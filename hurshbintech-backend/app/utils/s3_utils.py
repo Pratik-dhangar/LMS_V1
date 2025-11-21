@@ -17,15 +17,56 @@ class S3Manager:
     """
     
     def __init__(self):
-        """Initialize S3 client with credentials from environment variables"""
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            region_name=os.getenv('AWS_REGION', 'ap-south-1')
-        )
-        self.bucket_name = os.getenv('S3_BUCKET_NAME', 'hurshbintech-media')
+        """
+        Initialize S3 client with credentials from environment variables
+        If running on EC2 with IAM role, credentials are automatically detected
+        """
+        # Check if we should use S3
+        self.use_s3 = os.getenv('USE_S3', 'false').lower() == 'true'
+        
+        if not self.use_s3:
+            print("⚠️ S3 is disabled. Using local file storage.")
+            return
+        
+        # Initialize S3 client
+        # If AWS_ACCESS_KEY_ID is not set, boto3 will automatically use:
+        # 1. IAM role credentials (if on EC2)
+        # 2. AWS credentials file (~/.aws/credentials)
+        # 3. Environment variables
+        aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        
+        if aws_access_key and aws_secret_key:
+            print("🔑 Using explicit AWS credentials")
+            self.s3_client = boto3.client(
+                's3',
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=os.getenv('AWS_REGION', 'ap-south-1')
+            )
+        else:
+            print("🔐 Using IAM role credentials (EC2 instance profile)")
+            # Let boto3 automatically detect credentials
+            self.s3_client = boto3.client(
+                's3',
+                region_name=os.getenv('AWS_REGION', 'ap-south-1')
+            )
+        
+        self.bucket_name = os.getenv('S3_BUCKET_NAME', 'hurshbintech-media-bucket')
         self.region = os.getenv('AWS_REGION', 'ap-south-1')
+        
+        # Test S3 connection on initialization
+        try:
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+            print(f"✅ Successfully connected to S3 bucket: {self.bucket_name}")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                print(f"❌ S3 bucket '{self.bucket_name}' does not exist!")
+            elif error_code == '403':
+                print(f"❌ Access denied to S3 bucket '{self.bucket_name}'. Check IAM permissions.")
+            else:
+                print(f"❌ S3 connection error: {e}")
     
     async def upload_file(
         self, 
@@ -44,6 +85,9 @@ class S3Manager:
         Returns:
             Dictionary with file_url, s3_key, file_size, original_filename
         """
+        if not self.use_s3:
+            raise Exception("S3 is disabled. Set USE_S3=true in environment variables.")
+        
         try:
             # Generate unique filename to prevent overwrites
             file_extension = Path(file.filename).suffix.lower()
@@ -72,6 +116,8 @@ class S3Manager:
             # Generate public URL
             file_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
             
+            print(f"✅ Uploaded to S3: {s3_key}")
+            
             return {
                 "file_url": file_url,
                 "s3_key": s3_key,
@@ -83,11 +129,11 @@ class S3Manager:
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
-            print(f"S3 Upload Error [{error_code}]: {error_message}")
+            print(f"❌ S3 Upload Error [{error_code}]: {error_message}")
             raise Exception(f"Failed to upload file to S3: {error_message}")
         
         except Exception as e:
-            print(f"Unexpected S3 Upload Error: {str(e)}")
+            print(f"❌ Unexpected S3 Upload Error: {str(e)}")
             raise Exception(f"Failed to upload file: {str(e)}")
     
     def delete_file(self, s3_key: str) -> bool:
@@ -100,22 +146,26 @@ class S3Manager:
         Returns:
             True if successful, False otherwise
         """
+        if not self.use_s3:
+            print("⚠️ S3 is disabled. Skipping delete operation.")
+            return False
+        
         try:
             self.s3_client.delete_object(
                 Bucket=self.bucket_name,
                 Key=s3_key
             )
-            print(f"Successfully deleted: {s3_key}")
+            print(f"✅ Successfully deleted from S3: {s3_key}")
             return True
         
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
-            print(f"S3 Delete Error [{error_code}]: {error_message}")
+            print(f"❌ S3 Delete Error [{error_code}]: {error_message}")
             return False
         
         except Exception as e:
-            print(f"Unexpected S3 Delete Error: {str(e)}")
+            print(f"❌ Unexpected S3 Delete Error: {str(e)}")
             return False
     
     def delete_file_by_url(self, file_url: str) -> bool:
@@ -128,18 +178,21 @@ class S3Manager:
         Returns:
             True if successful, False otherwise
         """
+        if not self.use_s3:
+            return False
+        
         try:
             # Extract S3 key from URL
-            # Format: https://hurshbintech-media.s3.ap-south-1.amazonaws.com/folder/file.ext
+            # Format: https://hurshbintech-media-bucket.s3.ap-south-1.amazonaws.com/folder/file.ext
             if '.amazonaws.com/' in file_url:
                 s3_key = file_url.split('.amazonaws.com/')[-1]
                 return self.delete_file(s3_key)
             else:
-                print(f"Invalid S3 URL format: {file_url}")
+                print(f"❌ Invalid S3 URL format: {file_url}")
                 return False
         
         except Exception as e:
-            print(f"Error extracting S3 key from URL: {str(e)}")
+            print(f"❌ Error extracting S3 key from URL: {str(e)}")
             return False
     
     def get_presigned_url(
@@ -159,6 +212,9 @@ class S3Manager:
         Returns:
             Presigned URL string or None if error
         """
+        if not self.use_s3:
+            return None
+        
         try:
             params = {
                 'Bucket': self.bucket_name,
@@ -179,7 +235,7 @@ class S3Manager:
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
-            print(f"S3 Presigned URL Error [{error_code}]: {error_message}")
+            print(f"❌ S3 Presigned URL Error [{error_code}]: {error_message}")
             return None
     
     def list_files(self, folder: str = "", max_keys: int = 1000) -> list:
@@ -193,6 +249,9 @@ class S3Manager:
         Returns:
             List of file dictionaries with key, size, last_modified
         """
+        if not self.use_s3:
+            return []
+        
         try:
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
@@ -217,7 +276,7 @@ class S3Manager:
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
-            print(f"S3 List Error [{error_code}]: {error_message}")
+            print(f"❌ S3 List Error [{error_code}]: {error_message}")
             return []
     
     def file_exists(self, s3_key: str) -> bool:
@@ -230,6 +289,9 @@ class S3Manager:
         Returns:
             True if exists, False otherwise
         """
+        if not self.use_s3:
+            return False
+        
         try:
             self.s3_client.head_object(Bucket=self.bucket_name, Key=s3_key)
             return True
@@ -246,6 +308,9 @@ class S3Manager:
         Returns:
             Dictionary with metadata or None if error
         """
+        if not self.use_s3:
+            return None
+        
         try:
             response = self.s3_client.head_object(
                 Bucket=self.bucket_name,
@@ -261,7 +326,7 @@ class S3Manager:
             }
         
         except ClientError as e:
-            print(f"Error getting file metadata: {str(e)}")
+            print(f"❌ Error getting file metadata: {str(e)}")
             return None
 
 # Singleton instance for use across the application
