@@ -1,0 +1,50 @@
+import axios from 'axios';
+
+// axios instance with default config
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor - Add token to all requests
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - Handle errors globally
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 - Unauthorized (token expired)
+    if (error.response?.status === 401) {
+      console.warn('[Axios] Received 401 Unauthorized - clearing auth and redirecting to login');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_data');
+      // Use setTimeout to ensure state updates complete before navigation
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+    }
+
+    // Handle 403 - Forbidden
+    if (error.response?.status === 403) {
+      console.error('[Axios] Access forbidden (403):', error.response?.data?.detail || 'No detail provided');
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default axiosInstance;

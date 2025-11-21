@@ -1,0 +1,326 @@
+/* MediaPopup.css */
+.media-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.media-popup-overlay.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.media-popup-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 900px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.media-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.media-popup-title {
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.media-popup-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.media-popup-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Content */
+.media-popup-content {
+    flex: 1;
+    overflow: auto;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player-wrapper {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+.video-player-wrapper video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pdf-viewer-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    position: relative;
+}
+
+.pdf-loading {
+    color: #666;
+    font-size: 16px;
+    text-align: center;
+}
+
+.pdf-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Controls */
+.media-popup-controls {
+    padding: 12px 20px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.video-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.video-controls .control-btn {
+    background: #667eea;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+}
+
+.video-controls .control-btn:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+}
+
+.video-controls .control-btn:active {
+    transform: translateY(0);
+}
+
+.time-display {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 80px;
+    text-align: center;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #667eea, #764ba2);
+    outline: none;
+    border-radius: 3px;
+}
+
+.progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s;
+}
+
+.progress-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.progress-bar::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    cursor: pointer;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s;
+}
+
+.progress-bar::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* PDF Controls */
+.pdf-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+}
+
+.pdf-controls .control-btn {
+    background: #667eea;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+}
+
+.pdf-controls .control-btn:hover:not(:disabled) {
+    background: #5568d3;
+    transform: translateY(-2px);
+}
+
+.pdf-controls .control-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.page-display {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 100px;
+    text-align: center;
+}
+
+.zoom-display {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* View-only indicator */
+.view-only-indicator {
+    padding: 8px 20px;
+    background: #fef3c7;
+    border-top: 1px solid #fcd34d;
+    color: #92400e;
+    font-size: 13px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .media-popup-container {
+        width: 95vw;
+        height: 70vh;
+    }
+
+    .media-popup-header {
+        padding: 12px 16px;
+    }
+
+    .media-popup-controls {
+        padding: 10px 16px;
+        gap: 8px;
+    }
+
+    .video-controls,
+    .pdf-controls {
+        gap: 6px;
+    }
+
+    .control-btn {
+        padding: 6px 10px !important;
+        min-width: 36px !important;
+        height: 36px !important;
+        font-size: 12px !important;
+    }
+
+    .time-display,
+    .page-display {
+        font-size: 12px;
+        min-width: 70px;
+    }
+
+    .zoom-display {
+        font-size: 12px;
+        min-width: 45px;
+    }
+}
