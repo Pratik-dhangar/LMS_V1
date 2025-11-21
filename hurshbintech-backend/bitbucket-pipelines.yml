@@ -1,0 +1,70 @@
+image: python:3.11
+
+definitions:
+  steps:
+    - step: &build-and-test
+        name: Build and Test
+        caches:
+          - pip
+        script:
+          - pip install -r requirements.txt
+          - echo "Running tests..."
+          # Add your test commands here
+          # - pytest tests/
+        artifacts:
+          - "**"
+
+    - step: &build-docker
+        name: Build Docker Image
+        services:
+          - docker
+        script:
+          - export IMAGE_NAME=hurshbintech-backend
+          - export IMAGE_TAG=${BITBUCKET_COMMIT:0:7}
+          - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+          - docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
+          # Optional: Push to Docker registry
+          # - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          # - docker push $IMAGE_NAME:$IMAGE_TAG
+          # - docker push $IMAGE_NAME:latest
+
+    - step: &deploy-to-ec2
+        name: Deploy to EC2
+        deployment: production
+        script:
+          - pipe: atlassian/ssh-run:0.4.1
+            variables:
+              SSH_USER: $EC2_USER
+              SERVER: $EC2_HOST
+              COMMAND: |
+                cd ~/hurshbintech/hurshbintech-backend
+                git pull origin backend-test
+                docker-compose -f ~/hurshbintech/docker-compose.yml up -d --build backend
+                docker-compose -f ~/hurshbintech/docker-compose.yml exec -T backend alembic upgrade head
+
+pipelines:
+  branches:
+    backend-test:
+      - step: *build-and-test
+      - step: *build-docker
+      - step: *deploy-to-ec2
+
+    backend-dev:
+      - step: *build-and-test
+      - step: *build-docker
+
+    main:
+      - step: *build-and-test
+      - step: *build-docker
+      - step:
+          <<: *deploy-to-ec2
+          deployment: production
+
+  pull-requests:
+    '**':
+      - step: *build-and-test
+
+definitions:
+  services:
+    docker:
+      memory: 2048
