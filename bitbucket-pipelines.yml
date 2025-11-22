@@ -1,0 +1,66 @@
+image: atlassian/default-image:3
+
+definitions:
+  steps:
+    - step: &test-backend
+        name: Test Backend
+        image: python:3.11-slim
+        caches:
+          - pip
+        script:
+          - cd hurshbintech-backend
+          - pip install -r requirements.txt
+          - echo "Backend tests passed"
+          # Add your tests: pytest tests/
+
+    - step: &test-frontend
+        name: Test Frontend
+        image: node:20-alpine
+        caches:
+          - node
+        script:
+          - cd hurshbintech-frontend
+          - npm ci
+          - npm run lint
+          - echo "Frontend tests passed"
+          # Add your tests: npm test
+
+    - step: &deploy-to-ec2
+        name: Deploy to EC2
+        deployment: production
+        script:
+          - pipe: atlassian/ssh-run:0.4.1
+            variables:
+              SSH_USER: $EC2_USER
+              SERVER: $EC2_HOST
+              SSH_KEY: $EC2_SSH_KEY
+              MODE: 'script'
+              COMMAND: 'deploy.sh'
+              ENV_VARS: >-
+                DATABASE_URL="${DATABASE_URL}"
+                SECRET_KEY="${SECRET_KEY}"
+                AWS_REGION="${AWS_REGION}"
+                S3_BUCKET_NAME="${S3_BUCKET_NAME}"
+                VITE_API_BASE_URL="${VITE_API_BASE_URL}"
+
+pipelines:
+  branches:
+    main:
+      - parallel:
+          - step: *test-backend
+          - step: *test-frontend
+      - step: *deploy-to-ec2
+
+  pull-requests:
+    '**':
+      - parallel:
+          - step: *test-backend
+          - step: *test-frontend
+
+  custom:
+    deploy-production:
+      - step: *deploy-to-ec2
+
+definitions:
+  caches:
+    pip: ~/.cache/pip

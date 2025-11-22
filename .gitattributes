@@ -1,0 +1,30 @@
+# Auto detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Explicitly declare files that should always be treated as text
+*.md text
+*.txt text
+*.html text
+*.css text
+*.js text
+*.jsx text
+*.json text
+*.yml text
+*.yaml text
+*.py text
+*.sh text eol=lf
+*.conf text
+
+# Declare files that should not be normalized
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Ensure index.html is always treated as a text file
+index.html text eol=lf

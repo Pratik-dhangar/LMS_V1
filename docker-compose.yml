@@ -10,8 +10,8 @@ services:
       - "8000:8000"
     env_file:
       - ./hurshbintech-backend/.env.production
-    volumes:
-      - backend-uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
@@ -27,8 +27,8 @@ services:
       context: ./hurshbintech-frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000/api}
-        - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8000/ws}
+        - VITE_API_BASE_URL=http://43.204.218.16/api
+        - VITE_WS_URL=ws://43.204.218.16/ws
     container_name: hurshbintech-frontend
     ports:
       - "3000:80"
@@ -43,10 +43,6 @@ services:
       retries: 3
     networks:
       - hurshbintech-network
-
-volumes:
-  backend-uploads:
-    driver: local
 
 networks:
   hurshbintech-network:
