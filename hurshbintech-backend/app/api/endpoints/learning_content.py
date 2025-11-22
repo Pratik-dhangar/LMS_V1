@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -130,7 +130,7 @@ async def create_learning_content(
     description: Optional[str] = Form(None),
     content_type: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create new learning content with file upload to S3"""
@@ -288,7 +288,7 @@ async def update_content_head(
 @router.delete("/{content_id}")
 async def delete_learning_content(
     content_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Delete learning content and its S3 file"""
