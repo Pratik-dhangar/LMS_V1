@@ -45,10 +45,6 @@ logs/
 # ============================================
 # Alembic (Database Migrations)
 # ============================================
-# Keep alembic/ folder but ignore some files
-alembic.ini.bak
-alembic/versions/*.pyc
-alembic/versions/*.py
 
 # ============================================
 # Testing
@@ -211,5 +207,4 @@ cython_debug/
 .env
 # alembic.ini - COMMENTED OUT: needed for deployment
 # alembic/env.py - COMMENTED OUT: needed for deployment
-
-alembic/script.py.mako
+# alembic/script.py.mako - COMMENTED OUT: needed for deployment
