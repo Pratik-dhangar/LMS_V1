@@ -24,6 +24,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://43.204.218.16:3000",  # Production frontend
         "http://43.204.218.16:8000",  # Allow backend to call itself
+        "http://43.204.218.16",       # Also allow without port
     ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods
