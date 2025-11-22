@@ -17,10 +17,9 @@ COPY src ./src
 
 # DIAGNOSTIC: Check index.html status before build
 RUN echo "=== Checking index.html ===" && \
-    ls -la index.html && \
-    file index.html && \
+    ls -laR index.html && \
     stat index.html && \
-    cat index.html | head -5 && \
+    head -10 index.html && \
     echo "=== End diagnostic ==="
 
 # Accept build arguments for Vite
