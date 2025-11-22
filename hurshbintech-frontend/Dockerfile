@@ -15,6 +15,14 @@ RUN npm ci --prefer-offline --no-audit
 COPY index.html vite.config.js postcss.config.js tailwind.config.js eslint.config.js ./
 COPY src ./src
 
+# DIAGNOSTIC: Check index.html status before build
+RUN echo "=== Checking index.html ===" && \
+    ls -la index.html && \
+    file index.html && \
+    stat index.html && \
+    cat index.html | head -5 && \
+    echo "=== End diagnostic ==="
+
 # Accept build arguments for Vite
 ARG VITE_API_BASE_URL=http://localhost:8000/api
 ARG VITE_WS_URL=ws://localhost:8000/ws
