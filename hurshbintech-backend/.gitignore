@@ -209,7 +209,7 @@ dmypy.json
 # ============================================
 cython_debug/
 .env
-alembic.ini
+# alembic.ini - COMMENTED OUT: needed for deployment
 alembic/env.py
 app/api/endpoints/websocket.py
 alembic/script.py.mako
