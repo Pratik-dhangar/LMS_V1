@@ -141,7 +141,7 @@ cat ~/.ssh/id_ed25519.pub
 ### Step 3.1: Clone Repository
 
 ```bash
-cd /home/ubuntu
+  cd /home/ubuntu
 
 # Clone repository
 git clone git@bitbucket.org:lumesoft/hurshbintech.git
@@ -161,10 +161,10 @@ nano hurshbintech-backend/.env.production
 
 ```env
 # Database
-DATABASE_URL=postgresql://hurshbinuser:YourStrongPassword123!@host.docker.internal:5432/hurshbintechdb
+DATABASE_URL=postgresql://hurshbinuser:hurshbintech@host.docker.internal:5432/hurshbintechdb
 
 # Security
-SECRET_KEY=your_generated_secret_key_min_32_chars
+SECRET_KEY=09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
