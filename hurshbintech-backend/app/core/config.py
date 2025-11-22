@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     # CORS for backend origin settings
     BACKEND_CORS_ORIGINS: List[str]
     
+    # AWS S3 Configuration
+    USE_S3: bool = False
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION: str = "ap-south-1"
+    S3_BUCKET_NAME: str = "hurshbintech-media-bucket"
+    
     @property
     def DATABASE_URI(self) -> str:
         if self.DATABASE_URL:
