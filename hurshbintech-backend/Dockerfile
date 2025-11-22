@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
+# Make wait script executable
+RUN chmod +x /app/wait-for-postgres.sh
+
 # Create uploads directory (optional if using S3)
 RUN mkdir -p uploads/learning_content uploads/vlogs
 
