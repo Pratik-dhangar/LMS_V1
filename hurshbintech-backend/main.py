@@ -42,9 +42,8 @@ from app.api.endpoints import (
     learning_goals,
     learning_content_assignments,
     vlogs,
+    websocket,
 )
-# Import websocket separately (not exported in __init__.py)
-from app.api.endpoints import websocket
 
 # ✅ Import Learning Program routers
 from app.api.endpoints.learning_program_assignments import head_router, learner_router
