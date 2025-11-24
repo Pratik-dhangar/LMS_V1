@@ -31,7 +31,7 @@ const EditVlog = () => {
           video: null,
           thumbnail: null,
         });
-      } catch (err) {
+      } catch {
         setError('Failed to fetch vlog details');
       } finally {
         setLoading(false);

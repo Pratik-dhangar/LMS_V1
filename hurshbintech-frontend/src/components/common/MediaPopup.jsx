@@ -103,7 +103,6 @@ const MediaPopup = ({
         } finally {
             setPdfLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     };
 
     // Render specific PDF page

@@ -179,7 +179,7 @@ const LearnerSession = () => {
     };
 
     // Set up callback for keyboard trigger — show keyboard until trainer revokes
-    whiteboardService.onTriggerKeyboard = (data) => {
+    whiteboardService.onTriggerKeyboard = () => {
       console.log('[LearnerSession] Keyboard triggered by trainer');
       setShowKeyboard(true);
       // Do not auto-hide — the keyboard will remain visible until trainer revokes 'keyboard' access
@@ -436,10 +436,8 @@ const LearnerSession = () => {
       const hasAudio = rtcService.localStream && rtcService.localStream.getAudioTracks().length > 0;
       const hasVideo = rtcService.localStream && rtcService.localStream.getVideoTracks().length > 0;
 
-      setHasLocalAudio(hasAudio);
-      setHasLocalVideo(hasVideo);
-      setMicEnabled(hasAudio ? rtcService.isMicEnabled() : false);
-      setCameraEnabled(hasVideo ? rtcService.isCameraEnabled() : false);
+      // Note: Media state tracked in component state (_hasLocalAudio, _hasLocalVideo, etc.)
+      console.log('[LearnerSession] Local media detected:', { hasAudio, hasVideo });
 
       console.log('[LearnerSession] WebRTC service initialized', {
         hasAudio,

@@ -391,7 +391,7 @@ const Whiteboard = ({
     // const bananaImage = require('../../assets/banana.jpg');
 
 
-    const availableItems = [
+    const _availableItems = [
         { id: 'apple', name: 'Apple', src: appleImage },
         { id: 'banana', name: 'Banana', src: bananaImage },
         // { id: 'circle', name: 'Circle', src: null, shape: 'circle' },
@@ -720,6 +720,7 @@ const Whiteboard = ({
             }
             window.removeEventListener('resize', handleResize);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [whiteboardService, mediaControl]);
 
     // Register media control callback with whiteboardService
@@ -728,7 +729,6 @@ const Whiteboard = ({
             console.log('[Whiteboard] Sending media control event to server:', mediaControlEvent);
             whiteboardService?.sendMediaControl(mediaControlEvent);
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaControl, whiteboardService]);
 
     // Request media snapshot when learner joins (for reconnection support)
@@ -773,6 +773,7 @@ const Whiteboard = ({
                 }, 10);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [erasePenTrigger]);
 
     // Handle redraw canvas trigger (forces redraw of canvas items)
@@ -1169,7 +1170,7 @@ const Whiteboard = ({
             if (!isTrainer) return;
 
             const dx = currX - prevPosRef.current.x;
-            const dy = currY - prevPosRef.current.y;
+            const _dy = currY - prevPosRef.current.y;
 
             // Maintain aspect ratio for video resizing
             const aspectRatio = resizingVideo.width / resizingVideo.height;

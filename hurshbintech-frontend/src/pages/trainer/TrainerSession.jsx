@@ -13,7 +13,7 @@ import sessionService from '../../api/services/sessionService';
 // import learningContentService from '../../api/services/learningContentService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
-import WhiteboardToolsService from '../../api/services/whiteboardToolsService';
+import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
