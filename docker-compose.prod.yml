@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./hurshbintech-backend
+      dockerfile: Dockerfile
+    container_name: hurshbintech-backend
+    network_mode: "host"
+    env_file:
+      - ./hurshbintech-backend/.env.production
+    environment:
+      - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@localhost:5432/hurshbintechdb
+      - ENVIRONMENT=production
+    volumes:
+      - ~/certs:/app/certs:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./hurshbintech-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=https://43.204.218.16:8000/api
+        - VITE_WS_URL=wss://43.204.218.16:8000/ws
+        - ENVIRONMENT=production
+    container_name: hurshbintech-frontend
+    network_mode: "host"
+    volumes:
+      - ~/certs:/app/certs:ro
+    restart: unless-stopped
