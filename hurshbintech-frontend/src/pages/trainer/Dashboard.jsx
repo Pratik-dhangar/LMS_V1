@@ -117,7 +117,7 @@ const TrainerDashboard = () => {
         setMessages((prev) =>
           prev.length ? prev : [
             { id: "1", from: "Head", title: "Updated IIP for John Doe", time: "2 hours ago", body: "Please review before today's session." }
-          ])
+          ]
         );
       }
     } catch (_err) {
