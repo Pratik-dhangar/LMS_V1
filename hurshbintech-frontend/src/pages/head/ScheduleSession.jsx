@@ -74,7 +74,7 @@ const ScheduleSession = () => {
       setLearners(learnersData);
       setContents(contentsData);
       setLearningGoals(goalsData);
-    } catch (_error) {
+    } catch {
       toast.error('Failed to load data');
     } finally {
       setLoadingData(false);

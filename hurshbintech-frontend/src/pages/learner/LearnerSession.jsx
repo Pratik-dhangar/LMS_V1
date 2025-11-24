@@ -65,14 +65,14 @@ const LearnerSession = () => {
   const [reinforcementMeter, setReinforcementMeter] = useState(null);
 
   // Callbacks for meter updates
-  const [_onPromptMeterUpdate, setOnPromptMeterUpdate] = useState(null);
-  const [_onReinforcementMeterUpdate, setOnReinforcementMeterUpdate] = useState(null);
+  const [_onPromptMeterUpdate] = useState(null);
+  const [_onReinforcementMeterUpdate] = useState(null);
 
   // Media controls state
-  const [_micEnabled, setMicEnabled] = useState(true);
-  const [_cameraEnabled, setCameraEnabled] = useState(true);
-  const [_hasLocalAudio, setHasLocalAudio] = useState(false);
-  const [_hasLocalVideo, setHasLocalVideo] = useState(false);
+  const [_micEnabled] = useState(true);
+  const [_cameraEnabled] = useState(true);
+  const [_hasLocalAudio] = useState(false);
+  const [_hasLocalVideo] = useState(false);
 
   // Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
@@ -82,7 +82,7 @@ const LearnerSession = () => {
   });
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
-  const [_selectedItemId, setSelectedItemId] = useState(null); // Track learner's own selection
+  const [_selectedItemId] = useState(null); // Track learner's own selection
 
   // Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
@@ -96,9 +96,9 @@ const LearnerSession = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [_isPaused, setIsPaused] = useState(false);
-  const [_isFrozen, setIsFrozen] = useState(false);
-  const [_keyboardMode, setKeyboardMode] = useState(false);
+  const [_isPaused] = useState(false);
+  const [_isFrozen] = useState(false);
+  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -209,14 +209,14 @@ const LearnerSession = () => {
     };
 
     // Set up callback for erase pen event from trainer
-    whiteboardService.onErasePen = (_data) => {
+    whiteboardService.onErasePen = () => {
       console.log('[LearnerSession] Received erase pen event from trainer');
       setErasePenTrigger(prev => prev + 1);
       setRedrawCanvasTrigger(prev => prev + 1);
     };
 
     // Set up callback for clear canvas event (also clears video, items, and buckets)
-    whiteboardService.onClearCanvas = (_data) => {
+    whiteboardService.onClearCanvas = () => {
       console.log('[LearnerSession] Received clear canvas event from trainer');
       setClearCanvasTrigger(prev => prev + 1);
       // Also clear all canvas items and buckets
@@ -324,7 +324,7 @@ const LearnerSession = () => {
   // --------------------------
   // Session initialization
   // --------------------------
-  const initializeSession = async (_userId) => {
+  const initializeSession = async () => {
     try {
       const session = await sessionService.getSessionDetails(sessionId);
       setSessionInfo(session);
@@ -347,7 +347,7 @@ const LearnerSession = () => {
     try {
       wbService.initialize();
       setWhiteboardService(wbService);
-    } catch (_error) {
+    } catch {
       // toast.error('Failed to initialize whiteboard');
     }
 
@@ -453,7 +453,7 @@ const LearnerSession = () => {
     }
   };
 
-  const handleSessionEnded = (_payload) => {
+  const _handleSessionEnded = () => {
     toast.info('Session has been ended by the trainer');
     cleanup();
     navigate('/learner/dashboard');
@@ -466,7 +466,7 @@ const LearnerSession = () => {
         cleanup();
         toast.info('Left session');
         navigate('/learner/dashboard');
-      } catch (_error) {
+      } catch {
         cleanup();
         navigate('/learner/dashboard');
       }

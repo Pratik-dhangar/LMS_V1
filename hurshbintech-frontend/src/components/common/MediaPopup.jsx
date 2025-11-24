@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { FaTimes, FaPlay, FaPause, FaStepBackward, FaStepForward, FaExpand, FaCompress } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import * as pdfjsLib from 'pdfjs-dist';
 import './MediaPopup.css';
 
@@ -102,6 +103,7 @@ const MediaPopup = ({
         } finally {
             setPdfLoading(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     };
 
     // Render specific PDF page
@@ -152,6 +154,7 @@ const MediaPopup = ({
         if (mediaType === 'pdf' && mediaUrl) {
             loadPdf();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaType, mediaUrl]);
 
     // Update video time when currentTime prop changes (for sync from server)
@@ -180,6 +183,7 @@ const MediaPopup = ({
         if (mediaType === 'pdf' && currentPage && currentPage !== localCurrentPage) {
             renderPdfPage(currentPage);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, mediaType]);
 
     if (!mediaUrl) {

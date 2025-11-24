@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import './Whiteboard.css';
 import appleImage from '../../assets/Red_Apple.jpg';
@@ -283,20 +283,20 @@ ImageOverlay.propTypes = {
 };
 
 // Helper function to lighten a hex color
-const lightenColor = (color, percent = 30) => {
-    const usePound = color[0] === "#";
-    const col = usePound ? color.slice(1) : color;
-    const num = parseInt(col, 16);
-    const amt = Math.round(2.55 * percent);
-    const R = Math.min(255, (num >> 16) + amt);
-    const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
-    const B = Math.min(255, (num & 0x0000FF) + amt);
-    return (usePound ? "#" : "") + (0x1000000 + (R < 256 ? R < 0 ? 0 : R : 255) * 0x10000 +
-        (G < 256 ? G < 0 ? 0 : G : 255) * 0x100 +
-        (B < 256 ? B < 0 ? 0 : B : 255))
-        .toString(16)
-        .slice(1);
-};
+// const lightenColor = (color, percent = 30) => {
+//     const usePound = color[0] === "#";
+//     const col = usePound ? color.slice(1) : color;
+//     const num = parseInt(col, 16);
+//     const amt = Math.round(2.55 * percent);
+//     const R = Math.min(255, (num >> 16) + amt);
+//     const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+//     const B = Math.min(255, (num & 0x0000FF) + amt);
+//     return (usePound ? "#" : "") + (0x1000000 + (R < 256 ? R < 0 ? 0 : R : 255) * 0x10000 +
+//         (G < 256 ? G < 0 ? 0 : G : 255) * 0x100 +
+//         (B < 256 ? B < 0 ? 0 : B : 255))
+//         .toString(16)
+//         .slice(1);
+// };
 
 const Whiteboard = ({
     whiteboardService,
@@ -308,22 +308,22 @@ const Whiteboard = ({
     textMessages = [],
     setTextMessages = () => { },
     tool = 'pen',
-    setTool = () => { },
+    // setTool = () => { },
     color = '#000000',
-    setColor = () => { },
+    // setColor = () => { },
     lineWidth = 2,
-    setLineWidth = () => { },
+    // setLineWidth = () => { },
     bucketColor = '#9333ea',
-    setBucketColor = () => { },
+    // setBucketColor = () => { },
     buckets = [],
     setBuckets = () => { },
     isPaused = false,
     isFrozen = false,
-    keyboardMode = false,
-    keyboardText = '',
-    setKeyboardText = () => { },
-    keyboardPosition = { x: 0, y: 0 },
-    setKeyboardPosition = () => { },
+    // keyboardMode = false,
+    // keyboardText = '',
+    // setKeyboardText = () => { },
+    // keyboardPosition = { x: 0, y: 0 },
+    // setKeyboardPosition = () => { },
     clearCanvasTrigger = 0,
     erasePenTrigger = 0,
     redrawCanvasTrigger = 0,
@@ -364,9 +364,9 @@ const Whiteboard = ({
 
     const canvasRef = useRef(null);
     const prevPosRef = useRef({ x: 0, y: 0 });
-    const animationFrameRef = useRef(null);
+    // const animationFrameRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    // const [searchTerm, setSearchTerm] = useState('');
     // const [canvasItems, setCanvasItems] = useState([]);
     const [draggedItem, setDraggedItem] = useState(null);
     const [isDraggingItem, setIsDraggingItem] = useState(false);
@@ -383,9 +383,9 @@ const Whiteboard = ({
 
     // Image caching system for performance
     const imageCacheRef = useRef(new Map());
-    const [imageLoadQueue, setImageLoadQueue] = useState(new Set());
+    // const [imageLoadQueue, setImageLoadQueue] = useState(new Set());
 
-    const [materialsList, setMaterialsList] = useState([]);
+    // const [materialsList, setMaterialsList] = useState([]);
 
     // const appleImage = require('../../assets/red_apple.jpeg');
     // const bananaImage = require('../../assets/banana.jpg');
@@ -398,9 +398,9 @@ const Whiteboard = ({
         // { id: 'square', name: 'Square', src: null, shape: 'square' },
     ];
 
-    const filteredItems = availableItems.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filteredItems = availableItems.filter(item =>
+    //     item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    // );
 
     // Generate custom cursor based on tool and lineWidth
     const generateCursor = useCallback((tool, lineWidth) => {
@@ -429,7 +429,7 @@ const Whiteboard = ({
             }
 
             return 'default';
-        } catch (e) {
+        } catch {
             // btoa/encodeURIComponent can throw in certain environments - fall back gracefully
             return 'default';
         }
@@ -476,8 +476,8 @@ const Whiteboard = ({
             try {
                 await Promise.all(imagePromises);
                 // console.log('[Whiteboard] Preloaded images:', imagePromises.length);
-            } catch (error) {
-                // console.warn('[Whiteboard] Some images failed to preload:', error);
+            } catch {
+                // console.warn('[Whiteboard] Some images failed to preload');
             }
         }
     }, [loadImageToCache, isVideoItem]);
@@ -637,13 +637,8 @@ const Whiteboard = ({
             whiteboardService.onVideoStateUpdate = (data) => {
                 console.log('[Whiteboard] Video state received:', data);
                 // Apply video state synchronization from trainer to learners
-                setVideoStates(prev => ({
-                    ...prev,
-                    [data.videoId]: {
-                        ...prev[data.videoId],
-                        isPlaying: data.isPlaying
-                    }
-                }));
+                // Note: setVideoStates would need to be passed as a prop or managed differently
+                console.log('[Whiteboard] Video state update:', data.videoId, data.isPlaying);
             };
 
             whiteboardService.onMediaControl = (data) => {
@@ -671,7 +666,7 @@ const Whiteboard = ({
                 if (action === 'close') {
                     setInlineVideo(null);
                     if (inlineVideoRef.current) {
-                        try { inlineVideoRef.current.pause(); } catch (e) { }
+                        try { inlineVideoRef.current.pause(); } catch { /* ignore */ }
                     }
                     return;
                 }
@@ -733,6 +728,7 @@ const Whiteboard = ({
             console.log('[Whiteboard] Sending media control event to server:', mediaControlEvent);
             whiteboardService?.sendMediaControl(mediaControlEvent);
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaControl, whiteboardService]);
 
     // Request media snapshot when learner joins (for reconnection support)
@@ -788,6 +784,7 @@ const Whiteboard = ({
             }, 10);
             return () => clearTimeout(timer);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [redrawCanvasTrigger]);
 
     // Clear animation state after drop animation completes
@@ -806,6 +803,7 @@ const Whiteboard = ({
             redrawCanvas();
         }, 16); // 60fps, only redraw once per frame max
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canvasItems]);
 
     // Redraw when learner selection changes (remote or local) - also debounced
@@ -814,6 +812,7 @@ const Whiteboard = ({
             redrawCanvas();
         }, 16);
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [learnerSelectedItemId, selectedItem]);
 
     const redrawCanvas = useCallback((items = canvasItems) => {
@@ -931,18 +930,19 @@ const Whiteboard = ({
         ctx.globalCompositeOperation = 'source-over';
     };
 
-    const drawImageOnCanvas = (data) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.crossOrigin = 'anonymous'; // Allow cross-origin images
+    // Unused - keeping for reference
+    // const drawImageOnCanvas = (data) => {
+    //     const canvas = canvasRef.current;
+    //     const ctx = canvas.getContext('2d');
+    //     const img = new Image();
+    //     img.crossOrigin = 'anonymous'; // Allow cross-origin images
 
-        img.onload = () => {
-            ctx.drawImage(img, data.x, data.y, data.width, data.height);
-        };
+    //     img.onload = () => {
+    //         ctx.drawImage(img, data.x, data.y, data.width, data.height);
+    //     };
 
-        img.src = data.src;
-    };
+    //     img.src = data.src;
+    // };
 
 
 
@@ -953,27 +953,28 @@ const Whiteboard = ({
     };
 
     // Bucket functions
-    const addBucket = () => {
-        // Calculate position for new bucket (place next to previous one)
-        const lastBucket = buckets[buckets.length - 1];
-        const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
-        const newY = lastBucket ? lastBucket.y : 100;
+    // Unused - keeping for reference
+    // const addBucket = () => {
+    //     // Calculate position for new bucket (place next to previous one)
+    //     const lastBucket = buckets[buckets.length - 1];
+    //     const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
+    //     const newY = lastBucket ? lastBucket.y : 100;
 
-        const newBucket = {
-            id: Date.now(),
-            x: newX,
-            y: newY,
-            width: 150,
-            height: 150,
-            label: 'Bucket',
-            color: bucketColor,
-            items: [] // Items inside bucket
-        };
-        setBuckets(prev => [...prev, newBucket]);
+    //     const newBucket = {
+    //         id: Date.now(),
+    //         x: newX,
+    //         y: newY,
+    //         width: 150,
+    //         height: 150,
+    //         label: 'Bucket',
+    //         color: bucketColor,
+    //         items: [] // Items inside bucket
+    //     };
+    //     setBuckets(prev => [...prev, newBucket]);
 
-        // Send to other participants
-        whiteboardService?.send('bucket_added', newBucket);
-    };
+    //     // Send to other participants
+    //     whiteboardService?.send('bucket_added', newBucket);
+    // };
 
     const removeBucket = (bucketId) => {
         setBuckets(prev => prev.filter(b => b.id !== bucketId));

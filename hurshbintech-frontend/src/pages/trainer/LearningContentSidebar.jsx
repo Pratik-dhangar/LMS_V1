@@ -6,7 +6,7 @@ const LearningContentSidebar = ({
   handleLearningContentSearch,
   filteredLearningContent,
   onDragStartContent,
-  onContentCreated: _onContentCreated = () => { },
+  // onContentCreated
   onRemoveFromWhiteboard = () => { }
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);

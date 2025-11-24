@@ -48,7 +48,7 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
 
       await vlogService.createVlog(formDataToSend);
       onSuccess();
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to create vlog. Please try again.');
     } finally {
       setLoading(false);

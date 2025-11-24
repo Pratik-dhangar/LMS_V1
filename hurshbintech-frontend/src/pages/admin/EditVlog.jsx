@@ -75,7 +75,7 @@ const EditVlog = () => {
 
       await vlogService.updateVlog(id, formDataToSend);
       navigate('/admin/vlogs');
-    } catch (_err) {
+    } catch {
       setError('Failed to update vlog. Please try again.');
     } finally {
       setSaving(false);

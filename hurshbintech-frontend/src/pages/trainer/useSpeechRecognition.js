@@ -63,7 +63,7 @@ const useSpeechRecognition = (options = {}) => {
 
       // Update interim display (finalTranscript + interim)
       if (interim) {
-        setTranscript((prev) => {
+        setTranscript(() => {
           // Use the latest finalTranscriptRef for stable base
           return (finalTranscriptRef.current || '') + interim;
         });

@@ -121,7 +121,7 @@ const TrainerSession = () => {
   const [_additionalContentSearch, setAdditionalContentSearch] = useState('');
   const [_additionalContentResults, setAdditionalContentResults] = useState([]);
   const [learningProgramSearch, setLearningProgramSearch] = useState('');
-  const [_learningProgramSearchResults, setLearningProgramSearchResults] = useState([]);
+  const [_learningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
@@ -132,8 +132,8 @@ const TrainerSession = () => {
   // 🔸 How it works: canvasItems holds objects placed on whiteboard; activeTool selects action modes.
   // -----------------------------------------------------------
   const [canvasItems, setCanvasItems] = useState([]);
-  const [_activeTool, setActiveTool] = useState(null);
-  const [_keyboardMode, setKeyboardMode] = useState(false);
+  const [_activeTool] = useState(null);
+  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
   const [isPaused] = useState(false);

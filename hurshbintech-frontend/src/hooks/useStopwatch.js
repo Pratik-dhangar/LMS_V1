@@ -6,7 +6,7 @@ import { useState, useRef, useCallback } from 'react';
 const useStopwatch = () => {
     const [isRunning, setIsRunning] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
-    const [initialTime, setInitialTime] = useState(0); // Store the initial time for countdown
+    const [_initialTime, setInitialTime] = useState(0); // Store the initial time for countdown
     const [isCountdown, setIsCountdown] = useState(false); // Flag to indicate countdown mode
     const intervalRef = useRef(null);
     const startTimeRef = useRef(null);
