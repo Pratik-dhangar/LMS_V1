@@ -22,9 +22,13 @@ class Settings(BaseSettings):
     # Security JWT settings
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    ALGORITHM: Optional[str] = "HS256"
     
     # CORS for backend origin settings
     BACKEND_CORS_ORIGINS: List[str]
+    
+    # Environment
+    ENVIRONMENT: Optional[str] = "development"
     
     # AWS S3 Configuration
     USE_S3: bool = False
@@ -44,7 +48,8 @@ class Settings(BaseSettings):
     class Config:
         
         env_file = ".env.production" if os.getenv("ENVIRONMENT") == "production" else ".env"
-        case_sensitive = True 
+        case_sensitive = True
+        extra = "ignore"  # Ignore extra fields like CORS_ORIGINS 
 
 
 # Global settings instance
