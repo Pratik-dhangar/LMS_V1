@@ -32,7 +32,7 @@ class TrainingSession(Base):
     session_id = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text)
-    duration = Column(Integer, default=60)  # Session duration in minutes
+    duration = Column(Integer)  # Session duration in minutes
     
     # Participants
     trainer_id = Column(Integer, ForeignKey("users.id"), nullable=False)

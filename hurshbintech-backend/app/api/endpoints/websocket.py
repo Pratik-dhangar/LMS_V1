@@ -135,7 +135,7 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         try:
             while True:
                 message = await websocket.receive_json()
-                print(f"[WHITEBOARD] Received message from {role} in session {session_id}: {message.get('type')}")
+                logger.debug(f"[WHITEBOARD] Received message from {role} in session {session_id}: {message.get('type')}")
 
                 if message.get("type") == "media_control":
                     # Handle media control events
@@ -143,7 +143,7 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                 else:
                     # Forward draw/clear messages to the other participant
                     if role == "trainer" and "learner" in whiteboard_connections[session_id]:
-                        print(f"[WHITEBOARD] Forwarding {message.get('type')} from trainer to learner")
+                        logger.debug(f"[WHITEBOARD] Forwarding {message.get('type')} from trainer to learner")
                         await whiteboard_connections[session_id]["learner"].send_json(message)
                     elif role == "learner" and "trainer" in whiteboard_connections[session_id]:
                         print(f"[WHITEBOARD] Forwarding {message.get('type')} from learner to trainer")

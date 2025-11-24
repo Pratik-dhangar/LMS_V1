@@ -13,7 +13,8 @@ class SessionCreate(BaseModel):
     trainer_id: int
     learner_id: int
     scheduled_date: datetime
-    duration: int = Field(default=60, ge=15, le=240)  # Duration in minutes (15-240)
+    # Duration is required and must be between 15 and 240 minutes
+    duration: int = Field(..., ge=15, le=240)
     content_ids: List[int] = Field(default_factory=list)  # IDs of learning content to attach
     goal_ids: List[int] = Field(default_factory=list)  # IDs of learning goals to attach
 
@@ -70,7 +71,8 @@ class SessionResponse(BaseModel):
     trainer_name: str
     learner_name: str
     created_by_name: str
-    duration: int = 60  # Default to 60 minutes for old sessions
+    # Duration (minutes) — required in response; do not silently default to 60
+    duration: int
     learning_contents: List[LearningContentInSession] = []
     learning_goals: List['LearningGoalInSession'] = []
     created_at: datetime

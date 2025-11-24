@@ -25,6 +25,5 @@ class Vlog(VlogBase):
     updated_at: datetime
 
     class Config:
-        from_attributes = True  # Updated for Pydantic V2; previously w
         orm_mode = True
-        
+        from_attributes = True

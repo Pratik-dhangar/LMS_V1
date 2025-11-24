@@ -1,8 +1,8 @@
-"""new
+"""Create all tables
 
-Revision ID: 24430df30ab5
+Revision ID: 8f2a87d3b95f
 Revises: 
-Create Date: 2025-10-31 16:34:06.696842
+Create Date: 2025-11-24 14:34:32.523189
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '24430df30ab5'
+revision: str = '8f2a87d3b95f'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -46,6 +46,18 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_passcode'), 'users', ['passcode'], unique=True)
+    op.create_table('vlogs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.String(length=1000), nullable=True),
+    sa.Column('file_url', sa.String(length=255), nullable=False),
+    sa.Column('file_size', sa.Float(), nullable=False),
+    sa.Column('thumbnail_url', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_vlogs_id'), 'vlogs', ['id'], unique=False)
     op.create_table('head_profiles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -73,6 +85,38 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_head_profiles_id'), 'head_profiles', ['id'], unique=False)
     op.create_index(op.f('ix_head_profiles_user_id'), 'head_profiles', ['user_id'], unique=True)
+    op.create_table('learning_contents',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('content_type', sa.Enum('IMAGE', 'PDF', 'VIDEO', 'AUDIO', 'DOCUMENT', name='contenttype'), nullable=False),
+    sa.Column('file_url', sa.String(length=500), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=True),
+    sa.Column('thumbnail_url', sa.String(length=500), nullable=True),
+    sa.Column('created_by_admin_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_admin_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_learning_contents_id'), 'learning_contents', ['id'], unique=False)
+    op.create_index(op.f('ix_learning_contents_title'), 'learning_contents', ['title'], unique=False)
+    op.create_table('learning_goals',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('goal', sa.String(length=255), nullable=False),
+    sa.Column('goal_description', sa.Text(), nullable=True),
+    sa.Column('created_by_admin_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_admin_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_learning_goals_goal'), 'learning_goals', ['goal'], unique=False)
+    op.create_index(op.f('ix_learning_goals_id'), 'learning_goals', ['id'], unique=False)
     op.create_table('training_sessions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('session_id', sa.String(length=100), nullable=False),
@@ -81,13 +125,15 @@ def upgrade() -> None:
     sa.Column('duration', sa.Integer(), nullable=True),
     sa.Column('trainer_id', sa.Integer(), nullable=False),
     sa.Column('learner_id', sa.Integer(), nullable=False),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('scheduled_date', sa.DateTime(), nullable=True),
+    sa.Column('scheduled_date', sa.DateTime(), nullable=False),
     sa.Column('started_at', sa.DateTime(), nullable=True),
     sa.Column('ended_at', sa.DateTime(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['trainer_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -188,6 +234,46 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_learner_profiles_id'), 'learner_profiles', ['id'], unique=False)
     op.create_index(op.f('ix_learner_profiles_user_id'), 'learner_profiles', ['user_id'], unique=True)
+    op.create_table('learning_content_assignments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('learner_id', sa.Integer(), nullable=False),
+    sa.Column('learning_content_id', sa.Integer(), nullable=False),
+    sa.Column('assigned_by_head', sa.Integer(), nullable=False),
+    sa.Column('assigned_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_by_head'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['learning_content_id'], ['learning_contents.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_learning_content_assignments_id'), 'learning_content_assignments', ['id'], unique=False)
+    op.create_index(op.f('ix_learning_content_assignments_learner_id'), 'learning_content_assignments', ['learner_id'], unique=False)
+    op.create_index(op.f('ix_learning_content_assignments_learning_content_id'), 'learning_content_assignments', ['learning_content_id'], unique=False)
+    op.create_table('learning_goal_assignments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('learner_id', sa.Integer(), nullable=True),
+    sa.Column('learning_goal_id', sa.Integer(), nullable=True),
+    sa.Column('assigned_by_head', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_by_head'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['learning_goal_id'], ['learning_goals.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_learning_goal_assignments_id'), 'learning_goal_assignments', ['id'], unique=False)
+    op.create_table('session_learning_content',
+    sa.Column('session_id', sa.Integer(), nullable=False),
+    sa.Column('content_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['content_id'], ['learning_contents.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['session_id'], ['training_sessions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('session_id', 'content_id')
+    )
+    op.create_table('session_learning_goal',
+    sa.Column('session_id', sa.Integer(), nullable=False),
+    sa.Column('goal_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['goal_id'], ['learning_goals.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['session_id'], ['training_sessions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('session_id', 'goal_id')
+    )
     op.create_table('trainer_profiles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -269,6 +355,14 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_trainer_profiles_user_id'), table_name='trainer_profiles')
     op.drop_index(op.f('ix_trainer_profiles_id'), table_name='trainer_profiles')
     op.drop_table('trainer_profiles')
+    op.drop_table('session_learning_goal')
+    op.drop_table('session_learning_content')
+    op.drop_index(op.f('ix_learning_goal_assignments_id'), table_name='learning_goal_assignments')
+    op.drop_table('learning_goal_assignments')
+    op.drop_index(op.f('ix_learning_content_assignments_learning_content_id'), table_name='learning_content_assignments')
+    op.drop_index(op.f('ix_learning_content_assignments_learner_id'), table_name='learning_content_assignments')
+    op.drop_index(op.f('ix_learning_content_assignments_id'), table_name='learning_content_assignments')
+    op.drop_table('learning_content_assignments')
     op.drop_index(op.f('ix_learner_profiles_user_id'), table_name='learner_profiles')
     op.drop_index(op.f('ix_learner_profiles_id'), table_name='learner_profiles')
     op.drop_table('learner_profiles')
@@ -280,9 +374,17 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_training_sessions_session_id'), table_name='training_sessions')
     op.drop_index(op.f('ix_training_sessions_id'), table_name='training_sessions')
     op.drop_table('training_sessions')
+    op.drop_index(op.f('ix_learning_goals_id'), table_name='learning_goals')
+    op.drop_index(op.f('ix_learning_goals_goal'), table_name='learning_goals')
+    op.drop_table('learning_goals')
+    op.drop_index(op.f('ix_learning_contents_title'), table_name='learning_contents')
+    op.drop_index(op.f('ix_learning_contents_id'), table_name='learning_contents')
+    op.drop_table('learning_contents')
     op.drop_index(op.f('ix_head_profiles_user_id'), table_name='head_profiles')
     op.drop_index(op.f('ix_head_profiles_id'), table_name='head_profiles')
     op.drop_table('head_profiles')
+    op.drop_index(op.f('ix_vlogs_id'), table_name='vlogs')
+    op.drop_table('vlogs')
     op.drop_index(op.f('ix_users_passcode'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')

@@ -14,11 +14,11 @@ from app.models import (
     user_model, 
     learning_content_model, 
     learning_goals_model,
-    learning_content_assignment_model,
-    learning_goal_assignment_model,
-    session_model,
-    vlog_model
+    session_model
 )
+from app.models.learning_content_assignment_model import LearningContentAssignment
+from app.models.learning_goal_assignment_model import LearningGoalAssignment
+from app.models.vlog_model import Vlog
 
 
 # this is the Alembic Config object

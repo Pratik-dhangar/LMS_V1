@@ -59,7 +59,8 @@ def build_session_response(session: TrainingSession) -> SessionResponse:
         created_by_name=session.created_by.name if session.created_by else "Unknown",
         created_at=session.created_at,
         updated_at=session.updated_at,
-        duration=session.duration,
+        # Fallback to 60 if duration is None in DB (for old sessions) — otherwise use stored value
+        duration=session.duration if session.duration is not None else 60,
         learning_contents=[
             {
                 "id": content.id,

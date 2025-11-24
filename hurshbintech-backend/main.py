@@ -8,6 +8,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+import ssl
+import os
+from fastapi import FastAPI
+import uvicorn
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -20,8 +24,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
+        "http://localhost:3000",      # Development frontend (npm run dev)
+        "http://127.0.0.1:3000",      # Alternative localhost
         "http://43.204.218.16:3000",  
         "http://43.204.218.16:8000", 
         "http://43.204.218.16",       
@@ -69,3 +73,30 @@ app.include_router(learner_router, prefix="/api")     # Already has prefix="/api
 
 # ✅ WebSocket should NOT have /api prefix
 app.include_router(websocket_router)
+
+
+
+
+if __name__ == "__main__":
+    environment = os.getenv("ENVIRONMENT", "local")
+    
+    if environment == "production":
+        # HTTPS for EC2
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(
+            certfile="/app/certs/cert.pem",
+            keyfile="/app/certs/key.pem"
+        )
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            ssl_context=ssl_context
+        )
+    else:
+        # HTTP for localhost
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000
+        )
