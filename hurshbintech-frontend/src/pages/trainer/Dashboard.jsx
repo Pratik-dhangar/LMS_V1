@@ -24,6 +24,7 @@ const TrainerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadingExtras, setLoadingExtras] = useState(true);
   const [learnerQuery, setLearnerQuery] = useState("");
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   useEffect(() => {
     fetchAll();
@@ -226,7 +227,24 @@ const TrainerDashboard = () => {
           <div className="bg-white rounded-xl p-6 shadow">
             <div className="flex items-center justify-between mb-4">
               <div className="text-lg font-semibold">📅 Today's Schedule - {todaysDateString}</div>
-              <div className="text-sm text-gray-500">{sessions.filter(s => s.scheduled_date && new Date(s.scheduled_date).toDateString() === new Date().toDateString()).length} items</div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-500">{sessions.length} total items</div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="pagination" className="text-sm text-gray-600 font-medium">Show:</label>
+                  <select
+                    id="pagination"
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer hover:border-gray-400"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -239,80 +257,90 @@ const TrainerDashboard = () => {
                 (sessions.length === 0) ? (
                   <div className="text-center text-gray-500 py-6">No sessions scheduled yet.</div>
                 ) : (
-                  sessions
-                    .sort((a, b) => new Date(a.scheduled_date || 0) - new Date(b.scheduled_date || 0))
-                    .map((session) => {
-                      const scheduledDate = session.scheduled_date ? new Date(session.scheduled_date) : null;
-                      const timeLabel = scheduledDate ? scheduledDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
-                      const ampm = scheduledDate ? scheduledDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }).split(" ")[1] : "";
-                      const borderColor =
-                        session.status === "active" ? "border-l-4 border-green-500" :
-                        session.status === "scheduled" ? "border-l-4 border-blue-500" : "border-l-4 border-yellow-400";
-                      return (
-                        <div key={session.id || session.session_id} className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 flex items-center gap-4">
-                              <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
-                                <div className="text-xl font-bold text-[#2c3e50]">{timeLabel}</div>
-                                {/* show AM/PM if available */}
-                                <div className="text-xs text-gray-500">{ampm}</div>
-                              </div>
-
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3">
-                                  <div className="text-lg font-semibold text-gray-800">{session.title || `Session with ${session.learner?.name || session.learner_name || "Learner"}`}</div>
-                                  <span className={getStatusBadge(session.status)}>{(session.status || "scheduled").charAt(0).toUpperCase() + (session.status || "scheduled").slice(1)}</span>
+                  <>
+                    {sessions
+                      .sort((a, b) => new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0))
+                      .slice(0, itemsPerPage)
+                      .map((session) => {
+                        const scheduledDate = session.scheduled_date ? new Date(session.scheduled_date) : null;
+                        const timeLabel = scheduledDate ? scheduledDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+                        const ampm = scheduledDate ? scheduledDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }).split(" ")[1] : "";
+                        const borderColor =
+                          session.status === "active" ? "border-l-4 border-green-500" :
+                            session.status === "scheduled" ? "border-l-4 border-blue-500" : "border-l-4 border-yellow-400";
+                        return (
+                          <div key={session.id || session.session_id} className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 flex items-center gap-4">
+                                <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
+                                  <div className="text-xl font-bold text-[#2c3e50]">{timeLabel}</div>
+                                  {/* show AM/PM if available */}
+                                  <div className="text-xs text-gray-500">{ampm}</div>
                                 </div>
 
-                                <div className="text-sm text-gray-500 mt-1">
-                                  Duration: {session.duration ?? "—"} minutes {session.program ? ` | IIP: ${session.program}` : ""}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-lg font-semibold text-gray-800">{session.title || `Session with ${session.learner?.name || session.learner_name || "Learner"}`}</div>
+                                    <span className={getStatusBadge(session.status)}>{(session.status || "scheduled").charAt(0).toUpperCase() + (session.status || "scheduled").slice(1)}</span>
+                                  </div>
+
+                                  <div className="text-sm text-gray-500 mt-1">
+                                    Duration: {session.duration ?? "—"} minutes {session.program ? ` | IIP: ${session.program}` : ""}
+                                  </div>
+
+                                  {session.description && <div className="text-xs text-gray-600 mt-2">{session.description}</div>}
+                                  {session.scheduled_date && <div className="text-xs text-gray-500 mt-1">Scheduled: {new Date(session.scheduled_date).toLocaleString()}</div>}
                                 </div>
-
-                                {session.description && <div className="text-xs text-gray-600 mt-2">{session.description}</div>}
-                                {session.scheduled_date && <div className="text-xs text-gray-500 mt-1">Scheduled: {new Date(session.scheduled_date).toLocaleString()}</div>}
                               </div>
-                            </div>
 
-                            <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                              {session.status === "scheduled" && (
-                                <button
-                                  onClick={() => handleStartSession(session.session_id)}
-                                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-                                >
-                                  Start Session
-                                </button>
-                              )}
-                              {session.status === "active" && (
-                                <button
-                                  onClick={() => handleResumeSession(session.session_id)}
-                                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-                                >
-                                  Resume Session
-                                </button>
-                              )}
-                              {session.status === "ended" && (
-                                <span className="text-gray-500 text-sm">Completed</span>
-                              )}
+                              <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                                {session.status === "scheduled" && (
+                                  <button
+                                    onClick={() => handleStartSession(session.session_id)}
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
+                                  >
+                                    Start Session
+                                  </button>
+                                )}
+                                {session.status === "active" && (
+                                  <button
+                                    onClick={() => handleResumeSession(session.session_id)}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                  >
+                                    Resume Session
+                                  </button>
+                                )}
+                                {session.status === "ended" && (
+                                  <span className="text-gray-500 text-sm">Completed</span>
+                                )}
 
-                              <div className="flex gap-2 mt-2">
-                                <button
-                                  onClick={() => handleViewRecording(session.recording_url)}
-                                  className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
-                                >
-                                  ▶️ Watch
-                                </button>
-                                <button
-                                  onClick={() => navigate(`/trainer/session/${session.session_id || session.id}`)}
-                                  className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
-                                >
-                                  View Details
-                                </button>
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={() => handleViewRecording(session.recording_url)}
+                                    className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
+                                  >
+                                    ▶️ Watch
+                                  </button>
+                                  <button
+                                    onClick={() => navigate(`/trainer/session/${session.session_id || session.id}`)}
+                                    className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
+                                  >
+                                    View Details
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+
+                    {/* Pagination Info */}
+                    {sessions.length > itemsPerPage && (
+                      <div className="text-sm text-gray-500 pt-4 border-t text-center">
+                        Showing {itemsPerPage} of {sessions.length} sessions
+                      </div>
+                    )}
+                  </>
                 )
               )}
             </div>
@@ -406,6 +434,7 @@ const TrainerDashboard = () => {
                       <td className="py-3 pr-4">{s.learner?.name || s.learner_name || "—"}</td>
                       <td className="py-3 pr-4">{s.program || "—"}</td>
                       <td className="py-3 pr-4">{s.duration ? `${s.duration} min` : "—"}</td>
+                      {/* <td>{l.name}</td> */}
                       <td className="py-3 pr-4">
                         <button onClick={() => navigate(`/trainer/session/${s.session_id || s.id}/notes`)} className="text-sm text-blue-600">📝 View</button>
                       </td>

@@ -7,9 +7,11 @@ import sessionService from '../../api/services/sessionService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
+import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import useMessages from '../../hooks/useMessages';
+import useStopwatch from '../../hooks/useStopwatch';
 
 const LearnerSession = () => {
   const { sessionId } = useParams();
@@ -97,6 +99,37 @@ const LearnerSession = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const [keyboardMode, setKeyboardMode] = useState(false);
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Stopwatch hook for session timing
+  // 🔸 How it works: learner has its own stopwatch display (read-only)
+  // -----------------------------------------------------------
+  const stopwatch = useStopwatch();
+  const [syncedElapsedTime, setSyncedElapsedTime] = useState(0);
+  const [syncedIsRunning, setSyncedIsRunning] = useState(false);
+
+  // Listen for stopwatch updates from trainer
+  useEffect(() => {
+    if (!whiteboardService) {
+      return;
+    }
+
+    // Create the handler function
+    const handleStopwatchSync = (data) => {
+      setSyncedElapsedTime(data.elapsedTime);
+      setSyncedIsRunning(data.isRunning);
+    };
+
+    // Attach the handler
+    whiteboardService.onStopwatchSync = handleStopwatchSync;
+
+    // Cleanup
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onStopwatchSync = null;
+      }
+    };
+  }, [whiteboardService]);
 
   // Initialize session
   useEffect(() => {
@@ -251,9 +284,15 @@ const LearnerSession = () => {
         return;
       }
 
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      const totalSeconds = Math.floor(distance / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) {
+        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -288,7 +327,7 @@ const LearnerSession = () => {
       setSessionInfo(session);
 
       await sessionService.joinSession(sessionId);
-      toast.success('Joined session successfully');
+      // toast.success('Joined session successfully');
 
       await initializeWebRTC();
       setLoading(false);
@@ -368,7 +407,7 @@ const LearnerSession = () => {
         if (state === 'failed') {
           toast.error('Connection failed. Please refresh and try again.');
         } else if (state === 'connected') {
-          toast.success('Connected to trainer!');
+          // toast.success('Connected to trainer!');
         }
       };
 
@@ -553,17 +592,17 @@ const LearnerSession = () => {
                     {remoteStream ? '● Connected' : '○ Waiting...'}
                   </span>
                 </div>
-                <div className="relative">
+                <div className="relative h-[200px] overflow-hidden rounded-lg bg-black">
                   <video
                     ref={remoteVideoRef}
                     autoPlay
                     playsInline
                     muted={false}
                     className="session-video"
-                    style={{ display: remoteStream ? 'block' : 'none' }}
+                    style={{ display: remoteStream ? 'block' : 'none', width: '100%', height: '100%' }}
                   />
                   {!remoteStream && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-white text-base font-medium h-[200px] rounded-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-white text-base font-medium rounded-lg">
                       Waiting for trainer to join...
                     </div>
                   )}
@@ -604,13 +643,13 @@ const LearnerSession = () => {
               <div className="bg-white border border-blue-300 rounded p-3">
                 <div className="text-xs text-gray-600 mb-1">Prompt Level</div>
                 <div className="text-lg font-bold text-blue-600">
-                  {promptMeter ? promptMeter : '—'}
+                  {promptMeter ?? 0}
                 </div>
               </div>
               <div className="bg-white border border-green-300 rounded p-3">
                 <div className="text-xs text-gray-600 mb-1">Reinforcement Level</div>
                 <div className="text-lg font-bold text-green-600">
-                  {reinforcementMeter ? reinforcementMeter : '—'}
+                  {reinforcementMeter ?? 0}
                 </div>
               </div>
             </div>
@@ -702,6 +741,8 @@ const LearnerSession = () => {
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
+                stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
+                stopwatchIsRunning={syncedIsRunning}
               />
             </div>
           </div>
@@ -709,10 +750,10 @@ const LearnerSession = () => {
           {/* Virtual Keyboard - Positioned below whiteboard */}
           {showKeyboard && (
             <div
-              className="bg-gradient-to-b from-pink-100 via-purple-100 to-blue-100 border-4 border-pink-300 rounded-3xl p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none"
+              className="bg-gradient-to-b from-sky-100 via-blue-100 to-cyan-100 border-4 border-sky-300 rounded-3xl p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none"
               style={{
                 touchAction: 'none',
-                boxShadow: '0 10px 30px rgba(236, 72, 153, 0.15)'
+                boxShadow: '0 10px 30px rgba(14, 165, 233, 0.15)'
               }}
               onMouseDown={handleKeyboardMouseDown}
               onTouchStart={handleKeyboardMouseDown}
@@ -720,7 +761,7 @@ const LearnerSession = () => {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">🎹</span>
-                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-xl font-bold cursor-move">
+                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 text-xl font-bold cursor-move">
                     Magic Keyboard
                   </h4>
                 </div>
@@ -728,14 +769,14 @@ const LearnerSession = () => {
 
               {/* Text Display and Send Button */}
               <div className="mb-5 flex gap-3 items-stretch">
-                <div className="flex-1 bg-white border-3 border-pink-200 rounded-2xl px-4 py-3 shadow-sm">
+                <div className="flex-1 bg-white border-3 border-sky-200 rounded-2xl px-4 py-3 shadow-sm">
                   <p className="text-base text-gray-700 font-medium whitespace-pre-wrap break-words min-h-[44px] flex items-center">
                     {keyboardText || <span className="text-gray-400 italic">✨ Start typing...</span>}
                   </p>
                 </div>
                 <button
                   onClick={handleSendText}
-                  className="bg-gradient-to-br from-pink-400 to-pink-500 hover:from-pink-500 hover:to-pink-600 text-white px-6 py-3 rounded-2xl font-bold text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+                  className="bg-gradient-to-br from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white px-6 py-3 rounded-2xl font-bold text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
                 >
                   ✨ Send
                 </button>
@@ -749,7 +790,7 @@ const LearnerSession = () => {
                     {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-pink-300 to-pink-400 hover:from-pink-400 hover:to-pink-500 text-white font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -766,7 +807,7 @@ const LearnerSession = () => {
                     {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-purple-300 to-purple-400 hover:from-purple-400 hover:to-purple-500 text-white font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -783,7 +824,7 @@ const LearnerSession = () => {
                     {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-blue-300 to-blue-400 hover:from-blue-400 hover:to-blue-500 text-white font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -798,7 +839,7 @@ const LearnerSession = () => {
                   {/* Bottom Row - Space and Backspace */}
                   <div className="grid grid-cols-12 gap-2 mt-2">
                     <button
-                      className="col-span-8 bg-gradient-to-br from-cyan-300 to-cyan-400 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                      className="col-span-8 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
                       onClick={() => handleKeyboardKeyPress('SPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -808,7 +849,7 @@ const LearnerSession = () => {
                       🌟 SPACE 🌟
                     </button>
                     <button
-                      className="col-span-4 bg-gradient-to-br from-amber-300 to-amber-400 hover:from-amber-400 hover:to-amber-500 text-white font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                      className="col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
                       onClick={() => handleKeyboardKeyPress('BACKSPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();

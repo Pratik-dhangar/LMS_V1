@@ -13,11 +13,13 @@ import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
-import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
+import WhiteboardToolsService from '../../api/services/whiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
+import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import useMessages from '../../hooks/useMessages';
 import useVoiceInput from '../../hooks/useVoiceInput';
+import useStopwatch from '../../hooks/useStopwatch';
 import VideoSection from './VideoSection';
 import WhiteboardSection from './WhiteboardSection';
 import LearningProgramSidebar from './LearningProgramSidebar';
@@ -123,6 +125,7 @@ const TrainerSession = () => {
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
+  const [selectedProgramId, setSelectedProgramId] = useState(null); // Track which program is checked
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Whiteboard state and interactive modes
@@ -162,6 +165,35 @@ const TrainerSession = () => {
     drag: false,      // Can drag items on canvas
     keyboard: false   // Can use virtual keyboard
   });
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Stopwatch hook for session timing
+  // 🔸 How it works: manages stopwatch state with start/pause/resume/stop/reset operations
+  // -----------------------------------------------------------
+  const stopwatch = useStopwatch();
+  const lastSyncTimeRef = useRef(0);
+  const [showStopwatch, setShowStopwatch] = useState(false);
+
+  // Send stopwatch updates to learner via whiteboard service (throttled to 100ms)
+  useEffect(() => {
+    if (!whiteboardService || stopwatch.elapsedTime < 0) return;
+
+    // Check if WebSocket is ready before sending
+    if (!whiteboardService.ws || whiteboardService.ws.readyState !== WebSocket.OPEN) {
+      return; // Skip sending if WebSocket is not ready
+    }
+
+    const now = Date.now();
+    // Only send if 100ms has passed since last send
+    if (now - lastSyncTimeRef.current >= 100) {
+      lastSyncTimeRef.current = now;
+      whiteboardService.send('stopwatch_sync', {
+        elapsedTime: stopwatch.elapsedTime,
+        isRunning: stopwatch.isRunning
+      });
+    }
+  }, [whiteboardService, stopwatch.elapsedTime, stopwatch.isRunning]);
+
   const [selectedItemId, setSelectedItemId] = useState(null); // Track which item is selected by learner
 
   // -----------------------------------------------------------
@@ -250,10 +282,16 @@ const TrainerSession = () => {
         return;
       }
 
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-      setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      const totalSeconds = Math.floor(distance / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) {
+        // Format as H:MM:SS for long sessions
+        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      } else {
+        setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -643,6 +681,34 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Handle program checkbox selection - only one can be selected at a time
+  // 🔸 How it works: When trainer checks a program, uncheck the previous one and reset meter values to 0
+  // -----------------------------------------------------------
+  const handleProgramCheck = (programId) => {
+    // If the same program is clicked, uncheck it
+    if (selectedProgramId === programId) {
+      setSelectedProgramId(null);
+      setSelectedPromptLevel(null);
+      setSelectedReinforcementLevel(null);
+      // Send reset values (0) to learner
+      if (webRTC) {
+        webRTC.sendPromptMeter(0);
+        webRTC.sendReinforcementMeter(0);
+      }
+    } else {
+      // If a different program is checked, select the new one and reset meters to 0
+      setSelectedProgramId(programId);
+      setSelectedPromptLevel(null);
+      setSelectedReinforcementLevel(null);
+      // Send reset values (0) to learner
+      if (webRTC) {
+        webRTC.sendPromptMeter(0);
+        webRTC.sendReinforcementMeter(0);
+      }
+    }
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Compute filtered learning goals based on search term
   // 🔸 How it works: performs case-insensitive includes check on sessionInfo.learning_goals
   // -----------------------------------------------------------
@@ -835,67 +901,6 @@ const TrainerSession = () => {
         return;
       }
 
-      // ---------------------- PAUSE ----------------------
-      case '⏸️ Pause': {
-        if (toolsService) {
-          const isPausedNow = toolsService.togglePause();
-          const label = 'Pause';
-          setIsPaused(isPausedNow);
-          setActiveIcons(prev => ({ ...prev, [label]: isPausedNow }));
-        }
-        return;
-      }
-
-      // ---------------------- FREEZE ----------------------
-      case '❄️ Freeze': {
-        if (toolsService) {
-          const isFrozenNow = toolsService.toggleFreeze();
-          const label = 'Freeze';
-          setIsFrozen(isFrozenNow);
-          setActiveIcons(prev => ({ ...prev, [label]: isFrozenNow }));
-        }
-        return;
-      }
-
-      // ---------------------- CLEAR ----------------------
-      case '🗑️ Clear': {
-        if (toolsService) {
-          toolsService.clearWhiteboard();
-          const label = 'Clear';
-          setActiveIcons(prev => ({ ...prev, [label]: true }));
-          toast.info('Whiteboard cleared completely');
-          // Clear all canvas items and buckets
-          setCanvasItems([]);
-          setBuckets([]);
-          // Clear canvas for both trainer and learner
-          setClearCanvasTrigger(prev => prev + 1);
-          setRedrawCanvasTrigger(prev => prev + 1);
-          // Send clear event to learner (will also clear video, pen strokes, items, and buckets)
-          if (whiteboardService) {
-            whiteboardService.send('clear_canvas', {
-              timestamp: Date.now()
-            });
-          }
-        }
-        return;
-      }
-
-      // ---------------------- SHUFFLE ----------------------
-      case '🔀 Shuffle': {
-        if (toolsService && canvasItems.length > 0) {
-          const canvasEl = document.querySelector('.whiteboard canvas');
-          if (canvasEl) {
-            const rect = canvasEl.getBoundingClientRect();
-            const shuffledItems = toolsService.shuffleItems(canvasItems, rect.width, rect.height);
-            setCanvasItems(shuffledItems);
-            const label = 'Shuffle';
-            setActiveIcons(prev => ({ ...prev, [label]: true }));
-          }
-        } else {
-          toast.warning('No items to shuffle');
-        }
-        return;
-      }
 
       // ---------------------- TIMER ----------------------
       case '⏱️ Timer': {
@@ -945,119 +950,49 @@ const TrainerSession = () => {
       // ---------------------- REACTIONS / FEEDBACK ----------------------
       case '👍 Good Job!': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('👍 Good Job! reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '👍',
-            label: 'Good Job!',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('👍 Good Job!');
         }
         break;
       }
 
       case '🌟 Wow!': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('🌟 Wow! reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '🌟',
-            label: 'Wow!',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('🌟 Wow!');
         }
         break;
       }
 
       case '💪 Doing Well': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('💪 Doing Well reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '💪',
-            label: 'Doing Well',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('💪 Doing Well');
         }
         break;
       }
 
       case '🙏 Thank You': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('🙏 Thank You reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '🙏',
-            label: 'Thank You',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('🙏 Thank You');
         }
         break;
       }
 
       case '❤️ Loved it': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('❤️ Loved it reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '❤️',
-            label: 'Loved it',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('❤️ Loved it');
         }
         break;
       }
 
-      case '📈 Can Better': {
-        if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.info('📈 Can Better feedback sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '📈',
-            label: 'Can Better',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
-        }
-        break;
-      }
 
       case '😌 Relax': {
         if (toolsService) {
-          const reactionId = toolsService.addReaction(tool);
-          toast.success('😌 Relax reaction sent');
-          newItem = {
-            id: reactionId,
-            type: 'reaction',
-            emoji: '😌',
-            label: 'Relax',
-            x: centerX + Math.random() * 100 - 50,
-            y: centerY + Math.random() * 100 - 50,
-            ttl: 3000
-          };
+          toolsService.addReaction(tool);
+          toast.success('😌 Relax');
         }
         break;
       }
@@ -1130,12 +1065,12 @@ const TrainerSession = () => {
       // ---------------------- WAIT OVERLAY ----------------------
       case '⏳ Wait': {
         if (toolsService) {
-          const waitState = toolsService.showWaitOverlay();
-          toast.info('⏳ Wait overlay shown to learner');
+          toolsService.showWaitOverlay();
+          toast.info('⏳ Wait');
           const label = 'Wait';
           setActiveIcons(prev => ({ ...prev, [label]: true }));
         }
-        return;
+        break;
       }
 
       // ---------------------- DEFAULT ----------------------
@@ -1152,14 +1087,14 @@ const TrainerSession = () => {
       setCanvasItems(prev => {
         const next = [...prev, newItem];
         // broadcast full item to learners (if applicable)
-        if (['emoji', 'timer', 'stopwatch', 'overlay'].includes(newItem.type)) {
+        if (['emoji', 'timer', 'stopwatch', 'overlay', 'reaction', 'animation'].includes(newItem.type)) {
           emit('sendItemUpdate', newItem);
         }
         return next;
       });
 
-      // auto-remove short-lived emoji items if ttl provided
-      if (newItem.ttl && newItem.ttl > 0 && newItem.type === 'emoji') {
+      // auto-remove short-lived items if ttl provided
+      if (newItem.ttl && newItem.ttl > 0 && ['emoji', 'reaction', 'animation'].includes(newItem.type)) {
         setTimeout(() => {
           setCanvasItems(prev => prev.filter(i => i.id !== newItem.id));
           emit('sendItemRemove', { id: newItem.id });
@@ -1270,7 +1205,12 @@ const TrainerSession = () => {
               {filteredLearningGoals.length > 0 ? (
                 filteredLearningGoals.map((goal, index) => (
                   <div key={goal.id ?? index} className="flex items-center gap-2 p-2 bg-white border border-gray-300 rounded my-1 text-xs">
-                    <input type="checkbox" className="w-4 h-4" />
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 cursor-pointer"
+                      checked={selectedProgramId === goal.id}
+                      onChange={() => handleProgramCheck(goal.id)}
+                    />
                     <div className="flex-1">{index + 1}. {goal.goal}</div>
                     <div className="bg-gray-200 px-2 py-1 rounded font-semibold min-w-[30px] text-center cursor-pointer" title="Click to record prompt level">—</div>
                   </div>
@@ -1535,6 +1475,8 @@ const TrainerSession = () => {
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
+                stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
+                stopwatchIsRunning={stopwatch.isRunning}
               />
             </div>
           </div>
@@ -1637,31 +1579,34 @@ const TrainerSession = () => {
                 })}
               </div>
 
-              <div className="flex items-center justify-between w-full mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-emerald-400 to-green-500 text-white px-3 py-1 rounded shadow-sm flex items-center gap-2">
-                    <span className="text-sm">⏰</span>
-                    <div className="text-xs font-semibold">Timers</div>
+
+              <div className="w-full mb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-3 py-2 rounded shadow-md flex items-center gap-3">
+                      <span className="text-lg">⏲️</span>
+                      <div>
+                        <div className="text-sm font-semibold">Timers</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowStopwatch(prev => !prev)}
+                  className={`inline-flex items-center gap-2 my-2 px-3 py-2 rounded text-sm font-semibold ${showStopwatch ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`}
+                  aria-expanded={showStopwatch}
+                  aria-controls="stopwatch-panel"
+                  title="Toggle stopwatch panel"
+                >
+                  <span>⏲️</span>
+                  <span className="hidden sm:inline">Stopwatch</span>
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1 w-full mb-3">
-                {[
-                  { label: 'Timer', icon: '⏱️', title: 'Add countdown timer' },
-                  { label: 'Stopwatch', icon: '⏲️', title: 'Add stopwatch' }
-                ].map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                    className={`${!!activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                    title={t.title}
-                  >
-                    <span>{t.icon}</span>
-                    <span>{t.label}</span>
-                  </button>
-                ))}
-              </div>
+
+
 
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded shadow-sm flex items-center gap-2">
@@ -1675,7 +1620,6 @@ const TrainerSession = () => {
                   { label: 'Doing Well', icon: '💪' },
                   { label: 'Thank You', icon: '🙏' },
                   { label: 'Loved it', icon: '❤️' },
-                  { label: 'Can Better', icon: '📈' },
                   { label: 'Relax', icon: '😌' },
                   { label: 'Bubbles', icon: '🫧' },
                   { label: 'Smileys', icon: '😊' },
@@ -1765,7 +1709,7 @@ const TrainerSession = () => {
         </div>
 
         {/* Right Sidebar */}
-        <div className="flex-1 min-w-0 w-full lg:w-auto">
+        <div className="flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4">
           <LearningContentSidebar
             learningContentSearch={learningContentSearch}
             handleLearningContentSearch={handleLearningContentSearch}
@@ -1778,6 +1722,27 @@ const TrainerSession = () => {
               whiteboardService?.send('item_remove', { id: itemId });
             }}
           />
+
+          {/* Stopwatch toggle and (conditional) display */}
+          <div className="w-full">
+
+            {showStopwatch && (
+              <div id="stopwatch-panel">
+                <StopwatchDisplay
+                  formattedTime={stopwatch.formattedTime}
+                  isRunning={stopwatch.isRunning}
+                  onStart={stopwatch.start}
+                  onPause={stopwatch.pause}
+                  onResume={stopwatch.resume}
+                  onReset={stopwatch.reset}
+                  onSetTime={stopwatch.setTime}
+                  showControls={true}
+                  size="md"
+                  variant="standard"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

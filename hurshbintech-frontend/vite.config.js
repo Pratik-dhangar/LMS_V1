@@ -1,18 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
+
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      // Proxy all requests starting with /api to your FastAPI backend
-      '/api': {
-        target: 'http://127.0.0.1:8000', // Replace with your FastAPI server address
-        changeOrigin: true,
-        secure: false, // Set to true for HTTPS backends
-        // rewrite: (path) => path.replace(/^\/api/, '') // Optional: remove /api prefix
-      },
-    },
-  },
+   server: {
+    host: '0.0.0.0',
+    port: 3000,
+    https: process.env.ENVIRONMENT === 'production' ? {
+      key: fs.readFileSync('/app/certs/key.pem'),
+      cert: fs.readFileSync('/app/certs/cert.pem')
+    } : false
+  }
 })

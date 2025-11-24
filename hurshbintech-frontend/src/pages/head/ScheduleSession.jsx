@@ -24,7 +24,7 @@ const ScheduleSession = () => {
     trainer_id: '',
     learner_id: '',
     scheduled_date: '',
-    duration: 30,
+    duration: '',
     content_ids: [],
     goal_ids: []
   });
@@ -109,7 +109,7 @@ const ScheduleSession = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.trainer_id || !formData.learner_id || !formData.scheduled_date) {
+    if (!formData.title || !formData.trainer_id || !formData.learner_id || !formData.scheduled_date || !formData.duration) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -141,7 +141,7 @@ const ScheduleSession = () => {
     } catch (error) {
       if (error.response?.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
-          const errorMessages = error.response.data.detail.map(err => 
+          const errorMessages = error.response.data.detail.map(err =>
             `${err.loc.join('.')}: ${err.msg}`
           ).join(', ');
           toast.error(`Validation error: ${errorMessages}`);
@@ -177,29 +177,29 @@ const ScheduleSession = () => {
   };
 
   const handleTrainerSelect = (trainerId) => {
-    setFormData({...formData, trainer_id: trainerId});
-    setShowDropdown({...showDropdown, trainer: false});
-    setSearchTerm({...searchTerm, trainer: ''});
+    setFormData({ ...formData, trainer_id: trainerId });
+    setShowDropdown({ ...showDropdown, trainer: false });
+    setSearchTerm({ ...searchTerm, trainer: '' });
   };
 
   const handleLearnerSelect = (learnerId) => {
-    setFormData({...formData, learner_id: learnerId});
-    setShowDropdown({...showDropdown, learner: false});
-    setSearchTerm({...searchTerm, learner: ''});
+    setFormData({ ...formData, learner_id: learnerId });
+    setShowDropdown({ ...showDropdown, learner: false });
+    setSearchTerm({ ...searchTerm, learner: '' });
   };
 
 
 
-// State to hold the unconfirmed date/time from the input
-const [tempDate, setTempDate] = useState(formData.scheduled_date || '');
+  // State to hold the unconfirmed date/time from the input
+  const [tempDate, setTempDate] = useState(formData.scheduled_date || '');
 
-// Handler for the "Set" button
-const handleSetDate = () => {
-  // Commit the temporary date to the main form state
-  setFormData({...formData, scheduled_date: tempDate});
-  // You could also add a console.log or alert here for confirmation
-  console.log("Date set:", tempDate);
-};
+  // Handler for the "Set" button
+  const handleSetDate = () => {
+    // Commit the temporary date to the main form state
+    setFormData({ ...formData, scheduled_date: tempDate });
+    // You could also add a console.log or alert here for confirmation
+    console.log("Date set:", tempDate);
+  };
 
 
 
@@ -234,7 +234,7 @@ const handleSetDate = () => {
               <input
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="e.g., Introduction to Fruits"
                 required
@@ -246,7 +246,7 @@ const handleSetDate = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 rows="3"
                 placeholder="Session description (optional)"
@@ -264,10 +264,10 @@ const handleSetDate = () => {
                   placeholder={formData.trainer_id ? getSelectedTrainerName() : "Search trainer by name or ID..."}
                   value={searchTerm.trainer}
                   onChange={(e) => {
-                    setSearchTerm({...searchTerm, trainer: e.target.value});
-                    setShowDropdown({...showDropdown, trainer: true});
+                    setSearchTerm({ ...searchTerm, trainer: e.target.value });
+                    setShowDropdown({ ...showDropdown, trainer: true });
                   }}
-                  onFocus={() => setShowDropdown({...showDropdown, trainer: true})}
+                  onFocus={() => setShowDropdown({ ...showDropdown, trainer: true })}
                   className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   required={!formData.trainer_id}
                 />
@@ -278,9 +278,8 @@ const handleSetDate = () => {
                         <div
                           key={trainer.id}
                           onClick={() => handleTrainerSelect(trainer.user_id)}
-                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${
-                            formData.trainer_id === trainer.user_id ? 'bg-blue-100 font-medium' : ''
-                          }`}
+                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${formData.trainer_id === trainer.user_id ? 'bg-blue-100 font-medium' : ''
+                            }`}
                         >
                           {trainer.name} <span className="text-gray-500 text-sm">(ID: {trainer.user_id})</span>
                         </div>
@@ -294,8 +293,8 @@ const handleSetDate = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({...formData, trainer_id: ''});
-                      setSearchTerm({...searchTerm, trainer: ''});
+                      setFormData({ ...formData, trainer_id: '' });
+                      setSearchTerm({ ...searchTerm, trainer: '' });
                     }}
                     className="absolute right-2 top-9 text-gray-400 hover:text-gray-600"
                   >
@@ -314,10 +313,10 @@ const handleSetDate = () => {
                   placeholder={formData.learner_id ? getSelectedLearnerName() : "Search learner by name or ID..."}
                   value={searchTerm.learner}
                   onChange={(e) => {
-                    setSearchTerm({...searchTerm, learner: e.target.value});
-                    setShowDropdown({...showDropdown, learner: true});
+                    setSearchTerm({ ...searchTerm, learner: e.target.value });
+                    setShowDropdown({ ...showDropdown, learner: true });
                   }}
-                  onFocus={() => setShowDropdown({...showDropdown, learner: true})}
+                  onFocus={() => setShowDropdown({ ...showDropdown, learner: true })}
                   className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   required={!formData.learner_id}
                 />
@@ -328,9 +327,8 @@ const handleSetDate = () => {
                         <div
                           key={learner.id}
                           onClick={() => handleLearnerSelect(learner.user_id)}
-                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${
-                            formData.learner_id === learner.user_id ? 'bg-blue-100 font-medium' : ''
-                          }`}
+                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${formData.learner_id === learner.user_id ? 'bg-blue-100 font-medium' : ''
+                            }`}
                         >
                           {learner.name} <span className="text-gray-500 text-sm">(ID: {learner.user_id})</span>
                         </div>
@@ -344,8 +342,8 @@ const handleSetDate = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({...formData, learner_id: ''});
-                      setSearchTerm({...searchTerm, learner: ''});
+                      setFormData({ ...formData, learner_id: '' });
+                      setSearchTerm({ ...searchTerm, learner: '' });
                     }}
                     className="absolute right-2 top-9 text-gray-400 hover:text-gray-600"
                   >
@@ -371,36 +369,36 @@ const handleSetDate = () => {
               </div> */}
 
 
-                    <div>
-  <label className="block text-sm font-medium mb-2">
-    Date & Time <span className="text-red-500">*</span>
-  </label>
-  
-  {/* Flex container to hold input and button */}
-  <div className="flex items-center gap-2">
-    <input
-      type="datetime-local"
-      value={tempDate}  
-      onChange={(e) => setTempDate(e.target.value)} 
-      className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      required
-    />
-    <button
-      type="button" // Important: prevents form submission
-      onClick={handleSetDate}
-      className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 whitespace-nowrap"
-    >
-      Set
-    </button>
-  </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Date & Time <span className="text-red-500">*</span>
+                </label>
 
-  {/* Optional: Show the user what date is currently *confirmed* */}
-  {formData.scheduled_date && (
-    <p className="text-sm text-gray-600 mt-2">
-      Confirmed time: {new Date(formData.scheduled_date).toLocaleString()}
-    </p>
-  )}
-</div>
+                {/* Flex container to hold input and button */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={tempDate}
+                    onChange={(e) => setTempDate(e.target.value)}
+                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                  <button
+                    type="button" // Important: prevents form submission
+                    onClick={handleSetDate}
+                    className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 whitespace-nowrap"
+                  >
+                    Set
+                  </button>
+                </div>
+
+                {/* Optional: Show the user what date is currently *confirmed* */}
+                {formData.scheduled_date && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Confirmed time: {new Date(formData.scheduled_date).toLocaleString()}
+                  </p>
+                )}
+              </div>
 
 
 
@@ -410,16 +408,20 @@ const handleSetDate = () => {
                 <label className="block text-sm font-medium mb-2">
                   Duration (minutes) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   value={formData.duration}
-                  onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  min="5"
-                  max="60"
-                  step="5"
                   required
-                />
+                >
+                  <option value="">-- Select Duration --</option>
+                  <option value="30">30 minutes</option>
+                  <option value="60">60 minutes</option>
+                  <option value="90">90 minutes</option>
+                  <option value="120">120 minutes</option>
+                  <option value="150">150 minutes</option>
+                  <option value="180">180 minutes</option>
+                </select>
               </div>
             </div>
 
@@ -430,7 +432,7 @@ const handleSetDate = () => {
                 Select Learning Goals (Optional)
               </label>
               <p className="text-sm text-gray-500 mb-3">Choose learning goals for this session</p>
-             
+
               {learningGoals.length === 0 ? (
                 <p className="text-gray-500 text-center py-4 border rounded">No learning goals available</p>
               ) : (
@@ -451,18 +453,17 @@ const handleSetDate = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {learningGoals.map((goal) => (
-                        <tr 
+                        <tr
                           key={goal.id}
                           onClick={() => handleGoalToggle(goal.id)}
-                          className={`cursor-pointer hover:bg-gray-50 transition-colors ${
-                            formData.goal_ids.includes(goal.id) ? 'bg-blue-50' : ''
-                          }`}
+                          className={`cursor-pointer hover:bg-gray-50 transition-colors ${formData.goal_ids.includes(goal.id) ? 'bg-blue-50' : ''
+                            }`}
                         >
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={formData.goal_ids.includes(goal.id)}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="h-4 w-4 text-blue-600 rounded"
                             />
                           </td>
@@ -489,7 +490,7 @@ const handleSetDate = () => {
                 Select Learning Content (Optional)
               </label>
               <p className="text-sm text-gray-500 mb-3">Choose content that will be available during the session</p>
-              
+
               {contents.length === 0 ? (
                 <p className="text-gray-500 text-center py-4 border rounded">No learning content available</p>
               ) : (
@@ -499,7 +500,7 @@ const handleSetDate = () => {
                       const icons = { image: '🖼️', pdf: '📄', video: '🎥', audio: '🎵', document: '📝' };
                       return icons[type] || '📁';
                     };
-                    
+
                     // Function to render thumbnail or icon
                     const renderThumbnail = () => {
                       if (content.content_type === 'image' || content.thumbnail_url) {
@@ -529,20 +530,19 @@ const handleSetDate = () => {
                         </div>
                       );
                     };
-                    
+
                     return (
                       <div
                         key={content.id}
                         onClick={() => handleContentToggle(content.id)}
-                        className={`p-2 border rounded cursor-pointer transition-all relative ${
-                          formData.content_ids.includes(content.id)
-                            ? 'border-blue-500 bg-blue-50 shadow-md'
-                            : 'border-gray-300 hover:border-blue-300 hover:shadow'
-                        }`}
+                        className={`p-2 border rounded cursor-pointer transition-all relative ${formData.content_ids.includes(content.id)
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-300 hover:border-blue-300 hover:shadow'
+                          }`}
                       >
                         {/* Thumbnail */}
                         {renderThumbnail()}
-                        
+
                         {/* Content Info */}
                         <div className="mt-1.5">
                           <h4 className="font-medium text-xs line-clamp-1" title={content.title}>
@@ -552,13 +552,13 @@ const handleSetDate = () => {
                             {content.content_type}
                           </p>
                         </div>
-                        
+
                         {/* Checkbox */}
                         <div className="absolute top-1 right-1">
                           <input
                             type="checkbox"
                             checked={formData.content_ids.includes(content.id)}
-                            onChange={() => {}}
+                            onChange={() => { }}
                             className="h-3.5 w-3.5 text-blue-600 rounded"
                           />
                         </div>

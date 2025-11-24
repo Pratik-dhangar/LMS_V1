@@ -12,6 +12,7 @@ const ManageSessions = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
@@ -44,21 +45,22 @@ const ManageSessions = () => {
 
   const filteredSessions = sessions.filter(session => {
     const matchesFilter = filter === 'all' || session.status === filter;
-    const matchesSearch = !searchTerm || 
-      session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm ||
+      session.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.trainer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.learner?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+      session.learner_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDate = !dateFilter || (session.scheduled_date && session.scheduled_date.slice(0, 10) === dateFilter);
+    return matchesFilter && matchesSearch && matchesDate;
   });
 
   return (
     <div className="  flex flex-col min-h-screen bg-gray-50">
       <Navbar />
-       <main className="flex-1">
+      <main className="flex-1">
         <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
           {/* Header */}
           <div className="mb-8">
-            
+
             <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
               Manage Training Sessions
             </h1>
@@ -81,12 +83,32 @@ const ManageSessions = () => {
               Schedule Session
             </button>
           </div> */}
-           <div className="mb-8 flex justify-center items-center gap-4">
-            
-            <SearchBar 
-              onSearch={setSearchTerm} 
-              placeholder="Search by title, trainer, or learner..." 
+          <div className="mb-8 flex flex-wrap justify-center items-center gap-4">
+
+            <SearchBar
+              onSearch={setSearchTerm}
+              placeholder="Search by title, trainer, or learner..."
             />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Filter by date"
+                title="Filter sessions by date"
+              />
+              {dateFilter && (
+                <button
+                  type="button"
+                  onClick={() => setDateFilter('')}
+                  className="px-3 py-2 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                  title="Clear date filter"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button
               onClick={() => navigate('/head/schedule-session')}
               className="bg-[#27ae60] hover:bg-[#229954] text-white py-3 px-5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
@@ -100,43 +122,39 @@ const ManageSessions = () => {
 
           {/* Filters */}
           <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded font-medium ${
-                  filter === 'all' 
-                    ? 'bg-[#34495e] text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded font-medium ${filter === 'all'
+                ? 'bg-[#34495e] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
-              >
-                All ({sessions.length})
-              </button>
+            >
+              All ({sessions.length})
+            </button>
             <button
               onClick={() => setFilter('scheduled')}
-              className={`px-4 py-2 rounded font-medium ${
-                filter === 'scheduled' 
-                  ? 'bg-[#34495e] text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded font-medium ${filter === 'scheduled'
+                ? 'bg-[#34495e] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Scheduled ({sessions.filter(s => s.status === 'scheduled').length})
             </button>
             <button
               onClick={() => setFilter('active')}
-              className={`px-4 py-2 rounded font-medium ${
-                filter === 'active' 
-                  ? 'bg-[#34495e] text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded font-medium ${filter === 'active'
+                ? 'bg-[#34495e] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Active ({sessions.filter(s => s.status === 'active').length})
             </button>
             <button
               onClick={() => setFilter('ended')}
-              className={`px-4 py-2 rounded font-medium ${
-                filter === 'ended' 
-                  ? 'bg-[#34495e] text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded font-medium ${filter === 'ended'
+                ? 'bg-[#34495e] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Completed ({sessions.filter(s => s.status === 'ended').length})
             </button>
@@ -192,7 +210,7 @@ const ManageSessions = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            { session.trainer_name || 'N/A'}
+                            {session.trainer_name || 'N/A'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -202,14 +220,14 @@ const ManageSessions = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {session.scheduled_date 
+                            {session.scheduled_date
                               ? new Date(session.scheduled_date).toLocaleString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
                               : 'N/A'}
                           </div>
                         </td>
@@ -233,10 +251,10 @@ const ManageSessions = () => {
                                 {session.learning_contents.length} Content(s)
                               </span>
                             )}
-                            {(!session.learning_goals || session.learning_goals.length === 0) && 
-                             (!session.learning_contents || session.learning_contents.length === 0) && (
-                              <span className="text-xs text-gray-400">No materials</span>
-                            )}
+                            {(!session.learning_goals || session.learning_goals.length === 0) &&
+                              (!session.learning_contents || session.learning_contents.length === 0) && (
+                                <span className="text-xs text-gray-400">No materials</span>
+                              )}
                           </div>
                         </td>
                       </tr>
@@ -247,12 +265,12 @@ const ManageSessions = () => {
             )}
           </div>
         </div>
-      
-      <Footer />
-    </main>
+
+        <Footer />
+      </main>
     </div>
 
-  
+
   );
 };
 

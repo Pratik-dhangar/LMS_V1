@@ -3,10 +3,11 @@
 /* Video element styles */
 .session-video {
   width: 100%;
-  height: 200px;
+  height: 100%;
   background: #000;
   border-radius: 0.5rem;
   object-fit: cover;
+  display: block;
 }
 
 /* Loader animation */
@@ -20,7 +21,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Hover transitions for buttons and items */
