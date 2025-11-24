@@ -10,7 +10,7 @@ const useSpeechRecognition = (options = {}) => {
 
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [finalTranscript, setFinalTranscript] = useState('');
+  const [_finalTranscript, setFinalTranscript] = useState('');
   const finalTranscriptRef = useRef('');
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef(null);
@@ -52,8 +52,8 @@ const useSpeechRecognition = (options = {}) => {
       console.log('[useSpeechRecognition] onresult event, final:', final, 'interim:', interim);
 
       if (final) {
-        setFinalTranscript(prev => {
-          const nextFinal = prev + final;
+        setFinalTranscript(_prev => {
+          const nextFinal = _prev + final;
           finalTranscriptRef.current = nextFinal;
           // Update visible transcript to final results
           setTranscript(nextFinal);

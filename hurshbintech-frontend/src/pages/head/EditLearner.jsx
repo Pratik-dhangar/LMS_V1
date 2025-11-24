@@ -21,7 +21,7 @@ import SkillDevelopmentSection from '../../components/head/RegisterLearner/Skill
 const EditLearner = () => {
   const navigate = useNavigate();
   const { learnerId } = useParams();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   const [formData, setFormData] = useState({
     // Personal details
@@ -95,6 +95,7 @@ const EditLearner = () => {
 
   useEffect(() => {
     fetchLearnerData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [learnerId]);
 
   const fetchLearnerData = async () => {

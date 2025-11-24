@@ -19,7 +19,7 @@ import SearchBar from '../../components/common/SearchBar';
 // Manage Learners Component
 const ManageLearners = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // State management for learner data and filtering
   const [learners, setLearners] = useState([]);

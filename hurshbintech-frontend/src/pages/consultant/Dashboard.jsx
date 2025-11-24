@@ -4,7 +4,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 
 const ConsultantDashboard = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   const recentConnections = [
     { name: 'John Doe', type: 'Learner' },

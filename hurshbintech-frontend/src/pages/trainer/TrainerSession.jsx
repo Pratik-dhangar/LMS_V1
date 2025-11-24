@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
-import learningContentService from '../../api/services/learningContentService';
+// import learningContentService from '../../api/services/learningContentService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/whiteboardToolsService';
@@ -80,7 +80,7 @@ const TrainerSession = () => {
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [timeLeft, setTimeLeft] = useState(null);
-  const [timeExpired, setTimeExpired] = useState(false);
+  const [_timeExpired, setTimeExpired] = useState(false);
 
   // -----------------------------------------------------------  
   // 🔹 Purpose: Messages (chat) using custom hook
@@ -91,7 +91,7 @@ const TrainerSession = () => {
     currentMessage,
     setCurrentMessage,
     sendMessage,
-    handleKeyPress,
+    handleKeyPress: _handleKeyPress,
     addReceivedMessage
   } = useMessages(webRTC, 'trainer');
 
@@ -118,10 +118,10 @@ const TrainerSession = () => {
   }, [webRTC, addReceivedMessage]);
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState(sessionInfo?.notes || '');
-  const [additionalContentSearch, setAdditionalContentSearch] = useState('');
-  const [additionalContentResults, setAdditionalContentResults] = useState([]);
+  const [_additionalContentSearch, setAdditionalContentSearch] = useState('');
+  const [_additionalContentResults, setAdditionalContentResults] = useState([]);
   const [learningProgramSearch, setLearningProgramSearch] = useState('');
-  const [learningProgramSearchResults, setLearningProgramSearchResults] = useState([]);
+  const [_learningProgramSearchResults, setLearningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
@@ -132,12 +132,12 @@ const TrainerSession = () => {
   // 🔸 How it works: canvasItems holds objects placed on whiteboard; activeTool selects action modes.
   // -----------------------------------------------------------
   const [canvasItems, setCanvasItems] = useState([]);
-  const [activeTool, setActiveTool] = useState(null);
-  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [_activeTool, setActiveTool] = useState(null);
+  const [_keyboardMode, setKeyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [isPaused, setIsPaused] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(false);
+  const [isPaused] = useState(false);
+  const [isFrozen] = useState(false);
   // Keep simple active toggles for Canvas Controls, Timers and Emojis.
   // These no longer trigger business logic (timer/stopwatch/emoji overlay/shuffle/clear).
   const [activeIcons, setActiveIcons] = useState({});
@@ -318,6 +318,7 @@ const TrainerSession = () => {
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(checkInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionInfo, sessionId]);
 
   // Auto-hide info bar after 5 seconds
@@ -504,8 +505,11 @@ const TrainerSession = () => {
         console.log('[TrainerSession] Connection state:', state);
         setConnectionStatus(state);
         if (state === 'failed') {
-
+          // Handle failed connection
+          console.log('[TrainerSession] Connection failed');
         } else if (state === 'connected') {
+          // Handle successful connection
+          console.log('[TrainerSession] Connection successful');
         }
       };
 
@@ -567,7 +571,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Trainer leaves session without ending for all
   // 🔸 How it works: cleanup locally and navigate to trainer dashboard
   // -----------------------------------------------------------
-  const handleLeaveSession = () => {
+  const _handleLeaveSession = () => {
     if (window.confirm('Are you sure you want to leave this session?')) {
       cleanup();
       toast.info('Left session');
@@ -579,7 +583,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Auto-end session when time expires or other auto trigger
   // 🔸 How it works: calls API with reason, then cleans up and navigates away even on failure
   // -----------------------------------------------------------
-  const handleAutoEndSession = async () => {
+  const _handleAutoEndSession = async () => {
     try {
       await sessionService.endSession(sessionId, 'Session ended automatically due to time expiry');
       toast.info('Session ended automatically due to time expiry');
@@ -597,7 +601,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Handler when session is ended by other peer (e.g., learner)
   // 🔸 How it works: shows toast, cleans up local resources, navigates trainer away
   // -----------------------------------------------------------
-  const handleSessionEnded = (payload) => {
+  const _handleSessionEnded = (payload) => {
     console.log('Session ended by:', payload.ended_by);
     toast.info('Session has been ended');
     cleanup();
@@ -741,7 +745,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Search additional content (mocked for now)
   // 🔸 How it works: triggers when search length > 2 and sets mock results; replace with API call if available
   // -----------------------------------------------------------
-  const handleAdditionalContentSearch = async (e) => {
+  const _handleAdditionalContentSearch = async (e) => {
     const query = e.target.value;
     setAdditionalContentSearch(query);
     if (query.length > 2) {
@@ -863,7 +867,7 @@ const TrainerSession = () => {
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const now = Date.now();
+    const _now = Date.now();
     let newItem = null;
 
     // helper to emit via whiteboardService if available
@@ -880,7 +884,7 @@ const TrainerSession = () => {
       }
     };
 
-    const genId = () => Date.now() + Math.floor(Math.random() * 1000);
+    const _genId = () => Date.now() + Math.floor(Math.random() * 1000);
 
     switch (tool) {
       // ---------------------- SELECT (Learner Tool Access) ----------------------
@@ -1558,7 +1562,7 @@ const TrainerSession = () => {
                   { label: 'Clear', icon: '🗑️', title: 'Clear all items' },
                   { label: 'Shuffle', icon: '🔀', title: 'Shuffle items' }
                 ].map((t, i) => {
-                  const isPauseOrFreeze = t.label === 'Pause' || t.label === 'Freeze';
+                  const _isPauseOrFreeze = t.label === 'Pause' || t.label === 'Freeze';
                   // Active if Pause/Freeze are toggled OR if any of the icon-only tools are active
                   const isActive = (t.label === 'Pause' && isPaused) || (t.label === 'Freeze' && isFrozen) || !!activeIcons[t.label];
 
@@ -1630,7 +1634,7 @@ const TrainerSession = () => {
                   <button
                     key={i}
                     onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                    className={`${!!activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-2 py-2 rounded text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                    className={`${activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-2 py-2 rounded text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                     title={t.label}
                   >
                     <span>{t.icon}</span>

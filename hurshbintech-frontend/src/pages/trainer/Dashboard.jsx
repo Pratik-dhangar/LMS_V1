@@ -95,7 +95,7 @@ const TrainerDashboard = () => {
         const s = await sessionService.getTrainerStats();
         setStats((prev) => ({ ...prev, ...s }));
       }
-    } catch (err) {
+    } catch (_err) {
       console.debug("No trainerStats endpoint or failed - using derived stats");
     }
 
@@ -104,7 +104,7 @@ const TrainerDashboard = () => {
         const l = await sessionService.getTrainerLearners();
         setLearners(Array.isArray(l) ? l : []);
       }
-    } catch (err) {
+    } catch (_err) {
       console.debug("No getTrainerLearners endpoint or failed - using derived learners");
     }
 
@@ -117,10 +117,10 @@ const TrainerDashboard = () => {
         setMessages((prev) =>
           prev.length ? prev : [
             { id: "1", from: "Head", title: "Updated IIP for John Doe", time: "2 hours ago", body: "Please review before today's session." }
-          ]
+          ])
         );
       }
-    } catch (err) {
+    } catch (_err) {
       console.debug("No getTrainerMessages endpoint or failed - using fallback messages");
     }
 
@@ -137,7 +137,7 @@ const TrainerDashboard = () => {
           ]
         );
       }
-    } catch (err) {
+    } catch (_err) {
       console.debug("No getTrainerNotifications endpoint or failed - using fallback notifications");
     }
   };

@@ -19,7 +19,7 @@ import SearchBar from '../../components/common/SearchBar';
 // ManageTrainers Component
 const ManageTrainers = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // State management for trainer data and filtering
   const [trainers, setTrainers] = useState([]);

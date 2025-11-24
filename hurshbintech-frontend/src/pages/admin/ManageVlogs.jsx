@@ -24,7 +24,7 @@ const ManageVlogs = () => {
       const data = await vlogService.getAllVlogs();
       setVlogs(data);
       setError(null);
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to fetch vlogs. Please try again later.");
     } finally {
       setLoading(false);
