@@ -307,6 +307,9 @@ const Whiteboard = ({
     learnerSelectedItemId = null,
     textMessages = [],
     setTextMessages = () => { },
+    feedbackMessage = '',
+    floatingAnimations = [],
+    onAnimationPop = () => { },
     tool = 'pen',
     setTool = () => { },
     color = '#000000',
@@ -332,6 +335,13 @@ const Whiteboard = ({
 }) => {
     // Media control state management
     const mediaControl = useMediaControl();
+
+    // Debug log for feedback message
+    useEffect(() => {
+        if (feedbackMessage) {
+            console.log('[Whiteboard] Feedback message received:', feedbackMessage);
+        }
+    }, [feedbackMessage]);
 
     // Check if item is a video
     const isVideoItem = useCallback((item) => {
@@ -2230,6 +2240,76 @@ const Whiteboard = ({
                                         ⭐
                                     </div>
                                 ))}
+                            </div>
+                        ))}
+
+                        {/* FEEDBACK ANIMATION (Wait emoji) */}
+                        {canvasItems.filter(item => item.type === 'feedback_animation').map((animation) => (
+                            <div
+                                key={animation.id}
+                                style={{
+                                    position: 'absolute',
+                                    left: `${animation.x}px`,
+                                    top: `${animation.y}px`,
+                                    width: `${animation.width}px`,
+                                    height: `${animation.height}px`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '72px',
+                                    animation: 'pulse 1s ease-in-out infinite',
+                                    background: 'linear-gradient(135deg, rgba(255,240,245,0.8) 0%, rgba(240,255,250,0.8) 100%)',
+                                    borderRadius: '50%',
+                                    border: '4px solid rgba(255,255,255,0.8)',
+                                    boxShadow: '0 6px 20px rgba(220,200,255,0.35)',
+                                    zIndex: 100,
+                                    pointerEvents: 'none'
+                                }}
+                            >
+                                {animation.emoji}
+                            </div>
+                        ))}
+
+                        {/* FEEDBACK MESSAGE DISPLAY */}
+                        {feedbackMessage && (
+                            <div
+                                className="feedback-bubble"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                {/* Decorative confetti dots - friendly pastel colors */}
+                                <div className="confetti-container" aria-hidden="true">
+                                    <div className="confetti-dot confetti-1" />
+                                    <div className="confetti-dot confetti-2" />
+                                    <div className="confetti-dot confetti-3" />
+                                    <div className="confetti-dot confetti-4" />
+                                    <div className="confetti-dot confetti-5" />
+                                </div>
+                                <div className="feedback-text">{feedbackMessage}</div>
+                            </div>
+                        )}
+
+                        {/* FLOATING ANIMATIONS (Bubbles, Smileys, Balloons, Stars) */}
+                        {floatingAnimations.map((animation) => (
+                            <div
+                                key={animation.id}
+                                className={`floating-animation ${animation.type} ${animation.popped ? 'popped' : ''}`}
+                                style={{
+                                    left: `${animation.x}%`,
+                                    animationDelay: `${animation.startDelay}ms`,
+                                    animationDuration: `${animation.duration}ms`,
+                                    cursor: !isTrainer && !animation.popped ? 'pointer' : 'default',
+                                    pointerEvents: !isTrainer && !animation.popped ? 'auto' : 'none'
+                                }}
+                                onClick={() => {
+                                    if (!isTrainer && !animation.popped) {
+                                        onAnimationPop(animation.id);
+                                    }
+                                }}
+                            >
+                                {!animation.popped && (
+                                    <span className="floating-emoji emoji-fallback">{animation.emoji}</span>
+                                )}
                             </div>
                         ))}
                     </div>

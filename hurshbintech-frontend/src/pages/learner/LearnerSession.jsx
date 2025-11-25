@@ -41,9 +41,17 @@ const LearnerSession = () => {
   const [promptVisible, setPromptVisible] = useState(true); // Toggle prompt line visibility
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState(''); // Session notes from trainer
+  const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
+  const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
 
   // Use messages hook
   const { messages, currentMessage, setCurrentMessage, sendMessage, handleKeyPress, addReceivedMessage } = useMessages(webRTC, 'learner');
+
+  // Listen for feedback message state changes to debug
+  useEffect(() => {
+    if (!feedbackMessage) return;
+    console.log('[LearnerSession] feedbackMessage state changed to:', feedbackMessage);
+  }, [feedbackMessage]);
 
   // Set up WebRTC message callback
   useEffect(() => {
@@ -107,6 +115,24 @@ const LearnerSession = () => {
   const stopwatch = useStopwatch();
   const [syncedElapsedTime, setSyncedElapsedTime] = useState(0);
   const [syncedIsRunning, setSyncedIsRunning] = useState(false);
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle animation pop by learner
+  // 🔸 How it works: marks animation as popped and broadcasts to trainer/other learners
+  // -----------------------------------------------------------
+  const handleAnimationPop = (animationId) => {
+    setFloatingAnimations(prev =>
+      prev.map(a => a.id === animationId ? { ...a, popped: true } : a)
+    );
+
+    // Broadcast pop event to all participants
+    if (whiteboardService) {
+      whiteboardService.send('animation_popped', {
+        animationId: animationId,
+        timestamp: Date.now()
+      });
+    }
+  };
 
   // Listen for stopwatch updates from trainer
   useEffect(() => {
@@ -198,6 +224,40 @@ const LearnerSession = () => {
       setSessionNotes(typeof data === 'string' ? data : (data?.text || ''));
       // toast.info('📝 Session notes updated!');
     };
+
+    // Set up callback for feedback messages from trainer
+    whiteboardService.onFeedbackMessage = (data) => {
+      console.log('[LearnerSession] Feedback message received from trainer:', data);
+      setFeedbackMessage(data.message);
+
+      // Auto-hide feedback message after 3 seconds
+      setTimeout(() => {
+        setFeedbackMessage('');
+      }, 3000);
+    };
+
+    // Set up callback for floating animations from trainer
+    whiteboardService.onFloatingAnimations = (data) => {
+      console.log('[LearnerSession] Floating animations received from trainer:', data);
+      setFloatingAnimations(prev => [...prev, ...data.animations]);
+
+      // Auto-remove after 13 seconds (same as trainer)
+      setTimeout(() => {
+        setFloatingAnimations(prev =>
+          prev.filter(a => !data.animations.find(na => na.id === a.id))
+        );
+      }, 13000);
+    };
+
+    // Set up callback for animation pop events from other learners
+    whiteboardService.onAnimationPopped = (data) => {
+      console.log('[LearnerSession] Animation popped by another user:', data);
+      handleAnimationPop(data.animationId);
+    };
+
+    // Debug - log feedbackMessage state changes
+    // (we'll watch this console in the learner's browser to confirm receipt)
+    // useEffect can't be declared in this block; we add a top-level effect below
 
     // Set up callback for item removal from trainer
     whiteboardService.onItemRemove = (data) => {
@@ -721,6 +781,9 @@ const LearnerSession = () => {
                 toolAccess={toolAccess}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
+                feedbackMessage={feedbackMessage}
+                floatingAnimations={floatingAnimations}
+                onAnimationPop={handleAnimationPop}
                 // Canvas clear triggers
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
