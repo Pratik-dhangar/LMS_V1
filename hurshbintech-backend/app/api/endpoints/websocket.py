@@ -3,8 +3,34 @@ from typing import Dict, List, Optional
 import json
 import logging
 from datetime import datetime
+from app.core.config import settings
+from app.utils.s3_utils import S3Manager
 
 router = APIRouter()
+
+# Initialize S3 manager if using S3
+s3_manager = None
+if settings.USE_S3:
+    try:
+        s3_manager = S3Manager()
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to initialize S3Manager: {str(e)}")
+
+
+def get_presigned_url(file_url: str) -> str:
+    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    try:
+        if settings.USE_S3 and file_url and file_url.startswith("s3://"):
+            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
+            return presigned_url
+        else:
+            return file_url
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error generating presigned URL: {str(e)}")
+        return file_url
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -203,12 +229,12 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
         # Trainer opening media - acquire lock
         media_control_locks[session_id] = role  # Store trainer identifier (could be user_id or socket id)
         
-        # Store media state
+        # Store media state with presigned URL
         media_state = {
             "action": "open",
             "mediaId": data.get("mediaId"),
             "mediaType": data.get("mediaType"),
-            "mediaUrl": data.get("mediaUrl"),
+            "mediaUrl": get_presigned_url(data.get("mediaUrl")),
             "status": "paused",
             "currentTime": data.get("currentTime", 0),
             "currentPage": data.get("currentPage", 1),
