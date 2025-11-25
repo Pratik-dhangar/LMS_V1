@@ -22,6 +22,8 @@ media_control_locks: Dict[str, Optional[str]] = {}
 
 @router.websocket("/ws/rtc/{session_id}")
 async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
+    logger.info(f"[WebSocket] RTC connection attempt for session: {session_id}")
+    logger.info(f"[WebSocket] RTC connection from: {websocket.client}")
     await websocket.accept()
     logger.info(f"WebRTC WebSocket connection accepted for session: {session_id}")
 
