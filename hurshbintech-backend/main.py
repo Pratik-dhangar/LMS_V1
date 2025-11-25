@@ -26,9 +26,13 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",      # Development frontend (npm run dev)
         "http://127.0.0.1:3000",      # Alternative localhost
+        "https://localhost:3000",     # Production frontend (HTTPS)
         "http://43.204.218.16:3000",  
+        "https://43.204.218.16:3000", # Production HTTPS
         "http://43.204.218.16:8000", 
+        "https://43.204.218.16:8000", # Backend HTTPS
         "http://43.204.218.16",       
+        "https://43.204.218.16",      # Production HTTPS
     ],
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods
