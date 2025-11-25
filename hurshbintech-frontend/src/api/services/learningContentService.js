@@ -21,7 +21,8 @@ const learningContentService = {
     if (fileUrl.startsWith('http')) return fileUrl;
     // Remove /api prefix if present and add backend URL
     const cleanUrl = fileUrl.startsWith('/api') ? fileUrl.replace('/api', '') : fileUrl;
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+    const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
     return `${backendUrl}${cleanUrl}`;
   },
 

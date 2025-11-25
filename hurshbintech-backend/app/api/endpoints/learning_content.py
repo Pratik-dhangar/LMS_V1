@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import os
 import uuid
-import shutil
+import mimetypes
+import logging
 from pathlib import Path
 
 from app.db.session import get_db
@@ -15,34 +16,39 @@ from app.schemas.learning_content import (
 )
 from app.models.user_model import User, HeadProfile
 from app.core.deps import get_current_admin, get_current_head
+from app.core.config import settings
 from app.crud import learning_content_crud
+from app.utils.s3_utils import S3Manager
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/learning-content", tags=["Learning Content"])
 
-# Directory to store uploaded files (static directory in project)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads" / "learning_content"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-print(f"Learning content will be stored in: {UPLOAD_DIR}")
+# Initialize S3 manager if S3 is enabled
+s3_manager = None
+if settings.USE_S3:
+    try:
+        s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+        s3_manager.create_s3_folders()
+        logger.info("S3 manager initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize S3 manager: {str(e)}")
+else:
+    # Fallback to local storage
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+    UPLOAD_DIR = BASE_DIR / "uploads" / "learning_content"
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Learning content will be stored locally in: {UPLOAD_DIR}")
 
 # ============ FILE UPLOAD HELPER ============#
 
-async def save_upload_file(upload_file: UploadFile) -> dict:
-    """Save uploaded file to static directory and return file info"""
-    # Generate unique filename
-    file_extension = os.path.splitext(upload_file.filename)[1].lower()
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = UPLOAD_DIR / unique_filename
+def get_content_type(filename: str) -> str:
+    """Determine content type based on filename"""
+    content_type, _ = mimetypes.guess_type(filename)
+    return content_type or "application/octet-stream"
 
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(upload_file.file, buffer)
-
-    # Get file size
-    file_size = os.path.getsize(file_path)
-
-    # Determine content type based on extension
+def get_file_category(filename: str) -> str:
+    """Categorize file type"""
+    file_extension = os.path.splitext(filename)[1].lower()
     content_type_map = {
         '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image',
         '.pdf': 'pdf',
@@ -50,28 +56,105 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
         '.mp3': 'audio', '.wav': 'audio', '.ogg': 'audio', '.m4a': 'audio',
         '.doc': 'document', '.docx': 'document', '.txt': 'document', '.ppt': 'document', '.pptx': 'document'
     }
-    content_type = content_type_map.get(file_extension, 'document')
+    return content_type_map.get(file_extension, 'document')
 
-    return {
-        "file_url": f"/uploads/learning_content/{unique_filename}",
-        "file_size": file_size,
-        "content_type": content_type,
-        "original_filename": upload_file.filename
-    }
+async def save_upload_file(upload_file: UploadFile) -> dict:
+    """Save uploaded file to S3 or local storage"""
+    try:
+        # Read file content
+        file_content = await upload_file.read()
+        file_size = len(file_content)
+        
+        # Validate file size (max 500MB for videos, 50MB for others)
+        file_category = get_file_category(upload_file.filename)
+        max_size = 500 * 1024 * 1024 if file_category == 'video' else 50 * 1024 * 1024
+        
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File size exceeds {max_size / (1024*1024):.0f}MB limit"
+            )
+        
+        content_type = get_content_type(upload_file.filename)
+        file_category = get_file_category(upload_file.filename)
+        
+        if settings.USE_S3:
+            # Upload to S3
+            s3_key = s3_manager.upload_file(
+                file_content,
+                folder="learning-content",
+                filename=f"{uuid.uuid4()}{os.path.splitext(upload_file.filename)[1]}",
+                content_type=content_type
+            )
+            
+            # Generate and upload thumbnail
+            thumbnail_s3_key = None
+            if file_category in ['image', 'video']:
+                try:
+                    thumbnail_bytes = s3_manager.generate_thumbnail(file_content, file_category)
+                    if thumbnail_bytes:
+                        thumbnail_filename = f"{uuid.uuid4()}_thumbnail.jpg"
+                        thumbnail_s3_key = s3_manager.upload_file(
+                            thumbnail_bytes,
+                            folder="learning-content",
+                            filename=thumbnail_filename,
+                            content_type="image/jpeg"
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to generate thumbnail: {str(e)}")
+            
+            file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+            thumbnail_url = f"s3://{settings.S3_BUCKET_NAME}/{thumbnail_s3_key}" if thumbnail_s3_key else None
+            
+            return {
+                "file_url": file_url,
+                "thumbnail_url": thumbnail_url,
+                "file_size": file_size,
+                "content_type": file_category,
+                "original_filename": upload_file.filename,
+                "s3_key": s3_key,
+                "thumbnail_s3_key": thumbnail_s3_key
+            }
+        
+        else:
+            # Local storage fallback
+            file_extension = os.path.splitext(upload_file.filename)[1].lower()
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            file_path = UPLOAD_DIR / unique_filename
+            
+            with open(file_path, "wb") as buffer:
+                buffer.write(file_content)
+            
+            return {
+                "file_url": f"/uploads/learning_content/{unique_filename}",
+                "file_size": file_size,
+                "content_type": file_category,
+                "original_filename": upload_file.filename
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving upload file: {str(e)}")
+        raise
 
 def delete_file(file_url: str) -> bool:
-    """Delete file from static directory"""
+    """Delete file from S3 or local storage"""
     try:
-        # Extract filename from URL
-        filename = file_url.split('/')[-1]
-        file_path = UPLOAD_DIR / filename
-
-        if file_path.exists():
-            os.remove(file_path)
-            return True
-        return False
+        if settings.USE_S3 and file_url.startswith("s3://"):
+            # Extract S3 key
+            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            return s3_manager.delete_file(s3_key)
+        else:
+            # Local storage
+            filename = file_url.split('/')[-1]
+            file_path = UPLOAD_DIR / filename
+            if file_path.exists():
+                os.remove(file_path)
+                return True
+            return False
     except Exception as e:
-        print(f"Error deleting file: {e}")
+        logger.error(f"Error deleting file: {str(e)}")
         return False
 
 # ============ SERVE STATIC FILES ============#

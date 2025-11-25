@@ -1463,7 +1463,8 @@ const Whiteboard = ({
             if (!fullUrl.startsWith('http')) {
                 // It's a relative URL like /uploads/learning_content/file.png
                 // Use the same backend URL that the frontend uses
-                const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = `${backendUrl}${droppedData.url}`; // Store full URL
             }
