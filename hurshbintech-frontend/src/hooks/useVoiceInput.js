@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 export default function useVoiceInput({ lang = 'en-US' } = {}) {
     const [listening, setListening] = useState(false);
     const [transcript, setTranscript] = useState('Press mic to start listening...');
-    const [isSpeechSupported, setIsSpeechSupported] = useState(true);
+    const [_isSpeechSupported, setIsSpeechSupported] = useState(true);
 
     const recognitionRef = useRef(null);
     const transcriptRef = useRef('');

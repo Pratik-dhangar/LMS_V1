@@ -17,7 +17,7 @@ import SkillDevelopmentSection from '../../components/head/RegisterLearner/Skill
 
 const RegisterLearner = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   const [formData, setFormData] = useState({
     // Personal details

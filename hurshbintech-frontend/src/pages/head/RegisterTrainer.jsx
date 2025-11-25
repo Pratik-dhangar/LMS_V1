@@ -14,7 +14,7 @@ import NotesSection from '../../components/admin/EditHead/NotesSection';
 // register trainer 
 const RegisterTrainer = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',

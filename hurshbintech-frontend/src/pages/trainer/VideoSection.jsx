@@ -7,8 +7,8 @@ const VideoSection = ({
   cameraEnabled,
   handleToggleMic,
   handleToggleCamera,
-  sessionInfo,
-  connectionStatus
+  sessionInfo
+  // connectionStatus
 }) => {
   return (
     <div className="bg-slate-800 p-4 rounded mb-4 text-white">

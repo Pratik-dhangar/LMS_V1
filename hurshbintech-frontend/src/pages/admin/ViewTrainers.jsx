@@ -16,7 +16,7 @@ import SearchBar from '../../components/common/SearchBar';
 
 // ViewTrainers Component - Admin can view all trainers (no edit capability)
 const ViewTrainers = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // State management for trainer data and filtering
   const [trainers, setTrainers] = useState([]);

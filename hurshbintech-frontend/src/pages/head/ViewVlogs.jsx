@@ -14,7 +14,7 @@ const ViewVlogs = () => {
       try {
         const data = await vlogService.getAllVlogs();
         setVlogs(data);
-      } catch (err) {
+      } catch {
         setError('Failed to fetch vlogs. Please try again later.');
       } finally {
         setLoading(false);

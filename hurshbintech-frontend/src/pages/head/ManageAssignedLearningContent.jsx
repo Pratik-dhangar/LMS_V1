@@ -20,7 +20,7 @@ const ManageAssignedLearningContent = () => {
     try {
       const data = await learningContentAssignmentService.getLearners();
       setLearners(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load learners");
     }
   };
@@ -29,7 +29,7 @@ const ManageAssignedLearningContent = () => {
     try {
       const data = await learningContentAssignmentService.getContents();
       setContents(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load learning contents");
     }
   };
@@ -40,7 +40,7 @@ const ManageAssignedLearningContent = () => {
     try {
       const data = await learningContentAssignmentService.getAssignmentsByLearner(learnerId);
       setAssignedContents(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load assigned contents");
       setAssignedContents([]);
     } finally {
@@ -77,7 +77,7 @@ const ManageAssignedLearningContent = () => {
       await learningContentAssignmentService.revokeAssignment(assignmentId);
       toast.success("Assignment revoked successfully");
       fetchAssignedContents(selectedLearner);
-    } catch (error) {
+    } catch {
       toast.error("Failed to revoke assignment");
     }
   };

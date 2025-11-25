@@ -38,6 +38,7 @@ const LearnerDashboard = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showContentModal]);
 
   const fetchSessions = async () => {
