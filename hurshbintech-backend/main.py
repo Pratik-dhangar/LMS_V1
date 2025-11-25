@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-import ssl
 import os
 from fastapi import FastAPI
 import uvicorn
@@ -85,17 +84,13 @@ if __name__ == "__main__":
     environment = os.getenv("ENVIRONMENT", "local")
     
     if environment == "production":
-        # HTTPS for EC2
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(
-            certfile="/app/certs/cert.pem",
-            keyfile="/app/certs/key.pem"
-        )
+        # HTTPS for EC2 - use ssl_keyfile and ssl_certfile
         uvicorn.run(
             app,
             host="0.0.0.0",
             port=8000,
-            ssl_context=ssl_context
+            ssl_keyfile="/app/certs/key.pem",
+            ssl_certfile="/app/certs/cert.pem"
         )
     else:
         # HTTP for localhost
