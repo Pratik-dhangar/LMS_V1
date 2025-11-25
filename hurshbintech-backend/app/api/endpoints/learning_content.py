@@ -157,6 +157,28 @@ def delete_file(file_url: str) -> bool:
         logger.error(f"Error deleting file: {str(e)}")
         return False
 
+def get_presigned_url(file_url: str) -> str:
+    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    try:
+        if settings.USE_S3 and file_url.startswith("s3://"):
+            # Extract S3 key and generate presigned URL
+            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
+            return presigned_url
+        else:
+            # Return local path as-is (backend serves it)
+            return file_url
+    except Exception as e:
+        logger.error(f"Error generating presigned URL: {str(e)}")
+        return file_url  # Fallback to original URL
+
+def convert_response_urls(response: LearningContentResponse) -> LearningContentResponse:
+    """Convert S3 URLs in response to presigned HTTPS URLs"""
+    response.file_url = get_presigned_url(response.file_url)
+    if response.thumbnail_url:
+        response.thumbnail_url = get_presigned_url(response.thumbnail_url)
+    return response
+
 # ============ SERVE STATIC FILES ============#
 
 @router.get("/files/{filename}")
@@ -191,9 +213,15 @@ async def upload_file(
             )
 
         file_info = await save_upload_file(file)
+        
+        # Convert S3 URLs to presigned HTTPS URLs for browser access
+        file_url = get_presigned_url(file_info["file_url"])
+        thumbnail_url = get_presigned_url(file_info.get("thumbnail_url")) if file_info.get("thumbnail_url") else None
+        
         return {
             "message": "File uploaded successfully",
-            "file_url": file_info["file_url"],
+            "file_url": file_url,
+            "thumbnail_url": thumbnail_url,
             "file_size": file_info["file_size"],
             "content_type": file_info["content_type"],
             "original_filename": file_info["original_filename"]
@@ -216,7 +244,8 @@ async def create_learning_content(
     new_content = await learning_content_crud.create_learning_content(
         db, content_data, current_admin.id
     )
-    return LearningContentResponse.from_orm_with_users(new_content)
+    response = LearningContentResponse.from_orm_with_users(new_content)
+    return convert_response_urls(response)
 
 @router.get("/admin", response_model=List[LearningContentResponse])
 async def get_all_contents_admin(
@@ -225,7 +254,8 @@ async def get_all_contents_admin(
 ):
     """Admin gets all learning contents"""
     contents = await learning_content_crud.get_all_learning_contents(db)
-    return [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    responses = [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    return [convert_response_urls(r) for r in responses]
 
 @router.get("/admin/{content_id}", response_model=LearningContentResponse)
 async def get_content_by_id_admin(
@@ -239,7 +269,8 @@ async def get_content_by_id_admin(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    return LearningContentResponse.from_orm_with_users(content)
+    response = LearningContentResponse.from_orm_with_users(content)
+    return convert_response_urls(response)
 
 @router.patch("/admin/{content_id}", response_model=LearningContentResponse)
 async def update_content_admin(
@@ -256,7 +287,8 @@ async def update_content_admin(
     if not updated_content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    return LearningContentResponse.from_orm_with_users(updated_content)
+    response = LearningContentResponse.from_orm_with_users(updated_content)
+    return convert_response_urls(response)
 
 @router.delete("/admin/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_content_admin(
@@ -291,7 +323,8 @@ async def get_all_contents_head(
 ):
     """Head gets all learning contents (read-only list)"""
     contents = await learning_content_crud.get_all_learning_contents(db)
-    return [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    responses = [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    return [convert_response_urls(r) for r in responses]
 
 @router.get("/head/{content_id}", response_model=LearningContentResponse)
 async def get_content_by_id_head(
@@ -305,7 +338,8 @@ async def get_content_by_id_head(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    return LearningContentResponse.from_orm_with_users(content)
+    response = LearningContentResponse.from_orm_with_users(content)
+    return convert_response_urls(response)
 
 @router.patch("/head/{content_id}", response_model=LearningContentResponse)
 async def update_content_head(
@@ -322,4 +356,5 @@ async def update_content_head(
     if not updated_content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    return LearningContentResponse.from_orm_with_users(updated_content)
+    response = LearningContentResponse.from_orm_with_users(updated_content)
+    return convert_response_urls(response)

@@ -34,6 +34,26 @@ else:
 ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/ogg"]
 MAX_VIDEO_SIZE = 500 * 1024 * 1024  # 500MB
 
+def get_presigned_url(file_url: str) -> str:
+    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    try:
+        if settings.USE_S3 and file_url.startswith("s3://"):
+            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
+            return presigned_url
+        else:
+            return file_url
+    except Exception as e:
+        logger.error(f"Error generating presigned URL: {str(e)}")
+        return file_url
+
+def convert_vlog_response(vlog: Vlog) -> Vlog:
+    """Convert S3 URLs in vlog response to presigned HTTPS URLs"""
+    vlog.file_url = get_presigned_url(vlog.file_url)
+    if vlog.thumbnail_url:
+        vlog.thumbnail_url = get_presigned_url(vlog.thumbnail_url)
+    return vlog
+
 def validate_video_file(file: UploadFile):
     if file.content_type not in ALLOWED_VIDEO_TYPES:
         raise HTTPException(
@@ -195,7 +215,8 @@ async def create_vlog(
         thumbnail_url=file_info.get("thumbnail_url")
     )
     
-    return await vlog_crud.create_vlog(db, vlog_data)
+    created_vlog = await vlog_crud.create_vlog(db, vlog_data)
+    return convert_vlog_response(created_vlog)
 
 @router.get("/", response_model=List[Vlog])
 async def get_vlogs(
@@ -205,7 +226,7 @@ async def get_vlogs(
     current_user: User = Depends(get_current_admin_user)
 ):
     vlogs = await vlog_crud.get_vlogs(db, skip=skip, limit=limit)
-    return list(vlogs)
+    return [convert_vlog_response(v) for v in vlogs]
 
 @router.get("/{vlog_id}", response_model=Vlog)
 async def get_vlog(
@@ -216,7 +237,7 @@ async def get_vlog(
     vlog = await vlog_crud.get_vlog(db, vlog_id)
     if not vlog:
         raise HTTPException(status_code=404, detail="Vlog not found")
-    return vlog
+    return convert_vlog_response(vlog)
 
 @router.put("/{vlog_id}", response_model=Vlog)
 async def update_vlog(
@@ -288,7 +309,7 @@ async def update_vlog(
     vlog_update = VlogUpdate(**update_data)
     updated_vlog = await vlog_crud.update_vlog(db, vlog_id, vlog_update)
     
-    return updated_vlog
+    return convert_vlog_response(updated_vlog)
 
 @router.delete("/{vlog_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vlog(
