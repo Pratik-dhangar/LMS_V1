@@ -155,9 +155,9 @@ cd ~/hurshbintech
 # Pull latest code with S3 integration
 git pull origin main
 
-# Rebuild backend with updated requirements
+# Rebuild backend with updated requirements (includes OpenCV system libraries)
 docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml build backend
+docker-compose -f docker-compose.prod.yml build backend --no-cache
 
 # Start services
 docker-compose -f docker-compose.prod.yml up -d
@@ -172,7 +172,10 @@ S3 manager initialized successfully
 uploads/learning-content/ folder created in S3
 uploads/vlogs/ folder created in S3
 uploads/reference_data/ folder created in S3
+INFO: Application startup complete
 ```
+
+**Note**: The first rebuild may take 2-3 minutes as it installs OpenCV and system libraries. Subsequent rebuilds will be faster due to Docker layer caching.
 
 ### Step 6: Test S3 Integration
 
@@ -302,6 +305,15 @@ For 1000 uploads of 50MB average:
 ---
 
 ## 🐛 Troubleshooting
+
+### Error: "libGL.so.1: cannot open shared object file"
+This means OpenCV system libraries are missing. Rebuild the Docker image:
+```bash
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml build backend --no-cache
+docker-compose -f docker-compose.prod.yml up -d
+```
+The `--no-cache` flag forces Docker to reinstall all system dependencies from the updated Dockerfile.
 
 ### Error: "No module named 'boto3'"
 ```bash
