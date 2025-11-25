@@ -1460,13 +1460,16 @@ const Whiteboard = ({
             // Construct full URL properly - handle both relative and absolute URLs
             let fullUrl = droppedData.url;
             let fileUrl = fullUrl; // Store canonical fileUrl for learning content API
-            if (!fullUrl.startsWith('http')) {
+            
+            // Only prepend backend URL if it's a relative path
+            // Presigned URLs (starting with https://s3.amazonaws.com) should be used as-is
+            if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
                 // It's a relative URL like /uploads/learning_content/file.png
                 // Use the same backend URL that the frontend uses
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
                 fullUrl = `${backendUrl}${fullUrl}`;
-                fileUrl = `${backendUrl}${droppedData.url}`; // Store full URL
+                fileUrl = fullUrl; // Store full URL
             }
 
             // console.log('[Whiteboard] Dropping content on trainer canvas:', {
