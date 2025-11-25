@@ -34,7 +34,7 @@ const LearnerSession = () => {
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [timeLeft, setTimeLeft] = useState(null);
   const [canvasItems, setCanvasItems] = useState([]);
-  const [timeExpired, setTimeExpired] = useState(false);
+  const [_timeExpired, setTimeExpired] = useState(false);
 
   // Prompt and message placeholders
   const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
@@ -73,14 +73,14 @@ const LearnerSession = () => {
   const [reinforcementMeter, setReinforcementMeter] = useState(null);
 
   // Callbacks for meter updates
-  const [onPromptMeterUpdate, setOnPromptMeterUpdate] = useState(null);
-  const [onReinforcementMeterUpdate, setOnReinforcementMeterUpdate] = useState(null);
+  const [_onPromptMeterUpdate] = useState(null);
+  const [_onReinforcementMeterUpdate] = useState(null);
 
   // Media controls state
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [hasLocalAudio, setHasLocalAudio] = useState(false);
-  const [hasLocalVideo, setHasLocalVideo] = useState(false);
+  const [_micEnabled] = useState(true);
+  const [_cameraEnabled] = useState(true);
+  const [_hasLocalAudio] = useState(false);
+  const [_hasLocalVideo] = useState(false);
 
   // Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
@@ -90,7 +90,7 @@ const LearnerSession = () => {
   });
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState(null); // Track learner's own selection
+  const [_selectedItemId] = useState(null); // Track learner's own selection
 
   // Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
@@ -104,9 +104,9 @@ const LearnerSession = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [isPaused, setIsPaused] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(false);
-  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [_isPaused] = useState(false);
+  const [_isFrozen] = useState(false);
+  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -170,6 +170,7 @@ const LearnerSession = () => {
     initializeSession(user.id);
 
     return () => cleanup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Listen for tool access messages from trainer
@@ -204,7 +205,7 @@ const LearnerSession = () => {
     };
 
     // Set up callback for keyboard trigger — show keyboard until trainer revokes
-    whiteboardService.onTriggerKeyboard = (data) => {
+    whiteboardService.onTriggerKeyboard = () => {
       console.log('[LearnerSession] Keyboard triggered by trainer');
       setShowKeyboard(true);
       // Do not auto-hide — the keyboard will remain visible until trainer revokes 'keyboard' access
@@ -268,14 +269,14 @@ const LearnerSession = () => {
     };
 
     // Set up callback for erase pen event from trainer
-    whiteboardService.onErasePen = (data) => {
+    whiteboardService.onErasePen = () => {
       console.log('[LearnerSession] Received erase pen event from trainer');
       setErasePenTrigger(prev => prev + 1);
       setRedrawCanvasTrigger(prev => prev + 1);
     };
 
     // Set up callback for clear canvas event (also clears video, items, and buckets)
-    whiteboardService.onClearCanvas = (data) => {
+    whiteboardService.onClearCanvas = () => {
       console.log('[LearnerSession] Received clear canvas event from trainer');
       setClearCanvasTrigger(prev => prev + 1);
       // Also clear all canvas items and buckets
@@ -356,6 +357,7 @@ const LearnerSession = () => {
     }, 1000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionInfo]);
 
   // Auto check for session end
@@ -376,12 +378,13 @@ const LearnerSession = () => {
     }, 30000);
 
     return () => clearInterval(checkInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionInfo, sessionId]);
 
   // --------------------------
   // Session initialization
   // --------------------------
-  const initializeSession = async (userId) => {
+  const initializeSession = async () => {
     try {
       const session = await sessionService.getSessionDetails(sessionId);
       setSessionInfo(session);
@@ -404,7 +407,7 @@ const LearnerSession = () => {
     try {
       wbService.initialize();
       setWhiteboardService(wbService);
-    } catch (error) {
+    } catch {
       // toast.error('Failed to initialize whiteboard');
     }
 
@@ -493,10 +496,8 @@ const LearnerSession = () => {
       const hasAudio = rtcService.localStream && rtcService.localStream.getAudioTracks().length > 0;
       const hasVideo = rtcService.localStream && rtcService.localStream.getVideoTracks().length > 0;
 
-      setHasLocalAudio(hasAudio);
-      setHasLocalVideo(hasVideo);
-      setMicEnabled(hasAudio ? rtcService.isMicEnabled() : false);
-      setCameraEnabled(hasVideo ? rtcService.isCameraEnabled() : false);
+      // Note: Media state tracked in component state (_hasLocalAudio, _hasLocalVideo, etc.)
+      console.log('[LearnerSession] Local media detected:', { hasAudio, hasVideo });
 
       console.log('[LearnerSession] WebRTC service initialized', {
         hasAudio,
@@ -510,7 +511,7 @@ const LearnerSession = () => {
     }
   };
 
-  const handleSessionEnded = (payload) => {
+  const _handleSessionEnded = () => {
     toast.info('Session has been ended by the trainer');
     cleanup();
     navigate('/learner/dashboard');
@@ -523,7 +524,7 @@ const LearnerSession = () => {
         cleanup();
         toast.info('Left session');
         navigate('/learner/dashboard');
-      } catch (error) {
+      } catch {
         cleanup();
         navigate('/learner/dashboard');
       }

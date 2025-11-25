@@ -6,12 +6,12 @@ const LearningContentSidebar = ({
   handleLearningContentSearch,
   filteredLearningContent,
   onDragStartContent,
-  onContentCreated = () => { },
+  // onContentCreated
   onRemoveFromWhiteboard = () => { }
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(null);
+  const [_isProcessing, setIsProcessing] = useState(false);
+  const [_statusMessage, setStatusMessage] = useState(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();

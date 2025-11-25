@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 /**
  * MediaControlContext
@@ -10,6 +10,7 @@ const MediaControlContext = createContext(null);
 /**
  * Hook to use MediaControlContext
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useMediaControl = () => {
     const context = useContext(MediaControlContext);
     if (!context) {

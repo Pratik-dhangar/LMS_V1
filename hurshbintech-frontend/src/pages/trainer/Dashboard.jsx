@@ -22,7 +22,7 @@ const TrainerDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingExtras, setLoadingExtras] = useState(true);
+  const [_loadingExtras, setLoadingExtras] = useState(true);
   const [learnerQuery, setLearnerQuery] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
@@ -95,7 +95,7 @@ const TrainerDashboard = () => {
         const s = await sessionService.getTrainerStats();
         setStats((prev) => ({ ...prev, ...s }));
       }
-    } catch (err) {
+    } catch {
       console.debug("No trainerStats endpoint or failed - using derived stats");
     }
 
@@ -104,7 +104,7 @@ const TrainerDashboard = () => {
         const l = await sessionService.getTrainerLearners();
         setLearners(Array.isArray(l) ? l : []);
       }
-    } catch (err) {
+    } catch {
       console.debug("No getTrainerLearners endpoint or failed - using derived learners");
     }
 
@@ -120,7 +120,7 @@ const TrainerDashboard = () => {
           ]
         );
       }
-    } catch (err) {
+    } catch {
       console.debug("No getTrainerMessages endpoint or failed - using fallback messages");
     }
 
@@ -137,7 +137,7 @@ const TrainerDashboard = () => {
           ]
         );
       }
-    } catch (err) {
+    } catch {
       console.debug("No getTrainerNotifications endpoint or failed - using fallback notifications");
     }
   };

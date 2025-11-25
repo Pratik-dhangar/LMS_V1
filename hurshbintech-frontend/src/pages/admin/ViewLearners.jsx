@@ -16,7 +16,7 @@ import SearchBar from '../../components/common/SearchBar';
 
 // ViewLearners Component - Admin can view all learners (no edit capability)
 const ViewLearners = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // State management for learner data and filtering
   const [learners, setLearners] = useState([]);

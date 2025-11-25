@@ -20,7 +20,7 @@ const ManageLearningGoals = () => {
     try {
       const data = await learningGoalsService.admin.getAll();
       setGoals(data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load learning goals');
     } finally {
       setLoading(false);
@@ -36,7 +36,7 @@ const ManageLearningGoals = () => {
       setShowAddModal(false);
       setFormData({ goal: '', goal_description: '' });
       fetchGoals();
-    } catch (error) {
+    } catch {
       toast.error('Failed to create learning goal');
     }
   };
@@ -54,7 +54,7 @@ const ManageLearningGoals = () => {
       toast.success('Goal updated!');
       setShowEditModal(false);
       fetchGoals();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update goal');
     }
   };
@@ -65,7 +65,7 @@ const ManageLearningGoals = () => {
       await learningGoalsService.admin.delete(goalId);
       toast.success('Goal deleted!');
       fetchGoals();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete goal');
     }
   };

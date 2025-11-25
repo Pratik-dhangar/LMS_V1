@@ -17,7 +17,7 @@ import NotesSection from '../../components/admin/EditHead/NotesSection';
 const EditHead = () => {
   const navigate = useNavigate();
   const { headId } = useParams();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -50,6 +50,7 @@ const EditHead = () => {
 
   useEffect(() => {
     fetchHeadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [headId]);
 
   

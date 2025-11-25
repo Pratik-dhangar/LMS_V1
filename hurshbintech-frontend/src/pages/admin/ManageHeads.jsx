@@ -19,7 +19,7 @@ import adminService from '../../api/services/adminService';
 // ManageHeads Component
 const ManageHeads = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   
   // State management for head data and filtering
   const [heads, setHeads] = useState([]);

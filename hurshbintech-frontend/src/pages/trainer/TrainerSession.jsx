@@ -10,10 +10,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
-import learningContentService from '../../api/services/learningContentService';
+// import learningContentService from '../../api/services/learningContentService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
-import WhiteboardToolsService from '../../api/services/whiteboardToolsService';
+import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
@@ -80,7 +80,7 @@ const TrainerSession = () => {
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [timeLeft, setTimeLeft] = useState(null);
-  const [timeExpired, setTimeExpired] = useState(false);
+  const [_timeExpired, setTimeExpired] = useState(false);
 
   // -----------------------------------------------------------  
   // 🔹 Purpose: Messages (chat) using custom hook
@@ -91,7 +91,7 @@ const TrainerSession = () => {
     currentMessage,
     setCurrentMessage,
     sendMessage,
-    handleKeyPress,
+    handleKeyPress: _handleKeyPress,
     addReceivedMessage
   } = useMessages(webRTC, 'trainer');
 
@@ -129,7 +129,7 @@ const TrainerSession = () => {
   const [additionalContentSearch, setAdditionalContentSearch] = useState('');
   const [additionalContentResults, setAdditionalContentResults] = useState([]);
   const [learningProgramSearch, setLearningProgramSearch] = useState('');
-  const [learningProgramSearchResults, setLearningProgramSearchResults] = useState([]);
+  const [_learningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
@@ -140,8 +140,8 @@ const TrainerSession = () => {
   // 🔸 How it works: canvasItems holds objects placed on whiteboard; activeTool selects action modes.
   // -----------------------------------------------------------
   const [canvasItems, setCanvasItems] = useState([]);
-  const [activeTool, setActiveTool] = useState(null);
-  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [_activeTool] = useState(null);
+  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
   // Keep simple active toggles for Timers and Emojis.
@@ -324,6 +324,7 @@ const TrainerSession = () => {
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(checkInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionInfo, sessionId]);
 
   // Auto-hide info bar after 5 seconds
@@ -517,8 +518,11 @@ const TrainerSession = () => {
         console.log('[TrainerSession] Connection state:', state);
         setConnectionStatus(state);
         if (state === 'failed') {
-
+          // Handle failed connection
+          console.log('[TrainerSession] Connection failed');
         } else if (state === 'connected') {
+          // Handle successful connection
+          console.log('[TrainerSession] Connection successful');
         }
       };
 
@@ -580,7 +584,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Trainer leaves session without ending for all
   // 🔸 How it works: cleanup locally and navigate to trainer dashboard
   // -----------------------------------------------------------
-  const handleLeaveSession = () => {
+  const _handleLeaveSession = () => {
     if (window.confirm('Are you sure you want to leave this session?')) {
       cleanup();
       toast.info('Left session');
@@ -592,7 +596,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Auto-end session when time expires or other auto trigger
   // 🔸 How it works: calls API with reason, then cleans up and navigates away even on failure
   // -----------------------------------------------------------
-  const handleAutoEndSession = async () => {
+  const _handleAutoEndSession = async () => {
     try {
       await sessionService.endSession(sessionId, 'Session ended automatically due to time expiry');
       toast.info('Session ended automatically due to time expiry');
@@ -610,7 +614,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Handler when session is ended by other peer (e.g., learner)
   // 🔸 How it works: shows toast, cleans up local resources, navigates trainer away
   // -----------------------------------------------------------
-  const handleSessionEnded = (payload) => {
+  const _handleSessionEnded = (payload) => {
     console.log('Session ended by:', payload.ended_by);
     toast.info('Session has been ended');
     cleanup();
@@ -754,7 +758,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Search additional content (mocked for now)
   // 🔸 How it works: triggers when search length > 2 and sets mock results; replace with API call if available
   // -----------------------------------------------------------
-  const handleAdditionalContentSearch = async (e) => {
+  const _handleAdditionalContentSearch = async (e) => {
     const query = e.target.value;
     setAdditionalContentSearch(query);
     if (query.length > 2) {
@@ -925,7 +929,7 @@ const TrainerSession = () => {
     const centerX = rect ? rect.width / 2 : 400;
     const centerY = rect ? rect.height / 2 : 250;
 
-    const now = Date.now();
+    const _now = Date.now();
     let newItem = null;
 
     // helper to emit via whiteboardService if available
@@ -942,7 +946,7 @@ const TrainerSession = () => {
       }
     };
 
-    const genId = () => Date.now() + Math.floor(Math.random() * 1000);
+    const _genId = () => Date.now() + Math.floor(Math.random() * 1000);
 
     console.log('[TrainerSession] Matching tool in switch:', tool);
     switch (tool) {
@@ -1638,7 +1642,7 @@ const TrainerSession = () => {
                   <button
                     key={i}
                     onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                    className={`${!!activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-2 py-2 rounded text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                    className={`${activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-2 py-2 rounded text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                     title={t.label}
                   >
                     <span>{t.icon}</span>

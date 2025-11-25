@@ -31,7 +31,7 @@ const EditVlog = () => {
           video: null,
           thumbnail: null,
         });
-      } catch (err) {
+      } catch {
         setError('Failed to fetch vlog details');
       } finally {
         setLoading(false);
@@ -75,7 +75,7 @@ const EditVlog = () => {
 
       await vlogService.updateVlog(id, formDataToSend);
       navigate('/admin/vlogs');
-    } catch (err) {
+    } catch {
       setError('Failed to update vlog. Please try again.');
     } finally {
       setSaving(false);
