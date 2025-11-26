@@ -633,27 +633,27 @@ const LearnerSession = () => {
       </div>
 
       {/* Main Container */}
-      <div className="flex flex-1" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="flex flex-col lg:flex-row flex-1" style={{ height: 'calc(100vh - 180px)' }}>
         {/* Left Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+        <div className="w-full lg:w-80 bg-white border-r border-gray-200 p-2 sm:p-4 overflow-y-auto order-2 lg:order-1">
           {/* Video Conferencing */}
-          <div className="bg-slate-800 p-4 rounded mb-4 text-white">
+          <div className="bg-slate-800 p-3 sm:p-4 rounded mb-4 text-white">
             <div className="flex justify-between items-center">
-              <div className="text-sm font-semibold">📹 Video Conferencing</div>
+              <div className="text-xs sm:text-sm font-semibold">📹 Video Conferencing</div>
             </div>
             <div className="mt-2 text-xs text-gray-400">
               Connected with: {sessionInfo?.trainer_name ?? '—'} | Session Time: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--:--'}
             </div>
-            <div className="flex justify-center items-start gap-5 w-full p-3">
+            <div className="flex justify-center items-start gap-2 sm:gap-5 w-full p-2 sm:p-3">
               {/* Trainer video - remote */}
               <div className="flex-1 max-w-full flex flex-col">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-slate-700 font-medium">Trainer's Video</span>
+                  <span className="text-xs sm:text-sm text-slate-700 font-medium">Trainer's Video</span>
                   <span className={`text-xs ${remoteStream ? 'text-green-500' : 'text-red-500'}`}>
                     {remoteStream ? '● Connected' : '○ Waiting...'}
                   </span>
                 </div>
-                <div className="relative h-[200px] overflow-hidden rounded-lg bg-black">
+                <div className="relative h-[150px] sm:h-[180px] md:h-[200px] overflow-hidden rounded-lg bg-black">
                   <video
                     ref={remoteVideoRef}
                     autoPlay
@@ -663,7 +663,7 @@ const LearnerSession = () => {
                     style={{ display: remoteStream ? 'block' : 'none', width: '100%', height: '100%' }}
                   />
                   {!remoteStream && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-white text-base font-medium rounded-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-white text-sm sm:text-base font-medium rounded-lg">
                       Waiting for trainer to join...
                     </div>
                   )}
@@ -673,7 +673,7 @@ const LearnerSession = () => {
             </div>
           </div>
           {/* Prompt Line Box */}
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-4">
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 sm:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <button
@@ -687,29 +687,29 @@ const LearnerSession = () => {
               </div>
             </div>
             {promptVisible && (
-              <div className="bg-white border border-yellow-300 rounded p-3 min-h-[60px] mb-2">
-                <p className="text-gray-700 text-sm">{promptText}</p>
+              <div className="bg-white border border-yellow-300 rounded p-2 sm:p-3 min-h-[60px] mb-2">
+                <p className="text-gray-700 text-xs sm:text-sm">{promptText}</p>
               </div>
             )}
             <p className="text-xs text-gray-500 italic">Click eye icon to show/hide prompts</p>
           </div>
 
           {/* Meter Values Display */}
-          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 mb-4">
+          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-4 mb-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-blue-600">📊</span>
-              <h3 className="font-semibold text-gray-700">Current Session Metrics</h3>
+              <h3 className="font-semibold text-xs sm:text-sm text-gray-700">Current Session Metrics</h3>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-blue-300 rounded p-3">
-                <div className="text-xs text-gray-600 mb-1">Prompt Level</div>
-                <div className="text-lg font-bold text-blue-600">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3">
+                <div className="text-xs text-gray-600 mb-1">Prompt <br /> Level</div>
+                <div className="text-base sm:text-lg font-bold text-blue-600">
                   {promptMeter ?? 0}
                 </div>
               </div>
-              <div className="bg-white border border-green-300 rounded p-3">
+              <div className="bg-white border border-green-300 rounded p-2 sm:p-3">
                 <div className="text-xs text-gray-600 mb-1">Reinforcement Level</div>
-                <div className="text-lg font-bold text-green-600">
+                <div className="text-base sm:text-lg font-bold text-green-600">
                   {reinforcementMeter ?? 0}
                 </div>
               </div>
@@ -717,11 +717,11 @@ const LearnerSession = () => {
           </div>
 
           {/* In-Session Notes */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">📋 Session Notes</h3>
-            <div className="bg-white border border-gray-300 rounded p-3 min-h-[80px] max-h-[150px] overflow-y-auto">
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 mb-4">
+            <h3 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2">📋 Session Notes</h3>
+            <div className="bg-white border border-gray-300 rounded p-2 sm:p-3 min-h-[80px] max-h-[150px] overflow-y-auto">
               {sessionNotes ? (
-                <p className="text-sm text-gray-800 whitespace-pre-wrap">{sessionNotes}</p>
+                <p className="text-xs sm:text-sm text-gray-800 whitespace-pre-wrap">{sessionNotes}</p>
               ) : (
                 <p className="text-xs text-gray-500 italic">[Trainer notes will appear here...]</p>
               )}
@@ -729,9 +729,9 @@ const LearnerSession = () => {
           </div>
 
           {/* Messages */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Messages</h3>
-            <div className="bg-white border border-gray-300 rounded p-2 max-h-[150px] overflow-y-auto mb-2">
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4">
+            <h3 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2">Messages</h3>
+            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
               {messages.length > 0 ? (
                 messages.map((msg, idx) => (
                   <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs">
@@ -741,7 +741,7 @@ const LearnerSession = () => {
                 ))
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-sm font-semibold text-gray-600">Trainer:</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-600">Trainer:</p>
                   <p className="text-xs text-gray-500">Great job on the last activity!</p>
                 </div>
               )}
@@ -766,10 +766,10 @@ const LearnerSession = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col relative">
+        <div className="flex-1 flex flex-col relative order-1 lg:order-2">
 
           {/* Interactive Learning Area - Whiteboard (Constrained for Learner) */}
-          <div className="bg-gray-50 border-4 border-gray-300 rounded-lg m-4 relative mx-auto w-full max-w-[1086px] h-[340px] sm:h-[420px] md:h-[480px] lg:h-[501px]">
+          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[501px]">
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}

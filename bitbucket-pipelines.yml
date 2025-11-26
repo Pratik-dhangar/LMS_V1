@@ -61,6 +61,4 @@ pipelines:
     deploy-production:
       - step: *deploy-to-ec2
 
-definitions:
-  caches:
-    pip: ~/.cache/pip
+

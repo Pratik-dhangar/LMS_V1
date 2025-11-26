@@ -75,72 +75,63 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
                 setTranscript('No speech detected. Please try again.');
                 recog.stop();
             } else if (event.error === 'network') {
-                console.log('[useVoiceInput] Network error');
-                recog.stop();
+                console.log('[useVoiceInput] Network error - using offline speech recognition');
+                // Don't stop immediately, just log the error
+                // Chrome's speech recognition can work offline in some cases
 
-                // If offline, notify user and do not retry
+                // If offline, notify user
                 if (!navigator.onLine) {
-                    setTranscript('Network offline. Please check your internet connection.');
+                    setTranscript('Network offline. Speech recognition may not work properly.');
+                    recog.stop();
                     return;
                 }
 
-                // Retry with exponential backoff, up to MAX_RETRIES
-                if (listeningRef.current && retryCountRef.current < MAX_RETRIES) {
-                    const backoff = BASE_RETRY_MS * Math.pow(2, retryCountRef.current);
-                    console.log(`[useVoiceInput] Retrying recognition in ${backoff}ms (attempt ${retryCountRef.current + 1})`);
-                    setTranscript(`Network error. Retrying in ${Math.round(backoff / 1000)}s...`);
-                    restartTimeoutRef.current = setTimeout(() => {
-                        try {
-                            retryCountRef.current += 1;
-                            recog.start();
-                        } catch (e) {
-                            console.error('[useVoiceInput] Error restarting after network error:', e);
-                        }
-                    }, backoff);
-                } else {
-                    console.warn('[useVoiceInput] Network error - max retries reached or not listening');
-                    setTranscript('Network error. Please check your connection and try again.');
-                }
+                // For online network errors, continue without stopping
+                console.log('[useVoiceInput] Network error encountered but will continue');
+                setTranscript(transcriptRef.current || '🎤 Listening... (network issue detected)');
+
             } else if (event.error === 'not-allowed') {
                 console.log('[useVoiceInput] Microphone access denied.');
-                setTranscript('❌ Microphone access denied.');
+                setTranscript('❌ Microphone access denied. Please allow microphone access in your browser settings.');
                 setListening(false);
                 listeningRef.current = false;
+            } else if (event.error === 'aborted') {
+                console.log('[useVoiceInput] Speech recognition aborted');
+                // User intentionally stopped, don't show error
             } else {
                 console.log('[useVoiceInput] Other error:', event.error);
-                setTranscript(`Speech recognition error: ${event.error}`);
+                setTranscript(`Speech recognition error: ${event.error}. Please try again.`);
             }
         };
 
         recog.onend = () => {
             console.log('[useVoiceInput] Speech recognition ended, listening state:', listeningRef.current);
 
-            // If user is still expecting voice input, attempt auto-restart but respect retry/backoff
+            // If user is still expecting voice input, attempt auto-restart
             if (listeningRef.current && !restartTimeoutRef.current) {
                 // If offline, do not restart
                 if (!navigator.onLine) {
                     setTranscript('Network offline. Please check your internet connection.');
+                    setListening(false);
+                    listeningRef.current = false;
                     return;
                 }
 
-                if (retryCountRef.current >= MAX_RETRIES) {
-                    console.warn('[useVoiceInput] Max retries reached - not auto-restarting');
-                    setTranscript('Speech recognition repeatedly failed. Please check network and try again.');
-                    return;
-                }
-
-                const backoff = BASE_RETRY_MS * Math.pow(2, retryCountRef.current);
+                // Auto-restart without backoff for normal operation
                 restartTimeoutRef.current = setTimeout(() => {
                     try {
                         console.log('[useVoiceInput] Auto-restarting recognition after end');
-                        retryCountRef.current += 1;
                         recog.start();
                         restartTimeoutRef.current = null;
                     } catch (e) {
                         console.error('[useVoiceInput] Error auto-restarting recognition:', e);
                         restartTimeoutRef.current = null;
+                        if (e.name !== 'InvalidStateError') {
+                            setListening(false);
+                            listeningRef.current = false;
+                        }
                     }
-                }, backoff);
+                }, 300); // Small delay to avoid rapid restarts
             }
         };
 

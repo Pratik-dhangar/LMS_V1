@@ -75,6 +75,16 @@ const ManageLearningContent = () => {
       return;
     }
 
+    // Check for duplicate title
+    const duplicateExists = contents.some(
+      content => content.title.toLowerCase().trim() === formData.title.toLowerCase().trim()
+    );
+
+    if (duplicateExists) {
+      toast.error("A learning content with this name already exists. Please use a different name.");
+      return;
+    }
+
     try {
       await learningContentService.admin.create(formData);
       toast.success("Learning content created successfully!");
@@ -292,9 +302,9 @@ const ManageLearningContent = () => {
 
           {/* Search Bar and Add Button */}
           <div className="mb-6 flex justify-center items-center gap-4">
-            <SearchBar 
-              onSearch={handleSearch} 
-              placeholder="Search by title, type, or description..." 
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by title, type, or description..."
             />
             <button
               onClick={() => setShowAddModal(true)}
