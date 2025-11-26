@@ -19,17 +19,22 @@ if settings.USE_S3:
 
 
 def get_presigned_url(file_url: str) -> str:
-    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    """
+    Convert S3 URL to public HTTP URL (NO EXPIRATION)
+    
+    Public URLs are valid indefinitely until the file is deleted from S3.
+    Much more reliable than presigned URLs which expire after 24 hours.
+    """
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
-            return presigned_url
+            public_url = s3_manager.get_public_url(s3_key)
+            return public_url
         else:
             return file_url
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Error generating presigned URL: {str(e)}")
+        logger.error(f"Error generating public URL: {str(e)}")
         return file_url
 
 # Set up logging

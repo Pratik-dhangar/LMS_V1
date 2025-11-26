@@ -35,20 +35,25 @@ ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/ogg"]
 MAX_VIDEO_SIZE = 500 * 1024 * 1024  # 500MB
 
 def get_presigned_url(file_url: str) -> str:
-    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    """
+    Convert S3 URL to public HTTP URL (NO EXPIRATION)
+    
+    Public URLs are valid indefinitely until the file is deleted from S3.
+    Much more reliable than presigned URLs which expire after 24 hours.
+    """
     try:
         if settings.USE_S3 and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
-            return presigned_url
+            public_url = s3_manager.get_public_url(s3_key)
+            return public_url
         else:
             return file_url
     except Exception as e:
-        logger.error(f"Error generating presigned URL: {str(e)}")
+        logger.error(f"Error generating public URL: {str(e)}")
         return file_url
 
 def convert_vlog_response(vlog: Vlog) -> Vlog:
-    """Convert S3 URLs in vlog response to presigned HTTPS URLs"""
+    """Convert S3 URLs in vlog response to public HTTP URLs (no expiration)"""
     vlog.file_url = get_presigned_url(vlog.file_url)
     if vlog.thumbnail_url:
         vlog.thumbnail_url = get_presigned_url(vlog.thumbnail_url)

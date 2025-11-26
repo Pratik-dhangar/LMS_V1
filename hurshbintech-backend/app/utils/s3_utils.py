@@ -190,8 +190,27 @@ class S3Manager:
             logger.error(f"Error deleting S3 file: {str(e)}")
             return False
     
-    def get_presigned_url(self, s3_key: str, expiration: int = 3600) -> str:
-        """Get presigned URL for S3 object"""
+    def get_public_url(self, s3_key: str) -> str:
+        """
+        Get public HTTP URL for S3 object (NO EXPIRATION)
+        
+        Args:
+            s3_key: S3 object key (e.g., 'uploads/learning-content/file.png')
+        
+        Returns:
+            Public HTTPS URL to S3 object - valid indefinitely until deleted
+        
+        Note: Requires S3 bucket to have public read access configured.
+              No authentication needed. Much more reliable than presigned URLs.
+        """
+        return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
+    
+    def get_presigned_url(self, s3_key: str, expiration: int = 86400) -> str:
+        """
+        Get presigned URL for S3 object (DEPRECATED - use get_public_url instead)
+        
+        Presigned URLs expire after specified time - not suitable for permanent content access.
+        """
         try:
             url = self.s3_client.generate_presigned_url(
                 'get_object',
