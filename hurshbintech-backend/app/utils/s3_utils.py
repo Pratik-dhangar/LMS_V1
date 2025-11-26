@@ -190,38 +190,22 @@ class S3Manager:
             logger.error(f"Error deleting S3 file: {str(e)}")
             return False
     
-    def get_public_url(self, s3_key: str) -> str:
+    def get_public_url(self, s3_key: str, use_http: bool = False) -> str:
         """
-        Get public HTTP URL for S3 object (NO EXPIRATION)
+        Get public URL for S3 object (NO EXPIRATION)
         
         Args:
             s3_key: S3 object key (e.g., 'uploads/learning-content/file.png')
+            use_http: Use HTTP for local development, HTTPS for production
         
         Returns:
-            Public HTTPS URL to S3 object - valid indefinitely until deleted
+            Public URL to S3 object - valid indefinitely until deleted
         
         Note: Requires S3 bucket to have public read access configured.
-              No authentication needed. Much more reliable than presigned URLs.
+              No authentication needed. URLs are permanent and always accessible.
         """
-        return f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
-    
-    def get_presigned_url(self, s3_key: str, expiration: int = 86400) -> str:
-        """
-        Get presigned URL for S3 object (DEPRECATED - use get_public_url instead)
-        
-        Presigned URLs expire after specified time - not suitable for permanent content access.
-        """
-        try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': s3_key},
-                ExpiresIn=expiration
-            )
-            return url
-        
-        except ClientError as e:
-            logger.error(f"Error generating presigned URL: {str(e)}")
-            raise
+        protocol = "http" if use_http else "https"
+        return f"{protocol}://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
     
     def create_s3_folders(self) -> bool:
         """Create standard folder structure in S3"""

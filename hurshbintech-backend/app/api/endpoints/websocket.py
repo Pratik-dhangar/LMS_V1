@@ -18,17 +18,21 @@ if settings.USE_S3:
         logger.warning(f"Failed to initialize S3Manager: {str(e)}")
 
 
-def get_presigned_url(file_url: str) -> str:
+def get_public_url(file_url: str, use_http: bool = False) -> str:
     """
-    Convert S3 URL to public HTTP URL (NO EXPIRATION)
+    Convert S3 URL to public HTTPS URL (permanent access, no expiration)
     
-    Public URLs are valid indefinitely until the file is deleted from S3.
-    Much more reliable than presigned URLs which expire after 24 hours.
+    Args:
+        file_url: S3 URL (s3://bucket/key) or local path
+        use_http: Use HTTP for local dev, HTTPS for production
+    
+    Returns:
+        Public HTTP(S) URL that never expires until file is deleted
     """
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key)
+            public_url = s3_manager.get_public_url(s3_key, use_http=use_http)
             return public_url
         else:
             return file_url
@@ -234,12 +238,12 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
         # Trainer opening media - acquire lock
         media_control_locks[session_id] = role  # Store trainer identifier (could be user_id or socket id)
         
-        # Store media state with presigned URL
+        # Store media state with public URL (permanent access, no expiration)
         media_state = {
             "action": "open",
             "mediaId": data.get("mediaId"),
             "mediaType": data.get("mediaType"),
-            "mediaUrl": get_presigned_url(data.get("mediaUrl")),
+            "mediaUrl": get_public_url(data.get("mediaUrl"), use_http=False),
             "status": "paused",
             "currentTime": data.get("currentTime", 0),
             "currentPage": data.get("currentPage", 1),
