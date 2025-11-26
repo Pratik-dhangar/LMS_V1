@@ -56,18 +56,8 @@ const learningContentService = {
   // Trainer APIs - for trainer users (can create content from whiteboard)
   trainer: {
     create: async (contentData) => {
-      // Try trainer-specific endpoint first, fall back to admin if not available
-      try {
-        const response = await api.post('/content/learning-content/trainer', contentData);
-        return response.data;
-      } catch (error) {
-        // Fallback to admin endpoint for backward compatibility
-        if (error.response?.status === 404) {
-          console.warn('[learningContentService] Trainer endpoint not available, using admin endpoint');
-          return await learningContentService.admin.create(contentData);
-        }
-        throw error;
-      }
+      const response = await api.post('/content/learning-content/trainer', contentData);
+      return response.data;
     },
 
     getAll: async () => {
