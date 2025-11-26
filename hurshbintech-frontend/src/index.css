@@ -19,6 +19,16 @@ body {
   background-color: #f5f6fa;
 }
 
+/* Ensure emoji glyphs use a color emoji-capable font stack so newer emoji render */
+.emoji-fallback,
+button span,
+.floating-emoji,
+.popped-emoji,
+.feedback-bubble,
+.message-bubble {
+  font-family: 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

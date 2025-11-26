@@ -22,6 +22,9 @@ class WhiteboardService {
         this.onErasePen = null; // New callback for erasing pen strokes
         this.onClearCanvas = null; // New callback for clearing entire canvas
         this.onStopwatchSync = null; // New callback for stopwatch synchronization
+        this.onFeedbackMessage = null; // New callback for feedback messages
+        this.onFloatingAnimations = null; // New callback for floating animations (bubbles, smileys, balloons, stars)
+        this.onAnimationPopped = null; // New callback for animation pop events
     }
 
     initialize() {
@@ -160,6 +163,24 @@ class WhiteboardService {
                 case 'stopwatch_sync':
                     if (this.onStopwatchSync) {
                         this.onStopwatchSync(message.data);
+                    }
+                    break;
+
+                case 'feedback_message':
+                    if (this.onFeedbackMessage) {
+                        this.onFeedbackMessage(message.data);
+                    }
+                    break;
+
+                case 'floating_animations':
+                    if (this.onFloatingAnimations) {
+                        this.onFloatingAnimations(message.data);
+                    }
+                    break;
+
+                case 'animation_popped':
+                    if (this.onAnimationPopped) {
+                        this.onAnimationPopped(message.data);
                     }
                     break;
 
