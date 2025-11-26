@@ -12,7 +12,9 @@ from app.schemas.session import SessionCreate, SessionResponse, SessionEnd
 from app.models.user_model import User, TrainerProfile, LearnerProfile, HeadProfile
 from app.models.session_model import TrainingSession
 from app.core.deps import get_current_user, get_current_trainer, get_current_learner, get_current_head
+from app.core.config import settings
 from app.crud import session_crud, user_crud
+from app.utils.s3_utils import S3Manager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +22,30 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["Training Sessions"])
 
+# Initialize S3 manager if S3 is enabled
+s3_manager = None
+if settings.USE_S3:
+    try:
+        s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+        logger.info("S3 manager initialized for sessions")
+    except Exception as e:
+        logger.error(f"Failed to initialize S3 manager: {str(e)}")
+
 # In-memory storage for WebSocket connections per session
 active_connections: Dict[str, List[WebSocket]] = {}
+
+def get_presigned_url(file_url: str) -> str:
+    """Convert S3 URL to presigned HTTPS URL or return local path"""
+    try:
+        if settings.USE_S3 and file_url and file_url.startswith("s3://"):
+            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            presigned_url = s3_manager.get_presigned_url(s3_key, expiration=3600)
+            return presigned_url
+        else:
+            return file_url
+    except Exception as e:
+        logger.error(f"Error generating presigned URL: {str(e)}")
+        return file_url
 
 
 @router.get("/all", response_model=List[SessionResponse])
@@ -66,8 +90,8 @@ def build_session_response(session: TrainingSession) -> SessionResponse:
                 "id": content.id,
                 "title": content.title,
                 "content_type": content.content_type.value,
-                "file_url": content.file_url,
-                "thumbnail_url": content.thumbnail_url
+                "file_url": get_presigned_url(content.file_url),
+                "thumbnail_url": get_presigned_url(content.thumbnail_url) if content.thumbnail_url else None
             }
             for content in (session.learning_contents or [])
         ],

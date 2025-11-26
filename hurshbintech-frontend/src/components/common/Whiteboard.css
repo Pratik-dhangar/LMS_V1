@@ -841,3 +841,485 @@ input[type="range"]::-webkit-slider-thumb {
 .bucket-ripple {
     animation: bucketRipple 0.6s ease-out forwards !important;
 }
+
+/* Pulse animation for wait emoji */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Fade in and out animation for feedback messages */
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    90% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+/* Bounce animation for feedback messages - fun for babies */
+@keyframes bounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    70% {
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Feedback bubble styling for young children - gentle pastel tones */
+.feedback-bubble {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #FFFDF5 0%, #F4FFF6 50%, #F9F6FF 100%);
+    /* soft cream -> mint -> lavender */
+    color: #2D2A44;
+    /* soft darker color for readability */
+    padding: 28px 40px;
+    border-radius: 22px;
+    font-size: 38px;
+    font-weight: 900;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(180, 170, 240, 0.3), inset 0 -4px 10px rgba(255, 255, 255, 0.7);
+    animation: fadeInOut 3s ease-in-out, bounce 0.45s cubic-bezier(.36, .07, .19, .97);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'Comic Sans MS', 'Baloo 2', 'Poppins', cursive, sans-serif;
+}
+
+.feedback-bubble .feedback-text {
+    display: inline-block;
+    transform: translateZ(0);
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.9);
+    color: #4b3c6b;
+    /* friendly darker pastel for contrast */
+    padding: 0 4px;
+}
+
+/* Decorative confetti dots - pastel, light, tiny */
+.confetti-container {
+    position: absolute;
+    top: -12px;
+    left: -20px;
+    right: -20px;
+    bottom: -12px;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.confetti-dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    opacity: 0.95;
+    transform-origin: center;
+}
+
+.confetti-1 {
+    background: #FFDCE6;
+    left: 8%;
+    top: 10%;
+    animation: confettiFloat 2.8s ease-in-out infinite;
+}
+
+.confetti-2 {
+    background: #FFF4D6;
+    left: 20%;
+    top: 5%;
+    animation: confettiFloat 2.6s ease-in-out infinite;
+}
+
+.confetti-3 {
+    background: #E8FDF5;
+    left: 65%;
+    top: 12%;
+    animation: confettiFloat 3s ease-in-out infinite;
+}
+
+.confetti-4 {
+    background: #EEE6FF;
+    left: 80%;
+    top: 8%;
+    animation: confettiFloat 2.4s ease-in-out infinite;
+}
+
+.confetti-5 {
+    background: #FFECEF;
+    left: 50%;
+    top: 6%;
+    animation: confettiFloat 2.7s ease-in-out infinite;
+}
+
+@keyframes confettiFloat {
+    0% {
+        transform: translateY(0) scale(0.9);
+        opacity: 1
+    }
+
+    50% {
+        transform: translateY(-10px) scale(1.1);
+        opacity: 0.95
+    }
+
+    100% {
+        transform: translateY(0) scale(0.95);
+        opacity: 1
+    }
+}
+
+/* Responsive adjustments - keep visuals readable on mobile */
+@media (max-width: 640px) {
+    .feedback-bubble {
+        font-size: 28px;
+        padding: 16px 22px;
+        border-radius: 18px;
+    }
+
+    .confetti-dot {
+        width: 10px;
+        height: 10px
+    }
+}
+
+/* ========================================================================
+   FLOATING ANIMATIONS (Bubbles, Smileys, Balloons, Stars)
+   Baby-Friendly Design: Soft pastel colors, gentle movements, large size
+   ======================================================================== */
+
+.floating-animation {
+    position: absolute;
+    bottom: -100px;
+    font-size: 70px;
+    animation: floatUp 10s ease-in-out forwards;
+    z-index: 100;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.12));
+    cursor: pointer;
+}
+
+/* Hover effect for learner interaction */
+.floating-animation:hover {
+    transform: scale(1.15);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
+}
+
+.floating-animation.popped {
+    animation: none;
+    cursor: default;
+}
+
+.floating-emoji {
+    display: inline-block;
+    position: relative;
+    animation: gentleBounce 2s ease-in-out infinite;
+}
+
+/* Add pastel glow backgrounds for each type */
+.floating-animation.bubble .floating-emoji::before {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    left: -10%;
+    top: -10%;
+    background: radial-gradient(circle, rgba(173, 216, 230, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: none;
+}
+
+.floating-animation.smiley .floating-emoji::before {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    left: -10%;
+    top: -10%;
+    background: radial-gradient(circle, rgba(255, 253, 208, 0.5) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: none;
+}
+
+.floating-animation.balloon .floating-emoji::before {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    left: -10%;
+    top: -10%;
+    background: radial-gradient(circle, rgba(255, 182, 193, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: none;
+}
+
+.floating-animation.star .floating-emoji::before {
+    content: '';
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    left: -10%;
+    top: -10%;
+    background: radial-gradient(circle, rgba(255, 223, 186, 0.5) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+    animation: none;
+}
+
+.popped-emoji {
+    display: inline-block;
+    font-size: 90px;
+    animation: explode 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    filter: drop-shadow(0 0 20px rgba(255, 200, 100, 0.8));
+}
+
+/* Gentle bounce animation for floating emojis */
+@keyframes gentleBounce {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.05);
+    }
+}
+
+/* Soft glow pulse animation */
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.9;
+        transform: scale(1.1);
+    }
+}
+
+/* Float from bottom to top with gentle sway - optimized for performance */
+@keyframes floatUp {
+    0% {
+        bottom: -100px;
+        opacity: 0;
+        transform: translateX(0) scale(0.3);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateX(calc(var(--drift, 20px) * 0.7)) scale(1.05);
+    }
+
+    90% {
+        opacity: 0.9;
+        transform: translateX(calc(var(--drift, 20px) * 1.3)) scale(1);
+    }
+
+    100% {
+        bottom: 105%;
+        opacity: 0;
+        transform: translateX(calc(var(--drift, 20px) * 1.5)) scale(0.8);
+    }
+}
+
+/* Pop effect with sparkle */
+@keyframes popEffect {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1);
+    }
+
+    30% {
+        transform: scale(1.3) rotate(5deg);
+        opacity: 1;
+        filter: brightness(1.3);
+    }
+
+    60% {
+        transform: scale(1.6) rotate(-5deg);
+        opacity: 0.7;
+        filter: brightness(1.5) hue-rotate(20deg);
+    }
+
+    100% {
+        transform: scale(0.1) rotate(180deg);
+        opacity: 0;
+        filter: brightness(2) hue-rotate(40deg);
+    }
+}
+
+/* Explosion effect with colorful burst */
+@keyframes explode {
+    0% {
+        transform: scale(0.6) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1) saturate(1);
+    }
+
+    20% {
+        transform: scale(1.2) rotate(60deg);
+        opacity: 1;
+        filter: brightness(1.5) saturate(1.5);
+    }
+
+    40% {
+        transform: scale(2) rotate(180deg);
+        opacity: 0.9;
+        filter: brightness(2) saturate(2) hue-rotate(30deg);
+    }
+
+    70% {
+        transform: scale(2.8) rotate(300deg);
+        opacity: 0.5;
+        filter: brightness(2.5) saturate(2.5) hue-rotate(60deg);
+    }
+
+    100% {
+        transform: scale(3.5) rotate(480deg);
+        opacity: 0;
+        filter: brightness(3) saturate(3) hue-rotate(90deg);
+    }
+}
+
+/* Type-specific drift and timing variations */
+.floating-animation.bubble {
+    --drift: 35px;
+    animation-duration: 9s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.bubble .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.smiley {
+    --drift: 20px;
+    animation-duration: 10s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.smiley .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.balloon {
+    --drift: 28px;
+    animation-duration: 11s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.balloon .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.star {
+    --drift: 25px;
+    animation-duration: 10.5s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.star .floating-emoji {
+    animation: none;
+}
+
+/* Special twinkle animation for stars */
+@keyframes starTwinkle {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+        filter: brightness(1);
+    }
+
+    25% {
+        transform: translateY(-6px) scale(1.1) rotate(10deg);
+        filter: brightness(1.3);
+    }
+
+    50% {
+        transform: translateY(-10px) scale(1.05) rotate(0deg);
+        filter: brightness(1.5);
+    }
+
+    75% {
+        transform: translateY(-6px) scale(1.1) rotate(-10deg);
+        filter: brightness(1.3);
+    }
+}
+
+/* Responsive sizing for smaller screens */
+@media (max-width: 640px) {
+    .floating-animation {
+        font-size: 55px;
+    }
+
+    .popped-emoji {
+        font-size: 70px;
+    }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+    .floating-animation {
+        font-size: 50px;
+    }
+
+    .popped-emoji {
+        font-size: 65px;
+    }
+}

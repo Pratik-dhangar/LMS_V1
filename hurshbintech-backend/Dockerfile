@@ -10,11 +10,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
+# Install system dependencies (including OpenCV requirements)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     postgresql-client \
     curl \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -37,6 +43,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')" || exit 1
 
-# Run database migrations and start application
+# Run database migrations and start application with SSL support for production
 # Explicitly bind to 0.0.0.0 to accept connections from any interface (required for host network mode)
-CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --log-level info"]
+CMD ["sh", "-c", "alembic upgrade head && python main.py"]

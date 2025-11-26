@@ -118,8 +118,16 @@ const TrainerSession = () => {
   }, [webRTC, addReceivedMessage]);
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState(sessionInfo?.notes || '');
-  const [_additionalContentSearch, setAdditionalContentSearch] = useState('');
-  const [_additionalContentResults, setAdditionalContentResults] = useState([]);
+  const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
+  const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
+
+  // Debug: Log when feedbackMessage changes
+  useEffect(() => {
+    console.log('[TrainerSession] feedbackMessage state changed to:', feedbackMessage);
+  }, [feedbackMessage]);
+
+  const [additionalContentSearch, setAdditionalContentSearch] = useState('');
+  const [additionalContentResults, setAdditionalContentResults] = useState([]);
   const [learningProgramSearch, setLearningProgramSearch] = useState('');
   const [_learningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
@@ -136,9 +144,7 @@ const TrainerSession = () => {
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [isPaused] = useState(false);
-  const [isFrozen] = useState(false);
-  // Keep simple active toggles for Canvas Controls, Timers and Emojis.
+  // Keep simple active toggles for Timers and Emojis.
   // These no longer trigger business logic (timer/stopwatch/emoji overlay/shuffle/clear).
   const [activeIcons, setActiveIcons] = useState({});
   const [showInfoBar, setShowInfoBar] = useState(true);
@@ -344,9 +350,16 @@ const TrainerSession = () => {
       }
     };
 
+    // Set up callback for animation pop events from learner
+    whiteboardService.onAnimationPopped = (data) => {
+      console.log('[TrainerSession] Animation popped by learner:', data);
+      handleAnimationPop(data.animationId);
+    };
+
     return () => {
       if (whiteboardService) {
         whiteboardService.onItemSelected = null;
+        whiteboardService.onAnimationPopped = null;
       }
     };
   }, [whiteboardService]);
@@ -855,17 +868,66 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Spawn floating animations (bubbles, smileys, balloons, stars)
+  // 🔸 How it works: creates 5-8 floating items that rise from bottom and can be popped
+  // -----------------------------------------------------------
+  const spawnFloatingAnimation = (type, emoji) => {
+    const count = Math.floor(Math.random() * 4) + 5; // 5-8 items
+    const newAnimations = [];
+
+    for (let i = 0; i < count; i++) {
+      const animation = {
+        id: Date.now() + Math.random(),
+        type: type,
+        emoji: emoji,
+        x: Math.random() * 90 + 5, // 5-95% from left
+        startDelay: Math.random() * 1000, // 0-1s staggered start
+        duration: 8000 + Math.random() * 4000, // 8-12s to float up
+        popped: false
+      };
+      newAnimations.push(animation);
+    }
+
+    // Add to local state
+    setFloatingAnimations(prev => [...prev, ...newAnimations]);
+
+    // Broadcast to learner
+    if (whiteboardService) {
+      whiteboardService.send('floating_animations', {
+        animations: newAnimations,
+        timestamp: Date.now()
+      });
+    }
+
+    // Auto-remove after animation completes (12s max duration + 1s buffer)
+    setTimeout(() => {
+      setFloatingAnimations(prev =>
+        prev.filter(a => !newAnimations.find(na => na.id === a.id))
+      );
+    }, 13000);
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle animation pop from learner
+  // 🔸 How it works: updates animation state to show popped version
+  // -----------------------------------------------------------
+  const handleAnimationPop = (animationId) => {
+    setFloatingAnimations(prev =>
+      prev.map(a => a.id === animationId ? { ...a, popped: true } : a)
+    );
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Handle clicks on whiteboard tool buttons (timers, emoji, pause, etc.)
   // 🔸 How it works: depending on the tool string, creates items, starts intervals, emits via whiteboardService
   // -----------------------------------------------------------
   const handleToolClick = (tool) => {
     console.log('[TrainerSession] Tool clicked:', tool);
     const canvasEl = document.querySelector('.whiteboard canvas');
-    if (!canvasEl) return;
 
-    const rect = canvasEl.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
+    const rect = canvasEl?.getBoundingClientRect();
+    const centerX = rect ? rect.width / 2 : 400;
+    const centerY = rect ? rect.height / 2 : 250;
 
     const _now = Date.now();
     let newItem = null;
@@ -886,6 +948,7 @@ const TrainerSession = () => {
 
     const _genId = () => Date.now() + Math.floor(Math.random() * 1000);
 
+    console.log('[TrainerSession] Matching tool in switch:', tool);
     switch (tool) {
       // ---------------------- SELECT (Learner Tool Access) ----------------------
       case '✋ Select': {
@@ -903,30 +966,6 @@ const TrainerSession = () => {
       case '⌨️ Keyboard': {
         triggerLearnerKeyboard();
         return;
-      }
-
-
-      // ---------------------- TIMER ----------------------
-      case '⏱️ Timer': {
-        if (toolsService) {
-          // Start a 5-minute timer (300 seconds)
-          const timerId = toolsService.startTimer(5, 0);
-          const label = 'Timer';
-          setActiveIcons(prev => ({ ...prev, [label]: true }));
-
-          // Add timer item to canvas
-          newItem = {
-            id: timerId,
-            type: 'timer',
-            x: centerX - 50,
-            y: centerY - 50,
-            width: 100,
-            height: 100,
-            label: '⏱️ Timer',
-            remainingSeconds: 300
-          };
-        }
-        break;
       }
 
       // ---------------------- STOPWATCH ----------------------
@@ -951,134 +990,140 @@ const TrainerSession = () => {
         break;
       }
 
-      // ---------------------- REACTIONS / FEEDBACK ----------------------
+      // ---------------------- FEEDBACK & EMOJIS ----------------------
       case '👍 Good Job!': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('👍 Good Job!');
+        console.log('[TrainerSession] MATCHED Good Job case!');
+        const message = 'Good Job! 👍';
+        console.log('[TrainerSession] Setting feedback message:', message);
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Good Job feedback (keeps UI quiet for learner)
+        // Auto-hide after 3 seconds
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
 
       case '🌟 Wow!': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('🌟 Wow!');
+        console.log('[TrainerSession] MATCHED Wow case!');
+        const message = 'Wow! 🌟';
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Wow feedback
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
 
       case '💪 Doing Well': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('💪 Doing Well');
+        console.log('[TrainerSession] MATCHED Doing Well case!');
+        const message = 'Doing Well 💪';
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Doing Well feedback
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
 
       case '🙏 Thank You': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('🙏 Thank You');
+        const message = 'Thank You! 🙏';
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Thank You feedback
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
 
       case '❤️ Loved it': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('❤️ Loved it');
+        const message = 'Love It! ❤️';
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Love It feedback
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
-
 
       case '😌 Relax': {
-        if (toolsService) {
-          toolsService.addReaction(tool);
-          toast.success('😌 Relax');
+        console.log('[TrainerSession] MATCHED Relax case!');
+        const message = 'Relax 😌';
+        setFeedbackMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('feedback_message', {
+            message: message,
+            timestamp: Date.now()
+          });
         }
-        break;
+        // toast removed: Relax feedback
+        setTimeout(() => setFeedbackMessage(''), 3000);
+        return;
       }
 
-      // ---------------------- ANIMATIONS ----------------------
       case '🫧 Bubbles': {
-        if (toolsService) {
-          const animId = toolsService.startAnimation('bubbles');
-          toast.success('🫧 Bubbles animation started');
-          newItem = {
-            id: animId,
-            type: 'animation',
-            animationType: 'bubbles',
-            x: centerX,
-            y: centerY,
-            ttl: 5000
-          };
-        }
-        break;
+        console.log('[TrainerSession] Spawning bubbles animation');
+        spawnFloatingAnimation('bubble', '🫧');
+        return;
       }
 
       case '😊 Smileys': {
-        if (toolsService) {
-          const animId = toolsService.startAnimation('smileys');
-          toast.success('😊 Smileys animation started');
-          newItem = {
-            id: animId,
-            type: 'animation',
-            animationType: 'smileys',
-            x: centerX,
-            y: centerY,
-            ttl: 5000
-          };
-        }
-        break;
+        console.log('[TrainerSession] Spawning smileys animation');
+        spawnFloatingAnimation('smiley', '😊');
+        return;
       }
 
       case '🎈 Balloons': {
-        if (toolsService) {
-          const animId = toolsService.startAnimation('balloons');
-          toast.success('🎈 Balloons animation started');
-          newItem = {
-            id: animId,
-            type: 'animation',
-            animationType: 'balloons',
-            x: centerX,
-            y: centerY,
-            ttl: 5000
-          };
-        }
-        break;
+        console.log('[TrainerSession] Spawning balloons animation');
+        spawnFloatingAnimation('balloon', '🎈');
+        return;
       }
 
       case '⭐ Stars': {
-        if (toolsService) {
-          const animId = toolsService.startAnimation('stars');
-          toast.success('⭐ Stars animation started');
-          newItem = {
-            id: animId,
-            type: 'animation',
-            animationType: 'stars',
-            x: centerX,
-            y: centerY,
-            ttl: 5000
-          };
-        }
-        break;
+        console.log('[TrainerSession] Spawning stars animation');
+        spawnFloatingAnimation('star', '⭐');
+        return;
       }
 
-      // ---------------------- WAIT OVERLAY ----------------------
       case '⏳ Wait': {
-        if (toolsService) {
-          toolsService.showWaitOverlay();
-          toast.info('⏳ Wait');
-          const label = 'Wait';
-          setActiveIcons(prev => ({ ...prev, [label]: true }));
-        }
+        // Show animated wait emoji on whiteboard
+        newItem = {
+          id: genId(),
+          type: 'feedback_animation',
+          x: centerX - 50,
+          y: centerY - 50,
+          width: 100,
+          height: 100,
+          emoji: '⏳',
+          label: 'Wait',
+          ttl: 3000 // Auto-remove after 3 seconds
+        };
         break;
       }
 
       // ---------------------- DEFAULT ----------------------
       default:
+        console.log('[TrainerSession] No case matched for tool:', tool);
         toast.info(`Tool ${tool} clicked`);
         return;
     }
@@ -1091,14 +1136,14 @@ const TrainerSession = () => {
       setCanvasItems(prev => {
         const next = [...prev, newItem];
         // broadcast full item to learners (if applicable)
-        if (['emoji', 'timer', 'stopwatch', 'overlay', 'reaction', 'animation'].includes(newItem.type)) {
+        if (['emoji', 'timer', 'stopwatch', 'overlay', 'reaction', 'animation', 'feedback_animation'].includes(newItem.type)) {
           emit('sendItemUpdate', newItem);
         }
         return next;
       });
 
       // auto-remove short-lived items if ttl provided
-      if (newItem.ttl && newItem.ttl > 0 && ['emoji', 'reaction', 'animation'].includes(newItem.type)) {
+      if (newItem.ttl && newItem.ttl > 0 && ['emoji', 'reaction', 'animation', 'feedback_animation'].includes(newItem.type)) {
         setTimeout(() => {
           setCanvasItems(prev => prev.filter(i => i.id !== newItem.id));
           emit('sendItemRemove', { id: newItem.id });
@@ -1461,11 +1506,12 @@ const TrainerSession = () => {
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                isFrozen={isFrozen}
-                isPaused={isPaused}
                 learnerSelectedItemId={selectedItemId}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
+                feedbackMessage={feedbackMessage}
+                floatingAnimations={floatingAnimations}
+                onAnimationPop={handleAnimationPop}
                 tool={tool}
                 setTool={setTool}
                 color={color}
@@ -1546,44 +1592,6 @@ const TrainerSession = () => {
 
             {/* Trainer Whiteboard Tools */}
             <div className="w-full">
-              <div className="flex items-center justify-between w-full mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-3 py-1 rounded shadow-sm flex items-center gap-2">
-                    <span className="text-sm">📌</span>
-                    <div className="text-xs font-semibold">Canvas Controls</div>
-                  </div>
-                </div>
-
-              </div>
-              <div className="flex flex-wrap gap-1 w-full mb-3">
-                {[
-                  { label: 'Pause', icon: '⏸️', title: 'Pause interactions' },
-                  { label: 'Freeze', icon: '❄️', title: 'Freeze canvas' },
-                  { label: 'Clear', icon: '🗑️', title: 'Clear all items' },
-                  { label: 'Shuffle', icon: '🔀', title: 'Shuffle items' }
-                ].map((t, i) => {
-                  const _isPauseOrFreeze = t.label === 'Pause' || t.label === 'Freeze';
-                  // Active if Pause/Freeze are toggled OR if any of the icon-only tools are active
-                  const isActive = (t.label === 'Pause' && isPaused) || (t.label === 'Freeze' && isFrozen) || !!activeIcons[t.label];
-
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                      className={`${isActive
-                        ? 'bg-blue-500 border-blue-600 shadow-lg text-white'
-                        : 'bg-white border-gray-300 hover:bg-gray-100'
-                        } border-2 px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                      title={t.title}
-                    >
-                      <span>{t.icon}</span>
-                      <span>{t.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-
               <div className="w-full mb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

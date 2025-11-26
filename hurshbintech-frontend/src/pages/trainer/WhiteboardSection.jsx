@@ -88,9 +88,17 @@ const WhiteboardSection = ({
         {/* Other Trainer Tools */}
         <div className="text-[10px] font-semibold mb-2 text-slate-800 w-full">🎨 Trainer Tools (Click to use)</div>
         <div className="flex flex-wrap gap-2">
-          {['⏸️ Pause', '❄️ Freeze', '🗑️ Clear', '🔀 Shuffle', '⏱️ Timer', '⏲️ Stopwatch', '👍 Good Job!', '🌟 Wow!', '💪 Doing Well', '🙏 Thank You', '❤️ Loved it', '📈 Can Better', '😌 Relax', '🫧 Bubbles', '😊 Smileys', '🎈 Balloons', '⭐ Stars', '⏳ Wait'].map((t, i) => (
-            <div key={i} className="w-20 h-20 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center text-xs text-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md p-1" onClick={() => handleToolClick(t)}>{t}</div>
-          ))}
+          {['⏸️ Pause', '❄️ Freeze', '🗑️ Clear', '🔀 Shuffle', '⏱️ Timer', '⏲️ Stopwatch', '👍 Good Job!', '🌟 Wow!', '💪 Doing Well', '🙏 Thank You', '❤️ Loved it', '📈 Can Better', '😌 Relax', '🫧 Bubbles', '😊 Smileys', '🎈 Balloons', '⭐ Stars', '⏳ Wait'].map((t, i) => {
+            const parts = t.split(' ');
+            const emoji = parts.shift();
+            const label = parts.join(' ');
+            return (
+              <div key={i} className="w-20 h-20 bg-white border-2 border-gray-300 rounded-lg flex flex-col items-center justify-center text-xs text-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md p-1" onClick={() => handleToolClick(t)}>
+                <span className="emoji-fallback text-2xl leading-none">{emoji}</span>
+                <span className="mt-1 text-[10px]">{label}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Session notes */}
