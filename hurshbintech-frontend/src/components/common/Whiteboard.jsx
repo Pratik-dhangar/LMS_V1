@@ -331,7 +331,8 @@ const Whiteboard = ({
     erasePenTrigger = 0,
     redrawCanvasTrigger = 0,
     stopwatchFormattedTime = null,
-    stopwatchIsRunning = false
+    stopwatchIsRunning = false,
+    toolActive = false
 }) => {
     // Media control state management
     const mediaControl = useMediaControl();
@@ -1082,8 +1083,18 @@ const Whiteboard = ({
     const startDrawing = (e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+
+        // Handle both mouse and touch events
+        let x, y;
+        if (e.touches) {
+            // Touch event
+            x = e.touches[0].clientX - rect.left;
+            y = e.touches[0].clientY - rect.top;
+        } else {
+            // Mouse event
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
+        }
 
         // Check if clicking on a bucket (trainer only can drag buckets)
         if (isTrainer) {
@@ -1161,6 +1172,11 @@ const Whiteboard = ({
         // Only trainer can draw
         if (!isTrainer) return;
 
+        // Check if drawing tool is active (pen or eraser)
+        if ((tool === 'pen' || tool === 'eraser') && !toolActive) {
+            return; // Tool not active, don't allow drawing
+        }
+
         setIsDrawing(true);
         prevPosRef.current = { x, y };
 
@@ -1172,8 +1188,18 @@ const Whiteboard = ({
     const draw = (e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        const currX = e.clientX - rect.left;
-        const currY = e.clientY - rect.top;
+
+        // Handle both mouse and touch events
+        let currX, currY;
+        if (e.touches) {
+            // Touch event
+            currX = e.touches[0].clientX - rect.left;
+            currY = e.touches[0].clientY - rect.top;
+        } else {
+            // Mouse event
+            currX = e.clientX - rect.left;
+            currY = e.clientY - rect.top;
+        }
 
         // Handle video resizing
         if (resizingVideo) {
@@ -1755,6 +1781,9 @@ const Whiteboard = ({
                             onMouseDown={startDrawing}
                             onMouseMove={draw}
                             onMouseUp={stopDrawing}
+                            onTouchStart={startDrawing}
+                            onTouchMove={draw}
+                            onTouchEnd={stopDrawing}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                         />

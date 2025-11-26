@@ -15,7 +15,7 @@ from app.schemas.learning_content import (
     LearningContentResponse
 )
 from app.models.user_model import User, HeadProfile
-from app.core.deps import get_current_admin, get_current_head
+from app.core.deps import get_current_admin, get_current_head, get_current_trainer
 from app.core.config import settings
 from app.crud import learning_content_crud
 from app.utils.s3_utils import S3Manager
@@ -358,3 +358,57 @@ async def update_content_head(
 
     response = LearningContentResponse.from_orm_with_users(updated_content)
     return convert_response_urls(response)
+
+# ============ TRAINER ENDPOINTS ============#
+
+@router.post("/trainer", response_model=LearningContentResponse, status_code=status.HTTP_201_CREATED)
+async def create_learning_content_trainer(
+    content_data: LearningContentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: User = Depends(get_current_trainer)
+):
+    """Trainer creates new learning content"""
+    new_content = await learning_content_crud.create_learning_content(
+        db, content_data, current_trainer.id
+    )
+    return LearningContentResponse.from_orm_with_users(new_content)
+
+@router.get("/trainer", response_model=List[LearningContentResponse])
+async def get_all_contents_trainer(
+    db: AsyncSession = Depends(get_db),
+    current_trainer: User = Depends(get_current_trainer)
+):
+    """Trainer gets all learning contents"""
+    contents = await learning_content_crud.get_all_learning_contents(db)
+    return [LearningContentResponse.from_orm_with_users(c) for c in contents]
+
+@router.get("/trainer/{content_id}", response_model=LearningContentResponse)
+async def get_content_by_id_trainer(
+    content_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: User = Depends(get_current_trainer)
+):
+    """Trainer gets specific learning content"""
+    content = await learning_content_crud.get_learning_content_by_id(db, content_id)
+
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    return LearningContentResponse.from_orm_with_users(content)
+
+@router.patch("/trainer/{content_id}", response_model=LearningContentResponse)
+async def update_content_trainer(
+    content_id: int,
+    content_data: LearningContentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: User = Depends(get_current_trainer)
+):
+    """Trainer updates learning content"""
+    updated_content = await learning_content_crud.update_learning_content(
+        db, content_id, content_data, current_trainer.id
+    )
+
+    if not updated_content:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    return LearningContentResponse.from_orm_with_users(updated_content)

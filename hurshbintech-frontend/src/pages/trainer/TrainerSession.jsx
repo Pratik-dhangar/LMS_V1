@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
-// import learningContentService from '../../api/services/learningContentService';
+import learningContentService from '../../api/services/learningContentService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
@@ -131,6 +131,8 @@ const TrainerSession = () => {
   const [learningProgramSearch, setLearningProgramSearch] = useState('');
   const [_learningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
+  const [databaseSearchResults, setDatabaseSearchResults] = useState([]); // Results from database search
+  const [isSearching, setIsSearching] = useState(false); // Loading state for search
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
   const [selectedProgramId, setSelectedProgramId] = useState(null); // Track which program is checked
@@ -161,6 +163,9 @@ const TrainerSession = () => {
   const [lineWidth, setLineWidth] = useState(2);
   const [bucketColor, setBucketColor] = useState('#9333ea');
   const [buckets, setBuckets] = useState([]);
+  const [toolActive, setToolActive] = useState(false); // Track if drawing tool is active
+  const [eraserActive, setEraserActive] = useState(false); // Track if eraser tool is active
+  const [eraseAllActive, setEraseAllActive] = useState(false); // Track if erase all tool is active
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Tool access control for learner (trainer can grant/revoke permissions)
@@ -217,10 +222,17 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle voice input with automatic transcript sending to learner
-  // 🔸 How it works: handles voice input toggle and sends transcript via whiteboard service
+  // 🔸 How it works: handles voice input toggle and sends transcript via whiteboard service, coordinates with video conferencing mic
   // -----------------------------------------------------------
   const toggleListening = async () => {
     try {
+      // If turning on voice input and video conferencing mic is on, turn it off
+      if (!listening && micEnabled && webRTC) {
+        const newState = webRTC.toggleMic();
+        setMicEnabled(newState);
+        toast.info('Video conferencing mic turned off - voice input enabled');
+      }
+
       // Toggle voice input using the new hook
       await handleVoiceToggle();
 
@@ -232,6 +244,13 @@ const TrainerSession = () => {
           text: transcript.trim(),
           timestamp: Date.now()
         });
+
+        // Turn video conferencing mic back on after voice input is done
+        if (webRTC && !micEnabled) {
+          const newState = webRTC.toggleMic();
+          setMicEnabled(newState);
+          toast.info('Video conferencing mic turned back on');
+        }
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -542,12 +561,18 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle microphone on/off
-  // 🔸 How it works: calls webRTC.toggleMic() and updates state
+  // 🔸 How it works: calls webRTC.toggleMic() and updates state, coordinates with voice input
   // -----------------------------------------------------------
   const handleToggleMic = () => {
     if (webRTC) {
       const newState = webRTC.toggleMic();
       setMicEnabled(newState);
+
+      // If turning on video conferencing mic, turn off voice input
+      if (newState && listening) {
+        handleVoiceToggle(); // Stop voice input
+        toast.info('Voice input stopped - video conferencing mic enabled');
+      }
     }
   };
 
@@ -734,25 +759,90 @@ const TrainerSession = () => {
   ) || [];
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Control learning content search input state
-  // 🔸 How it works: simple controlled input for filtering content
+  // 🔹 Purpose: Control learning content search input state and search database
+  // 🔸 How it works: searches database for content matching the search term with debouncing
   // -----------------------------------------------------------
-  const handleLearningContentSearch = (e) => {
-    setLearningContentSearch(e.target.value);
+  const handleLearningContentSearch = async (e) => {
+    const searchValue = e.target.value;
+    setLearningContentSearch(searchValue);
+
+    // Clear database results if search is empty
+    if (!searchValue.trim()) {
+      setDatabaseSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Debounce the API call
+    setIsSearching(true);
   };
+
+  // Debounced search effect for database query
+  useEffect(() => {
+    const searchDatabase = async () => {
+      if (!learningContentSearch.trim()) {
+        setDatabaseSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      try {
+        setIsSearching(true);
+        console.log('[TrainerSession] Searching database for:', learningContentSearch);
+
+        // Fetch all learning content from database based on user role
+        const userData = localStorage.getItem('user_data');
+        const user = userData ? JSON.parse(userData) : null;
+
+        let allContent = [];
+        if (user?.role === 'admin') {
+          allContent = await learningContentService.admin.getAll();
+        } else if (user?.role === 'trainer') {
+          allContent = await learningContentService.trainer.getAll();
+        } else if (user?.role === 'head') {
+          allContent = await learningContentService.head.getAll();
+        }
+
+        // Filter results based on search term
+        const searchLower = learningContentSearch.toLowerCase();
+        const filtered = allContent.filter(content => {
+          return (
+            content.title?.toLowerCase().includes(searchLower) ||
+            content.content_type?.toLowerCase().includes(searchLower) ||
+            content.category?.toLowerCase().includes(searchLower) ||
+            content.description?.toLowerCase().includes(searchLower)
+          );
+        });
+
+        console.log('[TrainerSession] Database search results:', filtered.length);
+        setDatabaseSearchResults(filtered);
+      } catch (error) {
+        console.error('[TrainerSession] Error searching database:', error);
+        toast.error('Failed to search learning content');
+        setDatabaseSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    // Debounce: wait 500ms after user stops typing
+    const timeoutId = setTimeout(searchDatabase, 500);
+    return () => clearTimeout(timeoutId);
+  }, [learningContentSearch]);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Compute filtered learning content based on search term
-  // 🔸 How it works: performs case-insensitive includes check on title, type, and category
+  // 🔸 How it works: If searching, show database results; otherwise show filtered assigned content
   // -----------------------------------------------------------
-  const filteredLearningContent = sessionInfo?.learning_contents?.filter(content => {
-    const searchLower = learningContentSearch.toLowerCase();
-    return (
-      content.title?.toLowerCase().includes(searchLower) ||
-      content.content_type?.toLowerCase().includes(searchLower) ||
-      content.category?.toLowerCase().includes(searchLower)
-    );
-  }) || [];
+  const filteredLearningContent = (() => {
+    // If there's a search term, prioritize database results
+    if (learningContentSearch.trim()) {
+      return databaseSearchResults;
+    }
+
+    // Otherwise, show all assigned content from session
+    return sessionInfo?.learning_contents || [];
+  })();
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Search additional content (mocked for now)
@@ -1167,32 +1257,32 @@ const TrainerSession = () => {
   return (
     <div className="max-w-full">
       {/* Navigation / Header */}
-      <div className="bg-slate-800 px-5 py-4 sticky top-0 z-[1000] shadow-md">
-        <div className="flex justify-between items-center">
+      <div className="bg-slate-800 px-3 sm:px-5 py-3 sm:py-4 sticky top-0 z-[1000] shadow-md">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <div className="text-white text-lg font-bold mb-2">HurshBin Trainer</div>
-            <div className="text-sm text-gray-400">
+            <div className="text-white text-base sm:text-lg font-bold mb-1 sm:mb-2">HurshBin Trainer</div>
+            <div className="text-xs sm:text-sm text-gray-400">
               {sessionInfo?.title ?? 'Training Session'} — Learner : {sessionInfo?.learner_name ?? 'Learner'}
             </div>
           </div>
 
-          <div className="flex gap-3 items-center">
-            <div className="text-white text-sm">
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center w-full sm:w-auto">
+            <div className="text-white text-xs sm:text-sm">
               Status: <strong>{connectionStatus}</strong>
             </div>
-            <div className="text-white text-sm">
+            <div className="text-white text-xs sm:text-sm">
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
             <button
-              className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer text-sm hover:bg-green-700 transition-colors"
+              className="bg-green-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-green-700 transition-colors"
               onClick={() => navigate('/trainer/dashboard')}
             >
               🏠 Dashboard
             </button>
-            <button className="bg-slate-700 text-white px-4 py-2 rounded cursor-pointer text-sm hover:bg-slate-600 transition-colors" onClick={() => console.log('[TrainerSession] Open settings')}>
+            <button className="bg-slate-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-slate-600 transition-colors" onClick={() => console.log('[TrainerSession] Open settings')}>
               ⚙️ Settings
             </button>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer text-sm hover:bg-blue-600 transition-colors" onClick={() => console.log('[TrainerSession] Active')}>
+            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-blue-600 transition-colors" onClick={() => console.log('[TrainerSession] Active')}>
               Live
             </button>
           </div>
@@ -1202,11 +1292,11 @@ const TrainerSession = () => {
 
       {/* Info bar - Auto-hide after 5 seconds */}
       {showInfoBar && (
-        <div className="bg-yellow-100 border border-yellow-400 p-3 rounded mt-4 mx-4 flex justify-between items-center">
-          <span><strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to learner).</span>
+        <div className="bg-yellow-100 border border-yellow-400 p-2 sm:p-3 rounded mt-2 sm:mt-4 mx-2 sm:mx-4 flex justify-between items-center">
+          <span className="text-xs sm:text-sm"><strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to learner).</span>
           <button
             onClick={() => setShowInfoBar(false)}
-            className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-4"
+            className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-2 sm:ml-4"
             title="Close"
           >
             ×
@@ -1215,9 +1305,9 @@ const TrainerSession = () => {
       )}
 
       {/* Main layout */}
-      <div className="flex flex-col lg:flex-row gap-5 my-5 mx-4 items-start">
-        {/* Left Sidebar */}
-        <div className="flex-1 min-w-0 w-full lg:w-auto">
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 my-3 sm:my-5 mx-2 sm:mx-4 items-start">
+        {/* Left Sidebar - Learning Program */}
+        <div className="flex-1 min-w-0 w-full lg:w-auto order-1">
           <VideoSection
             remoteStream={remoteStream}
             remoteVideoRef={remoteVideoRef}
@@ -1228,56 +1318,56 @@ const TrainerSession = () => {
             sessionInfo={sessionInfo}
             connectionStatus={connectionStatus}
           />
-          <div className="bg-gray-50 border-2 border-gray-300 p-4 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar">
-            <div className="bg-blue-500 text-white font-semibold p-2 -mx-4 -mt-4 mb-4 rounded-t">
+          <div className="bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar mt-3 sm:mt-4">
+            <div className="bg-blue-500 text-white font-semibold p-1.5 sm:p-2 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-2 sm:mb-4 rounded-t text-sm sm:text-base">
               📋 Learning Program
             </div>
 
-            <div className="bg-white border-2 border-blue-500 p-3 rounded mb-5 flex items-center">
+            <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 rounded mb-3 sm:mb-5 flex items-center">
               <input
                 type="text"
-                className="flex-1 bg-gray-100 px-2 py-2 rounded text-xs border-none outline-none mr-2"
+                className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 rounded text-xs border-none outline-none mr-2"
                 placeholder="🔍 Search Child Name / IIP..."
                 value={learningProgramSearch}
                 onChange={handleLearningProgramSearch}
               />
             </div>
 
-            <div className="bg-gray-50 p-2 rounded mb-4">
-              <div className="text-xs font-semibold mb-2 text-slate-800">
+            <div className="bg-gray-50 p-1.5 sm:p-2 rounded mb-3 sm:mb-4">
+              <div className="text-[10px] sm:text-xs font-semibold mb-2 text-slate-800">
                 Selected: {sessionInfo?.learner_name ?? '—'} {sessionInfo?.iip_id ? `- ${sessionInfo.iip_id}` : ''}
               </div>
             </div>
 
-            <div className="text-sm font-semibold mb-2">Program Items</div>
-            <div className="max-h-[200px] overflow-y-auto mb-4">
+            <div className="text-xs sm:text-sm font-semibold mb-2">Program Items</div>
+            <div className="max-h-[180px] sm:max-h-[200px] overflow-y-auto mb-3 sm:mb-4">
               {filteredLearningGoals.length > 0 ? (
                 filteredLearningGoals.map((goal, index) => (
-                  <div key={goal.id ?? index} className="flex items-center gap-2 p-2 bg-white border border-gray-300 rounded my-1 text-xs">
+                  <div key={goal.id ?? index} className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-white border border-gray-300 rounded my-1 text-[10px] sm:text-xs">
                     <input
                       type="checkbox"
-                      className="w-4 h-4 cursor-pointer"
+                      className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer"
                       checked={selectedProgramId === goal.id}
                       onChange={() => handleProgramCheck(goal.id)}
                     />
                     <div className="flex-1">{index + 1}. {goal.goal}</div>
-                    <div className="bg-gray-200 px-2 py-1 rounded font-semibold min-w-[30px] text-center cursor-pointer" title="Click to record prompt level">—</div>
+                    <div className="bg-gray-200 px-1.5 sm:px-2 py-1 rounded font-semibold min-w-[25px] sm:min-w-[30px] text-center cursor-pointer text-[10px] sm:text-xs" title="Click to record prompt level">—</div>
                   </div>
                 ))
-              ) : <div className="text-xs text-gray-500 italic">No matching program items found.</div>
+              ) : <div className="text-[10px] sm:text-xs text-gray-500 italic">No matching program items found.</div>
               }
 
             </div>
 
 
 
-            <div className="text-sm font-semibold mt-4 mb-2">📊 Prompt Meter</div>
-            <div className="bg-white border-2 border-blue-500 rounded p-2 mb-4">
-              <div className="flex flex-wrap gap-1 justify-center">
+            <div className="text-xs sm:text-sm font-semibold mt-3 sm:mt-4 mb-2">📊 Prompt <br /> Meter</div>
+            <div className="bg-white border-2 border-blue-500 rounded p-1.5 sm:p-2 mb-3 sm:mb-4">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-center">
                 {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
                   <div
                     key={p}
-                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white px-2 py-2 rounded font-semibold text-xs cursor-pointer min-w-[35px] text-center hover:bg-green-700`}
+                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 py-1.5 sm:py-2 rounded font-semibold text-[10px] sm:text-xs cursor-pointer min-w-[30px] sm:min-w-[35px] text-center hover:bg-green-700`}
                     onClick={() => {
                       setSelectedPromptLevel(p);
                       webRTC && webRTC.sendPromptMeter(p);
@@ -1287,21 +1377,21 @@ const TrainerSession = () => {
                   </div>
                 ))}
               </div>
-              <div className="text-[10px] text-gray-500 mt-2 text-center">Click to record prompt level for selected item</div>
+              <div className="text-[9px] sm:text-[10px] text-gray-500 mt-1 sm:mt-2 text-center">Click to record prompt level for selected item</div>
               {selectedPromptLevel && (
-                <div className="text-xs font-semibold text-center mt-2 text-blue-600">
+                <div className="text-[10px] sm:text-xs font-semibold text-center mt-1 sm:mt-2 text-blue-600">
                   Selected: {selectedPromptLevel}
                 </div>
               )}
             </div>
 
-            <div className="text-sm font-semibold mb-2">🎯 Reinforcement Meter</div>
-            <div className="bg-white border-2 border-green-600 rounded p-2 mb-4">
-              <div className="flex flex-wrap gap-1 justify-center">
+            <div className="text-xs sm:text-sm font-semibold mb-2">🎯 Reinforcement Meter</div>
+            <div className="bg-white border-2 border-green-600 rounded p-1.5 sm:p-2 mb-3 sm:mb-4">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-center">
                 {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
                   <div
                     key={r}
-                    className={`${selectedReinforcementLevel === r ? 'bg-blue-600' : 'bg-green-600'} text-white px-2 py-2 rounded font-semibold text-xs cursor-pointer min-w-[40px] text-center hover:bg-green-700`}
+                    className={`${selectedReinforcementLevel === r ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 py-1.5 sm:py-2 rounded font-semibold text-[10px] sm:text-xs cursor-pointer min-w-[35px] sm:min-w-[40px] text-center hover:bg-green-700`}
                     onClick={() => {
                       setSelectedReinforcementLevel(r);
                       webRTC && webRTC.sendReinforcementMeter(r);
@@ -1313,24 +1403,24 @@ const TrainerSession = () => {
               </div>
 
               {selectedReinforcementLevel && (
-                <div className="text-xs font-semibold text-center mt-2 text-blue-600">
+                <div className="text-[10px] sm:text-xs font-semibold text-center mt-1 sm:mt-2 text-blue-600">
                   Selected: {selectedReinforcementLevel}
                 </div>
               )}
             </div>
 
             {/* Speech Section */}
-            <h3 className="text-base font-semibold mb-2">🎙️ Voice Input</h3>
+            <h3 className="text-sm sm:text-base font-semibold mb-2">🎙️ Voice Input</h3>
             <button
               onClick={toggleListening}
-              className={`${listening ? 'bg-red-500' : 'bg-green-500'} text-white border-none rounded-full w-[50px] h-[50px] text-lg cursor-pointer mb-2 flex justify-center items-center mx-auto hover:opacity-90`}
+              className={`${listening ? 'bg-red-500' : 'bg-green-500'} text-white border-none rounded-full w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] text-base sm:text-lg cursor-pointer mb-2 flex justify-center items-center mx-auto hover:opacity-90`}
             >
               {listening ? "🔇" : <FaMicrophone />}
             </button>
-            <p className="text-xs text-center text-gray-600 mb-2">
+            <p className="text-[10px] sm:text-xs text-center text-gray-600 mb-2">
               {listening ? 'Recording... Click to stop' : 'Click to start recording'}
             </p>
-            <div className="bg-white border border-gray-200 p-2 min-h-[60px] rounded whitespace-pre-wrap text-sm max-h-[150px] overflow-y-auto mb-2">
+            <div className="bg-white border border-gray-200 p-2 min-h-[50px] sm:min-h-[60px] rounded whitespace-pre-wrap text-xs sm:text-sm max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
               {transcript || <span className="text-gray-400 italic">Your speech will appear here...</span>}
             </div>
             {transcript && !listening && (
@@ -1344,7 +1434,7 @@ const TrainerSession = () => {
                     });
                   }
                 }}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded text-sm font-semibold mb-2"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded text-xs sm:text-sm font-semibold mb-2"
               >
                 📤 Send to Learner
               </button>
@@ -1354,88 +1444,135 @@ const TrainerSession = () => {
         </div>
 
         {/* Center Area */}
-        <div className="flex-[3] min-w-0 w-full lg:w-auto">
+        <div className="flex-[3] min-w-0 w-full lg:w-auto order-2">
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
-          <div className="w-full mb-3">
+          <div className="w-full mb-2 sm:mb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-2 rounded shadow-md flex items-center gap-2">
-                  <span className="text-lg">🎨</span>
-                  <div className="text-sm font-semibold">Whiteboard Drawing Tools</div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">🎨</span>
+                  <div className="text-xs sm:text-sm font-semibold">Whiteboard Drawing Tools</div>
                 </div>
               </div>
 
 
             </div>
           </div>
-          <div className="w-full flex flex-wrap gap-2 items-center ">
+          <div className="w-full flex flex-wrap gap-1 sm:gap-2 items-center ">
             {/* Drawing tool buttons */}
             <div className="flex gap-1">
               <button
-                onClick={() => setTool('pen')}
-                className={`${tool === 'pen' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                title="Pen Tool"
+                onClick={() => {
+                  if (tool === 'pen' && toolActive && !eraserActive) {
+                    // Deactivate pen
+                    setToolActive(false);
+                  } else {
+                    // Activate pen - deactivate other tools first
+                    setTool('pen');
+                    setToolActive(true);
+                    setEraserActive(false);
+                    setEraseAllActive(false);
+                  }
+                }}
+                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                title="Pen Tool (Click to activate/deactivate)"
               >
                 <span>✏️</span>
-                <span>Pen</span>
-              </button>
-              <button
-                onClick={() => setTool('eraser')}
-                className={`${tool === 'eraser' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                title="Eraser Tool"
-              >
-                <span>🧽</span>
-                <span>Eraser</span>
-              </button>
-              <button
-                onClick={eraseAllPen}
-                className={`${tool === 'eraser' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                title="Erase All Pen Strokes"
-              >
-                <span>🗑️</span>
-                <span>Erase All</span>
+                <span className="hidden xs:inline">Pen</span>
+                {tool === 'pen' && toolActive && !eraserActive}
               </button>
               <button
                 onClick={() => {
-                  setTool('bucket');
-                  addBucket();
+                  if (eraserActive) {
+                    // Deactivate eraser
+                    setEraserActive(false);
+                    setToolActive(false);
+                  } else {
+                    // Activate eraser - deactivate other tools first
+                    setTool('eraser');
+                    setToolActive(true);
+                    setEraserActive(true);
+                    setEraseAllActive(false);
+                  }
                 }}
-                className={`${tool === 'bucket' ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-3 py-2 rounded text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
-                title="Add Bucket"
+                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                title="Eraser Tool (Click to activate/deactivate)"
+              >
+                <span>🧽</span>
+                <span className="hidden xs:inline">Eraser</span>
+                {eraserActive}
+              </button>
+              <button
+                onClick={() => {
+                  if (eraseAllActive) {
+                    // Deactivate erase all
+                    setEraseAllActive(false);
+                  } else {
+                    // Activate erase all - deactivate other tools first
+                    setEraseAllActive(true);
+                    setEraserActive(false);
+                    setToolActive(false);
+                    eraseAllPen();
+                  }
+                }}
+                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                title="Erase All Pen Strokes"
+              >
+                <span>🗑️</span>
+                <span className="hidden sm:inline">Erase All</span>
+                {eraseAllActive}
+              </button>
+              <button
+                onClick={() => {
+                  if (tool === 'bucket' && toolActive) {
+                    // Bucket is active, add a new bucket
+                    addBucket();
+                  } else {
+                    // Activate bucket tool - deactivate other tools first
+                    setTool('bucket');
+                    setToolActive(true);
+                    setEraserActive(false);
+                    setEraseAllActive(false);
+                    toast.info('Bucket tool activated - click again to add buckets');
+                  }
+                }}
+                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                title="Bucket Tool (Click to activate, click again to add bucket)"
               >
                 <span>🪣</span>
-                <span>Bucket</span>
+                <span className="hidden xs:inline">Bucket</span>
+                {tool === 'bucket' && toolActive}
               </button>
             </div>
 
             {/* Color and Size Controls */}
-            <div className="flex gap-2 items-center flex-wrap">
+            <div className="flex gap-1 sm:gap-2 items-center flex-wrap">
               <div className="flex items-center gap-1">
-                <label className="text-xs font-semibold text-slate-700">Pen Color:</label>
+                <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden sm:inline">Pen Color:</label>
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={tool === 'eraser'}
-                  className="w-6 h-6 rounded cursor-pointer border border-gray-300"
+                  className="w-5 h-5 sm:w-6 sm:h-6 rounded cursor-pointer border border-gray-300"
                   title="Pen Color"
                 />
               </div>
 
               <div className="flex items-center gap-1">
-                <label className="text-xs font-semibold text-slate-700">Bucket Color:</label>
+                <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden sm:inline">Bucket Color:</label>
                 <input
                   type="color"
                   value={bucketColor}
                   onChange={(e) => setBucketColor(e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border border-gray-300"
+                  className="w-5 h-5 sm:w-6 sm:h-6 rounded cursor-pointer border border-gray-300"
                   title="Bucket Color"
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-slate-700">Brush Size:</label>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden md:inline">Brush Size:</label>
 
                   {/* Slider: make slightly larger than before */}
                   <input
@@ -1444,7 +1581,7 @@ const TrainerSession = () => {
                     max="10"
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                    className="w-32 brush-size-slider"
+                    className="w-20 sm:w-32 brush-size-slider"
                     title="Brush Size"
                     aria-label="Brush size slider"
                     style={{
@@ -1455,7 +1592,7 @@ const TrainerSession = () => {
                 </div>
 
                 {/* Preview showing current brush/eraser size */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <div
                     className="brush-preview"
                     title="Brush preview"
@@ -1468,7 +1605,7 @@ const TrainerSession = () => {
                     }}
                   />
 
-                  <div className="text-xs text-slate-600">{lineWidth}</div>
+                  <div className="text-[10px] sm:text-xs text-slate-600">{lineWidth}</div>
                 </div>
               </div>
             </div>
@@ -1485,15 +1622,15 @@ const TrainerSession = () => {
                   });
                 }
               }}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-xs font-semibold transition-colors flex items-center gap-1"
+              className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs font-semibold transition-colors flex items-center gap-1"
               title="Clear All Canvas Items and Pen Strokes"
             >
               <span>🗑️</span>
-              <span>Clear All</span>
+              <span className="hidden sm:inline">Clear All</span>
             </button>
           </div>
           {/* Whiteboard */}
-          <div className="bg-gray-50 border-4 border-gray-300 rounded-lg m-4 relative mx-auto w-full max-w-[1086px] h-[340px] sm:h-[420px] md:h-[480px] lg:h-[501px]">
+          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[501px]">
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
@@ -1527,31 +1664,32 @@ const TrainerSession = () => {
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
                 stopwatchIsRunning={stopwatch.isRunning}
+                toolActive={toolActive}
               />
             </div>
           </div>
 
           {/* Toolbar */}
-          <div className="flex flex-wrap gap-2 p-4 bg-white rounded mt-4">
+          <div className="flex flex-wrap gap-1 sm:gap-2 p-2 sm:p-4 bg-white rounded mt-2 sm:mt-4">
             <div className="flex items-center justify-between w-full mb-2">
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-3 py-1 rounded shadow-sm flex items-center gap-2">
-                  <span className="text-sm">🛠️</span>
-                  <div className="text-xs font-semibold">Whiteboard Tools & Learner Access</div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-2 sm:px-3 py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm">🛠️</span>
+                  <div className="text-[10px] sm:text-xs font-semibold">Whiteboard Tools & Learner Access</div>
                 </div>              </div>
 
 
             </div>
 
             {/* Learner Tool Access Controls */}
-            <div className="w-full flex flex-wrap gap-2 mb-3 pb-3">
+            <div className="w-full flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3">
               {/* Select Tool Toggle */}
               <button
                 onClick={() => toggleLearnerToolAccess('select')}
                 className={`${learnerToolAccess.select
                   ? 'bg-blue-500 hover:bg-blue-600 border-blue-600 shadow-lg text-white'
                   : 'bg-white hover:bg-gray-50 border-gray-400 text-slate-800'
-                  } border-2 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
+                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
                 title={learnerToolAccess.select ? 'Click to disable Select' : 'Click to enable Select'}
               >
                 <span>✋</span>
@@ -1564,7 +1702,7 @@ const TrainerSession = () => {
                 className={`${learnerToolAccess.drag
                   ? 'bg-blue-500 hover:bg-blue-600 border-blue-600 shadow-lg text-white'
                   : 'bg-white hover:bg-gray-50 border-gray-400 text-slate-800'
-                  } border-2 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
+                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
                 title={learnerToolAccess.drag ? 'Click to disable Drag' : 'Click to enable Drag'}
               >
                 <span>↔️</span>
@@ -1581,7 +1719,7 @@ const TrainerSession = () => {
                     triggerLearnerKeyboard();
                   }
                 }}
-                className={`${learnerToolAccess.keyboard ? 'bg-blue-500 border-blue-600 text-white hover:bg-blue-600' : 'bg-white border-gray-400 text-blue-600 hover:bg-blue-50'} border-2 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
+                className={`${learnerToolAccess.keyboard ? 'bg-blue-500 border-blue-600 text-white hover:bg-blue-600' : 'bg-white border-gray-400 text-blue-600 hover:bg-blue-50'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
                 title={learnerToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
               >
                 <span>⌨️</span>
@@ -1594,11 +1732,11 @@ const TrainerSession = () => {
             <div className="w-full">
               <div className="w-full mb-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-3 py-2 rounded shadow-md flex items-center gap-3">
-                      <span className="text-lg">⏲️</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-2 sm:gap-3">
+                      <span className="text-base sm:text-lg">⏲️</span>
                       <div>
-                        <div className="text-sm font-semibold">Timers</div>
+                        <div className="text-xs sm:text-sm font-semibold">Timers</div>
                       </div>
                     </div>
                   </div>
@@ -1608,7 +1746,7 @@ const TrainerSession = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowStopwatch(prev => !prev)}
-                  className={`inline-flex items-center gap-2 my-2 px-3 py-2 rounded text-sm font-semibold ${showStopwatch ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`}
+                  className={`inline-flex items-center gap-1 sm:gap-2 my-1 sm:my-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-semibold ${showStopwatch ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`}
                   aria-expanded={showStopwatch}
                   aria-controls="stopwatch-panel"
                   title="Toggle stopwatch panel"
@@ -1620,12 +1758,12 @@ const TrainerSession = () => {
 
 
 
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded shadow-sm flex items-center gap-2">
-                  <span className="text-sm">✨</span>
-                  <div className="text-xs font-semibold">Feedback & Emojis</div>
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm">✨</span>
+                  <div className="text-[10px] sm:text-xs font-semibold">Feedback & Emojis</div>
                 </div>              </div>
-              <div className="flex flex-wrap gap-1 w-full">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1 w-full">
                 {[
                   { label: 'Good Job!', icon: '👍' },
                   { label: 'Wow!', icon: '🌟' },
@@ -1642,7 +1780,7 @@ const TrainerSession = () => {
                   <button
                     key={i}
                     onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                    className={`${activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-2 py-2 rounded text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                    className={`${activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
                     title={t.label}
                   >
                     <span>{t.icon}</span>
@@ -1653,9 +1791,9 @@ const TrainerSession = () => {
             </div>
 
             {/* Session notes */}
-            <div className="border-2 border-gray-300 p-4 my-4 rounded bg-gray-50 w-full">
+            <div className="border-2 border-gray-300 p-2 sm:p-4 my-2 sm:my-4 rounded bg-gray-50 w-full">
               <div className="flex justify-between items-center mb-2">
-                <div className="font-semibold text-slate-800 text-base">📝 Session Notes</div>
+                <div className="font-semibold text-slate-800 text-sm sm:text-base">📝 Session Notes</div>
                 <button
                   onClick={() => {
                     setSessionNotes('');
@@ -1666,14 +1804,14 @@ const TrainerSession = () => {
                       });
                     }
                   }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
+                  className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-semibold transition-colors"
                   title="Clear all notes"
                 >
-                  🗑️ Clear
+                  🗑️ <span className="hidden sm:inline">Clear</span>
                 </button>
               </div>
               <textarea
-                className="w-full p-2 rounded mt-1 text-xs text-gray-800 min-h-[80px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 rounded mt-1 text-xs text-gray-800 min-h-[60px] sm:min-h-[80px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={sessionNotes}
                 onChange={handleNotesChange}
                 placeholder="Write session notes here..."
@@ -1681,9 +1819,9 @@ const TrainerSession = () => {
             </div>
 
             {/* Message box */}
-            <div className="border-2 border-gray-300 p-4 mt-2 rounded bg-gray-50 w-full">
-              <div className="font-semibold text-slate-800 mb-2 text-base">💬 Message Box</div>
-              <div className="max-h-[150px] overflow-y-auto mb-2">
+            <div className="border-2 border-gray-300 p-2 sm:p-4 mt-2 rounded bg-gray-50 w-full">
+              <div className="font-semibold text-slate-800 mb-2 text-sm sm:text-base">💬 Message Box</div>
+              <div className="max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`message-bubble ${msg.sender === 'trainer' ? 'message-bubble-sent' : 'message-bubble-received'}`}>
                     <strong>{msg.sender}:</strong> {msg.text}
@@ -1693,39 +1831,40 @@ const TrainerSession = () => {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-1 sm:gap-2 items-center">
                 <input
                   type="text"
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type message..."
-                  className="flex-1 p-2 border border-gray-300 rounded text-xs"
+                  className="flex-1 p-1.5 sm:p-2 border border-gray-300 rounded text-xs"
                 />
                 <button
                   onClick={sendMessage}
-                  className="px-4 py-2 bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                  className="px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600 text-xs sm:text-sm"
                 >
                   Send
                 </button>
               </div>
             </div>
 
-            <div className="text-right mt-4 w-full">
-              <button className="bg-green-600 text-white px-8 py-3 rounded inline-flex items-center gap-2 text-base cursor-pointer hover:bg-green-700" onClick={handleSaveSession}>
-                💾 Save Session
-                <span className="text-[10px] font-normal opacity-90">(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
+            <div className="text-right mt-3 sm:mt-4 w-full">
+              <button className="bg-green-600 text-white px-4 sm:px-8 py-2 sm:py-3 rounded inline-flex items-center gap-1 sm:gap-2 text-sm sm:text-base cursor-pointer hover:bg-green-700" onClick={handleSaveSession}>
+                💾 <span className="hidden xs:inline">Save Session</span>
+                <span className="text-[9px] sm:text-[10px] font-normal opacity-90 hidden sm:inline">(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar */}
-        <div className="flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4">
+        {/* Right Sidebar - Learning Content */}
+        <div className="flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4 order-3">
           <LearningContentSidebar
             learningContentSearch={learningContentSearch}
             handleLearningContentSearch={handleLearningContentSearch}
             filteredLearningContent={filteredLearningContent}
+            isSearching={isSearching}
             onDragStartContent={onDragStartContent}
             onRemoveFromWhiteboard={(itemId) => {
               // Remove item from whiteboard canvas
@@ -1759,13 +1898,13 @@ const TrainerSession = () => {
       </div>
 
       {/* Session Info Bar */}
-      <div className="bg-slate-700 text-white px-5 py-3 mt-5 mx-4 rounded flex justify-between items-center">
-        <div className="text-xs">
+      <div className="bg-slate-700 text-white px-3 sm:px-5 py-2 sm:py-3 mt-3 sm:mt-5 mx-2 sm:mx-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+        <div className="text-[10px] sm:text-xs">
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
         </div>
-        <div className="flex gap-2">
-          <button className="bg-red-500 text-white px-4 py-2 rounded text-xs cursor-pointer hover:bg-red-600" onClick={handleEndSession}>⏹️ End Session</button>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded text-xs cursor-pointer hover:bg-blue-600" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ Pause</button>
+        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+          <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
+          <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
         </div>
       </div>
     </div>

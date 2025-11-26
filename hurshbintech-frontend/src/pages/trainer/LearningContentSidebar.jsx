@@ -5,6 +5,7 @@ const LearningContentSidebar = ({
   learningContentSearch,
   handleLearningContentSearch,
   filteredLearningContent,
+  isSearching = false,
   onDragStartContent,
   // onContentCreated
   onRemoveFromWhiteboard = () => { }
@@ -77,13 +78,13 @@ const LearningContentSidebar = ({
   };
   return (
     <div
-      className={`bg-gray-50 border-2 border-gray-300 p-4 rounded h-fit 130vh overflow-y-auto session-sidebar transition-colors ${isDragOver ? 'bg-blue-50 border-blue-400' : ''
+      className={`bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 rounded h-fit 130vh overflow-y-auto session-sidebar transition-colors ${isDragOver ? 'bg-blue-50 border-blue-400' : ''
         }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="bg-green-600 text-white font-semibold p-2 -mx-4 -mt-4 mb-4 rounded-t">📚 Learning Content</div>
+      <div className="bg-green-600 text-white font-semibold p-1.5 sm:p-2 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-2 sm:mb-4 rounded-t text-sm sm:text-base">📚 Learning Content</div>
 
       {/* Status Message Display */}
       {/* {statusMessage && (
@@ -105,20 +106,30 @@ const LearningContentSidebar = ({
         </div>
       )} */}
 
-      <div className="bg-white border-2 border-blue-500 p-3 rounded mb-4 flex items-center">
+      <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 rounded mb-3 sm:mb-4 flex items-center">
         <input
           type="text"
-          className="flex-1 bg-gray-100 px-2 py-2 rounded text-xs border-none outline-none"
-          placeholder="🔍 Search Content by Title, Type, or Category..."
+          className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 rounded text-xs border-none outline-none"
+          placeholder="🔍 Search All Content in Database..."
           value={learningContentSearch}
           onChange={handleLearningContentSearch}
         />
+        {isSearching && (
+          <div className="ml-2 animate-spin text-blue-500">⟳</div>
+        )}
       </div>
 
-      <div className="text-xs font-semibold mb-2">📋 Assigned IIP Content</div>
+      <div className="text-[10px] sm:text-xs font-semibold mb-2">
+        {learningContentSearch ? '🔍 Search Results' : '📋 Assigned IIP Content'}
+      </div>
 
-      <div className="max-h-[460px] overflow-y-auto">
-        {filteredLearningContent.length > 0 ? (
+      <div className="max-h-[400px] sm:max-h-[460px] overflow-y-auto">
+        {isSearching ? (
+          <div className="text-center p-8 text-gray-500">
+            <div className="animate-spin text-3xl mb-2">⟳</div>
+            <div className="text-xs">Searching database...</div>
+          </div>
+        ) : filteredLearningContent.length > 0 ? (
           filteredLearningContent.map((content) => {
             // Get proper icon for content type
             const getContentIcon = (type) => {
@@ -139,7 +150,7 @@ const LearningContentSidebar = ({
                   content.content_type === 'image' ? content.file_url : content.thumbnail_url
                 );
                 return (
-                  <div className="relative w-full h-20 bg-gray-100 rounded-md overflow-hidden mb-2">
+                  <div className="relative w-full h-16 sm:h-20 bg-gray-100 rounded-md overflow-hidden mb-1.5 sm:mb-2">
                     <img
                       src={imageUrl}
                       alt={content.title}
@@ -151,18 +162,18 @@ const LearningContentSidebar = ({
                           e.target.nextElementSibling.style.display = 'flex';
                         }
                       }}
-                      onLoad={() => {
-                        console.log('[TrainerSession] Image loaded successfully:', imageUrl);
-                      }}
+                    // onLoad={() => {
+                    //   console.log('[TrainerSession] Image loaded successfully:', imageUrl);
+                    // }}
                     />
-                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl">
+                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-2xl sm:text-3xl">
                       {getContentIcon(content.content_type)}
                     </div>
                   </div>
                 );
               }
               return (
-                <div className="w-full h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md flex items-center justify-center mb-2 text-3xl">
+                <div className="w-full h-16 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md flex items-center justify-center mb-1.5 sm:mb-2 text-2xl sm:text-3xl">
                   {getContentIcon(content.content_type)}
                 </div>
               );
@@ -171,16 +182,16 @@ const LearningContentSidebar = ({
             return (
               <div
                 key={content.id}
-                className="border-2 border-dashed border-blue-500 bg-white rounded-md p-2 my-2 cursor-grab shadow-sm hover:shadow-md transition-shadow"
+                className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1.5 sm:p-2 my-1.5 sm:my-2 cursor-grab shadow-sm hover:shadow-md transition-shadow"
                 draggable
                 onDragStart={(e) => onDragStartContent(e, content)}
               >
                 {renderThumbnail()}
 
-                <div className="text-xs font-semibold text-slate-800 mb-1">
+                <div className="text-[10px] sm:text-xs font-semibold text-slate-800 mb-1">
                   {content.title}
                 </div>
-                <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                <div className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-1">
                   <span>{getContentIcon(content.content_type)}</span>
                   <span className="uppercase">
                     {content.content_type || 'file'}
@@ -196,7 +207,7 @@ const LearningContentSidebar = ({
             );
           })
         ) : (
-          <div className="text-xs text-gray-500 italic p-4 text-center">
+          <div className="text-[10px] sm:text-xs text-gray-500 italic p-3 sm:p-4 text-center">
             {learningContentSearch ? (
               <>No content matches "{learningContentSearch}". Try a different search term.</>
             ) : (
