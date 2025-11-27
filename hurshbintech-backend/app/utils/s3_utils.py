@@ -190,22 +190,23 @@ class S3Manager:
             logger.error(f"Error deleting S3 file: {str(e)}")
             return False
     
-    def get_public_url(self, s3_key: str, use_http: bool = False) -> str:
+    def get_public_url(self, s3_key: str) -> str:
         """
-        Get public URL for S3 object (NO EXPIRATION)
+        Get public URL for S3 object via Nginx proxy (NO EXPIRATION)
         
         Args:
             s3_key: S3 object key (e.g., 'uploads/learning-content/file.png')
-            use_http: Use HTTP for local development, HTTPS for production
         
         Returns:
-            Public URL to S3 object - valid indefinitely until deleted
+            Public HTTPS URL through Nginx proxy - valid indefinitely until deleted
         
-        Note: Requires S3 bucket to have public read access configured.
-              No authentication needed. URLs are permanent and always accessible.
+        Note: URLs go through Nginx proxy which:
+              - Adds CORS headers for browser access
+              - Handles proper content delivery
+              - Ensures consistent access from frontend
         """
-        protocol = "http" if use_http else "https"
-        return f"{protocol}://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
+        # Return Nginx proxy URL - Nginx forwards to S3 and adds CORS headers
+        return f"https://43.204.218.16:3000/s3/{s3_key}"
     
     def create_s3_folders(self) -> bool:
         """Create standard folder structure in S3"""

@@ -34,21 +34,20 @@ if settings.USE_S3:
 # In-memory storage for WebSocket connections per session
 active_connections: Dict[str, List[WebSocket]] = {}
 
-def get_public_url(file_url: str, use_http: bool = False) -> str:
+def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to public HTTPS URL (permanent access, no expiration)
+    Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
     
     Args:
         file_url: S3 URL (s3://bucket/key) or local path
-        use_http: Use HTTP for local dev, HTTPS for production
     
     Returns:
-        Public HTTP(S) URL that never expires until file is deleted
+        Public HTTPS URL through Nginx proxy that never expires until file is deleted
     """
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key, use_http=use_http)
+            public_url = s3_manager.get_public_url(s3_key)
             return public_url
         else:
             return file_url
@@ -99,8 +98,8 @@ def build_session_response(session: TrainingSession) -> SessionResponse:
                 "id": content.id,
                 "title": content.title,
                 "content_type": content.content_type.value,
-                "file_url": get_public_url(content.file_url, use_http=False),
-                "thumbnail_url": get_public_url(content.thumbnail_url, use_http=False) if content.thumbnail_url else None
+                "file_url": get_public_url(content.file_url),
+                "thumbnail_url": get_public_url(content.thumbnail_url) if content.thumbnail_url else None
             }
             for content in (session.learning_contents or [])
         ],

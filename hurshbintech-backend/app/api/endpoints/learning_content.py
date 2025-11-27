@@ -157,22 +157,21 @@ def delete_file(file_url: str) -> bool:
         logger.error(f"Error deleting file: {str(e)}")
         return False
 
-def get_public_url(file_url: str, use_http: bool = False) -> str:
+def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to public HTTPS URL (permanent access, no expiration)
+    Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
     
     Args:
         file_url: S3 URL (s3://bucket/key) or local path
-        use_http: Use HTTP for local dev, HTTPS for production
     
     Returns:
-        Public HTTP(S) URL that never expires until file is deleted
+        Public HTTPS URL through Nginx proxy that never expires until file is deleted
     """
     try:
         if settings.USE_S3 and file_url.startswith("s3://"):
-            # Extract S3 key and generate public URL
+            # Extract S3 key and generate Nginx proxy URL
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key, use_http=use_http)
+            public_url = s3_manager.get_public_url(s3_key)
             return public_url
         else:
             # Return local path as-is (backend serves it)
@@ -223,9 +222,9 @@ async def upload_file(
 
         file_info = await save_upload_file(file)
         
-        # Convert S3 URLs to public HTTPS URLs
-        file_url = get_public_url(file_info["file_url"], use_http=False)
-        thumbnail_url = get_public_url(file_info.get("thumbnail_url"), use_http=False) if file_info.get("thumbnail_url") else None
+        # Convert S3 URLs to public HTTPS URLs via Nginx proxy
+        file_url = get_public_url(file_info["file_url"])
+        thumbnail_url = get_public_url(file_info.get("thumbnail_url")) if file_info.get("thumbnail_url") else None
         
         return {
             "message": "File uploaded successfully",

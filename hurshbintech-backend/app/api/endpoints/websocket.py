@@ -18,21 +18,20 @@ if settings.USE_S3:
         logger.warning(f"Failed to initialize S3Manager: {str(e)}")
 
 
-def get_public_url(file_url: str, use_http: bool = False) -> str:
+def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to public HTTPS URL (permanent access, no expiration)
+    Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
     
     Args:
         file_url: S3 URL (s3://bucket/key) or local path
-        use_http: Use HTTP for local dev, HTTPS for production
     
     Returns:
-        Public HTTP(S) URL that never expires until file is deleted
+        Public HTTPS URL through Nginx proxy that never expires until file is deleted
     """
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key, use_http=use_http)
+            public_url = s3_manager.get_public_url(s3_key)
             return public_url
         else:
             return file_url
@@ -243,7 +242,7 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
             "action": "open",
             "mediaId": data.get("mediaId"),
             "mediaType": data.get("mediaType"),
-            "mediaUrl": get_public_url(data.get("mediaUrl"), use_http=False),
+            "mediaUrl": get_public_url(data.get("mediaUrl")),
             "status": "paused",
             "currentTime": data.get("currentTime", 0),
             "currentPage": data.get("currentPage", 1),

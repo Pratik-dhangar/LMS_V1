@@ -34,21 +34,20 @@ else:
 ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/ogg"]
 MAX_VIDEO_SIZE = 500 * 1024 * 1024  # 500MB
 
-def get_public_url(file_url: str, use_http: bool = False) -> str:
+def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to public HTTPS URL (permanent access, no expiration)
+    Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
     
     Args:
         file_url: S3 URL (s3://bucket/key) or local path
-        use_http: Use HTTP for local dev, HTTPS for production
     
     Returns:
-        Public HTTP(S) URL that never expires until file is deleted
+        Public HTTPS URL through Nginx proxy that never expires until file is deleted
     """
     try:
         if settings.USE_S3 and file_url.startswith("s3://"):
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key, use_http=use_http)
+            public_url = s3_manager.get_public_url(s3_key)
             return public_url
         else:
             return file_url
@@ -58,9 +57,9 @@ def get_public_url(file_url: str, use_http: bool = False) -> str:
 
 def convert_vlog_response(vlog: Vlog) -> Vlog:
     """Convert S3 URLs in vlog response to public HTTPS URLs (no expiration)"""
-    vlog.file_url = get_public_url(vlog.file_url, use_http=False)
+    vlog.file_url = get_public_url(vlog.file_url)
     if vlog.thumbnail_url:
-        vlog.thumbnail_url = get_public_url(vlog.thumbnail_url, use_http=False)
+        vlog.thumbnail_url = get_public_url(vlog.thumbnail_url)
     return vlog
 
 def validate_video_file(file: UploadFile):
