@@ -8,6 +8,8 @@ const sessionReportService = {
       return response.data;
     } catch (error) {
       console.error('Error creating session report:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
       throw error;
     }
   },
@@ -63,6 +65,28 @@ const sessionReportService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching learners summary:', error);
+      throw error;
+    }
+  },
+
+  // Get overall statistics across all learners (Head only)
+  getOverallStatistics: async () => {
+    try {
+      const response = await axios.get('/session-reports/overall/statistics');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching overall statistics:', error);
+      throw error;
+    }
+  },
+
+  // Get statistics for a specific program of a learner
+  getProgramStatistics: async (learnerId, programName) => {
+    try {
+      const response = await axios.get(`/session-reports/learner/${learnerId}/program/${encodeURIComponent(programName)}/statistics`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching program statistics:', error);
       throw error;
     }
   },

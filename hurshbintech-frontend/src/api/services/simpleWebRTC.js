@@ -46,6 +46,9 @@ class SimpleWebRTC {
     this.onConnectionChange = null;
     this.onError = null;
     this.onMessage = null;
+    this.onPromptMeterUpdate = null;
+    this.onReinforcementMeterUpdate = null;
+    this.onNotesUpdate = null;
 
     // State
     this.isInitialized = false;
@@ -166,7 +169,9 @@ class SimpleWebRTC {
    */
   setupWebSocket() {
     return new Promise((resolve, reject) => {
-      const wsUrl = this.wsUrl.replace('http', 'ws');
+      const wsUrl = this.wsUrl
+        .replace(/^https:/, 'wss:')
+        .replace(/^http:/, 'ws:');
       this.ws = new WebSocket(`${wsUrl}/ws/rtc/${this.sessionId}`);
 
       this.ws.onopen = () => {
@@ -384,7 +389,7 @@ class SimpleWebRTC {
         return;
       }
 
-      await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
+      await this.pc.setRemoteDescription(offer);
       console.log(`[SimpleWebRTC][${this.role}] Remote description set, signaling state: ${this.pc.signalingState}`);
 
       // Create answer
@@ -422,7 +427,7 @@ class SimpleWebRTC {
         return;
       }
 
-      await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
+      await this.pc.setRemoteDescription(answer);
       console.log(`[SimpleWebRTC][${this.role}] Remote answer set, signaling state: ${this.pc.signalingState}`);
 
       // Add pending ICE candidates
@@ -466,7 +471,13 @@ class SimpleWebRTC {
       });
     } catch (error) {
       console.error(`[SimpleWebRTC][${this.role}] Error adding ICE candidate:`, error);
-      console.log(`[SimpleWebRTC][${this.role}] Failed candidate:`, candidate);
+      console.error(`[SimpleWebRTC][${this.role}] Failed candidate details:`, {
+        type: candidate?.type,
+        protocol: candidate?.protocol,
+        address: candidate?.address,
+        error: error.message
+      });
+      console.warn(`[SimpleWebRTC][${this.role}] Continuing despite candidate error (may still establish connection)`);
     }
   }
 

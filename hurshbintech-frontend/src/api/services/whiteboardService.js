@@ -17,7 +17,6 @@ class WhiteboardService {
         this.onBucketUpdate = null; // New callback for bucket updates
         this.onVideoStateUpdate = null; // New callback for video state synchronization
         this.onMediaControl = null; // New callback for media control events (open/play/pause/seek/page_change/close)
-        this.onSessionNotes = null; // New callback for session notes from trainer
         this.onItemRemove = null; // New callback for item removal
         this.onErasePen = null; // New callback for erasing pen strokes
         this.onClearCanvas = null; // New callback for clearing entire canvas
@@ -134,12 +133,6 @@ class WhiteboardService {
                 case 'media_control':
                     if (this.onMediaControl) {
                         this.onMediaControl(message.data);
-                    }
-                    break;
-
-                case 'session_notes':
-                    if (this.onSessionNotes) {
-                        this.onSessionNotes(message.data);
                     }
                     break;
 

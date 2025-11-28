@@ -76,267 +76,267 @@ function App() {
 
   return (
     <MediaControlProvider>
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Home />} />
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to={getDashboardPath()} replace /> : <Login />}
-      />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to={getDashboardPath()} replace /> : <Login />}
+        />
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/register-head"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <RegisterHead />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/manage-heads"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ManageHeads />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/edit-head/:headId"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <EditHead />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/learning-content"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ManageLearningContent />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/learning-goals"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ManageLearningGoals />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/view-learners"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ViewLearners />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/view-trainers"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ViewTrainers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/vlogs"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ManageVlogs />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/vlogs/:id/edit"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <EditVlog />
-          </ProtectedRoute>
-        }
-      />
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/register-head"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <RegisterHead />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-heads"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageHeads />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/edit-head/:headId"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <EditHead />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/learning-content"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageLearningContent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/learning-goals"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageLearningGoals />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/view-learners"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ViewLearners />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/view-trainers"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ViewTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/vlogs"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageVlogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/vlogs/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <EditVlog />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Head Routes */}
-      <Route
-        path="/head/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <HeadDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/manage-trainers"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ManageTrainers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/manage-learners"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ManageLearners />
-          </ProtectedRoute>
-        }
-      />
+        {/* Head Routes */}
+        <Route
+          path="/head/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <HeadDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/manage-trainers"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ManageTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/manage-learners"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ManageLearners />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/head/register-trainer"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <RegisterTrainer />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/register-learner"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <RegisterLearner />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/head/register-trainer"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <RegisterTrainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/register-learner"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <RegisterLearner />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/head/edit-trainer/:trainerId"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <EditTrainer />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/edit-learner/:learnerId"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <EditLearner />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/schedule-session"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ScheduleSession />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/manage-sessions"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ManageSessions />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/vlogs"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ViewVlogs />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/head/manage-assigned-programs"
-        element={<ManageAssignedPrograms
-        />}
-      />
-      <Route path="/head/manage-assigned-learning-content"
-        element={<ManageAssignedLearningContent
-        />}
-      />
-      <Route
-        path="/head/reports"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <ReportCard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/head/learner-reports/:learnerId"
-        element={
-          <ProtectedRoute allowedRoles={['head']}>
-            <LearnerReports />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/head/edit-trainer/:trainerId"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <EditTrainer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/edit-learner/:learnerId"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <EditLearner />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/schedule-session"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ScheduleSession />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/manage-sessions"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ManageSessions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/vlogs"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ViewVlogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/head/manage-assigned-programs"
+          element={<ManageAssignedPrograms
+          />}
+        />
+        <Route path="/head/manage-assigned-learning-content"
+          element={<ManageAssignedLearningContent
+          />}
+        />
+        <Route
+          path="/head/reports"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ReportCard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/learner-reports/:learnerId"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <LearnerReports />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Trainer Routes */}
-      <Route
-        path="/trainer/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['trainer']}>
-            <TrainerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/session/:sessionId"
-        element={
-          <ProtectedRoute allowedRoles={['trainer']}>
-            <TrainerSession />
-          </ProtectedRoute>
-        }
-      />
+        {/* Trainer Routes */}
+        <Route
+          path="/trainer/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TrainerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TrainerSession />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Consultant Routes */}
-      <Route
-        path="/consultant/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['consultant']}>
-            <ConsultantDashboard />
-          </ProtectedRoute>
-        }
-      />
+        {/* Consultant Routes */}
+        <Route
+          path="/consultant/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['consultant']}>
+              <ConsultantDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Learner Routes */}
-      <Route
-        path="/learner/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['learner']}>
-            <LearnerDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/learner/session/:sessionId"
-        element={
-          <ProtectedRoute allowedRoles={['learner']}>
-            <LearnerSession />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/learner/learning-programs"
-        element={
-          <ProtectedRoute roles={['learner']}>
-            <ViewAssignedPrograms />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/learner/learning-program/:id"
-        element={<LearningProgramDetails />}
-      />
+        {/* Learner Routes */}
+        <Route
+          path="/learner/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <LearnerSession />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/learning-programs"
+          element={
+            <ProtectedRoute roles={['learner']}>
+              <ViewAssignedPrograms />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/learning-program/:id"
+          element={<LearningProgramDetails />}
+        />
 
 
 
-      {/* 404 - Redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* 404 - Redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </MediaControlProvider>
   );
 }

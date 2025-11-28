@@ -21,7 +21,7 @@ const LearningProgramSidebar = ({
 }) => {
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
-  
+
   return (
     <div className="bg-gray-50 border-2 border-gray-300 p-4 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar">
       <div className="bg-blue-500 text-white font-semibold p-2 -mx-4 -mt-4 mb-4 rounded-t">

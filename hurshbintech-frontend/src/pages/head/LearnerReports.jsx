@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
-import ReportChartModal from '../../components/common/ReportChartModal';
+import ReportChartModal from './ReportChartModal';
+import ProgramReportModal from './ProgramReportModal';
 
 const LearnerReports = () => {
   const { learnerId } = useParams();
@@ -13,6 +14,9 @@ const LearnerReports = () => {
   const [showChartModal, setShowChartModal] = useState(false);
   const [statistics, setStatistics] = useState(null);
   const [expandedPrograms, setExpandedPrograms] = useState({});
+  const [showProgramReport, setShowProgramReport] = useState(false);
+  const [programStatistics, setProgramStatistics] = useState(null);
+  const [loadingProgramStats, setLoadingProgramStats] = useState(false);
 
   useEffect(() => {
     fetchLearnerReports();
@@ -24,7 +28,7 @@ const LearnerReports = () => {
       setLoading(true);
       const data = await sessionReportService.getByLearnerGrouped(parseInt(learnerId));
       setGroupedReports(data);
-      
+
       // Get learner info from first report if available
       if (data.length > 0 && data[0].reports.length > 0) {
         const firstReport = data[0].reports[0];
@@ -59,6 +63,21 @@ const LearnerReports = () => {
 
   const handleShowChart = () => {
     setShowChartModal(true);
+  };
+
+  const handleShowProgramReport = async (programName, e) => {
+    e.stopPropagation();
+    try {
+      setLoadingProgramStats(true);
+      const stats = await sessionReportService.getProgramStatistics(parseInt(learnerId), programName);
+      setProgramStatistics(stats);
+      setShowProgramReport(true);
+    } catch (error) {
+      console.error('Error fetching program statistics:', error);
+      toast.error('Failed to load program statistics');
+    } finally {
+      setLoadingProgramStats(false);
+    }
   };
 
   const getMeterColor = (value, type) => {
@@ -170,8 +189,17 @@ const LearnerReports = () => {
                         {group.total_records} report{group.total_records !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <div className="text-2xl">
-                      {expandedPrograms[group.program_name] ? '▼' : '▶'}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={(e) => handleShowProgramReport(group.program_name, e)}
+                        disabled={loadingProgramStats}
+                        className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded text-sm font-semibold flex items-center gap-1 transition-all"
+                      >
+                        📊 Report
+                      </button>
+                      <div className="text-2xl">
+                        {expandedPrograms[group.program_name] ? '▼' : '▶'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -230,6 +258,15 @@ const LearnerReports = () => {
           statistics={statistics}
           learnerName={learnerInfo?.learner_name || 'Learner'}
           onClose={() => setShowChartModal(false)}
+        />
+      )}
+
+      {/* Program Report Modal */}
+      {showProgramReport && programStatistics && (
+        <ProgramReportModal
+          statistics={programStatistics}
+          learnerName={learnerInfo?.learner_name || 'Learner'}
+          onClose={() => setShowProgramReport(false)}
         />
       )}
     </div>

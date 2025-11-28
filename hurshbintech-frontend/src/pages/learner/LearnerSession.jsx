@@ -12,6 +12,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
+import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 
 const LearnerSession = () => {
   const { sessionId } = useParams();
@@ -38,9 +39,9 @@ const LearnerSession = () => {
 
   // Prompt and message placeholders
   const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
-  const [promptVisible, setPromptVisible] = useState(true); // Toggle prompt line visibility
+  const [promptVisible, setPromptVisible] = useState(false); // Toggle prompt line visibility (collapsed by default)
+  const [isEyeBlinking, setIsEyeBlinking] = useState(false); // Eye blinking animation when new prompt received
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
-  const [sessionNotes, setSessionNotes] = useState(''); // Session notes from trainer
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
@@ -116,20 +117,156 @@ const LearnerSession = () => {
   const stopwatch = useStopwatch();
   const [syncedElapsedTime, setSyncedElapsedTime] = useState(0);
   const [syncedIsRunning, setSyncedIsRunning] = useState(false);
+  const lastTickSecondRef = useRef(null);
+  const hasPlayedCelebrationRef = useRef(false);
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Reusable AudioContext (optimized)
+  // 🔸 How it works: Single AudioContext instance to prevent lag
+  // -----------------------------------------------------------
+  const audioContextRef = useRef(null);
+
+  const getAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Play pop sound effect based on animation type (optimized)
+  // 🔸 How it works: Uses Web Audio API with reusable context and simplified sounds
+  // -----------------------------------------------------------
+  const playPopSound = (animationType) => {
+    try {
+      const audioContext = getAudioContext();
+      const now = audioContext.currentTime;
+
+      switch (animationType) {
+        case 'bubble': {
+          // Bubble: Simple "bloop" (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+          break;
+        }
+
+        case 'smiley': {
+          // Smiley: Simple "ding" (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1000, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+          break;
+        }
+
+        case 'balloon': {
+          // Balloon: Quick pop with minimal white noise
+          const bufferSize = audioContext.sampleRate * 0.05; // Reduced to 50ms
+          const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+          const data = buffer.getChannelData(0);
+
+          // Generate white noise
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+
+          const noiseSource = audioContext.createBufferSource();
+          noiseSource.buffer = buffer;
+          const noiseGain = audioContext.createGain();
+          noiseGain.gain.setValueAtTime(0.4, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+          noiseSource.connect(noiseGain);
+          noiseGain.connect(audioContext.destination);
+          noiseSource.start(now);
+
+          // Single low thump
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.04);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.04);
+          break;
+        }
+
+        case 'star': {
+          // Star: Simple twinkle (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1600, now);
+          osc.frequency.exponentialRampToValueAtTime(2000, now + 0.05);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+          break;
+        }
+
+        default: {
+          // Default quick pop
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.06);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+          break;
+        }
+      }
+    } catch (error) {
+      console.log('[LearnerSession] Could not play pop sound:', error);
+    }
+  };
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Handle animation pop by learner
   // 🔸 How it works: marks animation as popped and broadcasts to trainer/other learners
   // -----------------------------------------------------------
-  const handleAnimationPop = (animationId) => {
+  const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
+    // Find the animation to get its type
+    const animation = floatingAnimations.find(a => a.id === animationId);
+    if (animation) {
+      playPopSound(animation.type);
+    }
+
     setFloatingAnimations(prev =>
-      prev.map(a => a.id === animationId ? { ...a, popped: true } : a)
+      prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
     );
 
     // Broadcast pop event to all participants
     if (whiteboardService) {
       whiteboardService.send('animation_popped', {
         animationId: animationId,
+        poppedLeft: poppedLeft,
+        poppedTop: poppedTop,
         timestamp: Date.now()
       });
     }
@@ -157,6 +294,55 @@ const LearnerSession = () => {
       }
     };
   }, [whiteboardService]);
+
+  // Sound effects for learner stopwatch - clean implementation
+  const prevElapsedTimeRef = useRef(null);
+  const prevIsRunningRef = useRef(false);
+
+  useEffect(() => {
+    const currentSeconds = Math.floor(syncedElapsedTime / 1000);
+    const prevTime = prevElapsedTimeRef.current;
+    const prevSeconds = prevTime !== null ? Math.floor(prevTime / 1000) : null;
+    const wasRunning = prevIsRunningRef.current;
+
+    // Play tick sound at 10, 9, 8... 1 seconds (when second changes)
+    if (syncedIsRunning && currentSeconds <= 10 && currentSeconds >= 1) {
+      if (lastTickSecondRef.current !== currentSeconds) {
+        lastTickSecondRef.current = currentSeconds;
+        playTickSound();
+      }
+    }
+
+    // Play celebration when countdown reaches 0
+    // Multiple conditions to catch the finish:
+    // 1. Time was > 0 and is now 0
+    // 2. Timer was running and stopped with time at 0
+    // 3. Time dropped below 500ms (almost finished)
+    const timeJustHitZero = prevTime !== null && prevTime > 0 && syncedElapsedTime === 0;
+    const timerJustStopped = wasRunning && !syncedIsRunning && syncedElapsedTime === 0;
+    const timeAlmostZero = prevTime !== null && prevTime > 500 && syncedElapsedTime <= 500 && syncedElapsedTime >= 0;
+
+    const justFinished = timeJustHitZero || timerJustStopped || timeAlmostZero;
+
+    if (justFinished && !hasPlayedCelebrationRef.current) {
+      console.log('🎉 Learner: Countdown finished! Playing celebration...', {
+        prevTime, syncedElapsedTime, wasRunning, syncedIsRunning
+      });
+      hasPlayedCelebrationRef.current = true;
+      playCelebrationSound();
+    }
+
+    // Reset flags when timer is set above 10 seconds
+    if (currentSeconds > 10) {
+      hasPlayedCelebrationRef.current = false;
+      lastTickSecondRef.current = null;
+    }
+
+    // Store for next comparison
+    prevElapsedTimeRef.current = syncedElapsedTime;
+    prevIsRunningRef.current = syncedIsRunning;
+
+  }, [syncedElapsedTime, syncedIsRunning]);
 
   // Initialize session
   useEffect(() => {
@@ -217,14 +403,13 @@ const LearnerSession = () => {
       console.log('[LearnerSession] Prompt update received from trainer:', data);
       console.log('[LearnerSession] Setting promptText to:', data.text);
       setPromptText(data.text);
+      // Trigger eye blinking animation when new prompt is received
+      setIsEyeBlinking(true);
+      // Stop blinking after 3 seconds
+      setTimeout(() => {
+        setIsEyeBlinking(false);
+      }, 3000);
       // toast.success('📝 New prompt from trainer!');
-    };
-
-    // Set up callback for session notes from trainer
-    whiteboardService.onSessionNotes = (data) => {
-      console.log('[LearnerSession] Session notes received from trainer:', data);
-      setSessionNotes(typeof data === 'string' ? data : (data?.text || ''));
-      // toast.info('📝 Session notes updated!');
     };
 
     // Set up callback for feedback messages from trainer
@@ -265,7 +450,7 @@ const LearnerSession = () => {
     // Set up callback for animation pop events from other learners
     whiteboardService.onAnimationPopped = (data) => {
       console.log('[LearnerSession] Animation popped by another user:', data);
-      handleAnimationPop(data.animationId);
+      handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
     // Debug - log feedbackMessage state changes
@@ -325,7 +510,6 @@ const LearnerSession = () => {
         whiteboardService.onToolAccess = null;
         whiteboardService.onTriggerKeyboard = null;
         whiteboardService.onPromptUpdate = null;
-        whiteboardService.onSessionNotes = null;
         whiteboardService.onItemRemove = null;
         whiteboardService.onErasePen = null;
         whiteboardService.onClearCanvas = null;
@@ -689,8 +873,12 @@ const LearnerSession = () => {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setPromptVisible(!promptVisible)}
-                  className="text-yellow-600 hover:text-yellow-800 transition-colors text-lg cursor-pointer hover:bg-yellow-200 rounded p-1"
+                  onClick={() => {
+                    setPromptVisible(!promptVisible);
+                    // Stop blinking when user clicks the eye
+                    if (isEyeBlinking) setIsEyeBlinking(false);
+                  }}
+                  className={`text-yellow-600 hover:text-yellow-800 transition-colors text-lg cursor-pointer hover:bg-yellow-200 rounded p-1 ${isEyeBlinking ? 'animate-eye-blink' : ''}`}
                   title={promptVisible ? 'Hide prompts' : 'Show prompts'}
                 >
                   👁
@@ -725,18 +913,6 @@ const LearnerSession = () => {
                   {reinforcementMeter ?? 0}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* In-Session Notes */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 mb-4">
-            <h3 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2">📋 Session Notes</h3>
-            <div className="bg-white border border-gray-300 rounded p-2 sm:p-3 min-h-[80px] max-h-[150px] overflow-y-auto">
-              {sessionNotes ? (
-                <p className="text-xs sm:text-sm text-gray-800 whitespace-pre-wrap">{sessionNotes}</p>
-              ) : (
-                <p className="text-xs text-gray-500 italic">[Trainer notes will appear here...]</p>
-              )}
             </div>
           </div>
 

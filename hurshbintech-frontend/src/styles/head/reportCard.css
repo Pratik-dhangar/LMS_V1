@@ -1,0 +1,102 @@
+:root {
+    --primary: #2563eb;
+    --muted: #6b7280;
+}
+
+.report-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+.report-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0 !important;
+    /* remove wrapper padding so inner card can be flush */
+}
+
+/* .report-page>footer {
+    margin-top: auto;
+} */
+
+.report-page h1 {
+    color: #1f2937;
+    font-weight: 700;
+}
+
+/* Card tweaks */
+.report-content .bg-white {
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
+}
+
+.report-content .report-card {
+    width: 100%;
+    margin: 0 !important;
+    /* no margin between navbar and footer */
+    padding: 0 !important;
+    /* no internal padding */
+    /* DO NOT grow to fill remaining vertical space; size to content */
+    flex: 0 0 auto;
+    min-height: 0;
+    /* allow internal scroll if inner content overflows */
+    overflow: auto;
+}
+
+/* Learner card */
+.report-content .learner-card {
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.report-content .learner-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 10px 25px rgba(2, 6, 23, 0.08);
+}
+
+.report-content .avatar {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    font-size: 1.125rem;
+}
+
+.report-content .stat-box {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.report-content .view-btn {
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.report-content .view-btn:active {
+    transform: translateY(1px);
+}
+
+/* Responsive grid tweaks */
+@media (max-width: 640px) {
+    .report-content .grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .report-page h1 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .report-page h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (min-width: 1025px) {
+    .report-page h1 {
+        font-size: 1.75rem;
+    }
+}
