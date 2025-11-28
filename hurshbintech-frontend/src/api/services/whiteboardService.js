@@ -23,6 +23,7 @@ class WhiteboardService {
         this.onClearCanvas = null; // New callback for clearing entire canvas
         this.onStopwatchSync = null; // New callback for stopwatch synchronization
         this.onFeedbackMessage = null; // New callback for feedback messages
+        this.onWaitingMessage = null; // New callback for waiting messages
         this.onFloatingAnimations = null; // New callback for floating animations (bubbles, smileys, balloons, stars)
         this.onAnimationPopped = null; // New callback for animation pop events
     }
@@ -169,6 +170,12 @@ class WhiteboardService {
                 case 'feedback_message':
                     if (this.onFeedbackMessage) {
                         this.onFeedbackMessage(message.data);
+                    }
+                    break;
+
+                case 'waiting_message':
+                    if (this.onWaitingMessage) {
+                        this.onWaitingMessage(message.data);
                     }
                     break;
 

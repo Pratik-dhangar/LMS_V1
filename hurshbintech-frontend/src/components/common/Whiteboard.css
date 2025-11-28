@@ -902,6 +902,30 @@ input[type="range"]::-webkit-slider-thumb {
     }
 }
 
+/* Spin animation for waiting spinner */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Gentle pulse animation for waiting message */
+@keyframes gentlePulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
 /* Feedback bubble styling for young children - gentle pastel tones */
 .feedback-bubble {
     position: absolute;
@@ -932,6 +956,51 @@ input[type="range"]::-webkit-slider-thumb {
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.9);
     color: #4b3c6b;
     /* friendly darker pastel for contrast */
+    padding: 0 4px;
+}
+
+/* Waiting bubble styling - similar to feedback but with spinner */
+.waiting-bubble {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #FFF9F0 0%, #F0F9FF 50%, #F9F0FF 100%);
+    /* soft peach -> light blue -> light purple */
+    color: #2D2A44;
+    padding: 28px 40px;
+    border-radius: 22px;
+    font-size: 28px;
+    font-weight: 900;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(150, 180, 240, 0.3), inset 0 -4px 10px rgba(255, 255, 255, 0.7);
+    animation: fadeInOut 3s ease-in-out, gentlePulse 1.5s ease-in-out infinite;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'Comic Sans MS', 'Baloo 2', 'Poppins', cursive, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.waiting-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 182, 193, 0.3);
+    border-radius: 50%;
+    border-top-color: #FF9AC5;
+    border-right-color: #FFB3D9;
+    animation: spin 1.2s linear infinite;
+}
+
+.waiting-bubble .waiting-text {
+    display: inline-block;
+    transform: translateZ(0);
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.9);
+    color: #4b3c6b;
     padding: 0 4px;
 }
 
@@ -1032,15 +1101,13 @@ input[type="range"]::-webkit-slider-thumb {
     font-size: 70px;
     animation: floatUp 10s ease-in-out forwards;
     z-index: 100;
-    transition: all 0.3s ease;
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.12));
+    will-change: transform, opacity;
     cursor: pointer;
 }
 
 /* Hover effect for learner interaction */
 .floating-animation:hover {
     transform: scale(1.15);
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
 }
 
 .floating-animation.popped {
@@ -1051,61 +1118,9 @@ input[type="range"]::-webkit-slider-thumb {
 .floating-emoji {
     display: inline-block;
     position: relative;
-    animation: gentleBounce 2s ease-in-out infinite;
 }
 
 /* Add pastel glow backgrounds for each type */
-.floating-animation.bubble .floating-emoji::before {
-    content: '';
-    position: absolute;
-    width: 120%;
-    height: 120%;
-    left: -10%;
-    top: -10%;
-    background: radial-gradient(circle, rgba(173, 216, 230, 0.4) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: -1;
-    animation: none;
-}
-
-.floating-animation.smiley .floating-emoji::before {
-    content: '';
-    position: absolute;
-    width: 120%;
-    height: 120%;
-    left: -10%;
-    top: -10%;
-    background: radial-gradient(circle, rgba(255, 253, 208, 0.5) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: -1;
-    animation: none;
-}
-
-.floating-animation.balloon .floating-emoji::before {
-    content: '';
-    position: absolute;
-    width: 120%;
-    height: 120%;
-    left: -10%;
-    top: -10%;
-    background: radial-gradient(circle, rgba(255, 182, 193, 0.4) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: -1;
-    animation: none;
-}
-
-.floating-animation.star .floating-emoji::before {
-    content: '';
-    position: absolute;
-    width: 120%;
-    height: 120%;
-    left: -10%;
-    top: -10%;
-    background: radial-gradient(circle, rgba(255, 223, 186, 0.5) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: -1;
-    animation: none;
-}
 
 .popped-emoji {
     display: inline-block;

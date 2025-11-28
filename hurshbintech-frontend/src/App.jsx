@@ -34,6 +34,8 @@ import ManageSessions from './pages/head/ManageSessions';
 import ViewVlogs from './pages/head/ViewVlogs';
 import ManageAssignedPrograms from "./pages/head/ManageAssignedPrograms";
 import ManageAssignedLearningContent from './pages/head/ManageAssignedLearningContent';
+import ReportCard from './pages/head/ReportCard';
+import LearnerReports from './pages/head/LearnerReports';
 
 
 // Trainer Pages
@@ -254,6 +256,22 @@ function App() {
       <Route path="/head/manage-assigned-learning-content"
         element={<ManageAssignedLearningContent
         />}
+      />
+      <Route
+        path="/head/reports"
+        element={
+          <ProtectedRoute allowedRoles={['head']}>
+            <ReportCard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/head/learner-reports/:learnerId"
+        element={
+          <ProtectedRoute allowedRoles={['head']}>
+            <LearnerReports />
+          </ProtectedRoute>
+        }
       />
 
       {/* Trainer Routes */}

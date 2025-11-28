@@ -42,6 +42,7 @@ const LearnerSession = () => {
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState(''); // Session notes from trainer
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
+  const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
 
   // Use messages hook
@@ -231,9 +232,20 @@ const LearnerSession = () => {
       console.log('[LearnerSession] Feedback message received from trainer:', data);
       setFeedbackMessage(data.message);
 
-      // Auto-hide feedback message after 3 seconds
+      // Auto-hide after 3 seconds
       setTimeout(() => {
         setFeedbackMessage('');
+      }, 3000);
+    };
+
+    // Set up callback for waiting messages from trainer
+    whiteboardService.onWaitingMessage = (data) => {
+      console.log('[LearnerSession] Waiting message received from trainer:', data);
+      setWaitingMessage(data.message);
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setWaitingMessage('');
       }, 3000);
     };
 
@@ -691,7 +703,7 @@ const LearnerSession = () => {
                 <p className="text-gray-700 text-xs sm:text-sm">{promptText}</p>
               </div>
             )}
-            <p className="text-xs text-gray-500 italic">Click eye icon to show/hide prompts</p>
+
           </div>
 
           {/* Meter Values Display */}
@@ -783,6 +795,7 @@ const LearnerSession = () => {
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
+                waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
                 onAnimationPop={handleAnimationPop}
                 // Canvas clear triggers

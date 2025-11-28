@@ -308,6 +308,7 @@ const Whiteboard = ({
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
+    waitingMessage = '',
     floatingAnimations = [],
     onAnimationPop = () => { },
     tool = 'pen',
@@ -1496,7 +1497,7 @@ const Whiteboard = ({
             // Construct full URL properly - handle both relative and absolute URLs
             let fullUrl = droppedData.url;
             let fileUrl = fullUrl; // Store canonical fileUrl for learning content API
-            
+
             // Only prepend backend URL if it's a relative path
             // Presigned URLs (starting with https://s3.amazonaws.com) should be used as-is
             if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
@@ -2321,6 +2322,18 @@ const Whiteboard = ({
                                     <div className="confetti-dot confetti-5" />
                                 </div>
                                 <div className="feedback-text">{feedbackMessage}</div>
+                            </div>
+                        )}
+
+                        {/* WAITING MESSAGE DISPLAY */}
+                        {waitingMessage && (
+                            <div
+                                className="waiting-bubble"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <div className="waiting-spinner" />
+                                <div className="waiting-text">{waitingMessage}</div>
                             </div>
                         )}
 
