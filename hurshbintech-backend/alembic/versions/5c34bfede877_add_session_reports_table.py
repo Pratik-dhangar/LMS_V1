@@ -40,10 +40,15 @@ def upgrade() -> None:
     op.create_index(op.f('ix_session_reports_learner_id'), 'session_reports', ['learner_id'], unique=False)
     op.create_index(op.f('ix_session_reports_program_id'), 'session_reports', ['program_id'], unique=False)
     op.create_index(op.f('ix_session_reports_session_id'), 'session_reports', ['session_id'], unique=False)
+    
+    #  SAFE DROP: Index
     op.execute("DROP INDEX IF EXISTS ix_users_active_session_token")
-    op.drop_column('users', 'last_login_at')
-    op.drop_column('users', 'last_login_ip')
-    op.drop_column('users', 'active_session_token')
+    
+    #  SAFE DROPS: Columns (Replaced op.drop_column with SQL)
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS last_login_at")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS last_login_ip")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS active_session_token")
+    
     # ### end Alembic commands ###
 
 
