@@ -40,7 +40,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_session_reports_learner_id'), 'session_reports', ['learner_id'], unique=False)
     op.create_index(op.f('ix_session_reports_program_id'), 'session_reports', ['program_id'], unique=False)
     op.create_index(op.f('ix_session_reports_session_id'), 'session_reports', ['session_id'], unique=False)
-    op.drop_index(op.f('ix_users_active_session_token'), table_name='users')
+    op.execute("DROP INDEX IF EXISTS ix_users_active_session_token")
     op.drop_column('users', 'last_login_at')
     op.drop_column('users', 'last_login_ip')
     op.drop_column('users', 'active_session_token')
