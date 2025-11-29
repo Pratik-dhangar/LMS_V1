@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import Navbar from '../../components/layout/Navbar';
+import Footer from '../../components/layout/Footer';
+import '../../styles/head/manageAssignedLearningContent.css';
 import learningContentAssignmentService from "../../api/services/learningContentAssignmentService";
 
 const ManageAssignedLearningContent = () => {
@@ -88,14 +91,15 @@ const ManageAssignedLearningContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 malc-page">
+      <Navbar />
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">
           Manage Assigned Learning Content
         </h1>
 
         {/* Assignment Form */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="malc-card bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Assign New Content</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -106,7 +110,7 @@ const ManageAssignedLearningContent = () => {
               <select
                 value={selectedLearner}
                 onChange={(e) => handleLearnerChange(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 malc-select"
               >
                 <option value="">Choose a learner...</option>
                 {learners.map((learner) => (
@@ -124,7 +128,7 @@ const ManageAssignedLearningContent = () => {
               <select
                 value={selectedContent}
                 onChange={(e) => setSelectedContent(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 malc-select"
               >
                 <option value="">Choose content...</option>
                 {contents.map((content) => (
@@ -139,7 +143,7 @@ const ManageAssignedLearningContent = () => {
               <button
                 onClick={handleAssign}
                 disabled={assigning || !selectedLearner || !selectedContent}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-md transition-colors malc-assign-btn"
               >
                 {assigning ? "Assigning..." : "Assign"}
               </button>
@@ -163,7 +167,7 @@ const ManageAssignedLearningContent = () => {
                 {assignedContents.map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="border rounded-lg p-4 flex justify-between items-center bg-gray-50"
+                    className="malc-assigned-item border rounded-lg p-4 flex justify-between items-center bg-gray-50"
                   >
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-800">
@@ -189,6 +193,7 @@ const ManageAssignedLearningContent = () => {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 };

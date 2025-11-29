@@ -17,6 +17,10 @@ from app.models.session_model import (
     TrainingSession
 )
 
+from app.models.session_report_model import (
+    SessionReport
+)
+
 from app.models.learning_content_model import (
     LearningContent
 )

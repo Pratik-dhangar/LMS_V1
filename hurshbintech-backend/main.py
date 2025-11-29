@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 import os
 from fastapi import FastAPI
 import uvicorn
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -18,6 +20,21 @@ app = FastAPI(
     version="1.0.0",
     description="User management system with role-based authentication"
 )
+
+# ✅ Add custom validation error handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """Custom handler for validation errors to provide detailed debugging info"""
+    print(f"Validation Error on {request.url}")
+    print(f"Errors: {exc.errors()}")
+    print(f"Body: {exc.body}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": exc.errors(),
+            "body": str(exc.body)
+        }
+    )
 
 # ✅ CORS
 app.add_middleware(
@@ -55,6 +72,7 @@ from app.api.endpoints.learning_goals import router as learning_goals_router
 from app.api.endpoints.learning_content_assignments import router as learning_content_assignments_router
 from app.api.endpoints.vlogs import router as vlogs_router
 from app.api.endpoints.websocket import router as websocket_router
+from app.api.endpoints.session_reports import router as session_reports_router
 
 # ✅ Import Learning Program routers
 from app.api.endpoints.learning_program_assignments import head_router as head_lp_router, learner_router
@@ -69,6 +87,7 @@ app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(learning_content_assignments_router, prefix="/api")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
+app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 
 # ✅ Learning Program routers (correct)
 app.include_router(head_lp_router, prefix="/api")        # Already has prefix="/api/head"

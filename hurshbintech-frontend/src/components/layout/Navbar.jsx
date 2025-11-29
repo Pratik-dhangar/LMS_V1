@@ -35,15 +35,15 @@ const Navbar = () => {
     <nav className="bg-[#2f4153] p-0 sticky top-0 z-[1000] shadow-md pointer-events-auto" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
       <div className="max-w-[1400px] mx-auto px-8 py-4 flex flex-wrap justify-between items-center">
         <div className="flex flex-col items-start">
-          <h1 className="text-white text-[1.8rem] font-bold m-0 tracking-wide md:text-2xl">
+          <h1 className="text-white text-[1.8rem] font-bold m-0 tracking-wide md:text-2xl" style={{ color: '#ffffff' }}>
             HurshBinTech
           </h1>
 
           <div className="hidden md:flex items-center mt-2 gap-4">
             <button
               className={` ${isDashboardPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => {
@@ -79,8 +79,8 @@ const Navbar = () => {
 
             <button
               className={` ${isTrainerPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => {
@@ -93,8 +93,8 @@ const Navbar = () => {
 
             <button
               className={` ${isConsultantPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => {
@@ -107,8 +107,8 @@ const Navbar = () => {
 
             <button
               className={` ${isLearnerPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => {
@@ -165,8 +165,8 @@ const Navbar = () => {
           <div className="md:hidden w-full flex flex-col items-start gap-3 mt-4">
             <button
               className={`w-full text-left ${isDashboardPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => {
@@ -179,8 +179,8 @@ const Navbar = () => {
             {/* Menu Admin */}
             <button
               className={`w-full text-left ${isAdminPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-3Two hundred flex items-center gap-2
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => handleNavigate("/admin/dashboard")}
@@ -194,8 +194,8 @@ const Navbar = () => {
             {/* Menu Head */}
             <button
               className={`w-full text-left ${isHeadPage
-                  ? "bg-[#3498db]"
-                  : "bg-[#4a6278] hover:bg-[#3498db]"
+                ? "bg-[#3498db]"
+                : "bg-[#4a6278] hover:bg-[#3498db]"
                 } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
               disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => handleNavigate("/trainer/dashboard")}

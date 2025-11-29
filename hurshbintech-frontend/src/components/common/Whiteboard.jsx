@@ -308,6 +308,7 @@ const Whiteboard = ({
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
+    waitingMessage = '',
     floatingAnimations = [],
     onAnimationPop = () => { },
     tool = 'pen',
@@ -1496,7 +1497,7 @@ const Whiteboard = ({
             // Construct full URL properly - handle both relative and absolute URLs
             let fullUrl = droppedData.url;
             let fileUrl = fullUrl; // Store canonical fileUrl for learning content API
-            
+
             // Only prepend backend URL if it's a relative path
             // Presigned URLs (starting with https://s3.amazonaws.com) should be used as-is
             if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
@@ -2324,6 +2325,18 @@ const Whiteboard = ({
                             </div>
                         )}
 
+                        {/* WAITING MESSAGE DISPLAY */}
+                        {waitingMessage && (
+                            <div
+                                className="waiting-bubble"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <div className="waiting-spinner" />
+                                <div className="waiting-text">{waitingMessage}</div>
+                            </div>
+                        )}
+
                         {/* FLOATING ANIMATIONS (Bubbles, Smileys, Balloons, Stars) */}
                         {floatingAnimations.map((animation) => (
                             <div
@@ -2334,20 +2347,83 @@ const Whiteboard = ({
                                     animationDelay: `${animation.startDelay}ms`,
                                     animationDuration: `${animation.duration}ms`,
                                     cursor: !isTrainer && !animation.popped ? 'pointer' : 'default',
-                                    pointerEvents: !isTrainer && !animation.popped ? 'auto' : 'none'
+                                    pointerEvents: animation.popped ? 'none' : (!isTrainer ? 'auto' : 'none'),
                                 }}
-                                onClick={() => {
+                                onClick={(e) => {
                                     if (!isTrainer && !animation.popped) {
-                                        onAnimationPop(animation.id);
+                                        // Get current position before popping
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const poppedLeft = rect.left + (rect.width / 2);
+                                        const poppedTop = rect.top + (rect.height / 2);
+                                        console.log('Star clicked at:', poppedLeft, poppedTop);
+                                        onAnimationPop(animation.id, poppedLeft, poppedTop);
                                     }
                                 }}
                             >
-                                {!animation.popped && (
+                                {!animation.popped ? (
                                     <span className="floating-emoji emoji-fallback">{animation.emoji}</span>
-                                )}
+                                ) : null}
                             </div>
                         ))}
                     </div>
+
+                    {/* Sparkle Effects for Popped Stars */}
+                    {floatingAnimations
+                        .filter(animation => animation.popped && animation.type === 'star' && animation.poppedLeft && animation.poppedTop)
+                        .map((animation) => {
+                            // Generate sparkle particles with varied properties for organic feel
+                            const sparkleCount = 20;
+                            const sparkles = Array.from({ length: sparkleCount }, (_, i) => ({
+                                angle: (360 / sparkleCount) * i,
+                                delay: i * 0.04,
+                                distance: 90 + (i % 4) * 15, // Varied distance for depth
+                                size: 1.2 + (i % 3) * 0.3 // Varied size multiplier
+                            }));
+
+                            return (
+                                <div
+                                    key={`sparkle-${animation.id}`}
+                                    style={{
+                                        position: 'fixed',
+                                        left: `${animation.poppedLeft}px`,
+                                        top: `${animation.poppedTop}px`,
+                                        pointerEvents: 'none',
+                                        zIndex: 10000,
+                                        width: '0',
+                                        height: '0',
+                                        willChange: 'transform'
+                                    }}
+                                >
+                                    {/* Radiating Diamond Sparkles - Main Wave */}
+                                    {sparkles.map((sparkle, index) => (
+                                        <div
+                                            key={index}
+                                            className="sparkle-particle"
+                                            style={{
+                                                '--angle': `${sparkle.angle}deg`,
+                                                '--distance': `${sparkle.distance}px`,
+                                                '--delay': `${sparkle.delay}s`,
+                                                '--size': sparkle.size
+                                            }}
+                                        />
+                                    ))}
+
+                                    {/* Secondary Wave of Diamond Sparkles */}
+                                    {sparkles.slice(0, 10).map((sparkle, index) => (
+                                        <div
+                                            key={`wave2-${index}`}
+                                            className="sparkle-particle sparkle-wave-2"
+                                            style={{
+                                                '--angle': `${sparkle.angle + 18}deg`,
+                                                '--distance': `${sparkle.distance * 0.65}px`,
+                                                '--delay': `${sparkle.delay + 0.2}s`,
+                                                '--size': sparkle.size * 0.8
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            );
+                        })}
 
                     {/* Media Popup for Video/PDF */}
                     {mediaControl.currentMedia.isVisible && (

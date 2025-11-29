@@ -11,6 +11,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
+import sessionReportService from '../../api/services/sessionReportService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
@@ -119,6 +120,7 @@ const TrainerSession = () => {
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState(sessionInfo?.notes || '');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
+  const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
 
   // Debug: Log when feedbackMessage changes
@@ -372,7 +374,7 @@ const TrainerSession = () => {
     // Set up callback for animation pop events from learner
     whiteboardService.onAnimationPopped = (data) => {
       console.log('[TrainerSession] Animation popped by learner:', data);
-      handleAnimationPop(data.animationId);
+      handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
     return () => {
@@ -694,24 +696,77 @@ const TrainerSession = () => {
     toast.success('Session saved (local placeholder)');
   };
 
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Save session report with program, prompt meter, and reinforcement meter
+  // 🔸 How it works: captures selected program and meter values, sends to backend API
+  // -----------------------------------------------------------
+  const handleSaveReport = async () => {
+    console.log('[handleSaveReport] Starting - sessionInfo:', sessionInfo);
+
+    if (!sessionInfo || !sessionInfo.id) {
+      console.error('[handleSaveReport] Session info not available:', sessionInfo);
+      toast.error('Session information not loaded');
+      return;
+    }
+
+    if (!selectedProgramId || !selectedPromptLevel || !selectedReinforcementLevel) {
+      toast.error('Please select a program and both meter values');
+      return;
+    }
+
+    try {
+      const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
+
+      if (!selectedProgram) {
+        toast.error('Selected program not found');
+        return;
+      }
+
+      if (!sessionInfo.learner_id) {
+        toast.error('Learner information not available');
+        return;
+      }
+
+      const reportData = {
+        session_id: sessionInfo.id,
+        learner_id: sessionInfo.learner_id,
+        program_id: selectedProgramId,
+        program_name: selectedProgram.goal,
+        prompt_meter: selectedPromptLevel,
+        reinforcement_meter: selectedReinforcementLevel
+      };
+
+      console.log('[TrainerSession] Report data being sent:', JSON.stringify(reportData, null, 2));
+      console.log('[TrainerSession] session_id type:', typeof reportData.session_id, 'value:', reportData.session_id);
+      console.log('[TrainerSession] learner_id type:', typeof reportData.learner_id, 'value:', reportData.learner_id);
+
+      await sessionReportService.create(reportData);
+      toast.success(`Report saved: ${selectedProgram.goal}`);
+
+      // Reset selections after saving
+      setSelectedProgramId(null);
+      setSelectedPromptLevel(null);
+      setSelectedReinforcementLevel(null);
+
+      // Send reset values to learner
+      if (webRTC) {
+        webRTC.sendPromptMeter(0);
+        webRTC.sendReinforcementMeter(0);
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Error saving report:', error);
+      toast.error('Failed to save session report');
+    }
+  };
 
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Update session notes (trainer's notes)
-  // 🔸 How it works: updates local state and broadcasts note update via whiteboardService for real-time display to learner
+  // 🔸 How it works: updates local state for trainer's own notes
   // -----------------------------------------------------------
   const handleNotesChange = (e) => {
     const newNotes = e.target.value;
     setSessionNotes(newNotes);
-
-    // Send notes to learner via whiteboard service
-    if (whiteboardService) {
-      // console.log('[TrainerSession] Sending session notes to learner:', newNotes);
-      whiteboardService.send('session_notes', {
-        text: newNotes,
-        timestamp: Date.now()
-      });
-    }
   };
 
   // -----------------------------------------------------------
@@ -959,15 +1014,16 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Spawn floating animations (bubbles, smileys, balloons, stars)
-  // 🔸 How it works: creates 5-8 floating items that rise from bottom and can be popped
+  // 🔸 How it works: creates 10 floating items that rise from bottom and can be popped
   // -----------------------------------------------------------
   const spawnFloatingAnimation = (type, emoji) => {
-    const count = Math.floor(Math.random() * 4) + 5; // 5-8 items
+    const count = 10; // 10 items
     const newAnimations = [];
+    const baseId = Date.now();
 
     for (let i = 0; i < count; i++) {
       const animation = {
-        id: Date.now() + Math.random(),
+        id: `${baseId}-${type}-${i}-${Math.random()}`,
         type: type,
         emoji: emoji,
         x: Math.random() * 90 + 5, // 5-95% from left
@@ -998,12 +1054,144 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Reusable AudioContext (optimized)
+  // 🔸 How it works: Single AudioContext instance to prevent lag
+  // -----------------------------------------------------------
+  const audioContextRef = useRef(null);
+
+  const getAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Play pop sound effect based on animation type (optimized)
+  // 🔸 How it works: Uses Web Audio API with reusable context and simplified sounds
+  // -----------------------------------------------------------
+  const playPopSound = (animationType) => {
+    try {
+      const audioContext = getAudioContext();
+      const now = audioContext.currentTime;
+
+      switch (animationType) {
+        case 'bubble': {
+          // Bubble: Simple "bloop" (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+          break;
+        }
+
+        case 'smiley': {
+          // Smiley: Simple "ding" (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1000, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+          break;
+        }
+
+        case 'balloon': {
+          // Balloon: Quick pop with minimal white noise
+          const bufferSize = audioContext.sampleRate * 0.05; // Reduced to 50ms
+          const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+          const data = buffer.getChannelData(0);
+
+          // Generate white noise
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+
+          const noiseSource = audioContext.createBufferSource();
+          noiseSource.buffer = buffer;
+          const noiseGain = audioContext.createGain();
+          noiseGain.gain.setValueAtTime(0.4, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+          noiseSource.connect(noiseGain);
+          noiseGain.connect(audioContext.destination);
+          noiseSource.start(now);
+
+          // Single low thump
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(50, now + 0.04);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.04);
+          break;
+        }
+
+        case 'star': {
+          // Star: Simple twinkle (1 oscillator)
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1600, now);
+          osc.frequency.exponentialRampToValueAtTime(2000, now + 0.05);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+          break;
+        }
+
+        default: {
+          // Default quick pop
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.06);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+          break;
+        }
+      }
+    } catch (error) {
+      console.log('[TrainerSession] Could not play pop sound:', error);
+    }
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Handle animation pop from learner
   // 🔸 How it works: updates animation state to show popped version
   // -----------------------------------------------------------
-  const handleAnimationPop = (animationId) => {
+  const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
+    // Find the animation to get its type
+    const animation = floatingAnimations.find(a => a.id === animationId);
+    if (animation) {
+      playPopSound(animation.type);
+    }
+
     setFloatingAnimations(prev =>
-      prev.map(a => a.id === animationId ? { ...a, popped: true } : a)
+      prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
     );
   };
 
@@ -1172,7 +1360,7 @@ const TrainerSession = () => {
       }
 
       case '🫧 Bubbles': {
-        console.log('[TrainerSession] Spawning bubbles animation');
+        console.log('[TrainerSession] Spawning bubble animation');
         spawnFloatingAnimation('bubble', '🫧');
         return;
       }
@@ -1196,19 +1384,18 @@ const TrainerSession = () => {
       }
 
       case '⏳ Wait': {
-        // Show animated wait emoji on whiteboard
-        newItem = {
-          id: genId(),
-          type: 'feedback_animation',
-          x: centerX - 50,
-          y: centerY - 50,
-          width: 100,
-          height: 100,
-          emoji: '⏳',
-          label: 'Wait',
-          ttl: 3000 // Auto-remove after 3 seconds
-        };
-        break;
+        console.log('[TrainerSession] Showing wait message');
+        const message = 'Please Wait ⏳';
+        setWaitingMessage(message);
+        if (whiteboardService) {
+          whiteboardService.send('waiting_message', {
+            message: message,
+            timestamp: Date.now()
+          });
+        }
+        // Auto-hide after 3 seconds
+        setTimeout(() => setWaitingMessage(''), 3000);
+        return;
       }
 
       // ---------------------- DEFAULT ----------------------
@@ -1408,6 +1595,21 @@ const TrainerSession = () => {
                 </div>
               )}
             </div>
+
+            {/* Save Report Button */}
+            {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
+              <button
+                onClick={handleSaveReport}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded text-xs sm:text-sm font-semibold mb-3 sm:mb-4 flex items-center justify-center gap-1 sm:gap-2"
+              >
+                💾 <span className="hidden xs:inline">Save Session Report</span><span className="xs:hidden">Save Report</span>
+              </button>
+            )}
+            {selectedProgramId && (!selectedPromptLevel || !selectedReinforcementLevel) && (
+              <div className="text-[9px] sm:text-xs text-orange-600 mb-3 sm:mb-4 text-center bg-orange-50 p-1.5 sm:p-2 rounded border border-orange-200">
+                ⚠️ Select both meters to save
+              </div>
+            )}
 
             {/* Speech Section */}
             <h3 className="text-sm sm:text-base font-semibold mb-2">🎙️ Voice Input</h3>
@@ -1647,6 +1849,7 @@ const TrainerSession = () => {
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
+                waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
                 onAnimationPop={handleAnimationPop}
                 tool={tool}
@@ -1776,17 +1979,25 @@ const TrainerSession = () => {
                   { label: 'Balloons', icon: '🎈' },
                   { label: 'Stars', icon: '⭐' },
                   { label: 'Wait', icon: '⏳' }
-                ].map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                    className={`${activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100'} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
-                    title={t.label}
-                  >
-                    <span>{t.icon}</span>
-                    <span className="hidden sm:inline">{t.label}</span>
-                  </button>
-                ))}
+                ].map((t, i) => {
+                  // Use pastel colors for Bubbles, Smileys, Balloons, Stars - no shadow/border
+                  const isFloatingEmoji = ['Bubbles', 'Smileys', 'Balloons', 'Stars'].includes(t.label);
+                  const baseClass = isFloatingEmoji
+                    ? (activeIcons[t.label] ? 'bg-blue-200 text-gray-800' : 'bg-pink-100 hover:bg-pink-200 text-gray-800')
+                    : (activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100');
+
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
+                      className={`${baseClass} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
+                      title={t.label}
+                    >
+                      <span>{t.icon}</span>
+                      <span className="hidden sm:inline">{t.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1797,12 +2008,6 @@ const TrainerSession = () => {
                 <button
                   onClick={() => {
                     setSessionNotes('');
-                    if (whiteboardService) {
-                      whiteboardService.send('session_notes', {
-                        text: '',
-                        timestamp: Date.now()
-                      });
-                    }
                   }}
                   className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-semibold transition-colors"
                   title="Clear all notes"
