@@ -307,7 +307,7 @@ const LearnerDashboard = () => {
               <div className="border rounded-lg p-4 flex items-center justify-between bg-white">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-800 truncate">
-                    Next Session: {formatShortDate(nextSession.scheduled_date ?? nextSession.started_at)}
+                    {nextSession.title || 'Next Session'}: {formatShortDate(nextSession.scheduled_date ?? nextSession.started_at)}
                   </h3>
                   <p className="text-xs text-gray-500 truncate mt-1">
                     Time: {nextSession.scheduled_date ? new Date(nextSession.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} | Trainer: {nextSession.trainer?.name || nextSession.trainer_name || '—'}

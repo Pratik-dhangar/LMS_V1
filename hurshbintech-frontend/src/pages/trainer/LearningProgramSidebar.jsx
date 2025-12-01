@@ -10,12 +10,18 @@ const LearningProgramSidebar = ({
   setSelectedPromptLevel,
   selectedReinforcementLevel,
   setSelectedReinforcementLevel,
+  selectedProgramId,
+  handleProgramCheck,
   webRTC,
   toggleListening,
   listening,
   transcript,
-  whiteboardService
+  whiteboardService,
+  onSaveReport
 }) => {
+  // Get selected program name
+  const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
+
   return (
     <div className="bg-gray-50 border-2 border-gray-300 p-4 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar">
       <div className="bg-blue-500 text-white font-semibold p-2 -mx-4 -mt-4 mb-4 rounded-t">
@@ -99,6 +105,21 @@ const LearningProgramSidebar = ({
           </div>
         )}
       </div>
+
+      {/* Save Report Button */}
+      {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
+        <button
+          onClick={onSaveReport}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded text-sm font-semibold mb-4 flex items-center justify-center gap-2"
+        >
+          💾 Save Session Report
+        </button>
+      )}
+      {selectedProgramId && (!selectedPromptLevel || !selectedReinforcementLevel) && (
+        <div className="text-xs text-orange-600 mb-4 text-center bg-orange-50 p-2 rounded border border-orange-200">
+          ⚠️ Select both Prompt and Reinforcement levels to save report
+        </div>
+      )}
 
       {/* Speech Section */}
       <h3 className="text-base font-semibold mb-2">🎙️ Voice Input</h3>
