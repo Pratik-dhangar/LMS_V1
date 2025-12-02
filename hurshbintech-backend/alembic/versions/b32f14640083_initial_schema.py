@@ -1,8 +1,8 @@
-"""add_single_device_login_fields
+"""initial schema
 
-Revision ID: 6b325f43b192
-Revises: 8f2a87d3b95f
-Create Date: 2025-11-27 23:15:42.752298
+Revision ID: b32f14640083
+Revises: 
+Create Date: 2025-12-01 17:36:47.145746
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6b325f43b192'
-down_revision: Union[str, Sequence[str], None] = '8f2a87d3b95f'
+revision: str = 'b32f14640083'
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

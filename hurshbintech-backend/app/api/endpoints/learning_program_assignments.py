@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
 from pydantic import BaseModel
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-from app.models.learning_goals_model import LearningGoals
-from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.core.deps import get_current_user
-
+from app.db.session import get_db
+from app.models.learning_goal_assignment_model import LearningGoalAssignment
+from app.models.learning_goals_model import LearningGoals
 
 # ROUTERS
 head_router = APIRouter(prefix="/head", tags=["Learning Programs"])
@@ -23,6 +22,7 @@ class AssignProgramRequest(BaseModel):
 # ✅ HEAD APIs
 # ------------------------------------------------------------------------------
 
+
 @head_router.get("/learning-programs")
 async def get_learning_programs(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LearningGoals))
@@ -33,14 +33,14 @@ async def get_learning_programs(db: AsyncSession = Depends(get_db)):
 async def assign_learning_programs(
     request: AssignProgramRequest,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     for program_id in request.program_ids:
         db.add(
             LearningGoalAssignment(
                 learner_id=request.learner_id,
                 learning_goal_id=program_id,
-                assigned_by_head=current_user.id
+                assigned_by_head=current_user.id,
             )
         )
     await db.commit()
@@ -48,10 +48,7 @@ async def assign_learning_programs(
 
 
 @head_router.get("/assigned-learning-programs/{learner_id}")
-async def get_assigned_learning_programs(
-    learner_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+async def get_assigned_learning_programs(learner_id: int, db: AsyncSession = Depends(get_db)):
     stmt = (
         select(
             LearningGoalAssignment.id,
@@ -76,9 +73,7 @@ async def get_assigned_learning_programs(
 
 @head_router.get("/assigned-learning-program/details/{assigned_id}")
 async def get_learning_program_details(
-    assigned_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    assigned_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     stmt = (
         select(
@@ -105,13 +100,8 @@ async def get_learning_program_details(
 
 
 @head_router.delete("/assigned-learning-program/{assigned_id}")
-async def remove_assigned_program(
-    assigned_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    await db.execute(
-        delete(LearningGoalAssignment).where(LearningGoalAssignment.id == assigned_id)
-    )
+async def remove_assigned_program(assigned_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(delete(LearningGoalAssignment).where(LearningGoalAssignment.id == assigned_id))
     await db.commit()
     return {"message": "Program unassigned"}
 
@@ -120,10 +110,10 @@ async def remove_assigned_program(
 # ✅ LEARNER APIs
 # ------------------------------------------------------------------------------
 
+
 @learner_router.get("/my-learning-programs")
 async def learner_my_programs(
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     # print(f"DEBUG: current_user.id = {current_user.id}")  # Debug log
 
@@ -157,9 +147,7 @@ async def learner_my_programs(
 
 @learner_router.get("/my-learning-program/details/{assigned_id}")
 async def learner_program_details(
-    assigned_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    assigned_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     stmt = (
         select(

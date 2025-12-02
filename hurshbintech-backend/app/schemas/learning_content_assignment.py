@@ -1,10 +1,12 @@
-from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime
+
+from pydantic import BaseModel
+
 
 class LearningContentAssignmentCreate(BaseModel):
     learner_id: int
     learning_content_id: int
+
 
 class LearningContentAssignmentResponse(BaseModel):
     id: int
@@ -21,9 +23,11 @@ class LearningContentAssignmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class LearnerResponse(BaseModel):
     id: int
     name: str
+
 
 class ContentResponse(BaseModel):
     id: int

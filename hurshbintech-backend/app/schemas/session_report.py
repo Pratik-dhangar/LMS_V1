@@ -1,23 +1,27 @@
 """
 Session Report Schemas - Pydantic models for validation
 """
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Literal
+
 from datetime import datetime
+from typing import Dict, List, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 
 class SessionReportCreate(BaseModel):
     """Schema for creating a new session report"""
+
     session_id: int
     learner_id: int
     program_id: Optional[int] = None
     program_name: str = Field(..., min_length=1, max_length=500)
-    prompt_meter: Literal['I', '10', '20', '30', '40', '50', '60', '70', '80', '90']
-    reinforcement_meter: Literal['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10']
+    prompt_meter: Literal["I", "10", "20", "30", "40", "50", "60", "70", "80", "90"]
+    reinforcement_meter: Literal["Full", "90", "80", "70", "60", "50", "40", "30", "20", "10"]
 
 
 class SessionReportResponse(BaseModel):
     """Schema for session report response"""
+
     id: int
     session_id: int
     learner_id: int
@@ -26,13 +30,14 @@ class SessionReportResponse(BaseModel):
     prompt_meter: str
     reinforcement_meter: str
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class SessionReportGrouped(BaseModel):
     """Schema for grouped session reports by program"""
+
     program_name: str
     program_id: Optional[int]
     reports: List[SessionReportResponse]
@@ -41,6 +46,7 @@ class SessionReportGrouped(BaseModel):
 
 class LearnerReportSummary(BaseModel):
     """Schema for learner report summary"""
+
     learner_id: int
     learner_name: str
     iip_id: Optional[str]
@@ -52,6 +58,7 @@ class LearnerReportSummary(BaseModel):
 
 class SessionReportStatistics(BaseModel):
     """Schema for session report statistics (for charts)"""
+
     prompt_distribution: Dict[str, int]  # {'I': 5, '10': 3, '20': 8, ...}
     reinforcement_distribution: Dict[str, int]  # {'Full': 2, '90': 5, ...}
     total_reports: int

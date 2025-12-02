@@ -1,8 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from datetime import datetime
 
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from app.db.session import Base
+
 
 class LearningGoals(Base):
     __tablename__ = "learning_goals"

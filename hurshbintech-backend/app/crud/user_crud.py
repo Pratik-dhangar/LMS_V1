@@ -1,28 +1,33 @@
 """
 CRUD operations for all user types
 """
-import random
-import logging
+
 import enum
-from sqlalchemy.ext.asyncio import AsyncSession
+import logging
+import random
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+
 from app.models.user_model import (
-    User, 
+    Admin,
+    ConsultantProfile,
+    HeadProfile,
+    LearnerProfile,
+    TrainerProfile,
+    User,
     UserRole,
-    Admin, 
-    HeadProfile, 
-    TrainerProfile, 
-    ConsultantProfile, 
-    LearnerProfile, 
-    ConceptionType, 
-    CaesareanType
 )
 from app.schemas.user import (
-    HeadCreate, HeadUpdate, 
-    TrainerCreate, TrainerUpdate,
-    ConsultantCreate, ConsultantUpdate,
-    LearnerCreate, LearnerUpdate
+    ConsultantCreate,
+    ConsultantUpdate,
+    HeadCreate,
+    HeadUpdate,
+    LearnerCreate,
+    LearnerUpdate,
+    TrainerCreate,
+    TrainerUpdate,
 )
 
 # Get logger for this module
@@ -32,55 +37,59 @@ logger = logging.getLogger(__name__)
 # ============ PASSCODE GENERATOR ============
 # Generate a unique 6-digit passcode
 def generate_passcode(role: str, name: str) -> str:
-    
+
     random_number = random.randint(100000, 999999)
     return str(random_number)
 
 
 # ============ CENTRALIZED USER AUTHENTICATION ============
 
+
 # Get user by passcode and role (for login)
 async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: str) -> User | None:
     """
     Query User table by passcode and role for authentication
     Supports: admin, head, trainer, consultant, learner
+    Uses bcrypt verification for password matching
     """
-    logger.debug(f"Querying User table for role={role}, passcode=***")
-    
+    from app.core.security import verify_password
+
+    logger.debug(f"Querying User table for role={role}")
+
     # Convert string role to UserRole enum
     role_enum_map = {
         "admin": UserRole.ADMIN,
         "head": UserRole.HEAD,
         "trainer": UserRole.TRAINER,
         "consultant": UserRole.CONSULTANT,
-        "learner": UserRole.LEARNER
+        "learner": UserRole.LEARNER,
     }
-    
+
     role_enum = role_enum_map.get(role.lower())
     if not role_enum:
         logger.warning(f"Invalid role: {role}")
         return None
-    
-    result = await db.execute(
-        select(User).where(
-            User.passcode == passcode,
-            User.role == role_enum,
-            User.is_active == True
-        )
-    )
-    user = result.scalar_one_or_none()
-    
-    if user:
-        logger.debug(f"Found user: ID={user.id}, name={user.name}, role={user.role.value}")
-    else:
-        logger.debug(f"No active user found with role={role}")
-    
-    return user
+
+    # Get all users with this role (including inactive ones)
+    result = await db.execute(select(User).where(User.role == role_enum))
+    users = result.scalars().all()
+
+    # Find user with matching password (active status checked at endpoint)
+    for user in users:
+        if verify_password(passcode, user.passcode):
+            logger.debug(
+                f"Found user: ID={user.id}, name={user.name}, role={user.role.value}, active={user.is_active}"
+            )
+            return user
+
+    logger.debug(f"No user found with role={role} and matching passcode")
+    return None
 
 
 # ============ ADMIN CRUD ============
 
-# Get admin by passcode 
+
+# Get admin by passcode
 async def get_admin_by_passcode(db: AsyncSession, passcode: str) -> Admin | None:
     logger.debug("Querying admin by passcode")
     result = await db.execute(select(Admin).where(Admin.passcode == passcode))
@@ -94,12 +103,11 @@ async def get_admin_by_passcode(db: AsyncSession, passcode: str) -> Admin | None
 
 # ============ HEAD CRUD ============
 
+
 async def get_head_by_id(db: AsyncSession, head_id: int):
     """Get head profile with user data by profile ID"""
     result = await db.execute(
-        select(HeadProfile)
-        .options(joinedload(HeadProfile.user))
-        .where(HeadProfile.id == head_id)
+        select(HeadProfile).options(joinedload(HeadProfile.user)).where(HeadProfile.id == head_id)
     )
     return result.scalar_one_or_none()
 
@@ -116,39 +124,35 @@ async def get_head_by_passcode(db: AsyncSession, passcode: str):
 
 async def get_head_by_contact(db: AsyncSession, contact_no: str):
     """Get head profile by contact number"""
-    result = await db.execute(
-        select(HeadProfile).where(HeadProfile.contact_no == contact_no)
-    )
+    result = await db.execute(select(HeadProfile).where(HeadProfile.contact_no == contact_no))
     return result.scalar_one_or_none()
 
 
 async def get_all_heads(db: AsyncSession):
     """Get all head profiles with user data"""
-    result = await db.execute(
-        select(HeadProfile).options(joinedload(HeadProfile.user))
-    )
+    result = await db.execute(select(HeadProfile).options(joinedload(HeadProfile.user)))
     return list(result.scalars().all())
 
 
 async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_id: int):
     """Create a new head with User and HeadProfile records"""
     logger.debug(f"Creating new head with name: {head_data.name}")
-    
+
     # Generate passcode if not provided
     passcode = head_data.passcode or generate_passcode("HEAD", head_data.name)
-    logger.debug(f"Generated passcode for new head")
-    
+    logger.debug("Generated passcode for new head")
+
     # Create User record first
     new_user = User(
         name=head_data.name,
         passcode=passcode,
         email=None,  # Email optional for heads
         role=UserRole.HEAD,
-        is_active=True
+        is_active=True,
     )
     db.add(new_user)
     await db.flush()  # Get the user ID
-    
+
     # Create HeadProfile record
     new_head_profile = HeadProfile(
         user_id=new_user.id,
@@ -168,15 +172,15 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
         input_at_hurshbin=head_data.input_at_hurshbin,
         note_box=head_data.note_box,
         message_box=head_data.message_box,
-        created_by_admin_id=created_by_admin_id
+        created_by_admin_id=created_by_admin_id,
     )
-    
+
     db.add(new_head_profile)
     await db.commit()
     await db.refresh(new_head_profile)
     await db.refresh(new_user)
     logger.info(f"Successfully created head with ID: {new_head_profile.id}")
-    
+
     # Attach user to profile for convenience
     new_head_profile.user = new_user
     return new_head_profile
@@ -187,18 +191,18 @@ async def update_head(db: AsyncSession, head_id: int, head_update: HeadUpdate):
     head = await get_head_by_id(db, head_id)
     if not head:
         return None
-    
+
     # Update only provided profile fields
     update_data = head_update.model_dump(exclude_unset=True)
-    
+
     # Handle name separately if provided (update User table)
-    if 'name' in update_data:
-        head.user.name = update_data.pop('name')
-    
+    if "name" in update_data:
+        head.user.name = update_data.pop("name")
+
     # Update profile fields
     for field, value in update_data.items():
         setattr(head, field, value)
-    
+
     await db.commit()
     await db.refresh(head)
     return head
@@ -218,6 +222,7 @@ async def delete_head(db: AsyncSession, head_id: int) -> str | bool:
 
 
 # ============ TRAINER CRUD ============
+
 
 async def get_trainer_by_id(db: AsyncSession, trainer_id: int):
     """Get trainer profile with user data by profile ID"""
@@ -241,9 +246,7 @@ async def get_trainer_by_passcode(db: AsyncSession, passcode: str):
 
 async def get_trainer_by_contact(db: AsyncSession, contact_no: str):
     """Get trainer profile by contact number"""
-    result = await db.execute(
-        select(TrainerProfile).where(TrainerProfile.contact_no == contact_no)
-    )
+    result = await db.execute(select(TrainerProfile).where(TrainerProfile.contact_no == contact_no))
     return result.scalar_one_or_none()
 
 
@@ -261,18 +264,14 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
     """Create a new trainer with User and TrainerProfile records"""
     # Generate passcode if not provided
     passcode = trainer_data.passcode or generate_passcode("TRAINER", trainer_data.name)
-    
+
     # Create User record first
     new_user = User(
-        name=trainer_data.name,
-        passcode=passcode,
-        email=None,
-        role=UserRole.TRAINER,
-        is_active=True
+        name=trainer_data.name, passcode=passcode, email=None, role=UserRole.TRAINER, is_active=True
     )
     db.add(new_user)
     await db.flush()
-    
+
     # Create TrainerProfile record
     new_trainer_profile = TrainerProfile(
         user_id=new_user.id,
@@ -292,14 +291,14 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
         input_at_hurshbin=trainer_data.input_at_hurshbin,
         note_box=trainer_data.note_box,
         message_box=trainer_data.message_box,
-        created_by_head_id=created_by_head_id
+        created_by_head_id=created_by_head_id,
     )
-    
+
     db.add(new_trainer_profile)
     await db.commit()
     await db.refresh(new_trainer_profile)
     await db.refresh(new_user)
-    
+
     new_trainer_profile.user = new_user
     return new_trainer_profile
 
@@ -309,27 +308,28 @@ async def update_trainer(db: AsyncSession, trainer_id: int, trainer_update: Trai
     trainer = await get_trainer_by_id(db, trainer_id)
     if not trainer:
         return None
-    
+
     # Update only provided fields
     update_data = trainer_update.model_dump(exclude_unset=True)
-    
+
     # Handle name separately if provided
-    if 'name' in update_data:
-        trainer.user.name = update_data.pop('name')
-    
+    if "name" in update_data:
+        trainer.user.name = update_data.pop("name")
+
     for field, value in update_data.items():
         setattr(trainer, field, value)
-    
+
     await db.commit()
     await db.refresh(trainer)
     return trainer
+
 
 # Delete trainer
 async def delete_trainer(db: AsyncSession, trainer_id: int) -> str | bool:
     trainer = await get_trainer_by_id(db, trainer_id)
     if not trainer:
         return False
-    
+
     user = trainer.user
     await db.delete(user)
     await db.commit()
@@ -347,6 +347,7 @@ async def get_consultant_by_id(db: AsyncSession, consultant_id: int):
     )
     return result.scalar_one_or_none()
 
+
 # Get consultant by passcode
 async def get_consultant_by_passcode(db: AsyncSession, passcode: str):
     """Get consultant by passcode (from User table)"""
@@ -357,6 +358,7 @@ async def get_consultant_by_passcode(db: AsyncSession, passcode: str):
     )
     return result.scalar_one_or_none()
 
+
 # Get consultant by contact number
 async def get_consultant_by_contact(db: AsyncSession, contact_no: str):
     """Get consultant profile by contact number"""
@@ -364,6 +366,7 @@ async def get_consultant_by_contact(db: AsyncSession, contact_no: str):
         select(ConsultantProfile).where(ConsultantProfile.contact_no == contact_no)
     )
     return result.scalar_one_or_none()
+
 
 # Get consultants by head
 async def get_consultants_by_head(db: AsyncSession, head_id: int):
@@ -375,23 +378,26 @@ async def get_consultants_by_head(db: AsyncSession, head_id: int):
     )
     return list(result.scalars().all())
 
+
 # Create consultant
-async def create_consultant(db: AsyncSession, consultant_data: ConsultantCreate, created_by_head_id: int):
+async def create_consultant(
+    db: AsyncSession, consultant_data: ConsultantCreate, created_by_head_id: int
+):
     """Create a new consultant with User and ConsultantProfile records"""
     # Generate passcode if not provided
     passcode = consultant_data.passcode or generate_passcode("CONSULTANT", consultant_data.name)
-    
+
     # Create User record first
     new_user = User(
         name=consultant_data.name,
         passcode=passcode,
         email=None,
         role=UserRole.CONSULTANT,
-        is_active=True
+        is_active=True,
     )
     db.add(new_user)
     await db.flush()
-    
+
     # Create ConsultantProfile record
     new_consultant_profile = ConsultantProfile(
         user_id=new_user.id,
@@ -401,34 +407,37 @@ async def create_consultant(db: AsyncSession, consultant_data: ConsultantCreate,
         qualification=consultant_data.qualification,
         experience=consultant_data.experience,
         date_of_joining=consultant_data.date_of_joining,
-        created_by_head_id=created_by_head_id
+        created_by_head_id=created_by_head_id,
     )
-    
+
     db.add(new_consultant_profile)
     await db.commit()
     await db.refresh(new_consultant_profile)
     await db.refresh(new_user)
-    
+
     new_consultant_profile.user = new_user
     return new_consultant_profile
 
+
 # Update consultant profile
-async def update_consultant(db: AsyncSession, consultant_id: int, consultant_update: ConsultantUpdate):
+async def update_consultant(
+    db: AsyncSession, consultant_id: int, consultant_update: ConsultantUpdate
+):
     """Update consultant profile"""
     consultant = await get_consultant_by_id(db, consultant_id)
     if not consultant:
         return None
-    
+
     # Update only provided fields
     update_data = consultant_update.model_dump(exclude_unset=True)
-    
+
     # Handle name separately if provided
-    if 'name' in update_data:
-        consultant.user.name = update_data.pop('name')
-    
+    if "name" in update_data:
+        consultant.user.name = update_data.pop("name")
+
     for field, value in update_data.items():
         setattr(consultant, field, value)
-    
+
     await db.commit()
     await db.refresh(consultant)
     return consultant
@@ -439,73 +448,77 @@ async def delete_consultant(db: AsyncSession, consultant_id: int) -> str | bool:
     consultant = await get_consultant_by_id(db, consultant_id)
     if not consultant:
         return False
-    
+
     user = consultant.user
     await db.delete(user)
     await db.commit()
     return "Consultant deleted successfully"
 
+
 # ============ DASHBOARD STATS ============
 #  For admin dashboard
 async def get_admin_dashboard_stats(db: AsyncSession) -> dict:
     logger.debug("Retrieving dashboard statistics")
-   
+
     from sqlalchemy import func, select
-    
+
     # Count admins
     logger.debug("Counting admins")
     admin_count = await db.execute(select(func.count(Admin.id)))
     total_admins = admin_count.scalar() or 0
-    
+
     # Count heads
     logger.debug("Counting heads")
     head_count = await db.execute(select(func.count(HeadProfile.id)))
     total_heads = head_count.scalar() or 0
-    
+
     # Count trainers
     logger.debug("Counting trainers")
     trainer_count = await db.execute(select(func.count(TrainerProfile.id)))
     total_trainers = trainer_count.scalar() or 0
-    
+
     # Count consultants
     logger.debug("Counting consultants")
     consultant_count = await db.execute(select(func.count(ConsultantProfile.id)))
     total_consultants = consultant_count.scalar() or 0
-    
+
     # Total users
     total_users = total_admins + total_heads + total_trainers + total_consultants
-    logger.debug(f"Total users count: {total_users} (Admins: {total_admins}, Heads: {total_heads}, Trainers: {total_trainers}, Consultants: {total_consultants})")
-    
+    logger.debug(
+        f"Total users count: {total_users} (Admins: {total_admins}, Heads: {total_heads}, Trainers: {total_trainers}, Consultants: {total_consultants})"
+    )
+
     # Active sessions - sum of all sessions done (from all roles)
     head_sessions = await db.execute(select(func.sum(HeadProfile.number_of_sessions_done)))
     trainer_sessions = await db.execute(select(func.sum(TrainerProfile.number_of_sessions_done)))
-    consultant_sessions = await db.execute(select(func.sum(ConsultantProfile.number_of_sessions_done)))
-    
-    active_sessions = (
-        (head_sessions.scalar() or 0) + 
-        (trainer_sessions.scalar() or 0) + 
-        (consultant_sessions.scalar() or 0)
+    consultant_sessions = await db.execute(
+        select(func.sum(ConsultantProfile.number_of_sessions_done))
     )
-    
+
+    active_sessions = (
+        (head_sessions.scalar() or 0)
+        + (trainer_sessions.scalar() or 0)
+        + (consultant_sessions.scalar() or 0)
+    )
+
     return {
         "total_users": total_users,
         "active_sessions": active_sessions,
-        "total_trainers": total_trainers
+        "total_trainers": total_trainers,
     }
-   
 
 
 #  For head dashboard  -- todo- total learners? / active trainers?/  sessions this week?
 async def get_head_dashboard_stats(db: AsyncSession) -> dict:
     logger.debug("Retrieving dashboard statistics")
-   
+
     from sqlalchemy import func, select
-    
+
     # Count trainers
     logger.debug("Counting trainers")
     trainer_count = await db.execute(select(func.count(TrainerProfile.id)))
     total_trainers = trainer_count.scalar() or 0
-    
+
     # Total users
     total_users = total_trainers
     logger.debug(f"Total users count: {total_users} (Trainers: {total_trainers})")
@@ -513,23 +526,25 @@ async def get_head_dashboard_stats(db: AsyncSession) -> dict:
     # Active sessions - sum of all sessions done (from all roles)
     head_sessions = await db.execute(select(func.sum(HeadProfile.number_of_sessions_done)))
     trainer_sessions = await db.execute(select(func.sum(TrainerProfile.number_of_sessions_done)))
-    consultant_sessions = await db.execute(select(func.sum(ConsultantProfile.number_of_sessions_done)))
-    
-    active_sessions = (
-        (head_sessions.scalar() or 0) + 
-        (trainer_sessions.scalar() or 0) + 
-        (consultant_sessions.scalar() or 0)
+    consultant_sessions = await db.execute(
+        select(func.sum(ConsultantProfile.number_of_sessions_done))
     )
-    
+
+    active_sessions = (
+        (head_sessions.scalar() or 0)
+        + (trainer_sessions.scalar() or 0)
+        + (consultant_sessions.scalar() or 0)
+    )
+
     return {
         "total_users": total_users,
         "active_sessions": active_sessions,
-        "total_trainers": total_trainers
+        "total_trainers": total_trainers,
     }
- 
 
 
 # ============ LEARNER CRUD ============
+
 
 async def get_learner_by_id(db: AsyncSession, learner_id: int):
     """Get learner profile with user data by profile ID"""
@@ -539,14 +554,14 @@ async def get_learner_by_id(db: AsyncSession, learner_id: int):
         .where(LearnerProfile.id == learner_id)
     )
     learner = result.scalar_one_or_none()
-    
+
     # Convert enum objects to string values for response
     if learner:
         if isinstance(learner.conception_type, enum.Enum):
             learner.conception_type = learner.conception_type.value
         if isinstance(learner.caesarean_type, enum.Enum):
             learner.caesarean_type = learner.caesarean_type.value
-    
+
     return learner
 
 
@@ -578,14 +593,14 @@ async def get_learners_by_head(db: AsyncSession, head_id: int):
         .where(LearnerProfile.created_by_head_id == head_id)
     )
     learners = list(result.scalars().all())
-    
+
     # Convert enum objects to string values for response
     for learner in learners:
         if isinstance(learner.conception_type, enum.Enum):
             learner.conception_type = learner.conception_type.value
         if isinstance(learner.caesarean_type, enum.Enum):
             learner.caesarean_type = learner.caesarean_type.value
-    
+
     return learners
 
 
@@ -596,18 +611,22 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
 
     # Create User record first
     new_user = User(
-        name=learner_data.name,
-        passcode=passcode,
-        email=None,
-        role=UserRole.LEARNER,
-        is_active=True
+        name=learner_data.name, passcode=passcode, email=None, role=UserRole.LEARNER, is_active=True
     )
     db.add(new_user)
     await db.flush()
 
     # Convert enum fields to their string values
-    caesarean_type_value = learner_data.caesarean_type.value if isinstance(learner_data.caesarean_type, enum.Enum) else learner_data.caesarean_type
-    conception_type_value = learner_data.conception_type.value if isinstance(learner_data.conception_type, enum.Enum) else learner_data.conception_type
+    caesarean_type_value = (
+        learner_data.caesarean_type.value
+        if isinstance(learner_data.caesarean_type, enum.Enum)
+        else learner_data.caesarean_type
+    )
+    conception_type_value = (
+        learner_data.conception_type.value
+        if isinstance(learner_data.conception_type, enum.Enum)
+        else learner_data.conception_type
+    )
 
     # Create LearnerProfile record
     new_learner_profile = LearnerProfile(
@@ -617,7 +636,6 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
         date_of_assessment=learner_data.date_of_assessment,
         dlb_concerns_checklist=learner_data.dlb_concerns_checklist,
         personal_notes=learner_data.personal_notes,
-        
         # --- Delivery History ---
         mother_bed_rest=learner_data.mother_bed_rest,
         mother_bed_rest_duration=learner_data.mother_bed_rest_duration,
@@ -641,7 +659,6 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
         incubator_reason=learner_data.incubator_reason,
         had_jaundice=learner_data.had_jaundice,
         delivery_other_details=learner_data.delivery_other_details,
-
         # --- Medical History ---
         screamed_as_baby=learner_data.screamed_as_baby,
         difficult_sleep_pattern=learner_data.difficult_sleep_pattern,
@@ -652,30 +669,26 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
         major_illness_hospitalization=learner_data.major_illness_hospitalization,
         major_illness_details=learner_data.major_illness_details,
         specific_medical_details=learner_data.specific_medical_details,
-        
         # --- Learning history ---
         years_school_attended=learner_data.years_school_attended,
         support_provided=learner_data.support_provided,
         current_grade=learner_data.current_grade,
         current_learning_scenario=learner_data.current_learning_scenario,
-        
         # --- History of intervention ---
         intervention_duration=learner_data.intervention_duration,
         intervention_notes=learner_data.intervention_notes,
-
         # --- Assessment behaviour ---
         assessment_behaviour_notes=learner_data.assessment_behaviour_notes,
-
         # --- Detailed skill development assessment ---
         skill_development_assessment=learner_data.skill_development_assessment,
-        created_by_head_id=created_by_head_id
+        created_by_head_id=created_by_head_id,
     )
 
     db.add(new_learner_profile)
     await db.commit()
     await db.refresh(new_learner_profile)
     await db.refresh(new_user)
-    
+
     new_learner_profile.user = new_user
     return new_learner_profile
 
@@ -685,25 +698,26 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
     learner = await get_learner_by_id(db, learner_id)
     if not learner:
         return None
-    
+
     # Update only provided fields
     update_data = learner_update.model_dump(exclude_unset=True)
-    
+
     # Handle name separately if provided
-    if 'name' in update_data:
-        learner.user.name = update_data.pop('name')
-    
+    if "name" in update_data:
+        learner.user.name = update_data.pop("name")
+
     # Convert enum objects to their string values for database storage
     for field, value in update_data.items():
         if isinstance(value, enum.Enum):
             update_data[field] = value.value
-    
+
     for field, value in update_data.items():
         setattr(learner, field, value)
 
     await db.commit()
     await db.refresh(learner)
     return learner
+
 
 # Delete learner
 async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
@@ -719,13 +733,12 @@ async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
 
 # ============ ADMIN VIEW - SYSTEM-WIDE QUERIES ============
 
+
 async def get_all_trainers_system_wide(db: AsyncSession):
     """Get all trainers across all heads (for admin view)"""
     logger.info("Fetching all trainers system-wide for admin")
     result = await db.execute(
-        select(TrainerProfile)
-        .options(joinedload(TrainerProfile.user))
-        .order_by(TrainerProfile.id)
+        select(TrainerProfile).options(joinedload(TrainerProfile.user)).order_by(TrainerProfile.id)
     )
     trainers = result.scalars().unique().all()
     logger.info(f"Found {len(trainers)} trainers system-wide")
@@ -736,9 +749,7 @@ async def get_all_learners_system_wide(db: AsyncSession):
     """Get all learners across all heads (for admin view)"""
     logger.info("Fetching all learners system-wide for admin")
     result = await db.execute(
-        select(LearnerProfile)
-        .options(joinedload(LearnerProfile.user))
-        .order_by(LearnerProfile.id)
+        select(LearnerProfile).options(joinedload(LearnerProfile.user)).order_by(LearnerProfile.id)
     )
     learners = result.scalars().unique().all()
     logger.info(f"Found {len(learners)} learners system-wide")
