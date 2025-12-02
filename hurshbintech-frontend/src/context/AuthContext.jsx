@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../api/services/authService';
 import { toast } from 'react-toastify';
+import logger from '../utils/logger';
 
 // Create Auth Context
 const AuthContext = createContext(null);
@@ -30,56 +31,56 @@ export const AuthProvider = ({ children }) => {
   // Load user from localStorage on mount
   useEffect(() => {
     const loadUser = () => {
-      console.log('Loading user from localStorage');
+      logger.debug('Loading user from localStorage');
       const userData = authService.getCurrentUser();
       const token = localStorage.getItem('access_token');
-      
+
       if (userData && token) {
-        console.log('User authenticated from localStorage:', { id: userData.id, role: userData.role });
+        logger.debug('User authenticated from localStorage:', { id: userData.id, role: userData.role });
         setUser(userData);
       } else {
-        console.log('No authenticated user found in localStorage');
+        logger.debug('No authenticated user found in localStorage');
       }
       setLoading(false);
     };
-    
+
     loadUser();
   }, []);
 
- 
+
   /**
    * User Login
    */
   const userLogin = async (credentials) => {
     try {
-      console.log('AuthContext: Processing login for role:', { role: credentials.role });
+      logger.debug('AuthContext: Processing login for role:', { role: credentials.role });
       const response = await authService.userLogin(credentials);
 
-      console.log('AuthContext: Login successful, storing user data:', { 
+      logger.debug('AuthContext: Login successful, storing user data:', {
         userId: response.user_id,
-        role: response.role 
+        role: response.role
       });
-      
+
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user_data', JSON.stringify({
         id: response.user_id,
         role: response.role,
         name: response.name,
       }));
-      
+
       setUser({
         id: response.user_id,
         role: response.role,
         name: response.name,
       });
-      
+
       toast.success(`Welcome, ${response.name}`, {
         position: "top-center",
         autoClose: 3000,
       });
-      
+
       // Redirect based on role
-      console.log('AuthContext: Redirecting to dashboard for role:', { role: response.role });
+      logger.debug('AuthContext: Redirecting to dashboard for role:', { role: response.role });
       if (response.role === 'head') {
         navigate('/head/dashboard');
       } else if (response.role === 'trainer') {
@@ -92,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         navigate('/learner/dashboard');
       }
     } catch (error) {
-      console.error('AuthContext: Login failed:', { 
+      logger.error('AuthContext: Login failed:', {
         error: error.response?.data?.detail || 'Unknown error',
         status: error.response?.status
       });
@@ -109,9 +110,9 @@ export const AuthProvider = ({ children }) => {
    * Logs out the current user
    */
   const logout = () => {
-    console.log('AuthContext: Logging out user:', { 
+    console.log('AuthContext: Logging out user:', {
       userId: user?.id,
-      role: user?.role 
+      role: user?.role
     });
     authService.logout();
     setUser(null);
