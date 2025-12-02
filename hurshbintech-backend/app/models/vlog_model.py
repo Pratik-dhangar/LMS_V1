@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, DateTime, Float, Integer, String
 from sqlalchemy.sql import func
+
 from app.db.session import Base
+
 
 class Vlog(Base):
     __tablename__ = "vlogs"
@@ -12,4 +14,6 @@ class Vlog(Base):
     file_size = Column(Float, nullable=False)  # Size in MB
     thumbnail_url = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

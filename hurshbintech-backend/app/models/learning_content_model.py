@@ -1,9 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum as SQLEnum
-from sqlalchemy.orm import relationship
-from datetime import datetime
 import enum
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+
 
 class ContentType(str, enum.Enum):
     IMAGE = "image"
@@ -11,6 +15,7 @@ class ContentType(str, enum.Enum):
     VIDEO = "video"
     AUDIO = "audio"
     DOCUMENT = "document"
+
 
 class LearningContent(Base):
     __tablename__ = "learning_contents"

@@ -9,7 +9,7 @@ import Footer from '../../components/layout/Footer';
 import { FaFileAlt } from "react-icons/fa";
 
 // Import icons 
-import { FaUsers, FaBookOpen, FaComments, FaUserTie } from 'react-icons/fa';
+import { FaUsers, FaBookOpen, FaComments, FaUserTie, FaChartBar } from 'react-icons/fa';
 
 // Head Dashboard Component
 const HeadDashboard = () => {
@@ -89,9 +89,13 @@ const HeadDashboard = () => {
       path: '/head/manage-assigned-learning-content',
       color: 'purple'
     },
-
-
-
+    {
+      title: 'Session Reports',
+      description: 'View and analyze learner session reports and progress',
+      icon: <FaChartBar />,
+      path: '/head/reports',
+      color: 'teal'
+    }
   ];
 
   const colors = {
@@ -118,9 +122,11 @@ const HeadDashboard = () => {
     yellow: {
       border: 'border-purple-500',
       text: 'text-purple-500'
+    },
+    teal: {
+      border: 'border-teal-500',
+      text: 'text-teal-500'
     }
-
-
   };
 
 

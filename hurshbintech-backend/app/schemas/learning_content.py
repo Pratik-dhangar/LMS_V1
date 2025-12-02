@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class LearningContentCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
@@ -10,10 +12,12 @@ class LearningContentCreate(BaseModel):
     file_size: Optional[int] = None
     thumbnail_url: Optional[str] = None
 
+
 class LearningContentUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=255)
     description: Optional[str] = None
     thumbnail_url: Optional[str] = None
+
 
 class LearningContentResponse(BaseModel):
     id: int
@@ -39,7 +43,11 @@ class LearningContentResponse(BaseModel):
             id=content.id,
             title=content.title,
             description=content.description,
-            content_type=content.content_type.value if hasattr(content.content_type, 'value') else content.content_type,
+            content_type=(
+                content.content_type.value
+                if hasattr(content.content_type, "value")
+                else content.content_type
+            ),
             file_url=content.file_url,
             file_size=content.file_size,
             thumbnail_url=content.thumbnail_url,
@@ -48,5 +56,5 @@ class LearningContentResponse(BaseModel):
             updated_by_id=content.updated_by_id,
             updated_by_name=content.updated_by.name if content.updated_by else None,
             created_at=content.created_at,
-            updated_at=content.updated_at
+            updated_at=content.updated_at,
         )

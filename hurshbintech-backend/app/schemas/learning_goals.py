@@ -1,14 +1,18 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class LearningGoalsCreate(BaseModel):
     goal: str = Field(..., min_length=3, max_length=255)
     goal_description: Optional[str] = None
 
+
 class LearningGoalsUpdate(BaseModel):
     goal: Optional[str] = Field(None, min_length=3, max_length=255)
     goal_description: Optional[str] = None
+
 
 class LearningGoalsResponse(BaseModel):
     id: int
@@ -35,5 +39,5 @@ class LearningGoalsResponse(BaseModel):
             updated_by_id=goal.updated_by_id,
             updated_by_name=goal.updated_by.name if goal.updated_by else None,
             created_at=goal.created_at,
-            updated_at=goal.updated_at
+            updated_at=goal.updated_at,
         )

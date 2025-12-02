@@ -1,11 +1,13 @@
 """
 User schemas for CRUD operations
 """
-from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, List
-from datetime import date, datetime
+
 import enum
 import json
+from datetime import date, datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, field_validator
 
 
 # ============ ENUMERATIONS ============
@@ -13,12 +15,14 @@ class CaesareanType(enum.Enum):
     ELECTIVE = "elective"
     EMERGENCY = "emergency"
 
+
 class ConceptionType(enum.Enum):
     NATURAL = "natural"
     IVF = "ivf"
     IUI = "iui"
     SURROGACY = "surrogacy"
     UNKNOWN = "unknown"
+
 
 class ReferenceDataType(enum.Enum):
     LINK = "link"
@@ -44,8 +48,10 @@ class AdminResponse(BaseModel):
 
 # ============ HEAD SCHEMAS ============
 
+
 class HeadCreate(BaseModel):
     """Schema for creating a new head"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
@@ -68,6 +74,7 @@ class HeadCreate(BaseModel):
 
 class HeadUpdate(BaseModel):
     """Schema for updating head profile"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
@@ -89,6 +96,7 @@ class HeadUpdate(BaseModel):
 
 class HeadResponse(BaseModel):
     """Schema for head response - combines User and Profile data"""
+
     id: int  # Profile ID
     name: str  # From User
     role: str  # From User
@@ -99,7 +107,7 @@ class HeadResponse(BaseModel):
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
-    
+
     # Additional Profile Fields
     experience_with_hurshbin: Optional[str] = None
     interest: Optional[str] = None
@@ -111,42 +119,59 @@ class HeadResponse(BaseModel):
     input_at_hurshbin: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
-    
+
     created_by: Optional[int] = None
     created_at: datetime  # From User
-    
+
     @classmethod
     def from_orm_with_user(cls, profile, user=None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
-        
+
         data = {
             "id": profile.id,
             "name": user.name,
-            "role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": user.passcode,
             "created_at": user.created_at,
             "created_by": profile.created_by_admin_id,
             # Profile fields
-            **{field: getattr(profile, field) for field in [
-                'age', 'address', 'contact_no', 'qualification', 'experience',
-                'date_of_joining', 'experience_with_hurshbin', 'interest',
-                'self_description', 'future_vision', 'number_of_sessions_done',
-                'head_description', 'learners_guardian_description', 'input_at_hurshbin',
-                'note_box', 'message_box'
-            ] if hasattr(profile, field)}
+            **{
+                field: getattr(profile, field)
+                for field in [
+                    "age",
+                    "address",
+                    "contact_no",
+                    "qualification",
+                    "experience",
+                    "date_of_joining",
+                    "experience_with_hurshbin",
+                    "interest",
+                    "self_description",
+                    "future_vision",
+                    "number_of_sessions_done",
+                    "head_description",
+                    "learners_guardian_description",
+                    "input_at_hurshbin",
+                    "note_box",
+                    "message_box",
+                ]
+                if hasattr(profile, field)
+            },
         }
         return cls(**data)
-    
+
     class Config:
         from_attributes = True
 
 
 # ============ TRAINER SCHEMAS ============
 
+
 class TrainerCreate(BaseModel):
     """Schema for creating a new trainer"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
@@ -167,9 +192,9 @@ class TrainerCreate(BaseModel):
     message_box: Optional[str] = None
 
 
-
 class TrainerUpdate(BaseModel):
     """Schema for updating trainer profile"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
@@ -191,6 +216,7 @@ class TrainerUpdate(BaseModel):
 
 class TrainerResponse(BaseModel):
     """Schema for trainer response - combines User and Profile data"""
+
     id: int  # Profile ID
     user_id: int  # User ID from users table
     name: str  # From User
@@ -202,7 +228,7 @@ class TrainerResponse(BaseModel):
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
-    
+
     # Additional Profile Fields
     experience_with_hurshbin: Optional[str] = None
     interest: Optional[str] = None
@@ -214,42 +240,60 @@ class TrainerResponse(BaseModel):
     input_at_hurshbin: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
-    
+
     created_by: Optional[int] = None
     created_at: datetime  # From User
-    
+
     @classmethod
     def from_orm_with_user(cls, profile, user=None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
-        
+
         data = {
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
-            "role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": user.passcode,
             "created_at": user.created_at,
             "created_by": profile.created_by_head_id,
             # Profile fields
-            **{field: getattr(profile, field) for field in [
-                'age', 'address', 'contact_no', 'qualification', 'experience',
-                'date_of_joining', 'experience_with_hurshbin', 'interest',
-                'self_description', 'future_vision', 'number_of_sessions_done',
-                'head_description', 'learners_guardian_description', 'input_at_hurshbin',
-                'note_box', 'message_box'
-            ] if hasattr(profile, field)}
+            **{
+                field: getattr(profile, field)
+                for field in [
+                    "age",
+                    "address",
+                    "contact_no",
+                    "qualification",
+                    "experience",
+                    "date_of_joining",
+                    "experience_with_hurshbin",
+                    "interest",
+                    "self_description",
+                    "future_vision",
+                    "number_of_sessions_done",
+                    "head_description",
+                    "learners_guardian_description",
+                    "input_at_hurshbin",
+                    "note_box",
+                    "message_box",
+                ]
+                if hasattr(profile, field)
+            },
         }
         return cls(**data)
-    
+
     class Config:
         from_attributes = True
 
+
 # ============ CONSULTANT SCHEMAS ============
+
 
 class ConsultantCreate(BaseModel):
     """Schema for creating a new consultant"""
+
     name: str
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
@@ -262,6 +306,7 @@ class ConsultantCreate(BaseModel):
 
 class ConsultantUpdate(BaseModel):
     """Schema for updating consultant profile"""
+
     name: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
@@ -278,6 +323,7 @@ class ConsultantUpdate(BaseModel):
 
 class ConsultantResponse(BaseModel):
     """Schema for consultant response - combines User and Profile data"""
+
     id: int  # Profile ID
     name: str  # From User
     role: str  # From User
@@ -286,17 +332,17 @@ class ConsultantResponse(BaseModel):
     contact_no: Optional[str] = None
     date_of_joining: Optional[date] = None
     created_at: datetime  # From User
-    
+
     @classmethod
     def from_orm_with_user(cls, profile, user=None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
-        
+
         data = {
             "id": profile.id,
             "name": user.name,
-            "role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": user.passcode,
             "created_at": user.created_at,
             "age": profile.age,
@@ -304,7 +350,7 @@ class ConsultantResponse(BaseModel):
             "date_of_joining": profile.date_of_joining,
         }
         return cls(**data)
-    
+
     class Config:
         from_attributes = True
 
@@ -313,7 +359,7 @@ class ConsultantResponse(BaseModel):
 # Learner schemas
 class LearnerCreate(BaseModel):
     """Schema for creating a new learner"""
-    
+
     # --- Personal details ---
     name: str  # Name is required
     passcode: Optional[str] = None  # Auto-generated if not provided
@@ -322,8 +368,8 @@ class LearnerCreate(BaseModel):
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[str] = None  # Will store JSON string
     personal_notes: Optional[str] = None
-    
-    @field_validator('dlb_concerns_checklist', mode='before')
+
+    @field_validator("dlb_concerns_checklist", mode="before")
     @classmethod
     def validate_checklist(cls, v):
         """Convert list to JSON string for storage"""
@@ -339,7 +385,7 @@ class LearnerCreate(BaseModel):
             except json.JSONDecodeError:
                 return json.dumps([])  # Return empty array if invalid
         return json.dumps([])  # Default empty array
-    
+
     # --- Delivery History ---
     mother_bed_rest: Optional[bool] = None
     mother_bed_rest_duration: Optional[str] = None
@@ -363,7 +409,7 @@ class LearnerCreate(BaseModel):
     incubator_reason: Optional[str] = None
     had_jaundice: Optional[bool] = None
     delivery_other_details: Optional[str] = None
-    
+
     # --- Medical History ---
     screamed_as_baby: Optional[bool] = None
     difficult_sleep_pattern: Optional[bool] = None
@@ -374,13 +420,13 @@ class LearnerCreate(BaseModel):
     major_illness_hospitalization: Optional[bool] = None
     major_illness_details: Optional[str] = None
     specific_medical_details: Optional[str] = None
-    
+
     # --- Learning history ---
     years_school_attended: Optional[int] = None
     support_provided: Optional[str] = None
     current_grade: Optional[str] = None
     current_learning_scenario: Optional[str] = None
-    
+
     # --- History of intervention ---
     intervention_duration: Optional[str] = None
     intervention_notes: Optional[str] = None
@@ -390,12 +436,11 @@ class LearnerCreate(BaseModel):
 
     # --- Detailed skill development assessment ---
     skill_development_assessment: Optional[str] = None
-    
 
 
 class LearnerUpdate(BaseModel):
     """Schema for updating a learner's profile"""
-    
+
     # --- Personal details ---
     name: Optional[str] = None
     age: Optional[int] = None
@@ -403,8 +448,8 @@ class LearnerUpdate(BaseModel):
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[str] = None  # Will store JSON string
     personal_notes: Optional[str] = None
-    
-    @field_validator('dlb_concerns_checklist', mode='before')
+
+    @field_validator("dlb_concerns_checklist", mode="before")
     @classmethod
     def validate_checklist(cls, v):
         """Convert list to JSON string for storage"""
@@ -420,7 +465,7 @@ class LearnerUpdate(BaseModel):
             except json.JSONDecodeError:
                 return json.dumps([])  # Return empty array if invalid
         return json.dumps([])  # Default empty array
-    
+
     # --- Delivery History ---
     mother_bed_rest: Optional[bool] = None
     mother_bed_rest_duration: Optional[str] = None
@@ -444,7 +489,7 @@ class LearnerUpdate(BaseModel):
     incubator_reason: Optional[str] = None
     had_jaundice: Optional[bool] = None
     delivery_other_details: Optional[str] = None
-    
+
     # --- Medical History ---
     screamed_as_baby: Optional[bool] = None
     difficult_sleep_pattern: Optional[bool] = None
@@ -455,13 +500,13 @@ class LearnerUpdate(BaseModel):
     major_illness_hospitalization: Optional[bool] = None
     major_illness_details: Optional[str] = None
     specific_medical_details: Optional[str] = None
-    
+
     # --- Learning history ---
     years_school_attended: Optional[int] = None
     support_provided: Optional[str] = None
     current_grade: Optional[str] = None
     current_learning_scenario: Optional[str] = None
-    
+
     # --- History of intervention ---
     intervention_duration: Optional[str] = None
     intervention_notes: Optional[str] = None
@@ -475,7 +520,7 @@ class LearnerUpdate(BaseModel):
 
 class LearnerResponse(BaseModel):
     """Schema for learner response"""
-    
+
     # --- Personal details ---
     id: int
     user_id: int  # User ID from users table
@@ -486,7 +531,7 @@ class LearnerResponse(BaseModel):
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[List[str]] = None  # Return list to frontend
     personal_notes: Optional[str] = None
-    
+
     # --- Delivery History ---
     mother_bed_rest: Optional[bool] = None
     mother_bed_rest_duration: Optional[str] = None
@@ -510,7 +555,7 @@ class LearnerResponse(BaseModel):
     incubator_reason: Optional[str] = None
     had_jaundice: Optional[bool] = None
     delivery_other_details: Optional[str] = None
-    
+
     # --- Medical History ---
     screamed_as_baby: Optional[bool] = None
     difficult_sleep_pattern: Optional[bool] = None
@@ -521,13 +566,13 @@ class LearnerResponse(BaseModel):
     major_illness_hospitalization: Optional[bool] = None
     major_illness_details: Optional[str] = None
     specific_medical_details: Optional[str] = None
-    
+
     # --- Learning history ---
     years_school_attended: Optional[int] = None
     support_provided: Optional[str] = None
     current_grade: Optional[str] = None
     current_learning_scenario: Optional[str] = None
-    
+
     # --- History of intervention ---
     intervention_duration: Optional[str] = None
     intervention_notes: Optional[str] = None
@@ -537,18 +582,18 @@ class LearnerResponse(BaseModel):
 
     # --- Detailed skill development assessment ---
     skill_development_assessment: Optional[str] = None
-    
+
     # --- Timestamps & FKs ---
     created_by: Optional[int] = None
     created_at: datetime
     updated_at: datetime
-    
+
     @classmethod
     def from_orm_with_user(cls, profile, user=None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
-        
+
         # Build data dictionary with all profile fields
         data = {
             "id": profile.id,
@@ -559,39 +604,68 @@ class LearnerResponse(BaseModel):
             "updated_at": profile.updated_at,
             "created_by": profile.created_by_head_id,
         }
-        
+
         # Add all other profile fields
         profile_fields = [
-            'age', 'dob', 'date_of_assessment', 'personal_notes',
-            'mother_bed_rest', 'mother_bed_rest_duration', 'mother_depressed_fearful',
-            'ultrasounds_performed', 'was_premature', 'premature_weeks', 'was_overdue',
-            'overdue_duration', 'caesarean_delivery', 'caesarean_type', 'forceps_delivery',
-            'vacuum_delivery', 'very_fast_labor', 'induced_delivery', 'very_long_slow_labor',
-            'conception_type', 'was_adopted', 'adoption_age', 'in_incubator',
-            'incubator_reason', 'had_jaundice', 'delivery_other_details',
-            'screamed_as_baby', 'difficult_sleep_pattern', 'struggled_changing_routines',
-            'difficulties_shifting_food', 'physical_milestones_achieved',
-            'vocal_language_milestones_achieved', 'major_illness_hospitalization',
-            'major_illness_details', 'specific_medical_details', 'years_school_attended',
-            'support_provided', 'current_grade', 'current_learning_scenario',
-            'intervention_duration', 'intervention_notes', 'assessment_behaviour_notes',
-            'skill_development_assessment'
+            "age",
+            "dob",
+            "date_of_assessment",
+            "personal_notes",
+            "mother_bed_rest",
+            "mother_bed_rest_duration",
+            "mother_depressed_fearful",
+            "ultrasounds_performed",
+            "was_premature",
+            "premature_weeks",
+            "was_overdue",
+            "overdue_duration",
+            "caesarean_delivery",
+            "caesarean_type",
+            "forceps_delivery",
+            "vacuum_delivery",
+            "very_fast_labor",
+            "induced_delivery",
+            "very_long_slow_labor",
+            "conception_type",
+            "was_adopted",
+            "adoption_age",
+            "in_incubator",
+            "incubator_reason",
+            "had_jaundice",
+            "delivery_other_details",
+            "screamed_as_baby",
+            "difficult_sleep_pattern",
+            "struggled_changing_routines",
+            "difficulties_shifting_food",
+            "physical_milestones_achieved",
+            "vocal_language_milestones_achieved",
+            "major_illness_hospitalization",
+            "major_illness_details",
+            "specific_medical_details",
+            "years_school_attended",
+            "support_provided",
+            "current_grade",
+            "current_learning_scenario",
+            "intervention_duration",
+            "intervention_notes",
+            "assessment_behaviour_notes",
+            "skill_development_assessment",
         ]
-        
+
         for field in profile_fields:
             if hasattr(profile, field):
                 data[field] = getattr(profile, field)
-        
+
         # Convert dlb_concerns_checklist from JSON string to list
-        if hasattr(profile, 'dlb_concerns_checklist') and profile.dlb_concerns_checklist:
+        if hasattr(profile, "dlb_concerns_checklist") and profile.dlb_concerns_checklist:
             try:
-                data['dlb_concerns_checklist'] = json.loads(profile.dlb_concerns_checklist)
+                data["dlb_concerns_checklist"] = json.loads(profile.dlb_concerns_checklist)
             except (json.JSONDecodeError, TypeError):
-                data['dlb_concerns_checklist'] = []
+                data["dlb_concerns_checklist"] = []
         else:
-            data['dlb_concerns_checklist'] = []
-        
+            data["dlb_concerns_checklist"] = []
+
         return cls(**data)
-    
+
     class Config:
         from_attributes = True

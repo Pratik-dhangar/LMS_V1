@@ -1,21 +1,21 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 from typing import List, Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.models.learning_goals_model import LearningGoals
 from app.schemas.learning_goals import LearningGoalsCreate, LearningGoalsUpdate
 
+
 async def create_learning_goal(
-    db: AsyncSession,
-    goal_data: LearningGoalsCreate,
-    admin_id: int
+    db: AsyncSession, goal_data: LearningGoalsCreate, admin_id: int
 ) -> LearningGoals:
     """Create new learning goal"""
     new_goal = LearningGoals(
         goal=goal_data.goal,
         goal_description=goal_data.goal_description,
-        created_by_admin_id=admin_id
+        created_by_admin_id=admin_id,
     )
 
     db.add(new_goal)
@@ -25,46 +25,34 @@ async def create_learning_goal(
     # Load relationships
     result = await db.execute(
         select(LearningGoals)
-        .options(
-            joinedload(LearningGoals.created_by),
-            joinedload(LearningGoals.updated_by)
-        )
+        .options(joinedload(LearningGoals.created_by), joinedload(LearningGoals.updated_by))
         .where(LearningGoals.id == new_goal.id)
     )
     return result.scalar_one()
+
 
 async def get_all_learning_goals(db: AsyncSession) -> List[LearningGoals]:
     """Get all learning goals"""
     result = await db.execute(
         select(LearningGoals)
-        .options(
-            joinedload(LearningGoals.created_by),
-            joinedload(LearningGoals.updated_by)
-        )
+        .options(joinedload(LearningGoals.created_by), joinedload(LearningGoals.updated_by))
         .order_by(LearningGoals.created_at.desc())
     )
     return result.scalars().all()
 
-async def get_learning_goal_by_id(
-    db: AsyncSession,
-    goal_id: int
-) -> Optional[LearningGoals]:
+
+async def get_learning_goal_by_id(db: AsyncSession, goal_id: int) -> Optional[LearningGoals]:
     """Get learning goal by ID"""
     result = await db.execute(
         select(LearningGoals)
-        .options(
-            joinedload(LearningGoals.created_by),
-            joinedload(LearningGoals.updated_by)
-        )
+        .options(joinedload(LearningGoals.created_by), joinedload(LearningGoals.updated_by))
         .where(LearningGoals.id == goal_id)
     )
     return result.scalar_one_or_none()
 
+
 async def update_learning_goal(
-    db: AsyncSession,
-    goal_id: int,
-    goal_data: LearningGoalsUpdate,
-    user_id: int
+    db: AsyncSession, goal_id: int, goal_data: LearningGoalsUpdate, user_id: int
 ) -> Optional[LearningGoals]:
     """Update learning goal"""
     goal = await get_learning_goal_by_id(db, goal_id)
@@ -85,18 +73,13 @@ async def update_learning_goal(
     # Reload relationships
     result = await db.execute(
         select(LearningGoals)
-        .options(
-            joinedload(LearningGoals.created_by),
-            joinedload(LearningGoals.updated_by)
-        )
+        .options(joinedload(LearningGoals.created_by), joinedload(LearningGoals.updated_by))
         .where(LearningGoals.id == goal_id)
     )
     return result.scalar_one()
 
-async def delete_learning_goal(
-    db: AsyncSession,
-    goal_id: int
-) -> bool:
+
+async def delete_learning_goal(db: AsyncSession, goal_id: int) -> bool:
     """Delete learning goal (admin only)"""
     goal = await get_learning_goal_by_id(db, goal_id)
 

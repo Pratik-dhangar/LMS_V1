@@ -1,9 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.vlog_model import Vlog
 from app.schemas.vlog import VlogCreate, VlogUpdate
-from typing import List, Optional
-import os
+
 
 class VlogCRUD:
     async def create_vlog(self, db: AsyncSession, vlog: VlogCreate) -> Vlog:
@@ -12,7 +14,7 @@ class VlogCRUD:
             description=vlog.description,
             file_url=vlog.file_url,
             file_size=vlog.file_size,
-            thumbnail_url=vlog.thumbnail_url
+            thumbnail_url=vlog.thumbnail_url,
         )
         db.add(db_vlog)
         await db.commit()
@@ -49,12 +51,13 @@ class VlogCRUD:
 
         # Get the base directory (backend root)
         from pathlib import Path
+
         base_dir = Path(__file__).parent.parent.parent
-        
+
         # Convert URL paths to file system paths and delete files
         if db_vlog.file_url:
             # Remove leading slash and normalize path separators
-            clean_path = db_vlog.file_url.lstrip('/').replace('\\', '/')
+            clean_path = db_vlog.file_url.lstrip("/").replace("\\", "/")
             file_path = base_dir / clean_path
             print(f"Attempting to delete video file: {file_path}")
             if file_path.exists():
@@ -65,7 +68,7 @@ class VlogCRUD:
 
         if db_vlog.thumbnail_url:
             # Remove leading slash and normalize path separators
-            clean_path = db_vlog.thumbnail_url.lstrip('/').replace('\\', '/')
+            clean_path = db_vlog.thumbnail_url.lstrip("/").replace("\\", "/")
             thumbnail_path = base_dir / clean_path
             print(f"Attempting to delete thumbnail file: {thumbnail_path}")
             if thumbnail_path.exists():

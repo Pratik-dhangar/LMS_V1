@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class VlogBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
@@ -9,8 +11,10 @@ class VlogBase(BaseModel):
     file_size: float
     thumbnail_url: Optional[str] = None
 
+
 class VlogCreate(VlogBase):
     pass
+
 
 class VlogUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -18,6 +22,7 @@ class VlogUpdate(BaseModel):
     file_url: Optional[str] = None
     file_size: Optional[float] = None
     thumbnail_url: Optional[str] = None
+
 
 class Vlog(VlogBase):
     id: int

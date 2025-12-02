@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 // axios instance with default config
 const axiosInstance = axios.create({
@@ -29,7 +30,7 @@ axiosInstance.interceptors.response.use(
   (error) => {
     // Handle 401 - Unauthorized (token expired)
     if (error.response?.status === 401) {
-      console.warn('[Axios] Received 401 Unauthorized - clearing auth and redirecting to login');
+      logger.warn('[Axios] Received 401 Unauthorized - clearing auth and redirecting to login');
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_data');
       // Use setTimeout to ensure state updates complete before navigation
@@ -40,7 +41,7 @@ axiosInstance.interceptors.response.use(
 
     // Handle 403 - Forbidden
     if (error.response?.status === 403) {
-      console.error('[Axios] Access forbidden (403):', error.response?.data?.detail || 'No detail provided');
+      logger.error('[Axios] Access forbidden (403):', error.response?.data?.detail || 'No detail provided');
     }
 
     return Promise.reject(error);

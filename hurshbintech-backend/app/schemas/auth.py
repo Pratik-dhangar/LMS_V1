@@ -1,10 +1,10 @@
-
 # Authentication schemas for login requests and token responses
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
+
 
 # User (Admin/Head/Trainer/Consultant) login request with role and passcode
 class UserLogin(BaseModel):
-    role: str  
+    role: str
     passcode: str
 
 

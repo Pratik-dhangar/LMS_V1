@@ -1,0 +1,137 @@
+:root {
+    --page-max-width: 1100px;
+    --card-radius: 12px;
+    --card-padding: 1.25rem;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --danger: #dc2626;
+}
+
+.malc-page {
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.malc-page>.max-w-6xl {
+    padding: 1.25rem;
+    flex: 1 1 auto;
+}
+
+.malc-page>footer {
+    margin-top: auto;
+}
+
+.malc-page h1 {
+    color: #1f2937;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 2.2rem;
+}
+
+.malc-card {
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
+    background: #ffffff;
+}
+
+.malc-form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.malc-select {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #111827;
+    transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.malc-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    border-color: var(--primary);
+}
+
+.malc-assign-btn {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .08s ease;
+}
+
+.malc-assign-btn:disabled {
+    background: #94a3b8 !important;
+    cursor: not-allowed;
+}
+
+.malc-assign-btn:not(:disabled) {
+    background: var(--primary);
+    color: #fff;
+}
+
+.malc-assign-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+
+.malc-assigned-item {
+    background: #fbfdff;
+    border: 1px solid #e6eefc;
+    border-radius: 10px;
+    padding: 0.875rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.malc-assigned-item h3 {
+    margin: 0 0 0.25rem 0;
+}
+
+.malc-assigned-item p {
+    margin: 0;
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+    .malc-page .max-w-6xl {
+        padding: 1.5rem;
+    }
+
+    .malc-page h1 {
+        font-size: 2.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .malc-page .max-w-6xl {
+        padding: 2rem;
+    }
+
+    .malc-card {
+        padding: 1.5rem;
+    }
+
+    .malc-assign-btn {
+        max-width: 260px;
+    }
+}
+
+@media (max-width: 480px) {
+    .malc-page h1 {
+        font-size: 1.6rem;
+    }
+
+    .malc-card {
+        padding: 1rem;
+    }
+}
