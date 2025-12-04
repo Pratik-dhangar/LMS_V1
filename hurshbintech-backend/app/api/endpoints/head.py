@@ -7,8 +7,10 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from app.core.deps import get_current_head
+from app.core.security import decrypt_passcode
 from app.crud import user_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile
@@ -365,3 +367,77 @@ async def delete_learner_account(
 
     result = await user_crud.delete_learner(db, learner_id)
     return {"message": result}
+
+
+# --- Reveal Passcode Endpoint (Secure) ---
+logger = logging.getLogger(__name__)
+
+
+@router.get("/users/{user_id}/reveal-passcode", response_model=dict)
+async def reveal_user_passcode(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """
+    Decrypt and return a user's plaintext passcode for admin viewing.
+    
+    Security considerations:
+    - Only accessible by authenticated head users
+    - Verifies user belongs to current head
+    - Logs all reveal requests for audit trail
+    - Should only be used when absolutely necessary
+    """
+    
+    # Get user from database
+    user = await user_crud.get_user_by_id(db, user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Verify user belongs to current head (check profile created_by_head_id)
+    is_authorized = False
+    if user.role.value == "trainer" and user.trainer_profile:
+        is_authorized = user.trainer_profile.created_by_head_id == current_head.id
+    elif user.role.value == "consultant" and user.consultant_profile:
+        is_authorized = user.consultant_profile.created_by_head_id == current_head.id
+    elif user.role.value == "learner" and user.learner_profile:
+        is_authorized = user.learner_profile.created_by_head_id == current_head.id
+    
+    if not is_authorized:
+        # Log unauthorized attempt
+        logger.warning(
+            f"Unauthorized passcode reveal attempt - Head ID: {current_head.id}, "
+            f"User ID: {user_id}, User Role: {user.role.value}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this user's passcode"
+        )
+    
+    try:
+        # Decrypt the passcode
+        plaintext_passcode = decrypt_passcode(user.passcode)
+        
+        # Log successful reveal for audit trail
+        logger.info(
+            f"Passcode revealed - Head ID: {current_head.id}, Head Name: {current_head.user.name}, "
+            f"User ID: {user_id}, User Name: {user.name}, User Role: {user.role.value}"
+        )
+        
+        return {
+            "user_id": user_id,
+            "name": user.name,
+            "role": user.role.value,
+            "passcode": plaintext_passcode
+        }
+        
+    except ValueError as e:
+        logger.error(f"Failed to decrypt passcode for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to decrypt passcode"
+        )

@@ -29,6 +29,7 @@ from app.schemas.user import (
     TrainerCreate,
     TrainerUpdate,
 )
+from app.core.security import hash_password, verify_password, encrypt_passcode
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
@@ -45,6 +46,22 @@ def generate_passcode(role: str, name: str) -> str:
 # ============ CENTRALIZED USER AUTHENTICATION ============
 
 
+# Get user by ID with relationships loaded
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+    """Get user by ID with all profile relationships loaded"""
+    result = await db.execute(
+        select(User)
+        .options(
+            joinedload(User.head_profile),
+            joinedload(User.trainer_profile),
+            joinedload(User.consultant_profile),
+            joinedload(User.learner_profile),
+        )
+        .where(User.id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
 # Get user by passcode and role (for login)
 async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: str) -> User | None:
     """
@@ -52,8 +69,6 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
     Supports: admin, head, trainer, consultant, learner
     Uses bcrypt verification for password matching
     """
-    from app.core.security import verify_password
-
     logger.debug(f"Querying User table for role={role}")
 
     # Convert string role to UserRole enum
@@ -76,7 +91,7 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
 
     # Find user with matching password (active status checked at endpoint)
     for user in users:
-        if verify_password(passcode, user.passcode):
+        if verify_password(passcode, user.passcode_hash):
             logger.debug(
                 f"Found user: ID={user.id}, name={user.name}, role={user.role.value}, active={user.is_active}"
             )
@@ -142,10 +157,15 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
     passcode = head_data.passcode or generate_passcode("HEAD", head_data.name)
     logger.debug("Generated passcode for new head")
 
+    # Encrypt passcode for storage, hash for verification
+    encrypted_passcode = encrypt_passcode(passcode)
+    passcode_hash = hash_password(passcode)
+
     # Create User record first
     new_user = User(
         name=head_data.name,
-        passcode=passcode,
+        passcode=encrypted_passcode,  # Store encrypted, not plaintext
+        passcode_hash=passcode_hash,
         email=None,  # Email optional for heads
         role=UserRole.HEAD,
         is_active=True,
@@ -183,6 +203,8 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
 
     # Attach user to profile for convenience
     new_head_profile.user = new_user
+    # Store plaintext passcode as temporary attribute for response
+    new_head_profile.plaintext_passcode = passcode
     return new_head_profile
 
 
@@ -265,9 +287,13 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
     # Generate passcode if not provided
     passcode = trainer_data.passcode or generate_passcode("TRAINER", trainer_data.name)
 
+    # Encrypt passcode for storage, hash for verification
+    encrypted_passcode = encrypt_passcode(passcode)
+    passcode_hash = hash_password(passcode)
+
     # Create User record first
     new_user = User(
-        name=trainer_data.name, passcode=passcode, email=None, role=UserRole.TRAINER, is_active=True
+        name=trainer_data.name, passcode=encrypted_passcode, passcode_hash=passcode_hash, email=None, role=UserRole.TRAINER, is_active=True
     )
     db.add(new_user)
     await db.flush()
@@ -300,6 +326,8 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
     await db.refresh(new_user)
 
     new_trainer_profile.user = new_user
+    # Store plaintext passcode as temporary attribute for response
+    new_trainer_profile.plaintext_passcode = passcode
     return new_trainer_profile
 
 
@@ -387,10 +415,15 @@ async def create_consultant(
     # Generate passcode if not provided
     passcode = consultant_data.passcode or generate_passcode("CONSULTANT", consultant_data.name)
 
+    # Encrypt passcode for storage, hash for verification
+    encrypted_passcode = encrypt_passcode(passcode)
+    passcode_hash = hash_password(passcode)
+
     # Create User record first
     new_user = User(
         name=consultant_data.name,
-        passcode=passcode,
+        passcode=encrypted_passcode,  # Store encrypted, not plaintext
+        passcode_hash=passcode_hash,
         email=None,
         role=UserRole.CONSULTANT,
         is_active=True,
@@ -416,6 +449,8 @@ async def create_consultant(
     await db.refresh(new_user)
 
     new_consultant_profile.user = new_user
+    # Store plaintext passcode as temporary attribute for response
+    new_consultant_profile.plaintext_passcode = passcode
     return new_consultant_profile
 
 
@@ -609,9 +644,13 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
     # Generate passcode if not provided
     passcode = learner_data.passcode or generate_passcode("LEARNER", learner_data.name)
 
+    # Encrypt passcode for storage, hash for verification
+    encrypted_passcode = encrypt_passcode(passcode)
+    passcode_hash = hash_password(passcode)
+
     # Create User record first
     new_user = User(
-        name=learner_data.name, passcode=passcode, email=None, role=UserRole.LEARNER, is_active=True
+        name=learner_data.name, passcode=encrypted_passcode, passcode_hash=passcode_hash, email=None, role=UserRole.LEARNER, is_active=True
     )
     db.add(new_user)
     await db.flush()
@@ -690,6 +729,8 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
     await db.refresh(new_user)
 
     new_learner_profile.user = new_user
+    # Store plaintext passcode as temporary attribute for response
+    new_learner_profile.plaintext_passcode = passcode
     return new_learner_profile
 
 

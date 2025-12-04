@@ -98,6 +98,7 @@ class HeadResponse(BaseModel):
     """Schema for head response - combines User and Profile data"""
 
     id: int  # Profile ID
+    user_id: int  # From Profile - needed for reveal passcode endpoint
     name: str  # From User
     role: str  # From User
     passcode: str  # From User
@@ -129,11 +130,15 @@ class HeadResponse(BaseModel):
         if user is None:
             user = profile.user
 
+        # Use plaintext passcode if available (during creation), otherwise use encrypted version
+        passcode = getattr(profile, 'plaintext_passcode', user.passcode)
+
         data = {
             "id": profile.id,
+            "user_id": profile.user_id,
             "name": user.name,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
-            "passcode": user.passcode,
+            "passcode": passcode,
             "created_at": user.created_at,
             "created_by": profile.created_by_admin_id,
             # Profile fields
@@ -250,12 +255,15 @@ class TrainerResponse(BaseModel):
         if user is None:
             user = profile.user
 
+        # Use plaintext passcode if available (during creation), otherwise use encrypted version
+        passcode = getattr(profile, 'plaintext_passcode', user.passcode)
+
         data = {
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
-            "passcode": user.passcode,
+            "passcode": passcode,
             "created_at": user.created_at,
             "created_by": profile.created_by_head_id,
             # Profile fields
@@ -325,6 +333,7 @@ class ConsultantResponse(BaseModel):
     """Schema for consultant response - combines User and Profile data"""
 
     id: int  # Profile ID
+    user_id: int  # User ID from users table
     name: str  # From User
     role: str  # From User
     passcode: str  # From User
@@ -339,11 +348,15 @@ class ConsultantResponse(BaseModel):
         if user is None:
             user = profile.user
 
+        # Use plaintext passcode if available (during creation), otherwise use encrypted version
+        passcode = getattr(profile, 'plaintext_passcode', user.passcode)
+
         data = {
             "id": profile.id,
+            "user_id": user.id,
             "name": user.name,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
-            "passcode": user.passcode,
+            "passcode": passcode,
             "created_at": user.created_at,
             "age": profile.age,
             "contact_no": profile.contact_no,
@@ -594,12 +607,15 @@ class LearnerResponse(BaseModel):
         if user is None:
             user = profile.user
 
+        # Use plaintext passcode if available (during creation), otherwise use encrypted version
+        passcode = getattr(profile, 'plaintext_passcode', user.passcode)
+
         # Build data dictionary with all profile fields
         data = {
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
-            "passcode": user.passcode,
+            "passcode": passcode,
             "created_at": user.created_at,
             "updated_at": profile.updated_at,
             "created_by": profile.created_by_head_id,

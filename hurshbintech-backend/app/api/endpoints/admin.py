@@ -6,8 +6,10 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from app.core.deps import get_current_admin
+from app.core.security import decrypt_passcode
 from app.crud import user_crud
 from app.db.session import get_db
 from app.models.user_model import User
@@ -133,3 +135,57 @@ async def get_all_learners_list(
     """Get all learners - admin can view all learners in the system"""
     learners = await user_crud.get_all_learners_system_wide(db)
     return [LearnerResponse.from_orm_with_user(learner) for learner in learners]
+
+
+# --- Reveal Passcode Endpoint (Admin - Full Access) ---
+logger = logging.getLogger(__name__)
+
+
+@router.get("/users/{user_id}/reveal-passcode", response_model=dict)
+async def reveal_user_passcode_admin(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """
+    Decrypt and return a user's plaintext passcode for admin viewing.
+    
+    Security considerations:
+    - Only accessible by authenticated admin users
+    - Admins have full access to all user passcodes
+    - Logs all reveal requests for audit trail
+    - Should only be used when absolutely necessary
+    """
+    
+    # Get user from database
+    user = await user_crud.get_user_by_id(db, user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    try:
+        # Decrypt the passcode
+        plaintext_passcode = decrypt_passcode(user.passcode)
+        
+        # Log successful reveal for audit trail
+        logger.info(
+            f"Passcode revealed by ADMIN - Admin ID: {current_admin.id}, Admin Name: {current_admin.name}, "
+            f"User ID: {user_id}, User Name: {user.name}, User Role: {user.role.value}"
+        )
+        
+        return {
+            "user_id": user_id,
+            "name": user.name,
+            "role": user.role.value,
+            "passcode": plaintext_passcode
+        }
+        
+    except ValueError as e:
+        logger.error(f"Failed to decrypt passcode for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to decrypt passcode"
+        )
