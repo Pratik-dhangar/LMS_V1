@@ -70,16 +70,18 @@ async def validation_exception_handler(request, exc):
     return JSONResponse(status_code=422, content={"detail": exc.errors(), "body": str(exc.body)})
 
 
-# ✅ CORS
-# If BACKEND_CORS_ORIGINS is empty, use sensible defaults for development
+# ✅ CORS Configuration
+# If BACKEND_CORS_ORIGINS is empty, use sensible defaults for development & PWA
 allowed_origins = (
     settings.BACKEND_CORS_ORIGINS
     if settings.BACKEND_CORS_ORIGINS
     else [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "https://hurshbin.lumesoftai.in:3001",  # ✅ PWA Frontend (Domain)
+        "https://hurshbin.lumesoftai.in:8001",  # ✅ PWA Backend (Domain)
+        "https://43.204.218.16:3001",            # IP Access (Backup)
+        "https://43.204.218.16:8001",            # IP Access (Backup)
     ]
 )
 
@@ -91,7 +93,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
 # ✅ REQUEST LOGGING
 # Log all requests with timing and correlation IDs
 app.add_middleware(RequestLoggingMiddleware)
