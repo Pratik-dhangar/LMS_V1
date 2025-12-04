@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
@@ -61,6 +60,40 @@ import './App.css';
 
 function App() {
   const { isAuthenticated, user } = useAuth();
+
+  // Lock orientation to landscape on mobile and tablet devices
+  useEffect(() => {
+    const lockOrientation = async () => {
+      try {
+        // Check if Screen Orientation API is supported
+        if (screen.orientation && screen.orientation.lock) {
+          // Attempt to lock to landscape
+          await screen.orientation.lock('landscape-primary').catch(() => {
+            // Fallback to 'landscape' if 'landscape-primary' is not supported
+            return screen.orientation.lock('landscape');
+          });
+          console.log('✅ Orientation locked to landscape');
+        } else if (screen.lockOrientation) {
+          // Older API fallback
+          screen.lockOrientation('landscape-primary') || screen.lockOrientation('landscape');
+          console.log('✅ Orientation locked to landscape (legacy API)');
+        } else {
+          console.log('ℹ Screen orientation lock not supported on this device');
+        }
+      } catch (error) {
+        // Orientation lock may fail if not in fullscreen or not supported
+        console.log('ℹ Could not lock orientation:', error.message);
+      }
+    };
+
+    // Only lock on mobile/tablet (not desktop)
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                            (window.innerWidth <= 1366);
+    
+    if (isMobileOrTablet) {
+      lockOrientation();
+    }
+  }, []);
 
   // Determine dashboard based on user role
   const getDashboardPath = () => {
