@@ -131,8 +131,20 @@ const headService = {
   deleteLearner: async (learnerId) => {
     const response = await axiosInstance.delete(`/head/learners/${learnerId}`);
     return response.data;
-  },  
-}; 
+  },
+
+  /**
+   * Reveal (decrypt) a user's passcode
+   * @param {number} userId - The user ID to reveal passcode for
+   * @returns {Promise} - Object containing decrypted passcode
+   */
+  revealPasscode: async (userId) => {
+    console.log('Revealing passcode for user:', { userId });
+    const response = await axiosInstance.get(`/head/users/${userId}/reveal-passcode`);
+    console.log('Passcode revealed successfully');
+    return response.data;
+  },
+};
 
 
 export default headService;

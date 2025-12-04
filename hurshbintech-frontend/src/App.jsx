@@ -17,6 +17,7 @@ import ManageLearningGoals from './pages/admin/ManageLearningGoals';
 import ManageLearningContent from './pages/admin/ManageLearningContent';
 import ViewLearners from './pages/admin/ViewLearners';
 import ViewTrainers from './pages/admin/ViewTrainers';
+import ViewConsultants from './pages/admin/ViewConsultants';
 import ManageVlogs from './pages/admin/ManageVlogs';
 import EditVlog from './pages/admin/EditVlog';
 
@@ -146,6 +147,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <ViewTrainers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-coaches"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ViewConsultants />
             </ProtectedRoute>
           }
         />

@@ -1,13 +1,15 @@
-:root {
-    --primary: #2563eb;
-    --muted: #6b7280;
-}
+/* ============================================================================
+   REPORT CARD - Responsive Learner Report Styles
+   Head role learner performance reports
+   ============================================================================ */
 
 .report-page {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #f8fafc;
+    background-color: var(--color-bg-secondary);
+    width: 100%;
+    overflow-x: hidden;
 }
 
 .report-content {
@@ -15,41 +17,45 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: 0 !important;
-    /* remove wrapper padding so inner card can be flush */
+    padding: 0;
 }
-
-/* .report-page>footer {
-    margin-top: auto;
-} */
 
 .report-page h1 {
-    color: #1f2937;
+    color: var(--color-gray-900);
     font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 1.2;
 }
 
-/* Card tweaks */
+/* Card styles */
 .report-content .bg-white {
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
 }
 
 .report-content .report-card {
     width: 100%;
-    margin: 0 !important;
-    /* no margin between navbar and footer */
-    padding: 0 !important;
-    /* no internal padding */
-    /* DO NOT grow to fill remaining vertical space; size to content */
+    margin: 0;
+    padding: 0;
     flex: 0 0 auto;
     min-height: 0;
-    /* allow internal scroll if inner content overflows */
     overflow: auto;
 }
 
-/* Learner card */
+/* Learner card with 2-column grid */
+.learner-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+    width: 100%;
+}
+
 .report-content .learner-card {
     transition: transform 160ms ease, box-shadow 160ms ease;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-gray-200);
 }
 
 .report-content .learner-card:hover {
@@ -62,41 +68,102 @@
     height: 48px;
     flex: 0 0 48px;
     font-size: 1.125rem;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-gray-200);
+    color: var(--color-gray-700);
+    font-weight: 600;
 }
 
 .report-content .stat-box {
-    padding: 0.5rem;
-    border-radius: 8px;
-    background: #ffffff;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-gray-100);
 }
 
 .report-content .view-btn {
     transition: transform 120ms ease, box-shadow 120ms ease;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    min-height: 40px;
 }
 
 .report-content .view-btn:active {
     transform: translateY(1px);
 }
 
-/* Responsive grid tweaks */
-@media (max-width: 640px) {
-    .report-content .grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    .report-page h1 {
-        font-size: 1.25rem;
-    }
-}
-
-@media (min-width: 641px) and (max-width: 1024px) {
+/* ============================================================================
+   RESPONSIVE: TABLET LANDSCAPE (813px - 1366px)
+   ============================================================================ */
+@media (min-width: 813px) and (max-width: 1366px) {
     .report-page h1 {
         font-size: 1.5rem;
     }
+
+    .learner-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .report-content .learner-card {
+        padding: var(--spacing-sm);
+    }
+
+    .report-content .avatar {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        font-size: 1rem;
+    }
+
+    .report-content .view-btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
 }
 
-@media (min-width: 1025px) {
+/* ============================================================================
+   RESPONSIVE: MOBILE LANDSCAPE (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
     .report-page h1 {
-        font-size: 1.75rem;
+        font-size: 1.25rem;
+    }
+
+    /* 2-column grid for mobile landscape */
+    .learner-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-xs);
+    }
+
+    .report-content .learner-card {
+        padding: var(--spacing-xs);
+    }
+
+    .report-content .learner-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .report-content .avatar {
+        width: 32px;
+        height: 32px;
+        flex: 0 0 32px;
+        font-size: 0.875rem;
+    }
+
+    .report-content .stat-box {
+        padding: 0.3rem;
+        font-size: 0.75rem;
+    }
+
+    .report-content .view-btn {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.6rem;
+        min-height: 36px;
     }
 }

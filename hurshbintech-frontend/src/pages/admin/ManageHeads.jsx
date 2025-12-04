@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  Users,         
-  Edit3,         
-  AlertCircle,   
-  Loader2        
+import {
+  Users,
+  Edit3,
+  AlertCircle,
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
@@ -20,12 +22,13 @@ import adminService from '../../api/services/adminService';
 const ManageHeads = () => {
   const navigate = useNavigate();
   const { user: _user } = useAuth();
-  
+
   // State management for head data and filtering
   const [heads, setHeads] = useState([]);
-  const [filteredHeads, setFilteredHeads] = useState([]);    
-  const [loading, setLoading] = useState(true);              
-  const [activeSearchQuery, setActiveSearchQuery] = useState('');        
+  const [filteredHeads, setFilteredHeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [visiblePasscodes, setVisiblePasscodes] = useState({});
   const [error, setError] = useState('');
 
   // Fetch heads data when component mounts
@@ -40,7 +43,7 @@ const ManageHeads = () => {
       setFilteredHeads(heads);
     } else {
       const searchLower = query.toLowerCase();
-      const filtered = heads.filter(head => 
+      const filtered = heads.filter(head =>
         head.name.toLowerCase().includes(searchLower) ||
         head.passcode.toLowerCase().includes(searchLower) ||
         (head.contact_no && head.contact_no.toLowerCase().includes(searchLower))
@@ -49,7 +52,7 @@ const ManageHeads = () => {
     }
   };
 
-  
+
   const fetchHeads = async () => {
     try {
       setLoading(true);
@@ -78,6 +81,31 @@ const ManageHeads = () => {
     navigate(`/admin/edit-head/${headId}`);
   };
 
+  /**
+   * Toggle password visibility for a specific head
+   * 
+   * @param {number} headId - The unique identifier of the head (profile ID)
+   * @param {number} userId - The user ID associated with the head
+   */
+  const togglePasscodeVisibility = async (headId, userId) => {
+    const currentlyVisible = !!visiblePasscodes[headId];
+    if (currentlyVisible) {
+      // Hide the passcode
+      setVisiblePasscodes(prev => ({ ...prev, [headId]: false }));
+      return;
+    }
+
+    // Reveal: call admin reveal endpoint and cache the decrypted passcode
+    try {
+      const resp = await adminService.revealPasscode(userId);
+      setVisiblePasscodes(prev => ({ ...prev, [headId]: resp.passcode }));
+    } catch (err) {
+      console.error('Failed to reveal passcode for head', headId, err);
+      toast.error('Failed to reveal passcode', { position: 'top-center', autoClose: 3000 });
+      setVisiblePasscodes(prev => ({ ...prev, [headId]: false }));
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
@@ -85,7 +113,7 @@ const ManageHeads = () => {
         <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
           {/* Header */}
           <div className="mb-8">
-            
+
             <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
               Manage HurshBin Heads
             </h1>
@@ -94,12 +122,12 @@ const ManageHeads = () => {
 
           {/* Search Bar and Add New Head Button */}
           <div className="mb-8 flex justify-center items-center gap-4">
-           
-            <SearchBar 
+
+            <SearchBar
               onSearch={handleSearch}
               placeholder="Search by name, passcode, contact..."
             />
-             <button
+            <button
               onClick={() => navigate('/admin/register-head')}
               className="bg-[#27ae60] hover:bg-[#229954] text-white py-3 px-5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
             >
@@ -143,7 +171,7 @@ const ManageHeads = () => {
                     {activeSearchQuery ? 'No heads found' : 'No heads registered yet'}
                   </p>
                   <p className="text-gray-500">
-                    {activeSearchQuery 
+                    {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'Register your first head to get started'
                     }
@@ -184,8 +212,8 @@ const ManageHeads = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredHeads.map((head, index) => (
-                        <tr 
-                          key={head.id} 
+                        <tr
+                          key={head.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium border border-gray-300">
@@ -196,15 +224,28 @@ const ManageHeads = () => {
                             <div className="text-xs text-gray-500">{head.role}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap border border-gray-300">
-                            <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                              {head.passcode}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 font-mono">
+                                {visiblePasscodes[head.id] ? visiblePasscodes[head.id] : '••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasscodeVisibility(head.id, head.user_id)}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                title={visiblePasscodes[head.id] ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {visiblePasscodes[head.id] ? (
+                                  <EyeOff className="w-4 h-4 text-gray-600" />
+                                ) : (
+                                  <Eye className="w-4 h-4 text-gray-600" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border border-gray-300">
                             {head.contact_no || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border border-gray-300">
-                            {head.date_of_joining 
+                            {head.date_of_joining
                               ? new Date(head.date_of_joining).toLocaleDateString()
                               : 'N/A'
                             }

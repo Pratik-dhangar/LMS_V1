@@ -5,6 +5,7 @@ import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
 import MediaPopup from './MediaPopup';
 import { useMediaControl } from '../../context/MediaControlContext';
+import FillInTheBlanks from './FillInTheBlanks';
 
 // Memoized Video Overlay Component
 const VideoOverlay = React.memo(({
@@ -591,7 +592,8 @@ const Whiteboard = ({
                             y: data.y !== undefined ? data.y : item.y,
                             width: data.width !== undefined ? data.width : item.width,
                             height: data.height !== undefined ? data.height : item.height,
-                            inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket
+                            inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
+                            answers: data.answers !== undefined ? data.answers : item.answers
                         }
                         : item
                 ));
@@ -2215,6 +2217,60 @@ const Whiteboard = ({
                                 )}
                             </div>
                         ))}
+
+                        {/* FILL IN THE BLANKS EXERCISES */}
+                        {canvasItems.filter(item => item.type === 'fill-in-blanks').map(exercise => {
+                            const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === exercise.id;
+                            const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === exercise.id;
+                            const isDraggable = (isTrainer && isSelectedByTrainer) || (!isTrainer && isSelectedByLearner);
+
+                            return (
+                                <FillInTheBlanks
+                                    key={exercise.id}
+                                    exercise={exercise}
+                                    isTrainer={isTrainer}
+                                    allowLearnerInteraction={exercise.allowLearnerInteraction === true}
+                                    onAnswerChange={(exerciseId, answers) => {
+                                        // Update the exercise answers in canvasItems
+                                        setCanvasItems(prev => prev.map(item =>
+                                            item.id === exerciseId
+                                                ? { ...item, answers }
+                                                : item
+                                        ));
+
+                                        // Sync to other participants via whiteboard service
+                                        if (whiteboardService) {
+                                            whiteboardService.sendItemUpdate({
+                                                id: exerciseId,
+                                                answers,
+                                                type: 'fill-in-blanks'
+                                            });
+                                        }
+                                    }}
+                                    onEdit={(exerciseData) => {
+                                        if (isTrainer) {
+                                            // Store the exercise being edited
+                                            setSelectedItem({
+                                                ...exerciseData,
+                                                editMode: true
+                                            });
+                                        }
+                                    }}
+                                    x={exercise.x}
+                                    y={exercise.y}
+                                    width={exercise.width}
+                                    height={exercise.height}
+                                    isSelected={isSelectedByTrainer || isSelectedByLearner}
+                                    isDraggable={isDraggable}
+                                    onMouseDown={(e) => {
+                                        if (e.button === 0) {
+                                            e.stopPropagation();
+                                            startDrawing(e);
+                                        }
+                                    }}
+                                />
+                            );
+                        })}
 
                         {/* REACTION BUTTONS - Show button labels */}
                         {canvasItems.filter(item => item.type === 'reaction').map(reaction => (
