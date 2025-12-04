@@ -1,11 +1,14 @@
-/* Session-specific complex styles */
+/* ============================================================================
+   SESSION.CSS - Session-specific Styles
+   Responsive design for video sessions, chat, and virtual keyboard
+   ============================================================================ */
 
 /* Video element styles */
 .session-video {
   width: 100%;
   height: 100%;
   background: #000;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   object-fit: cover;
   display: block;
 }
@@ -13,8 +16,8 @@
 /* Loader animation */
 .session-loader {
   border: 4px solid #93c5fd;
-  border-top-color: #2563eb;
-  border-radius: 50%;
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
   width: 3rem;
   height: 3rem;
   animation: spin 1s linear infinite;
@@ -28,15 +31,17 @@
 
 /* Hover transitions for buttons and items */
 .session-hover-transition {
-  transition: all 0.3s ease;
+  transition: all var(--transition-base);
 }
 
 /* Message bubble styles */
 .message-bubble {
   padding: 0.375rem 0.75rem;
-  margin-bottom: 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  max-width: 100%;
+  word-wrap: break-word;
 }
 
 .message-bubble-sent {
@@ -44,27 +49,32 @@
 }
 
 .message-bubble-received {
-  background-color: #f9fafb;
+  background-color: var(--color-gray-50);
 }
 
 /* Virtual keyboard button styles */
 .keyboard-key {
   padding: 0.625rem;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: bold;
-  transition: background 0.2s ease;
+  transition: background var(--transition-fast);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .keyboard-key:hover {
-  background: #e5e7eb;
+  background: var(--color-gray-200);
 }
 
 .keyboard-key:active {
-  background: #d1d5db;
+  background: var(--color-gray-300);
 }
 
 /* Scrollbar styles for sidebars */
@@ -88,7 +98,7 @@
 
 /* Tool icon active state */
 .tool-icon-active {
-  border-color: #3b82f6 !important;
+  border-color: var(--color-primary) !important;
   background-color: #dbeafe !important;
 }
 
@@ -96,20 +106,26 @@
 .permission-allowed {
   background-color: #c6f6d5;
   color: #22543d;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
 }
 
 .permission-blocked {
   background-color: #fed7d7;
   color: #742a2a;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
 }
 
 /* Media controls */
 .media-control-on {
-  background-color: #22c55e;
+  background-color: var(--color-success);
 }
 
 .media-control-off {
-  background-color: #ef4444;
+  background-color: var(--color-error);
 }
 
 /* Video waiting overlay */
@@ -119,8 +135,195 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d1d5db;
-  font-size: 0.875rem;
+  color: var(--color-gray-300);
+  font-size: var(--font-size-sm);
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
+}
+
+/* ============================================================================
+   RESPONSIVE: TABLET LANDSCAPE (813px - 1366px)
+   ============================================================================ */
+@media (min-width: 813px) and (max-width: 1366px) {
+  .message-bubble {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .keyboard-key {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .session-loader {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE: MOBILE LANDSCAPE (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
+  .session-video {
+    border-radius: var(--radius-sm);
+  }
+
+  .message-bubble {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .keyboard-key {
+    padding: 0.4rem;
+    font-size: 0.75rem;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .session-loader {
+    width: 2rem;
+    height: 2rem;
+    border-width: 3px;
+  }
+
+  .session-sidebar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .video-waiting-overlay {
+    font-size: 0.75rem;
+  }
+
+  .permission-allowed,
+  .permission-blocked {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* ============================================================================
+   HAMBURGER MENU & RESPONSIVE SIDEBAR STYLES
+   ============================================================================ */
+
+/* Hamburger button styling - only visible on mobile/tablet */
+.hamburger-btn {
+  position: fixed;
+  z-index: 999;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hamburger-btn:active {
+  transform: scale(0.95);
+}
+
+/* Overlay backdrop for mobile sidebars */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 998;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive sidebar - slides in from left/right on mobile */
+.responsive-sidebar {
+  transition: transform var(--transition-base);
+  will-change: transform;
+}
+
+.responsive-sidebar-left {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 400px;
+  z-index: 999;
+  background: white;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+
+.responsive-sidebar-right {
+  position: fixed;
+  top: 80px;
+  right: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 400px;
+  z-index: 999;
+  background: white;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+
+/* Slide animations */
+.sidebar-slide-left-enter {
+  transform: translateX(-100%);
+}
+
+.sidebar-slide-left-open {
+  transform: translateX(0);
+}
+
+.sidebar-slide-right-enter {
+  transform: translateX(100%);
+}
+
+.sidebar-slide-right-open {
+  transform: translateX(0);
+}
+
+/* Prevent body scroll when sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
+}
+
+/* Desktop: hide hamburger and overlays, show sidebars normally */
+@media (min-width: 1367px) {
+
+  .hamburger-btn,
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  .responsive-sidebar {
+    position: relative !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
 }

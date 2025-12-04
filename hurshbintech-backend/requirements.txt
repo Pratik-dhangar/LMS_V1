@@ -12,6 +12,7 @@ pydantic-settings
 email-validator
 websockets
 python-multipart
+cryptography>=41.0.0
 boto3==1.34.0
 Pillow>=10.0.0
 opencv-python>=4.8.0

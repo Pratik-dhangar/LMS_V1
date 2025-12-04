@@ -93,6 +93,29 @@ const adminService = {
     console.log('Received learners data:', { count: response.data.length });
     return response.data;
   },
+
+  /**
+   * Get all Consultants/Coaches (system-wide, read-only)
+   * @returns {Promise} - Array of consultant objects
+   */
+  getAllConsultants: async () => {
+    console.log('Fetching all consultants (admin view)');
+    const response = await axiosInstance.get('/admin/consultants');
+    console.log('Received consultants data:', { count: response.data.length });
+    return response.data;
+  },
+
+  /**
+   * Reveal (decrypt) a user's passcode (admin)
+   * @param {number} userId - The user ID to reveal passcode for
+   * @returns {Promise} - Object containing decrypted passcode
+   */
+  revealPasscode: async (userId) => {
+    console.log('Admin revealing passcode for user:', { userId });
+    const response = await axiosInstance.get(`/admin/users/${userId}/reveal-passcode`);
+    console.log('Admin passcode reveal response received');
+    return response.data;
+  },
 };
 
 export default adminService;

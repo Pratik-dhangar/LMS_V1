@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import {            
-  Users,         
-  Edit3,         
-  AlertCircle,   
-  Loader2        
+import {
+  Users,
+  Edit3,
+  AlertCircle,
+  Loader2
+  , Eye, EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
@@ -23,17 +24,19 @@ const ManageTrainers = () => {
 
   // State management for trainer data and filtering
   const [trainers, setTrainers] = useState([]);
-  const [filteredTrainers, setFilteredTrainers] = useState([]);    
-  const [loading, setLoading] = useState(true);              
-  const [activeSearchQuery, setActiveSearchQuery] = useState('');        
+  const [filteredTrainers, setFilteredTrainers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [error, setError] = useState('');
+  const [visiblePasscodes, setVisiblePasscodes] = useState({});
+  const [revealedPasscodes, setRevealedPasscodes] = useState({}); // Store decrypted passcodes
 
   // Fetch trainers data when component mounts
   useEffect(() => {
     fetchTrainers();
   }, []);
 
-  
+
   // Fetch all trainers from the server
   const fetchTrainers = async () => {
     try {
@@ -51,6 +54,32 @@ const ManageTrainers = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const togglePasscodeVisibility = async (trainerId, userId) => {
+    // If already visible, just hide it
+    if (visiblePasscodes[trainerId]) {
+      setVisiblePasscodes(prev => ({ ...prev, [trainerId]: false }));
+      return;
+    }
+
+    // If not yet revealed, fetch from backend
+    if (!revealedPasscodes[trainerId]) {
+      try {
+        const response = await headService.revealPasscode(userId);
+        setRevealedPasscodes(prev => ({ ...prev, [trainerId]: response.passcode }));
+        setVisiblePasscodes(prev => ({ ...prev, [trainerId]: true }));
+      } catch (err) {
+        console.error('Error revealing passcode:', err);
+        toast.error('Failed to reveal passcode', {
+          position: "top-center",
+          autoClose: 3000,
+        });
+      }
+    } else {
+      // Already revealed, just toggle visibility
+      setVisiblePasscodes(prev => ({ ...prev, [trainerId]: true }));
     }
   };
 
@@ -74,7 +103,7 @@ const ManageTrainers = () => {
       setFilteredTrainers(trainers);
     } else {
       const lowerQuery = query.toLowerCase();
-      const filtered = trainers.filter(trainer => 
+      const filtered = trainers.filter(trainer =>
         trainer.name.toLowerCase().includes(lowerQuery) ||
         trainer.passcode.toLowerCase().includes(lowerQuery) ||
         (trainer.contact_no && trainer.contact_no.toLowerCase().includes(lowerQuery))
@@ -90,7 +119,7 @@ const ManageTrainers = () => {
         <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
           {/* Header */}
           <div className="mb-8">
-            
+
             <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
               Manage HurshBin Trainers
             </h1>
@@ -99,10 +128,10 @@ const ManageTrainers = () => {
 
           {/* Search Bar and Add New Trainer Button */}
           <div className="mb-8 flex justify-center items-center gap-4">
-            
-            <SearchBar 
-              onSearch={handleSearch} 
-              placeholder="Search by name, passcode, contact number..." 
+
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by name, passcode, contact number..."
             />
             <button
               onClick={() => navigate('/head/register-trainer')}
@@ -148,7 +177,7 @@ const ManageTrainers = () => {
                     {activeSearchQuery ? 'No trainers found' : 'No trainers registered yet'}
                   </p>
                   <p className="text-gray-500">
-                    {activeSearchQuery 
+                    {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'Register your first trainer to get started'
                     }
@@ -189,8 +218,8 @@ const ManageTrainers = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredTrainers.map((trainer, index) => (
-                        <tr 
-                          key={trainer.id} 
+                        <tr
+                          key={trainer.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-700 font-medium border border-gray-300">
@@ -201,9 +230,22 @@ const ManageTrainers = () => {
                             <div className="text-xs text-gray-500">{trainer.role}</div>
                           </td>
                           <td className="px-6 py-4 text-center whitespace-nowrap border border-gray-300">
-                            <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                              {trainer.passcode}
-                            </span>
+                            <div className="flex items-center gap-2 justify-center">
+                              <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {visiblePasscodes[trainer.id]
+                                  ? revealedPasscodes[trainer.id]
+                                  : '••••••'
+                                }
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
+                                className="text-gray-600 hover:text-gray-800 p-1 rounded"
+                                aria-label={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {visiblePasscodes[trainer.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-700 border border-gray-300">
                             {trainer.contact_no || 'N/A'}

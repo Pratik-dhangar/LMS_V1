@@ -44,109 +44,86 @@ const WhiteboardSection = ({
       />
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 p-4 bg-gray-200 rounded mt-4">
-        <div className="text-xs font-semibold mb-2 text-slate-800 w-full">🛠️ Whiteboard Tools</div>
+      <div className="p-4 bg-gray-200 rounded mt-4">
+        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px', color: '#1a202c' }}>🛠️ Whiteboard Tools</div>
 
         {/* Learner Tool Access Controls */}
-        <div className="bg-blue-50 p-2 rounded mb-2 border-2 border-blue-400 w-full">
-          <div className="text-[10px] font-semibold mb-2 text-blue-800">👥 Learner Tool Access (Toggle ON/OFF)</div>
+        <div style={{ backgroundColor: '#eff6ff', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #3b82f6' }}>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '16px', color: '#1e40af' }}>👥 Learner Tool Access & Exercise Tools</div>
 
-          {/* Select Tool Access */}
-          <div className="flex justify-between items-center mb-2 py-1 px-2 bg-white rounded">
-            <span className="text-xs">✋ Select (Learner can select items)</span>
-            <button
-              onClick={() => handleToolClick('✋ Select')}
-              className="bg-blue-500 text-white border-none px-3 py-1 rounded-xl text-[10px] font-bold cursor-pointer min-w-[50px]"
-            >
-              TOGGLE
-            </button>
+          {/* Select Tool */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
+            <span style={{ fontSize: '12px' }}>✋ Select</span>
+            <button onClick={() => handleToolClick('✋ Select')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
-          {/* Drag Tool Access */}
-          <div className="flex justify-between items-center mb-2 py-1 px-2 bg-white rounded">
-            <span className="text-xs">↔️ Drag (Learner can move items)</span>
-            <button
-              onClick={() => handleToolClick('↔️ Drag')}
-              className="bg-blue-500 text-white border-none px-3 py-1 rounded-xl text-[10px] font-bold cursor-pointer min-w-[50px]"
-            >
-              TOGGLE
-            </button>
+          {/* Drag Tool */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
+            <span style={{ fontSize: '12px' }}>↔️ Drag</span>
+            <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
-          {/* Keyboard Tool Trigger */}
-          <div className="flex justify-between items-center py-1 px-2 bg-white rounded">
-            <span className="text-xs">⌨️ Keyboard (Trigger for learner)</span>
-            <button
-              onClick={() => handleToolClick('⌨️ Keyboard')}
-              className="bg-blue-500 text-white border-none px-3 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              TRIGGER
-            </button>
+          {/* Keyboard Tool */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
+            <span style={{ fontSize: '12px' }}>⌨️ Keyboard</span>
+            <button onClick={() => handleToolClick('⌨️ Keyboard')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TRIGGER</button>
+          </div>
+
+          {/* FILL IN THE BLANKS TOOL - SIMPLE AND DIRECT */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#dcfce7', borderRadius: '8px', border: '2px solid #22c55e', marginBottom: '0' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#166534', marginBottom: '4px' }}>📝 Fill in the Blanks</div>
+              <div style={{ fontSize: '11px', color: '#4b5563' }}>Create interactive exercises</div>
+            </div>
+            <button onClick={() => handleToolClick('📝 Fill Blanks')} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '16px', whiteSpace: 'nowrap' }}>✨ CREATE</button>
           </div>
         </div>
 
         {/* Other Trainer Tools */}
-        <div className="text-[10px] font-semibold mb-2 text-slate-800 w-full">🎨 Trainer Tools (Click to use)</div>
-        <div className="flex flex-wrap gap-2">
+        <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '12px', color: '#1a202c' }}>🎨 Trainer Tools (Click to use)</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {['⏸️ Pause', '❄️ Freeze', '🗑️ Clear', '🔀 Shuffle', '⏱️ Timer', '⏲️ Stopwatch', '👍 Good Job!', '🌟 Wow!', '💪 Doing Well', '🙏 Thank You', '❤️ Loved it', '📈 Can Better', '😌 Relax', '🫧 Bubbles', '😊 Smileys', '🎈 Balloons', '⭐ Stars', '⏳ Wait'].map((t, i) => {
             const parts = t.split(' ');
             const emoji = parts.shift();
             const label = parts.join(' ');
             return (
-              <div key={i} className="w-20 h-20 bg-white border-2 border-gray-300 rounded-lg flex flex-col items-center justify-center text-xs text-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md p-1" onClick={() => handleToolClick(t)}>
-                <span className="emoji-fallback text-2xl leading-none">{emoji}</span>
-                <span className="mt-1 text-[10px]">{label}</span>
+              <div key={i} style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px solid #d1d5db', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: '12px', textAlign: 'center', cursor: 'pointer', padding: '8px' }} onClick={() => handleToolClick(t)}>
+                <span style={{ fontSize: '24px', lineHeight: '1' }}>{emoji}</span>
+                <span style={{ marginTop: '6px', fontSize: '10px' }}>{label}</span>
               </div>
             );
           })}
         </div>
 
         {/* Session notes */}
-        <div className="border-2 border-gray-300 p-4 my-4 rounded bg-gray-50 w-full">
-          <div className="font-semibold text-slate-800 mb-2 text-base">📝 Session Notes</div>
-          <textarea
-            className="w-full p-2 rounded mt-1 text-xs text-gray-800 min-h-[80px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={sessionNotes}
-            onChange={handleNotesChange}
-            placeholder="Write session notes here..."
-          />
+        <div style={{ border: '2px solid #d1d5db', padding: '16px', marginTop: '16px', marginBottom: '16px', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
+          <div style={{ fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>📝 Session Notes</div>
+          <textarea style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px', color: '#1f2937', minHeight: '80px', border: '1px solid #d1d5db', outline: 'none' }} value={sessionNotes} onChange={handleNotesChange} placeholder="Write session notes here..." />
         </div>
 
         {/* Message box */}
-        <div className="border-2 border-gray-300 p-4 mt-2 rounded bg-gray-50 w-full">
-          <div className="font-semibold text-slate-800 mb-2 text-base">💬 Message Box</div>
-          <div className="max-h-[150px] overflow-y-auto mb-2">
+        <div style={{ border: '2px solid #d1d5db', padding: '16px', marginTop: '8px', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
+          <div style={{ fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>💬 Message Box</div>
+          <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '8px' }}>
             {messages.map((msg, idx) => (
               <div key={idx} className={`message-bubble ${msg.sender === 'trainer' ? 'message-bubble-sent' : 'message-bubble-received'}`}>
                 <strong>{msg.sender}:</strong> {msg.text}
-                <div className="text-[9px] text-gray-500 mt-1">
+                <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>
                   {new Date(msg.timestamp).toLocaleTimeString()}
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex gap-2 items-center">
-            <input
-              type="text"
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Type message..."
-              className="flex-1 p-2 border border-gray-300 rounded text-xs"
-            />
-            <button
-              onClick={sendMessage}
-              className="px-4 py-2 bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
-            >
-              Send
-            </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input type="text" value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="Type message..." style={{ flex: '1', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '12px' }} />
+            <button onClick={sendMessage} style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Send</button>
           </div>
         </div>
 
-        <div className="text-right mt-4 w-full">
-          <button className="bg-green-600 text-white px-8 py-3 rounded inline-flex items-center gap-2 text-base cursor-pointer hover:bg-green-700" onClick={handleSaveSession}>
+        <div style={{ textAlign: 'right', marginTop: '16px' }}>
+          <button style={{ backgroundColor: '#16a34a', color: 'white', padding: '12px 32px', borderRadius: '6px', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '16px', cursor: 'pointer' }} onClick={handleSaveSession}>
             💾 Save Session
-            <span className="text-[10px] font-normal opacity-90">(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
+            <span style={{ fontSize: '10px', fontWeight: 'normal', opacity: '0.9' }}>(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
           </button>
         </div>
       </div>

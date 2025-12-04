@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import {            
-  Users,         
-  AlertCircle,   
-  Loader2        
+import {
+  Users,
+  AlertCircle,
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
@@ -20,17 +22,18 @@ const ViewLearners = () => {
 
   // State management for learner data and filtering
   const [learners, setLearners] = useState([]);
-  const [filteredLearners, setFilteredLearners] = useState([]);    
-  const [loading, setLoading] = useState(true);              
-  const [activeSearchQuery, setActiveSearchQuery] = useState('');        
+  const [filteredLearners, setFilteredLearners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [error, setError] = useState('');
+  const [visiblePasscodes, setVisiblePasscodes] = useState({});
 
   // Fetch learners data when component mounts
   useEffect(() => {
     fetchLearners();
   }, []);
 
-  
+
   // Fetch all learners from the server
   const fetchLearners = async () => {
     try {
@@ -59,12 +62,37 @@ const ViewLearners = () => {
       setFilteredLearners(learners);
     } else {
       const lowerQuery = query.toLowerCase();
-      const filtered = learners.filter(learner => 
+      const filtered = learners.filter(learner =>
         learner.name.toLowerCase().includes(lowerQuery) ||
         learner.passcode.toLowerCase().includes(lowerQuery)
       );
       setFilteredLearners(filtered);
     }
+  };
+
+  /**
+   * Toggle passcode visibility for a specific learner
+   * @param {number} learnerId - The learner ID (profile ID)
+   * @param {number} userId - The user ID
+   */
+  const togglePasscodeVisibility = (learnerId, userId) => {
+    // Reveal/hide using admin reveal endpoint
+    const currentlyVisible = !!visiblePasscodes[learnerId];
+    if (currentlyVisible) {
+      setVisiblePasscodes(prev => ({ ...prev, [learnerId]: false }));
+      return;
+    }
+
+    (async () => {
+      try {
+        const resp = await adminService.revealPasscode(userId);
+        setVisiblePasscodes(prev => ({ ...prev, [learnerId]: resp.passcode }));
+      } catch (err) {
+        console.error('Failed to reveal passcode for learner', learnerId, err);
+        toast.error('Failed to reveal passcode', { position: 'top-center', autoClose: 3000 });
+        setVisiblePasscodes(prev => ({ ...prev, [learnerId]: false }));
+      }
+    })();
   };
 
   return (
@@ -74,7 +102,7 @@ const ViewLearners = () => {
         <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
           {/* Header */}
           <div className="mb-8">
-            
+
             <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
               View HurshBin Learners
             </h1>
@@ -83,9 +111,9 @@ const ViewLearners = () => {
 
           {/* Search Bar */}
           <div className="mb-8 flex justify-center items-center">
-            <SearchBar 
-              onSearch={handleSearch} 
-              placeholder="Search by name, passcode..." 
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by name, passcode..."
             />
           </div>
           {activeSearchQuery && (
@@ -122,7 +150,7 @@ const ViewLearners = () => {
                     {activeSearchQuery ? 'No learners found' : 'No learners registered yet'}
                   </p>
                   <p className="text-gray-500">
-                    {activeSearchQuery 
+                    {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'No learners have been registered in the system'
                     }
@@ -148,9 +176,9 @@ const ViewLearners = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                    {filteredLearners.map((learner, index) => (
-                        <tr 
-                          key={learner.id} 
+                      {filteredLearners.map((learner, index) => (
+                        <tr
+                          key={learner.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium border border-gray-300">
@@ -161,9 +189,22 @@ const ViewLearners = () => {
                             <div className="text-xs text-gray-500">{learner.role}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap border border-gray-300">
-                            <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                              {learner.passcode}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {visiblePasscodes[learner.id] ? visiblePasscodes[learner.id] : '••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasscodeVisibility(learner.id, learner.user_id)}
+                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                title={visiblePasscodes[learner.id] ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {visiblePasscodes[learner.id] ? (
+                                  <EyeOff className="w-4 h-4 text-gray-600" />
+                                ) : (
+                                  <Eye className="w-4 h-4 text-gray-600" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border border-gray-300">
                             {learner.date_of_assessment

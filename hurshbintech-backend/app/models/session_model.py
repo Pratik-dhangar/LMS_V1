@@ -54,10 +54,10 @@ class TrainingSession(Base):
     duration = Column(Integer)  # Session duration in minutes
 
     # Participants
-    trainer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    learner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    trainer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    learner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_by_id = Column(
-        Integer, ForeignKey("users.id"), nullable=False
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )  # Head who created the session
 
     # Session status: scheduled, active, ended, cancelled
@@ -70,9 +70,9 @@ class TrainingSession(Base):
     notes = Column(Text)
 
     # Relationships
-    trainer = relationship("User", foreign_keys=[trainer_id])
-    learner = relationship("User", foreign_keys=[learner_id])
-    created_by = relationship("User", foreign_keys=[created_by_id])
+    trainer = relationship("User", foreign_keys=[trainer_id], passive_deletes=True)
+    learner = relationship("User", foreign_keys=[learner_id], passive_deletes=True)
+    created_by = relationship("User", foreign_keys=[created_by_id], passive_deletes=True)
     learning_contents = relationship(
         "LearningContent", secondary=session_content_association, backref="sessions"
     )

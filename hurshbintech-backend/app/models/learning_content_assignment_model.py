@@ -10,14 +10,14 @@ class LearningContentAssignment(Base):
     __tablename__ = "learning_content_assignments"
 
     id = Column(Integer, primary_key=True, index=True)
-    learner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    learner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     learning_content_id = Column(
         Integer, ForeignKey("learning_contents.id"), nullable=False, index=True
     )
-    assigned_by_head = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_by_head = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    learner = relationship("User", foreign_keys=[learner_id])
+    learner = relationship("User", foreign_keys=[learner_id], passive_deletes=True)
     learning_content = relationship("LearningContent")
-    assigned_by = relationship("User", foreign_keys=[assigned_by_head])
+    assigned_by = relationship("User", foreign_keys=[assigned_by_head], passive_deletes=True)

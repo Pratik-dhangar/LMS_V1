@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # Default 30 minutes
     ALGORITHM: Optional[str] = "HS256"
+    
+    # Encryption key for passcode storage (Fernet key - must be 32 url-safe base64-encoded bytes)
+    ENCRYPTION_KEY: str = ""  # MUST be set in .env for production
 
     # Database settings
     DB_ECHO: bool = False  # Disable SQL logging in production

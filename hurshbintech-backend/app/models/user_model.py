@@ -56,8 +56,11 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=True)  # Good for password resets
     passcode = Column(
-        String(60), unique=True, nullable=False, index=True
-    )  # Increased to 60 for bcrypt hashes
+        String(255), unique=True, nullable=False, index=True
+    )  # Encrypted passcode (Fernet) - decrypt via API for admin display
+    passcode_hash = Column(
+        String(60), nullable=False, index=True
+    )  # Bcrypt hash for verification (e.g., "$2b$12$...")
     role = Column(SAEnum(UserRole), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
@@ -71,6 +74,7 @@ class User(Base):
         foreign_keys="HeadProfile.user_id",
         uselist=False,
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     trainer_profile = relationship(
         "TrainerProfile",
@@ -78,6 +82,7 @@ class User(Base):
         foreign_keys="TrainerProfile.user_id",
         uselist=False,
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     consultant_profile = relationship(
         "ConsultantProfile",
@@ -85,6 +90,7 @@ class User(Base):
         foreign_keys="ConsultantProfile.user_id",
         uselist=False,
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     learner_profile = relationship(
         "LearnerProfile",
@@ -92,6 +98,7 @@ class User(Base):
         foreign_keys="LearnerProfile.user_id",
         uselist=False,
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     # Relationship for tracking who created whom (e.g., Admins creating Heads)
@@ -120,7 +127,7 @@ class HeadProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # --- Link to User Table (One-to-One) ---
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     user = relationship("User", back_populates="head_profile", foreign_keys=[user_id])
 
     # Contact & Personal Info
@@ -168,7 +175,7 @@ class TrainerProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # --- Link to User Table (One-to-One) ---
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     user = relationship("User", back_populates="trainer_profile", foreign_keys=[user_id])
 
     # Contact & Personal Info
@@ -217,7 +224,7 @@ class ConsultantProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # --- Link to User Table (One-to-One) ---
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     user = relationship("User", back_populates="consultant_profile", foreign_keys=[user_id])
 
     # Contact & Personal Info
@@ -263,7 +270,7 @@ class LearnerProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # --- Link to User Table (One-to-One) ---
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     user = relationship("User", back_populates="learner_profile", foreign_keys=[user_id])
 
     age = Column(Integer)

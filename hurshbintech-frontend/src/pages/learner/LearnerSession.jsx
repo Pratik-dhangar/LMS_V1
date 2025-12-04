@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { FaBars, FaTimes } from 'react-icons/fa';
 import sessionService from '../../api/services/sessionService';
 import SimpleWebRTC from '../../api/services/simpleWebRTC';
 import WhiteboardService from '../../api/services/whiteboardService';
@@ -45,6 +46,9 @@ const LearnerSession = () => {
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
+
+  // Hamburger menu state for responsive sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Use messages hook
   const { messages, currentMessage, setCurrentMessage, sendMessage, handleKeyPress, addReceivedMessage } = useMessages(webRTC, 'learner');
@@ -465,6 +469,47 @@ const LearnerSession = () => {
       }
     };
 
+    // Set up callback for item updates from trainer (including new exercises)
+    whiteboardService.onItemUpdate = (data) => {
+      console.log('[LearnerSession] Item update received:', data);
+      if (data?.id && data?.type) {
+        // Filter exercises by targetLearnerId - only show if meant for this learner
+        if (data.type === 'fill-in-blanks' && data.targetLearnerId) {
+          // Convert both IDs to strings for comparison to handle string/number mismatches
+          const targetId = String(data.targetLearnerId);
+          const myId = String(sessionInfo?.learner_id || '');
+          
+          console.log('[LearnerSession] Exercise targeting check:', {
+            exerciseId: data.id,
+            targetLearnerId: targetId,
+            myLearnerId: myId,
+            sessionInfoLoaded: !!sessionInfo,
+            match: targetId === myId
+          });
+          
+          if (myId && targetId !== myId) {
+            console.log('[LearnerSession] Exercise not for this learner, ignoring');
+            return; // Don't add this exercise
+          }
+          
+          console.log('[LearnerSession] Exercise is for this learner, adding to canvas');
+        }
+
+        setCanvasItems(prev => {
+          const existingIndex = prev.findIndex(item => item.id === data.id);
+          if (existingIndex >= 0) {
+            // Update existing item
+            const updated = [...prev];
+            updated[existingIndex] = { ...updated[existingIndex], ...data };
+            return updated;
+          } else {
+            // Add new item
+            return [...prev, data];
+          }
+        });
+      }
+    };
+
     // Set up callback for erase pen event from trainer
     whiteboardService.onErasePen = () => {
       console.log('[LearnerSession] Received erase pen event from trainer');
@@ -510,6 +555,7 @@ const LearnerSession = () => {
         whiteboardService.onToolAccess = null;
         whiteboardService.onTriggerKeyboard = null;
         whiteboardService.onPromptUpdate = null;
+        whiteboardService.onItemUpdate = null;
         whiteboardService.onItemRemove = null;
         whiteboardService.onErasePen = null;
         whiteboardService.onClearCanvas = null;
@@ -517,7 +563,7 @@ const LearnerSession = () => {
         whiteboardService.onBucketUpdate = null;
       }
     };
-  }, [whiteboardService]);
+  }, [whiteboardService, sessionInfo]);
 
   // Countdown timer with auto-end
   useEffect(() => {
@@ -828,10 +874,32 @@ const LearnerSession = () => {
         </div>
       </div>
 
+      {/* Hamburger Menu Button - Mobile/Tablet Only */}
+      <div className="lg:hidden fixed top-20 left-4 z-[999]">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+          aria-label="Toggle Sidebar"
+        >
+          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+        </button>
+      </div>
+
+      {/* Overlay backdrop for mobile sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[998]"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Container */}
       <div className="flex flex-col lg:flex-row flex-1" style={{ height: 'calc(100vh - 180px)' }}>
         {/* Left Sidebar */}
-        <div className="w-full lg:w-80 bg-white border-r border-gray-200 p-2 sm:p-4 overflow-y-auto order-2 lg:order-1">
+        <div className={`w-full lg:w-80 bg-white border-r border-gray-200 p-2 sm:p-4 overflow-y-auto order-2 lg:order-1 transition-transform duration-300 lg:transform-none ${isSidebarOpen
+            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0'
+            : 'lg:relative max-lg:fixed max-lg:-translate-x-full'
+          }`}>
           {/* Video Conferencing */}
           <div className="bg-slate-800 p-3 sm:p-4 rounded mb-4 text-white">
             <div className="flex justify-between items-center">

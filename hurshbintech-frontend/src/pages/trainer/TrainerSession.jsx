@@ -25,7 +25,9 @@ import VideoSection from './VideoSection';
 import WhiteboardSection from './WhiteboardSection';
 import LearningProgramSidebar from './LearningProgramSidebar';
 import LearningContentSidebar from './LearningContentSidebar';
-import { FaMicrophone } from 'react-icons/fa';
+import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
+import { exerciseTemplates } from '../../utils/fillInBlanksTemplates';
+import FillBlanksCreator from '../../components/common/FillBlanksCreator';
 
 // -------------------------------------------------------------
 // 🔹 Purpose: TrainerSession component
@@ -148,6 +150,10 @@ const TrainerSession = () => {
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+
+  // Hamburger menu state for responsive sidebars
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   // Keep simple active toggles for Timers and Emojis.
   // These no longer trigger business logic (timer/stopwatch/emoji overlay/shuffle/clear).
   const [activeIcons, setActiveIcons] = useState({});
@@ -176,8 +182,15 @@ const TrainerSession = () => {
   const [learnerToolAccess, setLearnerToolAccess] = useState({
     select: false,    // Can select items on canvas
     drag: false,      // Can drag items on canvas
-    keyboard: false   // Can use virtual keyboard
+    keyboard: false,  // Can use virtual keyboard
+    fillBlanks: false // Can interact with fill in the blanks exercises
   });
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Fill in the Blanks Creator Modal State
+  // 🔸 How it works: controls visibility of exercise creation modal
+  // -----------------------------------------------------------
+  const [showFillBlanksCreator, setShowFillBlanksCreator] = useState(false);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -971,6 +984,49 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Send Fill in the Blanks exercise to specific learner
+  // 🔸 How it works: Creates exercise with learner targeting and broadcasts via whiteboard service
+  // -----------------------------------------------------------
+  const handleSendExercise = (exercise) => {
+    if (!whiteboardService || !sessionInfo) {
+      toast.error('Cannot send exercise - service not ready');
+      console.error('[TrainerSession] Cannot send exercise - whiteboardService:', !!whiteboardService, 'sessionInfo:', !!sessionInfo);
+      return;
+    }
+
+    console.log('[TrainerSession] Preparing to send exercise:', {
+      exerciseId: exercise.id,
+      exerciseTitle: exercise.title,
+      sessionInfoLearnerId: sessionInfo.learner_id,
+      learnerName: sessionInfo.learner_name,
+      fillBlanksAccess: learnerToolAccess.fillBlanks
+    });
+
+    // Add learner targeting to exercise
+    const targetedExercise = {
+      ...exercise,
+      targetLearnerId: sessionInfo.learner_id,
+      allowLearnerInteraction: learnerToolAccess.fillBlanks // Use current permission state
+    };
+
+    // Add to canvas items
+    setCanvasItems(prev => [...prev, targetedExercise]);
+
+    // Broadcast to whiteboard
+    whiteboardService.sendItemUpdate(targetedExercise);
+
+    console.log('[TrainerSession] Exercise sent to learner via whiteboard service:', {
+      exerciseId: targetedExercise.id,
+      targetLearnerId: targetedExercise.targetLearnerId,
+      title: targetedExercise.title,
+      allowLearnerInteraction: targetedExercise.allowLearnerInteraction,
+      fullExercise: targetedExercise
+    });
+
+    toast.success(`📝 Exercise sent to ${sessionInfo.learner_name || 'learner'}!`);
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Add a new bucket to the whiteboard
   // 🔸 How it works: creates a new bucket positioned next to the previous one, updates state and notifies via whiteboardService
   // -----------------------------------------------------------
@@ -1398,6 +1454,14 @@ const TrainerSession = () => {
         return;
       }
 
+      // ---------------------- FILL IN THE BLANKS ----------------------
+      case '📝 Fill Blanks': {
+        console.log('[TrainerSession] Opening Fill in the Blanks creator');
+        // Open the creator modal instead of directly creating exercise
+        setShowFillBlanksCreator(true);
+        return; // Don't create item here, wait for modal
+      }
+
       // ---------------------- DEFAULT ----------------------
       default:
         console.log('[TrainerSession] No case matched for tool:', tool);
@@ -1491,10 +1555,42 @@ const TrainerSession = () => {
         </div>
       )}
 
+      {/* Hamburger Menu Buttons - Mobile/Tablet Only */}
+      <div className="lg:hidden fixed top-20 left-4 right-4 z-[999] flex justify-between pointer-events-none">
+        <button
+          onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+          className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors pointer-events-auto"
+          aria-label="Toggle Learning Program"
+        >
+          {isLeftSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+        </button>
+        <button
+          onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+          className="bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors pointer-events-auto"
+          aria-label="Toggle Learning Content"
+        >
+          {isRightSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+        </button>
+      </div>
+
+      {/* Overlay backdrop for mobile sidebars */}
+      {(isLeftSidebarOpen || isRightSidebarOpen) && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[998]"
+          onClick={() => {
+            setIsLeftSidebarOpen(false);
+            setIsRightSidebarOpen(false);
+          }}
+        />
+      )}
+
       {/* Main layout */}
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 my-3 sm:my-5 mx-2 sm:mx-4 items-start">
         {/* Left Sidebar - Learning Program */}
-        <div className="flex-1 min-w-0 w-full lg:w-auto order-1">
+        <div className={`flex-1 min-w-0 w-full lg:w-auto order-1 transition-transform duration-300 lg:transform-none ${isLeftSidebarOpen
+            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0 overflow-y-auto bg-white'
+            : 'lg:relative max-lg:fixed max-lg:-translate-x-full'
+          }`}>
           <VideoSection
             remoteStream={remoteStream}
             remoteVideoRef={remoteVideoRef}
@@ -1928,6 +2024,40 @@ const TrainerSession = () => {
                 <span>⌨️</span>
                 <span>Keyboard</span>
               </button>
+
+              {/* FILL IN THE BLANKS - CREATE EXERCISE */}
+              <button
+                onClick={() => {
+                  // Toggle learner interaction permission
+                  const willEnable = !learnerToolAccess.fillBlanks;
+                  toggleLearnerToolAccess('fillBlanks');
+
+                  // Update all existing fill-in-blanks exercises with the permission state
+                  setCanvasItems(prev => prev.map(item =>
+                    item.type === 'fill-in-blanks'
+                      ? { ...item, allowLearnerInteraction: willEnable }
+                      : item
+                  ));
+
+                  // Broadcast the permission change to all participants
+                  if (whiteboardService) {
+                    whiteboardService.send('fillBlanksPermission', {
+                      allowed: willEnable,
+                      timestamp: Date.now()
+                    });
+                  }
+
+                  toast.success(willEnable ? '✅ Learners can now fill in the blanks!' : '🔒 Fill in the blanks locked');
+                }}
+                className={`${learnerToolAccess.fillBlanks
+                  ? 'bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 border-green-600 text-white shadow-lg'
+                  : 'bg-white border-gray-400 text-slate-800 hover:bg-gray-50'
+                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
+                title={learnerToolAccess.fillBlanks ? 'Click to lock fill in the blanks' : 'Click to allow learners to fill in the blanks'}
+              >
+                <span>{learnerToolAccess.fillBlanks ? '✏️' : '📝'}</span>
+                <span>Fill Blanks</span>
+              </button>
             </div>
 
 
@@ -2001,7 +2131,26 @@ const TrainerSession = () => {
               </div>
             </div>
 
-            {/* Session notes */}
+            {/* CREATE EXERCISES SECTION */}
+            <div className="w-full">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm">📚</span>
+                  <div className="text-[10px] sm:text-xs font-semibold">Create Exercises</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 sm:gap-2 w-full">
+                {/* Create Fill in the Blanks Exercise */}
+                <button
+                  onClick={() => handleToolClick('📝 Fill Blanks')}
+                  className="bg-gradient-to-r from-purple-400 to-indigo-400 hover:from-purple-500 hover:to-indigo-500 border-2 border-purple-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1 shadow-lg"
+                  title="Create a new Fill in the Blanks exercise"
+                >
+                  <span>📝</span>
+                  <span>Create</span>
+                </button>
+              </div>
+            </div>
             <div className="border-2 border-gray-300 p-2 sm:p-4 my-2 sm:my-4 rounded bg-gray-50 w-full">
               <div className="flex justify-between items-center mb-2">
                 <div className="font-semibold text-slate-800 text-sm sm:text-base">📝 Session Notes</div>
@@ -2064,7 +2213,10 @@ const TrainerSession = () => {
         </div>
 
         {/* Right Sidebar - Learning Content */}
-        <div className="flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4 order-3">
+        <div className={`flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4 order-3 transition-transform duration-300 lg:transform-none ${isRightSidebarOpen
+            ? 'fixed top-20 right-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0 overflow-y-auto bg-white'
+            : 'lg:relative max-lg:fixed max-lg:translate-x-full'
+          }`}>
           <LearningContentSidebar
             learningContentSearch={learningContentSearch}
             handleLearningContentSearch={handleLearningContentSearch}
@@ -2112,6 +2264,14 @@ const TrainerSession = () => {
           <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
         </div>
       </div>
+
+      {/* Fill in the Blanks Creator Modal */}
+      <FillBlanksCreator
+        isOpen={showFillBlanksCreator}
+        onClose={() => setShowFillBlanksCreator(false)}
+        onSend={handleSendExercise}
+        learnerName={sessionInfo?.learner_name || 'Learner'}
+      />
     </div>
   );
 };

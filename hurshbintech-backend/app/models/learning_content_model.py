@@ -29,12 +29,13 @@ class LearningContent(Base):
     thumbnail_url = Column(String(500), nullable=True)  # for videos/images
 
     # Metadata
-    created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # If the creating/updating user is removed, keep the content but null the reference
+    created_by_admin_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    created_by = relationship("User", foreign_keys=[created_by_admin_id])
-    updated_by = relationship("User", foreign_keys=[updated_by_id])
+    created_by = relationship("User", foreign_keys=[created_by_admin_id], passive_deletes=True)
+    updated_by = relationship("User", foreign_keys=[updated_by_id], passive_deletes=True)
