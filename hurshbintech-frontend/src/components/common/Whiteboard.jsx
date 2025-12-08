@@ -134,7 +134,10 @@ const PDFOverlay = React.memo(({
     onMouseDown,
     onMouseMove,
     onMouseUp,
-    onDoubleClick
+    onDoubleClick,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
 }) => (
     <div
         key={`pdf-${item.id}`}
@@ -158,6 +161,9 @@ const PDFOverlay = React.memo(({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onDoubleClick={onDoubleClick}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
     >
         {/* PDF Icon and Label */}
         <div className="pdf-overlay-content">
@@ -190,7 +196,10 @@ PDFOverlay.propTypes = {
     onMouseDown: PropTypes.func,
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
-    onDoubleClick: PropTypes.func
+    onDoubleClick: PropTypes.func,
+    onTouchStart: PropTypes.func,
+    onTouchMove: PropTypes.func,
+    onTouchEnd: PropTypes.func
 };
 
 // Memoized Image Overlay Component - for images that can be dragged to sidebar
@@ -204,7 +213,10 @@ const ImageOverlay = React.memo(({
     onMouseMove,
     onMouseUp,
     onDoubleClick,
-    onDragStart
+    onDragStart,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd
 }) => (
     <div
         key={`image-${item.id}`}
@@ -236,6 +248,9 @@ const ImageOverlay = React.memo(({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onDoubleClick={onDoubleClick}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
     >
         {/* Image Content */}
         <img
@@ -280,7 +295,10 @@ ImageOverlay.propTypes = {
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
     onDoubleClick: PropTypes.func,
-    onDragStart: PropTypes.func
+    onDragStart: PropTypes.func,
+    onTouchStart: PropTypes.func,
+    onTouchMove: PropTypes.func,
+    onTouchEnd: PropTypes.func
 };
 
 // Helper function to lighten a hex color
@@ -495,6 +513,87 @@ const Whiteboard = ({
             }
         }
     }, [loadImageToCache, isVideoItem]);
+
+    // Handle touch-based drop from learning content sidebar
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !isTrainer) return;
+
+        const handleTouchDrop = (e) => {
+            const { content, x, y } = e.detail;
+
+            if (!content) return;
+
+            // Construct full URL properly
+            let fullUrl = content.file_url;
+            let fileUrl = fullUrl;
+
+            if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const backendUrl = apiBaseUrl.replace('/api', '');
+                fullUrl = `${backendUrl}${fullUrl}`;
+                fileUrl = fullUrl;
+            }
+
+            // Check if it's a video
+            const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv'];
+            const isVideo = videoExtensions.some(ext => fullUrl.toLowerCase().includes(ext)) ||
+                content.content_type === 'video';
+
+            if (isVideo) {
+                const videoData = {
+                    id: Date.now(),
+                    src: fullUrl
+                };
+
+                console.log('[Whiteboard] Activating inline video split mode (touch):', videoData);
+                setInlineVideo({ id: videoData.id, src: videoData.src });
+
+                whiteboardService?.sendMediaControl({
+                    action: 'open',
+                    videoId: videoData.id,
+                    src: videoData.src
+                });
+                return;
+            }
+
+            // For non-video items, add to canvas
+            const newItem = {
+                id: Date.now(),
+                src: content.thumbnail_url ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'https://43.204.218.16:8000'}${content.thumbnail_url}` : fullUrl,
+                x: x - 50,
+                y: y - 50,
+                width: 100,
+                height: 100,
+                title: content.title,
+                type: content.content_type,
+                fileUrl: fileUrl,
+                thumbnail: content.thumbnail_url,
+                originalFilename: content.original_filename || content.title || 'image',
+                mimeType: content.mime_type || 'image/jpeg'
+            };
+
+            setCanvasItems(prev => [...prev, newItem]);
+
+            whiteboardService?.sendImage({
+                id: newItem.id,
+                src: newItem.src,
+                x: newItem.x,
+                y: newItem.y,
+                width: newItem.width,
+                height: newItem.height,
+                title: newItem.title,
+                type: newItem.type,
+                fileUrl: newItem.fileUrl,
+                thumbnail: newItem.thumbnail,
+                originalFilename: newItem.originalFilename,
+                mimeType: newItem.mimeType
+            });
+        };
+
+        canvas.addEventListener('touchDrop', handleTouchDrop);
+        return () => canvas.removeEventListener('touchDrop', handleTouchDrop);
+    }, [isTrainer, whiteboardService, setCanvasItems, setInlineVideo]);
 
     // Preload images when canvasItems change - debounced to prevent excessive calls
     useEffect(() => {
@@ -1808,6 +1907,7 @@ const Whiteboard = ({
                         <canvas
                             ref={canvasRef}
                             className="whiteboard"
+                            data-whiteboard="true"
                             onMouseDown={startDrawing}
                             onMouseMove={draw}
                             onMouseUp={stopDrawing}
@@ -1877,6 +1977,24 @@ const Whiteboard = ({
                                             draw(e);
                                         }}
                                         onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            stopDrawing();
+                                        }}
+                                        onTouchStart={(e) => {
+                                            e.stopPropagation();
+                                            if (!isTrainer && !toolAccess.select) {
+                                                return;
+                                            }
+                                            startDrawing(e);
+                                        }}
+                                        onTouchMove={(e) => {
+                                            e.stopPropagation();
+                                            if (isDraggingItem || isResizingItem) {
+                                                e.preventDefault();
+                                                draw(e);
+                                            }
+                                        }}
+                                        onTouchEnd={(e) => {
                                             e.stopPropagation();
                                             stopDrawing();
                                         }}
@@ -1954,6 +2072,25 @@ const Whiteboard = ({
                                             draw(e);
                                         }}
                                         onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            stopDrawing();
+                                        }}
+                                        onTouchStart={(e) => {
+                                            e.stopPropagation();
+                                            // Check permissions for learners
+                                            if (!isTrainer && !toolAccess.select) {
+                                                return;
+                                            }
+                                            startDrawing(e);
+                                        }}
+                                        onTouchMove={(e) => {
+                                            e.stopPropagation();
+                                            if (isDraggingItem || isResizingItem) {
+                                                e.preventDefault(); // Prevent scrolling while dragging
+                                                draw(e);
+                                            }
+                                        }}
+                                        onTouchEnd={(e) => {
                                             e.stopPropagation();
                                             stopDrawing();
                                         }}

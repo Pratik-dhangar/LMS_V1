@@ -1772,6 +1772,48 @@ const TrainerSession = () => {
 
         {/* Center Area */}
         <div className="w-full md:flex-1 responsive-whiteboard-section order-2">
+
+          {/* Whiteboard */}
+          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
+            {/* Whiteboard component - keep logic intact */}
+            <div className="w-full h-full">
+              <Whiteboard
+                whiteboardService={whiteboardService}
+                isTrainer={true}
+                canvasItems={canvasItems}
+                setCanvasItems={setCanvasItems}
+                keyboardMode={keyboardMode}
+                keyboardText={keyboardText}
+                setKeyboardText={setKeyboardText}
+                keyboardPosition={keyboardPosition}
+                setKeyboardPosition={setKeyboardPosition}
+                learnerSelectedItemId={selectedItemId}
+                textMessages={textMessages}
+                setTextMessages={setTextMessages}
+                feedbackMessage={feedbackMessage}
+                waitingMessage={waitingMessage}
+                floatingAnimations={floatingAnimations}
+                onAnimationPop={handleAnimationPop}
+                tool={tool}
+                setTool={setTool}
+                color={color}
+                setColor={setColor}
+                lineWidth={lineWidth}
+                setLineWidth={setLineWidth}
+                bucketColor={bucketColor}
+                setBucketColor={setBucketColor}
+                buckets={buckets}
+                setBuckets={setBuckets}
+                clearCanvasTrigger={clearCanvasTrigger}
+                erasePenTrigger={erasePenTrigger}
+                redrawCanvasTrigger={redrawCanvasTrigger}
+                stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
+                stopwatchIsRunning={stopwatch.isRunning}
+                toolActive={toolActive}
+              />
+            </div>
+          </div>
+
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
           <div className="w-full mb-2 sm:mb-3 md:mb-4">
             <div className="flex items-center justify-between">
@@ -1955,46 +1997,6 @@ const TrainerSession = () => {
               <span>🗑️</span>
               <span className="hidden sm:inline">Clear All</span>
             </button>
-          </div>
-          {/* Whiteboard */}
-          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
-            {/* Whiteboard component - keep logic intact */}
-            <div className="w-full h-full">
-              <Whiteboard
-                whiteboardService={whiteboardService}
-                isTrainer={true}
-                canvasItems={canvasItems}
-                setCanvasItems={setCanvasItems}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemId={selectedItemId}
-                textMessages={textMessages}
-                setTextMessages={setTextMessages}
-                feedbackMessage={feedbackMessage}
-                waitingMessage={waitingMessage}
-                floatingAnimations={floatingAnimations}
-                onAnimationPop={handleAnimationPop}
-                tool={tool}
-                setTool={setTool}
-                color={color}
-                setColor={setColor}
-                lineWidth={lineWidth}
-                setLineWidth={setLineWidth}
-                bucketColor={bucketColor}
-                setBucketColor={setBucketColor}
-                buckets={buckets}
-                setBuckets={setBuckets}
-                clearCanvasTrigger={clearCanvasTrigger}
-                erasePenTrigger={erasePenTrigger}
-                redrawCanvasTrigger={redrawCanvasTrigger}
-                stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
-                stopwatchIsRunning={stopwatch.isRunning}
-                toolActive={toolActive}
-              />
-            </div>
           </div>
 
           {/* Toolbar */}
@@ -2285,11 +2287,12 @@ const TrainerSession = () => {
       <div className="bg-slate-700 text-white px-3 sm:px-5 py-2 sm:py-3 mt-3 sm:mt-5 mx-2 sm:mx-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
         <div className="text-[10px] sm:text-xs">
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
-        </div>
-        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+          <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
           <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
           <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
         </div>
+        </div>
+        
       </div>
 
       {/* Fill in the Blanks Creator Modal */}
