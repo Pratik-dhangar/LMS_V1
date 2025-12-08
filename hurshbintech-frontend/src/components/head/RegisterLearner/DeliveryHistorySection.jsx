@@ -1,54 +1,55 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const DeliveryHistorySection = ({ formData, handleChange }) => {
   const RadioGroup = ({ label, name, value }) => (
-    <div className="flex items-center gap-6">
-      <label className="block text-sm font-medium text-gray-700 mb-0">{label}</label>
-      <div className="flex items-center gap-4">
-        <label className="flex items-center cursor-pointer">
+    <div className="register-radio-group">
+      <label className="register-radio-label">{label}</label>
+      <div className="register-radio-options">
+        <label className="register-radio-option">
           <input
             type="radio"
             name={name}
             value="true"
             checked={value === true}
             onChange={handleChange}
-            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            className="register-radio-input"
           />
-          <span className="ml-2 text-sm text-gray-700">Yes</span>
+          <span className="register-radio-text">Yes</span>
         </label>
-        <label className="flex items-center cursor-pointer">
+        <label className="register-radio-option">
           <input
             type="radio"
             name={name}
             value="false"
             checked={value === false}
             onChange={handleChange}
-            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            className="register-radio-input"
           />
-          <span className="ml-2 text-sm text-gray-700">No</span>
+          <span className="register-radio-text">No</span>
         </label>
       </div>
     </div>
   );
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Delivery History
       </h2>
-      
+
       {/* Mother bed rest */}
-      <div className="mb-4">
-        <RadioGroup 
-          label="Did the mother need periods of bed rest while pregnant?" 
-          name="mother_bed_rest" 
-          value={formData.mother_bed_rest} 
+      <div className="register-field-full">
+        <RadioGroup
+          label="Did the mother need periods of bed rest while pregnant?"
+          name="mother_bed_rest"
+          value={formData.mother_bed_rest}
         />
       </div>
 
       {formData.mother_bed_rest === true && (
-        <div className="ml-8 mb-4">
-          <label htmlFor="mother_bed_rest_duration" className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="register-conditional-field">
+          <label htmlFor="mother_bed_rest_duration" className="register-field-label">
             If so, for how long?
           </label>
           <input
@@ -57,24 +58,24 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="mother_bed_rest_duration"
             value={formData.mother_bed_rest_duration}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="register-input"
             placeholder="e.g., 2 months"
           />
         </div>
       )}
 
       {/* Mother depressed or fearful */}
-      <div className="mb-4">
-        <RadioGroup 
-          label="Was the mother depressed or overly fearful during the pregnancy?" 
-          name="mother_depressed_fearful" 
-          value={formData.mother_depressed_fearful} 
+      <div className="register-field-full">
+        <RadioGroup
+          label="Was the mother depressed or overly fearful during the pregnancy?"
+          name="mother_depressed_fearful"
+          value={formData.mother_depressed_fearful}
         />
       </div>
 
       {/* Ultrasounds performed */}
-      <div className="mb-4">
-        <label htmlFor="ultrasounds_performed" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="ultrasounds_performed" className="register-field-label">
           How many ultrasounds were performed during the pregnancy?
         </label>
         <input
@@ -83,18 +84,18 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
           name="ultrasounds_performed"
           value={formData.ultrasounds_performed}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-input"
           placeholder="Enter number"
           min="0"
         />
       </div>
 
       {/* Was baby premature */}
-      <div className="mb-4">
-        <RadioGroup 
-          label="Was baby premature?" 
-          name="was_premature" 
-          value={formData.was_premature} 
+      <div className="register-field-full">
+        <RadioGroup
+          label="Was baby premature?"
+          name="was_premature"
+          value={formData.was_premature}
         />
       </div>
 
@@ -117,10 +118,10 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* Was baby overdue */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Was baby overdue?" 
-          name="was_overdue" 
-          value={formData.was_overdue} 
+        <RadioGroup
+          label="Was baby overdue?"
+          name="was_overdue"
+          value={formData.was_overdue}
         />
       </div>
 
@@ -143,10 +144,10 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* Caesarean delivery */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Caesarean delivery?" 
-          name="caesarean_delivery" 
-          value={formData.caesarean_delivery} 
+        <RadioGroup
+          label="Caesarean delivery?"
+          name="caesarean_delivery"
+          value={formData.caesarean_delivery}
         />
       </div>
 
@@ -171,46 +172,46 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* Forceps delivery */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Forceps delivery?" 
-          name="forceps_delivery" 
-          value={formData.forceps_delivery} 
+        <RadioGroup
+          label="Forceps delivery?"
+          name="forceps_delivery"
+          value={formData.forceps_delivery}
         />
       </div>
 
       {/* Vacuum delivery */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Vacuum delivery?" 
-          name="vacuum_delivery" 
-          value={formData.vacuum_delivery} 
+        <RadioGroup
+          label="Vacuum delivery?"
+          name="vacuum_delivery"
+          value={formData.vacuum_delivery}
         />
       </div>
 
       {/* Very fast labor */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Very fast labor?" 
-          name="very_fast_labor" 
-          value={formData.very_fast_labor} 
+        <RadioGroup
+          label="Very fast labor?"
+          name="very_fast_labor"
+          value={formData.very_fast_labor}
         />
       </div>
 
       {/* Induced delivery */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Induced delivery?" 
-          name="induced_delivery" 
-          value={formData.induced_delivery} 
+        <RadioGroup
+          label="Induced delivery?"
+          name="induced_delivery"
+          value={formData.induced_delivery}
         />
       </div>
 
       {/* Very long/slow labor */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Very long / slow labor?" 
-          name="very_long_slow_labor" 
-          value={formData.very_long_slow_labor} 
+        <RadioGroup
+          label="Very long / slow labor?"
+          name="very_long_slow_labor"
+          value={formData.very_long_slow_labor}
         />
       </div>
 
@@ -237,10 +238,10 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* Was child adopted */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Was the child adopted?" 
-          name="was_adopted" 
-          value={formData.was_adopted} 
+        <RadioGroup
+          label="Was the child adopted?"
+          name="was_adopted"
+          value={formData.was_adopted}
         />
       </div>
 
@@ -263,10 +264,10 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* In incubator */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Was your baby in an incubator?" 
-          name="in_incubator" 
-          value={formData.in_incubator} 
+        <RadioGroup
+          label="Was your baby in an incubator?"
+          name="in_incubator"
+          value={formData.in_incubator}
         />
       </div>
 
@@ -289,10 +290,10 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
 
       {/* Had jaundice */}
       <div className="mb-4">
-        <RadioGroup 
-          label="Did she/he have jaundice?" 
-          name="had_jaundice" 
-          value={formData.had_jaundice} 
+        <RadioGroup
+          label="Did she/he have jaundice?"
+          name="had_jaundice"
+          value={formData.had_jaundice}
         />
       </div>
 

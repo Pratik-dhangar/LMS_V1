@@ -1,14 +1,15 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const AssessmentBehaviourSection = ({ formData, handleChange }) => {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Assessment Behaviour
       </h2>
-      
+
       <div>
-        <label htmlFor="assessment_behaviour_notes" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="assessment_behaviour_notes" className="register-field-label">
           Notes
         </label>
         <textarea
@@ -17,7 +18,7 @@ const AssessmentBehaviourSection = ({ formData, handleChange }) => {
           value={formData.assessment_behaviour_notes}
           onChange={handleChange}
           rows="5"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Enter assessment behaviour notes..."
         />
       </div>

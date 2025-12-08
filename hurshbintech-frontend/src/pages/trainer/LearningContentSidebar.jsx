@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import learningContentService from '../../api/services/learningContentService';
+import '../../styles/Pages.css';
 
 const LearningContentSidebar = ({
   learningContentSearch,
@@ -78,13 +79,12 @@ const LearningContentSidebar = ({
   };
   return (
     <div
-      className={`bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 rounded h-fit 130vh overflow-y-auto session-sidebar transition-colors ${isDragOver ? 'bg-blue-50 border-blue-400' : ''
-        }`}
+      className={`sidebar-container ${isDragOver ? 'sidebar-drag-over' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="bg-green-600 text-white font-semibold p-1.5 sm:p-2 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-2 sm:mb-4 rounded-t text-sm sm:text-base">📚 Learning Content</div>
+      <div className="sidebar-header sidebar-header-green">📚 Learning Content</div>
 
       {/* Status Message Display */}
       {/* {statusMessage && (
@@ -106,28 +106,28 @@ const LearningContentSidebar = ({
         </div>
       )} */}
 
-      <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 rounded mb-3 sm:mb-4 flex items-center">
+      <div className="sidebar-search-box">
         <input
           type="text"
-          className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 rounded text-xs border-none outline-none"
+          className="sidebar-search-input"
           placeholder="🔍 Search All Content in Database..."
           value={learningContentSearch}
           onChange={handleLearningContentSearch}
         />
         {isSearching && (
-          <div className="ml-2 animate-spin text-blue-500">⟳</div>
+          <div className="sidebar-search-spinner">⟳</div>
         )}
       </div>
 
-      <div className="text-[10px] sm:text-xs font-semibold mb-2">
+      <div className="sidebar-section-title">
         {learningContentSearch ? '🔍 Search Results' : '📋 Assigned IIP Content'}
       </div>
 
-      <div className="max-h-[400px] sm:max-h-[460px] overflow-y-auto">
+      <div className="sidebar-content-list">
         {isSearching ? (
-          <div className="text-center p-8 text-gray-500">
-            <div className="animate-spin text-3xl mb-2">⟳</div>
-            <div className="text-xs">Searching database...</div>
+          <div className="sidebar-loading">
+            <div className="sidebar-loading-spinner">⟳</div>
+            <div className="sidebar-loading-text">Searching database...</div>
           </div>
         ) : filteredLearningContent.length > 0 ? (
           filteredLearningContent.map((content) => {

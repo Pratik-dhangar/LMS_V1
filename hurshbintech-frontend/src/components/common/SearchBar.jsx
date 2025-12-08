@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
+import '../../styles/components/common/SearchBar.css';
 
 /**
  * Reusable SearchBar Component
@@ -32,21 +33,21 @@ const SearchBar = ({ onSearch, placeholder = "Search...", className = "" }) => {
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="relative flex-1 max-w-md">
+    <div className={`search-bar-container ${className}`}>
+      <div className="search-bar-input-wrapper">
         <input
           type="text"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyPress={handleKeyPress}
-          className="w-full px-4 py-3 pl-12 pr-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="search-bar-input"
         />
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="search-bar-icon" />
         {query && (
           <button
             onClick={handleClear}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="search-bar-clear"
           >
             ✕
           </button>
@@ -54,7 +55,7 @@ const SearchBar = ({ onSearch, placeholder = "Search...", className = "" }) => {
       </div>
       <button
         onClick={handleSearch}
-        className="bg-[#3498db] hover:bg-[#2980b9] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+        className="search-bar-button"
       >
         Search
       </button>

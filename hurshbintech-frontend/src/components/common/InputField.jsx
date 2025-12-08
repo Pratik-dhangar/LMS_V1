@@ -1,4 +1,5 @@
 import React from 'react';
+import '../../styles/components/common/InputField.css';
 
 /**
  * InputField Component
@@ -17,21 +18,21 @@ import React from 'react';
  * @param {number} min - Minimum value for number inputs
  * @param {number} max - Maximum value for number inputs
  */
-const InputField = ({ 
-  label, 
-  name, 
-  value, 
-  onChange, 
-  type = "text", 
-  required = false, 
-  placeholder = "", 
+const InputField = ({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  placeholder = "",
   error,
   min,
   max
 }) => (
-  <div>
-    <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-2">
-      {label} {required && <span className="text-red-500">*</span>}
+  <div className="input-field-container">
+    <label htmlFor={name} className="input-field-label">
+      {label} {required && <span className="input-field-required">*</span>}
     </label>
     <input
       type={type}
@@ -42,11 +43,9 @@ const InputField = ({
       placeholder={placeholder}
       min={min}
       max={max}
-      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
-        error ? 'border-red-500' : 'border-gray-300'
-      }`}
+      className={`input-field-input ${error ? 'error' : ''}`}
     />
-    {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+    {error && <p className="input-field-error-message">{error}</p>}
   </div>
 );
 

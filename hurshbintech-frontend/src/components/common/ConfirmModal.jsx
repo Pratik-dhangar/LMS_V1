@@ -1,6 +1,7 @@
 // ConfirmModal Component - A reusable confirmation modal dialog
 
 import React from 'react';
+import '../../styles/components/common/ConfirmModal.css';
 
 /**
  * @param {boolean} show 
@@ -13,13 +14,13 @@ import React from 'react';
  * @param {boolean} loading 
  * @param {string} variant 
  */
-const ConfirmModal = ({ 
-  show, 
+const ConfirmModal = ({
+  show,
   isOpen, // some callers use `isOpen` prop; accept both for compatibility
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
+  onClose,
+  onConfirm,
+  title,
+  message,
   confirmText = "Confirm",
   cancelText = "Cancel",
   loading = false,
@@ -28,43 +29,40 @@ const ConfirmModal = ({
   const visible = typeof show !== 'undefined' ? show : !!isOpen;
   if (!visible) return null;
 
-  const iconColor = variant === "danger" ? "bg-red-100" : "bg-blue-100";
-  const iconStroke = variant === "danger" ? "text-red-600" : "text-blue-600";
-  const buttonColor = variant === "danger" 
-    ? "bg-red-600 hover:bg-red-700" 
-    : "bg-blue-600 hover:bg-blue-700";
+  const iconClass = variant === "danger" ? "danger" : "primary";
+  const buttonClass = variant === "danger" ? "danger" : "primary";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center gap-4 mb-4">
-          <div className={`flex-shrink-0 w-12 h-12 ${iconColor} rounded-full flex items-center justify-center`}>
-            <svg className={`w-6 h-6 ${iconStroke}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="confirm-modal-overlay">
+      <div className="confirm-modal-container">
+        <div className="confirm-modal-header">
+          <div className={`confirm-modal-icon ${iconClass}`}>
+            <svg fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
               <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
             </svg>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-600">This action cannot be undone</p>
+          <div className="confirm-modal-header-text">
+            <h3>{title}</h3>
+            <p>This action cannot be undone</p>
           </div>
         </div>
-        <p className="text-gray-700 mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
+        <p className="confirm-modal-message">{message}</p>
+        <div className="confirm-modal-buttons">
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="confirm-modal-cancel-btn"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`px-5 py-2 ${buttonColor} text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2`}
+            className={`confirm-modal-confirm-btn ${buttonClass}`}
           >
             {loading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <div className="confirm-modal-spinner"></div>
                 Processing...
               </>
             ) : (

@@ -1,18 +1,19 @@
 import React from 'react';
 import ChecklistField from '../../common/ChecklistField';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChange, referenceFiles, removeFile }) => {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Personal Details
       </h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <div className="register-section-grid">
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-            Name <span className="text-red-500">*</span>
+          <label htmlFor="name" className="register-field-label">
+            Name <span className="register-required">*</span>
           </label>
           <input
             type="text"
@@ -20,16 +21,16 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition`}
+            className={`register-input ${errors.name ? 'register-input-error' : ''}`}
             placeholder="Enter learner's name"
           />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+          {errors.name && <p className="register-error-text">{errors.name}</p>}
         </div>
 
         {/* Age */}
         <div>
-          <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-            Age <span className="text-red-500">*</span>
+          <label htmlFor="age" className="register-field-label">
+            Age <span className="register-required">*</span>
           </label>
           <input
             type="number"
@@ -37,17 +38,17 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
             name="age"
             value={formData.age}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.age ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition`}
+            className={`register-input ${errors.age ? 'register-input-error' : ''}`}
             placeholder="Enter age"
             min="0"
           />
-          {errors.age && <p className="text-red-500 text-sm mt-1">{errors.age}</p>}
+          {errors.age && <p className="register-error-text">{errors.age}</p>}
         </div>
 
         {/* DOB */}
         <div>
-          <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">
-            Date of Birth (DOB) <span className="text-red-500">*</span>
+          <label htmlFor="dob" className="register-field-label">
+            Date of Birth (DOB) <span className="register-required">*</span>
           </label>
           <input
             type="date"
@@ -55,15 +56,15 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
             name="dob"
             value={formData.dob}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.dob ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition`}
+            className={`register-input ${errors.dob ? 'register-input-error' : ''}`}
           />
-          {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob}</p>}
+          {errors.dob && <p className="register-error-text">{errors.dob}</p>}
         </div>
 
         {/* Date of Assessment */}
         <div>
-          <label htmlFor="date_of_assessment" className="block text-sm font-medium text-gray-700 mb-2">
-            Date of Assessment <span className="text-red-500">*</span>
+          <label htmlFor="date_of_assessment" className="register-field-label">
+            Date of Assessment <span className="register-required">*</span>
           </label>
           <input
             type="date"
@@ -71,9 +72,9 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
             name="date_of_assessment"
             value={formData.date_of_assessment}
             onChange={handleChange}
-            className={`w-full px-4 py-2 border ${errors.date_of_assessment ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition`}
+            className={`register-input ${errors.date_of_assessment ? 'register-input-error' : ''}`}
           />
-          {errors.date_of_assessment && <p className="text-red-500 text-sm mt-1">{errors.date_of_assessment}</p>}
+          {errors.date_of_assessment && <p className="register-error-text">{errors.date_of_assessment}</p>}
         </div>
       </div>
 
@@ -90,8 +91,8 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
       </div>
 
       {/* Upload References */}
-      <div className="mt-6">
-        <label htmlFor="personal_reference_files" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="personal_reference_files" className="register-field-label">
           Upload References (Documents, Images, Videos)
         </label>
         <input
@@ -99,22 +100,22 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
           id="personal_reference_files"
           multiple
           onChange={handleFileChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-file-input"
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
         />
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="register-file-hint">
           Supported formats: PDF, DOCX, Images, Videos
         </p>
-        
+
         {referenceFiles.length > 0 && (
-          <div className="mt-4 space-y-2">
+          <div className="register-file-list">
             {referenceFiles.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-700 truncate flex-1">{file.name}</span>
+              <div key={index} className="register-file-item">
+                <span className="register-file-name">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeFile(index)}
-                  className="ml-3 text-red-500 hover:text-red-700 text-sm font-medium"
+                  className="register-file-remove"
                 >
                   Remove
                 </button>
@@ -125,9 +126,9 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
       </div>
 
       {/* A box for notes */}
-      <div className="mt-6">
-        <label htmlFor="personal_notes" className="block text-sm font-medium text-gray-700 mb-2">
-         Notes <span className="text-red-500">*</span>
+      <div className="register-field-full">
+        <label htmlFor="personal_notes" className="register-field-label">
+          Notes <span className="register-required">*</span>
         </label>
         <textarea
           id="personal_notes"
@@ -135,10 +136,10 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
           value={formData.personal_notes}
           onChange={handleChange}
           rows="4"
-          className={`w-full px-4 py-2 border ${errors.personal_notes ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition`}
+          className={`register-textarea ${errors.personal_notes ? 'register-input-error' : ''}`}
           placeholder="Enter personal notes..."
         />
-        {errors.personal_notes && <p className="text-red-500 text-sm mt-1">{errors.personal_notes}</p>}
+        {errors.personal_notes && <p className="register-error-text">{errors.personal_notes}</p>}
       </div>
     </div>
   );

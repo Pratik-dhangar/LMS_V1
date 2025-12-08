@@ -1,0 +1,86 @@
+/* Footer.css */
+
+.footer {
+    background-color: #2c3e50;
+    color: white;
+    padding: 2rem 0;
+    margin-top: auto;
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.footer-content {
+    text-align: center;
+}
+
+.footer-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.footer-contact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.footer-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.footer-contact-item svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #ecf0f1;
+}
+
+.footer-contact-item a {
+    color: #ecf0f1;
+    text-decoration: none;
+    transition: color 0.2s;
+    font-size: 0.95rem;
+}
+
+.footer-contact-item a:hover {
+    color: white;
+}
+
+.footer-separator {
+    display: none;
+    color: #ecf0f1;
+}
+
+/* Responsive design */
+@media (min-width: 640px) {
+    .footer-contact {
+        flex-direction: row;
+        gap: 2rem;
+    }
+
+    .footer-separator {
+        display: inline;
+    }
+}
+
+@media (min-width: 768px) {
+    .footer {
+        padding: 1rem 0;
+    }
+
+    .footer-title {
+        font-size: 1rem;
+    }
+
+    .footer-contact-item a {
+        font-size: 0.85rem;
+    }
+}

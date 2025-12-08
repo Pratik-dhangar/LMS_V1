@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import InputField from '../../../components/common/InputField';
 import TextAreaField from '../../../components/common/TextAreaField';
 import vlogService from '../../../api/services/vlogService';
+import '../../../styles/components/admin/CreateVlogModal.css';
 
 const CreateVlogModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -56,12 +57,12 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 relative z-[10001]">
-        <h2 className="text-xl font-semibold mb-4">Create New Vlog</h2>
-        
+    <div className="create-vlog-overlay">
+      <div className="create-vlog-modal">
+        <h2 className="create-vlog-title">Create New Vlog</h2>
+
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          <div className="create-vlog-error">
             {error}
           </div>
         )}
@@ -83,8 +84,8 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
             required
           />
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="create-vlog-field">
+            <label className="create-vlog-label">
               Video File
             </label>
             <input
@@ -93,12 +94,12 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="video/*"
               onChange={handleFileChange}
               required
-              className="w-full"
+              className="create-vlog-file-input"
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="create-vlog-field">
+            <label className="create-vlog-label">
               Thumbnail Image
             </label>
             <input
@@ -107,22 +108,22 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="image/*"
               onChange={handleFileChange}
               required
-              className="w-full"
+              className="create-vlog-file-input"
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="create-vlog-buttons">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="create-vlog-btn-cancel"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="create-vlog-btn-submit"
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create'}

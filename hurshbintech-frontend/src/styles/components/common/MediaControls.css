@@ -1,0 +1,36 @@
+/* MediaControls Component Styles */
+
+.media-controls-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.media-controls-button {
+  padding: 0.5rem;
+  border-radius: 9999px;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.media-controls-button.enabled {
+  background-color: #22c55e;
+}
+
+.media-controls-button.enabled:hover {
+  background-color: #16a34a;
+}
+
+.media-controls-button.disabled {
+  background-color: #ef4444;
+}
+
+.media-controls-button.disabled:hover {
+  background-color: #dc2626;
+}
+
+.media-controls-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}

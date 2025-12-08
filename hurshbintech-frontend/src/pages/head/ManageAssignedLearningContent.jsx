@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/head/manageAssignedLearningContent.css';
+import '../../styles/Pages.css';
 import learningContentAssignmentService from "../../api/services/learningContentAssignmentService";
 
 const ManageAssignedLearningContent = () => {
@@ -91,26 +91,26 @@ const ManageAssignedLearningContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 malc-page">
+    <div className="page-container">
       <Navbar />
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
+      <div className="page-content">
+        <h1 className="page-title">
           Manage Assigned Learning Content
         </h1>
 
         {/* Assignment Form */}
-        <div className="malc-card bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Assign New Content</h2>
+        <div className="form-container">
+          <h2 className="form-section-title">Assign New Content</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="form-grid form-grid-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label">
                 Select Learner
               </label>
               <select
                 value={selectedLearner}
                 onChange={(e) => handleLearnerChange(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 malc-select"
+                className="form-select"
               >
                 <option value="">Choose a learner...</option>
                 {learners.map((learner) => (
@@ -122,13 +122,13 @@ const ManageAssignedLearningContent = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="form-label">
                 Select Content
               </label>
               <select
                 value={selectedContent}
                 onChange={(e) => setSelectedContent(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 malc-select"
+                className="form-select"
               >
                 <option value="">Choose content...</option>
                 {contents.map((content) => (
@@ -139,11 +139,11 @@ const ManageAssignedLearningContent = () => {
               </select>
             </div>
 
-            <div className="flex items-end">
+            <div className="form-field-end">
               <button
                 onClick={handleAssign}
                 disabled={assigning || !selectedLearner || !selectedContent}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-md transition-colors malc-assign-btn"
+                className="btn-primary"
               >
                 {assigning ? "Assigning..." : "Assign"}
               </button>
@@ -153,36 +153,36 @@ const ManageAssignedLearningContent = () => {
 
         {/* Assigned Contents */}
         {selectedLearner && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          <div className="form-container">
+            <h2 className="form-section-title">
               Assigned Content for {learners.find(l => l.id.toString() === selectedLearner)?.name}
             </h2>
 
             {loading ? (
-              <div className="text-center py-6 text-gray-500">Loading assigned contents...</div>
+              <div className="loading-container">Loading assigned contents...</div>
             ) : assignedContents.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">No content assigned yet.</div>
+              <div className="empty-state-description">No content assigned yet.</div>
             ) : (
-              <div className="space-y-4">
+              <div className="assignments-list">
                 {assignedContents.map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="malc-assigned-item border rounded-lg p-4 flex justify-between items-center bg-gray-50"
+                    className="assignment-item"
                   >
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">
+                    <div className="assignment-details">
+                      <h3 className="assignment-title">
                         {assignment.content_title}
                       </h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="assignment-info">
                         Type: {assignment.content_type} | Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="assignment-meta">
                         Assigned by: {assignment.assigned_by_name}
                       </p>
                     </div>
                     <button
                       onClick={() => handleRevoke(assignment.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white font-semibold py-1.5 px-3 rounded-md text-sm transition-colors"
+                      className="btn-danger"
                     >
                       Revoke
                     </button>

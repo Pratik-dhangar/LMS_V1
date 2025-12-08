@@ -8,6 +8,7 @@ import Footer from '../../components/layout/Footer';
 import headService from '../../api/services/headService';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
+import '../../styles/Pages.css';
 
 
 const ScheduleSession = () => {
@@ -220,8 +221,8 @@ const ScheduleSession = () => {
     return (
       <>
         <Navbar />
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
         </div>
         <Footer />
       </>
@@ -231,46 +232,48 @@ const ScheduleSession = () => {
   return (
     <>
       <Navbar />
-      <div className="container mx-auto px-4 py-8 min-h-screen">
-        <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Schedule Training Session</h1>
-            <p className="text-gray-600">Create a new session for trainer and learner</p>
+      <div className="page-content">
+        <div className="form-container" style={{ maxWidth: '1024px', margin: '0 auto' }}>
+          <div className="page-header" style={{ marginBottom: '2rem', borderBottom: 'none' }}>
+            <div>
+              <h1 className="page-title">Schedule Training Session</h1>
+              <p className="page-description">Create a new session for trainer and learner</p>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="form-section">
             {/* Title */}
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Session Title <span className="text-red-500">*</span>
+            <div className="form-field">
+              <label className="form-label">
+                Session Title <span className="text-required">*</span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="form-input"
                 placeholder="e.g., Introduction to Fruits"
                 required
               />
             </div>
 
             {/* Description */}
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+            <div className="form-field">
+              <label className="form-label">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="form-textarea"
                 rows="3"
                 placeholder="Session description (optional)"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="form-grid form-grid-2">
               {/* Select Trainer with Searchable Dropdown */}
-              <div className="relative" ref={trainerDropdownRef}>
-                <label className="block text-sm font-medium mb-2">
-                  Select Trainer <span className="text-red-500">*</span>
+              <div className="dropdown-field" ref={trainerDropdownRef}>
+                <label className="form-label">
+                  Select Trainer <span className="text-required">*</span>
                 </label>
                 <input
                   type="text"
@@ -281,24 +284,23 @@ const ScheduleSession = () => {
                     setShowDropdown({ ...showDropdown, trainer: true });
                   }}
                   onFocus={() => setShowDropdown({ ...showDropdown, trainer: true })}
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="form-input"
                   required={!formData.trainer_id}
                 />
                 {showDropdown.trainer && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="dropdown-menu">
                     {filteredTrainers.length > 0 ? (
                       filteredTrainers.map(trainer => (
                         <div
                           key={trainer.id}
                           onClick={() => handleTrainerSelect(trainer.user_id)}
-                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${formData.trainer_id === trainer.user_id ? 'bg-blue-100 font-medium' : ''
-                            }`}
+                          className={`dropdown-item ${formData.trainer_id === trainer.user_id ? 'dropdown-item-selected' : ''}`}
                         >
-                          {trainer.name} <span className="text-gray-500 text-sm">(ID: {trainer.user_id})</span>
+                          {trainer.name} <span className="dropdown-item-meta">(ID: {trainer.user_id})</span>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-2 text-gray-500 text-sm">No trainers found</div>
+                      <div className="dropdown-item dropdown-item-empty">No trainers found</div>
                     )}
                   </div>
                 )}
@@ -309,7 +311,7 @@ const ScheduleSession = () => {
                       setFormData({ ...formData, trainer_id: '' });
                       setSearchTerm({ ...searchTerm, trainer: '' });
                     }}
-                    className="absolute right-2 top-9 text-gray-400 hover:text-gray-600"
+                    className="dropdown-clear"
                   >
                     ✕
                   </button>
@@ -317,9 +319,9 @@ const ScheduleSession = () => {
               </div>
 
               {/* Select Learner with Searchable Dropdown */}
-              <div className="relative" ref={learnerDropdownRef}>
-                <label className="block text-sm font-medium mb-2">
-                  Select Learner <span className="text-red-500">*</span>
+              <div className="dropdown-field" ref={learnerDropdownRef}>
+                <label className="form-label">
+                  Select Learner <span className="text-required">*</span>
                 </label>
                 <input
                   type="text"
@@ -330,24 +332,23 @@ const ScheduleSession = () => {
                     setShowDropdown({ ...showDropdown, learner: true });
                   }}
                   onFocus={() => setShowDropdown({ ...showDropdown, learner: true })}
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="form-input"
                   required={!formData.learner_id}
                 />
                 {showDropdown.learner && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="dropdown-menu">
                     {filteredLearners.length > 0 ? (
                       filteredLearners.map(learner => (
                         <div
                           key={learner.id}
                           onClick={() => handleLearnerSelect(learner.user_id)}
-                          className={`px-4 py-2 cursor-pointer hover:bg-blue-50 ${formData.learner_id === learner.user_id ? 'bg-blue-100 font-medium' : ''
-                            }`}
+                          className={`dropdown-item ${formData.learner_id === learner.user_id ? 'dropdown-item-selected' : ''}`}
                         >
-                          {learner.name} <span className="text-gray-500 text-sm">(ID: {learner.user_id})</span>
+                          {learner.name} <span className="dropdown-item-meta">(ID: {learner.user_id})</span>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-2 text-gray-500 text-sm">No learners found</div>
+                      <div className="dropdown-item dropdown-item-empty">No learners found</div>
                     )}
                   </div>
                 )}
@@ -358,7 +359,7 @@ const ScheduleSession = () => {
                       setFormData({ ...formData, learner_id: '' });
                       setSearchTerm({ ...searchTerm, learner: '' });
                     }}
-                    className="absolute right-2 top-9 text-gray-400 hover:text-gray-600"
+                    className="dropdown-clear"
                   >
                     ✕
                   </button>
@@ -366,7 +367,7 @@ const ScheduleSession = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="form-grid form-grid-2">
               {/* Scheduled Date/Time */}
               {/* <div>
                 <label className="block text-sm font-medium mb-2">
@@ -382,24 +383,24 @@ const ScheduleSession = () => {
               </div> */}
 
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Date & Time <span className="text-red-500">*</span>
+              <div className="form-field">
+                <label className="form-label">
+                  Date & Time <span className="text-required">*</span>
                 </label>
 
                 {/* Flex container to hold input and button */}
-                <div className="flex items-center gap-2">
+                <div className="input-group">
                   <input
                     type="datetime-local"
                     value={tempDate}
                     onChange={(e) => setTempDate(e.target.value)}
-                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="form-input"
                     required
                   />
                   <button
-                    type="button" // Important: prevents form submission
+                    type="button"
                     onClick={handleSetDate}
-                    className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 whitespace-nowrap"
+                    className="btn-primary" style={{ whiteSpace: 'nowrap', padding: '0.5rem 1rem' }}
                   >
                     Set
                   </button>
@@ -407,24 +408,21 @@ const ScheduleSession = () => {
 
                 {/* Optional: Show the user what date is currently *confirmed* */}
                 {formData.scheduled_date && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="form-helper-text">
                     Confirmed time: {new Date(formData.scheduled_date).toLocaleString()}
                   </p>
                 )}
               </div>
 
-
-
-
               {/* Duration */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Duration (minutes) <span className="text-red-500">*</span>
+              <div className="form-field">
+                <label className="form-label">
+                  Duration (minutes) <span className="text-required">*</span>
                 </label>
                 <select
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="form-select"
                   required
                 >
                   <option value="">-- Select Duration --</option>
@@ -648,10 +646,10 @@ const ScheduleSession = () => {
             </div>
 
             {/* Submit Buttons */}
-            <div className="flex space-x-3">
+            <div className="form-actions">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                className="btn-primary"
                 disabled={loading}
               >
                 {loading ? 'Scheduling...' : 'Schedule Session'}
@@ -659,7 +657,7 @@ const ScheduleSession = () => {
               <button
                 type="button"
                 onClick={() => navigate('/head/dashboard')}
-                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium"
+                className="btn-danger"
                 disabled={loading}
               >
                 Cancel

@@ -7,6 +7,7 @@ import ErrorState from "../../components/common/ErrorState";
 import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
+import '../../styles/Pages.css';
 
 const ManageVlogs = () => {
   const [vlogs, setVlogs] = useState([]);
@@ -83,21 +84,16 @@ const ManageVlogs = () => {
   return (
     <>
       <Navbar />
-      <div className="flex-1 bg-[#f5f6fa] p-8 m-6 min-h-screen md:p-4">
-        <div className="max-w-6xl mx-auto">
+      <div className="page-main">
+        <div className="page-content">
           {/* Header */}
-          <div
-            className="
-        flex flex-col items-start gap-4  /* <-- Default: stacked for mobile */
-        md:flex-row md:justify-between md:items-center  /* <-- md: and up: side-by-side */
-        mb-6 pb-4 border-b-[3px] border-[#2c3e50]"
-          >
+          <div className="page-header page-header-split">
             {/* Left Side: Title and Subtitle */}
             <div>
-              <h1 className="text-[#2c3e50] text-[2rem] m-0 font-bold md:text-2xl">
+              <h1 className="page-title">
                 Manage Training Vlogs
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="page-description">
                 Upload and manage training Vlogs
               </p>
             </div>
@@ -105,11 +101,7 @@ const ManageVlogs = () => {
             {/* Right Side: Button (now outside the div) */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="
-          w-full md:w-auto 
-          bg-[#27ae60] hover:bg-[#229954] text-white px-6 py-3 
-          rounded-lg font-medium shadow-md hover:shadow-lg 
-          transition-all whitespace-nowrap"
+              className="btn-success"
             >
               + Add New Vlog
             </button>
@@ -117,14 +109,14 @@ const ManageVlogs = () => {
 
           {/* Vlogs Grid */}
           {vlogs.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl shadow-md">
-              <p className="text-gray-500 text-lg">
+            <div className="empty-state">
+              <p className="empty-state-description">
                 No training vlogs available. Create your first vlog to get
                 started!
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="card-grid">
               {vlogs.map((vlog) => (
                 <div
                   key={vlog.id}
@@ -167,9 +159,8 @@ const ManageVlogs = () => {
                       />
                     ) : null}
                     <div
-                      className={`flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200 ${
-                        vlog.thumbnail_url ? "hidden" : ""
-                      }`}
+                      className={`flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200 ${vlog.thumbnail_url ? "hidden" : ""
+                        }`}
                     >
                       <span className="text-4xl">🎬</span>
                     </div>
@@ -280,19 +271,19 @@ const ManageVlogs = () => {
 
       {/* Video Player Modal */}
       {showVideoPlayer && selectedVlog && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[9999] p-4">
-          <div className="relative w-full max-w-3xl">
+        <div className="modal-overlay modal-overlay-dark">
+          <div className="modal-video">
             {/* Close Button */}
             <button
               onClick={() => {
                 setShowVideoPlayer(false);
                 setSelectedVlog(null);
               }}
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+              className="modal-close-video"
               aria-label="Close video"
             >
               <svg
-                className="w-8 h-8"
+                className="icon-lg"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -307,25 +298,24 @@ const ManageVlogs = () => {
             </button>
 
             {/* Video Player Container */}
-            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
-              <div className="p-3 bg-gray-800 border-b border-gray-700">
-                <h2 className="text-lg font-semibold text-white truncate">
+            <div className="video-player-container">
+              <div className="video-player-header">
+                <h2 className="video-player-title">
                   {selectedVlog.title}
                 </h2>
                 {selectedVlog.description && (
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                  <p className="video-player-description">
                     {selectedVlog.description}
                   </p>
                 )}
               </div>
 
-              <div className="relative bg-black">
+              <div className="video-wrapper">
                 <video
                   src={getFullUrl(selectedVlog.file_url)}
                   controls
                   autoPlay
-                  className="w-full h-auto"
-                  style={{ maxHeight: "60vh" }}
+                  className="video-player"
                   controlsList="download"
                   onError={(e) => {
                     console.error("Video load error:", e);
@@ -335,8 +325,8 @@ const ManageVlogs = () => {
                 </video>
               </div>
 
-              <div className="p-3 bg-gray-800 border-t border-gray-700">
-                <div className="flex justify-between items-center text-xs text-gray-400">
+              <div className="video-player-footer">
+                <div className="video-player-meta">
                   <span>📦 {formatFileSize(selectedVlog.file_size)}</span>
                   <span>📅 {formatDate(selectedVlog.created_at)}</span>
                 </div>

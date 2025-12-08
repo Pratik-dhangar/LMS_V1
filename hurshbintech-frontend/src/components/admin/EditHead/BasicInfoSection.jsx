@@ -2,6 +2,7 @@
 import React from 'react';
 import InputField from '../../common/InputField';
 import TextAreaField from '../../common/TextAreaField';
+import '../../../styles/SharedComponents.css';
 
 /**
  * @param {object} formData
@@ -9,11 +10,11 @@ import TextAreaField from '../../common/TextAreaField';
  * @param {function} handleChange
  */
 const BasicInfoSection = ({ formData, errors, handleChange }) => (
-  <section className="mb-8">
-    <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+  <section className="section">
+    <h2 className="section-title">
       Basic Information
     </h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid-2">
       <InputField
         label="Name"
         name="name"
@@ -23,7 +24,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         placeholder="Enter full name"
         error={errors.name}
       />
-      
+
       <InputField
         label="Age"
         name="age"
@@ -36,7 +37,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         min={18}
         max={100}
       />
-      
+
       <InputField
         label="Contact Number"
         name="contact_no"
@@ -47,7 +48,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         placeholder="+91-XXXXXXXXXX"
         error={errors.contact_no}
       />
-      
+
       <InputField
         label="Date of Joining"
         name="date_of_joining"
@@ -57,8 +58,8 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         onChange={handleChange}
         error={errors.date_of_joining}
       />
-      
-      <div className="md:col-span-2">
+
+      <div style={{ gridColumn: '1 / -1' }}>
         <TextAreaField
           label="Address"
           name="address"

@@ -4,6 +4,7 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import learningProgramsService from "../../api/services/learningProgramsService";
 import { Loader2 } from "lucide-react";
+import '../../styles/Pages.css';
 
 const ViewAssignedPrograms = () => {
   const [programs, setPrograms] = useState([]);
@@ -28,33 +29,33 @@ const ViewAssignedPrograms = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
 
-      <main className="flex-1 p-6 max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-blue-600 pb-2 mb-6">
+      <main className="page-main">
+        <h1 className="page-title">
           My Learning Programs
         </h1>
 
         {loading ? (
-          <div className="flex flex-col items-center gap-2 py-10">
-            <Loader2 className="w-10 h-10 animate-spin" />
-            <p className="text-gray-600">Loading programs...</p>
+          <div className="loading-container">
+            <Loader2 className="loading-spinner" />
+            <p className="loading-text">Loading programs...</p>
           </div>
         ) : programs.length === 0 ? (
-          <p className="text-gray-600 text-lg">No learning programs assigned yet.</p>
+          <p className="empty-state-description">No learning programs assigned yet.</p>
         ) : (
-          <div className="space-y-6">
+          <div className="programs-list">
             {programs.map((p) => (
               <div
                 key={p.id}
-                className="p-5 border rounded-lg bg-white shadow-sm hover:bg-gray-50 transition"
+                className="program-card"
               >
-                <h3 className="font-semibold text-gray-800 text-lg">
+                <h3 className="program-title">
                   {p.name || p.program_title}
                 </h3>
                 {(p.description || p.program_description) && (
-                  <p className="text-gray-600 text-sm mt-1">
+                  <p className="program-description">
                     {p.description || p.program_description}
                   </p>
                 )}

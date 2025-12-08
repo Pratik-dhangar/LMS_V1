@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { FaTimes, FaPlay, FaPause, FaStepBackward, FaStepForward, FaExpand, FaCompress } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import * as pdfjsLib from 'pdfjs-dist';
-import './MediaPopup.css';
+import '../../styles/components/common/MediaPopup.css';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;

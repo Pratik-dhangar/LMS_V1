@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import learningProgramsService from "../../api/services/learningProgramsService";
+import '../../styles/Pages.css';
 
 const LearningProgramDetails = () => {
   const { id } = useParams();
@@ -27,32 +28,34 @@ const LearningProgramDetails = () => {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        <Loader2 className="w-10 h-10 animate-spin" />
+      <div className="page-container">
+        <div className="loading-container">
+          <Loader2 className="loading-spinner" />
+        </div>
       </div>
     );
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
 
-      <main className="flex-grow max-w-4xl mx-auto p-6">
+      <main className="page-main">
         <button
           onClick={() => navigate(-1)}
-          className="bg-gray-200 px-4 py-2 rounded-md mb-4 hover:bg-gray-300"
+          className="back-button"
         >
           ⬅ Back
         </button>
 
-        <div className="bg-white p-8 rounded-lg shadow-lg border">
-          <h1 className="text-3xl font-bold mb-4">{program.program_title}</h1>
+        <div className="detail-card">
+          <h1 className="detail-title">{program.program_title}</h1>
 
-          <p className="text-gray-700 whitespace-pre-line">
+          <p className="detail-description">
             {program.program_description}
           </p>
 
           {program.assigned_at && (
-            <p className="mt-6 text-sm text-gray-500">
+            <p className="detail-meta">
               Assigned On: {new Date(program.assigned_at).toLocaleDateString()}
             </p>
           )}

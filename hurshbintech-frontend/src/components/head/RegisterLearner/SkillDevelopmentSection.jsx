@@ -1,14 +1,15 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const SkillDevelopmentSection = ({ formData, handleChange }) => {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Detailed Skill Development Assessment
       </h2>
-      
+
       <div>
-        <label htmlFor="skill_development_assessment" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="skill_development_assessment" className="register-field-label">
           Skill Development Assessment
         </label>
         <textarea
@@ -17,7 +18,7 @@ const SkillDevelopmentSection = ({ formData, handleChange }) => {
           value={formData.skill_development_assessment}
           onChange={handleChange}
           rows="6"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Enter detailed skill development assessment..."
         />
       </div>

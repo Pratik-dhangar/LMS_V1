@@ -14,6 +14,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
+import '../../styles/Pages.css';
 
 
 // ViewLearners Component - Admin can view all learners (no edit capability)
@@ -96,29 +97,29 @@ const ViewLearners = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
-          <div className="mb-8">
+          <div className="page-header">
 
-            <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
+            <h1 className="page-title">
               View HurshBin Learners
             </h1>
-            <p className="text-gray-600 mt-2">View all registered learners in the system</p>
+            <p className="page-description">View all registered learners in the system</p>
           </div>
 
           {/* Search Bar */}
-          <div className="mb-8 flex justify-center items-center">
+          <div className="search-section">
             <SearchBar
               onSearch={handleSearch}
               placeholder="Search by name, passcode..."
             />
           </div>
           {activeSearchQuery && (
-            <div className="text-center mb-4">
-              <p className="text-sm text-gray-600">
+            <div className="search-results-info">
+              <p className="search-results-text">
                 Found {filteredLearners.length} result{filteredLearners.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -126,9 +127,9 @@ const ViewLearners = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border-2 border-red-500 text-red-800 p-4 rounded-lg mb-8">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+            <div className="error-message">
+              <div className="error-message-content">
+                <AlertCircle className="error-icon" />
                 <p>{error}</p>
               </div>
             </div>
@@ -136,20 +137,20 @@ const ViewLearners = () => {
 
           {/* Loading State */}
           {loading ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 flex flex-col items-center">
-              <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-              <p className="text-gray-600 font-medium">Loading learners...</p>
+            <div className="loading-container">
+              <Loader2 className="loading-spinner-icon" />
+              <p className="loading-text">Loading learners...</p>
             </div>
           ) : (
             /* Table */
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden border-2 border-gray-300">
+            <div className="data-table-container">
               {filteredLearners.length === 0 ? (
-                <div className="p-12 text-center">
-                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-xl font-semibold text-gray-700 mb-2">
+                <div className="empty-state">
+                  <Users className="empty-state-icon" />
+                  <p className="empty-state-title">
                     {activeSearchQuery ? 'No learners found' : 'No learners registered yet'}
                   </p>
-                  <p className="text-gray-500">
+                  <p className="empty-state-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'No learners have been registered in the system'
@@ -157,56 +158,56 @@ const ViewLearners = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead className="bg-[#34495e] text-white">
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead className="data-table-header">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider border border-gray-400">
+                        <th className="data-table-th">
                           Sr. No.
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider border border-gray-400">
+                        <th className="data-table-th">
                           Name
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider border border-gray-400">
+                        <th className="data-table-th">
                           Passcode
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider border border-gray-400">
+                        <th className="data-table-th">
                           Date of Assessment
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="data-table-body">
                       {filteredLearners.map((learner, index) => (
                         <tr
                           key={learner.id}
-                          className="hover:bg-gray-50 transition-colors"
+                          className="data-table-row"
                         >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium border border-gray-300">
+                          <td className="data-table-td data-table-td-center">
                             {index + 1}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap border border-gray-300">
-                            <div className="text-sm font-medium text-gray-900">{learner.name}</div>
-                            <div className="text-xs text-gray-500">{learner.role}</div>
+                          <td className="data-table-td">
+                            <div className="data-table-name">{learner.name}</div>
+                            <div className="data-table-subtext">{learner.role}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap border border-gray-300">
-                            <div className="flex items-center gap-2">
-                              <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          <td className="data-table-td">
+                            <div className="passcode-display-inline">
+                              <span className="passcode-badge">
                                 {visiblePasscodes[learner.id] ? visiblePasscodes[learner.id] : '••••••'}
                               </span>
                               <button
                                 onClick={() => togglePasscodeVisibility(learner.id, learner.user_id)}
-                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                className="icon-btn"
                                 title={visiblePasscodes[learner.id] ? 'Hide passcode' : 'Show passcode'}
                               >
                                 {visiblePasscodes[learner.id] ? (
-                                  <EyeOff className="w-4 h-4 text-gray-600" />
+                                  <EyeOff className="icon-sm" />
                                 ) : (
-                                  <Eye className="w-4 h-4 text-gray-600" />
+                                  <Eye className="icon-sm" />
                                 )}
                               </button>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 border border-gray-300">
+                          <td className="data-table-td">
                             {learner.date_of_assessment
                               ? new Date(learner.date_of_assessment).toLocaleDateString()
                               : 'N/A'
@@ -223,7 +224,7 @@ const ViewLearners = () => {
 
           {/* Summary */}
           {!loading && filteredLearners.length > 0 && (
-            <div className="mt-6 text-sm text-gray-600 text-center">
+            <div className="page-summary">
               Showing {filteredLearners.length} of {learners.length} learner{learners.length !== 1 ? 's' : ''}
             </div>
           )}

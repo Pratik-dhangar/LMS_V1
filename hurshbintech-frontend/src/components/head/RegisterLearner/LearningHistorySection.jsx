@@ -1,16 +1,17 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const LearningHistorySection = ({ formData, handleChange }) => {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Learning History
       </h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <div className="register-section-grid">
         {/* Number of years school attended */}
         <div>
-          <label htmlFor="years_school_attended" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="years_school_attended" className="register-field-label">
             Number of years school attended
           </label>
           <input
@@ -19,7 +20,7 @@ const LearningHistorySection = ({ formData, handleChange }) => {
             name="years_school_attended"
             value={formData.years_school_attended}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="register-input"
             placeholder="Enter number of years"
             min="0"
           />
@@ -27,7 +28,7 @@ const LearningHistorySection = ({ formData, handleChange }) => {
 
         {/* Current grade of learning */}
         <div>
-          <label htmlFor="current_grade" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="current_grade" className="register-field-label">
             Current grade of learning
           </label>
           <input
@@ -36,15 +37,15 @@ const LearningHistorySection = ({ formData, handleChange }) => {
             name="current_grade"
             value={formData.current_grade}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="register-input"
             placeholder="e.g., Grade 5, KG-2"
           />
         </div>
       </div>
 
       {/* Any support provided */}
-      <div className="mt-6">
-        <label htmlFor="support_provided" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="support_provided" className="register-field-label">
           Any support provided?
         </label>
         <textarea
@@ -53,14 +54,14 @@ const LearningHistorySection = ({ formData, handleChange }) => {
           value={formData.support_provided}
           onChange={handleChange}
           rows="3"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Describe any support provided..."
         />
       </div>
 
       {/* Current learning scenario */}
-      <div className="mt-6">
-        <label htmlFor="current_learning_scenario" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="current_learning_scenario" className="register-field-label">
           Current learning scenario
         </label>
         <textarea
@@ -69,7 +70,7 @@ const LearningHistorySection = ({ formData, handleChange }) => {
           value={formData.current_learning_scenario}
           onChange={handleChange}
           rows="4"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Describe the current learning scenario..."
         />
       </div>

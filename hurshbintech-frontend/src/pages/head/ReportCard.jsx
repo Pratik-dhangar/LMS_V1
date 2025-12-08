@@ -5,7 +5,7 @@ import sessionReportService from '../../api/services/sessionReportService';
 import headService from '../../api/services/headService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/head/reportCard.css';
+import '../../styles/Pages.css';
 
 const ReportCard = () => {
   const navigate = useNavigate();
@@ -75,49 +75,47 @@ const ReportCard = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 report-page">
+    <div className="page-container">
       <Navbar />
-      <div className="bg-white rounded-lg shadow-lg p-2 sm:p-4 report-card">
+      <div className="page-main">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-              📊 Session Reports
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">View learner session reports and progress</p>
+            <h1 className="page-title">📊 Session Reports</h1>
+            <p className="page-description">View learner session reports and progress</p>
           </div>
           <button
             onClick={() => navigate('/head/dashboard')}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm font-semibold"
+            className="btn-secondary"
           >
             ← Back to Dashboard
           </button>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
+        <div className="search-section">
           <input
             type="text"
             placeholder="🔍 Search by learner name or IIP ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="search-input"
           />
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="text-gray-600 mt-4">Loading learners...</p>
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p className="loading-text">Loading learners...</p>
           </div>
         )}
 
         {/* Empty State */}
         {!loading && filteredLearners.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="text-gray-600 text-lg">
+          <div className="empty-state">
+            <div className="empty-state-icon">📭</div>
+            <p className="empty-state-description">
               {searchTerm ? 'No learners found matching your search' : 'No learners registered yet'}
             </p>
           </div>
@@ -125,42 +123,42 @@ const ReportCard = () => {
 
         {/* Learners List */}
         {!loading && filteredLearners.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="report-cards-grid">
             {filteredLearners.map((learner) => (
               <div
                 key={learner.learner_id}
                 onClick={() => handleLearnerClick(learner.learner_id)}
-                className={`learner-card bg-gradient-to-br ${learner.total_reports > 0 ? 'from-blue-50 to-indigo-50 border-blue-200' : 'from-gray-50 to-gray-100 border-gray-200'} border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer hover:scale-105`}
+                className={`report-card ${learner.total_reports > 0 ? 'report-card-active' : 'report-card-inactive'}`}
               >
                 {/* Learner Header */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`${learner.total_reports > 0 ? 'bg-blue-500' : 'bg-gray-400'} text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold avatar`}>
+                <div className="report-card-header">
+                  <div className={`report-card-avatar ${learner.total_reports > 0 ? 'report-card-avatar-active' : 'report-card-avatar-inactive'}`}>
                     {learner.learner_name?.charAt(0).toUpperCase() || '?'}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-800 text-lg">{learner.learner_name}</h3>
+                  <div className="report-card-info">
+                    <h3 className="report-card-name">{learner.learner_name}</h3>
                     {learner.iip_id && (
-                      <p className="text-xs text-gray-600">IIP: {learner.iip_id}</p>
+                      <p className="report-card-iip">IIP: {learner.iip_id}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-white rounded-lg p-2 text-center stat-box">
-                    <div className="text-2xl font-bold text-blue-600">{learner.total_sessions}</div>
-                    <div className="text-xs text-gray-600">Sessions</div>
+                <div className="report-stats">
+                  <div className="report-stat-box">
+                    <div className="report-stat-value report-stat-sessions">{learner.total_sessions}</div>
+                    <div className="report-stat-label">Sessions</div>
                   </div>
-                  <div className="bg-white rounded-lg p-2 text-center stat-box">
-                    <div className="text-2xl font-bold text-green-600">{learner.total_reports}</div>
-                    <div className="text-xs text-gray-600">Reports</div>
+                  <div className="report-stat-box">
+                    <div className="report-stat-value report-stat-reports">{learner.total_reports}</div>
+                    <div className="report-stat-label">Reports</div>
                   </div>
                 </div>
 
                 {/* Last Session */}
                 {learner.last_session_date && (
-                  <div className="text-xs text-gray-600 mb-2">
-                    <span className="font-semibold">Last Session:</span>{' '}
+                  <div className="report-card-meta">
+                    <span className="report-meta-label">Last Session:</span>{' '}
                     {new Date(learner.last_session_date).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -171,9 +169,9 @@ const ReportCard = () => {
 
                 {/* Programs Badge */}
                 {learner.programs_covered && learner.programs_covered.length > 0 && (
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="text-xs font-semibold text-gray-700">Programs:</span>
-                    <span className="bg-purple-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+                  <div className="report-programs">
+                    <span className="report-programs-label">Programs:</span>
+                    <span className="report-programs-badge">
                       {learner.programs_covered.length}
                     </span>
                   </div>
@@ -181,7 +179,7 @@ const ReportCard = () => {
 
                 {/* No Reports Badge */}
                 {learner.total_reports === 0 && (
-                  <div className="text-xs text-gray-500 italic mb-2">
+                  <div className="report-no-reports">
                     No reports yet
                   </div>
                 )}
@@ -192,7 +190,7 @@ const ReportCard = () => {
                     e.stopPropagation();
                     handleLearnerClick(learner.learner_id);
                   }}
-                  className={`view-btn w-full ${learner.total_reports > 0 ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 hover:bg-gray-500'} text-white py-2 rounded-lg text-sm font-semibold mt-2`}
+                  className={`report-view-button ${learner.total_reports > 0 ? 'report-view-button-active' : 'report-view-button-inactive'}`}
                 >
                   {learner.total_reports > 0 ? 'View Reports →' : 'View Details →'}
                 </button>

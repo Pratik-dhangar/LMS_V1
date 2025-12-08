@@ -1,0 +1,142 @@
+/* Navbar.css */
+
+.navbar {
+    background-color: #2f4153;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    pointer-events: auto;
+}
+
+.navbar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.navbar-title {
+    color: #ffffff;
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 0.025em;
+}
+
+.navbar-nav {
+    display: none;
+    align-items: center;
+    margin-top: 0.5rem;
+    gap: 1rem;
+}
+
+.navbar-nav-desktop {
+    display: flex;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-actions-desktop {
+    display: none;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-btn {
+    background-color: #4a6278;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.125rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-btn:hover:not(:disabled) {
+    background-color: #3498db;
+}
+
+.navbar-btn.active {
+    background-color: #3498db;
+}
+
+.navbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.navbar-btn.login-btn,
+.navbar-btn.logout-btn {
+    margin-top: 2.25rem;
+}
+
+.navbar-toggle {
+    display: block;
+    color: white;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.navbar-toggle svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.navbar-mobile-menu {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.navbar-mobile-menu .navbar-btn {
+    width: 100%;
+    text-align: left;
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+    .navbar-title {
+        font-size: 1.5rem;
+    }
+
+    .navbar-nav {
+        display: flex;
+    }
+
+    .navbar-actions-desktop {
+        display: flex;
+    }
+
+    .navbar-toggle {
+        display: none;
+    }
+
+    .navbar-mobile-menu {
+        display: none;
+    }
+}

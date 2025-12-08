@@ -1,6 +1,7 @@
 // NotesSection Component
 import React from 'react';
 import TextAreaField from '../../common/TextAreaField';
+import '../../../styles/components/admin/EditHeadSections.css';
 
 /**
  * @param {object} formData
@@ -8,11 +9,11 @@ import TextAreaField from '../../common/TextAreaField';
  */
 
 const NotesSection = ({ formData, handleChange }) => (
-  <section className="mb-8">
-    <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+  <section className="edit-head-section">
+    <h2 className="edit-head-section-title">
       Notes & Messages
     </h2>
-    <div className="grid grid-cols-1 gap-6">
+    <div className="edit-head-section-grid">
       <TextAreaField
         label="Box of Note"
         name="note_box"
@@ -21,7 +22,7 @@ const NotesSection = ({ formData, handleChange }) => (
         rows={4}
         placeholder="Additional notes"
       />
-      
+
       <TextAreaField
         label="Message Box"
         name="message_box"

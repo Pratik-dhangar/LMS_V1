@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { LogOut, LogIn, Menu, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
+import '../../styles/components/layout/Navbar.css';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -32,20 +33,16 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-[#2f4153] p-0 sticky top-0 z-[1000] shadow-md pointer-events-auto" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
-      <div className="max-w-[1400px] mx-auto px-8 py-4 flex flex-wrap justify-between items-center">
-        <div className="flex flex-col items-start">
-          <h1 className="text-white text-[1.8rem] font-bold m-0 tracking-wide md:text-2xl" style={{ color: '#ffffff' }}>
+    <nav className="navbar" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
+      <div className="navbar-container">
+        <div className="navbar-brand">
+          <h1 className="navbar-title">
             HurshBinTech
           </h1>
 
-          <div className="hidden md:flex items-center mt-2 gap-4">
+          <div className="navbar-nav navbar-nav-desktop">
             <button
-              className={` ${isDashboardPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/");
               }}
@@ -54,9 +51,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className={` ${isAdminPage ? "bg-[#3498db]" : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isAdminPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/admin/dashboard");
               }}
@@ -66,9 +61,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className={` ${isHeadPage ? "bg-[#3498db]" : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isHeadPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/head/dashboard");
               }}
@@ -78,11 +71,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className={` ${isTrainerPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isTrainerPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/trainer/dashboard");
               }}
@@ -92,11 +81,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className={` ${isConsultantPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isConsultantPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/consultant/dashboard");
               }}
@@ -106,11 +91,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className={` ${isLearnerPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2 
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isLearnerPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/learner/dashboard");
               }}
@@ -121,11 +102,10 @@ const Navbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-4">
+        <div className="navbar-actions">
+          <div className="navbar-actions-desktop">
             <button
-              className="bg-[#4a6278] hover:bg-[#3498db] text-white border-none py-2 px-4 mt-9 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed"
+              className="navbar-btn login-btn"
               onClick={() => navigate("/login")}
               disabled={!!user}
             >
@@ -134,8 +114,7 @@ const Navbar = () => {
             </button>
 
             <button
-              className="bg-[#4a6278] hover:bg-[#3498db] text-white border-none py-2 px-4 mt-9 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed"
+              className="navbar-btn logout-btn"
               onClick={(e) => {
                 e.preventDefault();
                 logout();
@@ -150,7 +129,7 @@ const Navbar = () => {
           </div>
 
           <button
-            className="md:hidden text-white p-1"
+            className="navbar-toggle"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
@@ -162,13 +141,9 @@ const Navbar = () => {
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden w-full flex flex-col items-start gap-3 mt-4">
+          <div className="navbar-mobile-menu">
             <button
-              className={`w-full text-left ${isDashboardPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
               onClick={() => {
                 navigate("/");
               }}
@@ -178,11 +153,7 @@ const Navbar = () => {
 
             {/* Menu Admin */}
             <button
-              className={`w-full text-left ${isAdminPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-3Two hundred flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isAdminPage ? "active" : ""}`}
               onClick={() => handleNavigate("/admin/dashboard")}
               disabled={
                 !user || user.role !== "admin"
@@ -193,11 +164,7 @@ const Navbar = () => {
 
             {/* Menu Head */}
             <button
-              className={`w-full text-left ${isHeadPage
-                ? "bg-[#3498db]"
-                : "bg-[#4a6278] hover:bg-[#3498db]"
-                } text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`navbar-btn ${isHeadPage ? "active" : ""}`}
               onClick={() => handleNavigate("/trainer/dashboard")}
               disabled={
                 !user || user.role !== "head"
@@ -208,8 +175,7 @@ const Navbar = () => {
 
             {/* Menu Login Button */}
             <button
-              className="w-full text-left bg-[#4a6278] hover:bg-[#3498db] text-white border-none py-2 px-4 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed"
+              className="navbar-btn"
               onClick={() => handleNavigate("/login")}
               disabled={!!user}
             >
@@ -220,8 +186,7 @@ const Navbar = () => {
             {/* Menu Logout Button */}
 
             <button
-              className="w-full text-left bg-[#4a6278] hover:bg-[#3498db] text-white border-none py-2 px-4 rounded-sm text-sm font-medium cursor-pointer transition-all duration-300 flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed"
+              className="navbar-btn"
               onClick={(e) => {
                 e.preventDefault();
                 handleLogout();

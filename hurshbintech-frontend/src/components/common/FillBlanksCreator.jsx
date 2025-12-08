@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { exerciseTemplates } from '../../utils/fillInBlanksTemplates';
+import '../../styles/components/common/FillBlanksCreator.css';
 
 /**
  * FillBlanksCreator Modal
  * Allows trainer to create/customize fill-in-the-blank exercises
  * Shows live preview and sends to specific learner
  */
-const FillBlanksCreator = ({ 
-  isOpen, 
-  onClose, 
+const FillBlanksCreator = ({
+  isOpen,
+  onClose,
   onSend,
   learnerName = 'Learner'
 }) => {
@@ -46,7 +47,7 @@ const FillBlanksCreator = ({
 
   const handleSend = () => {
     let exercise;
-    
+
     if (useCustom) {
       // Create custom exercise
       exercise = exerciseTemplates.custom({
@@ -76,78 +77,31 @@ const FillBlanksCreator = ({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        maxWidth: '800px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-        fontFamily: "'Segoe UI', 'Roboto', sans-serif"
-      }}>
+    <div className="fill-blanks-creator-overlay">
+      <div className="fill-blanks-creator-modal">
         {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: '24px',
-          borderTopLeftRadius: '16px',
-          borderTopRightRadius: '16px',
-          color: 'white'
-        }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>
+        <div className="fill-blanks-creator-header">
+          <h2>
             📝 Create Fill in the Blanks Exercise
           </h2>
-          <p style={{ margin: '8px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
+          <p>
             For: <strong>{learnerName}</strong>
           </p>
         </div>
 
         {/* Content */}
-        <div style={{ padding: '24px' }}>
+        <div className="fill-blanks-creator-content">
           {/* Template/Custom Toggle */}
-          <div style={{ marginBottom: '24px', display: 'flex', gap: '12px' }}>
+          <div className="fill-blanks-creator-toggle">
             <button
               onClick={() => setUseCustom(false)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: useCustom ? '2px solid #e5e7eb' : '2px solid #667eea',
-                backgroundColor: useCustom ? 'white' : '#f3f4f6',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={useCustom ? 'inactive' : 'active'}
             >
               📚 Use Template
             </button>
             <button
               onClick={() => setUseCustom(true)}
-              style={{
-                flex: 1,
-                padding: '12px',
-                border: useCustom ? '2px solid #667eea' : '2px solid #e5e7eb',
-                backgroundColor: useCustom ? '#f3f4f6' : 'white',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={useCustom ? 'active' : 'inactive'}
             >
               ✏️ Create Custom
             </button>
@@ -155,28 +109,21 @@ const FillBlanksCreator = ({
 
           {/* Template Selection */}
           {!useCustom && (
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+            <div className="fill-blanks-creator-template-section">
+              <label className="fill-blanks-creator-template-label">
                 Choose a Template:
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              <div className="fill-blanks-creator-template-grid">
                 {templates.map(template => (
                   <div
                     key={template.id}
                     onClick={() => setSelectedTemplate(template.id)}
-                    style={{
-                      padding: '16px',
-                      border: selectedTemplate === template.id ? '2px solid #667eea' : '2px solid #e5e7eb',
-                      backgroundColor: selectedTemplate === template.id ? '#eef2ff' : 'white',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
+                    className={`fill-blanks-creator-template-card ${selectedTemplate === template.id ? 'selected' : 'unselected'}`}
                   >
-                    <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                    <div className="fill-blanks-creator-template-card-name">
                       {template.name}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                    <div className="fill-blanks-creator-template-card-desc">
                       {template.description}
                     </div>
                   </div>
@@ -187,9 +134,9 @@ const FillBlanksCreator = ({
 
           {/* Custom Exercise Form */}
           {useCustom && (
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+            <div className="fill-blanks-creator-custom-section">
+              <div className="fill-blanks-creator-form-group">
+                <label className="fill-blanks-creator-form-label">
                   Title:
                 </label>
                 <input
@@ -197,18 +144,12 @@ const FillBlanksCreator = ({
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder="e.g., Grammar Exercise"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px'
-                  }}
+                  className="fill-blanks-creator-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+              <div className="fill-blanks-creator-form-group">
+                <label className="fill-blanks-creator-form-label">
                   Instructions:
                 </label>
                 <input
@@ -216,18 +157,12 @@ const FillBlanksCreator = ({
                   value={customInstructions}
                   onChange={(e) => setCustomInstructions(e.target.value)}
                   placeholder="e.g., Fill in the missing words"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px'
-                  }}
+                  className="fill-blanks-creator-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+              <div className="fill-blanks-creator-form-group">
+                <label className="fill-blanks-creator-form-label">
                   Options (comma-separated, for drag & drop):
                 </label>
                 <input
@@ -235,56 +170,41 @@ const FillBlanksCreator = ({
                   value={customOptions}
                   onChange={(e) => setCustomOptions(e.target.value)}
                   placeholder="e.g., apple, banana, orange"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px'
-                  }}
+                  className="fill-blanks-creator-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+              <div className="fill-blanks-creator-blanks-container">
+                <label className="fill-blanks-creator-form-label">
                   Questions:
                 </label>
                 {customBlanks.map((blank, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                  <div key={index} className="fill-blanks-creator-blank-row">
                     <input
                       type="text"
                       value={blank.textBefore}
                       onChange={(e) => handleBlankChange(index, 'textBefore', e.target.value)}
                       placeholder="Text before blank"
-                      style={{ flex: 1, padding: '8px', border: '2px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }}
+                      className="fill-blanks-creator-blank-input"
                     />
                     <input
                       type="text"
                       value={blank.correctAnswer}
                       onChange={(e) => handleBlankChange(index, 'correctAnswer', e.target.value)}
                       placeholder="Answer"
-                      style={{ width: '120px', padding: '8px', border: '2px solid #10b981', borderRadius: '6px', fontSize: '13px', fontWeight: '600' }}
+                      className="fill-blanks-creator-blank-answer"
                     />
                     <input
                       type="text"
                       value={blank.textAfter}
                       onChange={(e) => handleBlankChange(index, 'textAfter', e.target.value)}
                       placeholder="Text after"
-                      style={{ flex: 1, padding: '8px', border: '2px solid #e5e7eb', borderRadius: '6px', fontSize: '13px' }}
+                      className="fill-blanks-creator-blank-input"
                     />
                     {customBlanks.length > 1 && (
                       <button
                         onClick={() => handleRemoveBlank(index)}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: '600'
-                        }}
+                        className="fill-blanks-creator-remove-btn"
                       >
                         ✕
                       </button>
@@ -293,17 +213,7 @@ const FillBlanksCreator = ({
                 ))}
                 <button
                   onClick={handleAddBlank}
-                  style={{
-                    marginTop: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}
+                  className="fill-blanks-creator-add-btn"
                 >
                   + Add Question
                 </button>
@@ -313,43 +223,16 @@ const FillBlanksCreator = ({
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '20px 24px',
-          borderTop: '1px solid #e5e7eb',
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'flex-end'
-        }}>
+        <div className="fill-blanks-creator-footer">
           <button
             onClick={handleClose}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'white',
-              color: '#374151',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
+            className="fill-blanks-creator-cancel-btn"
           >
             Cancel
           </button>
           <button
             onClick={handleSend}
-            style={{
-              padding: '10px 24px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-            }}
+            className="fill-blanks-creator-send-btn"
           >
             📤 Send to {learnerName}
           </button>

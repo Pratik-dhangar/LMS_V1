@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import './Whiteboard.css';
+import '../../styles/components/common/Whiteboard.css';
 import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
 import MediaPopup from './MediaPopup';
@@ -160,22 +160,22 @@ const PDFOverlay = React.memo(({
         onDoubleClick={onDoubleClick}
     >
         {/* PDF Icon and Label */}
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200">
-            <div className="text-5xl mb-2">📄</div>
-            <div className="text-center text-gray-700 text-sm font-semibold px-2 line-clamp-2">
+        <div className="pdf-overlay-content">
+            <div className="pdf-icon">📄</div>
+            <div className="pdf-filename">
                 {item.src ? item.src.split('/').pop() : 'PDF Document'}
             </div>
-            <div className="text-xs text-gray-500 mt-2">Double-click to open</div>
+            <div className="pdf-hint">Double-click to open</div>
         </div>
 
         {/* Selection Indicators */}
         {isSelectedByRemoteLearner && (
-            <div className="absolute -top-6 left-0 text-green-500 text-sm font-bold">
+            <div className="selection-indicator">
                 👤 Learner
             </div>
         )}
         {isSelectedByLearner && (
-            <div className="absolute -top-6 left-0 text-green-500 text-sm font-bold">
+            <div className="selection-indicator">
                 ✓ Selected
             </div>
         )}
@@ -258,12 +258,12 @@ const ImageOverlay = React.memo(({
 
         {/* Selection Indicators */}
         {isSelectedByRemoteLearner && (
-            <div className="absolute -top-6 left-0 text-green-500 text-sm font-bold">
+            <div className="selection-indicator">
                 👤 Learner
             </div>
         )}
         {isSelectedByLearner && (
-            <div className="absolute -top-6 left-0 text-green-500 text-sm font-bold">
+            <div className="selection-indicator">
                 ✓ Selected
             </div>
         )}
@@ -389,6 +389,7 @@ const Whiteboard = ({
     const [editingBucketId, setEditingBucketId] = useState(null);
     const [editingBucketLabel, setEditingBucketLabel] = useState('');
     const [animatingItemId, setAnimatingItemId] = useState(null); // For drop animation
+    const [isDragOverCanvas, setIsDragOverCanvas] = useState(false); // For visual feedback during drag over
 
     // Inline video state for 50-50 split mode
     const [inlineVideo, setInlineVideo] = useState(null); // { id, src, title }
@@ -527,6 +528,7 @@ const Whiteboard = ({
             whiteboardService.onImage = (data) => {
                 // Add the image to canvasItems if not already present
                 // The useEffect will handle redrawing via redrawCanvas()
+                console.log('[Whiteboard] onImage received:', data);
                 setCanvasItems(prev => {
                     const exists = prev.find(item => item.id === data.id);
                     if (!exists) {
@@ -545,6 +547,7 @@ const Whiteboard = ({
                             originalFilename: data.originalFilename,
                             mimeType: data.mimeType
                         };
+                        console.log('[Whiteboard] Adding image item to canvasItems:', newItem);
 
                         // Auto-open popup if it's a video/PDF and this is a trainer adding it
                         if (isTrainer) {
@@ -1476,6 +1479,9 @@ const Whiteboard = ({
 
     const handleDrop = (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        setIsDragOverCanvas(false);
+
         if (!isTrainer) return;
 
         const canvas = canvasRef.current;
@@ -1620,8 +1626,29 @@ const Whiteboard = ({
         setDraggedItem(null);
     };
 
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOverCanvas(true);
+        // Allow the drop by setting the effect
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        // Only set to false if leaving the canvas element itself, not child elements
+        if (e.target === canvasRef.current) {
+            setIsDragOverCanvas(false);
+        }
+    };
+
     const handleDragOver = (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy';
+        }
     };
 
     // Video control handlers for inline split mode
@@ -1699,11 +1726,11 @@ const Whiteboard = ({
         <div className={`whiteboard-container ${isTrainer ? 'trainer-mode' : 'learner-mode'}`}>
             {/* Stopwatch Display - Top Right Corner */}
             {stopwatchFormattedTime && (
-                <div className="absolute top-4 right-4 z-50">
-                    <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg border border-orange-500">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-mono font-bold tracking-wide">{stopwatchFormattedTime.display}</span>
-                            {stopwatchIsRunning && <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>}
+                <div className="stopwatch-overlay">
+                    <div className="stopwatch-overlay-inner">
+                        <div className="stopwatch-content">
+                            <span className="stopwatch-time">{stopwatchFormattedTime.display}</span>
+                            {stopwatchIsRunning && <span className="stopwatch-indicator"></span>}
                         </div>
                     </div>
                 </div>
@@ -1711,27 +1738,27 @@ const Whiteboard = ({
 
             {/* Text Messages Display - Top of Whiteboard */}
             {textMessages.length > 0 && (
-                <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-40 w-[90%] max-w-[600px] space-y-2">
+                <div className="text-messages-container">
                     {textMessages.map((msg, index) => (
                         <div
                             key={msg.id}
-                            className="bg-blue-600 text-white px-6 py-4 rounded-lg shadow-xl animate-fade-in border-2 border-blue-400"
+                            className="text-message"
                             style={{
                                 animationDelay: `${index * 100}ms`,
                                 opacity: 0.95
                             }}
                         >
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex-1 text-center">
-                                    <div className="flex items-center justify-center gap-2 mb-2">
-                                        <span className="text-2xl">💬</span>
-                                        <span className="font-bold text-base">{msg.sender}</span>
+                            <div className="text-message-content">
+                                <div className="text-message-body">
+                                    <div className="text-message-header">
+                                        <span className="text-message-icon">💬</span>
+                                        <span className="text-message-sender">{msg.sender}</span>
                                     </div>
-                                    <div className="text-base font-medium leading-relaxed">{msg.text}</div>
+                                    <div className="text-message-text">{msg.text}</div>
                                 </div>
                                 <button
                                     onClick={() => setTextMessages(prev => prev.filter(m => m.id !== msg.id))}
-                                    className="text-white hover:text-red-200 text-2xl leading-none font-bold px-2 flex-shrink-0"
+                                    className="text-message-close"
                                     title="Close"
                                 >
                                     ×
@@ -1764,7 +1791,7 @@ const Whiteboard = ({
                         {isTrainer && (
                             <button
                                 onClick={handleVideoClose}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 z-30"
+                                className="video-close-button"
                                 title="Close video"
                             >
                                 ×
@@ -1789,6 +1816,12 @@ const Whiteboard = ({
                             onTouchEnd={stopDrawing}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
+                            onDragEnter={handleDragEnter}
+                            onDragLeave={handleDragLeave}
+                            style={{
+                                backgroundColor: isDragOverCanvas ? 'rgba(100, 200, 255, 0.1)' : 'transparent',
+                                transition: 'background-color 0.2s ease'
+                            }}
                         />
 
                         {/* PAUSE OVERLAY - When pause tool is active */}
@@ -1856,7 +1889,7 @@ const Whiteboard = ({
                                     {/* Resize Handle for Trainer */}
                                     {isSelectedByTrainer && (
                                         <div
-                                            className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 border-2 border-white cursor-se-resize"
+                                            className="resize-handle"
                                             style={{
                                                 left: `${item.x + item.width - 2}px`,
                                                 top: `${item.y + item.height - 2}px`,
@@ -1880,7 +1913,7 @@ const Whiteboard = ({
                                                 removeItemFromBucket(item.id, item.inBucket);
                                             }}
                                             onMouseDown={(e) => e.stopPropagation()}
-                                            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 border-2 border-white shadow-md"
+                                            className="item-delete-button"
                                             style={{
                                                 left: `${item.x + item.width - 12}px`,
                                                 top: `${item.y - 12}px`,
@@ -1900,6 +1933,7 @@ const Whiteboard = ({
                             const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === item.id;
                             const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === item.id;
                             const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemId === item.id;
+                            console.log('[Whiteboard] Rendering image item:', { id: item.id, src: item.src, isVideo: isVideoItem(item), isPdf: isPdfItem(item) });
 
                             return (
                                 <div key={`image-wrapper-${item.id}`}>
@@ -1958,7 +1992,7 @@ const Whiteboard = ({
                                     {/* Resize Handle for Trainer */}
                                     {isSelectedByTrainer && (
                                         <div
-                                            className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 border-2 border-white cursor-se-resize"
+                                            className="resize-handle"
                                             style={{
                                                 left: `${item.x + item.width - 2}px`,
                                                 top: `${item.y + item.height - 2}px`,
@@ -1982,7 +2016,7 @@ const Whiteboard = ({
                                                 removeItemFromBucket(item.id, item.inBucket);
                                             }}
                                             onMouseDown={(e) => e.stopPropagation()}
-                                            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 border-2 border-white shadow-md"
+                                            className="item-delete-button"
                                             style={{
                                                 left: `${item.x + item.width - 12}px`,
                                                 top: `${item.y - 12}px`,
@@ -2152,7 +2186,7 @@ const Whiteboard = ({
 
                                 {/* Bucket Label - Editable for trainers only */}
                                 <div
-                                    className="absolute left-1/2 transform -translate-x-1/2 text-white px-3 py-1 rounded text-xs font-semibold whitespace-nowrap flex items-center gap-2"
+                                    className="bucket-label"
                                     style={{
                                         backgroundColor: bucket.color || bucketColor,
                                         pointerEvents: isTrainer ? 'auto' : 'none',
@@ -2167,7 +2201,7 @@ const Whiteboard = ({
                                             if (!isTrainer) return;
                                             handleBucketLabelClick(bucket, e);
                                         }}
-                                        className={editingBucketId !== bucket.id ? "cursor-pointer" : "cursor-default"}
+                                        style={{ cursor: editingBucketId !== bucket.id ? 'pointer' : 'default' }}
                                     >
                                         {editingBucketId === bucket.id ? (
                                             <input
@@ -2179,7 +2213,7 @@ const Whiteboard = ({
                                                 onClick={(e) => e.stopPropagation()}
                                                 onMouseDown={(e) => e.stopPropagation()}
                                                 autoFocus
-                                                className="text-white px-1 border-none outline-none w-24 text-center text-xs"
+                                                className="bucket-input"
                                                 style={{ backgroundColor: bucket.color || bucketColor }}
                                             />
                                         ) : (
@@ -2195,7 +2229,7 @@ const Whiteboard = ({
                                                 removeBucket(bucket.id);
                                             }}
                                             onMouseDown={(e) => e.stopPropagation()}
-                                            className="text-white hover:text-red-300 text-lg leading-none font-bold"
+                                            className="bucket-close-button"
                                             title="Remove Bucket"
                                         >
                                             ×
@@ -2206,7 +2240,7 @@ const Whiteboard = ({
                                 {/* Resize Handle Visual (Trainer only) - Larger and more visible */}
                                 {isTrainer && (
                                     <div
-                                        className="absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-lg"
+                                        className="bucket-color-indicator"
                                         style={{
                                             backgroundColor: bucket.color || bucketColor,
                                             pointerEvents: 'none',

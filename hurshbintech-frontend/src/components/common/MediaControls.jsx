@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import '../../styles/components/common/MediaControls.css';
 
 const MediaControls = ({ stream, micEnabled, onToggleMic }) => {
     const [cameraOn, setCameraOn] = useState(true);
@@ -25,16 +26,16 @@ const MediaControls = ({ stream, micEnabled, onToggleMic }) => {
     };
 
     return (
-        <div className="flex space-x-2">
+        <div className="media-controls-container">
             <button
                 onClick={toggleMic}
-                className={`p-2 rounded-full ${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                className={`media-controls-button ${micEnabled ? 'enabled' : 'disabled'}`}
                 title={micEnabled ? 'Turn Mic Off' : 'Turn Mic On'}
             >
                 {micEnabled ? (
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
+                        className="media-controls-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -49,7 +50,7 @@ const MediaControls = ({ stream, micEnabled, onToggleMic }) => {
                 ) : (
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
+                        className="media-controls-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -65,13 +66,13 @@ const MediaControls = ({ stream, micEnabled, onToggleMic }) => {
             </button>
             <button
                 onClick={toggleCamera}
-                className={`p-2 rounded-full ${cameraOn ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                className={`media-controls-button ${cameraOn ? 'enabled' : 'disabled'}`}
                 title={cameraOn ? 'Turn Camera Off' : 'Turn Camera On'}
             >
                 {cameraOn ? (
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
+                        className="media-controls-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -86,7 +87,7 @@ const MediaControls = ({ stream, micEnabled, onToggleMic }) => {
                 ) : (
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
+                        className="media-controls-icon"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

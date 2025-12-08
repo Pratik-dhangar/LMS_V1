@@ -1,0 +1,193 @@
+/* RegisterLearner Section Styles */
+
+.register-learner-section,
+.register-section {
+  margin-bottom: 2rem;
+}
+
+.register-learner-section-title,
+.register-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.register-learner-grid,
+.register-section-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+
+  .register-learner-grid,
+  .register-section-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.register-learner-form-group,
+.register-form-group {
+  margin-bottom: 1rem;
+}
+
+.register-learner-label,
+.register-field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.register-learner-required,
+.register-required {
+  color: #ef4444;
+}
+
+.register-learner-input,
+.register-input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.register-learner-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.register-learner-input.error,
+.register-input-error {
+  border-color: #ef4444;
+}
+
+.register-learner-error-text,
+.register-error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.register-learner-textarea,
+.register-textarea {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.register-learner-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Radio Group Styles */
+.register-learner-radio-group,
+.register-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.register-learner-radio-label,
+.register-radio-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.register-learner-radio-options,
+.register-radio-options {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.register-learner-radio-option,
+.register-radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.register-learner-radio-input,
+.register-radio-input {
+  width: 1rem;
+  height: 1rem;
+  color: #2563eb;
+}
+
+.register-learner-radio-input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.register-learner-radio-text,
+.register-radio-text {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+/* Conditional Details */
+.register-learner-conditional-details,
+.register-conditional-field {
+  margin-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* File Upload */
+.register-learner-file-list,
+.register-file-list {
+  margin-top: 0.5rem;
+}
+
+.register-learner-file-item,
+.register-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.register-learner-file-name,
+.register-file-name {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.register-learner-file-remove,
+.register-file-remove {
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.register-learner-file-remove:hover {
+  color: #dc2626;
+}
+
+/* Aliases for existing Register component class prefixes used in JSX
+  These map older class names (register-*) to the new register-learner-* styles so components don't need to be updated */
+.register-field-full {
+  grid-column: 1 / -1;
+}
