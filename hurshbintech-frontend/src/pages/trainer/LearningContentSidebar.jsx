@@ -185,6 +185,66 @@ const LearningContentSidebar = ({
                 className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1.5 sm:p-2 my-1.5 sm:my-2 cursor-grab shadow-sm hover:shadow-md transition-shadow"
                 draggable
                 onDragStart={(e) => onDragStartContent(e, content)}
+                onTouchStart={(e) => {
+                  // Store content data for touch drag
+                  const touch = e.touches[0];
+                  const target = e.currentTarget;
+                  target.dataset.touchContent = JSON.stringify(content);
+                  target.dataset.touchStartX = touch.clientX;
+                  target.dataset.touchStartY = touch.clientY;
+                  target.style.opacity = '0.7';
+                }}
+                onTouchMove={(e) => {
+                  // Visual feedback during drag
+                  const target = e.currentTarget;
+                  if (target.dataset.touchContent) {
+                    const touch = e.touches[0];
+                    const deltaX = Math.abs(touch.clientX - parseFloat(target.dataset.touchStartX));
+                    const deltaY = Math.abs(touch.clientY - parseFloat(target.dataset.touchStartY));
+
+                    // If moved more than 10px, consider it a drag
+                    if (deltaX > 10 || deltaY > 10) {
+                      target.style.opacity = '0.5';
+                    }
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  const target = e.currentTarget;
+                  target.style.opacity = '1';
+
+                  if (!target.dataset.touchContent) return;
+
+                  const content = JSON.parse(target.dataset.touchContent);
+                  const touch = e.changedTouches[0];
+
+                  // Find element at touch position (the whiteboard canvas)
+                  const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                  // Check if dropped on whiteboard canvas
+                  const whiteboardCanvas = elementAtPoint?.closest('canvas[data-whiteboard="true"]');
+
+                  if (whiteboardCanvas) {
+                    // Trigger content drop on whiteboard
+                    const rect = whiteboardCanvas.getBoundingClientRect();
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+
+                    // Dispatch custom event for whiteboard to handle
+                    const dropEvent = new CustomEvent('touchDrop', {
+                      detail: {
+                        content,
+                        x,
+                        y
+                      }
+                    });
+                    whiteboardCanvas.dispatchEvent(dropEvent);
+                  }
+
+                  // Cleanup
+                  delete target.dataset.touchContent;
+                  delete target.dataset.touchStartX;
+                  delete target.dataset.touchStartY;
+                }}
               >
                 {renderThumbnail()}
 
