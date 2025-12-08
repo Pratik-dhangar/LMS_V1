@@ -1,5 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import '../../styles/Pages.css';
 
 const OverallReportModal = ({ statistics, onClose }) => {
     // Prepare data for Program breakdown bar chart
@@ -50,45 +51,43 @@ const OverallReportModal = ({ statistics, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay">
+            <div className="modal-container" style={{ maxWidth: '1792px' }}>
                 {/* Header */}
-                <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white p-6 rounded-t-lg sticky top-0 z-10">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h2 className="text-2xl font-bold">📊 Overall Session Reports</h2>
-                            <p className="text-teal-100 mt-1">Statistics across all learners and programs</p>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold transition-all"
-                        >
-                            ×
-                        </button>
+                <div className="modal-header modal-header-teal">
+                    <div>
+                        <h2 className="modal-title">📊 Overall Session Reports</h2>
+                        <p className="modal-subtitle">Statistics across all learners and programs</p>
                     </div>
+                    <button
+                        onClick={onClose}
+                        className="modal-close-button"
+                    >
+                        ×
+                    </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-6">
+                <div className="modal-content">
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-4 text-center">
-                            <div className="text-3xl font-bold text-blue-600">{statistics.total_reports || 0}</div>
-                            <div className="text-sm text-gray-600 mt-1">Total Reports</div>
+                    <div className="chart-summary-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                        <div className="chart-summary-card chart-summary-blue">
+                            <div className="chart-summary-value">{statistics.total_reports || 0}</div>
+                            <div className="chart-summary-label">Total Reports</div>
                         </div>
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-4 text-center">
-                            <div className="text-3xl font-bold text-green-600">{statistics.total_learners || 0}</div>
-                            <div className="text-sm text-gray-600 mt-1">Total Learners</div>
+                        <div className="chart-summary-card chart-summary-green">
+                            <div className="chart-summary-value">{statistics.total_learners || 0}</div>
+                            <div className="chart-summary-label">Total Learners</div>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-lg p-4 text-center">
-                            <div className="text-3xl font-bold text-purple-600">{statistics.total_programs || 0}</div>
-                            <div className="text-sm text-gray-600 mt-1">Total Programs</div>
+                        <div className="chart-summary-card chart-summary-purple">
+                            <div className="chart-summary-value">{statistics.total_programs || 0}</div>
+                            <div className="chart-summary-label">Total Programs</div>
                         </div>
-                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 rounded-lg p-4 text-center">
-                            <div className="text-3xl font-bold text-orange-600">
+                        <div className="chart-summary-card chart-summary-orange">
+                            <div className="chart-summary-value">
                                 {Object.keys(statistics.prompt_distribution || {}).length}
                             </div>
-                            <div className="text-sm text-gray-600 mt-1">Prompt Levels Used</div>
+                            <div className="chart-summary-label">Prompt Levels Used</div>
                         </div>
                     </div>
 

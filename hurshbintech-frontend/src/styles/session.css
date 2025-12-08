@@ -142,29 +142,14 @@
 }
 
 /* ============================================================================
-   RESPONSIVE: TABLET LANDSCAPE (813px - 1366px)
+   RESPONSIVE BREAKPOINTS
+   - Mobile: up to 812px
+   - Tablet: 813px to 1366px
+   - Desktop: 1367px and above
    ============================================================================ */
-@media (min-width: 813px) and (max-width: 1366px) {
-  .message-bubble {
-    font-size: 0.75rem;
-    padding: 0.3rem 0.6rem;
-  }
-
-  .keyboard-key {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    min-width: 40px;
-    min-height: 40px;
-  }
-
-  .session-loader {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-}
 
 /* ============================================================================
-   RESPONSIVE: MOBILE LANDSCAPE (max-width: 812px)
+   MOBILE STYLES (max-width: 812px)
    ============================================================================ */
 @media (max-width: 812px) {
   .session-video {
@@ -178,10 +163,10 @@
   }
 
   .keyboard-key {
-    padding: 0.4rem;
-    font-size: 0.75rem;
-    min-width: 36px;
-    min-height: 36px;
+    padding: 0.35rem;
+    font-size: 0.7rem;
+    min-width: 32px;
+    min-height: 32px;
   }
 
   .session-loader {
@@ -203,13 +188,58 @@
     font-size: 0.65rem;
     padding: 0.2rem 0.4rem;
   }
+
+  /* Mobile-specific action icons */
+  .action-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Mobile-specific media controls */
+  .media-control-on,
+  .media-control-off {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* TABLET STYLES (813px - 1366px) - Now same as Desktop (consolidated below) */
+
+/* Tablet and Desktop share same styling */
+@media (min-width: 813px) {
+  .message-bubble {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .keyboard-key {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .session-loader {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .video-waiting-overlay {
+    font-size: 1rem;
+  }
+
+  .action-icon {
+    width: 2rem;
+    height: 2rem;
+  }
 }
 
 /* ============================================================================
    HAMBURGER MENU & RESPONSIVE SIDEBAR STYLES
    ============================================================================ */
 
-/* Hamburger button styling - only visible on mobile/tablet */
+/* Hamburger button styling - MOBILE ONLY */
 .hamburger-btn {
   position: fixed;
   z-index: 999;
@@ -223,7 +253,8 @@
   transition: all var(--transition-base);
   min-width: 44px;
   min-height: 44px;
-  display: flex;
+  display: none;
+  /* Hidden by default - only show on mobile */
   align-items: center;
   justify-content: center;
 }
@@ -237,7 +268,24 @@
   transform: scale(0.95);
 }
 
-/* Overlay backdrop for mobile sidebars */
+/* Mobile: Show hamburger button ONLY */
+@media (max-width: 812px) {
+  .hamburger-btn {
+    display: flex !important;
+    padding: 0.625rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* Tablet and Desktop: Hide hamburger */
+@media (min-width: 813px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+}
+
+/* Overlay backdrop for mobile sidebars ONLY */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -245,19 +293,25 @@
   backdrop-filter: blur(2px);
   z-index: 998;
   animation: fadeIn 0.3s ease-in-out;
+  display: none;
+  /* Hidden by default */
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
+/* Mobile: Show overlay */
+@media (max-width: 812px) {
+  .sidebar-overlay {
+    display: block !important;
   }
 }
 
-/* Responsive sidebar - slides in from left/right on mobile */
+/* Tablet and Desktop: Hide overlay */
+@media (min-width: 813px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Responsive sidebar - slides in from left/right on mobile and tablet */
 .responsive-sidebar {
   transition: transform var(--transition-base);
   will-change: transform;
@@ -274,6 +328,9 @@
   background: white;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  /* Hidden by default */
 }
 
 .responsive-sidebar-right {
@@ -287,6 +344,44 @@
   background: white;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  /* Hidden by default */
+}
+
+/* Mobile: Show right sidebar */
+@media (max-width: 812px) {
+  .responsive-sidebar-right {
+    display: block !important;
+    top: 70px;
+    width: 90%;
+    max-width: 320px;
+  }
+}
+
+/* Tablet and Desktop: Show as permanent sidebar */
+@media (min-width: 813px) {
+  .responsive-sidebar-right {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+
+  .responsive-sidebar-left {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
 }
 
 /* Slide animations */
@@ -309,21 +404,5 @@
 /* Prevent body scroll when sidebar is open */
 body.sidebar-open {
   overflow: hidden;
-}
-
-/* Desktop: hide hamburger and overlays, show sidebars normally */
-@media (min-width: 1367px) {
-
-  .hamburger-btn,
-  .sidebar-overlay {
-    display: none !important;
-  }
-
-  .responsive-sidebar {
-    position: relative !important;
-    transform: none !important;
-    width: auto !important;
-    max-width: none !important;
-    box-shadow: none !important;
-  }
+  touch-action: none;
 }

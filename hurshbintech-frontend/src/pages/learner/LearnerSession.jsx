@@ -14,6 +14,7 @@ import Footer from '../../components/layout/Footer';
 import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
+import '../../styles/Pages.css';
 
 const LearnerSession = () => {
   const { sessionId } = useParams();
@@ -478,7 +479,7 @@ const LearnerSession = () => {
           // Convert both IDs to strings for comparison to handle string/number mismatches
           const targetId = String(data.targetLearnerId);
           const myId = String(sessionInfo?.learner_id || '');
-          
+
           console.log('[LearnerSession] Exercise targeting check:', {
             exerciseId: data.id,
             targetLearnerId: targetId,
@@ -486,12 +487,12 @@ const LearnerSession = () => {
             sessionInfoLoaded: !!sessionInfo,
             match: targetId === myId
           });
-          
+
           if (myId && targetId !== myId) {
             console.log('[LearnerSession] Exercise not for this learner, ignoring');
             return; // Don't add this exercise
           }
-          
+
           console.log('[LearnerSession] Exercise is for this learner, adding to canvas');
         }
 
@@ -775,7 +776,15 @@ const LearnerSession = () => {
 
   const cleanup = () => {
     try {
+      // Stop all media tracks (camera and microphone)
+      if (webRTC?.localStream) {
+        webRTC.localStream.getTracks().forEach(track => {
+          track.stop();
+          console.log(`[LearnerSession] Stopped ${track.kind} track`);
+        });
+      }
       webRTC?.close();
+      console.log('[LearnerSession] WebRTC closed and media access revoked');
     } catch (error) {
       console.error('[LearnerSession] Error closing WebRTC:', error);
     }
@@ -836,49 +845,49 @@ const LearnerSession = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="loading-container">
         <div className="session-loader"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="session-page">
       {/* Navigation / Header - Similar to Trainer */}
-      <div className="bg-slate-800 px-5 py-4 sticky top-0 z-[1000] shadow-md">
-        <div className="flex justify-between items-center">
+      <div className="session-header">
+        <div className="session-header-main">
           <div>
-            <div className="text-white text-lg font-bold mb-2">HurshBin Learner</div>
-            <div className="text-sm text-gray-400">
+            <div className="session-header-title">HurshBin Learner</div>
+            <div className="session-header-subtitle">
               {sessionInfo?.title ?? 'Training Session'} — Trainer : {sessionInfo?.trainer_name ?? 'Trainer'}
             </div>
           </div>
 
-          <div className="flex gap-3 items-center">
-            <div className="text-white text-sm">
+          <div className="session-header-controls">
+            <div className="session-header-info">
               Status: <strong>{connectionStatus}</strong>
             </div>
-            <div className="text-white text-sm">
+            <div className="session-header-info">
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
             <button
-              className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer text-sm hover:bg-green-700 transition-colors"
+              className="btn-session btn-session-end"
               onClick={() => navigate('/learner/dashboard')}
             >
               🏠 Dashboard
             </button>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer text-sm hover:bg-blue-600 transition-colors" onClick={() => console.log('[LearnerSession] Active')}>
+            <button className="btn-session btn-session-active" onClick={() => console.log('[LearnerSession] Active')}>
               Live
             </button>
           </div>
         </div>
       </div>
 
-      {/* Hamburger Menu Button - Mobile/Tablet Only */}
-      <div className="lg:hidden fixed top-20 left-4 z-[999]">
+      {/* Sidebar Toggles (Mobile Only) */}
+      <div className="session-sidebar-toggles">
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+          className="sidebar-toggle-button"
           aria-label="Toggle Sidebar"
         >
           {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
@@ -888,36 +897,31 @@ const LearnerSession = () => {
       {/* Overlay backdrop for mobile sidebar */}
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[998]"
+          className="sidebar-overlay"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Main Container */}
-      <div className="flex flex-col lg:flex-row flex-1" style={{ height: 'calc(100vh - 180px)' }}>
-        {/* Left Sidebar */}
-        <div className={`w-full lg:w-80 bg-white border-r border-gray-200 p-2 sm:p-4 overflow-y-auto order-2 lg:order-1 transition-transform duration-300 lg:transform-none ${isSidebarOpen
-            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0'
-            : 'lg:relative max-lg:fixed max-lg:-translate-x-full'
-          }`}>
+      {/* Main Container - Responsive 3-column layout */}
+      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
+        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
           {/* Video Conferencing */}
-          <div className="bg-slate-800 p-3 sm:p-4 rounded mb-4 text-white">
+          <div className="bg-slate-800 p-3 sm:p-4 md:p-5 rounded mb-4 md:mb-5 text-white">
             <div className="flex justify-between items-center">
-              <div className="text-xs sm:text-sm font-semibold">📹 Video Conferencing</div>
+              <div className="text-xs sm:text-sm md:text-base font-semibold">📹 Video Conferencing</div>
             </div>
-            <div className="mt-2 text-xs text-gray-400">
+            <div className="mt-2 text-xs sm:text-sm md:text-sm text-gray-400">
               Connected with: {sessionInfo?.trainer_name ?? '—'} | Session Time: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--:--'}
             </div>
-            <div className="flex justify-center items-start gap-2 sm:gap-5 w-full p-2 sm:p-3">
-              {/* Trainer video - remote */}
+            <div className="flex justify-center items-start gap-2 sm:gap-5 md:gap-6 w-full p-2 sm:p-3 md:p-4">
               <div className="flex-1 max-w-full flex flex-col">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs sm:text-sm text-slate-700 font-medium">Trainer's Video</span>
-                  <span className={`text-xs ${remoteStream ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className="text-xs sm:text-sm md:text-base text-slate-700 font-medium">Trainer's Video</span>
+                  <span className={`text-xs sm:text-xs md:text-sm ${remoteStream ? 'text-green-500' : 'text-red-500'}`}>
                     {remoteStream ? '● Connected' : '○ Waiting...'}
                   </span>
                 </div>
-                <div className="relative h-[150px] sm:h-[180px] md:h-[200px] overflow-hidden rounded-lg bg-black">
+                <div className="relative h-[150px] sm:h-[180px] md:h-[220px] lg:h-[240px] overflow-hidden rounded-lg bg-black">
                   <video
                     ref={remoteVideoRef}
                     autoPlay
@@ -931,74 +935,66 @@ const LearnerSession = () => {
                       Waiting for trainer to join...
                     </div>
                   )}
-
                 </div>
               </div>
             </div>
           </div>
-          {/* Prompt Line Box */}
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 sm:p-4 mb-4">
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setPromptVisible(!promptVisible);
-                    // Stop blinking when user clicks the eye
                     if (isEyeBlinking) setIsEyeBlinking(false);
                   }}
-                  className={`text-yellow-600 hover:text-yellow-800 transition-colors text-lg cursor-pointer hover:bg-yellow-200 rounded p-1 ${isEyeBlinking ? 'animate-eye-blink' : ''}`}
+                  className={`text-yellow-600 hover:text-yellow-800 transition-colors text-lg md:text-xl cursor-pointer hover:bg-yellow-200 rounded p-1 ${isEyeBlinking ? 'animate-eye-blink' : ''}`}
                   title={promptVisible ? 'Hide prompts' : 'Show prompts'}
                 >
                   👁
                 </button>
-                <h3 className="font-semibold text-gray-700">Prompt Line (For Prompter)</h3>
+                <h3 className="font-semibold text-sm md:text-base text-gray-700">Prompt Line (For Prompter)</h3>
               </div>
             </div>
             {promptVisible && (
-              <div className="bg-white border border-yellow-300 rounded p-2 sm:p-3 min-h-[60px] mb-2">
-                <p className="text-gray-700 text-xs sm:text-sm">{promptText}</p>
+              <div className="bg-white border border-yellow-300 rounded p-2 sm:p-3 md:p-4 min-h-[60px] mb-2">
+                <p className="text-gray-700 text-xs sm:text-sm md:text-base">{promptText}</p>
               </div>
             )}
-
           </div>
-
-          {/* Meter Values Display */}
-          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-4 mb-4">
+          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-blue-600">📊</span>
-              <h3 className="font-semibold text-xs sm:text-sm text-gray-700">Current Session Metrics</h3>
+              <span className="text-blue-600 text-lg md:text-xl">📊</span>
+              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700">Current Session Metrics</h3>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:gap-4">
-              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3">
-                <div className="text-xs text-gray-600 mb-1">Prompt <br /> Level</div>
-                <div className="text-base sm:text-lg font-bold text-blue-600">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
+              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3 md:p-4">
+                <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Prompt <br /> Level</div>
+                <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-600">
                   {promptMeter ?? 0}
                 </div>
               </div>
-              <div className="bg-white border border-green-300 rounded p-2 sm:p-3">
-                <div className="text-xs text-gray-600 mb-1">Reinforcement Level</div>
-                <div className="text-base sm:text-lg font-bold text-green-600">
+              <div className="bg-white border border-green-300 rounded p-2 sm:p-3 md:p-4">
+                <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Reinforcement Level</div>
+                <div className="text-base sm:text-lg md:text-2xl font-bold text-green-600">
                   {reinforcementMeter ?? 0}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Messages */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4">
-            <h3 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2">Messages</h3>
-            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 md:p-5">
+            <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700 mb-2">Messages</h3>
+            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto mb-2">
               {messages.length > 0 ? (
                 messages.map((msg, idx) => (
-                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs">
+                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs md:text-sm">
                     <strong className="text-gray-800">{msg.sender === 'You' ? 'Trainer' : msg.sender}:</strong>
                     <span className="text-gray-700"> {msg.text}</span>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-xs sm:text-sm font-semibold text-gray-600">Trainer:</p>
-                  <p className="text-xs text-gray-500">Great job on the last activity!</p>
+                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">Trainer:</p>
+                  <p className="text-xs sm:text-xs md:text-sm text-gray-500">Great job on the last activity!</p>
                 </div>
               )}
             </div>
@@ -1009,30 +1005,26 @@ const LearnerSession = () => {
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="[Type message...]"
-                className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
               />
               <button
                 onClick={sendMessage}
-                className="px-4 py-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 md:px-5 md:py-3 bg-blue-500 text-white text-xs md:text-sm rounded hover:bg-blue-600 transition-colors"
               >
                 Send
               </button>
             </div>
           </div>
         </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col relative order-1 lg:order-2">
-
-          {/* Interactive Learning Area - Whiteboard (Constrained for Learner) */}
-          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[501px]">
+        {/* Whiteboard Area */}
+        <div className="w-full responsive-whiteboard-section">
+          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
                 isTrainer={false}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
-                // Learner side should not force freeze — trainer controls freeze via tools
                 isFrozen={false}
                 isPaused={false}
                 toolAccess={toolAccess}
@@ -1042,11 +1034,9 @@ const LearnerSession = () => {
                 waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
                 onAnimationPop={handleAnimationPop}
-                // Canvas clear triggers
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
-                // Buckets and whiteboard settings
                 buckets={buckets}
                 setBuckets={setBuckets}
                 bucketColor={bucketColor}
@@ -1067,11 +1057,9 @@ const LearnerSession = () => {
               />
             </div>
           </div>
-
-          {/* Virtual Keyboard - Positioned below whiteboard */}
           {showKeyboard && (
             <div
-              className="bg-gradient-to-b from-sky-100 via-blue-100 to-cyan-100 border-4 border-sky-300 rounded-3xl p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none"
+              className="bg-gradient-to-b from-sky-100 via-blue-100 to-cyan-100 border-4 border-sky-300 rounded-3xl p-4 sm:p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-5"
               style={{
                 touchAction: 'none',
                 boxShadow: '0 10px 30px rgba(14, 165, 233, 0.15)'
@@ -1079,39 +1067,34 @@ const LearnerSession = () => {
               onMouseDown={handleKeyboardMouseDown}
               onTouchStart={handleKeyboardMouseDown}
             >
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl">🎹</span>
-                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 text-xl font-bold cursor-move">
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-3xl sm:text-4xl">🎹</span>
+                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 text-lg sm:text-xl font-bold cursor-move">
                     Magic Keyboard
                   </h4>
                 </div>
               </div>
-
-              {/* Text Display and Send Button */}
-              <div className="mb-5 flex gap-3 items-stretch">
-                <div className="flex-1 bg-white border-3 border-sky-200 rounded-2xl px-4 py-3 shadow-sm">
-                  <p className="text-base text-gray-700 font-medium whitespace-pre-wrap break-words min-h-[44px] flex items-center">
+              <div className="mb-4 sm:mb-5 flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch">
+                <div className="flex-1 bg-white border-3 border-sky-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
+                  <p className="text-sm sm:text-base text-gray-700 font-medium whitespace-pre-wrap break-words min-h-[44px] flex items-center">
                     {keyboardText || <span className="text-gray-400 italic">✨ Start typing...</span>}
                   </p>
                 </div>
                 <button
                   onClick={handleSendText}
-                  className="bg-gradient-to-br from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white px-6 py-3 rounded-2xl font-bold text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+                  className="bg-gradient-to-br from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-sm sm:text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
                 >
                   ✨ Send
                 </button>
               </div>
-
-              {/* Keyboard Keys Grid */}
-              <div className="bg-white bg-opacity-80 rounded-2xl p-5 shadow-md">
-                <div className="grid gap-3">
-                  {/* Row 1 */}
-                  <div className="grid grid-cols-10 gap-2">
+              <div className="bg-white bg-opacity-80 rounded-2xl p-3 sm:p-5 shadow-md">
+                <div className="grid gap-2 sm:gap-3">
+                  <div className="grid grid-cols-10 md:grid-cols-10 gap-1 sm:gap-2">
                     {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1122,13 +1105,11 @@ const LearnerSession = () => {
                       </button>
                     ))}
                   </div>
-
-                  {/* Row 2 */}
-                  <div className="grid grid-cols-10 gap-2 ml-3">
+                  <div className="grid grid-cols-9 md:grid-cols-9 gap-1 sm:gap-2 md:ml-3">
                     {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1139,13 +1120,11 @@ const LearnerSession = () => {
                       </button>
                     ))}
                   </div>
-
-                  {/* Row 3 */}
-                  <div className="grid grid-cols-10 gap-2 ml-6">
+                  <div className="grid grid-cols-7 md:grid-cols-7 gap-1 sm:gap-2 md:ml-6">
                     {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1156,11 +1135,9 @@ const LearnerSession = () => {
                       </button>
                     ))}
                   </div>
-
-                  {/* Bottom Row - Space and Backspace */}
-                  <div className="grid grid-cols-12 gap-2 mt-2">
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2 mt-2">
                     <button
-                      className="col-span-8 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                      className="col-span-7 sm:col-span-8 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
                       onClick={() => handleKeyboardKeyPress('SPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1170,7 +1147,7 @@ const LearnerSession = () => {
                       🌟 SPACE 🌟
                     </button>
                     <button
-                      className="col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-base flex items-center justify-center"
+                      className="col-span-5 sm:col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
                       onClick={() => handleKeyboardKeyPress('BACKSPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1184,8 +1161,6 @@ const LearnerSession = () => {
               </div>
             </div>
           )}
-
-          {/* Leave Session Button - Small at Bottom */}
           <div className="px-4 pb-4 flex justify-center">
             <button
               onClick={handleLeaveSession}

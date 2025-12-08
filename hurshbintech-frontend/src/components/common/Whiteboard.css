@@ -17,26 +17,57 @@
     flex: 1;
     width: 100%;
     height: 100%;
-    align-items: stretch;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 0;
     position: relative;
     min-height: 400px;
-    overflow: hidden;
+    overflow: auto;
+    flex-direction: column;
+    pointer-events: auto;
 }
 
 .whiteboard-split-video {
-    flex: 0 0 50%;
-    width: 50%;
-    height: 100%;
+    /* Fixed dimensions: 450px width, 300px height */
+    width: 450px;
+    height: 300px;
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     border-right: 2px solid var(--color-primary);
+    border-radius: 4px;
     padding: 0;
-    margin: 0;
+    margin: 0 auto 1rem auto;
     overflow: hidden;
+    flex: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive: Tablet screens (813px - 1366px) */
+@media (max-width: 1366px) {
+    .whiteboard-split-video {
+        width: 400px;
+        height: 280px;
+    }
+}
+
+/* Responsive: Small tablets (600px - 812px) */
+@media (max-width: 812px) {
+    .whiteboard-split-video {
+        width: 340px;
+        height: 240px;
+    }
+}
+
+/* Responsive: Mobile screens (max 599px) */
+@media (max-width: 599px) {
+    .whiteboard-split-video {
+        width: 100%;
+        max-width: 280px;
+        height: 180px;
+    }
 }
 
 .whiteboard-split-video video {
@@ -50,13 +81,14 @@
 }
 
 .whiteboard-split-canvas {
-    flex: 0 0 50%;
-    width: 50%;
+    flex: 1;
+    width: 100%;
     height: 100%;
     position: relative;
     padding: 0;
     margin: 0;
     overflow: hidden;
+    pointer-events: auto;
 }
 
 .whiteboard-full-canvas {
@@ -67,6 +99,7 @@
     padding: 0;
     margin: 0;
     overflow: hidden;
+    pointer-events: auto;
 }
 
 .whiteboard-split-canvas .canvas-container {
@@ -107,6 +140,7 @@
     height: 100%;
     position: relative;
     overflow: hidden;
+    pointer-events: auto;
 }
 
 .whiteboard {
@@ -117,6 +151,7 @@
     border-radius: var(--radius-md);
     touch-action: none;
     cursor: crosshair;
+    pointer-events: auto;
 }
 
 /* Fade-in animation for text messages */
@@ -1610,29 +1645,31 @@ input[type="range"]::-webkit-slider-thumb {
    RESPONSIVE BREAKPOINTS - Whiteboard Specific Styles
    ============================================================================ */
 
-/* TABLET LANDSCAPE (813px - 1366px) */
-@media (min-width: 813px) and (max-width: 1366px) {
+/* ============================================================================
+   TABLET AND DESKTOP RESPONSIVE STYLES (min-width: 813px)
+   ============================================================================ */
+@media (min-width: 813px) {
     .whiteboard-main-wrapper {
-        min-height: 350px;
+        min-height: 500px;
     }
 
     .whiteboard {
-        min-height: 350px;
+        min-height: 400px;
     }
 
     .toolbar {
-        padding: 0.4rem;
-        gap: 0.3rem;
+        padding: 0.625rem;
+        gap: 0.625rem;
     }
 
     .tool-btn {
-        min-width: 40px;
-        min-height: 40px;
-        padding: 0.3rem;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.625rem;
     }
 
     .brush-size-slider {
-        min-width: 100px;
+        min-width: 120px;
         height: 6px;
     }
 
@@ -1647,32 +1684,32 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     input[type="color"] {
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
     }
 
     .floating-animation {
-        font-size: 60px;
+        font-size: 70px;
     }
 
     .popped-emoji {
-        font-size: 75px;
+        font-size: 80px;
     }
 
     .feedback-bubble {
-        font-size: 32px;
-        padding: 20px 30px;
+        font-size: 38px;
+        padding: 28px 40px;
     }
 
     .waiting-bubble {
-        font-size: 24px;
-        padding: 20px 30px;
+        font-size: 28px;
+        padding: 28px 40px;
     }
 
     .timer-display,
     .stopwatch-display {
-        font-size: 36px;
-        padding: 16px 32px;
+        font-size: 42px;
+        padding: 20px 40px;
     }
 }
 
@@ -1798,5 +1835,970 @@ input[type="range"]::-webkit-slider-thumb {
 
     .wait-text {
         font-size: 16px;
+    }
+}
+
+/* ============================================================================
+   ADDITIONAL UTILITY STYLES FOR OVERLAYS AND INDICATORS
+   ============================================================================ */
+
+/* Stopwatch overlay (top-right corner) */
+.stopwatch-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+}
+
+.stopwatch-overlay-inner {
+    background-color: #111827;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f97316;
+}
+
+.stopwatch-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stopwatch-time {
+    font-size: 0.875rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: bold;
+    letter-spacing: 0.025em;
+}
+
+.stopwatch-indicator {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #4ade80;
+    border-radius: 9999px;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Text messages display (top center) */
+.text-messages-container {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.text-message {
+    background-color: #2563eb;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: fadeIn 0.3s ease-out;
+    border: 2px solid #60a5fa;
+    opacity: 0.95;
+}
+
+.text-message-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.text-message-body {
+    flex: 1;
+    text-align: center;
+}
+
+.text-message-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.text-message-icon {
+    font-size: 1.5rem;
+}
+
+.text-message-sender {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.text-message-text {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.625;
+}
+
+.text-message-close {
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: bold;
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.text-message-close:hover {
+    color: #fecaca;
+}
+
+/* PDF overlay content */
+.pdf-overlay-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #f3f4f6, #e5e7eb);
+}
+
+.pdf-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.pdf-filename {
+    text-align: center;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pdf-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+/* Selection indicators */
+.selection-indicator {
+    position: absolute;
+    top: -1.5rem;
+    left: 0;
+    color: #22c55e;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+/* Video close button */
+.video-close-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    z-index: 30;
+}
+
+.video-close-button:hover {
+    background-color: #dc2626;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 1rem;
+    height: 1rem;
+    background-color: #3b82f6;
+    border: 2px solid white;
+    cursor: se-resize;
+}
+
+/* Delete buttons for items */
+.item-delete-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+}
+
+.item-delete-button:hover {
+    background-color: #dc2626;
+}
+
+/* Bucket label */
+.bucket-label {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bucket-input {
+    color: white;
+    padding: 0 0.25rem;
+    border: none;
+    outline: none;
+    width: 6rem;
+    text-align: center;
+    font-size: 0.75rem;
+    background: transparent;
+}
+
+.bucket-close-button {
+    color: white;
+    font-size: 1.125rem;
+    line-height: 1;
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.bucket-close-button:hover {
+    color: #fecaca;
+}
+
+.bucket-color-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 2px solid white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Utility classes */
+.absolute {
+    position: absolute;
+}
+
+.group {
+    /* Group class for hover effects - handled by CSS */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================================
+   COMPREHENSIVE RESPONSIVE STYLES FOR WHITEBOARD
+   Mobile: max-width 812px
+   Tablet: 813px - 1366px
+   Desktop: min-width 1367px
+   ============================================================================ */
+
+/* ============================================================================
+   MOBILE RESPONSIVE STYLES (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
+
+    /* Whiteboard container and main wrapper */
+    .whiteboard-container {
+        min-height: 280px;
+    }
+
+    .whiteboard-main-wrapper {
+        min-height: 280px;
+        flex-direction: column;
+    }
+
+    /* Video split view - stack vertically on mobile */
+    .whiteboard-split-video {
+        flex: 0 0 40%;
+        width: 100%;
+        height: 40%;
+        border-right: none;
+        border-bottom: 2px solid var(--color-primary);
+    }
+
+    .whiteboard-split-canvas {
+        flex: 0 0 60%;
+        width: 100%;
+        height: 60%;
+    }
+
+    .whiteboard {
+        min-height: 200px;
+        border-radius: var(--radius-sm);
+    }
+
+    /* Toolbar adjustments for mobile */
+    .toolbar {
+        padding: 0.375rem;
+        gap: 0.375rem;
+        flex-wrap: wrap;
+    }
+
+    .tool-btn {
+        padding: 0.375rem;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 0.875rem;
+    }
+
+    input[type="color"] {
+        width: 36px;
+        height: 36px;
+    }
+
+    input[type="range"] {
+        width: 80px;
+    }
+
+    /* Text messages and overlays */
+    .text-message-overlay {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        max-width: 90%;
+        border-radius: 0.5rem;
+    }
+
+    .text-message-text {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+
+    .text-message-close {
+        font-size: 1.25rem;
+        padding: 0 0.375rem;
+    }
+
+    /* Feedback and waiting bubbles */
+    .feedback-bubble {
+        font-size: 24px;
+        padding: 16px 24px;
+        border-radius: 16px;
+        max-width: 85%;
+    }
+
+    .waiting-bubble {
+        font-size: 20px;
+        padding: 14px 20px;
+        border-radius: 14px;
+        max-width: 85%;
+        gap: 10px;
+    }
+
+    .waiting-spinner {
+        width: 18px;
+        height: 18px;
+        border-width: 2px;
+    }
+
+    /* Floating animations */
+    .floating-animation {
+        font-size: 50px;
+    }
+
+    .popped-animation {
+        font-size: 60px;
+    }
+
+    /* Canvas items - images, videos, PDFs */
+    .canvas-item {
+        min-width: 80px !important;
+        min-height: 80px !important;
+    }
+
+    .canvas-item img,
+    .canvas-item video {
+        max-width: 100%;
+        max-height: 200px;
+    }
+
+    /* Delete and resize buttons */
+    .item-delete-button,
+    .video-close-button {
+        width: 1.25rem;
+        height: 1.25rem;
+        font-size: 0.75rem;
+    }
+
+    .resize-handle {
+        width: 0.875rem;
+        height: 0.875rem;
+    }
+
+    /* PDF overlay */
+    .pdf-overlay-content {
+        padding: 0.5rem;
+    }
+
+    .pdf-icon {
+        font-size: 2rem;
+    }
+
+    .pdf-filename {
+        font-size: 0.75rem;
+    }
+
+    .pdf-hint {
+        font-size: 0.65rem;
+    }
+
+    /* Bucket styling */
+    .bucket-label {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.65rem;
+        gap: 0.375rem;
+    }
+
+    .bucket-input {
+        width: 4rem;
+        font-size: 0.65rem;
+    }
+
+    .bucket-close-button {
+        font-size: 1rem;
+    }
+
+    .bucket-color-indicator {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    /* Confetti and sprinkles */
+    .confetti-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .star-sprinkles {
+        width: 200px;
+        height: 200px;
+    }
+
+    .sprinkle {
+        font-size: 24px;
+    }
+
+    /* Stopwatch display */
+    .stopwatch-display {
+        font-size: 1.5rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Fill in blanks exercise */
+    .fill-blanks-container {
+        padding: 0.75rem;
+        max-width: 95%;
+    }
+
+    .fill-blanks-question {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .fill-blanks-input {
+        font-size: 0.875rem;
+        padding: 0.375rem;
+        min-width: 60px;
+    }
+
+    .fill-blanks-submit {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ============================================================================
+   TABLET AND DESKTOP RESPONSIVE STYLES (min-width: 813px)
+   ============================================================================ */
+@media (min-width: 813px) {
+
+    /* Whiteboard container */
+    .whiteboard-container {
+        min-height: 500px;
+    }
+
+    .whiteboard-main-wrapper {
+        min-height: 500px;
+    }
+
+    /* Video split view - side by side */
+    .whiteboard-split-video {
+        flex: 0 0 50%;
+        width: 50%;
+    }
+
+    .whiteboard-split-canvas {
+        flex: 0 0 50%;
+        width: 50%;
+    }
+
+    .whiteboard {
+        min-height: 400px;
+    }
+
+    /* Toolbar */
+    .toolbar {
+        padding: 0.625rem;
+        gap: 0.625rem;
+    }
+
+    .tool-btn {
+        padding: 0.625rem;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.125rem;
+    }
+
+    input[type="color"] {
+        width: 44px;
+        height: 44px;
+    }
+
+    input[type="range"] {
+        width: 120px;
+    }
+
+    /* Text messages */
+    .text-message-overlay {
+        padding: 1rem;
+        font-size: 1.125rem;
+        max-width: 70%;
+    }
+
+    .text-message-text {
+        font-size: 1rem;
+        line-height: 1.625;
+    }
+
+    .text-message-close {
+        font-size: 1.5rem;
+        padding: 0 0.5rem;
+    }
+
+    /* Feedback and waiting bubbles */
+    .feedback-bubble {
+        font-size: 38px;
+        padding: 28px 40px;
+        border-radius: 22px;
+        max-width: 60%;
+    }
+
+    .waiting-bubble {
+        font-size: 28px;
+        padding: 28px 40px;
+        border-radius: 22px;
+        max-width: 60%;
+        gap: 16px;
+    }
+
+    .waiting-spinner {
+        width: 24px;
+        height: 24px;
+        border-width: 3px;
+    }
+
+    /* Floating animations */
+    .floating-animation {
+        font-size: 70px;
+    }
+
+    .popped-animation {
+        font-size: 80px;
+    }
+
+    /* Canvas items */
+    .canvas-item {
+        min-width: 120px !important;
+        min-height: 120px !important;
+    }
+
+    .canvas-item img,
+    .canvas-item video {
+        max-width: 100%;
+        max-height: 400px;
+    }
+
+    /* Delete and resize buttons */
+    .item-delete-button,
+    .video-close-button {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 1rem;
+    }
+
+    .resize-handle {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    /* PDF overlay */
+    .pdf-overlay-content {
+        padding: 1rem;
+    }
+
+    .pdf-icon {
+        font-size: 3rem;
+    }
+
+    .pdf-filename {
+        font-size: 1rem;
+    }
+
+    .pdf-hint {
+        font-size: 0.875rem;
+    }
+
+    /* Bucket styling */
+    .bucket-label {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        gap: 0.625rem;
+    }
+
+    .bucket-input {
+        width: 7rem;
+        font-size: 0.875rem;
+    }
+
+    .bucket-close-button {
+        font-size: 1.125rem;
+    }
+
+    .bucket-color-indicator {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    /* Confetti and sprinkles */
+    .confetti-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .star-sprinkles {
+        width: 300px;
+        height: 300px;
+    }
+
+    .sprinkle {
+        font-size: 40px;
+    }
+
+    /* Stopwatch display */
+    .stopwatch-display {
+        font-size: 2.5rem;
+        padding: 1rem 1.5rem;
+    }
+
+    /* Fill in blanks exercise */
+    .fill-blanks-container {
+        padding: 1.25rem;
+        max-width: 70%;
+    }
+
+    .fill-blanks-question {
+        font-size: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .fill-blanks-input {
+        font-size: 1.125rem;
+        padding: 0.625rem;
+        min-width: 100px;
+    }
+
+    .fill-blanks-submit {
+        padding: 0.625rem 1.25rem;
+        font-size: 1.125rem;
+    }
+}
+
+/* ============================================================================
+   DESKTOP RESPONSIVE STYLES (min-width: 1367px)
+   ============================================================================ */
+@media (min-width: 1367px) {
+
+    /* Whiteboard container - optimal desktop size */
+    .whiteboard-container {
+        min-height: 500px;
+    }
+
+    .whiteboard-main-wrapper {
+        min-height: 500px;
+    }
+
+    /* Video split view - balanced 50/50 split */
+    .whiteboard-split-video {
+        flex: 0 0 50%;
+        width: 50%;
+    }
+
+    .whiteboard-split-canvas {
+        flex: 0 0 50%;
+        width: 50%;
+    }
+
+    .whiteboard {
+        min-height: 400px;
+    }
+
+    /* Toolbar - full size for desktop */
+    .toolbar {
+        padding: 0.625rem;
+        gap: 0.625rem;
+    }
+
+    .tool-btn {
+        padding: 0.625rem;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.125rem;
+    }
+
+    input[type="color"] {
+        width: 44px;
+        height: 44px;
+    }
+
+    input[type="range"] {
+        width: 120px;
+    }
+
+    /* Text messages - full size */
+    .text-message-overlay {
+        padding: 1rem;
+        font-size: 1.125rem;
+        max-width: 70%;
+    }
+
+    .text-message-text {
+        font-size: 1rem;
+        line-height: 1.625;
+    }
+
+    .text-message-close {
+        font-size: 1.5rem;
+        padding: 0 0.5rem;
+    }
+
+    /* Feedback and waiting bubbles - full size */
+    .feedback-bubble {
+        font-size: 38px;
+        padding: 28px 40px;
+        border-radius: 22px;
+        max-width: 60%;
+    }
+
+    .waiting-bubble {
+        font-size: 28px;
+        padding: 28px 40px;
+        border-radius: 22px;
+        max-width: 60%;
+        gap: 16px;
+    }
+
+    .waiting-spinner {
+        width: 24px;
+        height: 24px;
+        border-width: 3px;
+    }
+
+    /* Floating animations - full size */
+    .floating-animation {
+        font-size: 70px;
+    }
+
+    .popped-animation {
+        font-size: 80px;
+    }
+
+    /* Canvas items - optimal desktop size */
+    .canvas-item {
+        min-width: 120px !important;
+        min-height: 120px !important;
+    }
+
+    .canvas-item img,
+    .canvas-item video {
+        max-width: 100%;
+        max-height: 400px;
+    }
+
+    /* Delete and resize buttons - full size */
+    .item-delete-button,
+    .video-close-button {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 1rem;
+    }
+
+    .resize-handle {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* PDF overlay */
+    .pdf-overlay-content {
+        padding: 1rem;
+    }
+
+    .pdf-icon {
+        font-size: 3rem;
+    }
+
+    .pdf-filename {
+        font-size: 0.875rem;
+    }
+
+    .pdf-hint {
+        font-size: 0.75rem;
+    }
+
+    /* Bucket styling - full size */
+    .bucket-label {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .bucket-input {
+        width: 6rem;
+        font-size: 0.75rem;
+    }
+
+    .bucket-close-button {
+        font-size: 1.125rem;
+    }
+
+    .bucket-color-indicator {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    /* Confetti and sprinkles - full size */
+    .confetti-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .star-sprinkles {
+        width: 300px;
+        height: 300px;
+    }
+
+    .sprinkle {
+        font-size: 36px;
+    }
+
+    /* Stopwatch display */
+    .stopwatch-display {
+        font-size: 2.5rem;
+        padding: 0.75rem 1.5rem;
+    }
+
+    /* Fill in blanks exercise */
+    .fill-blanks-container {
+        padding: 1.5rem;
+        max-width: 70%;
+    }
+
+    .fill-blanks-question {
+        font-size: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .fill-blanks-input {
+        font-size: 1.125rem;
+        padding: 0.625rem;
+        min-width: 100px;
+    }
+
+    .fill-blanks-submit {
+        padding: 0.625rem 1.25rem;
+        font-size: 1.125rem;
+    }
+}
+
+/* ============================================================================
+   TOUCH AND INTERACTION OPTIMIZATIONS
+   ============================================================================ */
+
+/* Improve touch target sizes on mobile */
+@media (max-width: 812px) and (hover: none) and (pointer: coarse) {
+
+    .tool-btn,
+    .item-delete-button,
+    .video-close-button,
+    .bucket-close-button,
+    .text-message-close,
+    .fill-blanks-submit {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Better touch feedback */
+    .tool-btn:active,
+    .floating-animation:active {
+        opacity: 0.7;
+    }
+}
+
+/* Hover effects only on devices that support hover */
+@media (hover: hover) and (pointer: fine) {
+    .tool-btn:hover {
+        transform: scale(1.05);
+    }
+
+    .floating-animation:hover {
+        transform: scale(1.1);
+    }
+
+    .item-delete-button:hover,
+    .video-close-button:hover {
+        transform: scale(1.1);
     }
 }

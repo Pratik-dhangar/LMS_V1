@@ -333,6 +333,15 @@ class SimpleWebRTC {
           }
           break;
 
+        case 'ping':
+          // Respond to server heartbeat ping with pong
+          this.send({
+            type: 'pong',
+            timestamp: new Date().toISOString()
+          });
+          console.debug(`[SimpleWebRTC][${this.role}] Responded to ping with pong`);
+          break;
+
         default:
           console.log(`[SimpleWebRTC][${this.role}] Unknown message type:`, message.type);
       }
@@ -594,24 +603,31 @@ class SimpleWebRTC {
    * Close connection and cleanup
    */
   close() {
-    console.log(`[SimpleWebRTC][${this.role}] Closing connection...`);
+    console.log(`[SimpleWebRTC][${this.role}] Closing connection and revoking media access...`);
 
-    // Stop local stream
+    // Stop all local media tracks (camera, microphone, etc.)
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[SimpleWebRTC][${this.role}] Stopped ${track.kind} track`);
+      });
+      this.localStream = null;
     }
 
     // Close peer connection
     if (this.pc) {
       this.pc.close();
+      this.pc = null;
     }
 
     // Close WebSocket
     if (this.ws) {
       this.ws.close();
+      this.ws = null;
     }
 
-    console.log(`[SimpleWebRTC][${this.role}] Connection closed`);
+    this.isInitialized = false;
+    console.log(`[SimpleWebRTC][${this.role}] Connection closed and media access revoked`);
   }
 }
 

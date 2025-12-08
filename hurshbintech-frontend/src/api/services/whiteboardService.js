@@ -184,6 +184,15 @@ class WhiteboardService {
                     }
                     break;
 
+                case 'ping':
+                    // Respond to server heartbeat ping with pong
+                    this.ws.send(JSON.stringify({
+                        type: 'pong',
+                        timestamp: new Date().toISOString()
+                    }));
+                    console.debug('[WhiteboardService] Responded to ping with pong');
+                    break;
+
                 default:
                     // Unknown message type — silently ignore
                     break;

@@ -1,0 +1,80 @@
+/* ChecklistField Component Styles */
+
+.checklist-field {
+  margin-bottom: 1.5rem;
+}
+
+.checklist-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.checklist-required {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+.checklist-container {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+}
+
+.checklist-container.error {
+  border-color: #ef4444;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .checklist-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.checklist-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  transition: background-color 0.2s;
+}
+
+.checklist-option:hover {
+  background-color: white;
+}
+
+.checklist-checkbox {
+  width: 1rem;
+  height: 1rem;
+  color: #2563eb;
+  border-color: #d1d5db;
+  border-radius: 0.25rem;
+}
+
+.checklist-checkbox:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.checklist-option-text {
+  font-size: 0.875rem;
+  color: #374151;
+  user-select: none;
+}
+
+.checklist-error {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #dc2626;
+}

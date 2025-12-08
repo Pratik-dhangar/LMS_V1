@@ -1,5 +1,6 @@
 import React from 'react';
 import Whiteboard from '../../components/common/Whiteboard';
+import '../../styles/Pages.css';
 
 const WhiteboardSection = ({
   whiteboardService,

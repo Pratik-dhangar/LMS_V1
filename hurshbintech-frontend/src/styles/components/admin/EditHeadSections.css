@@ -1,0 +1,20 @@
+/* Admin EditHead Section Styles */
+
+.edit-head-section {
+  margin-bottom: 2rem;
+}
+
+.edit-head-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.edit-head-section-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}

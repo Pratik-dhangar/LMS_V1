@@ -1,87 +1,88 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const MedicalHistorySection = ({ formData, handleChange }) => {
   const RadioGroup = ({ label, name, value }) => (
-    <div className="flex items-center gap-6 mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-0 flex-1">{label}</label>
-      <div className="flex items-center gap-4">
-        <label className="flex items-center cursor-pointer">
+    <div className="register-radio-group">
+      <label className="register-radio-label">{label}</label>
+      <div className="register-radio-options">
+        <label className="register-radio-option">
           <input
             type="radio"
             name={name}
             value="true"
             checked={value === true}
             onChange={handleChange}
-            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            className="register-radio-input"
           />
-          <span className="ml-2 text-sm text-gray-700">Yes</span>
+          <span className="register-radio-text">Yes</span>
         </label>
-        <label className="flex items-center cursor-pointer">
+        <label className="register-radio-option">
           <input
             type="radio"
             name={name}
             value="false"
             checked={value === false}
             onChange={handleChange}
-            className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            className="register-radio-input"
           />
-          <span className="ml-2 text-sm text-gray-700">No</span>
+          <span className="register-radio-text">No</span>
         </label>
       </div>
     </div>
   );
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         Medical History
       </h2>
-      
-      <RadioGroup 
-        label="Did the baby scream as a baby?" 
-        name="screamed_as_baby" 
-        value={formData.screamed_as_baby} 
+
+      <RadioGroup
+        label="Did the baby scream as a baby?"
+        name="screamed_as_baby"
+        value={formData.screamed_as_baby}
       />
 
-      <RadioGroup 
-        label="Did the baby have a difficult sleep pattern?" 
-        name="difficult_sleep_pattern" 
-        value={formData.difficult_sleep_pattern} 
+      <RadioGroup
+        label="Did the baby have a difficult sleep pattern?"
+        name="difficult_sleep_pattern"
+        value={formData.difficult_sleep_pattern}
       />
 
-      <RadioGroup 
-        label="Did the baby display struggle in changing the routines?" 
-        name="struggled_changing_routines" 
-        value={formData.struggled_changing_routines} 
+      <RadioGroup
+        label="Did the baby display struggle in changing the routines?"
+        name="struggled_changing_routines"
+        value={formData.struggled_changing_routines}
       />
 
-      <RadioGroup 
-        label="Did the baby display difficulties while shifting food habits?" 
-        name="difficulties_shifting_food" 
-        value={formData.difficulties_shifting_food} 
+      <RadioGroup
+        label="Did the baby display difficulties while shifting food habits?"
+        name="difficulties_shifting_food"
+        value={formData.difficulties_shifting_food}
       />
 
-      <RadioGroup 
-        label="Did the baby achieve physical milestones at the right age?" 
-        name="physical_milestones_achieved" 
-        value={formData.physical_milestones_achieved} 
+      <RadioGroup
+        label="Did the baby achieve physical milestones at the right age?"
+        name="physical_milestones_achieved"
+        value={formData.physical_milestones_achieved}
       />
 
-      <RadioGroup 
-        label="Did the baby vocal/language milestones at the right age?" 
-        name="vocal_language_milestones_achieved" 
-        value={formData.vocal_language_milestones_achieved} 
+      <RadioGroup
+        label="Did the baby vocal/language milestones at the right age?"
+        name="vocal_language_milestones_achieved"
+        value={formData.vocal_language_milestones_achieved}
       />
 
-      <RadioGroup 
-        label="Did the baby have any major illness/hospitalization in early developmental years?" 
-        name="major_illness_hospitalization" 
-        value={formData.major_illness_hospitalization} 
+      <RadioGroup
+        label="Did the baby have any major illness/hospitalization in early developmental years?"
+        name="major_illness_hospitalization"
+        value={formData.major_illness_hospitalization}
       />
 
       {formData.major_illness_hospitalization === true && (
-        <div className="ml-8 mb-4">
-          <label htmlFor="major_illness_details" className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="register-conditional-field">
+          <label htmlFor="major_illness_details" className="register-field-label">
             If yes, mention details:
           </label>
           <textarea
@@ -90,14 +91,14 @@ const MedicalHistorySection = ({ formData, handleChange }) => {
             value={formData.major_illness_details}
             onChange={handleChange}
             rows="3"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="register-textarea"
             placeholder="Enter illness/hospitalization details..."
           />
         </div>
       )}
 
-      <div className="mt-6">
-        <label htmlFor="specific_medical_details" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="specific_medical_details" className="register-field-label">
           Please mention specific medical details if any:
         </label>
         <textarea
@@ -106,7 +107,7 @@ const MedicalHistorySection = ({ formData, handleChange }) => {
           value={formData.specific_medical_details}
           onChange={handleChange}
           rows="4"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Enter any specific medical details..."
         />
       </div>

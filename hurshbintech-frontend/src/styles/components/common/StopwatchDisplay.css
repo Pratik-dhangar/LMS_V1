@@ -1,0 +1,384 @@
+/* StopwatchDisplay.css - Modern Purple Design */
+
+/* Base container styles */
+.stopwatch-display {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25);
+    color: #ffffff;
+}
+
+.stopwatch-display.compact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Size variants for containers */
+.stopwatch-display.size-sm {
+    padding: 0.5rem;
+}
+
+.stopwatch-display.size-md {
+    padding: 1rem;
+}
+
+.stopwatch-display.size-lg {
+    padding: 1.5rem;
+}
+
+/* Header section */
+.stopwatch-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.stopwatch-title {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.stopwatch-title.size-sm {
+    font-size: 0.75rem;
+}
+
+.stopwatch-title.size-md {
+    font-size: 0.875rem;
+}
+
+.stopwatch-title.size-lg {
+    font-size: 1rem;
+}
+
+/* Status indicator */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-dot.running {
+    background-color: #22c55e;
+}
+
+.status-dot.running-compact {
+    background-color: #ef4444;
+}
+
+.status-text {
+    font-weight: 500;
+}
+
+.status-text.running {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.status-text.running-compact {
+    color: #ef4444;
+    font-size: 0.625rem;
+}
+
+.status-text.size-sm {
+    font-size: 0.75rem;
+}
+
+.status-text.size-md {
+    font-size: 0.875rem;
+}
+
+.status-text.size-lg {
+    font-size: 1rem;
+}
+
+/* Time display in compact mode */
+.stopwatch-time-compact {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.stopwatch-time-compact.size-sm {
+    font-size: 1.25rem;
+}
+
+.stopwatch-time-compact.size-md {
+    font-size: 1.875rem;
+}
+
+.stopwatch-time-compact.size-lg {
+    font-size: 3rem;
+}
+
+/* Time breakdown grid */
+.time-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.time-unit {
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.time-unit.hours {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.time-unit.minutes {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.time-unit.seconds {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.time-unit-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: bold;
+}
+
+.time-unit-value.hours {
+    color: #ffffff;
+}
+
+.time-unit-value.minutes {
+    color: #ffffff;
+}
+
+.time-unit-value.seconds {
+    color: #ffffff;
+}
+
+.time-unit-value.size-sm {
+    font-size: 1.25rem;
+}
+
+.time-unit-value.size-md {
+    font-size: 1.875rem;
+}
+
+.time-unit-value.size-lg {
+    font-size: 3rem;
+}
+
+.time-unit-label {
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.time-unit-label.size-sm {
+    font-size: 0.625rem;
+}
+
+.time-unit-label.size-md {
+    font-size: 0.75rem;
+}
+
+.time-unit-label.size-lg {
+    font-size: 0.875rem;
+}
+
+/* Set time form */
+.set-time-form {
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.set-time-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+}
+
+.set-time-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.set-time-input-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: #4b5563;
+    margin-bottom: 0.25rem;
+}
+
+.set-time-input-group input {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.set-time-input-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.set-time-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Control buttons */
+.control-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.control-button {
+    flex: 1;
+    min-width: 80px;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.control-button.size-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.control-button.size-md {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.control-button.size-lg {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+}
+
+.control-button.start {
+    background-color: #22c55e;
+    color: white;
+}
+
+.control-button.start:hover {
+    background-color: #16a34a;
+}
+
+.control-button.pause {
+    background-color: #eab308;
+    color: white;
+}
+
+.control-button.pause:hover {
+    background-color: #ca8a04;
+}
+
+.control-button.resume {
+    background-color: #22c55e;
+    color: white;
+}
+
+.control-button.resume:hover {
+    background-color: #16a34a;
+}
+
+.control-button.reset {
+    background-color: #ef4444;
+    color: white;
+}
+
+.control-button.reset:hover {
+    background-color: #dc2626;
+}
+
+.control-button.set-time {
+    background-color: #6366f1;
+    color: white;
+}
+
+.control-button.set-time:hover {
+    background-color: #4f46e5;
+}
+
+.control-button.set-time.active {
+    background-color: #4338ca;
+}
+
+.control-button.set-time.active:hover {
+    background-color: #3730a3;
+}
+
+.control-button.set-confirm {
+    flex: 1;
+    background-color: #3b82f6;
+    color: white;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.control-button.set-confirm:hover {
+    background-color: #2563eb;
+}
+
+.control-button.set-cancel {
+    flex: 1;
+    background-color: #9ca3af;
+    color: white;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.control-button.set-cancel:hover {
+    background-color: #6b7280;
+}
+
+/* Animations */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}

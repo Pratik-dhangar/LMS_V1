@@ -21,6 +21,7 @@ import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import useMessages from '../../hooks/useMessages';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
+import { useMediaControl } from '../../context/MediaControlContext';
 import VideoSection from './VideoSection';
 import WhiteboardSection from './WhiteboardSection';
 import LearningProgramSidebar from './LearningProgramSidebar';
@@ -28,6 +29,8 @@ import LearningContentSidebar from './LearningContentSidebar';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import { exerciseTemplates } from '../../utils/fillInBlanksTemplates';
 import FillBlanksCreator from '../../components/common/FillBlanksCreator';
+import '../../styles/Pages.css';
+
 
 // -------------------------------------------------------------
 // 🔹 Purpose: TrainerSession component
@@ -199,6 +202,23 @@ const TrainerSession = () => {
   const stopwatch = useStopwatch();
   const lastSyncTimeRef = useRef(0);
   const [showStopwatch, setShowStopwatch] = useState(false);
+  const mediaControl = useMediaControl();
+  const mediaWasVisibleRef = useRef(false);
+
+  // 🔹 Purpose: Auto-show stopwatch when learning content ends
+  // 🔸 How it works: watches mediaControl.currentMedia.isVisible and triggers stopwatch when content closes
+  useEffect(() => {
+    if (mediaControl.currentMedia.isVisible) {
+      mediaWasVisibleRef.current = true;
+    } else if (mediaWasVisibleRef.current && !mediaControl.currentMedia.isVisible) {
+      // Content just closed - auto-show stopwatch
+      console.log('[TrainerSession] Content ended - auto-showing stopwatch');
+      setShowStopwatch(true);
+      // Optionally auto-start the stopwatch
+      // stopwatch.start();
+      mediaWasVisibleRef.current = false;
+    }
+  }, [mediaControl.currentMedia.isVisible]);
 
   // Send stopwatch updates to learner via whiteboard service (throttled to 100ms)
   useEffect(() => {
@@ -666,8 +686,16 @@ const TrainerSession = () => {
   // 🔸 How it works: calls service-specific teardown methods to release media and sockets
   // -----------------------------------------------------------
   const cleanup = () => {
+    // Stop all media tracks (camera and microphone) - revoke media access
+    if (webRTC?.localStream) {
+      webRTC.localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[TrainerSession] Stopped ${track.kind} track`);
+      });
+    }
     if (webRTC) {
       webRTC.close();
+      console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
     if (whiteboardService) {
       whiteboardService.close();
@@ -1499,41 +1527,41 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="loading-container">
         <div className="session-loader"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-full">
+    <div className="session-page">
       {/* Navigation / Header */}
-      <div className="bg-slate-800 px-3 sm:px-5 py-3 sm:py-4 sticky top-0 z-[1000] shadow-md">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="session-header">
+        <div className="session-header-main">
           <div>
-            <div className="text-white text-base sm:text-lg font-bold mb-1 sm:mb-2">HurshBin Trainer</div>
-            <div className="text-xs sm:text-sm text-gray-400">
+            <div className="session-header-title">HurshBin Trainer</div>
+            <div className="session-header-subtitle">
               {sessionInfo?.title ?? 'Training Session'} — Learner : {sessionInfo?.learner_name ?? 'Learner'}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3 items-center w-full sm:w-auto">
-            <div className="text-white text-xs sm:text-sm">
+          <div className="session-header-controls">
+            <div className="session-header-info">
               Status: <strong>{connectionStatus}</strong>
             </div>
-            <div className="text-white text-xs sm:text-sm">
+            <div className="session-header-info">
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
             <button
-              className="bg-green-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-green-700 transition-colors"
+              className="btn-session btn-session-end"
               onClick={() => navigate('/trainer/dashboard')}
             >
               🏠 Dashboard
             </button>
-            <button className="bg-slate-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-slate-600 transition-colors" onClick={() => console.log('[TrainerSession] Open settings')}>
+            <button className="btn-session btn-session-settings" onClick={() => console.log('[TrainerSession] Open settings')}>
               ⚙️ Settings
             </button>
-            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded cursor-pointer text-xs sm:text-sm hover:bg-blue-600 transition-colors" onClick={() => console.log('[TrainerSession] Active')}>
+            <button className="btn-session btn-session-active" onClick={() => console.log('[TrainerSession] Active')}>
               Live
             </button>
           </div>
@@ -1543,8 +1571,8 @@ const TrainerSession = () => {
 
       {/* Info bar - Auto-hide after 5 seconds */}
       {showInfoBar && (
-        <div className="bg-yellow-100 border border-yellow-400 p-2 sm:p-3 rounded mt-2 sm:mt-4 mx-2 sm:mx-4 flex justify-between items-center">
-          <span className="text-xs sm:text-sm"><strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to learner).</span>
+        <div className="session-info-banner">
+          <span className="session-info-text"><strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to learner).</span>
           <button
             onClick={() => setShowInfoBar(false)}
             className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-2 sm:ml-4"
@@ -1555,28 +1583,28 @@ const TrainerSession = () => {
         </div>
       )}
 
-      {/* Hamburger Menu Buttons - Mobile/Tablet Only */}
-      <div className="lg:hidden fixed top-20 left-4 right-4 z-[999] flex justify-between pointer-events-none">
+      {/* Hamburger Menu Buttons - Mobile Only */}
+      <div className="session-sidebar-toggles">
         <button
           onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-          className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors pointer-events-auto"
+          className="sidebar-toggle-button"
           aria-label="Toggle Learning Program"
         >
           {isLeftSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
         <button
           onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-          className="bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors pointer-events-auto"
+          className="sidebar-toggle-button"
           aria-label="Toggle Learning Content"
         >
           {isRightSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
       </div>
 
-      {/* Overlay backdrop for mobile sidebars */}
+      {/* Overlay backdrop for mobile sidebars ONLY */}
       {(isLeftSidebarOpen || isRightSidebarOpen) && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[998]"
+          className="sidebar-overlay"
           onClick={() => {
             setIsLeftSidebarOpen(false);
             setIsRightSidebarOpen(false);
@@ -1584,12 +1612,13 @@ const TrainerSession = () => {
         />
       )}
 
-      {/* Main layout */}
-      <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 my-3 sm:my-5 mx-2 sm:mx-4 items-start">
+      {/* Main layout - Responsive 2/3 column layout */}
+      <div className="flex flex-col md:flex-row gap-3 sm:gap-5 md:gap-4 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
         {/* Left Sidebar - Learning Program */}
-        <div className={`flex-1 min-w-0 w-full lg:w-auto order-1 transition-transform duration-300 lg:transform-none ${isLeftSidebarOpen
-            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0 overflow-y-auto bg-white'
-            : 'lg:relative max-lg:fixed max-lg:-translate-x-full'
+        <div className={`w-full md:w-[320px] flex-shrink-0 transition-transform duration-300 custom-scrollbar responsive-sidebar-left
+          ${isLeftSidebarOpen
+            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[420px] z-[999] transform translate-x-0 overflow-y-auto bg-white order-1'
+            : 'hidden md:flex md:flex-col order-1'
           }`}>
           <VideoSection
             remoteStream={remoteStream}
@@ -1601,32 +1630,32 @@ const TrainerSession = () => {
             sessionInfo={sessionInfo}
             connectionStatus={connectionStatus}
           />
-          <div className="bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar mt-3 sm:mt-4">
-            <div className="bg-blue-500 text-white font-semibold p-1.5 sm:p-2 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-2 sm:mb-4 rounded-t text-sm sm:text-base">
+          <div className="bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 md:p-5 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar mt-3 sm:mt-4 md:mt-5">
+            <div className="bg-blue-500 text-white font-semibold p-1.5 sm:p-2 md:p-3 -mx-2 sm:-mx-4 md:-mx-5 -mt-2 sm:-mt-4 md:-mt-5 mb-2 sm:mb-4 md:mb-5 rounded-t text-xs sm:text-sm md:text-base">
               📋 Learning Program
             </div>
 
-            <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 rounded mb-3 sm:mb-5 flex items-center">
+            <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 md:p-4 rounded mb-3 sm:mb-5 md:mb-6 flex items-center">
               <input
                 type="text"
-                className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 rounded text-xs border-none outline-none mr-2"
+                className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 md:py-2.5 rounded text-xs md:text-sm border-none outline-none mr-2"
                 placeholder="🔍 Search Child Name / IIP..."
                 value={learningProgramSearch}
                 onChange={handleLearningProgramSearch}
               />
             </div>
 
-            <div className="bg-gray-50 p-1.5 sm:p-2 rounded mb-3 sm:mb-4">
-              <div className="text-[10px] sm:text-xs font-semibold mb-2 text-slate-800">
+            <div className="bg-gray-50 p-1.5 sm:p-2 md:p-3 rounded mb-3 sm:mb-4 md:mb-5">
+              <div className="text-[10px] sm:text-xs md:text-sm font-semibold mb-2 text-slate-800">
                 Selected: {sessionInfo?.learner_name ?? '—'} {sessionInfo?.iip_id ? `- ${sessionInfo.iip_id}` : ''}
               </div>
             </div>
 
-            <div className="text-xs sm:text-sm font-semibold mb-2">Program Items</div>
-            <div className="max-h-[180px] sm:max-h-[200px] overflow-y-auto mb-3 sm:mb-4">
+            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2">Program Items</div>
+            <div className="max-h-[180px] sm:max-h-[220px] md:max-h-[260px] overflow-y-auto mb-3 sm:mb-4 md:mb-5">
               {filteredLearningGoals.length > 0 ? (
                 filteredLearningGoals.map((goal, index) => (
-                  <div key={goal.id ?? index} className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-white border border-gray-300 rounded my-1 text-[10px] sm:text-xs">
+                  <div key={goal.id ?? index} className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 md:p-3 bg-white border border-gray-300 rounded my-1 text-[10px] sm:text-xs md:text-sm">
                     <input
                       type="checkbox"
                       className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer"
@@ -1634,23 +1663,23 @@ const TrainerSession = () => {
                       onChange={() => handleProgramCheck(goal.id)}
                     />
                     <div className="flex-1">{index + 1}. {goal.goal}</div>
-                    <div className="bg-gray-200 px-1.5 sm:px-2 py-1 rounded font-semibold min-w-[25px] sm:min-w-[30px] text-center cursor-pointer text-[10px] sm:text-xs" title="Click to record prompt level">—</div>
+                    <div className="bg-gray-200 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 rounded font-semibold min-w-[25px] sm:min-w-[30px] md:min-w-[35px] text-center cursor-pointer text-[10px] sm:text-xs md:text-sm" title="Click to record prompt level">—</div>
                   </div>
                 ))
-              ) : <div className="text-[10px] sm:text-xs text-gray-500 italic">No matching program items found.</div>
+              ) : <div className="text-[10px] sm:text-xs md:text-sm text-gray-500 italic">No matching program items found.</div>
               }
 
             </div>
 
 
 
-            <div className="text-xs sm:text-sm font-semibold mt-3 sm:mt-4 mb-2">📊 Prompt <br /> Meter</div>
-            <div className="bg-white border-2 border-blue-500 rounded p-1.5 sm:p-2 mb-3 sm:mb-4">
-              <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-center">
+            <div className="text-xs sm:text-sm md:text-base font-semibold mt-3 sm:mt-4 md:mt-5 mb-2">📊 Prompt <br /> Meter</div>
+            <div className="bg-white border-2 border-blue-500 rounded p-1.5 sm:p-2 md:p-3 mb-3 sm:mb-4 md:mb-5">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1 md:gap-2 justify-center">
                 {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
                   <div
                     key={p}
-                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 py-1.5 sm:py-2 rounded font-semibold text-[10px] sm:text-xs cursor-pointer min-w-[30px] sm:min-w-[35px] text-center hover:bg-green-700`}
+                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 md:py-2.5 rounded font-semibold text-[10px] sm:text-xs md:text-sm cursor-pointer min-w-[28px] sm:min-w-[32px] md:min-w-[38px] text-center hover:bg-green-700`}
                     onClick={() => {
                       setSelectedPromptLevel(p);
                       webRTC && webRTC.sendPromptMeter(p);
@@ -1660,21 +1689,21 @@ const TrainerSession = () => {
                   </div>
                 ))}
               </div>
-              <div className="text-[9px] sm:text-[10px] text-gray-500 mt-1 sm:mt-2 text-center">Click to record prompt level for selected item</div>
+              <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-1 sm:mt-2 md:mt-3 text-center">Click to record prompt level for selected item</div>
               {selectedPromptLevel && (
-                <div className="text-[10px] sm:text-xs font-semibold text-center mt-1 sm:mt-2 text-blue-600">
+                <div className="text-[10px] sm:text-xs md:text-sm font-semibold text-center mt-1 sm:mt-2 md:mt-3 text-blue-600">
                   Selected: {selectedPromptLevel}
                 </div>
               )}
             </div>
 
-            <div className="text-xs sm:text-sm font-semibold mb-2">🎯 Reinforcement Meter</div>
-            <div className="bg-white border-2 border-green-600 rounded p-1.5 sm:p-2 mb-3 sm:mb-4">
-              <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-center">
+            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2">🎯 Reinforcement Meter</div>
+            <div className="bg-white border-2 border-green-600 rounded p-1.5 sm:p-2 md:p-3 mb-3 sm:mb-4 md:mb-5">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1 md:gap-2 justify-center">
                 {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
                   <div
                     key={r}
-                    className={`${selectedReinforcementLevel === r ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 py-1.5 sm:py-2 rounded font-semibold text-[10px] sm:text-xs cursor-pointer min-w-[35px] sm:min-w-[40px] text-center hover:bg-green-700`}
+                    className={`${selectedReinforcementLevel === r ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 md:py-2.5 rounded font-semibold text-[10px] sm:text-xs md:text-sm cursor-pointer min-w-[32px] sm:min-w-[38px] md:min-w-[45px] text-center hover:bg-green-700`}
                     onClick={() => {
                       setSelectedReinforcementLevel(r);
                       webRTC && webRTC.sendReinforcementMeter(r);
@@ -1742,21 +1771,21 @@ const TrainerSession = () => {
         </div>
 
         {/* Center Area */}
-        <div className="flex-[3] min-w-0 w-full lg:w-auto order-2">
+        <div className="w-full md:flex-1 responsive-whiteboard-section order-2">
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
-          <div className="w-full mb-2 sm:mb-3">
+          <div className="w-full mb-2 sm:mb-3 md:mb-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">🎨</span>
-                  <div className="text-xs sm:text-sm font-semibold">Whiteboard Drawing Tools</div>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded shadow-md flex items-center gap-1 sm:gap-2 md:gap-3">
+                  <span className="text-base sm:text-lg md:text-xl">🎨</span>
+                  <div className="text-xs sm:text-sm md:text-base font-semibold">Whiteboard Drawing Tools</div>
                 </div>
               </div>
 
 
             </div>
           </div>
-          <div className="w-full flex flex-wrap gap-1 sm:gap-2 items-center ">
+          <div className="w-full flex flex-wrap gap-1 sm:gap-2 md:gap-3 items-center ">
             {/* Drawing tool buttons */}
             <div className="flex gap-1">
               <button
@@ -1772,7 +1801,7 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                 title="Pen Tool (Click to activate/deactivate)"
               >
                 <span>✏️</span>
@@ -1793,7 +1822,7 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                 title="Eraser Tool (Click to activate/deactivate)"
               >
                 <span>🧽</span>
@@ -1813,7 +1842,7 @@ const TrainerSession = () => {
                     eraseAllPen();
                   }
                 }}
-                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                 title="Erase All Pen Strokes"
               >
                 <span>🗑️</span>
@@ -1834,7 +1863,7 @@ const TrainerSession = () => {
                     toast.info('Bucket tool activated - click again to add buckets');
                   }
                 }}
-                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
                 title="Bucket Tool (Click to activate, click again to add bucket)"
               >
                 <span>🪣</span>
@@ -1846,31 +1875,31 @@ const TrainerSession = () => {
             {/* Color and Size Controls */}
             <div className="flex gap-1 sm:gap-2 items-center flex-wrap">
               <div className="flex items-center gap-1">
-                <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden sm:inline">Pen Color:</label>
+                <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden sm:inline">Pen Color:</label>
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={tool === 'eraser'}
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded cursor-pointer border border-gray-300"
+                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded cursor-pointer border border-gray-300"
                   title="Pen Color"
                 />
               </div>
 
               <div className="flex items-center gap-1">
-                <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden sm:inline">Bucket Color:</label>
+                <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden sm:inline">Bucket Color:</label>
                 <input
                   type="color"
                   value={bucketColor}
                   onChange={(e) => setBucketColor(e.target.value)}
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded cursor-pointer border border-gray-300"
+                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded cursor-pointer border border-gray-300"
                   title="Bucket Color"
                 />
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <label className="text-[10px] sm:text-xs font-semibold text-slate-700 hidden md:inline">Brush Size:</label>
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+                  <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden md:inline">Brush Size:</label>
 
                   {/* Slider: make slightly larger than before */}
                   <input
@@ -1879,7 +1908,7 @@ const TrainerSession = () => {
                     max="10"
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                    className="w-20 sm:w-32 brush-size-slider"
+                    className="w-20 sm:w-32 md:w-40 brush-size-slider"
                     title="Brush Size"
                     aria-label="Brush size slider"
                     style={{
@@ -1890,7 +1919,7 @@ const TrainerSession = () => {
                 </div>
 
                 {/* Preview showing current brush/eraser size */}
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
                   <div
                     className="brush-preview"
                     title="Brush preview"
@@ -1903,7 +1932,7 @@ const TrainerSession = () => {
                     }}
                   />
 
-                  <div className="text-[10px] sm:text-xs text-slate-600">{lineWidth}</div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-slate-600">{lineWidth}</div>
                 </div>
               </div>
             </div>
@@ -1920,7 +1949,7 @@ const TrainerSession = () => {
                   });
                 }
               }}
-              className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs font-semibold transition-colors flex items-center gap-1"
+              className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm font-semibold transition-colors flex items-center gap-1"
               title="Clear All Canvas Items and Pen Strokes"
             >
               <span>🗑️</span>
@@ -1928,7 +1957,7 @@ const TrainerSession = () => {
             </button>
           </div>
           {/* Whiteboard */}
-          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[501px]">
+          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
@@ -2213,9 +2242,11 @@ const TrainerSession = () => {
         </div>
 
         {/* Right Sidebar - Learning Content */}
-        <div className={`flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-4 order-3 transition-transform duration-300 lg:transform-none ${isRightSidebarOpen
-            ? 'fixed top-20 right-0 bottom-0 w-[85%] max-w-[400px] z-[999] transform translate-x-0 overflow-y-auto bg-white'
-            : 'lg:relative max-lg:fixed max-lg:translate-x-full'
+        {/* Right Sidebar - Learning Content & Tools */}
+        <div className={`w-full md:w-[320px] flex-shrink-0 flex flex-col gap-4 md:gap-5 transition-transform duration-300 custom-scrollbar responsive-sidebar-right
+          ${isRightSidebarOpen
+            ? 'fixed top-20 right-0 bottom-0 w-[85%] max-w-[420px] z-[999] transform translate-x-0 overflow-y-auto bg-white order-1'
+            : 'hidden md:flex md:flex-col order-3'
           }`}>
           <LearningContentSidebar
             learningContentSearch={learningContentSearch}
@@ -2231,26 +2262,22 @@ const TrainerSession = () => {
             }}
           />
 
-          {/* Stopwatch toggle and (conditional) display */}
-          <div className="w-full">
+          {/* Stopwatch - Below Learning Content */}
+          {showStopwatch && (
+            <StopwatchDisplay
+              formattedTime={stopwatch.formattedTime}
+              isRunning={stopwatch.isRunning}
+              onStart={stopwatch.start}
+              onPause={stopwatch.pause}
+              onResume={stopwatch.resume}
+              onReset={stopwatch.reset}
+              onSetTime={stopwatch.setTime}
+              showControls={true}
+              size="md"
+              variant="standard"
+            />
+          )}
 
-            {showStopwatch && (
-              <div id="stopwatch-panel">
-                <StopwatchDisplay
-                  formattedTime={stopwatch.formattedTime}
-                  isRunning={stopwatch.isRunning}
-                  onStart={stopwatch.start}
-                  onPause={stopwatch.pause}
-                  onResume={stopwatch.resume}
-                  onReset={stopwatch.reset}
-                  onSetTime={stopwatch.setTime}
-                  showControls={true}
-                  size="md"
-                  variant="standard"
-                />
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

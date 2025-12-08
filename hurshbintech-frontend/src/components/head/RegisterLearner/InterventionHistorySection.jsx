@@ -1,15 +1,16 @@
 import React from 'react';
+import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const InterventionHistorySection = ({ formData, handleChange, handleFileChange, referenceFiles, removeFile }) => {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+    <div className="register-section">
+      <h2 className="register-section-title">
         History of Intervention
       </h2>
-      
+
       {/* Upload References */}
-      <div className="mb-6">
-        <label htmlFor="intervention_reference_files" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="intervention_reference_files" className="register-field-label">
           Upload References (Documents, Images, Videos)
         </label>
         <input
@@ -17,22 +18,22 @@ const InterventionHistorySection = ({ formData, handleChange, handleFileChange, 
           id="intervention_reference_files"
           multiple
           onChange={handleFileChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-file-input"
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
         />
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="register-file-hint">
           Supported formats: PDF, DOCX, Images, Videos
         </p>
-        
+
         {referenceFiles.length > 0 && (
-          <div className="mt-4 space-y-2">
+          <div className="register-file-list">
             {referenceFiles.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-700 truncate flex-1">{file.name}</span>
+              <div key={index} className="register-file-item">
+                <span className="register-file-name">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeFile(index)}
-                  className="ml-3 text-red-500 hover:text-red-700 text-sm font-medium"
+                  className="register-file-remove"
                 >
                   Remove
                 </button>
@@ -43,8 +44,8 @@ const InterventionHistorySection = ({ formData, handleChange, handleFileChange, 
       </div>
 
       {/* Duration of intervention */}
-      <div className="mb-6">
-        <label htmlFor="intervention_duration" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="register-field-full">
+        <label htmlFor="intervention_duration" className="register-field-label">
           Number of months/years of intervention
         </label>
         <input
@@ -53,14 +54,14 @@ const InterventionHistorySection = ({ formData, handleChange, handleFileChange, 
           name="intervention_duration"
           value={formData.intervention_duration}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-input"
           placeholder="e.g., 6 months, 2 years"
         />
       </div>
 
       {/* Intervention notes */}
       <div>
-        <label htmlFor="intervention_notes" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="intervention_notes" className="register-field-label">
           Notes
         </label>
         <textarea
@@ -69,7 +70,7 @@ const InterventionHistorySection = ({ formData, handleChange, handleFileChange, 
           value={formData.intervention_notes}
           onChange={handleChange}
           rows="4"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="register-textarea"
           placeholder="Enter intervention notes..."
         />
       </div>

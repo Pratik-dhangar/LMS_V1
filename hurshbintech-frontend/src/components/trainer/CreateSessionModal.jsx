@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
+import '../../styles/components/trainer/CreateSessionModal.css';
 
 const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
   const [title, setTitle] = useState('');
@@ -48,12 +49,12 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Create New Session</h2>
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <h2 className="modal-title">Create New Session</h2>
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="modal-form-group">
+            <label htmlFor="title" className="modal-label">
               Session Title
             </label>
             <input
@@ -61,12 +62,12 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="modal-input"
               required
             />
           </div>
-          <div className="mb-4">
-            <label htmlFor="learnerId" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="modal-form-group">
+            <label htmlFor="learnerId" className="modal-label">
               Learner ID
             </label>
             <input
@@ -74,14 +75,14 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
               id="learnerId"
               value={learnerId}
               onChange={(e) => setLearnerId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="modal-input"
               placeholder="Enter the numeric ID of the learner"
               required
             />
             {/* In a future version, this could be a dropdown populated by an API call to fetch available learners. */}
           </div>
-          <div className="mb-4">
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="modal-form-group">
+            <label htmlFor="duration" className="modal-label">
               Duration (minutes)
             </label>
             <input
@@ -89,12 +90,12 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
               id="duration"
               value={duration}
               onChange={(e) => setDuration(parseInt(e.target.value, 10))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="modal-input"
               required
             />
           </div>
-          <div className="mb-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="modal-form-group last">
+            <label htmlFor="description" className="modal-label">
               Description (Optional)
             </label>
             <textarea
@@ -102,21 +103,21 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="modal-textarea"
             ></textarea>
           </div>
-          <div className="flex justify-end gap-4">
+          <div className="modal-actions">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium"
+              className="modal-btn modal-btn-cancel"
               disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-400"
+              className="modal-btn modal-btn-submit"
               disabled={isLoading}
             >
               {isLoading ? 'Creating...' : 'Create Session'}

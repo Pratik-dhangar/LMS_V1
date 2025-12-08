@@ -1,4 +1,5 @@
 import React from 'react';
+import '../../styles/Pages.css';
 
 const VideoSection = ({
   remoteStream,
@@ -11,49 +12,49 @@ const VideoSection = ({
   // connectionStatus
 }) => {
   return (
-    <div className="bg-slate-800 p-4 rounded mb-4 text-white">
-      <div className="flex justify-between items-center">
-        <div className="text-sm font-semibold">📹 Video Conferencing</div>
-        <div className="flex gap-2 items-center">
+    <div className="video-section">
+      <div className="video-header">
+        <div className="video-title">📹 Video Conferencing</div>
+        <div className="video-controls">
           <button
             onClick={handleToggleMic}
-            className={`${micEnabled ? 'media-control-on' : 'media-control-off'} text-white border-none px-4 py-2 rounded cursor-pointer text-xs font-medium transition-colors`}
+            className={`media-control ${micEnabled ? 'media-control-on' : 'media-control-off'}`}
             title={micEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
           >
-            {micEnabled ? '🎤 Mic On' : '🎤 Mic Off'}
+            {micEnabled ? '🎤' : '🎤 '}
           </button>
           <button
             onClick={handleToggleCamera}
-            className={`${cameraEnabled ? 'media-control-on' : 'media-control-off'} text-white border-none px-4 py-2 rounded cursor-pointer text-xs font-medium transition-colors`}
+            className={`media-control ${cameraEnabled ? 'media-control-on' : 'media-control-off'}`}
             title={cameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
           >
-            {cameraEnabled ? '📹 Camera On' : '📹 Camera Off'}
+            {cameraEnabled ? '📹' : '📹'}
           </button>
         </div>
       </div>
-      <div className="mt-2 text-xs text-gray-400">
+      <div className="video-session-info">
         Connected with: {sessionInfo?.learner_name ?? '—'} | Session Time: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--:--'}
       </div>
-      <div className="flex justify-center items-start gap-5 w-full p-3">
+      <div className="video-container">
         {/* Remote video - learner's */}
-        <div className="flex-1 max-w-full flex flex-col">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-700 font-medium">Learner's Video</span>
-            <span className={`text-xs ${remoteStream ? 'text-green-500' : 'text-red-500'}`}>
+        <div className="video-remote">
+          <div className="video-label">
+            <span className="video-label-text">Learner's Video</span>
+            <span className={`video-status ${remoteStream ? 'video-status-connected' : 'video-status-waiting'}`}>
               {remoteStream ? '● Connected' : '○ Waiting...'}
             </span>
           </div>
-          <div className="relative">
+          <div className="video-player-wrapper">
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
               muted={false}
-              className="session-video"
+              className="video-player"
               style={{ display: remoteStream ? 'block' : 'none' }}
             />
             {!remoteStream && (
-              <div className="relative inset-0 flex items-center justify-center bg-slate-800 text-white text-base font-medium h-[200px] rounded-lg">
+              <div className="video-placeholder">
                 Waiting for learner to join...
               </div>
             )}

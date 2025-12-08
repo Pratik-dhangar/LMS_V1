@@ -8,6 +8,7 @@ import headService from '../../api/services/headService';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import '../../styles/Pages.css';
 
 // Form Section Components
 import PersonalDetailsSection from '../../components/head/RegisterLearner/PersonalDetailsSection';
@@ -22,7 +23,7 @@ const EditLearner = () => {
   const navigate = useNavigate();
   const { learnerId } = useParams();
   const { user: _user } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     // Personal details
     name: '',
@@ -31,7 +32,7 @@ const EditLearner = () => {
     date_of_assessment: '',
     dlb_concerns_checklist: [],  // Initialize as empty array
     personal_notes: '',
-    
+
     // Delivery History
     mother_bed_rest: null,
     mother_bed_rest_duration: '',
@@ -55,7 +56,7 @@ const EditLearner = () => {
     incubator_reason: '',
     had_jaundice: null,
     delivery_other_details: '',
-    
+
     // Medical History
     screamed_as_baby: null,
     difficult_sleep_pattern: null,
@@ -66,20 +67,20 @@ const EditLearner = () => {
     major_illness_hospitalization: null,
     major_illness_details: '',
     specific_medical_details: '',
-    
+
     // Learning History
     years_school_attended: '',
     support_provided: '',
     current_grade: '',
     current_learning_scenario: '',
-    
+
     // Intervention History
     intervention_duration: '',
     intervention_notes: '',
-    
+
     // Assessment Behaviour
     assessment_behaviour_notes: '',
-    
+
     // Skill Development
     skill_development_assessment: ''
   });
@@ -112,7 +113,7 @@ const EditLearner = () => {
         date_of_assessment: data.date_of_assessment ? new Date(data.date_of_assessment).toISOString().split('T')[0] : '',
         dlb_concerns_checklist: Array.isArray(data.dlb_concerns_checklist) ? data.dlb_concerns_checklist : [],
         personal_notes: data.personal_notes || '',
-        
+
         // Delivery History
         mother_bed_rest: data.mother_bed_rest,
         mother_bed_rest_duration: data.mother_bed_rest_duration || '',
@@ -136,7 +137,7 @@ const EditLearner = () => {
         incubator_reason: data.incubator_reason || '',
         had_jaundice: data.had_jaundice,
         delivery_other_details: data.delivery_other_details || '',
-        
+
         // Medical History
         screamed_as_baby: data.screamed_as_baby,
         difficult_sleep_pattern: data.difficult_sleep_pattern,
@@ -147,30 +148,30 @@ const EditLearner = () => {
         major_illness_hospitalization: data.major_illness_hospitalization,
         major_illness_details: data.major_illness_details || '',
         specific_medical_details: data.specific_medical_details || '',
-        
+
         // Learning History
         years_school_attended: data.years_school_attended || '',
         support_provided: data.support_provided || '',
         current_grade: data.current_grade || '',
         current_learning_scenario: data.current_learning_scenario || '',
-        
+
         // Intervention History
         intervention_duration: data.intervention_duration || '',
         intervention_notes: data.intervention_notes || '',
-        
+
         // Assessment Behaviour
         assessment_behaviour_notes: data.assessment_behaviour_notes || '',
-        
+
         // Skill Development
         skill_development_assessment: data.skill_development_assessment || '',
-        
+
         // Read-only data
         id: data.id,
         passcode: data.passcode,
         created_at: data.created_at,
         created_by: data.created_by
       };
-      
+
       setFormData(formattedData);
       setOriginalData(formattedData);
     } catch (error) {
@@ -188,7 +189,7 @@ const EditLearner = () => {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'radio') {
       setFormData(prev => ({
         ...prev,
@@ -200,7 +201,7 @@ const EditLearner = () => {
         [name]: value
       }));
     }
-    
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -217,49 +218,49 @@ const EditLearner = () => {
 
   const validate = () => {
     const newErrors = {};
-    
+
     // Required fields validation
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
+
     // Age is required
     if (!formData.age) {
       newErrors.age = 'Age is required';
     } else if (isNaN(formData.age) || formData.age < 1 || formData.age > 25) {
       newErrors.age = 'Age must be between 1 and 25';
     }
-    
+
     // Date of Birth is required
     if (!formData.dob) {
       newErrors.dob = 'Date of birth is required';
     } else if (new Date(formData.dob) > new Date()) {
       newErrors.dob = 'Date of birth cannot be in the future';
     }
-    
+
     // Date of Assessment is required
     if (!formData.date_of_assessment) {
       newErrors.date_of_assessment = 'Date of assessment is required';
     } else if (new Date(formData.date_of_assessment) > new Date()) {
       newErrors.date_of_assessment = 'Assessment date cannot be in the future';
     }
-    
+
     // DLB Concerns Checklist is required (at least one item)
     if (!formData.dlb_concerns_checklist || !Array.isArray(formData.dlb_concerns_checklist) || formData.dlb_concerns_checklist.length === 0) {
       newErrors.dlb_concerns_checklist = 'Please select at least one DLB concern';
     }
-    
+
     // Personal Notes is required
     if (!formData.personal_notes || !formData.personal_notes.trim()) {
       newErrors.personal_notes = 'Personal notes is required';
     }
-    
+
     return newErrors;
   };
 
   const hasChanges = () => {
     if (!originalData) return false;
-    
+
     return Object.keys(formData).some(key => {
       if (key === 'id' || key === 'passcode' || key === 'created_at' || key === 'created_by') {
         return false;
@@ -270,15 +271,15 @@ const EditLearner = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    
+
     // Clear previous errors
     setErrors({});
-    
+
     // Validate form
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      
+
       // Scroll to first error
       const firstErrorField = Object.keys(validationErrors)[0];
       const errorElement = document.getElementsByName(firstErrorField)[0];
@@ -286,14 +287,14 @@ const EditLearner = () => {
         errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         errorElement.focus();
       }
-      
+
       // Show error toast
       toast.error('Please fill in all required fields correctly', {
         position: "top-center",
         autoClose: 3000,
         theme: "colored",
       });
-      
+
       return;
     }
 
@@ -340,7 +341,7 @@ const EditLearner = () => {
 
       console.log('Updating learner with data:', updateData);
       await headService.updateLearner(learnerId, updateData);
-      
+
       toast.success('Learner updated successfully!', {
         position: 'top-center',
         autoClose: 3000,
@@ -353,12 +354,12 @@ const EditLearner = () => {
     } catch (error) {
       console.error('Error updating learner:', error);
       setSaving(false);
-      
+
       // Handle validation errors from backend (422)
       if (error.response?.status === 422) {
         const backendErrors = {};
         const validationDetails = error.response.data?.detail;
-        
+
         if (Array.isArray(validationDetails)) {
           // FastAPI validation error format
           validationDetails.forEach(err => {
@@ -368,7 +369,7 @@ const EditLearner = () => {
             }
           });
           setErrors(backendErrors);
-          
+
           // Show general error message
           toast.error('Please check the form for validation errors', {
             position: "top-center",
@@ -384,9 +385,9 @@ const EditLearner = () => {
         }
       } else {
         // Handle other errors
-        const errorMsg = error.response?.data?.detail || 
-                        error.message || 
-                        'Failed to update learner. Please try again.';
+        const errorMsg = error.response?.data?.detail ||
+          error.message ||
+          'Failed to update learner. Please try again.';
         toast.error(errorMsg, {
           position: 'top-center',
           autoClose: 5000,
@@ -403,7 +404,7 @@ const EditLearner = () => {
 
     try {
       await headService.deleteLearner(learnerId);
-      
+
       toast.success('Learner deleted successfully!', {
         position: 'top-center',
         autoClose: 3000,
@@ -426,7 +427,7 @@ const EditLearner = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="page-container">
         <Navbar />
         <Loader message="Loading learner data..." />
         <Footer />
@@ -436,7 +437,7 @@ const EditLearner = () => {
 
   if (fetchError) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="page-container">
         <Navbar />
         <ErrorState message={fetchError} onRetry={fetchLearnerData} />
         <Footer />
@@ -445,9 +446,9 @@ const EditLearner = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
-      
+
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteConfirm}
@@ -465,123 +466,121 @@ const EditLearner = () => {
 
       {/* Saving/Deleting Modal */}
       {(saving || deleting) && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl p-10 flex flex-col items-center shadow-2xl max-w-md mx-4">
-            <div className="relative">
-              <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600"></div>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div className="h-12 w-12 bg-blue-100 rounded-full"></div>
-              </div>
+        <div className="modal-overlay modal-overlay-blur">
+          <div className="modal-success">
+            <div className="spinner-wrapper">
+              <div className="spinner-large"></div>
+              <div className="spinner-center"></div>
             </div>
-            <p className="text-xl font-bold text-gray-800 mt-6">
+            <p className="modal-title">
               {saving ? 'Updating Learner...' : 'Deleting Learner...'}
             </p>
-            <p className="text-sm text-gray-600 mt-2">Please wait while we process your request</p>
+            <p className="modal-subtitle">Please wait while we process your request</p>
           </div>
         </div>
       )}
-      
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
+
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
-         <div className="mb-8">
+          <div className="page-header">
             <button
               onClick={() => navigate('/head/manage-learners')}
-              className="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center gap-2 transition-colors"
+              className="back-button"
             >
-              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
               Back to Manage Learners
             </button>
-            <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
+            <h1 className="page-title">
               Edit Learner Profile
             </h1>
-            <p className="text-gray-600 mt-2">Update profile information for {formData.name}</p>
+            <p className="page-description">Update profile information for {formData.name}</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleUpdate} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-6">
-            
-            <PersonalDetailsSection 
-              formData={formData} 
-              errors={errors} 
+          <form onSubmit={handleUpdate} className="form-container">
+
+            <PersonalDetailsSection
+              formData={formData}
+              errors={errors}
               handleChange={handleChange}
               handleFileChange={handleFileChange}
               referenceFiles={referenceFiles}
               removeFile={removeFile}
             />
 
-            <DeliveryHistorySection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <DeliveryHistorySection
+              formData={formData}
+              handleChange={handleChange}
             />
 
-            <MedicalHistorySection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <MedicalHistorySection
+              formData={formData}
+              handleChange={handleChange}
             />
 
-            <LearningHistorySection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <LearningHistorySection
+              formData={formData}
+              handleChange={handleChange}
             />
 
-            <InterventionHistorySection 
-              formData={formData} 
+            <InterventionHistorySection
+              formData={formData}
               handleChange={handleChange}
               handleFileChange={handleFileChange}
               referenceFiles={referenceFiles}
               removeFile={removeFile}
             />
 
-            <AssessmentBehaviourSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <AssessmentBehaviourSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
-            <SkillDevelopmentSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <SkillDevelopmentSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
             {/* Submit Buttons */}
-            
-           <div className="flex flex-col sm:flex-row gap-4 justify-between pt-6 border-t border-gray-300">
+
+            <div className="form-actions-split">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn-danger btn-icon"
               >
-                <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Delete Learner
               </button>
-              
-              <div className="flex gap-4">
+
+              <div className="form-actions-group">
                 <button
                   type="button"
                   onClick={() => navigate('/head/manage-learners')}
                   disabled={saving || deleting}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || deleting}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="btn-primary btn-icon"
                 >
                   {saving ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <div className="btn-spinner"></div>
                       Saving...
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                         <path d="M5 13l4 4L19 7"></path>
                       </svg>
                       Save Changes

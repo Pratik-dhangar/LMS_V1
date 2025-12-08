@@ -1,17 +1,18 @@
 // PersonalDetailsSection Component
 import React from 'react';
 import TextAreaField from '../../common/TextAreaField';
+import '../../../styles/components/admin/EditHeadSections.css';
 
 /**
  * @param {object} formData 
  * @param {function} handleChange 
  */
 const PersonalDetailsSection = ({ formData, handleChange }) => (
-  <section className="mb-8">
-    <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+  <section className="edit-head-section">
+    <h2 className="edit-head-section-title">
       Personal Details
     </h2>
-    <div className="grid grid-cols-1 gap-6">
+    <div className="edit-head-section-grid">
       <TextAreaField
         label="Interest"
         name="interest"
@@ -20,7 +21,7 @@ const PersonalDetailsSection = ({ formData, handleChange }) => (
         rows={2}
         placeholder="Enter interests and hobbies"
       />
-      
+
       <TextAreaField
         label="Describe Yourself?"
         name="self_description"
@@ -29,7 +30,7 @@ const PersonalDetailsSection = ({ formData, handleChange }) => (
         rows={3}
         placeholder="Self description"
       />
-      
+
       <TextAreaField
         label="Describe Your future Vision"
         name="future_vision"

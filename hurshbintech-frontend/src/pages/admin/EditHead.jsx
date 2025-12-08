@@ -13,12 +13,13 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
+import '../../styles/Pages.css';
 
 const EditHead = () => {
   const navigate = useNavigate();
   const { headId } = useParams();
   const { user: _user } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -53,13 +54,13 @@ const EditHead = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [headId]);
 
-  
+
   const fetchHeadData = async () => {
     try {
       setLoading(true);
       setFetchError('');
       const data = await adminService.getHeadById(headId);
-      
+
       // Format date for input and handle null/undefined values
       const formattedData = {
         name: data.name || '',
@@ -68,7 +69,7 @@ const EditHead = () => {
         contact_no: data.contact_no || '',
         qualification: data.qualification || '',
         experience: data.experience || '',
-        date_of_joining: data.date_of_joining 
+        date_of_joining: data.date_of_joining
           ? new Date(data.date_of_joining).toISOString().split('T')[0]
           : '',
         experience_with_hurshbin: data.experience_with_hurshbin || '',
@@ -88,7 +89,7 @@ const EditHead = () => {
         created_at: data.created_at,
         created_by: data.created_by
       };
-      
+
       setFormData(formattedData);
       setOriginalData(formattedData);
     } catch (error) {
@@ -126,39 +127,39 @@ const EditHead = () => {
 
   const validate = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
+
     if (!formData.contact_no.trim()) {
       newErrors.contact_no = 'Contact number is required';
     } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact_no)) {
       newErrors.contact_no = 'Invalid contact number format';
     }
-    
+
     if (formData.age && (isNaN(formData.age) || formData.age < 18 || formData.age > 100)) {
       newErrors.age = 'Age must be between 18 and 100';
     }
-    
+
     if (formData.date_of_joining && new Date(formData.date_of_joining) > new Date()) {
       newErrors.date_of_joining = 'Date of joining cannot be in the future';
     }
-    
+
     return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
+
     setSaving(true);
-    
+
     try {
       // Prepare data for submission
       const submitData = {
@@ -166,26 +167,26 @@ const EditHead = () => {
         age: formData.age ? parseInt(formData.age) : null,
         number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
       };
-      
+
       // Remove read-only fields
       delete submitData.id;
       delete submitData.role;
       delete submitData.passcode;
       delete submitData.created_at;
       delete submitData.created_by;
-      
+
       // Update head
       await adminService.updateHead(headId, submitData);
-      
+
       toast.success('Head profile updated successfully!', {
         position: "top-center",
         autoClose: 3000,
         theme: "colored",
       });
-      
+
       // Refresh data
       await fetchHeadData();
-      
+
     } catch (error) {
       console.error('Error updating head:', error);
       const errorMessage = error.response?.data?.detail || 'Failed to update head profile. Please try again.';
@@ -201,20 +202,20 @@ const EditHead = () => {
 
   const handleDelete = async () => {
     setDeleting(true);
-    
+
     try {
       await adminService.deleteHead(headId);
-      
+
       toast.success('Head deleted successfully!', {
         position: "top-center",
         autoClose: 2000,
         theme: "colored",
       });
-      
+
       setTimeout(() => {
         navigate('/admin/manage-heads');
       }, 1500);
-      
+
     } catch (error) {
       console.error('Error deleting head:', error);
       const errorMessage = error.response?.data?.detail || 'Failed to delete head. Please try again.';
@@ -234,7 +235,7 @@ const EditHead = () => {
 
   if (fetchError) {
     return (
-      <ErrorState 
+      <ErrorState
         title="Error Loading Profile"
         message={fetchError}
         buttonText="Back to Manage Heads"
@@ -244,9 +245,9 @@ const EditHead = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
-      
+
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         show={showDeleteConfirm}
@@ -259,79 +260,79 @@ const EditHead = () => {
         loading={deleting}
         variant="danger"
       />
-      
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
+
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
-          <div className="mb-8">
+          <div className="page-header">
             <button
               onClick={() => navigate('/admin/manage-heads')}
-              className="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center gap-2 transition-colors"
+              className="back-button"
             >
               <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
               Back to Manage Heads
             </button>
-            <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
+            <h1 className="page-title">
               Edit Head Profile
             </h1>
-            <p className="text-gray-600 mt-2">Update profile information for {formData.name}</p>
+            <p className="page-description">Update profile information for {formData.name}</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-6">
-            
+          <form onSubmit={handleSubmit} className="form-container">
+
             {/* Read-only Info */}
-            <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="info-box">
+              <div className="info-grid">
                 <div>
-                  <p className="text-xs font-medium text-blue-800 mb-1">Head ID</p>
-                  <p className="text-sm font-semibold text-blue-900">#{originalData?.id}</p>
+                  <p className="info-label">Head ID</p>
+                  <p className="info-value">#{originalData?.id}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-blue-800 mb-1">Passcode</p>
-                  <p className="text-sm font-semibold text-blue-900">{originalData?.passcode}</p>
+                  <p className="info-label">Passcode</p>
+                  <p className="info-value">{originalData?.passcode}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-blue-800 mb-1">Role</p>
-                  <p className="text-sm font-semibold text-blue-900 capitalize">{originalData?.role}</p>
+                  <p className="info-label">Role</p>
+                  <p className="info-value">{originalData?.role}</p>
                 </div>
               </div>
             </div>
 
             {/* Basic Information */}
-            <BasicInfoSection 
-              formData={formData} 
-              errors={errors} 
-              handleChange={handleChange} 
+            <BasicInfoSection
+              formData={formData}
+              errors={errors}
+              handleChange={handleChange}
             />
 
             {/* Professional Information */}
-            <ProfessionalInfoSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <ProfessionalInfoSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
             {/* Personal Details */}
-            <PersonalDetailsSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <PersonalDetailsSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
             {/* Performance & Feedback */}
-            <PerformanceFeedbackSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <PerformanceFeedbackSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
             {/* Reference Data Upload */}
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-300">
+            <div className="form-section">
+              <h2 className="form-section-title">
                 Reference Data
               </h2>
               <div>
-                <label htmlFor="reference_files" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="reference_files" className="form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
                 </label>
                 <input
@@ -339,23 +340,23 @@ const EditHead = () => {
                   id="reference_files"
                   multiple
                   onChange={handleFileChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  className="form-file-input"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
                 />
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="form-help-text">
                   Supported formats: PDF, DOCX, Images, Videos
                 </p>
-                
+
                 {/* File List */}
                 {referenceFiles.length > 0 && (
-                  <div className="mt-4 space-y-2">
+                  <div className="file-list">
                     {referenceFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <span className="text-sm text-gray-700 truncate flex-1">{file.name}</span>
+                      <div key={index} className="file-item">
+                        <span className="file-name">{file.name}</span>
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
-                          className="ml-3 text-red-500 hover:text-red-700 text-sm font-medium"
+                          className="file-remove-btn"
                         >
                           Remove
                         </button>
@@ -367,47 +368,47 @@ const EditHead = () => {
             </div>
 
             {/* Notes & Messages */}
-            <NotesSection 
-              formData={formData} 
-              handleChange={handleChange} 
+            <NotesSection
+              formData={formData}
+              handleChange={handleChange}
             />
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between pt-6 border-t border-gray-300">
+            <div className="form-actions form-actions-split">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn-danger btn-icon"
               >
-                <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Delete Head
               </button>
-              
-              <div className="flex gap-4">
+
+              <div className="form-actions-group">
                 <button
                   type="button"
                   onClick={() => navigate('/admin/manage-heads')}
                   disabled={saving || deleting}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || deleting}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="btn-primary btn-icon"
                 >
                   {saving ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <div className="btn-spinner"></div>
                       Saving...
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                         <path d="M5 13l4 4L19 7"></path>
                       </svg>
                       Save Changes

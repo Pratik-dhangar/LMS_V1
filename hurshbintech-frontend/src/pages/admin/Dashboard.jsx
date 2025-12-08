@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
+import '../../styles/Dashboards.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -45,68 +46,68 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="dashboard-container">
       <Navbar />
-      <main className="flex-1 m-6">
-        <div className="max-w-7xl mx-auto px-6 py-8 md:px-4 md:py-6">
+      <main className="dashboard-main">
+        <div className="dashboard-content-wrapper">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl ml-2 font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
-            Welcome, {user?.name}
+          <div className="dashboard-header">
+            <h1 className="dashboard-title">
+              Welcome, {user?.name}
             </h1>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6 mb-8">
+          <div className="stats-grid">
             {loading ? (
-              <div className="col-span-full text-center p-8 text-blue-600 text-lg font-medium bg-white rounded-lg shadow-sm">
+              <div className="stat-loading">
                 Loading stats...
               </div>
             ) : error ? (
-              <div className="col-span-full text-center p-8 text-red-600 text-lg font-medium bg-red-50 border-2 border-red-600 rounded-lg">
+              <div className="stat-error">
                 {error}
               </div>
             ) : (
-             <>
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
-                      <div className="text-sm text-gray-600 font-medium mb-2">Total Users</div>
-                      <div className="text-3xl md:text-4xl font-bold text-blue-600">{stats.total_users}</div>
-                    </div>
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
-                      <div className="text-sm text-gray-600 font-medium mb-2">Active Sessions Today</div>
-                      <div className="text-3xl md:text-4xl font-bold text-green-600">{stats.active_sessions}</div>
-                    </div>
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
-                      <div className="text-sm text-gray-600 font-medium mb-2">Total Trainers</div>
-                      <div className="text-3xl md:text-4xl font-bold text-red-500">{stats.total_trainers}</div>
-                    </div>
-                  </>
+              <>
+                <div className="stat-card">
+                  <div className="stat-label">Total Users</div>
+                  <div className="stat-value stat-value-blue">{stats.total_users}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Active Sessions Today</div>
+                  <div className="stat-value stat-value-green">{stats.active_sessions}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Total Trainers</div>
+                  <div className="stat-value stat-value-red">{stats.total_trainers}</div>
+                </div>
+              </>
             )}
           </div>
 
           {/* Admin Menu */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Admin Menu - Click to Open</h2>
+          <div className="dashboard-menu">
+            <div className="menu-title">
+              <h2>Admin Menu - Click to Open</h2>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="menu-grid">
               {menuItems.map((item) => (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   onClick={item.onClick}
-                  className="flex items-center justify-between py-4 px-5 bg-white border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 hover:border-blue-500 hover:shadow-md group"
+                  className="menu-item"
                 >
-                  <span className="text-gray-800 text-sm font-medium group-hover:text-blue-600">
+                  <span className="menu-item-text">
                     {item.title}
                   </span>
-                  <svg 
-                    className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" 
-                    fill="none" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    viewBox="0 0 24 24" 
+                  <svg
+                    className="menu-item-arrow"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
                     <path d="M19 9l-7 7-7-7"></path>

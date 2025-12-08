@@ -7,6 +7,8 @@ import headService from "../../api/services/headService";
 import learningProgramsService from "../../api/services/learningProgramsService";
 import { Loader2, Trash2, ListChecks } from "lucide-react";
 import { toast } from "react-toastify";
+import '../../styles/Pages.css';
+import '../../styles/head/ManageAssignedPrograms.css';
 
 const ManageAssignedPrograms = () => {
   const [learners, setLearners] = useState([]);
@@ -67,44 +69,44 @@ const ManageAssignedPrograms = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="page-container">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold border-b-2 pb-3">Manage Assigned Programs</h1>
+      <main className="page-main">
+        <h1 className="page-title">Manage Assigned Programs</h1>
 
         {loading ? (
-          <div className="p-8 text-center">
-            <Loader2 className="w-10 h-10 animate-spin mx-auto" />
+          <div className="loading-container">
+            <Loader2 className="loading-spinner" />
             Loading...
           </div>
         ) : (
           <>
             {/* Select Learner */}
-            <div className="bg-white p-6 rounded-lg shadow mt-6">
-              <label className="font-semibold">Select Learner</label>
-                            <select
-                                className="block w-full border p-2 rounded-md mt-2"
-                                onChange={(e) => {
-                                    setSelectedLearner(e.target.value);
-                                    loadAssignedPrograms(e.target.value);
-                                }}
-                            >
-                                <option value="">-- Select learner --</option>
-                                {learners.map((l) => (
-                                    <option key={l.id} value={l.user_id}>
-                                        ({l.user_id}) {l.name} 
-                                    </option>
-                                ))}
-                            </select>
+            <div className="form-container">
+              <label className="form-label">Select Learner</label>
+              <select
+                className="form-select"
+                onChange={(e) => {
+                  setSelectedLearner(e.target.value);
+                  loadAssignedPrograms(e.target.value);
+                }}
+              >
+                <option value="">-- Select learner --</option>
+                {learners.map((l) => (
+                  <option key={l.id} value={l.user_id}>
+                    ({l.user_id}) {l.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Learning Programs List with Search */}
-            <div className="bg-white p-6 rounded-lg shadow mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2 items-center">
-                  <ListChecks className="w-6 h-6" />
-                  <h2 className="text-xl font-semibold">Learning Programs from Admin</h2>
+            <div className="form-container">
+              <div className="form-section-header">
+                <div className="form-section-title-group">
+                  <ListChecks className="icon-md" />
+                  <h2 className="form-section-title">Learning Programs from Admin</h2>
                 </div>
               </div>
 
@@ -112,78 +114,109 @@ const ManageAssignedPrograms = () => {
               <input
                 type="text"
                 placeholder="Search learning program..."
-                className="w-full p-2 border rounded mb-4"
+                className="form-input"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
 
               {/* ✅ List View */}
-              <ul className="space-y-2 max-h-64 overflow-y-auto">
+              <ul className="checkbox-list">
                 {programs
                   .filter((p) => p.goal.toLowerCase().includes(searchTerm.toLowerCase()))
                   .map((program) => (
                     <li
                       key={program.id}
-                      className="flex justify-between items-center p-3 border rounded hover:bg-gray-50"
+                      className={`checkbox-list-item ${selectedPrograms.includes(program.id) ? 'selected' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          if (selectedPrograms.includes(program.id)) {
+                            setSelectedPrograms(selectedPrograms.filter((id) => id !== program.id));
+                          } else {
+                            setSelectedPrograms([...selectedPrograms, program.id]);
+                          }
+                        }
+                      }}
+                      onClick={(e) => {
+                        // Prevent toggling when clicking on the inner checkbox or button
+                        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button'))) {
+                          return;
+                        }
+                        // Toggle selection
+                        if (selectedPrograms.includes(program.id)) {
+                          setSelectedPrograms(selectedPrograms.filter((id) => id !== program.id));
+                        } else {
+                          setSelectedPrograms([...selectedPrograms, program.id]);
+                        }
+                      }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="checkbox-list-content">
                         <input
                           type="checkbox"
                           checked={selectedPrograms.includes(program.id)}
-                          onChange={() => {
-                            setSelectedPrograms(
-                              selectedPrograms.includes(program.id)
-                                ? selectedPrograms.filter((id) => id !== program.id)
-                                : [...selectedPrograms, program.id]
-                            );
+                          onChange={(e) => {
+                            // Prevent parent onClick from firing (toggle twice)
+                            e.stopPropagation();
+                            if (selectedPrograms.includes(program.id)) {
+                              setSelectedPrograms(selectedPrograms.filter((id) => id !== program.id));
+                            } else {
+                              setSelectedPrograms([...selectedPrograms, program.id]);
+                            }
                           }}
                         />
-                        <span className="font-medium">{program.goal}</span>
+                        <span className="checkbox-label">{program.goal}</span>
                       </div>
-                      <span className="text-sm text-gray-500">{program.goal_description}</span>
+                      <span className="checkbox-description">{program.goal_description}</span>
                     </li>
                   ))}
               </ul>
 
-              <button
-                className="bg-blue-600 text-white px-6 py-2 rounded-md mt-4"
-                disabled={assigning}
-                onClick={handleAssign}
-              >
-                {assigning ? "Assigning..." : "Assign Selected Programs"}
-              </button>
+              <div className="assign-actions">
+                <span className="assign-count">{selectedPrograms.length} selected</span>
+                <button
+                  className="btn-primary"
+                  disabled={assigning}
+                  onClick={handleAssign}
+                >
+                  {assigning ? "Assigning..." : "Assign Selected Programs"}
+                </button>
+              </div>
             </div>
 
             {/* Assigned Programs */}
             {selectedLearner && (
-              <div className="bg-white p-6 rounded-lg shadow mt-6">
-                <h2 className="text-xl font-semibold mb-4">Assigned Programs</h2>
+              <div className="form-container">
+                <h2 className="form-section-title">Assigned Programs</h2>
 
                 {assigned.length === 0 ? (
-                  <p>No programs assigned yet.</p>
+                  <p className="empty-state-description">No programs assigned yet.</p>
                 ) : (
-                  <table className="w-full border text-left">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="px-4 py-2 border">Program</th>
-                        <th className="px-4 py-2 border">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {assigned.map((row) => (
-                        <tr key={row.id}>
-                          <td className="px-4 py-2 border">{row.program_title}</td>
-                          <td className="px-4 py-2 border text-center">
-                            <button
-                              className="bg-red-600 text-white px-3 py-1 rounded-md"
-                              onClick={() => handleRemove(row.id)}
-                            >
-                              <Trash2 className="inline-block w-4 h-4" />
-                            </button>
-                          </td>
+                  <div className="data-table-container">
+                    <table className="data-table">
+                      <thead className="data-table-header">
+                        <tr>
+                          <th className="data-table-th">Program</th>
+                          <th className="data-table-th">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="data-table-body">
+                        {assigned.map((row) => (
+                          <tr key={row.id} className="data-table-row">
+                            <td className="data-table-td">{row.program_title}</td>
+                            <td className="data-table-td data-table-center">
+                              <button
+                                className="btn-danger btn-icon"
+                                onClick={() => handleRemove(row.id)}
+                              >
+                                <Trash2 className="icon-sm" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             )}

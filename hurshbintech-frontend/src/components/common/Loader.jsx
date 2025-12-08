@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '../layout/Navbar';
 import Footer from '../layout/Footer';
+import '../../styles/components/common/Loader.css';
 
 /**
  * Loader Component
@@ -12,12 +13,12 @@ import Footer from '../layout/Footer';
  */
 const Loader = ({ message = "Loading..." }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="loader-container">
       <Navbar />
-      <main className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">{message}</p>
+      <main className="loader-main">
+        <div className="loader-content">
+          <div className="loader-spinner"></div>
+          <p className="loader-message">{message}</p>
         </div>
       </main>
       <Footer />
