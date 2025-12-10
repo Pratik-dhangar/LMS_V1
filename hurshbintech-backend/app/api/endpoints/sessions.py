@@ -247,6 +247,42 @@ async def end_training_session(
     return {"message": "Session ended successfully"}
 
 
+@router.delete("/{session_id}", status_code=status.HTTP_200_OK)
+async def delete_training_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Delete a scheduled session (Head only, only if session is scheduled)"""
+    logger.info(f"Head {current_head.user_id} attempting to delete session {session_id}")
+
+    session = await session_crud.get_session_by_id(db, session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Verify head created this session
+    if session.created_by_id != current_head.user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this session"
+        )
+
+    # Only allow deletion of scheduled sessions
+    if session.status != "scheduled":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete {session.status} session. Only scheduled sessions can be deleted.",
+        )
+
+    success = await session_crud.delete_session(db, session_id)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete session")
+
+    logger.info(f"Session {session_id} deleted successfully by Head {current_head.user_id}")
+    return {"message": "Session deleted successfully"}
+
+
 # ============ LEARNER ENDPOINTS ============
 
 

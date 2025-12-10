@@ -60,6 +60,11 @@ class TrainingSession(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )  # Head who created the session
 
+    # New tracking fields
+    total_duration = Column(Integer, comment="Total duration of session in minutes")  # Calculated duration
+    learner_name = Column(String(255), comment="Cached learner name for quick access")  # Denormalized for performance
+    session_start_time = Column(DateTime, comment="When session was actually started by trainer")  # Actual start time by trainer
+
     # Session status: scheduled, active, ended, cancelled
     status = Column(String(50), default="scheduled", nullable=False)
     scheduled_date = Column(DateTime, nullable=False)

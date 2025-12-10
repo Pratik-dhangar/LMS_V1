@@ -19,6 +19,7 @@ from app.models import (
 from app.models.learning_content_assignment_model import LearningContentAssignment
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.vlog_model import Vlog
+from app.models.session_report_model import SessionReport
 
 
 # this is the Alembic Config object

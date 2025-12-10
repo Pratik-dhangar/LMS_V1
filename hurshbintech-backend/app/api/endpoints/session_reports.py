@@ -83,7 +83,7 @@ async def get_learner_reports_grouped(
     """
     Get all reports for a learner grouped by program name
     """
-    grouped_reports = await session_report_crud.get_session_reports_by_learner_grouped(
+    grouped_reports = await session_report_crud.get_session_reports_by_learner_grouped_with_details(
         db, learner_id
     )
 
@@ -93,7 +93,7 @@ async def get_learner_reports_grouped(
         result.append(
             {
                 "program_name": program_name,
-                "program_id": reports[0].program_id if reports else None,
+                "program_id": reports[0]["program_id"] if reports else None,
                 "reports": reports,
                 "total_records": len(reports),
             }
@@ -145,6 +145,69 @@ async def get_overall_statistics(
 
     stats = await session_report_crud.get_overall_statistics(db)
     return stats
+
+
+@router.get("/unique-learners")
+async def get_unique_learners(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all unique learners from session reports (Head only)
+    """
+    if current_user.role != UserRole.HEAD:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only heads can access this endpoint",
+        )
+
+    learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+    return learners
+
+
+@router.get("/learner/{learner_id}/programs")
+async def get_learner_programs(
+    learner_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all unique programs/goals for a specific learner (Head only)
+    """
+    if current_user.role != UserRole.HEAD:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only heads can access this endpoint",
+        )
+
+    programs = await session_report_crud.get_programs_by_learner(db, learner_id)
+    return programs
+
+
+@router.get("/learner/{learner_id}/program-sessions")
+async def get_program_session_data(
+    learner_id: int,
+    program_name: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all session data for a specific program/goal for graph visualization (Head only)
+    Use query parameter for program_name to handle special characters like /
+    """
+    print(f"[get_program_session_data] learner_id={learner_id}, program_name={program_name}")
+    
+    if current_user.role != UserRole.HEAD:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only heads can access this endpoint",
+        )
+
+    session_data = await session_report_crud.get_session_data_by_program(
+        db, learner_id, program_name
+    )
+    print(f"[get_program_session_data] Returning {len(session_data)} sessions")
+    return session_data
 
 
 @router.get("/learner/{learner_id}/program/{program_name}/statistics")

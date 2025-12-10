@@ -58,6 +58,15 @@ async def create_session(
     )
 
     db.add(new_session)
+    
+    # Fetch learner to populate learner_name
+    from app.models.user_model import User
+    learner_result = await db.execute(
+        select(User).where(User.id == session_data.learner_id)
+    )
+    learner = learner_result.scalar_one_or_none()
+    if learner:
+        new_session.learner_name = learner.name
 
     # Add learning content associations if provided (BEFORE commit)
     if session_data.content_ids:
@@ -173,6 +182,11 @@ async def start_session(db: AsyncSession, session_id: str) -> Optional[TrainingS
 
     session.status = "active"
     session.started_at = datetime.utcnow()
+    session.session_start_time = datetime.utcnow()  # Track when trainer actually started
+    
+    # Populate learner_name if not already set
+    if not session.learner_name and session.learner:
+        session.learner_name = session.learner.name
 
     await db.commit()
     await db.refresh(session)
@@ -205,6 +219,11 @@ async def end_session(
     session.ended_at = datetime.utcnow()
     if notes:
         session.notes = notes
+    
+    # Calculate total duration if session was started
+    if session.session_start_time and session.ended_at:
+        duration_delta = session.ended_at - session.session_start_time
+        session.total_duration = int(duration_delta.total_seconds() / 60)  # Convert to minutes
 
     await db.commit()
     await db.refresh(session)
@@ -222,3 +241,19 @@ async def end_session(
         .where(TrainingSession.session_id == session_id)
     )
     return result.unique().scalar_one()
+
+
+async def delete_session(db: AsyncSession, session_id: str) -> bool:
+    """Delete a scheduled session (only if scheduled, not started/ended)"""
+    session = await get_session_by_id(db, session_id)
+
+    if not session:
+        return False
+
+    # Only allow deletion of scheduled sessions
+    if session.status != "scheduled":
+        return False
+
+    await db.delete(session)
+    await db.commit()
+    return True
