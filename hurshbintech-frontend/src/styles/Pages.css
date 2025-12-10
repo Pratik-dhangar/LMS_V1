@@ -322,6 +322,8 @@
     color: #2f3a4c;
     border-right: 1px solid #e3e8f0;
     background: #ffffff;
+    vertical-align: middle;
+    /* ensure cell contents are vertically centered */
 }
 
 .data-table th:last-child,
@@ -339,6 +341,7 @@
 
 /* Center align Actions column */
 .data-table td:last-child {
+    padding: 2.2rem;
     text-align: center;
     vertical-align: middle;
     display: flex;
@@ -987,9 +990,9 @@
 }
 
 .sidebar-section-title {
-    font-size: 0.875rem;
+    font-size: clamp(0.375rem, 0.75vw, 0.5rem);
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: clamp(0.15rem, 0.3vw, 0.2rem);
 }
 
 .sidebar-scrollable {
@@ -999,7 +1002,7 @@
 }
 
 .sidebar-content-list {
-    max-height: 460px;
+    max-height: calc(100% - 2rem);
     overflow-y: auto;
 }
 
@@ -1320,9 +1323,8 @@
 /* Video Section */
 .video-section {
     background: #1e293b;
-    padding: 1.5rem;
+    padding: 0.5rem;
     border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
     color: white;
 }
 
@@ -1330,6 +1332,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 40%;
+    background: transparent;
 }
 
 .video-title {
@@ -1346,7 +1350,7 @@
 .media-control {
     color: white;
     border: none;
-    padding: 0.5rem 1rem;
+    padding: 0.2rem;
     border-radius: 0.375rem;
     cursor: pointer;
     font-size: 0.75rem;
@@ -1372,7 +1376,7 @@
 
 .video-session-info {
     margin-top: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.5rem;
     color: #94a3b8;
 }
 
@@ -1382,7 +1386,6 @@
     align-items: flex-start;
     gap: 1.25rem;
     width: 100%;
-    padding: 0.75rem;
 }
 
 .video-remote {
@@ -1400,13 +1403,13 @@
 }
 
 .video-label-text {
-    font-size: 0.875rem;
+    font-size: 0.7rem;
     color: #334155;
     font-weight: 500;
 }
 
 .video-status {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .video-status-connected {
@@ -1427,7 +1430,7 @@
     background: #000;
 }
 
-.video-placeholder {
+/* .video-placeholder {
     position: relative;
     inset: 0;
     display: flex;
@@ -1437,8 +1440,45 @@
     color: white;
     font-size: 1rem;
     font-weight: 500;
-    height: 200px;
+    height: 8rem;
     border-radius: 0.5rem;
+} */
+
+.video-placeholder {
+    /* --- Base Layout Properties --- */
+    position: relative;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e293b;
+    color: white;
+    font-weight: 500;
+    border-radius: 0.5rem;
+
+    /* --- 1. Large Screen (Desktop Default) --- */
+    /* These apply by default to large screens */
+    font-size: 1rem;
+    height: 8rem;
+}
+
+/* --- 2. Medium Screen (Tablet) --- */
+/* Triggers when screen is 1024px or smaller */
+@media (max-width: 1200px) {
+    .video-placeholder {
+        font-size: 0.5rem;
+        height: 5rem;
+    }
+}
+
+/* --- 3. Small Screen (Mobile) --- */
+/* Triggers when screen is 768px or smaller */
+/* This overrides the Tablet styles because it is more specific (smaller width) */
+@media (max-width: 768px) {
+    .video-placeholder {
+        font-size: 0.4rem;
+        height: 4rem;
+    }
 }
 
 /* Modal Components */
@@ -2079,6 +2119,7 @@
     .data-table th,
     .data-table td {
         padding: 0.75rem 0.5rem;
+        vertical-align: middle;
     }
 
     .tabs-list {

@@ -30,6 +30,8 @@ class SessionReportResponse(BaseModel):
     prompt_meter: str
     reinforcement_meter: str
     created_at: datetime
+    session_started_at: Optional[datetime] = None
+    session_goals: List[str] = []
 
     class Config:
         from_attributes = True

@@ -3,6 +3,676 @@
    Responsive design for video sessions, chat, and virtual keyboard
    ============================================================================ */
 
+/* ============================================================================
+   LAYOUT STRUCTURE - 80-20 Split for Mobile/Tablet
+   ============================================================================ */
+
+/* Session Header - Auto-hide on mobile/tablet after 5 seconds */
+.session-header {
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+/* Desktop: Always show header */
+@media (min-width: 1024px) {
+  .session-header {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile/Tablet: Show header with animation */
+@media (max-width: 1023px) {
+  .session-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* When header is visible - slide down */
+  .session-header:not(.hidden) {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* When header is hidden - slide up */
+  .session-header.hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Main Layout Container */
+.session-main-layout {
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  margin: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+/* Desktop: 3-column layout (Left sidebar + Center + Right sidebar) */
+@media (min-width: 1024px) {
+  .session-main-layout {
+    flex-direction: row;
+  }
+
+  .session-left-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 18rem;
+    flex-shrink: 0;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  /* Left sidebar components spacing */
+  .session-left-sidebar>* {
+    flex-shrink: 0;
+  }
+
+  .session-left-sidebar> :first-child {
+    max-height: 16rem;
+  }
+
+  .session-left-sidebar> :nth-child(2) {
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .session-center-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .session-right-column {
+    display: flex;
+    flex-direction: column;
+    width: 18rem;
+    flex-shrink: 0;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    overflow-y: auto;
+    padding-left: 0.5rem;
+  }
+
+  /* Hide video conferencing and learning program on desktop (they stay in left sidebar) */
+  .video-section-container,
+  .learning-program-container {
+    display: none !important;
+  }
+
+  /* Hide mobile-only components on desktop */
+  .session-mobile-video,
+  .session-mobile-program {
+    display: none;
+  }
+}
+
+/* Tablet and Mobile: 80-20 layout (Center 80% + Right column 20%) */
+@media (max-width: 1200px) {
+  .session-main-layout {
+    flex-direction: row;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+    margin: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  /* Hide desktop left sidebar on tablet/mobile */
+  .session-left-sidebar {
+    display: none !important;
+  }
+
+  /* Center area - 70% width */
+  .session-center-area {
+    width: 70%;
+    flex-shrink: 0;
+  }
+
+  /* Right column - 30% width, stacked components with 30% height each */
+  .session-right-column {
+    width: 30%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+    height: calc(100vh - 8rem);
+  }
+
+  /* Show mobile components */
+  .session-mobile-video,
+  .session-mobile-program {
+    display: block;
+    width: 100%;
+  }
+
+  /* Compact video section for mobile */
+  .session-mobile-video {
+    min-height: clamp(8rem, 20vh, 12rem);
+    max-height: clamp(20rem, 35vh, 25rem);
+  }
+
+  /* Scrollable program section */
+  .session-mobile-program {
+    overflow-y: auto;
+    max-height: clamp(20rem, 40vh, 30rem);
+  }
+
+  /* 30% height for each section container */
+  .session-right-column {
+    /* border: 3px solid red; */
+    height: 30%;
+  }
+
+  .section-container {
+    height: 10%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+    border: 2px solid red;
+  }
+
+  /* 30% height for video conference container */
+  .session-right-column>.video-section-container {
+    /* height: 0%; */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #e5e7eb;
+    background: #000;
+  }
+
+  /* Stopwatch at bottom - dynamic height */
+  .session-right-column>.stopwatch-display {
+    flex: 1;
+    min-height: 5%;
+    overflow: hidden;
+  }
+}
+
+/* ============================================================================
+   SECTION CONTAINERS - Always Visible Layout
+   ============================================================================ */
+
+.section-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(0.2rem, 0.6vw, 0.25rem);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.45rem, 0.9vw, 0.55rem);
+  flex-shrink: 0;
+  min-height: auto;
+  height: clamp(1.5rem, 4vh, 2rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.section-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
+  padding: clamp(0.15rem, 0.5vw, 0.2rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.05rem, 0.3vw, 0.1rem);
+}
+
+/* Video Section - Always visible */
+.video-section-container .section-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Learning Program - Always visible */
+.learning-program-container .section-header {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Learning Content - Always visible */
+.learning-content-container .section-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+/* Desktop: Learning content container styling */
+@media (min-width: 1024px) {
+  .learning-content-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .learning-content-container .section-header {
+    flex-shrink: 0;
+  }
+
+  .learning-content-container .section-content {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* Drawer Container Base */
+.drawer-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Drawer Header - Collapsible button */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: bold;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  min-height: clamp(1.75rem, 4vh, 2.25rem);
+}
+
+.drawer-header:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.drawer-header-title {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.drawer-toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: clamp(0.625rem, 1.2vw, 0.75rem);
+  flex-shrink: 0;
+}
+
+.drawer-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+/* Drawer Content - Hidden (not used in new layout) */
+.drawer-content {
+  display: none;
+}
+
+/* Video Conference Container - Fixed Display */
+.video-conference-container {
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  overflow: hidden;
+  background: #000;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-conference-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: clamp(1.75rem, 4vh, 2.25rem);
+}
+
+/* Video Section - Mobile optimized */
+.session-mobile-video {
+  border: clamp(1px, 0.2vw, 2px) solid #d1d5db;
+  border-radius: clamp(0.375rem, 1vw, 0.5rem);
+  overflow: hidden;
+  background: #000;
+}
+
+.video-section {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1f2937;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  overflow: hidden;
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.15rem, 0.6vw, 0.25rem);
+  background: #0f172a;
+  border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+}
+
+.video-title {
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  display: none;
+}
+
+.video-controls {
+  display: flex;
+  gap: clamp(0.15rem, 0.6vw, 0.25rem);
+}
+
+.media-control {
+  padding: clamp(0.2rem, 0.8vw, 0.25rem);
+  border-radius: clamp(0.15rem, 0.4vw, 0.2rem);
+  border: none;
+  cursor: pointer;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+  transition: all 0.2s ease;
+}
+
+.media-control-on {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.media-control-off {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.media-control:hover {
+  transform: scale(1.1);
+}
+
+.video-session-info {
+  padding: clamp(0.15rem, 0.4vw, 0.2rem);
+  background: #111827;
+  color: #9ca3af;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+  border-bottom: 1px solid #374151;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.video-container {
+  flex: 1;
+  display: flex;
+  background: #000;
+  position: relative;
+}
+
+.video-remote {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.15rem, 0.4vw, 0.2rem);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+  flex-shrink: 0;
+}
+
+.video-label-text {
+  font-weight: bold;
+}
+
+.video-status {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+}
+
+.video-status-connected {
+  color: #10b981;
+}
+
+.video-status-waiting {
+  color: #f59e0b;
+}
+
+.video-player-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: relative;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video-placeholder {
+  color: #9ca3af;
+  font-size: clamp(0.5rem, 1vw, 0.625rem);
+  text-align: center;
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+}
+
+/* Responsive video container height for tablets and mobile */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .video-container {
+    flex: none;
+    height: 200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .video-container {
+    flex: none;
+    height: 150px;
+  }
+}
+
+/* Learning Content Sidebar - Drawer layout */
+.sidebar-container {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  background: white;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-container.sidebar-drag-over {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-header {
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+  font-weight: bold;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-height: clamp(1.75rem, 4vh, 2.25rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-header-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.sidebar-header:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-search-box {
+  position: relative;
+  padding: clamp(0.1rem, 0.4vw, 0.15rem);
+  flex-shrink: 0;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  padding: clamp(0.1rem, 0.5vw, 0.15rem);
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.12rem, 0.5vw, 0.15rem);
+  font-size: clamp(0.375rem, 0.8vw, 0.45rem);
+  transition: all 0.2s ease;
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-search-spinner {
+  position: absolute;
+  right: clamp(0.375rem, 1vw, 0.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  animation: spin 1s linear infinite;
+  font-size: clamp(0.625rem, 1.2vw, 0.75rem);
+}
+
+@keyframes spin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+.sidebar-section-title {
+  padding: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.25rem, 1vw, 0.375rem);
+  font-weight: bold;
+  font-size: clamp(0.425rem, 1vw, 0.525rem);
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.sidebar-content-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: clamp(0.2rem, 0.8vw, 0.25rem);
+}
+
+.sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.5rem, 1.5vw, 0.75rem);
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+}
+
+.sidebar-loading-spinner {
+  animation: spin 1s linear infinite;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.sidebar-loading-text {
+  font-size: clamp(0.425rem, 1vw, 0.525rem);
+  color: #6b7280;
+}
+
+/* Whiteboard Container - Responsive sizing */
+.session-whiteboard-container {
+  background: #f9fafb;
+  border: clamp(2px, 0.3vw, 4px) solid #d1d5db;
+  border-radius: clamp(0.5rem, 1vw, 1rem);
+  margin: clamp(0.5rem, 1.5vw, 1rem);
+  position: relative;
+  width: calc(100% - clamp(1rem, 3vw, 2rem));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Desktop whiteboard */
+@media (min-width: 1024px) {
+  .session-whiteboard-container {
+    max-width: 67.875rem;
+    /* 1086px */
+    height: clamp(26.25rem, 35vh, 32.5rem);
+    /* 420px - 520px */
+  }
+}
+
+/* Tablet whiteboard */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .session-whiteboard-container {
+    height: clamp(22.5rem, 40vh, 30rem);
+    /* 360px - 480px */
+  }
+}
+
+/* Mobile whiteboard */
+@media (max-width: 767px) {
+  .session-whiteboard-container {
+    height: clamp(17.5rem, 35vh, 25rem);
+    /* 280px - 400px */
+    margin: clamp(0.25rem, 1vw, 0.5rem);
+  }
+}
+
 /* Video element styles */
 .session-video {
   width: 100%;
@@ -405,4 +1075,59 @@
 body.sidebar-open {
   overflow: hidden;
   touch-action: none;
+}
+
+/* ============================================================================
+   DESKTOP LAYOUT REFINEMENTS (1024px+)
+   ============================================================================ */
+@media (min-width: 1024px) {
+
+  /* Left sidebar with video and learning program */
+  .session-left-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  /* VideoSection wrapper in left sidebar - fixed height */
+  .session-left-sidebar>div:has(> video),
+  .session-left-sidebar>.video-section-wrapper {
+    flex-shrink: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* Learning program container in left sidebar - flexible height */
+  .session-left-sidebar>.bg-gray-50 {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: none !important;
+    height: auto;
+  }
+
+  /* Learning content in right column - full height */
+  .session-right-column {
+    height: auto;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  /* Center area whiteboard container */
+  .session-center-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Hide specific height constraints on desktop */
+  .session-left-sidebar>.bg-gray-50 {
+    max-height: none !important;
+  }
 }

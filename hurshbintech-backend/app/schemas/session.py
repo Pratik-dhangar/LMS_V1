@@ -80,12 +80,15 @@ class SessionResponse(BaseModel):
     created_by_name: str
     # Duration (minutes) — required in response; do not silently default to 60
     duration: int
+    # New tracking fields
+    total_duration: Optional[int] = None  # Actual session duration in minutes
+    session_start_time: Optional[datetime] = None  # When trainer started the session
     learning_contents: List[LearningContentInSession] = []
     learning_goals: List["LearningGoalInSession"] = []
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer("scheduled_date", "started_at", "ended_at", "created_at", "updated_at")
+    @field_serializer("scheduled_date", "started_at", "ended_at", "created_at", "updated_at", "session_start_time")
     def serialize_datetime(self, dt: Optional[datetime], _info):
         """Serialize datetime without timezone to preserve local time"""
         if dt is None:

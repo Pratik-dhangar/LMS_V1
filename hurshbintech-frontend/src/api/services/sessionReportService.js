@@ -99,6 +99,44 @@ const sessionReportService = {
       console.error('Error deleting session report:', error);
       throw error;
     }
+  },
+
+  // Get unique learners from session reports (Head only)
+  getUniqueLearners: async () => {
+    try {
+      const response = await axios.get('/session-reports/unique-learners');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unique learners:', error);
+      throw error;
+    }
+  },
+
+  // Get all programs/goals for a specific learner (Head only)
+  getLearnerPrograms: async (learnerId) => {
+    try {
+      const response = await axios.get(`/session-reports/learner/${learnerId}/programs`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching learner programs:', error);
+      throw error;
+    }
+  },
+
+  // Get session data for a specific program/goal (Head only)
+  getProgramSessionData: async (learnerId, programName) => {
+    try {
+      const response = await axios.get(
+        `/session-reports/learner/${learnerId}/program-sessions`,
+        {
+          params: { program_name: programName }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching program session data:', error);
+      throw error;
+    }
   }
 };
 

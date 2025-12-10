@@ -1,49 +1,86 @@
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import sessionReportService from '../../api/services/sessionReportService';
 import '../../styles/Pages.css';
 
-const ReportChartModal = ({ statistics, learnerName, onClose }) => {
-  // Prepare data for Prompt Meter pie chart
-  const promptData = Object.entries(statistics.prompt_distribution).map(([key, value]) => ({
-    name: key,
-    value: value
-  }));
+const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Prepare data for Reinforcement Meter pie chart
-  const reinforcementData = Object.entries(statistics.reinforcement_distribution).map(([key, value]) => ({
-    name: key,
-    value: value
-  }));
+  useEffect(() => {
+    if (learnerId) {
+      fetchChartData();
+    }
+  }, [learnerId]);
 
-  // Prepare data for Program breakdown bar chart
-  const programData = Object.entries(statistics.program_breakdown).map(([key, value]) => ({
-    name: key.length > 30 ? key.substring(0, 30) + '...' : key,
-    fullName: key,
-    value: value
-  }));
+  const fetchChartData = async () => {
+    try {
+      setLoading(true);
+      const data = await sessionReportService.getByLearnerGrouped(learnerId);
+      
+      // Process data for the bar chart
+      const processedData = [];
+      
+      data.forEach(group => {
+        group.reports.forEach(report => {
+          // Convert prompt meter to numeric value
+          let promptValue = report.prompt_meter === 'I' ? 0 : parseInt(report.prompt_meter);
+          
+          // Convert reinforcement meter to numeric value
+          let reinforcementValue = report.reinforcement_meter === 'Full' ? 100 : parseInt(report.reinforcement_meter);
+          
+          // Format session start time
+          const sessionTime = report.session_started_at 
+            ? new Date(report.session_started_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+              })
+            : new Date(report.created_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+              });
+          
+          processedData.push({
+            sessionTime: sessionTime,
+            fullSessionTime: report.session_started_at || report.created_at,
+            prompt: promptValue,
+            reinforcement: reinforcementValue,
+            goals: report.session_goals && report.session_goals.length > 0 
+              ? report.session_goals.join(', ') 
+              : report.program_name,
+            programName: report.program_name
+          });
+        });
+      });
+      
+      // Sort by session time (newest first)
+      processedData.sort((a, b) => new Date(b.fullSessionTime) - new Date(a.fullSessionTime));
+      
+      setChartData(processedData);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Color palettes
-  const promptColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-  const reinforcementColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#f59e0b', '#fbbf24', '#fcd34d', '#ef4444'];
-
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        className="font-bold text-sm"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white border-2 border-gray-300 rounded-lg p-3 shadow-lg">
+          <p className="font-bold text-sm mb-2">{data.sessionTime}</p>
+          <p className="text-xs text-gray-700 mb-2"><strong>Goals:</strong> {data.goals}</p>
+          <p className="text-xs text-blue-600"><strong>Prompt:</strong> {data.prompt}</p>
+          <p className="text-xs text-green-600"><strong>Reinforcement:</strong> {data.reinforcement}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   const handlePrint = () => {
@@ -89,144 +126,60 @@ const ReportChartModal = ({ statistics, learnerName, onClose }) => {
             </div>
           </div>
 
-          {/* Pie Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Prompt Meter Distribution */}
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">📊 Prompt Meter Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={promptData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomizedLabel}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {promptData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={promptColors[index % promptColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
+          {/* Main Bar Chart */}
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="loading-spinner"></div>
+            </div>
+          ) : (
+            <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">
+                📊 Session Progress - Prompt vs Reinforcement Meters
+              </h3>
+              <ResponsiveContainer width="100%" height={500}>
+                <BarChart 
+                  data={chartData} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="goals"
+                    angle={-45}
+                    textAnchor="end"
+                    height={150}
+                    interval={0}
+                    tick={{ fontSize: 10 }}
+                    label={{ value: 'Goals / Programs', position: 'insideBottom', offset: -80 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Meter Value', angle: -90, position: 'insideLeft' }}
+                    domain={[0, 100]}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="rect"
+                  />
+                  <Bar 
+                    dataKey="prompt" 
+                    fill="#3b82f6" 
+                    name="Prompt Meter"
+                    radius={[8, 8, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="reinforcement" 
+                    fill="#10b981" 
+                    name="Reinforcement Meter"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
               </ResponsiveContainer>
+              <div className="mt-4 text-center text-sm text-gray-600">
+                <p>Each bar pair represents a session. Hover over bars to see detailed information.</p>
+                <p className="mt-1">Sessions are ordered by time (most recent first).</p>
+              </div>
             </div>
-
-            {/* Reinforcement Meter Distribution */}
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">🎯 Reinforcement Meter Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={reinforcementData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomizedLabel}
-                    outerRadius={100}
-                    fill="#82ca9d"
-                    dataKey="value"
-                  >
-                    {reinforcementData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={reinforcementColors[index % reinforcementColors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Program Breakdown Bar Chart */}
-          <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">📚 Program Breakdown</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={programData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  interval={0}
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white border border-gray-300 rounded p-2 shadow-lg">
-                          <p className="font-semibold text-sm">{payload[0].payload.fullName}</p>
-                          <p className="text-xs text-gray-600">Reports: {payload[0].value}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="value" fill="#8b5cf6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Detailed Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Prompt Meter Table */}
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-gray-800 mb-3">Prompt Meter Breakdown</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 px-3">Level</th>
-                    <th className="text-right py-2 px-3">Count</th>
-                    <th className="text-right py-2 px-3">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {promptData.map((item) => (
-                    <tr key={item.name} className="border-b border-gray-200">
-                      <td className="py-2 px-3 font-semibold">{item.name}</td>
-                      <td className="text-right py-2 px-3">{item.value}</td>
-                      <td className="text-right py-2 px-3">
-                        {((item.value / statistics.total_reports) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Reinforcement Meter Table */}
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-gray-800 mb-3">Reinforcement Meter Breakdown</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 px-3">Level</th>
-                    <th className="text-right py-2 px-3">Count</th>
-                    <th className="text-right py-2 px-3">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reinforcementData.map((item) => (
-                    <tr key={item.name} className="border-b border-gray-200">
-                      <td className="py-2 px-3 font-semibold">{item.name}</td>
-                      <td className="text-right py-2 px-3">{item.value}</td>
-                      <td className="text-right py-2 px-3">
-                        {((item.value / statistics.total_reports) * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div className="modal-actions">

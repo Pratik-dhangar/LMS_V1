@@ -161,6 +161,13 @@ const TrainerSession = () => {
   // These no longer trigger business logic (timer/stopwatch/emoji overlay/shuffle/clear).
   const [activeIcons, setActiveIcons] = useState({});
   const [showInfoBar, setShowInfoBar] = useState(true);
+  const [showHeader, setShowHeader] = useState(true); // Show/hide header on mobile/tablet
+  const [drawerOpen, setDrawerOpen] = useState({
+    video: true,
+    program: false,
+    content: false
+  }); // Drawer states for mobile/tablet
+  const headerTimeoutRef = useRef(null); // Ref to store timeout ID for header auto-hide
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0); // Trigger to clear entire canvas including pen strokes
   const [erasePenTrigger, setErasePenTrigger] = useState(0); // Trigger to clear only pen strokes
   const [redrawCanvasTrigger, setRedrawCanvasTrigger] = useState(0); // Trigger to force redraw canvas items
@@ -390,6 +397,37 @@ const TrainerSession = () => {
       return () => clearTimeout(timer);
     }
   }, [showInfoBar]);
+
+  // Auto-hide header after 5 seconds on mobile/tablet only
+  useEffect(() => {
+    // Check if viewport is mobile/tablet (less than 1024px)
+    const isMobileOrTablet = () => window.innerWidth < 1024;
+
+    if (showHeader && isMobileOrTablet()) {
+      // Clear any existing timeout
+      if (headerTimeoutRef.current) {
+        clearTimeout(headerTimeoutRef.current);
+      }
+
+      // Set new timeout to hide header after 5 seconds
+      headerTimeoutRef.current = setTimeout(() => {
+        setShowHeader(false);
+      }, 5000);
+
+      return () => {
+        if (headerTimeoutRef.current) {
+          clearTimeout(headerTimeoutRef.current);
+        }
+      };
+    }
+  }, [showHeader]);
+
+  // Show header again on click for mobile/tablet
+  const handleHeaderClick = () => {
+    if (window.innerWidth < 1024) {
+      setShowHeader(true);
+    }
+  };
 
   // Listen for item selection messages from learner
   useEffect(() => {
@@ -1535,8 +1573,8 @@ const TrainerSession = () => {
 
   return (
     <div className="session-page">
-      {/* Navigation / Header */}
-      <div className="session-header">
+      {/* Navigation / Header - Auto-hide after 5s on mobile/tablet */}
+      <div className={`session-header ${!showHeader ? 'hidden' : ''}`} onClick={handleHeaderClick}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Trainer</div>
@@ -1568,7 +1606,6 @@ const TrainerSession = () => {
         </div>
       </div>
 
-
       {/* Info bar - Auto-hide after 5 seconds */}
       {showInfoBar && (
         <div className="session-info-banner">
@@ -1583,43 +1620,12 @@ const TrainerSession = () => {
         </div>
       )}
 
-      {/* Hamburger Menu Buttons - Mobile Only */}
-      <div className="session-sidebar-toggles">
-        <button
-          onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-          className="sidebar-toggle-button"
-          aria-label="Toggle Learning Program"
-        >
-          {isLeftSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-        </button>
-        <button
-          onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-          className="sidebar-toggle-button"
-          aria-label="Toggle Learning Content"
-        >
-          {isRightSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-        </button>
-      </div>
+      {/* Hamburger menus removed - using 80-20 layout on mobile/tablet */}
 
-      {/* Overlay backdrop for mobile sidebars ONLY */}
-      {(isLeftSidebarOpen || isRightSidebarOpen) && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => {
-            setIsLeftSidebarOpen(false);
-            setIsRightSidebarOpen(false);
-          }}
-        />
-      )}
-
-      {/* Main layout - Responsive 2/3 column layout */}
-      <div className="flex flex-col md:flex-row gap-3 sm:gap-5 md:gap-4 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        {/* Left Sidebar - Learning Program */}
-        <div className={`w-full md:w-[320px] flex-shrink-0 transition-transform duration-300 custom-scrollbar responsive-sidebar-left
-          ${isLeftSidebarOpen
-            ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[420px] z-[999] transform translate-x-0 overflow-y-auto bg-white order-1'
-            : 'hidden md:flex md:flex-col order-1'
-          }`}>
+      {/* Main layout - Desktop: 3 columns, Tablet/Mobile: 80% center + 20% right stacked */}
+      <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
+        {/* Desktop Only: Left Sidebar - Learning Program */}
+        <div className="session-left-sidebar">
           <VideoSection
             remoteStream={remoteStream}
             remoteVideoRef={remoteVideoRef}
@@ -1770,11 +1776,11 @@ const TrainerSession = () => {
           </div>
         </div>
 
-        {/* Center Area */}
-        <div className="w-full md:flex-1 responsive-whiteboard-section order-2">
+        {/* Center Area - 80% on mobile/tablet, flexible on desktop */}
+        <div className="session-center-area">
 
           {/* Whiteboard */}
-          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
+          <div className="session-whiteboard-container">
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
@@ -1815,21 +1821,21 @@ const TrainerSession = () => {
           </div>
 
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
-          <div className="w-full mb-2 sm:mb-3 md:mb-4">
+          <div className="w-full" style={{ marginBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded shadow-md flex items-center gap-1 sm:gap-2 md:gap-3">
-                  <span className="text-base sm:text-lg md:text-xl">🎨</span>
-                  <div className="text-xs sm:text-sm md:text-base font-semibold">Whiteboard Drawing Tools</div>
+              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded shadow-md flex items-center" style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
+                  <span style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}>🎨</span>
+                  <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 1rem)' }}>Whiteboard Drawing Tools</div>
                 </div>
               </div>
 
 
             </div>
           </div>
-          <div className="w-full flex flex-wrap gap-1 sm:gap-2 md:gap-3 items-center ">
+          <div className="w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
             {/* Drawing tool buttons */}
-            <div className="flex gap-1">
+            <div className="flex" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
               <button
                 onClick={() => {
                   if (tool === 'pen' && toolActive && !eraserActive) {
@@ -1843,7 +1849,8 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Pen Tool (Click to activate/deactivate)"
               >
                 <span>✏️</span>
@@ -1864,7 +1871,8 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Eraser Tool (Click to activate/deactivate)"
               >
                 <span>🧽</span>
@@ -1884,7 +1892,8 @@ const TrainerSession = () => {
                     eraseAllPen();
                   }
                 }}
-                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Erase All Pen Strokes"
               >
                 <span>🗑️</span>
@@ -1905,7 +1914,8 @@ const TrainerSession = () => {
                     toast.info('Bucket tool activated - click again to add buckets');
                   }
                 }}
-                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-1`}
+                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Bucket Tool (Click to activate, click again to add bucket)"
               >
                 <span>🪣</span>
@@ -1915,33 +1925,35 @@ const TrainerSession = () => {
             </div>
 
             {/* Color and Size Controls */}
-            <div className="flex gap-1 sm:gap-2 items-center flex-wrap">
-              <div className="flex items-center gap-1">
-                <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden sm:inline">Pen Color:</label>
+            <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
+              <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Pen Color:</label>
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={tool === 'eraser'}
-                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded cursor-pointer border border-gray-300"
+                  className="rounded cursor-pointer border border-gray-300"
+                  style={{ width: 'clamp(1.25rem, 3vw, 1.75rem)', height: 'clamp(1.25rem, 3vw, 1.75rem)' }}
                   title="Pen Color"
                 />
               </div>
 
-              <div className="flex items-center gap-1">
-                <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden sm:inline">Bucket Color:</label>
+              <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
                 <input
                   type="color"
                   value={bucketColor}
                   onChange={(e) => setBucketColor(e.target.value)}
-                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded cursor-pointer border border-gray-300"
+                  className="rounded cursor-pointer border border-gray-300"
+                  style={{ width: 'clamp(1.25rem, 3vw, 1.75rem)', height: 'clamp(1.25rem, 3vw, 1.75rem)' }}
                   title="Bucket Color"
                 />
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-                  <label className="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-700 hidden md:inline">Brush Size:</label>
+              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
+                  <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Brush Size:</label>
 
                   {/* Slider: make slightly larger than before */}
                   <input
@@ -1950,10 +1962,11 @@ const TrainerSession = () => {
                     max="10"
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                    className="w-20 sm:w-32 md:w-40 brush-size-slider"
+                    className="brush-size-slider"
                     title="Brush Size"
                     aria-label="Brush size slider"
                     style={{
+                      width: 'clamp(5rem, 12vw, 10rem)',
                       // set CSS variable used by stylesheet to drive the filled track
                       ['--pct']: `${Math.round(((lineWidth - 1) / (10 - 1)) * 100)}%`
                     }}
@@ -1961,7 +1974,7 @@ const TrainerSession = () => {
                 </div>
 
                 {/* Preview showing current brush/eraser size */}
-                <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+                <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
                   <div
                     className="brush-preview"
                     title="Brush preview"
@@ -1974,7 +1987,7 @@ const TrainerSession = () => {
                     }}
                   />
 
-                  <div className="text-[10px] sm:text-xs md:text-sm text-slate-600">{lineWidth}</div>
+                  <div className="text-slate-600" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>{lineWidth}</div>
                 </div>
               </div>
             </div>
@@ -1991,7 +2004,8 @@ const TrainerSession = () => {
                   });
                 }
               }}
-              className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded text-[10px] sm:text-xs md:text-sm font-semibold transition-colors flex items-center gap-1"
+              className="bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition-colors flex items-center"
+              style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
               title="Clear All Canvas Items and Pen Strokes"
             >
               <span>🗑️</span>
@@ -2000,12 +2014,12 @@ const TrainerSession = () => {
           </div>
 
           {/* Toolbar */}
-          <div className="flex flex-wrap gap-1 sm:gap-2 p-2 sm:p-4 bg-white rounded mt-2 sm:mt-4">
-            <div className="flex items-center justify-between w-full mb-2">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-2 sm:px-3 py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
-                  <span className="text-xs sm:text-sm">🛠️</span>
-                  <div className="text-[10px] sm:text-xs font-semibold">Whiteboard Tools & Learner Access</div>
+          <div className="flex flex-wrap bg-white rounded" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)', padding: 'clamp(0.5rem, 2vw, 1rem)', marginTop: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+            <div className="flex items-center justify-between w-full" style={{ marginBottom: '0.5rem' }}>
+              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
+                <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded shadow-sm flex items-center" style={{ padding: 'clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)', gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
+                  <span style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>🛠️</span>
+                  <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.75rem)' }}>Whiteboard Tools & Learner Access</div>
                 </div>              </div>
 
 
@@ -2243,26 +2257,99 @@ const TrainerSession = () => {
           </div>
         </div>
 
-        {/* Right Sidebar - Learning Content */}
-        {/* Right Sidebar - Learning Content & Tools */}
-        <div className={`w-full md:w-[320px] flex-shrink-0 flex flex-col gap-4 md:gap-5 transition-transform duration-300 custom-scrollbar responsive-sidebar-right
-          ${isRightSidebarOpen
-            ? 'fixed top-20 right-0 bottom-0 w-[85%] max-w-[420px] z-[999] transform translate-x-0 overflow-y-auto bg-white order-1'
-            : 'hidden md:flex md:flex-col order-3'
-          }`}>
-          <LearningContentSidebar
-            learningContentSearch={learningContentSearch}
-            handleLearningContentSearch={handleLearningContentSearch}
-            filteredLearningContent={filteredLearningContent}
-            isSearching={isSearching}
-            onDragStartContent={onDragStartContent}
-            onRemoveFromWhiteboard={(itemId) => {
-              // Remove item from whiteboard canvas
-              setCanvasItems(prev => prev.filter(item => item.id !== itemId));
-              // Also notify other participants via whiteboard service
-              whiteboardService?.send('item_remove', { id: itemId });
-            }}
-          />
+        {/* Right Column - 20% on mobile/tablet with all sections visible */}
+        <div className="session-right-column">
+          {/* Video Conference - 25% height */}
+          <div className=" video-section-container">
+            <div className="section-header">
+              <span>📹 Video Conferencing</span>
+            </div>
+            <VideoSection
+              remoteStream={remoteStream}
+              remoteVideoRef={remoteVideoRef}
+              micEnabled={micEnabled}
+              cameraEnabled={cameraEnabled}
+              handleToggleMic={handleToggleMic}
+              handleToggleCamera={handleToggleCamera}
+              sessionInfo={sessionInfo}
+              connectionStatus={connectionStatus}
+            />
+          </div>
+
+          {/* Learning Program - 25% height */}
+          <div className=" learning-program-container">
+            <div className="section-header">
+              <span>📋 Learning Program</span>
+            </div>
+            <div className="section-content">
+              <div className="bg-white border-2 border-blue-500 rounded flex items-center" style={{ padding: 'clamp(0.25rem, 1vw, 0.375rem)', marginBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+                <input
+                  type="text"
+                  className="flex-1 bg-gray-100 rounded border-none outline-none"
+                  style={{ padding: 'clamp(0.2rem, 0.8vw, 0.25rem)', fontSize: 'clamp(0.5rem, 1vw, 0.625rem)', marginRight: '0.25rem' }}
+                  placeholder="🔍 Search..."
+                  value={learningProgramSearch}
+                  onChange={handleLearningProgramSearch}
+                />
+              </div>
+
+              <div className="text-xs font-semibold mb-1" style={{ fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>Program Items</div>
+              <div className="flex-1 overflow-y-auto min-h-0" style={{ marginBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+                {filteredLearningGoals.length > 0 ? (
+                  filteredLearningGoals.map((goal, index) => (
+                    <div key={goal.id ?? index} className="flex items-center gap-0.5 bg-white border border-gray-300 rounded my-0.5" style={{ padding: 'clamp(0.2rem, 0.8vw, 0.25rem)', fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer"
+                        style={{ width: 'clamp(0.625rem, 1.5vw, 0.75rem)', height: 'clamp(0.625rem, 1.5vw, 0.75rem)' }}
+                        checked={selectedProgramId === goal.id}
+                        onChange={() => handleProgramCheck(goal.id)}
+                      />
+                      <div className="flex-1 truncate">{index + 1}. {goal.goal}</div>
+                    </div>
+                  ))
+                ) : <div className="text-gray-500 italic text-xs">No items</div>
+                }
+              </div>
+
+              <div className="text-xs font-semibold mb-0.5" style={{ fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>📊 Prompt Level</div>
+              <div className="flex flex-wrap justify-center gap-0.5" style={{ gap: 'clamp(0.1rem, 0.3vw, 0.25rem)', marginBottom: 'clamp(0.25rem, 1vw, 0.375rem)' }}>
+                {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
+                  <div
+                    key={p}
+                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white rounded font-semibold cursor-pointer text-center hover:bg-green-700`}
+                    style={{ padding: 'clamp(0.1rem, 0.4vw, 0.12rem)', fontSize: 'clamp(0.325rem, 0.7vw, 0.4rem)', minWidth: 'clamp(1rem, 2.2vw, 1.5rem)', lineHeight: '1' }}
+                    onClick={() => {
+                      setSelectedPromptLevel(p);
+                      webRTC && webRTC.sendPromptMeter(p);
+                    }}
+                  >
+                    {p}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Learning Content - 25% height */}
+          <div className=" learning-content-container">
+            <div className="section-header">
+              <span>📚 Learning Content</span>
+            </div>
+            <div className="section-content">
+              <LearningContentSidebar
+                learningContentSearch={learningContentSearch}
+                handleLearningContentSearch={handleLearningContentSearch}
+                filteredLearningContent={filteredLearningContent}
+                isSearching={isSearching}
+                onDragStartContent={onDragStartContent}
+                onRemoveFromWhiteboard={(itemId) => {
+                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                  whiteboardService?.send('item_remove', { id: itemId });
+                }}
+              />
+            </div>
+          </div>
 
           {/* Stopwatch - Below Learning Content */}
           {showStopwatch && (
@@ -2279,7 +2366,6 @@ const TrainerSession = () => {
               variant="standard"
             />
           )}
-
         </div>
       </div>
 
@@ -2288,11 +2374,11 @@ const TrainerSession = () => {
         <div className="text-[10px] sm:text-xs">
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
           <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
-          <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
-          <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
+            <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
+            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
+          </div>
         </div>
-        </div>
-        
+
       </div>
 
       {/* Fill in the Blanks Creator Modal */}

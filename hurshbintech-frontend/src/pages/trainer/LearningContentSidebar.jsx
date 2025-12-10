@@ -84,7 +84,7 @@ const LearningContentSidebar = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="sidebar-header sidebar-header-green">📚 Learning Content</div>
+      {/* Header removed - section-header is now in parent container */}
 
       {/* Status Message Display */}
       {/* {statusMessage && (

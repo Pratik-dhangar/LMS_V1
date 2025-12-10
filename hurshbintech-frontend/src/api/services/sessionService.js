@@ -95,6 +95,17 @@ const sessionService = {
     }
   },
 
+  // Delete session (Head only)
+  deleteSession: async (sessionId) => {
+    try {
+      const response = await api.delete(`/sessions/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error deleting session:', error);
+      throw error;
+    }
+  },
+
   // WebSocket
   initializeWebSocket: (sessionId, userId) => {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';

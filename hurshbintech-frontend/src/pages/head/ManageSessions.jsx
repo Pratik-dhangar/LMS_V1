@@ -16,10 +16,6 @@ const ManageSessions = () => {
   const [dateFilter, setDateFilter] = useState('');
   // const [showSearch, setShowSearch] = useState(false);
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
   const fetchSessions = async () => {
     try {
       setLoading(true);
@@ -31,6 +27,28 @@ const ManageSessions = () => {
       toast.error('Failed to load sessions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const handleDeleteSession = async (sessionId, sessionTitle) => {
+    if (window.confirm(`Are you sure you want to delete the session "${sessionTitle}"? This action cannot be undone.`)) {
+      try {
+        setLoading(true);
+        await sessionService.deleteSession(sessionId);
+        toast.success('Session deleted successfully');
+        // Refresh the sessions list
+        await fetchSessions();
+      } catch (error) {
+        console.error('Error deleting session:', error);
+        const errorMessage = error.response?.data?.detail || 'Failed to delete session';
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -171,6 +189,9 @@ const ManageSessions = () => {
                       <th className="data-table-th">
                         Materials
                       </th>
+                      <th className="data-table-th">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="data-table-body">
@@ -229,6 +250,25 @@ const ManageSessions = () => {
                               (!session.learning_contents || session.learning_contents.length === 0) && (
                                 <span className="material-badge material-badge-gray">No materials</span>
                               )}
+                          </div>
+                        </td>
+                        <td className="data-table-td">
+                          <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {session.status === 'scheduled' && (
+                              <button
+                                onClick={() => handleDeleteSession(session.session_id, session.title)}
+                                className="btn-danger"
+                                title="Delete this scheduled session"
+                                style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                              >
+                                🗑️ Delete
+                              </button>
+                            )}
+                            {session.status !== 'scheduled' && (
+                              <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                                Can't delete
+                              </span>
+                            )}
                           </div>
                         </td>
                       </tr>
