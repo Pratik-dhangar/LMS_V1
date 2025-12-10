@@ -36,6 +36,8 @@ import ManageAssignedPrograms from "./pages/head/ManageAssignedPrograms";
 import ManageAssignedLearningContent from './pages/head/ManageAssignedLearningContent';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
+import LearnerProgramsView from './pages/head/LearnerProgramsView';
+import ProgramGraphView from './pages/head/ProgramGraphView';
 
 
 // Trainer Pages
@@ -87,9 +89,9 @@ function App() {
     };
 
     // Only lock on mobile/tablet (not desktop)
-    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                            (window.innerWidth <= 1366);
-    
+    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (window.innerWidth <= 1366);
+
     if (isMobileOrTablet) {
       lockOrientation();
     }
@@ -311,7 +313,15 @@ function App() {
           path="/head/learner-reports/:learnerId"
           element={
             <ProtectedRoute allowedRoles={['head']}>
-              <LearnerReports />
+              <LearnerProgramsView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/head/learner/:learnerId/program/:programName"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ProgramGraphView />
             </ProtectedRoute>
           }
         />

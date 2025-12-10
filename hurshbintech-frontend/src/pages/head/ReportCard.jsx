@@ -21,39 +21,23 @@ const ReportCard = () => {
     try {
       setLoading(true);
 
-      // Fetch all learners and learners with reports in parallel
-      const [allLearnersResponse, reportSummary] = await Promise.all([
-        headService.getAllLearners(),
-        sessionReportService.getLearnersSummary().catch(() => []) // Gracefully handle if no reports exist
-      ]);
+      // Use the new API endpoint to fetch unique learners from session reports
+      const uniqueLearners = await sessionReportService.getUniqueLearners();
 
-      console.log('All learners:', allLearnersResponse);
-      console.log('Report summary:', reportSummary);
+      console.log('Unique learners from session reports:', uniqueLearners);
 
-      // Create a map of learners with reports for quick lookup (using learner_id which is user.id)
-      const reportMap = new Map();
-      reportSummary.forEach(r => {
-        reportMap.set(r.learner_id, r);
-      });
+      // Transform the data to match the expected format
+      const transformedLearners = uniqueLearners.map(learner => ({
+        learner_id: learner.learner_id,
+        learner_name: learner.learner_name,
+        iip_id: null, // IIP ID not available in session reports
+        total_sessions: learner.total_sessions || 0,
+        total_reports: learner.total_reports || 0,
+        last_session_date: learner.last_session_date || null,
+        programs_covered: learner.programs_covered || []
+      }));
 
-      // Merge all learners with their report data (if any)
-      // Note: learner.user_id is the actual user ID used in session_reports.learner_id
-      const mergedLearners = allLearnersResponse.map(learner => {
-        const reportData = reportMap.get(learner.user_id);
-        console.log(`Learner ${learner.name} (user_id: ${learner.user_id}):`, reportData);
-        return {
-          learner_id: learner.user_id,  // Use user_id for navigation and matching
-          profile_id: learner.id,        // Keep profile_id if needed
-          learner_name: learner.name,
-          iip_id: learner.iip_id || null,
-          total_sessions: reportData?.total_sessions || 0,
-          total_reports: reportData?.total_reports || 0,
-          last_session_date: reportData?.last_session_date || null,
-          programs_covered: reportData?.programs_covered || []
-        };
-      });
-
-      setLearners(mergedLearners);
+      setLearners(transformedLearners);
     } catch (error) {
       console.error('Error fetching learners:', error);
       toast.error('Failed to load learners');

@@ -254,6 +254,7 @@ const LearnerReports = () => {
         <ReportChartModal
           statistics={statistics}
           learnerName={learnerInfo?.learner_name || 'Learner'}
+          learnerId={parseInt(learnerId)}
           onClose={() => setShowChartModal(false)}
         />
       )}

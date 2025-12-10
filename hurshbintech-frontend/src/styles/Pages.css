@@ -322,6 +322,8 @@
     color: #2f3a4c;
     border-right: 1px solid #e3e8f0;
     background: #ffffff;
+    vertical-align: middle;
+    /* ensure cell contents are vertically centered */
 }
 
 .data-table th:last-child,
@@ -339,6 +341,7 @@
 
 /* Center align Actions column */
 .data-table td:last-child {
+    padding: 2.2rem;
     text-align: center;
     vertical-align: middle;
     display: flex;
@@ -1441,7 +1444,7 @@
     border-radius: 0.5rem;
 } */
 
- .video-placeholder {
+.video-placeholder {
     /* --- Base Layout Properties --- */
     position: relative;
     inset: 0;
@@ -2116,6 +2119,7 @@
     .data-table th,
     .data-table td {
         padding: 0.75rem 0.5rem;
+        vertical-align: middle;
     }
 
     .tabs-list {
