@@ -89,7 +89,7 @@ async def get_session_reports_by_learner_grouped_with_details(
     grouped = {}
     for report, session in rows:
         # Get goal names from session
-        goal_names = [goal.name for goal in session.learning_goals] if session.learning_goals else []
+        goal_names = [goal.goal for goal in session.learning_goals] if session.learning_goals else []
         
         # Create enriched report dict
         enriched_report = {

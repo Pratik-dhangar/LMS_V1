@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import Emoji from '../../components/common/Emoji';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
 import SearchBar from '../../components/common/SearchBar';
+import EditSessionModal from './EditSessionModal';
+import ViewSessionModal from './ViewSessionModal';
+import SessionTooltip from '../../components/common/SessionTooltip';
 import '../../styles/Pages.css';
 
 const ManageSessions = () => {
@@ -14,6 +18,10 @@ const ManageSessions = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [editingSession, setEditingSession] = useState(null);
+  const [viewingSession, setViewingSession] = useState(null);
+  const [hoveredSession, setHoveredSession] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   // const [showSearch, setShowSearch] = useState(false);
 
   const fetchSessions = async () => {
@@ -50,6 +58,60 @@ const ManageSessions = () => {
         setLoading(false);
       }
     }
+  };
+
+  const handleEditSession = (session) => {
+    setEditingSession(session);
+  };
+
+  const handleViewSession = (session) => {
+    setViewingSession(session);
+  };
+
+  const handleEditSuccess = async () => {
+    await fetchSessions();
+  };
+
+  const handleSessionTitleClick = (session, event) => {
+    event.stopPropagation();
+    const rect = event.target.getBoundingClientRect();
+
+    // Calculate initial position
+    let x = rect.left + rect.width + 10;
+    let y = rect.top;
+
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipWidth = 400; // max-width from CSS
+    const tooltipHeight = 300; // estimated height, will be adjusted by content
+
+    // Adjust horizontal position if tooltip goes off-screen to the right
+    if (x + tooltipWidth > viewportWidth) {
+      // Position to the left of the element instead
+      x = rect.left - tooltipWidth - 10;
+    }
+
+    // Ensure x doesn't go below 0 (off-screen to the left)
+    if (x < 0) {
+      x = 10; // 10px margin from left edge
+    }
+
+    // Adjust vertical position if tooltip goes off-screen at the bottom
+    if (y + tooltipHeight > viewportHeight) {
+      // Position so it doesn't go off-screen, with some margin
+      y = Math.max(10, viewportHeight - tooltipHeight - 10);
+    }
+
+    setTooltipPosition({
+      x,
+      y
+    });
+    setHoveredSession(session);
+  };
+
+  const handleCloseTooltip = () => {
+    setHoveredSession(null);
   };
 
   const getStatusBadge = (status) => {
@@ -198,7 +260,13 @@ const ManageSessions = () => {
                     {filteredSessions.map((session) => (
                       <tr key={session.id} className="data-table-row">
                         <td className="data-table-td">
-                          <div className="data-table-primary">{session.title}</div>
+                          <div
+                            className="data-table-primary"
+                            onClick={(e) => handleSessionTitleClick(session, e)}
+                            style={{ cursor: 'pointer', position: 'relative' }}
+                          >
+                            {session.title}
+                          </div>
                           {session.description && (
                             <div className="data-table-secondary data-table-truncate">{session.description}</div>
                           )}
@@ -255,18 +323,38 @@ const ManageSessions = () => {
                         <td className="data-table-td">
                           <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {session.status === 'scheduled' && (
+                              <>
+                                <button
+                                  onClick={() => handleEditSession(session)}
+                                  className="btn-primary"
+                                  title="Edit this scheduled session"
+                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSession(session.session_id, session.title)}
+                                  className="btn-danger"
+                                  title="Delete this scheduled session"
+                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                >
+                                  <Emoji emoji="🗑️" size="sm" /> Delete
+                                </button>
+                              </>
+                            )}
+                            {(session.status === 'active' || session.status === 'ended') && (
                               <button
-                                onClick={() => handleDeleteSession(session.session_id, session.title)}
-                                className="btn-danger"
-                                title="Delete this scheduled session"
+                                onClick={() => handleViewSession(session)}
+                                className="btn-secondary"
+                                title={`View this ${session.status === 'active' ? 'ongoing' : 'completed'} session`}
                                 style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
-                                🗑️ Delete
+                                👁️ View
                               </button>
                             )}
-                            {session.status !== 'scheduled' && (
+                            {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
                               <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
-                                Can't delete
+                                Can't edit/delete
                               </span>
                             )}
                           </div>
@@ -280,8 +368,34 @@ const ManageSessions = () => {
           </div>
         </div>
 
-        <Footer />
       </main>
+      <Footer />
+
+      {/* Edit Session Modal */}
+      {editingSession && (
+        <EditSessionModal
+          session={editingSession}
+          onClose={() => setEditingSession(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* View Session Modal */}
+      {viewingSession && (
+        <ViewSessionModal
+          session={viewingSession}
+          onClose={() => setViewingSession(null)}
+        />
+      )}
+
+      {/* Session Tooltip */}
+      {hoveredSession && (
+        <SessionTooltip
+          session={hoveredSession}
+          position={tooltipPosition}
+          onClose={handleCloseTooltip}
+        />
+      )}
     </div>
 
 

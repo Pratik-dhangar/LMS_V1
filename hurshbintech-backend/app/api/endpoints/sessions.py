@@ -23,6 +23,9 @@ from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, U
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
 from app.utils.s3_utils import S3Manager
 
+# Import SessionUpdate schema
+from app.schemas.session import SessionUpdate
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -75,12 +78,40 @@ async def get_all_sessions(
     from app.crud.session_crud import get_all_sessions_by_head
 
     sessions = await get_all_sessions_by_head(db, current_head.user_id)
-    return [build_session_response(s) for s in sessions]
+    
+    # Build responses with notes and reports
+    responses = []
+    for s in sessions:
+        response = await build_session_response(db, s)
+        responses.append(response)
+    
+    return responses
 
 
 # Helper function to build SessionResponse from TrainingSession model
-def build_session_response(session: TrainingSession) -> SessionResponse:
-    """Build SessionResponse from TrainingSession model"""
+async def build_session_response(db: AsyncSession, session: TrainingSession) -> SessionResponse:
+    """Build SessionResponse from TrainingSession model with notes and reports"""
+    from app.models.session_report_model import SessionReport
+    from sqlalchemy import select
+    
+    # Get session reports to include prompt/reinforcement values for each goal
+    reports_result = await db.execute(
+        select(SessionReport).where(SessionReport.session_id == session.id)
+    )
+    reports = reports_result.scalars().all()
+    
+    # Get session notes from the first report (all reports have same notes)
+    session_notes_text = reports[0].session_notes if reports and reports[0].session_notes else None
+    
+    # Create a map of program_id to report data
+    report_map = {}
+    for report in reports:
+        if report.program_id:
+            report_map[report.program_id] = {
+                "prompt_meter": report.prompt_meter,
+                "reinforcement_meter": report.reinforcement_meter
+            }
+    
     return SessionResponse(
         id=session.id,
         session_id=session.session_id,
@@ -100,6 +131,7 @@ def build_session_response(session: TrainingSession) -> SessionResponse:
         updated_at=session.updated_at,
         # Fallback to 60 if duration is None in DB (for old sessions) — otherwise use stored value
         duration=session.duration if session.duration is not None else 60,
+        session_notes=session_notes_text,
         learning_contents=[
             {
                 "id": content.id,
@@ -113,7 +145,13 @@ def build_session_response(session: TrainingSession) -> SessionResponse:
             for content in (session.learning_contents or [])
         ],
         learning_goals=[
-            {"id": goal.id, "goal": goal.goal, "goal_description": goal.goal_description}
+            {
+                "id": goal.id,
+                "goal": goal.goal,
+                "goal_description": goal.goal_description,
+                "prompt_meter": report_map.get(goal.id, {}).get("prompt_meter"),
+                "reinforcement_meter": report_map.get(goal.id, {}).get("reinforcement_meter")
+            }
             for goal in (session.learning_goals or [])
         ],
     )
@@ -166,7 +204,57 @@ async def create_training_session(
     new_session = await session_crud.create_session(db, session_data, current_user.id)
 
     logger.info(f"Session created successfully: {new_session.session_id}")
-    return build_session_response(new_session)
+    return await build_session_response(db, new_session)
+
+
+@router.put("/{session_id}", response_model=SessionResponse)
+async def update_training_session(
+    session_id: str,
+    session_data: SessionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Update a scheduled session (Head only, only if session is scheduled)"""
+    logger.info(f"Head {current_head.user_id} attempting to update session {session_id}")
+
+    session = await session_crud.get_session_by_id(db, session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Verify head created this session
+    if session.created_by_id != current_head.user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to update this session"
+        )
+
+    # Only allow updates to scheduled sessions
+    if session.status != "scheduled":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update {session.status} session. Only scheduled sessions can be updated.",
+        )
+
+    # Prepare update data (only non-None fields)
+    update_data = {
+        key: value
+        for key, value in session_data.model_dump(exclude_unset=True).items()
+        if value is not None and key not in ['content_ids', 'goal_ids']
+    }
+
+    # Extract content_ids and goal_ids if present in the update data
+    content_ids = getattr(session_data, 'content_ids', None)
+    goal_ids = getattr(session_data, 'goal_ids', None)
+
+    updated_session = await session_crud.update_session(
+        db, session_id, update_data, content_ids, goal_ids
+    )
+
+    if not updated_session:
+        raise HTTPException(status_code=500, detail="Failed to update session")
+
+    logger.info(f"Session {session_id} updated successfully by Head {current_head.user_id}")
+    return await build_session_response(db, updated_session)
 
 
 @router.get("/trainer/sessions", response_model=List[SessionResponse])
@@ -179,7 +267,11 @@ async def get_trainer_sessions_list(
 
     sessions = await session_crud.get_trainer_sessions(db, current_trainer.user_id)
 
-    return [build_session_response(s) for s in sessions]
+    responses = []
+    for s in sessions:
+        response = await build_session_response(db, s)
+        responses.append(response)
+    return responses
 
 
 @router.post("/{session_id}/start", response_model=SessionResponse)
@@ -204,7 +296,7 @@ async def start_training_session(
 
     started_session = await session_crud.start_session(db, session_id)
 
-    return build_session_response(started_session)
+    return await build_session_response(db, started_session)
 
 
 @router.post("/{session_id}/end")
@@ -296,7 +388,11 @@ async def get_learner_sessions_list(
 
     sessions = await session_crud.get_learner_sessions(db, current_learner.user_id)
 
-    return [build_session_response(s) for s in sessions]
+    responses = []
+    for s in sessions:
+        response = await build_session_response(db, s)
+        responses.append(response)
+    return responses
 
 
 @router.post("/{session_id}/join")
@@ -340,7 +436,7 @@ async def get_session_details(
     if current_user.id not in [session.trainer_id, session.learner_id]:
         raise HTTPException(status_code=403, detail="Not authorized to view this session")
 
-    return build_session_response(session)
+    return await build_session_response(db, session)
 
 
 # ============ WEBSOCKET ENDPOINT ============

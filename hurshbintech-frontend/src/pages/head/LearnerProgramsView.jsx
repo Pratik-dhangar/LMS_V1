@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/Pages.css';
 
 const LearnerProgramsView = () => {
@@ -13,10 +14,27 @@ const LearnerProgramsView = () => {
     const [learnerName, setLearnerName] = useState('');
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statistics, setStatistics] = useState(null);
+    const [groupedReports, setGroupedReports] = useState([]);
 
     useEffect(() => {
         fetchLearnerPrograms();
+        fetchStatistics();
     }, [learnerId]);
+
+    const fetchStatistics = async () => {
+        try {
+            const stats = await sessionReportService.getStatistics(parseInt(learnerId));
+            setStatistics(stats);
+            const reports = await sessionReportService.getByLearnerGrouped(parseInt(learnerId));
+            setGroupedReports(reports);
+        } catch (error) {
+            console.error('Error fetching statistics:', error);
+            // Don't block page load if statistics fail
+            setStatistics(null);
+            setGroupedReports([]);
+        }
+    };
 
     const fetchLearnerPrograms = async () => {
         try {
@@ -44,6 +62,37 @@ const LearnerProgramsView = () => {
         navigate(`/head/learner/${learnerId}/program/${encodeURIComponent(programName)}`);
     };
 
+    const handleDownloadAllProgramsPDF = async () => {
+        try {
+            if (!programs || programs.length === 0) {
+                toast.error('No programs available to generate report.');
+                return;
+            }
+
+            toast.info('Generating PDF report...');
+
+            // Use the new backend API to get comprehensive PDF data
+            const pdfData = await sessionReportService.getPdfData(parseInt(learnerId));
+
+            if (!pdfData || !pdfData.programs || pdfData.programs.length === 0) {
+                toast.error('No data available for PDF generation.');
+                return;
+            }
+
+            downloadProgressReportPDF({
+                learnerName: pdfData.learner_name || learnerName || 'Learner',
+                programName: null,
+                programs: pdfData.programs,
+            });
+
+            toast.success('PDF downloaded successfully!');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
+            toast.error(`Failed to generate PDF: ${errorMessage}`);
+        }
+    };
+
     const filteredPrograms = programs.filter(program =>
         program.program_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -60,12 +109,22 @@ const LearnerProgramsView = () => {
                             {learnerName && `${learnerName}'s Learning Programs`}
                         </p>
                     </div>
-                    <button
-                        onClick={() => navigate('/head/reports')}
-                        className="btn-secondary"
-                    >
-                        ← Back to Learners
-                    </button>
+                    <div className="button-group">
+                        <button
+                            onClick={handleDownloadAllProgramsPDF}
+                            className="btn-success"
+                            disabled={loading || programs.length === 0}
+                            title={programs.length === 0 ? 'No programs available to download' : 'Download all programs report as PDF'}
+                        >
+                            📥 Download PDF Report
+                        </button>
+                        <button
+                            onClick={() => navigate('/head/reports')}
+                            className="btn-secondary"
+                        >
+                            ← Back to Learners
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search Bar */}

@@ -1,4 +1,5 @@
 import React from 'react';
+import Emoji from '../../components/common/Emoji';
 import { FaMicrophone } from 'react-icons/fa';
 import '../../styles/Pages.css';
 
@@ -83,7 +84,7 @@ const LearningProgramSidebar = ({
         )}
       </div>
 
-      <div className="sidebar-section-title">🎯 Reinforcement Meter</div>
+      <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
       <div className="meter-container meter-container-green">
         <div className="meter-buttons">
           {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (

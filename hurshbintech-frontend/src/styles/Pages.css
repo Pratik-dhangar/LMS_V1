@@ -1422,12 +1422,25 @@
 
 .video-player-wrapper {
     position: relative;
+    width: 100%;
+    min-height: 200px;
+    height: 400px;
+    background: #000;
+    border-radius: 0.5rem;
+    overflow: hidden;
 }
 
 .video-player {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
     border-radius: 0.5rem;
     background: #000;
+    object-fit: cover;
+    z-index: 1;
 }
 
 /* .video-placeholder {
@@ -1446,8 +1459,11 @@
 
 .video-placeholder {
     /* --- Base Layout Properties --- */
-    position: relative;
-    inset: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1455,19 +1471,19 @@
     color: white;
     font-weight: 500;
     border-radius: 0.5rem;
+    min-height: 200px;
+    z-index: 0;
 
     /* --- 1. Large Screen (Desktop Default) --- */
     /* These apply by default to large screens */
     font-size: 1rem;
-    height: 8rem;
 }
 
 /* --- 2. Medium Screen (Tablet) --- */
 /* Triggers when screen is 1024px or smaller */
 @media (max-width: 1200px) {
     .video-placeholder {
-        font-size: 0.5rem;
-        height: 5rem;
+        font-size: 0.75rem;
     }
 }
 
@@ -1476,8 +1492,14 @@
 /* This overrides the Tablet styles because it is more specific (smaller width) */
 @media (max-width: 768px) {
     .video-placeholder {
-        font-size: 0.4rem;
-        height: 4rem;
+        font-size: 0.65rem;
+    }
+}
+
+/* Hide video conferencing on tablet and mobile */
+@media (max-width: 1024px) {
+    .hidden-mobile-tablet {
+        display: none !important;
     }
 }
 

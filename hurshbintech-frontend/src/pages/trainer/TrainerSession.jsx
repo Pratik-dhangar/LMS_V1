@@ -10,9 +10,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
+import sessionNotesService from '../../api/services/sessionNotesService';
 import learningContentService from '../../api/services/learningContentService';
 import sessionReportService from '../../api/services/sessionReportService';
-import SimpleWebRTC from '../../api/services/simpleWebRTC';
+import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
@@ -22,13 +23,16 @@ import useMessages from '../../hooks/useMessages';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
 import { useMediaControl } from '../../context/MediaControlContext';
-import VideoSection from './VideoSection';
+import TrainerVideoConference from '../../components/videoConference/TrainerVideoConference';
+import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import WhiteboardSection from './WhiteboardSection';
+import VideoSection from './VideoSection';
 import LearningProgramSidebar from './LearningProgramSidebar';
 import LearningContentSidebar from './LearningContentSidebar';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import { exerciseTemplates } from '../../utils/fillInBlanksTemplates';
 import FillBlanksCreator from '../../components/common/FillBlanksCreator';
+import Emoji from '../../components/common/Emoji';
 import '../../styles/Pages.css';
 
 
@@ -60,16 +64,16 @@ const TrainerSession = () => {
   const [toolsService, setToolsService] = useState(null);
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Media streams (only remote learner stream)
-  // 🔸 How it works: remoteStream holds peer stream from learner
+  // 🔹 Purpose: Media streams for video conferencing
+  // 🔸 How it works: localStream is trainer's camera/mic, remoteStream is learner's
   // -----------------------------------------------------------
+  const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const remoteVideoRef = useRef(null); // Ref for remote video element
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Refs to <video> element for remote video
-  // 🔸 How it works: useRef stores DOM node to assign srcObject and control playback.
-  // -----------------------------------------------------------
-  const remoteVideoRef = useRef(null);
+  // Video position and size for moveable video feed
+  const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
+  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Mic/video UI toggles and state
@@ -270,7 +274,7 @@ const TrainerSession = () => {
     try {
       // If turning on voice input and video conferencing mic is on, turn it off
       if (!listening && micEnabled && webRTC) {
-        const newState = webRTC.toggleMic();
+        const newState = webRTC.toggleMicrophone();
         setMicEnabled(newState);
         toast.info('Video conferencing mic turned off - voice input enabled');
       }
@@ -289,7 +293,7 @@ const TrainerSession = () => {
 
         // Turn video conferencing mic back on after voice input is done
         if (webRTC && !micEnabled) {
-          const newState = webRTC.toggleMic();
+          const newState = webRTC.toggleMicrophone();
           setMicEnabled(newState);
           toast.info('Video conferencing mic turned back on');
         }
@@ -317,10 +321,29 @@ const TrainerSession = () => {
     console.log('[TrainerSession] User data:', { id: user.id, role: user.role, name: user.name });
     initializeSession(user.id);
 
-    // 🔹 Purpose: Cleanup when the component unmounts
-    // 🔸 How it works: calls cleanup() to close connections and services.
+    // 🔹 Purpose: Cleanup when the component unmounts - save notes before leaving
+    // 🔸 How it works: clears auto-save timer, saves final notes, then calls cleanup()
     return () => {
-      console.log('[TrainerSession] Component unmounting, cleaning up');
+      console.log('[TrainerSession] Component unmounting, saving notes and cleaning up');
+
+      // Clear auto-save timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      // Save notes before unmounting (use navigator.sendBeacon for reliability)
+      if (sessionNotes && sessionNotes.trim()) {
+        const token = localStorage.getItem('access_token');
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+        const data = JSON.stringify({ notes: sessionNotes });
+
+        // Use sendBeacon for reliable sending even when page is closing
+        if (navigator.sendBeacon) {
+          const blob = new Blob([data], { type: 'application/json' });
+          navigator.sendBeacon(`${API_URL}/session-notes/${sessionId}`, blob);
+        }
+      }
+
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -548,97 +571,66 @@ const TrainerSession = () => {
       toast.error('Failed to initialize whiteboard');
     }
 
-    // Initialize WebRTC
-    const rtcService = new SimpleWebRTC(WS_BASE_URL, sessionId, 'trainer');
+    // Initialize Video Conference Service
+    const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
 
     try {
-      console.log('[TrainerSession] Initializing WebRTC service');
+      console.log('[TrainerSession] Initializing Video Conference service');
+
+      // Set callback for local stream (trainer's camera/mic)
+      videoService.onLocalStream = (stream) => {
+        console.log('[TrainerSession] Local stream received');
+        setLocalStream(stream);
+      };
 
       // Set callback for remote stream (learner's video)
-      rtcService.onRemoteStream = (stream) => {
-        console.log('[TrainerSession] Received remote stream from learner');
-        console.log('[TrainerSession] Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
-
-        // Add event listeners for track changes
-        stream.getTracks().forEach(track => {
-          console.log(`[TrainerSession] Adding listeners to ${track.kind} track`);
-          track.addEventListener('ended', () => {
-            console.log(`[TrainerSession] Remote ${track.kind} track ended`);
-          });
-          track.addEventListener('mute', () => {
-            console.log(`[TrainerSession] Remote ${track.kind} track muted`);
-          });
-          track.addEventListener('unmute', () => {
-            console.log(`[TrainerSession] Remote ${track.kind} track unmuted`);
-          });
-        });
-
+      videoService.onRemoteStream = (stream) => {
+        console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
-        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
-          const videoElement = remoteVideoRef.current;
-          videoElement.srcObject = stream;
-
-          console.log('[TrainerSession] Video element ready state:', videoElement.readyState);
-
-          // Wait for loadedmetadata before playing
-          const playVideo = () => {
-            console.log('[TrainerSession] Attempting to play video...');
-            videoElement.play().catch((error) => {
-              console.error('[TrainerSession] Error playing remote video:', error);
-              if (error.name === 'NotAllowedError') {
-                toast.warn('Autoplay blocked. Click video to enable.');
-              } else if (error.name !== 'AbortError') {
-                console.warn('Video play error:', error.name);
-              }
-            }).then(() => {
-              console.log('[TrainerSession] Video playing successfully');
-            });
-          };
-
-          if (videoElement.readyState >= 2) {
-            // Video is already loaded
-            playVideo();
-          } else {
-            // Wait for metadata to load
-            videoElement.addEventListener('loadedmetadata', playVideo, { once: true });
-          }
-        }
       };
 
       // Set callback for connection state changes
-      rtcService.onConnectionChange = (state) => {
+      videoService.onConnectionStateChange = (state) => {
         console.log('[TrainerSession] Connection state:', state);
-        setConnectionStatus(state);
-        if (state === 'failed') {
-          // Handle failed connection
-          console.log('[TrainerSession] Connection failed');
-        } else if (state === 'connected') {
-          // Handle successful connection
-          console.log('[TrainerSession] Connection successful');
-        }
+        const statusMap = {
+          'new': 'connecting',
+          'connecting': 'connecting',
+          'connected': 'connected',
+          'disconnected': 'disconnected',
+          'failed': 'failed',
+          'closed': 'disconnected'
+        };
+        setConnectionStatus(statusMap[state] || state);
       };
 
-      // Initialize WebRTC (gets local media)
-      await rtcService.initialize();
-      setWebRTC(rtcService);
+      // Set error callback
+      videoService.onError = (error) => {
+        console.error('[TrainerSession] Video conference error:', error);
+        toast.error(`Video error: ${error.message}`);
+      };
+
+      // Initialize video conference (gets local media and sets up connection)
+      await videoService.initialize();
+      setWebRTC(videoService);
 
       // Update media control states
-      setMicEnabled(rtcService.isMicEnabled());
-      setCameraEnabled(rtcService.isCameraEnabled());
+      setMicEnabled(videoService.isMicrophoneEnabled());
+      setCameraEnabled(videoService.isCameraEnabled());
 
-      console.log('[TrainerSession] WebRTC service initialized');
+      console.log('[TrainerSession] Video Conference service initialized');
     } catch (error) {
-      console.error('[TrainerSession] WebRTC init error:', error);
+      console.error('[TrainerSession] Video Conference init error:', error);
+      toast.error('Failed to initialize video conference');
     }
   };
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle microphone on/off
-  // 🔸 How it works: calls webRTC.toggleMic() and updates state, coordinates with voice input
+  // 🔸 How it works: calls webRTC.toggleMicrophone() and updates state, coordinates with voice input
   // -----------------------------------------------------------
   const handleToggleMic = () => {
     if (webRTC) {
-      const newState = webRTC.toggleMic();
+      const newState = webRTC.toggleMicrophone();
       setMicEnabled(newState);
 
       // If turning on video conferencing mic, turn off voice input
@@ -662,12 +654,27 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: End session explicitly by trainer
-  // 🔸 How it works: calls sessionService.endSession, cleans up local resources, and navigates away
+  // 🔸 How it works: saves notes, calls sessionService.endSession, cleans up local resources, and navigates away
   // -----------------------------------------------------------
   const handleEndSession = async () => {
     if (window.confirm('Are you sure you want to end this session?')) {
       try {
-        await sessionService.endSession(sessionId, '');
+        // Save notes before ending session
+        if (autoSaveTimerRef.current) {
+          clearTimeout(autoSaveTimerRef.current);
+        }
+
+        // Final save of notes
+        if (sessionNotes && sessionNotes.trim()) {
+          try {
+            await sessionNotesService.saveNotes(sessionId, sessionNotes);
+            console.log('[TrainerSession] Session notes saved before ending');
+          } catch (error) {
+            console.error('[TrainerSession] Error saving notes before ending:', error);
+          }
+        }
+
+        await sessionService.endSession(sessionId, sessionNotes || '');
         toast.success('Session ended successfully');
         cleanup();
         navigate('/trainer/dashboard');
@@ -840,12 +847,29 @@ const TrainerSession = () => {
 
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Update session notes (trainer's notes)
-  // 🔸 How it works: updates local state for trainer's own notes
+  // 🔹 Purpose: Update session notes (trainer's notes) with auto-save
+  // 🔸 How it works: updates local state and auto-saves to backend with debouncing
   // -----------------------------------------------------------
+  const autoSaveTimerRef = useRef(null);
+
   const handleNotesChange = (e) => {
     const newNotes = e.target.value;
     setSessionNotes(newNotes);
+
+    // Clear existing auto-save timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set new auto-save timer (save after 2 seconds of no typing)
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await sessionNotesService.saveNotes(sessionId, newNotes);
+      } catch (error) {
+        console.error('[TrainerSession] Error auto-saving notes:', error);
+        // Don't show toast for auto-save errors to avoid interrupting user
+      }
+    }, 2000);
   };
 
   // -----------------------------------------------------------
@@ -1626,16 +1650,6 @@ const TrainerSession = () => {
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
-          <VideoSection
-            remoteStream={remoteStream}
-            remoteVideoRef={remoteVideoRef}
-            micEnabled={micEnabled}
-            cameraEnabled={cameraEnabled}
-            handleToggleMic={handleToggleMic}
-            handleToggleCamera={handleToggleCamera}
-            sessionInfo={sessionInfo}
-            connectionStatus={connectionStatus}
-          />
           <div className="bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 md:p-5 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar mt-3 sm:mt-4 md:mt-5">
             <div className="bg-blue-500 text-white font-semibold p-1.5 sm:p-2 md:p-3 -mx-2 sm:-mx-4 md:-mx-5 -mt-2 sm:-mt-4 md:-mt-5 mb-2 sm:mb-4 md:mb-5 rounded-t text-xs sm:text-sm md:text-base">
               📋 Learning Program
@@ -1703,7 +1717,7 @@ const TrainerSession = () => {
               )}
             </div>
 
-            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2">🎯 Reinforcement Meter</div>
+            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
             <div className="bg-white border-2 border-green-600 rounded p-1.5 sm:p-2 md:p-3 mb-3 sm:mb-4 md:mb-5">
               <div className="flex flex-wrap gap-0.5 sm:gap-1 md:gap-2 justify-center">
                 {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
@@ -1781,6 +1795,22 @@ const TrainerSession = () => {
 
           {/* Whiteboard */}
           <div className="session-whiteboard-container">
+            {/* Moveable Video Feed Overlay */}
+            {remoteStream && (
+              <MoveableVideoFeed
+                videoStream={remoteStream}
+                label="Learner"
+                position={videoPosition}
+                size={videoSize}
+                onPositionChange={setVideoPosition}
+                onSizeChange={setVideoSize}
+                isDraggable={true}
+                isResizable={true}
+                connectionStatus={connectionStatus}
+                zIndex={100}
+              />
+            )}
+
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
@@ -1820,6 +1850,27 @@ const TrainerSession = () => {
             </div>
           </div>
 
+          {/* Video Controls - Below Whiteboard */}
+          <div className="w-full mt-4 mb-3">
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={handleToggleMic}
+                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 shadow-md`}
+                title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
+              >
+                <span className="text-xl">{micEnabled ? '🎤' : '🔇'}</span>
+                <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span>
+              </button>
+              <button
+                onClick={handleToggleCamera}
+                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 shadow-md`}
+                title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+              >
+                <span className="text-xl">{cameraEnabled ? '📹' : '📷'}</span>
+                <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span>
+              </button>
+            </div>
+          </div>
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
           <div className="w-full" style={{ marginBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <div className="flex items-center justify-between">
@@ -1829,8 +1880,6 @@ const TrainerSession = () => {
                   <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 1rem)' }}>Whiteboard Drawing Tools</div>
                 </div>
               </div>
-
-
             </div>
           </div>
           <div className="w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
@@ -1896,7 +1945,7 @@ const TrainerSession = () => {
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Erase All Pen Strokes"
               >
-                <span>🗑️</span>
+                <Emoji emoji="🗑️" size="base" />
                 <span className="hidden sm:inline">Erase All</span>
                 {eraseAllActive}
               </button>
@@ -1918,7 +1967,7 @@ const TrainerSession = () => {
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Bucket Tool (Click to activate, click again to add bucket)"
               >
-                <span>🪣</span>
+                <Emoji emoji="🪣" size="base" />
                 <span className="hidden xs:inline">Bucket</span>
                 {tool === 'bucket' && toolActive}
               </button>
@@ -2008,7 +2057,7 @@ const TrainerSession = () => {
               style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
               title="Clear All Canvas Items and Pen Strokes"
             >
-              <span>🗑️</span>
+              <Emoji emoji="🗑️" size="base" />
               <span className="hidden sm:inline">Clear All</span>
             </button>
           </div>
@@ -2018,7 +2067,7 @@ const TrainerSession = () => {
             <div className="flex items-center justify-between w-full" style={{ marginBottom: '0.5rem' }}>
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
                 <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded shadow-sm flex items-center" style={{ padding: 'clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)', gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
-                  <span style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>🛠️</span>
+                  <Emoji emoji="🛠️" size="sm" />
                   <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.75rem)' }}>Whiteboard Tools & Learner Access</div>
                 </div>              </div>
 
@@ -2112,7 +2161,7 @@ const TrainerSession = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-2 sm:gap-3">
-                      <span className="text-base sm:text-lg">⏲️</span>
+                      <Emoji emoji="⏲️" size="lg" />
                       <div>
                         <div className="text-xs sm:text-sm font-semibold">Timers</div>
                       </div>
@@ -2129,7 +2178,7 @@ const TrainerSession = () => {
                   aria-controls="stopwatch-panel"
                   title="Toggle stopwatch panel"
                 >
-                  <span>⏲️</span>
+                  <Emoji emoji="⏲️" size="base" />
                   <span className="hidden sm:inline">Stopwatch</span>
                 </button>
               </div>
@@ -2168,7 +2217,7 @@ const TrainerSession = () => {
                       className={`${baseClass} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
                       title={t.label}
                     >
-                      <span>{t.icon}</span>
+                      <Emoji emoji={t.icon} size="base" className="inline-block" />
                       <span className="hidden sm:inline">{t.label}</span>
                     </button>
                   );
@@ -2180,7 +2229,7 @@ const TrainerSession = () => {
             <div className="w-full">
               <div className="flex items-center gap-2 sm:gap-3 mb-2">
                 <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
-                  <span className="text-xs sm:text-sm">📚</span>
+                  <Emoji emoji="📚" size="sm" />
                   <div className="text-[10px] sm:text-xs font-semibold">Create Exercises</div>
                 </div>
               </div>
@@ -2206,7 +2255,7 @@ const TrainerSession = () => {
                   className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-semibold transition-colors"
                   title="Clear all notes"
                 >
-                  🗑️ <span className="hidden sm:inline">Clear</span>
+                  <Emoji emoji="🗑️" size="base" /> <span className="hidden sm:inline">Clear</span>
                 </button>
               </div>
               <textarea
@@ -2248,6 +2297,8 @@ const TrainerSession = () => {
               </div>
             </div>
 
+
+
             <div className="text-right mt-3 sm:mt-4 w-full">
               <button className="bg-green-600 text-white px-4 sm:px-8 py-2 sm:py-3 rounded inline-flex items-center gap-1 sm:gap-2 text-sm sm:text-base cursor-pointer hover:bg-green-700" onClick={handleSaveSession}>
                 💾 <span className="hidden xs:inline">Save Session</span>
@@ -2259,8 +2310,8 @@ const TrainerSession = () => {
 
         {/* Right Column - 20% on mobile/tablet with all sections visible */}
         <div className="session-right-column">
-          {/* Video Conference - 25% height */}
-          <div className=" video-section-container">
+          {/* Video Conference - 25% height - Hidden on tablet/mobile */}
+          <div className="video-section-container hidden-mobile-tablet">
             <div className="section-header">
               <span>📹 Video Conferencing</span>
             </div>
@@ -2274,6 +2325,25 @@ const TrainerSession = () => {
               sessionInfo={sessionInfo}
               connectionStatus={connectionStatus}
             />
+          </div>
+          {/* Learning Content - 25% height */}
+          <div className=" learning-content-container">
+            <div className="section-header">
+              <span>📚 Learning Content</span>
+            </div>
+            <div className="section-content">
+              <LearningContentSidebar
+                learningContentSearch={learningContentSearch}
+                handleLearningContentSearch={handleLearningContentSearch}
+                filteredLearningContent={filteredLearningContent}
+                isSearching={isSearching}
+                onDragStartContent={onDragStartContent}
+                onRemoveFromWhiteboard={(itemId) => {
+                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                  whiteboardService?.send('item_remove', { id: itemId });
+                }}
+              />
+            </div>
           </div>
 
           {/* Learning Program - 25% height */}
@@ -2331,25 +2401,7 @@ const TrainerSession = () => {
             </div>
           </div>
 
-          {/* Learning Content - 25% height */}
-          <div className=" learning-content-container">
-            <div className="section-header">
-              <span>📚 Learning Content</span>
-            </div>
-            <div className="section-content">
-              <LearningContentSidebar
-                learningContentSearch={learningContentSearch}
-                handleLearningContentSearch={handleLearningContentSearch}
-                filteredLearningContent={filteredLearningContent}
-                isSearching={isSearching}
-                onDragStartContent={onDragStartContent}
-                onRemoveFromWhiteboard={(itemId) => {
-                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
-                  whiteboardService?.send('item_remove', { id: itemId });
-                }}
-              />
-            </div>
-          </div>
+
 
           {/* Stopwatch - Below Learning Content */}
           {showStopwatch && (
@@ -2375,7 +2427,7 @@ const TrainerSession = () => {
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
           <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
             <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
-            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}>⏸️ <span className="hidden xs:inline">Pause</span></button>
+            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}><Emoji emoji="⏸️" size="sm" /> <span className="hidden xs:inline">Pause</span></button>
           </div>
         </div>
 

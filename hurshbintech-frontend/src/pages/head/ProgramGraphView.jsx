@@ -12,6 +12,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import sessionReportService from '../../api/services/sessionReportService';
+import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/Pages.css';
@@ -39,7 +40,25 @@ const ProgramGraphView = () => {
                 parseInt(learnerId),
                 programName
             );
-            setSessionData(data);
+
+            // Process data to add session labels with ID and time
+            const processedData = data.map(session => {
+                const sessionTime = session.session_date
+                    ? new Date(session.session_date).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                    })
+                    : 'N/A';
+
+                return {
+                    ...session,
+                    sessionLabel: `S${session.session_id} - ${sessionTime}`
+                };
+            });
+
+            setSessionData(processedData);
 
             // Fetch learner info
             const learners = await sessionReportService.getUniqueLearners();
@@ -55,10 +74,55 @@ const ProgramGraphView = () => {
         }
     };
 
+    const handleDownloadPDF = async () => {
+        try {
+            if (!sessionData || sessionData.length === 0) {
+                toast.error('No session data available to generate PDF.');
+                return;
+            }
+
+            toast.info('Generating PDF report...');
+
+            // Use the backend API to get comprehensive data
+            const pdfData = await sessionReportService.getPdfData(
+                parseInt(learnerId),
+                programName
+            );
+
+            if (!pdfData || !pdfData.sessions || pdfData.sessions.length === 0) {
+                toast.error('No data available for PDF generation.');
+                return;
+            }
+
+            // Create programs array with single program
+            const programs = [{
+                program_name: pdfData.program_name,
+                program_id: pdfData.program_id,
+                total_sessions: pdfData.total_sessions,
+                last_session_date: pdfData.sessions.length > 0
+                    ? pdfData.sessions[pdfData.sessions.length - 1].session_date
+                    : null,
+                sessions: pdfData.sessions
+            }];
+
+            downloadProgressReportPDF({
+                learnerName: pdfData.learner_name || learnerName || 'Learner',
+                programName: pdfData.program_name,
+                programs: programs
+            });
+
+            toast.success('PDF downloaded successfully!');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
+            toast.error(`Failed to generate PDF: ${errorMessage}`);
+        }
+    };
+
     // Custom tooltip for the chart
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
-            const sessionIndex = sessionData.findIndex(s => s.session_name === label);
+            const sessionIndex = sessionData.findIndex(s => s.sessionLabel === label);
             const session = sessionData[sessionIndex];
 
             return (
@@ -69,7 +133,7 @@ const ProgramGraphView = () => {
                     borderRadius: '8px',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}>
-                    <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>{label}</p>
+                    <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>Session ID: {session.session_id}</p>
                     {session.session_date && (
                         <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
                             {new Date(session.session_date).toLocaleDateString('en-US', {
@@ -105,12 +169,26 @@ const ProgramGraphView = () => {
                             {programName}
                         </p>
                     </div>
-                    <button
-                        onClick={() => navigate(`/head/learner-reports/${learnerId}`)}
-                        className="btn-secondary"
-                    >
-                        ← Back to Programs
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button
+                            onClick={handleDownloadPDF}
+                            disabled={loading || sessionData.length === 0}
+                            className="btn-primary"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
+                        >
+                            📥 Download PDF
+                        </button>
+                        <button
+                            onClick={() => navigate(`/head/learner-reports/${learnerId}`)}
+                            className="btn-secondary"
+                        >
+                            ← Back to Programs
+                        </button>
+                    </div>
                 </div>
 
                 {/* Loading State */}
@@ -155,12 +233,12 @@ const ProgramGraphView = () => {
                             >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
-                                    dataKey="session_name"
-                                    angle={-45}
-                                    textAnchor="end"
+                                    dataKey="sessionLabel"
+                                    angle={0}
+                                    textAnchor="middle"
                                     height={80}
                                     tick={{ fontSize: 12 }}
-                                    label={{ value: 'Sessions', position: 'insideBottom', offset: -10 }}
+                                    label={{ value: 'Session ID & Time', position: 'insideBottom', offset: -10 }}
                                 />
                                 <YAxis
                                     domain={[0, 100]}
@@ -207,7 +285,7 @@ const ProgramGraphView = () => {
                                         backgroundColor: '#f3f4f6',
                                         borderBottom: '2px solid #e5e7eb'
                                     }}>
-                                        <th style={{ padding: '12px', textAlign: 'left' }}>Session #</th>
+                                        <th style={{ padding: '12px', textAlign: 'left' }}>Session ID</th>
                                         <th style={{ padding: '12px', textAlign: 'left' }}>Date & Time</th>
                                         <th style={{ padding: '12px', textAlign: 'left' }}>Prompt Level</th>
                                         <th style={{ padding: '12px', textAlign: 'left' }}>Reinforcement Level</th>
@@ -225,7 +303,7 @@ const ProgramGraphView = () => {
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             <td style={{ padding: '12px' }}>
-                                                <strong>Session {session.session_number}</strong>
+                                                <strong>Session {session.session_id}</strong>
                                             </td>
                                             <td style={{ padding: '12px' }}>
                                                 {session.session_date &&

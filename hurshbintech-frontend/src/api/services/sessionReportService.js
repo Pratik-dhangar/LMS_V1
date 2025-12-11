@@ -137,6 +137,21 @@ const sessionReportService = {
       console.error('Error fetching program session data:', error);
       throw error;
     }
+  },
+
+  // Get comprehensive PDF data for a learner
+  getPdfData: async (learnerId, programName = null) => {
+    try {
+      const params = programName ? { program_name: programName } : {};
+      const response = await axios.get(
+        `/session-reports/learner/${learnerId}/pdf-data`,
+        { params }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching PDF data:', error);
+      throw error;
+    }
   }
 };
 

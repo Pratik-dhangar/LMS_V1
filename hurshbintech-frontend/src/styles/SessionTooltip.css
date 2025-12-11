@@ -1,0 +1,212 @@
+/* Session Tooltip Styles */
+.session-tooltip {
+    position: fixed;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    pointer-events: auto;
+    animation: tooltipFadeIn 0.2s ease-in-out;
+
+    /* Flex layout for header and body */
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 60px);
+    /* Ensure it doesn't take full viewport */
+    max-width: 420px;
+    min-width: 300px;
+}
+
+/* Click-based tooltip styling */
+.session-tooltip-click {
+    pointer-events: auto;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Tooltip header with close button - stays fixed */
+.tooltip-header-with-close {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+    /* Prevent shrinking */
+    background: white;
+}
+
+/* Scrollable body container */
+.tooltip-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    padding: 12px 16px;
+    min-height: 0;
+    /* Allow flex item to shrink below content size */
+}
+
+.tooltip-section {
+    margin-bottom: 12px;
+}
+
+.tooltip-section:last-child {
+    margin-bottom: 0;
+}
+
+.tooltip-header {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1f2937;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tooltip-content {
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.tooltip-notes {
+    margin: 0;
+    padding: 8px;
+    background: #f9fafb;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.tooltip-empty {
+    margin: 0;
+    padding: 8px;
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.tooltip-goal {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    border-left: 3px solid #3b82f6;
+}
+
+.tooltip-goal:last-child {
+    margin-bottom: 0;
+}
+
+.goal-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.goal-description {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.goal-meters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+/* Close button styling */
+.tooltip-close-button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.tooltip-close-button:hover {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.meter-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.meter-prompt {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+
+.meter-reinforcement {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #34d399;
+}
+
+/* Scrollbar styling for notes */
+.tooltip-notes::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tooltip-notes::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.tooltip-notes::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.tooltip-notes::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Scrollbar styling for tooltip body */
+.tooltip-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tooltip-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.tooltip-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.tooltip-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
