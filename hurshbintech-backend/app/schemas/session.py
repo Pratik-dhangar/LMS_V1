@@ -29,6 +29,8 @@ class SessionUpdate(BaseModel):
     description: Optional[str] = None
     scheduled_date: Optional[datetime] = None
     duration: Optional[int] = Field(None, ge=15, le=240)
+    content_ids: Optional[List[int]] = None  # IDs of learning content to attach
+    goal_ids: Optional[List[int]] = None  # IDs of learning goals to attach
 
 
 class SessionEnd(BaseModel):
@@ -56,6 +58,9 @@ class LearningGoalInSession(BaseModel):
     id: int
     goal: str
     goal_description: Optional[str]
+    # Include prompt and reinforcement values from session reports
+    prompt_meter: Optional[str] = None
+    reinforcement_meter: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -83,6 +88,8 @@ class SessionResponse(BaseModel):
     # New tracking fields
     total_duration: Optional[int] = None  # Actual session duration in minutes
     session_start_time: Optional[datetime] = None  # When trainer started the session
+    # Session notes from session_reports table
+    session_notes: Optional[str] = None  # Notes stored in session_reports table
     learning_contents: List[LearningContentInSession] = []
     learning_goals: List["LearningGoalInSession"] = []
     created_at: datetime

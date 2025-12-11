@@ -209,7 +209,7 @@ async def start_session(db: AsyncSession, session_id: str) -> Optional[TrainingS
 async def end_session(
     db: AsyncSession, session_id: str, notes: Optional[str] = None
 ) -> Optional[TrainingSession]:
-    """End an active session"""
+    """End an active session and finalize session notes"""
     session = await get_session_by_id(db, session_id)
 
     if not session:
@@ -225,6 +225,82 @@ async def end_session(
         duration_delta = session.ended_at - session.session_start_time
         session.total_duration = int(duration_delta.total_seconds() / 60)  # Convert to minutes
 
+    await db.commit()
+    
+    # Finalize session notes if they exist
+    from app.crud import session_notes_crud
+    await session_notes_crud.finalize_session_notes(
+        db=db,
+        session_id=session.id,
+        trainer_id=session.trainer_id,
+        notes=notes
+    )
+    
+    await db.refresh(session)
+
+    # Reload relationships
+    result = await db.execute(
+        select(TrainingSession)
+        .options(
+            joinedload(TrainingSession.trainer),
+            joinedload(TrainingSession.learner),
+            joinedload(TrainingSession.created_by),
+            joinedload(TrainingSession.learning_contents),
+            joinedload(TrainingSession.learning_goals),
+        )
+        .where(TrainingSession.session_id == session_id)
+    )
+    return result.unique().scalar_one()
+
+
+async def update_session(
+    db: AsyncSession,
+    session_id: str,
+    update_data: dict,
+    content_ids: Optional[List[int]] = None,
+    goal_ids: Optional[List[int]] = None,
+) -> Optional[TrainingSession]:
+    """Update a scheduled session (only if not started yet)"""
+    session = await get_session_by_id(db, session_id)
+
+    if not session:
+        return None
+
+    # Only allow updates to scheduled sessions
+    if session.status != "scheduled":
+        return None
+
+    # Update basic fields
+    for key, value in update_data.items():
+        if value is not None and hasattr(session, key):
+            # Handle scheduled_date timezone conversion
+            if key == "scheduled_date" and value.tzinfo is not None:
+                value = value.replace(tzinfo=None)
+            setattr(session, key, value)
+
+    # Update learning content associations if provided
+    if content_ids is not None:
+        # Clear existing associations
+        session.learning_contents.clear()
+        if content_ids:
+            content_result = await db.execute(
+                select(LearningContent).where(LearningContent.id.in_(content_ids))
+            )
+            contents = content_result.scalars().all()
+            session.learning_contents.extend(contents)
+
+    # Update learning goal associations if provided
+    if goal_ids is not None:
+        # Clear existing associations
+        session.learning_goals.clear()
+        if goal_ids:
+            goal_result = await db.execute(
+                select(LearningGoals).where(LearningGoals.id.in_(goal_ids))
+            )
+            goals = goal_result.scalars().all()
+            session.learning_goals.extend(goals)
+
+    session.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(session)
 

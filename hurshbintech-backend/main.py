@@ -33,6 +33,7 @@ from app.api.endpoints.learning_program_assignments import learner_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
 from app.api.endpoints.sessions import router as sessions_router
+from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.vlogs import router as vlogs_router
 from app.api.endpoints.websocket import router as websocket_router
 from app.core.config import settings
@@ -113,6 +114,7 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(head_endpoint_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
+app.include_router(session_notes_router, prefix="/api")
 app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(learning_content_assignments_router, prefix="/api")

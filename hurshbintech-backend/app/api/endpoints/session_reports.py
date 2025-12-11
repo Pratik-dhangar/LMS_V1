@@ -242,3 +242,84 @@ async def delete_session_report(
     success = await session_report_crud.delete_session_report(db, report_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+
+
+@router.get("/learner/{learner_id}/pdf-data")
+async def get_learner_pdf_data(
+    learner_id: int,
+    program_name: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get comprehensive data for PDF generation
+    Supports both single program and all programs report
+    """
+    try:
+        # Get learner info
+        learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+        learner = next((l for l in learners if l["learner_id"] == learner_id), None)
+        
+        if not learner:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Learner not found"
+            )
+        
+        # If specific program requested
+        if program_name:
+            session_data = await session_report_crud.get_session_data_by_program(
+                db, learner_id, program_name
+            )
+            
+            return {
+                "learner_name": learner["learner_name"],
+                "program_name": program_name,
+                "total_sessions": len(session_data),
+                "sessions": session_data,
+                "type": "single_program"
+            }
+        
+        # Get all programs for the learner
+        programs = await session_report_crud.get_programs_by_learner(db, learner_id)
+        
+        # Fetch session data for each program
+        programs_with_sessions = []
+        for program in programs:
+            try:
+                session_data = await session_report_crud.get_session_data_by_program(
+                    db, learner_id, program["program_name"]
+                )
+                programs_with_sessions.append({
+                    "program_name": program["program_name"],
+                    "program_id": program.get("program_id"),
+                    "total_sessions": len(session_data),
+                    "last_session_date": program.get("last_session_date"),
+                    "sessions": session_data
+                })
+            except Exception as e:
+                print(f"Error fetching data for program {program['program_name']}: {str(e)}")
+                # Continue with other programs even if one fails
+                programs_with_sessions.append({
+                    "program_name": program["program_name"],
+                    "program_id": program.get("program_id"),
+                    "total_sessions": 0,
+                    "last_session_date": program.get("last_session_date"),
+                    "sessions": []
+                })
+        
+        return {
+            "learner_name": learner["learner_name"],
+            "programs": programs_with_sessions,
+            "total_programs": len(programs_with_sessions),
+            "type": "all_programs"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in get_learner_pdf_data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch PDF data: {str(e)}"
+        )
