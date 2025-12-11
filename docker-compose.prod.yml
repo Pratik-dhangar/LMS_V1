@@ -27,3 +27,21 @@ services:
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped
+
+  # ✅ TURN Server for WebRTC (Fixes video connections behind NAT)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: hurshbintech-coturn
+    restart: unless-stopped
+    network_mode: "host"
+    command: 
+      - -n 
+      - --log-file=stdout 
+      - --min-port=49152 
+      - --max-port=65535 
+      - --realm=hurshbin.lumesoftai.in
+      - --user=hurshbin:SecureTurnPass2024!
+      - --lt-cred-mech 
+      - --fingerprint 
+      - --external-ip=43.204.218.16
+      - --listening-port=3478
