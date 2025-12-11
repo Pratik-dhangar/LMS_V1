@@ -15,21 +15,22 @@ const ICE_SERVERS = [
     // Google STUN servers for NAT traversal
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
 
-    // Free TURN servers for complex network scenarios
+    // ✅ Self-hosted TURN server on EC2 (Primary - Most Reliable)
+    {
+        urls: 'turn:43.204.218.16:3478',
+        username: 'hurshbin',
+        credential: 'SecureTurnPass2024!',
+    },
+    {
+        urls: 'turn:43.204.218.16:3478?transport=tcp',
+        username: 'hurshbin',
+        credential: 'SecureTurnPass2024!',
+    },
+
+    // Backup: Free TURN servers (Fallback only)
     {
         urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-    },
-    {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-    },
-    {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject',
     }
