@@ -1,5 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { toast } from 'react-toastify';
+import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/Pages.css';
 
 const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
@@ -26,13 +28,27 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
         window.print();
     };
 
+    const handleDownloadPDF = () => {
+        try {
+            downloadProgressReportPDF({
+                learnerName: learnerName,
+                programName: statistics.program_name,
+                programStatistics: statistics,
+            });
+            toast.success('PDF downloaded successfully!');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF');
+        }
+    };
+
     return (
         <div className="modal-overlay">
             <div className="modal-container" style={{ maxWidth: '1536px' }}>
                 {/* Header */}
                 <div className="modal-header modal-header-indigo">
                     <div>
-                        <h2 className="modal-title">📈 Program Report</h2>
+                        <h2 className="modal-title"><Emoji emoji="📈" size="base" /> Program Report</h2>
                         <p className="modal-subtitle">{statistics.program_name}</p>
                         <p className="modal-subtitle" style={{ fontSize: '0.875rem', opacity: 0.9 }}>{learnerName}</p>
                     </div>
@@ -69,7 +85,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                     {/* Progress Over Time Line Chart */}
                     {progressData.length > 0 && (
                         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">📈 Progress Over Sessions</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center"><Emoji emoji="📈" size="base" /> Progress Over Sessions</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={progressData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -158,7 +174,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
 
                         {/* Reinforcement Meter Distribution */}
                         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">🎯 Reinforcement Meter Distribution</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center"><Emoji emoji="🎯" size="base" /> Reinforcement Meter Distribution</h3>
                             {reinforcementData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={280}>
                                     <PieChart>
@@ -230,6 +246,12 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
 
                     {/* Action Buttons */}
                     <div className="flex justify-center gap-4 pt-4">
+                        <button
+                            onClick={handleDownloadPDF}
+                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                        >
+                            📥 Download PDF
+                        </button>
                         <button
                             onClick={handlePrint}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"

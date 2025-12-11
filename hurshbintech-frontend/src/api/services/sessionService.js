@@ -106,6 +106,18 @@ const sessionService = {
     }
   },
 
+  // Update session (Head only)
+  updateSession: async (sessionId, sessionData) => {
+    try {
+      const response = await api.put(`/sessions/${sessionId}`, sessionData);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error updating session:', error);
+      console.error('[sessionService] Error response:', error.response?.data);
+      throw error;
+    }
+  },
+
   // WebSocket
   initializeWebSocket: (sessionId, userId) => {
     const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';

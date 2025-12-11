@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import Emoji from './Emoji';
 import '../../styles/components/common/Whiteboard.css';
 import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
@@ -2480,7 +2481,7 @@ const Whiteboard = ({
                             <div key={animation.id} style={{ position: 'absolute', width: '100%', height: '100%', bottom: '0' }}>
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={`smiley-${animation.id}-${i}`} className="smiley" style={{ bottom: '0%' }}>
-                                        😊
+                                        <Emoji emoji="😊" size="3xl" />
                                     </div>
                                 ))}
                             </div>
@@ -2500,7 +2501,7 @@ const Whiteboard = ({
                             <div key={animation.id} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                                     <div key={`star-${animation.id}-${i}`} className="star">
-                                        ⭐
+                                        <Emoji emoji="⭐" size="3xl" />
                                     </div>
                                 ))}
                             </div>
@@ -2529,7 +2530,7 @@ const Whiteboard = ({
                                     pointerEvents: 'none'
                                 }}
                             >
-                                {animation.emoji}
+                                <Emoji emoji={animation.emoji} size="3xl" />
                             </div>
                         ))}
 
@@ -2588,7 +2589,9 @@ const Whiteboard = ({
                                 }}
                             >
                                 {!animation.popped ? (
-                                    <span className="floating-emoji emoji-fallback">{animation.emoji}</span>
+                                    <span className="floating-emoji">
+                                        <Emoji emoji={animation.emoji} size="lg" />
+                                    </span>
                                 ) : null}
                             </div>
                         ))}

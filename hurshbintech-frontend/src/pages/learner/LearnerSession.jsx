@@ -5,12 +5,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import sessionService from '../../api/services/sessionService';
-import SimpleWebRTC from '../../api/services/simpleWebRTC';
+import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import Emoji from '../../components/common/Emoji';
+import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
+import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
@@ -28,8 +31,9 @@ const LearnerSession = () => {
   // Stream state (only remote - trainer's video)
   const [remoteStream, setRemoteStream] = useState(null);
 
-  // Video ref (only remote - trainer's video)
-  const remoteVideoRef = useRef(null);
+  // Video position and size for moveable video feed
+  const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
+  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
 
   // UI and session state
   const [sessionInfo, setSessionInfo] = useState(null);
@@ -654,102 +658,51 @@ const LearnerSession = () => {
       // toast.error('Failed to initialize whiteboard');
     }
 
-    // Initialize WebRTC
-    const rtcService = new SimpleWebRTC(WS_BASE_URL, sessionId, 'learner');
+    // Initialize Video Conference Service
+    const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'learner');
 
     try {
-      console.log('[LearnerSession] Initializing WebRTC service');
+      console.log('[LearnerSession] Initializing Video Conference service');
+
+      // Set callback for local stream (learner's camera/mic)
+      videoService.onLocalStream = (stream) => {
+        console.log('[LearnerSession] Local stream received');
+        // Learner doesn't display their own video to minimize distraction
+      };
 
       // Set callback for remote stream (trainer's video)
-      rtcService.onRemoteStream = (stream) => {
-        console.log('[LearnerSession] Received remote stream from trainer');
-        console.log('[LearnerSession] Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
-
-        // Add event listeners for track changes
-        stream.getTracks().forEach(track => {
-          console.log(`[LearnerSession] Adding listeners to ${track.kind} track`);
-          track.addEventListener('ended', () => {
-            console.log(`[LearnerSession] Remote ${track.kind} track ended`);
-          });
-          track.addEventListener('mute', () => {
-            console.log(`[LearnerSession] Remote ${track.kind} track muted`);
-          });
-          track.addEventListener('unmute', () => {
-            console.log(`[LearnerSession] Remote ${track.kind} track unmuted`);
-          });
-        });
-
+      videoService.onRemoteStream = (stream) => {
+        console.log('[LearnerSession] Remote stream received from trainer');
         setRemoteStream(stream);
-        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
-          const videoElement = remoteVideoRef.current;
-          videoElement.srcObject = stream;
-
-          // Wait for loadedmetadata before playing
-          const playVideo = () => {
-            videoElement.play().catch((error) => {
-              console.error('[LearnerSession] Error playing remote video:', error);
-              if (error.name === 'NotAllowedError') {
-                // toast.warn('Autoplay blocked. Click video to enable.');
-              } else if (error.name !== 'AbortError') {
-                console.warn('Video play error:', error.name);
-              }
-            });
-          };
-
-          if (videoElement.readyState >= 2) {
-            // Video is already loaded
-            playVideo();
-          } else {
-            // Wait for metadata to load
-            videoElement.addEventListener('loadedmetadata', playVideo, { once: true });
-          }
-        }
       };
 
       // Set callback for connection state changes
-      rtcService.onConnectionChange = (state) => {
+      videoService.onConnectionStateChange = (state) => {
         console.log('[LearnerSession] Connection state:', state);
-        setConnectionStatus(state);
-        if (state === 'failed') {
-          toast.error('Connection failed. Please refresh and try again.');
-        } else if (state === 'connected') {
-          // toast.success('Connected to trainer!');
-        }
+        const statusMap = {
+          'new': 'connecting',
+          'connecting': 'connecting',
+          'connected': 'connected',
+          'disconnected': 'disconnected',
+          'failed': 'failed',
+          'closed': 'disconnected'
+        };
+        setConnectionStatus(statusMap[state] || state);
       };
 
-      // Set callback for prompt meter updates
-      rtcService.onPromptMeterUpdate = (value) => {
-        console.log('[LearnerSession] Prompt meter update:', value);
-        setPromptMeter(value);
-        // toast.info(`Prompt Level: ${value}`);
+      // Set error callback
+      videoService.onError = (error) => {
+        console.error('[LearnerSession] Video conference error:', error);
+        toast.error(`Video error: ${error.message}`);
       };
 
-      // Set callback for reinforcement meter updates
-      rtcService.onReinforcementMeterUpdate = (value) => {
-        console.log('[LearnerSession] Reinforcement meter update:', value);
-        setReinforcementMeter(value);
-        // toast.info(`Reinforcement Level: ${value}`);
-      };
+      // Initialize video conference (gets local media and sets up connection)
+      await videoService.initialize();
+      setWebRTC(videoService);
 
-      // Initialize WebRTC (gets local media)
-      await rtcService.initialize();
-      setWebRTC(rtcService);
-
-      // Update media control states and availability
-      const hasAudio = rtcService.localStream && rtcService.localStream.getAudioTracks().length > 0;
-      const hasVideo = rtcService.localStream && rtcService.localStream.getVideoTracks().length > 0;
-
-      // Note: Media state tracked in component state (_hasLocalAudio, _hasLocalVideo, etc.)
-      console.log('[LearnerSession] Local media detected:', { hasAudio, hasVideo });
-
-      console.log('[LearnerSession] WebRTC service initialized', {
-        hasAudio,
-        hasVideo,
-        micEnabled: hasAudio ? rtcService.isMicEnabled() : 'N/A',
-        cameraEnabled: hasVideo ? rtcService.isCameraEnabled() : 'N/A'
-      });
+      console.log('[LearnerSession] Video Conference service initialized');
     } catch (error) {
-      console.error('[LearnerSession] WebRTC init error:', error);
+      console.error('[LearnerSession] Video Conference init error:', error);
       toast.error('Failed to initialize video connection: ' + error.message);
     }
   };
@@ -905,40 +858,7 @@ const LearnerSession = () => {
       {/* Main Container - Responsive 3-column layout */}
       <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
         <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
-          {/* Video Conferencing */}
-          <div className="bg-slate-800 p-3 sm:p-4 md:p-5 rounded mb-4 md:mb-5 text-white">
-            <div className="flex justify-between items-center">
-              <div className="text-xs sm:text-sm md:text-base font-semibold">📹 Video Conferencing</div>
-            </div>
-            <div className="mt-2 text-xs sm:text-sm md:text-sm text-gray-400">
-              Connected with: {sessionInfo?.trainer_name ?? '—'} | Session Time: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--:--'}
-            </div>
-            <div className="flex justify-center items-start gap-2 sm:gap-5 md:gap-6 w-full p-2 sm:p-3 md:p-4">
-              <div className="flex-1 max-w-full flex flex-col">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs sm:text-sm md:text-base text-slate-700 font-medium">Trainer's Video</span>
-                  <span className={`text-xs sm:text-xs md:text-sm ${remoteStream ? 'text-green-500' : 'text-red-500'}`}>
-                    {remoteStream ? '● Connected' : '○ Waiting...'}
-                  </span>
-                </div>
-                <div className="relative h-[150px] sm:h-[180px] md:h-[220px] lg:h-[240px] overflow-hidden rounded-lg bg-black">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    muted={false}
-                    className="session-video"
-                    style={{ display: remoteStream ? 'block' : 'none', width: '100%', height: '100%' }}
-                  />
-                  {!remoteStream && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800 text-white text-sm sm:text-base font-medium rounded-lg">
-                      Waiting for trainer to join...
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Video Conferencing - Now on whiteboard */}
           <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -950,7 +870,7 @@ const LearnerSession = () => {
                   className={`text-yellow-600 hover:text-yellow-800 transition-colors text-lg md:text-xl cursor-pointer hover:bg-yellow-200 rounded p-1 ${isEyeBlinking ? 'animate-eye-blink' : ''}`}
                   title={promptVisible ? 'Hide prompts' : 'Show prompts'}
                 >
-                  👁
+                  <Emoji emoji="👁" size="lg" />
                 </button>
                 <h3 className="font-semibold text-sm md:text-base text-gray-700">Prompt Line (For Prompter)</h3>
               </div>
@@ -963,7 +883,7 @@ const LearnerSession = () => {
           </div>
           <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-blue-600 text-lg md:text-xl">📊</span>
+              <Emoji emoji="📊" size="lg" />
               <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700">Current Session Metrics</h3>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
@@ -1019,6 +939,22 @@ const LearnerSession = () => {
         {/* Whiteboard Area */}
         <div className="w-full responsive-whiteboard-section">
           <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
+            {/* Moveable Video Feed Overlay */}
+            {remoteStream && (
+              <MoveableVideoFeed
+                videoStream={remoteStream}
+                label="Trainer"
+                position={videoPosition}
+                size={videoSize}
+                onPositionChange={setVideoPosition}
+                onSizeChange={setVideoSize}
+                isDraggable={true}
+                isResizable={true}
+                connectionStatus={connectionStatus}
+                zIndex={100}
+              />
+            )}
+
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
@@ -1144,7 +1080,7 @@ const LearnerSession = () => {
                         handleKeyboardKeyPress('SPACE');
                       }}
                     >
-                      🌟 SPACE 🌟
+                      <Emoji emoji="🌟" size="sm" /> SPACE <Emoji emoji="🌟" size="sm" />
                     </button>
                     <button
                       className="col-span-5 sm:col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"

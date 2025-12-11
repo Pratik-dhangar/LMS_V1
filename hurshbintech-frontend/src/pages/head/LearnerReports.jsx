@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import Emoji from '../../components/common/Emoji';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
 import ReportChartModal from './ReportChartModal';
 import ProgramReportModal from './ProgramReportModal';
+import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/Pages.css';
 
 const LearnerReports = () => {
@@ -81,6 +83,21 @@ const LearnerReports = () => {
     }
   };
 
+  const handleDownloadAllProgramsPDF = () => {
+    try {
+      downloadProgressReportPDF({
+        learnerName: learnerInfo?.learner_name || 'Learner',
+        programName: null, // null means all programs
+        statistics: statistics,
+        groupedReports: groupedReports,
+      });
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
+    }
+  };
+
   const getMeterColor = (value, type) => {
     if (type === 'prompt') {
       const numValue = value === 'I' ? 0 : parseInt(value);
@@ -101,7 +118,7 @@ const LearnerReports = () => {
         {/* Header */}
         <div className="page-header">
           <div>
-            <h1 className="page-title">📈 Learner Reports</h1>
+            <h1 className="page-title"><Emoji emoji="📈" size="xl" /> Learner Reports</h1>
             {learnerInfo && (
               <div className="report-learner-info">
                 <p className="report-learner-name">{learnerInfo.learner_name}</p>
@@ -113,8 +130,17 @@ const LearnerReports = () => {
           </div>
           <div className="button-group">
             <button
+              onClick={handleDownloadAllProgramsPDF}
+              className="btn-success"
+              disabled={loading || groupedReports.length === 0}
+              title={groupedReports.length === 0 ? 'No reports available to download' : 'Download all reports as PDF'}
+            >
+              📥 Download PDF Report
+            </button>
+            <button
               onClick={handleShowChart}
               className="btn-chart"
+              disabled={loading || !statistics}
             >
               📊 View Charts
             </button>

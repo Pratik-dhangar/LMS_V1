@@ -173,7 +173,7 @@ const OverallReportModal = ({ statistics, onClose }) => {
 
                         {/* Reinforcement Meter Distribution */}
                         <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">🎯 Reinforcement Meter Distribution</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-center"><Emoji emoji="🎯" size="base" /> Reinforcement Meter Distribution</h3>
                             {reinforcementData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
                                     <PieChart>

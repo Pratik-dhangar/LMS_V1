@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
+import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/Pages.css';
 
 const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
@@ -17,49 +19,49 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
     try {
       setLoading(true);
       const data = await sessionReportService.getByLearnerGrouped(learnerId);
-      
+
       // Process data for the bar chart
       const processedData = [];
-      
+
       data.forEach(group => {
         group.reports.forEach(report => {
           // Convert prompt meter to numeric value
           let promptValue = report.prompt_meter === 'I' ? 0 : parseInt(report.prompt_meter);
-          
+
           // Convert reinforcement meter to numeric value
           let reinforcementValue = report.reinforcement_meter === 'Full' ? 100 : parseInt(report.reinforcement_meter);
-          
+
           // Format session start time
-          const sessionTime = report.session_started_at 
+          const sessionTime = report.session_started_at
             ? new Date(report.session_started_at).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit'
-              })
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit'
+            })
             : new Date(report.created_at).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit'
-              });
-          
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit'
+            });
+
           processedData.push({
             sessionTime: sessionTime,
             fullSessionTime: report.session_started_at || report.created_at,
             prompt: promptValue,
             reinforcement: reinforcementValue,
-            goals: report.session_goals && report.session_goals.length > 0 
-              ? report.session_goals.join(', ') 
+            goals: report.session_goals && report.session_goals.length > 0
+              ? report.session_goals.join(', ')
               : report.program_name,
             programName: report.program_name
           });
         });
       });
-      
+
       // Sort by session time (newest first)
       processedData.sort((a, b) => new Date(b.fullSessionTime) - new Date(a.fullSessionTime));
-      
+
       setChartData(processedData);
     } catch (error) {
       console.error('Error fetching chart data:', error);
@@ -85,6 +87,24 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      // Fetch grouped reports for PDF
+      const groupedReports = await sessionReportService.getByLearnerGrouped(learnerId);
+
+      downloadProgressReportPDF({
+        learnerName: learnerName,
+        programName: null, // All programs
+        statistics: statistics,
+        groupedReports: groupedReports,
+      });
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
+    }
   };
 
   return (
@@ -137,12 +157,12 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
                 📊 Session Progress - Prompt vs Reinforcement Meters
               </h3>
               <ResponsiveContainer width="100%" height={500}>
-                <BarChart 
-                  data={chartData} 
+                <BarChart
+                  data={chartData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
+                  <XAxis
                     dataKey="goals"
                     angle={-45}
                     textAnchor="end"
@@ -151,24 +171,24 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
                     tick={{ fontSize: 10 }}
                     label={{ value: 'Goals / Programs', position: 'insideBottom', offset: -80 }}
                   />
-                  <YAxis 
+                  <YAxis
                     label={{ value: 'Meter Value', angle: -90, position: 'insideLeft' }}
                     domain={[0, 100]}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="rect"
                   />
-                  <Bar 
-                    dataKey="prompt" 
-                    fill="#3b82f6" 
+                  <Bar
+                    dataKey="prompt"
+                    fill="#3b82f6"
                     name="Prompt Meter"
                     radius={[8, 8, 0, 0]}
                   />
-                  <Bar 
-                    dataKey="reinforcement" 
-                    fill="#10b981" 
+                  <Bar
+                    dataKey="reinforcement"
+                    fill="#10b981"
                     name="Reinforcement Meter"
                     radius={[8, 8, 0, 0]}
                   />
@@ -183,6 +203,12 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
 
           {/* Action Buttons */}
           <div className="modal-actions">
+            <button
+              onClick={handleDownloadPDF}
+              className="btn-success"
+            >
+              📥 Download PDF
+            </button>
             <button
               onClick={handlePrint}
               className="btn-primary"
