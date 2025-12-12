@@ -1,0 +1,74 @@
+services:
+  # 1. PWA Backend
+  backend-pwa:
+    build:
+      context: ./hurshbintech-backend
+      dockerfile: Dockerfile
+    container_name: hurshbintech-backend-pwa
+    # Map AWS Port 8001 -> Container Port 8000
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./hurshbintech-backend/.env.production
+    environment:
+      # Connects to the 'db-pwa' service defined below
+      - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@db-pwa:5432/hurshbintechdb_pwa
+      - ENVIRONMENT=production
+    volumes:
+      - ~/certs:/app/certs:ro
+    depends_on:
+      - db-pwa
+    # SSL Command
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem
+    restart: unless-stopped
+
+  # 2. PWA Frontend
+  frontend-pwa:
+    build:
+      context: ./hurshbintech-frontend
+      dockerfile: Dockerfile
+      args:
+        # POINT TO THE PUBLIC IP + NEW BACKEND PORT (8001)
+        - VITE_API_BASE_URL=https://hurshbin.lumesoftai.in:8001/api
+        - VITE_WS_URL=wss://hurshbin.lumesoftai.in:8001
+        - ENVIRONMENT=production
+        - VITE_ENABLE_PWA=true
+    container_name: hurshbintech-frontend-pwa
+    # Map AWS Port 3001 -> Container Port 3000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ~/certs:/app/certs:ro
+    restart: unless-stopped
+
+  # 3. PWA Database (A fresh, separate DB container)
+  db-pwa:
+    image: postgres:15
+    container_name: hurshbintech-db-pwa
+    environment:
+      POSTGRES_USER: hurshbinuser
+      POSTGRES_PASSWORD: hurshbintech
+      POSTGRES_DB: hurshbintechdb_pwa
+    volumes:
+      - pwa_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # 4. ✅ TURN Server for WebRTC (Fixes video connections behind NAT)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: hurshbintech-coturn
+    restart: unless-stopped
+    network_mode: "host"
+    command: 
+      - -n 
+      - --log-file=stdout 
+      - --min-port=49152 
+      - --max-port=65535 
+      - --user=hurshbin:SecureTurnPass2024!
+      - --lt-cred-mech 
+      - --fingerprint 
+      - --external-ip=43.204.218.16
+      - --listening-port=3478
+
+volumes:
+  pwa_postgres_data:

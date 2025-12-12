@@ -1,7 +1,7 @@
 import React from 'react';
 import Emoji from '../../components/common/Emoji';
 import { FaMicrophone } from 'react-icons/fa';
-import '../../styles/Pages.css';
+import '../../styles/LearningProgram.css';
 
 const LearningProgramSidebar = ({
   learningProgramSearch,
@@ -51,7 +51,12 @@ const LearningProgramSidebar = ({
         {filteredLearningGoals.length > 0 ? (
           filteredLearningGoals.map((goal, index) => (
             <div key={goal.id ?? index} className="sidebar-list-item">
-              <input type="checkbox" className="sidebar-checkbox" />
+              <input
+                type="checkbox"
+                className="sidebar-checkbox"
+                checked={selectedProgramId === goal.id}
+                onChange={() => handleProgramCheck(goal.id)}
+              />
               <div className="sidebar-item-text">{index + 1}. {goal.goal}</div>
               <div className="sidebar-badge" title="Click to record prompt level">—</div>
             </div>
@@ -60,7 +65,7 @@ const LearningProgramSidebar = ({
         }
       </div>
 
-      <div className="sidebar-section-title" style={{ marginTop: '1.5rem' }}>📊 Prompt Meter</div>
+      <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
       <div className="meter-container meter-container-blue">
         <div className="meter-buttons">
           {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
@@ -132,27 +137,11 @@ const LearningProgramSidebar = ({
         {listening ? "🔇" : <FaMicrophone />}
       </button>
       <p className="voice-status-text">
-        {listening ? 'Recording... Click to stop' : 'Click to start recording'}
+        {listening ? '🎤 Recording... Click to stop' : '📢 Click to start recording'}
       </p>
       <div className="transcript-box">
         {transcript || <span className="transcript-placeholder">Your speech will appear here...</span>}
       </div>
-      {transcript && !listening && (
-        <button
-          onClick={() => {
-            if (whiteboardService && transcript.trim()) {
-              console.log('[TrainerSession] ✅ Manually sending prompt to learner:', transcript);
-              whiteboardService.send('prompt_update', {
-                text: transcript.trim(),
-                timestamp: Date.now()
-              });
-            }
-          }}
-          className="btn-send-prompt"
-        >
-          📤 Send to Learner
-        </button>
-      )}
     </div>
   );
 };

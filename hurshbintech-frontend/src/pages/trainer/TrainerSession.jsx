@@ -261,14 +261,35 @@ const TrainerSession = () => {
   const stopwatchesRef = useRef(new Map());
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Callback for when trainer mutes microphone (auto-send prompt)
+  // 🔸 How it works: sends the transcript to learner when mute is triggered
+  // -----------------------------------------------------------
+  const handleMuteMicCallback = (transcriptText) => {
+    try {
+      if (transcriptText && transcriptText.trim() && whiteboardService) {
+        whiteboardService.send('prompt_update', {
+          text: transcriptText.trim(),
+          timestamp: Date.now()
+        });
+        
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Error in handleMuteMicCallback:', error);
+    }
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Voice input state via reusable hook
   // 🔸 How it works: uses `useVoiceInput` to handle speech recognition lifecycle
   // -----------------------------------------------------------
-  const { listening, transcript, toggleListening: handleVoiceToggle } = useVoiceInput({ lang: 'en-IN' });
+  const { listening, transcript, toggleListening: handleVoiceToggle, transcriptRef } = useVoiceInput({
+    lang: 'en-IN',
+    onMuteMic: handleMuteMicCallback
+  });
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle voice input with automatic transcript sending to learner
-  // 🔸 How it works: handles voice input toggle and sends transcript via whiteboard service, coordinates with video conferencing mic
+  // 🔸 How it works: handles voice input toggle and coordinates with video conferencing mic
   // -----------------------------------------------------------
   const toggleListening = async () => {
     try {
@@ -276,27 +297,18 @@ const TrainerSession = () => {
       if (!listening && micEnabled && webRTC) {
         const newState = webRTC.toggleMicrophone();
         setMicEnabled(newState);
-        toast.info('Video conferencing mic turned off - voice input enabled');
+        
       }
 
       // Toggle voice input using the new hook
+      // The hook will auto-send via the onMuteMic callback when mic is muted
       await handleVoiceToggle();
 
-      // Send the transcript to learner when stopping listening
-      if (!listening && transcript && transcript.trim() && !transcript.includes('---Stopped Listening---') && whiteboardService) {
-        console.log('[TrainerSession] ✅ Sending prompt to learner:', transcript);
-        console.log('[TrainerSession] WhiteboardService status:', whiteboardService ? 'Connected' : 'Not connected');
-        whiteboardService.send('prompt_update', {
-          text: transcript.trim(),
-          timestamp: Date.now()
-        });
-
-        // Turn video conferencing mic back on after voice input is done
-        if (webRTC && !micEnabled) {
-          const newState = webRTC.toggleMicrophone();
-          setMicEnabled(newState);
-          toast.info('Video conferencing mic turned back on');
-        }
+      // Turn video conferencing mic back on after voice input is done
+      if (listening && !micEnabled && webRTC) {
+        const newState = webRTC.toggleMicrophone();
+        setMicEnabled(newState);
+        
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -1391,29 +1403,6 @@ const TrainerSession = () => {
         triggerLearnerKeyboard();
         return;
       }
-
-      // ---------------------- STOPWATCH ----------------------
-      case '⏲️ Stopwatch': {
-        if (toolsService) {
-          const stopwatchId = toolsService.startStopwatch();
-          const label = 'Stopwatch';
-          setActiveIcons(prev => ({ ...prev, [label]: true }));
-
-          // Add stopwatch item to canvas
-          newItem = {
-            id: stopwatchId,
-            type: 'stopwatch',
-            x: centerX - 50,
-            y: centerY - 50,
-            width: 100,
-            height: 100,
-            label: '⏲️ Stopwatch',
-            elapsedSeconds: 0
-          };
-        }
-        break;
-      }
-
       // ---------------------- FEEDBACK & EMOJIS ----------------------
       case '👍 Good Job!': {
         console.log('[TrainerSession] MATCHED Good Job case!');
@@ -1644,153 +1633,32 @@ const TrainerSession = () => {
         </div>
       )}
 
-      {/* Hamburger menus removed - using 80-20 layout on mobile/tablet */}
 
-      {/* Main layout - Desktop: 3 columns, Tablet/Mobile: 80% center + 20% right stacked */}
+      {/* Main layout - Desktop: 3 columns, Tablet/Mobile: 70% center + 30% right stacked */}
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
-          <div className="bg-gray-50 border-2 border-gray-300 p-2 sm:p-4 md:p-5 rounded h-fit max-h-[90vh] overflow-y-auto session-sidebar mt-3 sm:mt-4 md:mt-5">
-            <div className="bg-blue-500 text-white font-semibold p-1.5 sm:p-2 md:p-3 -mx-2 sm:-mx-4 md:-mx-5 -mt-2 sm:-mt-4 md:-mt-5 mb-2 sm:mb-4 md:mb-5 rounded-t text-xs sm:text-sm md:text-base">
-              📋 Learning Program
-            </div>
-
-            <div className="bg-white border-2 border-blue-500 p-2 sm:p-3 md:p-4 rounded mb-3 sm:mb-5 md:mb-6 flex items-center">
-              <input
-                type="text"
-                className="flex-1 bg-gray-100 px-2 py-1.5 sm:py-2 md:py-2.5 rounded text-xs md:text-sm border-none outline-none mr-2"
-                placeholder="🔍 Search Child Name / IIP..."
-                value={learningProgramSearch}
-                onChange={handleLearningProgramSearch}
-              />
-            </div>
-
-            <div className="bg-gray-50 p-1.5 sm:p-2 md:p-3 rounded mb-3 sm:mb-4 md:mb-5">
-              <div className="text-[10px] sm:text-xs md:text-sm font-semibold mb-2 text-slate-800">
-                Selected: {sessionInfo?.learner_name ?? '—'} {sessionInfo?.iip_id ? `- ${sessionInfo.iip_id}` : ''}
-              </div>
-            </div>
-
-            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2">Program Items</div>
-            <div className="max-h-[180px] sm:max-h-[220px] md:max-h-[260px] overflow-y-auto mb-3 sm:mb-4 md:mb-5">
-              {filteredLearningGoals.length > 0 ? (
-                filteredLearningGoals.map((goal, index) => (
-                  <div key={goal.id ?? index} className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 md:p-3 bg-white border border-gray-300 rounded my-1 text-[10px] sm:text-xs md:text-sm">
-                    <input
-                      type="checkbox"
-                      className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer"
-                      checked={selectedProgramId === goal.id}
-                      onChange={() => handleProgramCheck(goal.id)}
-                    />
-                    <div className="flex-1">{index + 1}. {goal.goal}</div>
-                    <div className="bg-gray-200 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 rounded font-semibold min-w-[25px] sm:min-w-[30px] md:min-w-[35px] text-center cursor-pointer text-[10px] sm:text-xs md:text-sm" title="Click to record prompt level">—</div>
-                  </div>
-                ))
-              ) : <div className="text-[10px] sm:text-xs md:text-sm text-gray-500 italic">No matching program items found.</div>
-              }
-
-            </div>
-
-
-
-            <div className="text-xs sm:text-sm md:text-base font-semibold mt-3 sm:mt-4 md:mt-5 mb-2">📊 Prompt <br /> Meter</div>
-            <div className="bg-white border-2 border-blue-500 rounded p-1.5 sm:p-2 md:p-3 mb-3 sm:mb-4 md:mb-5">
-              <div className="flex flex-wrap gap-0.5 sm:gap-1 md:gap-2 justify-center">
-                {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
-                  <div
-                    key={p}
-                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 md:py-2.5 rounded font-semibold text-[10px] sm:text-xs md:text-sm cursor-pointer min-w-[28px] sm:min-w-[32px] md:min-w-[38px] text-center hover:bg-green-700`}
-                    onClick={() => {
-                      setSelectedPromptLevel(p);
-                      webRTC && webRTC.sendPromptMeter(p);
-                    }}
-                  >
-                    {p}
-                  </div>
-                ))}
-              </div>
-              <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-1 sm:mt-2 md:mt-3 text-center">Click to record prompt level for selected item</div>
-              {selectedPromptLevel && (
-                <div className="text-[10px] sm:text-xs md:text-sm font-semibold text-center mt-1 sm:mt-2 md:mt-3 text-blue-600">
-                  Selected: {selectedPromptLevel}
-                </div>
-              )}
-            </div>
-
-            <div className="text-xs sm:text-sm md:text-base font-semibold mb-2"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
-            <div className="bg-white border-2 border-green-600 rounded p-1.5 sm:p-2 md:p-3 mb-3 sm:mb-4 md:mb-5">
-              <div className="flex flex-wrap gap-0.5 sm:gap-1 md:gap-2 justify-center">
-                {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
-                  <div
-                    key={r}
-                    className={`${selectedReinforcementLevel === r ? 'bg-blue-600' : 'bg-green-600'} text-white px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 md:py-2.5 rounded font-semibold text-[10px] sm:text-xs md:text-sm cursor-pointer min-w-[32px] sm:min-w-[38px] md:min-w-[45px] text-center hover:bg-green-700`}
-                    onClick={() => {
-                      setSelectedReinforcementLevel(r);
-                      webRTC && webRTC.sendReinforcementMeter(r);
-                    }}
-                  >
-                    {r}
-                  </div>
-                ))}
-              </div>
-
-              {selectedReinforcementLevel && (
-                <div className="text-[10px] sm:text-xs font-semibold text-center mt-1 sm:mt-2 text-blue-600">
-                  Selected: {selectedReinforcementLevel}
-                </div>
-              )}
-            </div>
-
-            {/* Save Report Button */}
-            {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
-              <button
-                onClick={handleSaveReport}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded text-xs sm:text-sm font-semibold mb-3 sm:mb-4 flex items-center justify-center gap-1 sm:gap-2"
-              >
-                💾 <span className="hidden xs:inline">Save Session Report</span><span className="xs:hidden">Save Report</span>
-              </button>
-            )}
-            {selectedProgramId && (!selectedPromptLevel || !selectedReinforcementLevel) && (
-              <div className="text-[9px] sm:text-xs text-orange-600 mb-3 sm:mb-4 text-center bg-orange-50 p-1.5 sm:p-2 rounded border border-orange-200">
-                ⚠️ Select both meters to save
-              </div>
-            )}
-
-            {/* Speech Section */}
-            <h3 className="text-sm sm:text-base font-semibold mb-2">🎙️ Voice Input</h3>
-            <button
-              onClick={toggleListening}
-              className={`${listening ? 'bg-red-500' : 'bg-green-500'} text-white border-none rounded-full w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] text-base sm:text-lg cursor-pointer mb-2 flex justify-center items-center mx-auto hover:opacity-90`}
-            >
-              {listening ? "🔇" : <FaMicrophone />}
-            </button>
-            <p className="text-[10px] sm:text-xs text-center text-gray-600 mb-2">
-              {listening ? 'Recording... Click to stop' : 'Click to start recording'}
-            </p>
-            <div className="bg-white border border-gray-200 p-2 min-h-[50px] sm:min-h-[60px] rounded whitespace-pre-wrap text-xs sm:text-sm max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
-              {transcript || <span className="text-gray-400 italic">Your speech will appear here...</span>}
-            </div>
-            {transcript && !listening && (
-              <button
-                onClick={() => {
-                  if (whiteboardService && transcript.trim()) {
-                    console.log('[TrainerSession] ✅ Manually sending prompt to learner:', transcript);
-                    whiteboardService.send('prompt_update', {
-                      text: transcript.trim(),
-                      timestamp: Date.now()
-                    });
-                  }
-                }}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded text-xs sm:text-sm font-semibold mb-2"
-              >
-                📤 Send to Learner
-              </button>
-            )}
-
-          </div>
+          <LearningProgramSidebar
+            learningProgramSearch={learningProgramSearch}
+            handleLearningProgramSearch={handleLearningProgramSearch}
+            sessionInfo={sessionInfo}
+            filteredLearningGoals={filteredLearningGoals}
+            selectedPromptLevel={selectedPromptLevel}
+            setSelectedPromptLevel={setSelectedPromptLevel}
+            selectedReinforcementLevel={selectedReinforcementLevel}
+            setSelectedReinforcementLevel={setSelectedReinforcementLevel}
+            selectedProgramId={selectedProgramId}
+            handleProgramCheck={handleProgramCheck}
+            webRTC={webRTC}
+            toggleListening={toggleListening}
+            listening={listening}
+            transcript={transcript}
+            whiteboardService={whiteboardService}
+            onSaveReport={handleSaveReport}
+          />
         </div>
 
-        {/* Center Area - 80% on mobile/tablet, flexible on desktop */}
+        {/* Center Area - 70% on mobile/tablet, flexible on desktop */}
         <div className="session-center-area">
 
           {/* Whiteboard */}
@@ -1852,37 +1720,39 @@ const TrainerSession = () => {
 
           {/* Video Controls - Below Whiteboard */}
           <div className="w-full mt-4 mb-3">
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
               <button
                 onClick={handleToggleMic}
-                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 shadow-md`}
+                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
                 title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
               >
-                <span className="text-xl">{micEnabled ? '🎤' : '🔇'}</span>
+                <span>{micEnabled ? '🎤' : '🔇'}</span>
                 <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span>
               </button>
               <button
                 onClick={handleToggleCamera}
-                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 shadow-md`}
+                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
                 title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
               >
-                <span className="text-xl">{cameraEnabled ? '📹' : '📷'}</span>
+                <span>{cameraEnabled ? '📹' : '📷'}</span>
                 <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span>
               </button>
             </div>
           </div>
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
-          <div className="w-full" style={{ marginBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+          <div className="session-whiteboard-tools w-full" style={{ marginBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded shadow-md flex items-center" style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
+                <div className="session-section-header bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded shadow-md flex items-center" style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
                   <span style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}>🎨</span>
                   <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 1rem)' }}>Whiteboard Drawing Tools</div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
+          <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
             {/* Drawing tool buttons */}
             <div className="flex" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
               <button
@@ -2063,10 +1933,10 @@ const TrainerSession = () => {
           </div>
 
           {/* Toolbar */}
-          <div className="flex flex-wrap bg-white rounded" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)', padding: 'clamp(0.5rem, 2vw, 1rem)', marginTop: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+          <div className="session-tools-section flex flex-wrap bg-white rounded" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)', padding: 'clamp(0.5rem, 2vw, 1rem)', marginTop: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <div className="flex items-center justify-between w-full" style={{ marginBottom: '0.5rem' }}>
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
-                <div className="bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded shadow-sm flex items-center" style={{ padding: 'clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)', gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
+                <div className="session-section-header bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded shadow-sm flex items-center" style={{ padding: 'clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)', gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
                   <Emoji emoji="🛠️" size="sm" />
                   <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.75rem)' }}>Whiteboard Tools & Learner Access</div>
                 </div>              </div>
@@ -2075,7 +1945,7 @@ const TrainerSession = () => {
             </div>
 
             {/* Learner Tool Access Controls */}
-            <div className="w-full flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3">
+            <div className="session-tools-section w-full flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3">
               {/* Select Tool Toggle */}
               <button
                 onClick={() => toggleLearnerToolAccess('select')}
@@ -2156,11 +2026,11 @@ const TrainerSession = () => {
 
 
             {/* Trainer Whiteboard Tools */}
-            <div className="w-full">
+            <div className="session-interactive-buttons w-full">
               <div className="w-full mb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-2 sm:gap-3">
+                    <div className="session-section-header bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-2 sm:gap-3">
                       <Emoji emoji="⏲️" size="lg" />
                       <div>
                         <div className="text-xs sm:text-sm font-semibold">Timers</div>
@@ -2170,7 +2040,7 @@ const TrainerSession = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="session-interactive-buttons flex items-center gap-2">
                 <button
                   onClick={() => setShowStopwatch(prev => !prev)}
                   className={`inline-flex items-center gap-1 sm:gap-2 my-1 sm:my-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-semibold ${showStopwatch ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`}
@@ -2186,11 +2056,11 @@ const TrainerSession = () => {
 
 
               <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
+                <div className="session-section-header bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
                   <span className="text-xs sm:text-sm">✨</span>
                   <div className="text-[10px] sm:text-xs font-semibold">Feedback & Emojis</div>
                 </div>              </div>
-              <div className="flex flex-wrap gap-0.5 sm:gap-1 w-full">
+              <div className="session-interactive-buttons flex flex-wrap gap-0.5 sm:gap-1 w-full">
                 {[
                   { label: 'Good Job!', icon: '👍' },
                   { label: 'Wow!', icon: '🌟' },
@@ -2226,14 +2096,14 @@ const TrainerSession = () => {
             </div>
 
             {/* CREATE EXERCISES SECTION */}
-            <div className="w-full">
+            <div className="session-create-exercise w-full">
               <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
+                <div className="session-section-header bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
                   <Emoji emoji="📚" size="sm" />
                   <div className="text-[10px] sm:text-xs font-semibold">Create Exercises</div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1 sm:gap-2 w-full">
+              <div className="session-create-exercise flex flex-wrap gap-1 sm:gap-2 w-full">
                 {/* Create Fill in the Blanks Exercise */}
                 <button
                   onClick={() => handleToolClick('📝 Fill Blanks')}
@@ -2245,21 +2115,23 @@ const TrainerSession = () => {
                 </button>
               </div>
             </div>
-            <div className="border-2 border-gray-300 p-2 sm:p-4 my-2 sm:my-4 rounded bg-gray-50 w-full">
+            <div className="session-notes-section border-2 border-gray-300 my-2 sm:my-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
               <div className="flex justify-between items-center mb-2">
-                <div className="font-semibold text-slate-800 text-sm sm:text-base">📝 Session Notes</div>
+                <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>📝 Session Notes</div>
                 <button
                   onClick={() => {
                     setSessionNotes('');
                   }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-semibold transition-colors"
+                  className="session-interactive-buttons bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition-colors"
+                  style={{ padding: 'clamp(0.25rem, 0.8vw, 0.375rem) clamp(0.5rem, 1.2vw, 0.75rem)', fontSize: 'clamp(0.5rem, 1.2vw, 0.625rem)' }}
                   title="Clear all notes"
                 >
                   <Emoji emoji="🗑️" size="base" /> <span className="hidden sm:inline">Clear</span>
                 </button>
               </div>
               <textarea
-                className="w-full p-2 rounded mt-1 text-xs text-gray-800 min-h-[60px] sm:min-h-[80px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded mt-1 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', minHeight: 'clamp(60px, 15vw, 80px)' }}
                 value={sessionNotes}
                 onChange={handleNotesChange}
                 placeholder="Write session notes here..."
@@ -2267,30 +2139,32 @@ const TrainerSession = () => {
             </div>
 
             {/* Message box */}
-            <div className="border-2 border-gray-300 p-2 sm:p-4 mt-2 rounded bg-gray-50 w-full">
-              <div className="font-semibold text-slate-800 mb-2 text-sm sm:text-base">💬 Message Box</div>
-              <div className="max-h-[120px] sm:max-h-[150px] overflow-y-auto mb-2">
+            <div className="session-message-box border-2 border-gray-300 mt-2 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+              <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
+              <div className="overflow-y-auto mb-2" style={{ maxHeight: 'clamp(100px, 25vw, 150px)' }}>
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`message-bubble ${msg.sender === 'trainer' ? 'message-bubble-sent' : 'message-bubble-received'}`}>
                     <strong>{msg.sender}:</strong> {msg.text}
-                    <div className="text-[9px] text-gray-500 mt-1">
+                    <div className="text-gray-500 mt-1" style={{ fontSize: 'clamp(0.5rem, 1vw, 0.625rem)' }}>
                       {new Date(msg.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-1 sm:gap-2 items-center">
+              <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
                 <input
                   type="text"
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type message..."
-                  className="flex-1 p-1.5 sm:p-2 border border-gray-300 rounded text-xs"
+                  className="flex-1 border border-gray-300 rounded"
+                  style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
                 />
                 <button
                   onClick={sendMessage}
-                  className="px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600 text-xs sm:text-sm"
+                  className="bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                  style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
                 >
                   Send
                 </button>
@@ -2299,16 +2173,20 @@ const TrainerSession = () => {
 
 
 
-            <div className="text-right mt-3 sm:mt-4 w-full">
-              <button className="bg-green-600 text-white px-4 sm:px-8 py-2 sm:py-3 rounded inline-flex items-center gap-1 sm:gap-2 text-sm sm:text-base cursor-pointer hover:bg-green-700" onClick={handleSaveSession}>
+            <div className="text-right w-full" style={{ marginTop: 'clamp(0.75rem, 2vw, 1rem)' }}>
+              <button
+                className="session-save-button bg-green-600 text-white rounded inline-flex items-center cursor-pointer hover:bg-green-700"
+                style={{ padding: 'clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
+                onClick={handleSaveSession}
+              >
                 💾 <span className="hidden xs:inline">Save Session</span>
-                <span className="text-[9px] sm:text-[10px] font-normal opacity-90 hidden sm:inline">(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
+                <span className="font-normal opacity-90 hidden sm:inline" style={{ fontSize: 'clamp(0.5rem, 1vw, 0.625rem)' }}>(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Column - 20% on mobile/tablet with all sections visible */}
+        {/* Right Column - 30% on mobile/tablet (Learning Content + Learning Program) */}
         <div className="session-right-column">
           {/* Video Conference - 25% height - Hidden on tablet/mobile */}
           <div className="video-section-container hidden-mobile-tablet">
@@ -2346,58 +2224,28 @@ const TrainerSession = () => {
             </div>
           </div>
 
-          {/* Learning Program - 25% height */}
-          <div className=" learning-program-container">
-            <div className="section-header">
-              <span>📋 Learning Program</span>
-            </div>
+          {/* Learning Program - 25% height - Tablet/Mobile */}
+          <div className="learning-program-container">
+            
             <div className="section-content">
-              <div className="bg-white border-2 border-blue-500 rounded flex items-center" style={{ padding: 'clamp(0.25rem, 1vw, 0.375rem)', marginBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
-                <input
-                  type="text"
-                  className="flex-1 bg-gray-100 rounded border-none outline-none"
-                  style={{ padding: 'clamp(0.2rem, 0.8vw, 0.25rem)', fontSize: 'clamp(0.5rem, 1vw, 0.625rem)', marginRight: '0.25rem' }}
-                  placeholder="🔍 Search..."
-                  value={learningProgramSearch}
-                  onChange={handleLearningProgramSearch}
-                />
-              </div>
-
-              <div className="text-xs font-semibold mb-1" style={{ fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>Program Items</div>
-              <div className="flex-1 overflow-y-auto min-h-0" style={{ marginBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
-                {filteredLearningGoals.length > 0 ? (
-                  filteredLearningGoals.map((goal, index) => (
-                    <div key={goal.id ?? index} className="flex items-center gap-0.5 bg-white border border-gray-300 rounded my-0.5" style={{ padding: 'clamp(0.2rem, 0.8vw, 0.25rem)', fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>
-                      <input
-                        type="checkbox"
-                        className="cursor-pointer"
-                        style={{ width: 'clamp(0.625rem, 1.5vw, 0.75rem)', height: 'clamp(0.625rem, 1.5vw, 0.75rem)' }}
-                        checked={selectedProgramId === goal.id}
-                        onChange={() => handleProgramCheck(goal.id)}
-                      />
-                      <div className="flex-1 truncate">{index + 1}. {goal.goal}</div>
-                    </div>
-                  ))
-                ) : <div className="text-gray-500 italic text-xs">No items</div>
-                }
-              </div>
-
-              <div className="text-xs font-semibold mb-0.5" style={{ fontSize: 'clamp(0.425rem, 1vw, 0.525rem)' }}>📊 Prompt Level</div>
-              <div className="flex flex-wrap justify-center gap-0.5" style={{ gap: 'clamp(0.1rem, 0.3vw, 0.25rem)', marginBottom: 'clamp(0.25rem, 1vw, 0.375rem)' }}>
-                {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
-                  <div
-                    key={p}
-                    className={`${selectedPromptLevel === p ? 'bg-blue-600' : 'bg-green-600'} text-white rounded font-semibold cursor-pointer text-center hover:bg-green-700`}
-                    style={{ padding: 'clamp(0.1rem, 0.4vw, 0.12rem)', fontSize: 'clamp(0.325rem, 0.7vw, 0.4rem)', minWidth: 'clamp(1rem, 2.2vw, 1.5rem)', lineHeight: '1' }}
-                    onClick={() => {
-                      setSelectedPromptLevel(p);
-                      webRTC && webRTC.sendPromptMeter(p);
-                    }}
-                  >
-                    {p}
-                  </div>
-                ))}
-              </div>
+              <LearningProgramSidebar
+                learningProgramSearch={learningProgramSearch}
+                handleLearningProgramSearch={handleLearningProgramSearch}
+                sessionInfo={sessionInfo}
+                filteredLearningGoals={filteredLearningGoals}
+                selectedPromptLevel={selectedPromptLevel}
+                setSelectedPromptLevel={setSelectedPromptLevel}
+                selectedReinforcementLevel={selectedReinforcementLevel}
+                setSelectedReinforcementLevel={setSelectedReinforcementLevel}
+                selectedProgramId={selectedProgramId}
+                handleProgramCheck={handleProgramCheck}
+                webRTC={webRTC}
+                toggleListening={toggleListening}
+                listening={listening}
+                transcript={transcript}
+                whiteboardService={whiteboardService}
+                onSaveReport={handleSaveReport}
+              />
             </div>
           </div>
 
@@ -2421,16 +2269,27 @@ const TrainerSession = () => {
         </div>
       </div>
 
-      {/* Session Info Bar */}
-      <div className="bg-slate-700 text-white px-3 sm:px-5 py-2 sm:py-3 mt-3 sm:mt-5 mx-2 sm:mx-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-        <div className="text-[10px] sm:text-xs">
+      {/* Session Info Bar - fixed to bottom with no surrounding margin */}
+      <div className="session-info-bar session-control-buttons">
+        <div className="session-info-text">
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
-          <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
-            <button className="bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-red-600 flex-1 sm:flex-none" onClick={handleEndSession}>⏹️ <span className="hidden xs:inline">End Session</span></button>
-            <button className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-blue-600 flex-1 sm:flex-none" onClick={() => console.log('[TrainerSession] Pause clicked')}><Emoji emoji="⏸️" size="sm" /> <span className="hidden xs:inline">Pause</span></button>
-          </div>
         </div>
-
+        <div className="session-info-actions">
+          <button
+            className="btn-end-session"
+            onClick={handleEndSession}
+            title="End Session"
+          >
+            ⏹️ <span className="xs:inline">End Session</span>
+          </button>
+          <button
+            className="btn-pause-session"
+            onClick={() => console.log('[TrainerSession] Pause clicked')}
+            title="Pause"
+          >
+            <Emoji emoji="⏸️" size="sm" /> <span className="xs:inline">Pause</span>
+          </button>
+        </div>
       </div>
 
       {/* Fill in the Blanks Creator Modal */}
