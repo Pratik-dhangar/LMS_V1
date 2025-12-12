@@ -1,0 +1,264 @@
+/* ==============================
+   GLOBAL SIDEBAR CARD
+   ============================== */
+
+.sidebar-container {
+    width: 280px;
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    border-radius: 6px;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    font-family: sans-serif;
+}
+
+/* ==============================
+   HEADER
+   ============================== */
+
+.sidebar-header {
+    background: #1e88e5;
+    color: white;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 6px 6px 0 0;
+    font-size: 15px;
+}
+
+/* ==============================
+   SEARCH BOX
+   ============================== */
+
+.sidebar-search-box {
+    padding: 12px;
+}
+
+.sidebar-search-input {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #cdd4db;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* ==============================
+   SELECTED INFO
+   ============================== */
+
+.sidebar-info-box {
+    padding: 0 12px 10px 12px;
+}
+
+.sidebar-info-text {
+    background: #f1f5f9;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #d8dee4;
+}
+
+/* ==============================
+   SECTION TITLE
+   ============================== */
+
+.sidebar-section-title {
+    padding: 0 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ==============================
+   PROGRAM ITEMS LIST
+   ============================== */
+
+.sidebar-scrollable {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0 12px;
+    margin-top: 5px;
+}
+
+.sidebar-scrollable::-webkit-scrollbar {
+    width: 0;
+}
+
+.sidebar-list-item {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d6d6d6;
+    padding: 8px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.sidebar-checkbox {
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+}
+
+.sidebar-item-text {
+    flex: 1;
+}
+
+.sidebar-badge {
+    background: #ececec;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+/* ==============================
+   PROMPT METER SECTION
+   ============================== */
+
+.meter-container {
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.meter-container-blue {
+    border: 1px solid #1e88e5;
+    border-radius: 6px;
+}
+
+.meter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.meter-button {
+    width: 38px;
+    padding: 6px 0;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+}
+
+/* PROMPT METER COLORS (Matched to Image) */
+.meter-button-green { background: #00b050; }
+.meter-button-yellow { background: #ffc000; }
+.meter-button-orange { background: #ed7d31; }
+.meter-button-red { background: #c00000; }
+
+.meter-button-selected {
+    outline: 2px solid #000;
+}
+
+/* Helper text */
+.meter-helper-text {
+    font-size: 11px;
+    color: #555;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* ==============================
+   REINFORCEMENT METER
+   ============================== */
+
+.meter-container-green {
+    border: 1px solid #00b050;
+    border-radius: 6px;
+}
+
+/* ==============================
+   SAVE REPORT BUTTON
+   ============================== */
+
+.btn-save-report {
+    width: calc(100% - 24px);
+    margin: 12px;
+    background: #7b1fa2;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-save-report:hover {
+    background: #6a1890;
+}
+
+/* ==============================
+   WARNING MESSAGE
+   ============================== */
+
+.sidebar-warning {
+    width: calc(100% - 24px);
+    margin: 12px;
+    padding: 8px;
+    background: #fff3cd;
+    color: #8a6d3b;
+    border: 1px solid #ffeeba;
+    font-size: 12px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* ==============================
+   VOICE INPUT
+   ============================== */
+
+.voice-button {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    margin: 8px auto 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: white;
+}
+
+.voice-button-idle { background: #4caf50; }
+.voice-button-recording { background: #d32f2f; }
+
+.voice-status-text {
+    text-align: center;
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.transcript-box {
+    margin: 10px 12px;
+    background: #fff;
+    border: 1px solid #d6d6d6;
+    min-height: 60px;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    overflow-y: auto;
+}
+
+.transcript-placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* ==============================
+   RESPONSIVE TUNING
+   ============================== */
+
+@media (max-width: 768px) {
+    .sidebar-container {
+        width: 100%;
+    }
+}

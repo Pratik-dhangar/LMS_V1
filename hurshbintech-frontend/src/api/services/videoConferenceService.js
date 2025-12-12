@@ -70,6 +70,8 @@ class VideoConferenceService {
         this.onConnectionStateChange = null;
         this.onError = null;
         this.onMessage = null;
+        this.onPromptMeterUpdate = null;
+        this.onReinforcementMeterUpdate = null;
     }
 
     /**
@@ -371,6 +373,18 @@ class VideoConferenceService {
                     }
                     break;
 
+                case 'prompt_meter':
+                    if (this.onPromptMeterUpdate) {
+                        this.onPromptMeterUpdate(message.value);
+                    }
+                    break;
+
+                case 'reinforcement_meter':
+                    if (this.onReinforcementMeterUpdate) {
+                        this.onReinforcementMeterUpdate(message.value);
+                    }
+                    break;
+
                 case 'ping':
                     this.sendSignal({ type: 'pong', timestamp: new Date().toISOString() });
                     break;
@@ -626,6 +640,41 @@ class VideoConferenceService {
         if (!this.localStream) return false;
         const videoTrack = this.localStream.getVideoTracks()[0];
         return videoTrack ? videoTrack.enabled : false;
+    }
+
+    /**
+     * Send prompt meter value to learner
+     */
+    sendPromptMeter(value) {
+        console.log(`[VideoConference][${this.role}] Sending prompt meter:`, value);
+        this.sendSignal({
+            type: 'prompt_meter',
+            value: value
+        });
+    }
+
+    /**
+     * Send reinforcement meter value to learner
+     */
+    sendReinforcementMeter(value) {
+        console.log(`[VideoConference][${this.role}] Sending reinforcement meter:`, value);
+        this.sendSignal({
+            type: 'reinforcement_meter',
+            value: value
+        });
+    }
+
+    /**
+     * Send chat message to other participant
+     */
+    sendMessage(message, senderRole) {
+        console.log(`[VideoConference][${this.role}] Sending message:`, message);
+        this.sendSignal({
+            type: 'message',
+            text: message,
+            sender: senderRole,
+            timestamp: new Date().toISOString()
+        });
     }
 
     /**

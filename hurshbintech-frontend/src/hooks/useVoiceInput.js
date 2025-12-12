@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function useVoiceInput({ lang = 'en-US' } = {}) {
+export default function useVoiceInput({ lang = 'en-US', onMuteMic = null } = {}) {
     const [listening, setListening] = useState(false);
     const [transcript, setTranscript] = useState('Press mic to start listening...');
     const [_isSpeechSupported, setIsSpeechSupported] = useState(true);
@@ -9,9 +9,11 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
     const transcriptRef = useRef('');
     const listeningRef = useRef(false);
     const restartTimeoutRef = useRef(null);
+    const silenceTimeoutRef = useRef(null);
     const retryCountRef = useRef(0);
     const MAX_RETRIES = 5;
     const BASE_RETRY_MS = 1000; // base backoff
+    const SILENCE_THRESHOLD = 3000; // 3 seconds of silence to auto-stop
 
     // Initialize SpeechRecognition
     useEffect(() => {
@@ -60,6 +62,18 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
                     clearTimeout(restartTimeoutRef.current);
                     restartTimeoutRef.current = null;
                 }
+
+                // Reset silence timeout when speech is detected
+                if (silenceTimeoutRef.current) {
+                    clearTimeout(silenceTimeoutRef.current);
+                }
+                silenceTimeoutRef.current = setTimeout(() => {
+                    if (listeningRef.current) {
+                        console.log('[useVoiceInput] Silence detected (3+ seconds) - auto-stopping');
+                        recog.stop();
+                        silenceTimeoutRef.current = null;
+                    }
+                }, SILENCE_THRESHOLD);
             }
 
             const displayText = transcriptRef.current + interimTranscript;
@@ -143,6 +157,10 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
                     clearTimeout(restartTimeoutRef.current);
                     restartTimeoutRef.current = null;
                 }
+                if (silenceTimeoutRef.current) {
+                    clearTimeout(silenceTimeoutRef.current);
+                    silenceTimeoutRef.current = null;
+                }
                 if (recognitionRef.current) {
                     recognitionRef.current.abort();
                     recognitionRef.current = null;
@@ -166,14 +184,24 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
                 console.log('[useVoiceInput] Stopping speech recognition');
                 listeningRef.current = false;
 
-                // Clear any pending restart timeout
+                // Clear any pending timeouts
                 if (restartTimeoutRef.current) {
                     clearTimeout(restartTimeoutRef.current);
                     restartTimeoutRef.current = null;
                 }
+                if (silenceTimeoutRef.current) {
+                    clearTimeout(silenceTimeoutRef.current);
+                    silenceTimeoutRef.current = null;
+                }
 
                 recog.stop();
                 setListening(false);
+
+                // Trigger mute callback if provided
+                if (onMuteMic && transcriptRef.current.trim()) {
+                    console.log('[useVoiceInput] Calling onMuteMic callback with transcript:', transcriptRef.current);
+                    onMuteMic(transcriptRef.current);
+                }
             } else {
                 // Start listening
                 console.log('[useVoiceInput] Starting speech recognition');
@@ -181,6 +209,11 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
                 setListening(true);
                 listeningRef.current = true;
                 setTranscript('🎤 Listening...');
+
+                // Reset silence timeout
+                if (silenceTimeoutRef.current) {
+                    clearTimeout(silenceTimeoutRef.current);
+                }
 
                 try {
                     recog.start();
@@ -204,5 +237,5 @@ export default function useVoiceInput({ lang = 'en-US' } = {}) {
         }
     };
 
-    return { listening, transcript, toggleListening };
+    return { listening, transcript, toggleListening, transcriptRef };
 }

@@ -76,7 +76,7 @@
   }
 
   .session-left-sidebar> :first-child {
-    max-height: 16rem;
+    max-height: 45rem;
   }
 
   .session-left-sidebar> :nth-child(2) {
@@ -113,8 +113,8 @@
   }
 }
 
-/* Tablet and Mobile: 80-20 layout (Center 80% + Right column 20%) */
-@media (max-width: 1200px) {
+/* Tablet and Mobile: 70-30 layout (Center 70% + Right column 30%) */
+@media (max-width: 1023px) {
   .session-main-layout {
     flex-direction: row;
     gap: clamp(0.5rem, 1.5vw, 1rem);
@@ -132,14 +132,14 @@
     flex-shrink: 0;
   }
 
-  /* Right column - 30% width, stacked components with 30% height each */
+  /* Right column - 30% width, stacked components */
   .session-right-column {
     width: 30%;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
-    overflow: hidden;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    overflow-y: auto;
     height: calc(100vh - 8rem);
   }
 
@@ -272,6 +272,39 @@
   .learning-content-container .section-content {
     flex: 1;
     min-height: 0;
+  }
+}
+
+/* Tablet/Mobile: Learning Content and Learning Program containers */
+@media (max-width: 1023px) {
+
+  .learning-content-container,
+  .learning-program-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: white;
+  }
+
+  .learning-content-container .section-header,
+  .learning-program-container .section-header {
+    flex-shrink: 0;
+  }
+
+  .learning-content-container .section-content,
+  .learning-program-container .section-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Hide video section container on tablet/mobile */
+  .video-section-container {
+    display: none !important;
   }
 }
 
@@ -538,7 +571,7 @@
 .sidebar-header {
   padding: clamp(0.25rem, 1vw, 0.375rem);
   font-weight: bold;
-  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  font-size: clamp(0.5rem, 1.2vw, 1rem);
   border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
   color: white;
   cursor: pointer;
@@ -634,42 +667,69 @@
   color: #6b7280;
 }
 
-/* Whiteboard Container - Responsive sizing */
+/* ========================================
+   UNIFIED WHITEBOARD CONTAINER STYLES
+   Used by both Trainer & Learner Sessions
+   ======================================== */
+
 .session-whiteboard-container {
   background: #f9fafb;
   border: clamp(2px, 0.3vw, 4px) solid #d1d5db;
   border-radius: clamp(0.5rem, 1vw, 1rem);
   margin: clamp(0.5rem, 1.5vw, 1rem);
   position: relative;
-  width: calc(100% - clamp(1rem, 3vw, 2rem));
+  width: calc(100% - clamp(1rem, 3vw, 3rem));
   margin-left: auto;
   margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* Desktop whiteboard */
-@media (min-width: 1024px) {
+/* ========================================
+   RESPONSIVE BREAKPOINTS FOR WHITEBOARDS
+   Mobile, Tablet, Desktop
+   ======================================== */
+
+/* MOBILE: 0px - 640px */
+@media (max-width: 640px) {
   .session-whiteboard-container {
-    max-width: 67.875rem;
-    /* 1086px */
-    height: clamp(26.25rem, 35vh, 32.5rem);
-    /* 420px - 520px */
+    height: 280px;
+    max-width: 100%;
   }
 }
 
-/* Tablet whiteboard */
+/* SMALL MOBILE: 641px - 767px */
+@media (min-width: 641px) and (max-width: 767px) {
+  .session-whiteboard-container {
+    height: 320px;
+    max-width: 100%;
+  }
+}
+
+/* TABLET: 768px - 1023px */
 @media (min-width: 768px) and (max-width: 1023px) {
   .session-whiteboard-container {
-    height: clamp(22.5rem, 40vh, 30rem);
-    /* 360px - 480px */
+    height: 360px;
+    max-width: 100%;
   }
 }
 
-/* Mobile whiteboard */
-@media (max-width: 767px) {
+/* SMALL LAPTOP/DESKTOP: 1024px - 1365px */
+@media (min-width: 1024px) and (max-width: 1365px) {
   .session-whiteboard-container {
-    height: clamp(17.5rem, 35vh, 25rem);
-    /* 280px - 400px */
-    margin: clamp(0.25rem, 1vw, 0.5rem);
+    height: 420px;
+    max-width: 67.875rem;
+    /* 1086px */
+  }
+}
+
+/* LARGE DESKTOP: 1366px and up */
+@media (min-width: 1366px) {
+  .session-whiteboard-container {
+    height: 520px;
+    max-width: 67.875rem;
+    /* 1086px */
   }
 }
 
@@ -1129,5 +1189,303 @@ body.sidebar-open {
   /* Hide specific height constraints on desktop */
   .session-left-sidebar>.bg-gray-50 {
     max-height: none !important;
+  }
+}
+
+/* ============================================================================
+   COMPREHENSIVE RESPONSIVE BUTTON & COMPONENT STYLES
+   ============================================================================ */
+
+/* Session Header Buttons - Responsive */
+.btn-session {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.625rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-session-end {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-session-settings {
+  background: #475569;
+  color: white;
+}
+
+.btn-session-active {
+  background: #10b981;
+  color: white;
+}
+
+/* Video Control Buttons - Responsive */
+.media-control {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+  font-size: clamp(0.75rem, 1.8vw, 1rem);
+  transition: all 0.2s ease;
+  min-width: clamp(2rem, 5vw, 2.5rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Whiteboard Drawing Tools Section */
+.session-whiteboard-tools {
+  width: 100%;
+  margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
+}
+
+.session-whiteboard-tools button {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.5rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+}
+
+/* Whiteboard Tools & Learner Access Buttons */
+.session-tools-section button {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.5rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  min-width: clamp(4rem, 10vw, 5rem);
+}
+
+/* Timers, Stopwatch, Feedback Section Buttons */
+.session-interactive-buttons button {
+  padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.375rem, 1.2vw, 0.75rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.75rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(1.75rem, 4.5vw, 2.25rem);
+}
+
+/* Create Exercises Button */
+.session-create-exercise button {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.5rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+}
+
+/* Session Notes & Message Box */
+.session-notes-section textarea {
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+  min-height: clamp(60px, 15vw, 80px);
+}
+
+.session-message-box input {
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+}
+
+.session-message-box button {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+}
+
+/* Section Headers - Responsive */
+.session-section-header {
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  margin-bottom: clamp(0.5rem, 1.2vw, 0.75rem);
+}
+
+/* Save Session Button */
+.session-save-button {
+  padding: clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2.25rem, 5.5vw, 2.75rem);
+}
+
+/* End Session & Pause Buttons */
+.session-control-buttons button {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.75rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(1.75rem, 4.5vw, 2.25rem);
+}
+
+/* Tablet-specific adjustments (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .btn-session {
+    padding: clamp(0.5rem, 1.2vw, 0.625rem) clamp(0.75rem, 1.8vw, 1rem);
+    font-size: clamp(0.75rem, 1.6vw, 0.875rem);
+  }
+
+  .media-control {
+    min-width: clamp(2.25rem, 5.5vw, 2.75rem);
+    min-height: clamp(2.25rem, 5.5vw, 2.75rem);
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button {
+    padding: clamp(0.5rem, 1.4vw, 0.625rem) clamp(0.75rem, 1.8vw, 1rem);
+    font-size: clamp(0.75rem, 1.6vw, 0.875rem);
+  }
+}
+
+/* Mobile-specific adjustments (< 768px) */
+@media (max-width: 767px) {
+  .btn-session {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.625rem;
+  }
+
+  .media-control {
+    min-width: 2rem;
+    min-height: 2rem;
+    font-size: 0.75rem;
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button,
+  .session-interactive-buttons button {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.625rem;
+    min-height: 1.75rem;
+  }
+
+  .session-notes-section textarea {
+    font-size: 0.625rem;
+    min-height: 60px;
+  }
+
+  .session-message-box input,
+  .session-message-box button {
+    font-size: 0.625rem;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .session-save-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.625rem;
+    min-height: 2rem;
+  }
+
+  /* Make emoji and feedback buttons smaller on mobile */
+  .session-interactive-buttons button {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5rem;
+    min-height: 1.5rem;
+    min-width: 2.5rem;
+  }
+}
+
+/* Extra small mobile (< 375px) */
+@media (max-width: 374px) {
+  .btn-session {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.5rem;
+  }
+
+  .media-control {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    font-size: 0.625rem;
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5rem;
+    min-height: 1.5rem;
+  }
+
+  .session-interactive-buttons button {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.45rem;
+    min-height: 1.25rem;
+    min-width: 2rem;
+  }
+}
+
+/* Session Info Bar pinned to bottom */
+.session-info-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  padding: clamp(0.5rem, 1.2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+  background: #0f172a;
+  /* darker slate to match theme */
+  color: #ffffff;
+  box-shadow: 0 -2px 8px rgba(2, 6, 23, 0.2);
+  margin: 0;
+  /* ensure no surrounding space */
+  border-radius: 0;
+  /* flush to edges */
+}
+
+.session-info-bar .session-info-text {
+  font-size: clamp(0.6rem, 1.2vw, 0.9rem);
+  color: #ffffff;
+  /* ensure visibility on dark background */
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-info-bar .session-info-actions {
+  display: flex;
+  gap: clamp(0.4rem, 1vw, 0.75rem);
+}
+
+.session-info-bar .btn-end-session,
+.session-info-bar .btn-pause-session {
+  background: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: clamp(0.35rem, 0.9vw, 0.55rem) clamp(0.6rem, 1.6vw, 0.9rem);
+  font-size: clamp(0.6rem, 1.1vw, 0.85rem);
+  border-radius: 0.375rem;
+}
+
+.session-info-bar .btn-end-session:hover {
+  background: red;
+}
+
+.session-info-bar .btn-pause-session:hover {
+  background: rgb(149, 206, 229);
+}
+
+/* Ensure content can scroll beneath the fixed bar without leaving extra gap */
+.session-main-layout {
+  /* no forced bottom margin; allow overlap under the fixed session-info-bar */
+  /* intentionally left minimal to avoid extra spacing at page bottom */
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .session-info-bar {
+    padding: clamp(0.4rem, 1.8vw, 0.6rem);
+  }
+
+  .session-info-bar .session-info-text {
+    font-size: clamp(0.55rem, 1.1vw, 0.75rem);
+    color: #ffffff;
+    /* mobile override */
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

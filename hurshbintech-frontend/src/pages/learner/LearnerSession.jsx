@@ -696,6 +696,18 @@ const LearnerSession = () => {
         toast.error(`Video error: ${error.message}`);
       };
 
+      // Set callback for prompt meter updates from trainer
+      videoService.onPromptMeterUpdate = (value) => {
+        console.log('[LearnerSession] Prompt meter update received:', value);
+        setPromptMeter(value);
+      };
+
+      // Set callback for reinforcement meter updates from trainer
+      videoService.onReinforcementMeterUpdate = (value) => {
+        console.log('[LearnerSession] Reinforcement meter update received:', value);
+        setReinforcementMeter(value);
+      };
+
       // Initialize video conference (gets local media and sets up connection)
       await videoService.initialize();
       setWebRTC(videoService);
@@ -913,7 +925,7 @@ const LearnerSession = () => {
                 ))
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">Trainer:</p>
+                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.trainer_name ?? 'Trainer'}:</p>
                   <p className="text-xs sm:text-xs md:text-sm text-gray-500">Great job on the last activity!</p>
                 </div>
               )}
@@ -937,8 +949,8 @@ const LearnerSession = () => {
           </div>
         </div>
         {/* Whiteboard Area */}
-        <div className="w-full responsive-whiteboard-section">
-          <div className="bg-gray-50 border-2 sm:border-4 border-gray-300 rounded-lg m-2 sm:m-4 relative mx-auto w-full max-w-[1086px] h-[280px] sm:h-[360px] md:h-[420px] lg:h-[520px]">
+        <div className="w-full responsive-whiteboard-section mx-auto">
+          <div className="session-whiteboard-container">
             {/* Moveable Video Feed Overlay */}
             {remoteStream && (
               <MoveableVideoFeed
