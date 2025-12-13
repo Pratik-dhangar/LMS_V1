@@ -327,6 +327,12 @@ class SimpleWebRTC {
           }
           break;
 
+        case 'prompt_text':
+          if (this.role === 'learner' && this.onPromptText) {
+            this.onPromptText({ text: message.text });
+          }
+          break;
+
         case 'notes_update':
           if (this.role === 'learner' && this.onNotesUpdate) {
             this.onNotesUpdate(message.notes);
@@ -585,6 +591,17 @@ class SimpleWebRTC {
       text: message,
       sender: senderRole,
       timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Send prompt text to learner (for prompter line)
+   */
+  sendPrompt(promptText) {
+    console.log(`[SimpleWebRTC][${this.role}] Sending prompt:`, promptText);
+    this.send({
+      type: 'prompt_text',
+      text: promptText
     });
   }
 

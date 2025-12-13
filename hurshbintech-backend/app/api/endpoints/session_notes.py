@@ -50,6 +50,8 @@ async def create_or_update_notes(
         notes=notes_data.notes or "",
         is_finalized="false"
     )
+    
+    logger.info(f"✅ Notes saved successfully for session {session_id}, content length: {len(notes_data.notes or '')}")
 
     return notes or {"message": "Notes saved successfully"}
 

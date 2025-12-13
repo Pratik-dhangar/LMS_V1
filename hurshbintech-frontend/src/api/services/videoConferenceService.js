@@ -72,6 +72,7 @@ class VideoConferenceService {
         this.onMessage = null;
         this.onPromptMeterUpdate = null;
         this.onReinforcementMeterUpdate = null;
+        this.onPromptText = null;
     }
 
     /**
@@ -385,6 +386,12 @@ class VideoConferenceService {
                     }
                     break;
 
+                case 'prompt_text':
+                    if (this.onPromptText) {
+                        this.onPromptText({ text: message.text });
+                    }
+                    break;
+
                 case 'ping':
                     this.sendSignal({ type: 'pong', timestamp: new Date().toISOString() });
                     break;
@@ -674,6 +681,17 @@ class VideoConferenceService {
             text: message,
             sender: senderRole,
             timestamp: new Date().toISOString()
+        });
+    }
+
+    /**
+     * Send prompt text to learner (for prompter line)
+     */
+    sendPrompt(promptText) {
+        console.log(`[VideoConference][${this.role}] Sending prompt:`, promptText);
+        this.sendSignal({
+            type: 'prompt_text',
+            text: promptText
         });
     }
 

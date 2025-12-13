@@ -271,7 +271,7 @@ const TrainerSession = () => {
           text: transcriptText.trim(),
           timestamp: Date.now()
         });
-        
+
       }
     } catch (error) {
       console.error('[TrainerSession] Error in handleMuteMicCallback:', error);
@@ -297,7 +297,7 @@ const TrainerSession = () => {
       if (!listening && micEnabled && webRTC) {
         const newState = webRTC.toggleMicrophone();
         setMicEnabled(newState);
-        
+
       }
 
       // Toggle voice input using the new hook
@@ -308,7 +308,7 @@ const TrainerSession = () => {
       if (listening && !micEnabled && webRTC) {
         const newState = webRTC.toggleMicrophone();
         setMicEnabled(newState);
-        
+
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -346,7 +346,7 @@ const TrainerSession = () => {
       // Save notes before unmounting (use navigator.sendBeacon for reliability)
       if (sessionNotes && sessionNotes.trim()) {
         const token = localStorage.getItem('access_token');
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+        const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
         const data = JSON.stringify({ notes: sessionNotes });
 
         // Use sendBeacon for reliable sending even when page is closing
@@ -876,9 +876,11 @@ const TrainerSession = () => {
     // Set new auto-save timer (save after 2 seconds of no typing)
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
+        console.log('[TrainerSession] 💾 Auto-saving session notes...');
         await sessionNotesService.saveNotes(sessionId, newNotes);
+        console.log('[TrainerSession] ✅ Session notes auto-saved successfully');
       } catch (error) {
-        console.error('[TrainerSession] Error auto-saving notes:', error);
+        console.error('[TrainerSession] ❌ Error auto-saving notes:', error);
         // Don't show toast for auto-save errors to avoid interrupting user
       }
     }, 2000);
@@ -2226,7 +2228,7 @@ const TrainerSession = () => {
 
           {/* Learning Program - 25% height - Tablet/Mobile */}
           <div className="learning-program-container">
-            
+
             <div className="section-content">
               <LearningProgramSidebar
                 learningProgramSearch={learningProgramSearch}

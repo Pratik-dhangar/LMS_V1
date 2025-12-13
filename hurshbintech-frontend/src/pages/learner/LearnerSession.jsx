@@ -71,10 +71,22 @@ const LearnerSession = () => {
         console.log('[LearnerSession] Message received:', message);
         addReceivedMessage(message);
       };
+
+      // Set up prompt text handler
+      webRTC.onPromptText = (data) => {
+        console.log('[LearnerSession] Prompt text received from trainer:', data);
+        setPromptText(data.text);
+        // Trigger eye blinking animation when new prompt is received
+        setIsEyeBlinking(true);
+        setTimeout(() => {
+          setIsEyeBlinking(false);
+        }, 3000);
+      };
     }
     return () => {
       if (webRTC) {
         webRTC.onMessage = null;
+        webRTC.onPromptText = null;
       }
     };
   }, [webRTC, addReceivedMessage]);
@@ -407,19 +419,7 @@ const LearnerSession = () => {
       // Do not auto-hide — the keyboard will remain visible until trainer revokes 'keyboard' access
     };
 
-    // Set up callback for prompt updates from trainer voice input
-    whiteboardService.onPromptUpdate = (data) => {
-      console.log('[LearnerSession] Prompt update received from trainer:', data);
-      console.log('[LearnerSession] Setting promptText to:', data.text);
-      setPromptText(data.text);
-      // Trigger eye blinking animation when new prompt is received
-      setIsEyeBlinking(true);
-      // Stop blinking after 3 seconds
-      setTimeout(() => {
-        setIsEyeBlinking(false);
-      }, 3000);
-      // toast.success('📝 New prompt from trainer!');
-    };
+    // NOTE: Auto-send prompt via whiteboardService disabled - only manual send via webRTC.sendPrompt is used
 
     // Set up callback for feedback messages from trainer
     whiteboardService.onFeedbackMessage = (data) => {

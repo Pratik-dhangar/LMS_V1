@@ -8,8 +8,29 @@
     border: 1px solid #d6d6d6;
     border-radius: 6px;
     padding: 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     font-family: sans-serif;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
 }
 
 /* ==============================
@@ -23,6 +44,34 @@
     padding: 10px 12px;
     border-radius: 6px 6px 0 0;
     font-size: 15px;
+    flex-shrink: 0;
+}
+
+/* ==============================
+   SCROLLABLE CONTENT WRAPPER
+   ============================== */
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
 }
 
 /* ==============================
@@ -121,11 +170,13 @@
 .meter-container {
     padding: 12px;
     margin-top: 10px;
+    margin-bottom: 12px;
 }
 
 .meter-container-blue {
     border: 1px solid #1e88e5;
     border-radius: 6px;
+    padding: 12px;
 }
 
 .meter-buttons {
@@ -147,13 +198,25 @@
 }
 
 /* PROMPT METER COLORS (Matched to Image) */
-.meter-button-green { background: #00b050; }
-.meter-button-yellow { background: #ffc000; }
-.meter-button-orange { background: #ed7d31; }
-.meter-button-red { background: #c00000; }
+.meter-button-green {
+    background: #00b050;
+}
+
+.meter-button-yellow {
+    background: #ffc000;
+}
+
+.meter-button-orange {
+    background: #ed7d31;
+}
+
+.meter-button-red {
+    background: #c00000;
+}
 
 .meter-button-selected {
-    outline: 2px solid #000;
+    background: #1b5e20 !important;
+    color: white;
 }
 
 /* Helper text */
@@ -164,6 +227,46 @@
     text-align: center;
 }
 
+.meter-selected-text {
+    font-size: 12px;
+    color: #2c3e50;
+    font-weight: 600;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* ==============================
+   SEND TO LEARNER BUTTON
+   ============================== */
+
+.btn-send-to-learner {
+    width: calc(100% - 24px);
+    margin: 12px;
+    background: #27ae60;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s ease;
+}
+
+.btn-send-to-learner:hover {
+    background: #229954;
+}
+
+.btn-send-to-learner:active {
+    transform: scale(0.98);
+}
+
+.btn-send-to-learner:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 /* ==============================
    REINFORCEMENT METER
    ============================== */
@@ -171,6 +274,7 @@
 .meter-container-green {
     border: 1px solid #00b050;
     border-radius: 6px;
+    padding: 12px;
 }
 
 /* ==============================
@@ -214,38 +318,65 @@
    VOICE INPUT
    ============================== */
 
+.sidebar-section-title {
+    padding: 0 12px;
+    margin-top: 16px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.voice-section {
+    padding: 0 12px;
+    margin-top: 12px;
+    text-align: center;
+}
+
 .voice-button {
-    width: 46px;
-    height: 46px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     border: none;
-    margin: 8px auto 0 auto;
+    margin: 12px auto;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     color: white;
+    transition: transform 0.2s ease;
+    font-size: 20px;
 }
 
-.voice-button-idle { background: #4caf50; }
-.voice-button-recording { background: #d32f2f; }
+.voice-button:hover {
+    transform: scale(1.15);
+}
+
+.voice-button-idle {
+    background: #4caf50;
+}
+
+.voice-button-recording {
+    background: #d32f2f;
+}
 
 .voice-status-text {
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
     color: #6b7280;
-    margin-top: 4px;
+    margin: 10px 0 12px 0;
+    font-weight: 500;
 }
 
 .transcript-box {
-    margin: 10px 12px;
+    margin: 0 0 12px 0;
     background: #fff;
     border: 1px solid #d6d6d6;
-    min-height: 60px;
+    min-height: 70px;
     border-radius: 6px;
-    padding: 8px;
+    padding: 10px;
     font-size: 12px;
     overflow-y: auto;
+    line-height: 1.4;
 }
 
 .transcript-placeholder {
