@@ -34,7 +34,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
 # Build the application
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # -------------------------
 # 2) Nginx Stage

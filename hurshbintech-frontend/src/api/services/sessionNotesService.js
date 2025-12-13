@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('access_token');
@@ -16,14 +16,16 @@ const sessionNotesService = {
      */
     saveNotes: async (sessionId, notes) => {
         try {
+            console.log('[SessionNotes] Saving notes for session:', sessionId, 'Content length:', notes?.length || 0);
             const response = await axios.post(
                 `${API_URL}/session-notes/${sessionId}`,
                 { notes },
                 { headers: getAuthHeader() }
             );
+            console.log('[SessionNotes] ✅ Notes saved successfully for session:', sessionId);
             return response.data;
         } catch (error) {
-            console.error('Error saving session notes:', error);
+            console.error('[SessionNotes] ❌ Error saving session notes:', error);
             throw error;
         }
     },

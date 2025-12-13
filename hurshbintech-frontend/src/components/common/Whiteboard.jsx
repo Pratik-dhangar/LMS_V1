@@ -2381,10 +2381,18 @@ const Whiteboard = ({
                                         className="bucket-color-indicator"
                                         style={{
                                             backgroundColor: bucket.color || bucketColor,
-                                            pointerEvents: 'none',
-                                            transform: 'translate(25%, 25%)' // Position half outside for better visibility
+                                            pointerEvents: 'auto',  // Changed from 'none' to 'auto'
+                                            transform: 'translate(-50%, -50%)',
+                                            cursor: 'nwse-resize'  // Added resize cursor
                                         }}
                                         title="Drag to resize"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setSelectedItem({ ...bucket, type: 'bucket' });
+                                            setIsResizingItem(true);
+                                            prevPosRef.current = { x: e.clientX - canvasRef.current.getBoundingClientRect().left, y: e.clientY - canvasRef.current.getBoundingClientRect().top };
+                                        }}
                                     />
                                 )}
                             </div>

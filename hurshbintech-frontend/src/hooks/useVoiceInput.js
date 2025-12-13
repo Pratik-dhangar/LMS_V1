@@ -13,7 +13,7 @@ export default function useVoiceInput({ lang = 'en-US', onMuteMic = null } = {})
     const retryCountRef = useRef(0);
     const MAX_RETRIES = 5;
     const BASE_RETRY_MS = 1000; // base backoff
-    const SILENCE_THRESHOLD = 3000; // 3 seconds of silence to auto-stop
+    const SILENCE_THRESHOLD = 10000; // 10 seconds of silence to auto-stop
 
     // Initialize SpeechRecognition
     useEffect(() => {
@@ -119,34 +119,10 @@ export default function useVoiceInput({ lang = 'en-US', onMuteMic = null } = {})
         };
 
         recog.onend = () => {
-            console.log('[useVoiceInput] Speech recognition ended, listening state:', listeningRef.current);
-
-            // If user is still expecting voice input, attempt auto-restart
-            if (listeningRef.current && !restartTimeoutRef.current) {
-                // If offline, do not restart
-                if (!navigator.onLine) {
-                    setTranscript('Network offline. Please check your internet connection.');
-                    setListening(false);
-                    listeningRef.current = false;
-                    return;
-                }
-
-                // Auto-restart without backoff for normal operation
-                restartTimeoutRef.current = setTimeout(() => {
-                    try {
-                        console.log('[useVoiceInput] Auto-restarting recognition after end');
-                        recog.start();
-                        restartTimeoutRef.current = null;
-                    } catch (e) {
-                        console.error('[useVoiceInput] Error auto-restarting recognition:', e);
-                        restartTimeoutRef.current = null;
-                        if (e.name !== 'InvalidStateError') {
-                            setListening(false);
-                            listeningRef.current = false;
-                        }
-                    }
-                }, 300); // Small delay to avoid rapid restarts
-            }
+            console.log('[useVoiceInput] Speech recognition ended');
+            // Auto-restart disabled - user must manually restart by clicking the button
+            setListening(false);
+            listeningRef.current = false;
         };
 
         recognitionRef.current = recog;
