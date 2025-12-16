@@ -353,17 +353,10 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                         other_conn = whiteboard_connections[session_id]["learner"]
                         if other_conn.is_alive:
                             # Add special logging for exercise (item_update) messages
-                            if message.get('type') == 'item_update' and message.get('data', {}).get('type') == 'fill-in-blanks':
-                                print(
-                                    f"[WHITEBOARD] Forwarding exercise from trainer to learner: "
-                                    f"exerciseId={message.get('data', {}).get('id')}, "
-                                    f"targetLearnerId={message.get('data', {}).get('targetLearnerId')}, "
-                                    f"title={message.get('data', {}).get('title')}"
-                                )
-                            else:
-                                logger.debug(
-                                    f"[WHITEBOARD] Forwarding {message.get('type')} from trainer to learner"
-                                )
+                            # Forward draw/clear/item_update messages to learner (no special-case logging)
+                            logger.debug(
+                                f"[WHITEBOARD] Forwarding {message.get('type')} from trainer to learner"
+                            )
                             await other_conn.websocket.send_json(message)
                     elif role == "learner" and "trainer" in whiteboard_connections[session_id]:
                         other_conn = whiteboard_connections[session_id]["trainer"]

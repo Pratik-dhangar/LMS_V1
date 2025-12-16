@@ -73,6 +73,15 @@ class TrainingSession(Base):
 
     # Session data
     notes = Column(Text)
+    
+    # Recording fields
+    recording_url = Column(String(500), comment="Storage path/key for session recording")
+    recording_status = Column(
+        String(50), 
+        default="pending", 
+        comment="Recording status: pending, processing, completed, failed"
+    )
+    recording_uploaded_at = Column(DateTime, comment="When recording was successfully stored")
 
     # Relationships
     trainer = relationship("User", foreign_keys=[trainer_id], passive_deletes=True)

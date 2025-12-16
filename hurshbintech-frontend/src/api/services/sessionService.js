@@ -132,6 +132,48 @@ const sessionService = {
     } else {
       console.error('WebSocket not open, cannot send message');
     }
+  },
+
+  // Recording APIs
+  getRecordingUrl: async (sessionId) => {
+    try {
+      const response = await api.get(`/sessions/${sessionId}/recording-url`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching recording URL:', error);
+      throw error;
+    }
+  },
+
+  // Webhook to notify recording completion (called by Janus or file watcher)
+  notifyRecordingComplete: async (sessionId, filePath, recordingId, duration) => {
+    try {
+      const response = await api.post('/sessions/recordings/webhook/complete', {
+        session_id: sessionId,
+        file_path: filePath,
+        recording_id: recordingId,
+        duration: duration
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error notifying recording completion:', error);
+      throw error;
+    }
+  },
+
+  // Upload actual recording file
+  uploadRecording: async (formData) => {
+    try {
+      const response = await api.post('/sessions/recordings/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error uploading recording:', error);
+      throw error;
+    }
   }
 };
 

@@ -30,9 +30,10 @@ import VideoSection from './VideoSection';
 import LearningProgramSidebar from './LearningProgramSidebar';
 import LearningContentSidebar from './LearningContentSidebar';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
-import { exerciseTemplates } from '../../utils/fillInBlanksTemplates';
-import FillBlanksCreator from '../../components/common/FillBlanksCreator';
+// Fill blanks exercise removed
 import Emoji from '../../components/common/Emoji';
+import RecordingControls from '../../components/session/RecordingControls';
+import JanusRecordingService from '../../api/services/janusService';
 import '../../styles/Pages.css';
 
 
@@ -62,6 +63,7 @@ const TrainerSession = () => {
   const [webRTC, setWebRTC] = useState(null);
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
+  const [recordingService, setRecordingService] = useState(null);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Media streams for video conferencing
@@ -139,8 +141,6 @@ const TrainerSession = () => {
 
   const [additionalContentSearch, setAdditionalContentSearch] = useState('');
   const [additionalContentResults, setAdditionalContentResults] = useState([]);
-  const [learningProgramSearch, setLearningProgramSearch] = useState('');
-  const [_learningProgramSearchResults] = useState([]);
   const [learningContentSearch, setLearningContentSearch] = useState(''); // Search for assigned learning content
   const [databaseSearchResults, setDatabaseSearchResults] = useState([]); // Results from database search
   const [isSearching, setIsSearching] = useState(false); // Loading state for search
@@ -183,7 +183,11 @@ const TrainerSession = () => {
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
-  const [bucketColor, setBucketColor] = useState('#9333ea');
+  // Unified whiteboard button styles (white background, black text)
+  const wbBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
+  const wbBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
+  const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+  const wbSmallBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
   const [toolActive, setToolActive] = useState(false); // Track if drawing tool is active
   const [eraserActive, setEraserActive] = useState(false); // Track if eraser tool is active
@@ -196,15 +200,10 @@ const TrainerSession = () => {
   const [learnerToolAccess, setLearnerToolAccess] = useState({
     select: false,    // Can select items on canvas
     drag: false,      // Can drag items on canvas
-    keyboard: false,  // Can use virtual keyboard
-    fillBlanks: false // Can interact with fill in the blanks exercises
+    keyboard: false   // Can use virtual keyboard
   });
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Fill in the Blanks Creator Modal State
-  // 🔸 How it works: controls visibility of exercise creation modal
-  // -----------------------------------------------------------
-  const [showFillBlanksCreator, setShowFillBlanksCreator] = useState(false);
+  // Fill in the blanks feature removed
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -550,7 +549,7 @@ const TrainerSession = () => {
       }
 
       console.log('[TrainerSession] Authorization successful, initializing WebRTC');
-      await initializeWebRTC();
+      await initializeWebRTC(session.id);
       setLoading(false);
       console.log('[TrainerSession] Session initialization complete');
     } catch (error) {
@@ -565,7 +564,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Initialize WebRTCService and WhiteboardService
   // 🔸 How it works: creates service instances, sets event handlers, obtains local media, and connects
   // -----------------------------------------------------------
-  const initializeWebRTC = async () => {
+  const initializeWebRTC = async (numericSessionId) => {
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'trainer');
     try {
@@ -625,11 +624,17 @@ const TrainerSession = () => {
       await videoService.initialize();
       setWebRTC(videoService);
 
+      // Initialize recording service with numeric database ID
+      console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
+      const recService = new JanusRecordingService(videoService, numericSessionId);
+      setRecordingService(recService);
+
       // Update media control states
       setMicEnabled(videoService.isMicrophoneEnabled());
       setCameraEnabled(videoService.isCameraEnabled());
 
       console.log('[TrainerSession] Video Conference service initialized');
+      console.log('[TrainerSession] Recording service initialized');
     } catch (error) {
       console.error('[TrainerSession] Video Conference init error:', error);
       toast.error('Failed to initialize video conference');
@@ -760,6 +765,10 @@ const TrainerSession = () => {
     if (toolsService) {
       toolsService.cleanup();
     }
+    if (recordingService) {
+      recordingService.destroy();
+      console.log('[TrainerSession] Recording service cleaned up');
+    }
 
     // clear timers and stopwatches intervals
     timersRef.current.forEach(({ intervalId }) => clearInterval(intervalId));
@@ -887,12 +896,6 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Control learning program search input state
-  // 🔸 How it works: simple controlled input for filtering goals
-  // -----------------------------------------------------------
-  const handleLearningProgramSearch = (e) => {
-    setLearningProgramSearch(e.target.value);
-  };
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Handle program checkbox selection - only one can be selected at a time
@@ -926,9 +929,7 @@ const TrainerSession = () => {
   // 🔹 Purpose: Compute filtered learning goals based on search term
   // 🔸 How it works: performs case-insensitive includes check on sessionInfo.learning_goals
   // -----------------------------------------------------------
-  const filteredLearningGoals = sessionInfo?.learning_goals?.filter(goal =>
-    goal.goal.toLowerCase().includes(learningProgramSearch.toLowerCase())
-  ) || [];
+  const filteredLearningGoals = sessionInfo?.learning_goals || [];
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Control learning content search input state and search database
@@ -1087,48 +1088,7 @@ const TrainerSession = () => {
     }
   };
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Send Fill in the Blanks exercise to specific learner
-  // 🔸 How it works: Creates exercise with learner targeting and broadcasts via whiteboard service
-  // -----------------------------------------------------------
-  const handleSendExercise = (exercise) => {
-    if (!whiteboardService || !sessionInfo) {
-      toast.error('Cannot send exercise - service not ready');
-      console.error('[TrainerSession] Cannot send exercise - whiteboardService:', !!whiteboardService, 'sessionInfo:', !!sessionInfo);
-      return;
-    }
-
-    console.log('[TrainerSession] Preparing to send exercise:', {
-      exerciseId: exercise.id,
-      exerciseTitle: exercise.title,
-      sessionInfoLearnerId: sessionInfo.learner_id,
-      learnerName: sessionInfo.learner_name,
-      fillBlanksAccess: learnerToolAccess.fillBlanks
-    });
-
-    // Add learner targeting to exercise
-    const targetedExercise = {
-      ...exercise,
-      targetLearnerId: sessionInfo.learner_id,
-      allowLearnerInteraction: learnerToolAccess.fillBlanks // Use current permission state
-    };
-
-    // Add to canvas items
-    setCanvasItems(prev => [...prev, targetedExercise]);
-
-    // Broadcast to whiteboard
-    whiteboardService.sendItemUpdate(targetedExercise);
-
-    console.log('[TrainerSession] Exercise sent to learner via whiteboard service:', {
-      exerciseId: targetedExercise.id,
-      targetLearnerId: targetedExercise.targetLearnerId,
-      title: targetedExercise.title,
-      allowLearnerInteraction: targetedExercise.allowLearnerInteraction,
-      fullExercise: targetedExercise
-    });
-
-    toast.success(`📝 Exercise sent to ${sessionInfo.learner_name || 'learner'}!`);
-  };
+  // Fill-in-blanks sending removed
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Add a new bucket to the whiteboard
@@ -1147,7 +1107,6 @@ const TrainerSession = () => {
       width: 150,
       height: 150,
       label: 'Bucket',
-      color: bucketColor,
       items: [] // Items inside bucket
     };
     setBuckets(prev => [...prev, newBucket]);
@@ -1536,12 +1495,7 @@ const TrainerSession = () => {
       }
 
       // ---------------------- FILL IN THE BLANKS ----------------------
-      case '📝 Fill Blanks': {
-        console.log('[TrainerSession] Opening Fill in the Blanks creator');
-        // Open the creator modal instead of directly creating exercise
-        setShowFillBlanksCreator(true);
-        return; // Don't create item here, wait for modal
-      }
+      // Fill Blanks removed
 
       // ---------------------- DEFAULT ----------------------
       default:
@@ -1607,16 +1561,13 @@ const TrainerSession = () => {
             </div>
             <button
               className="btn-session btn-session-end"
-              onClick={() => navigate('/trainer/dashboard')}
+              onClick={() =>
+                window.open('/trainer/dashboard', '_blank', 'noopener,noreferrer')
+              }
             >
               🏠 Dashboard
             </button>
-            <button className="btn-session btn-session-settings" onClick={() => console.log('[TrainerSession] Open settings')}>
-              ⚙️ Settings
-            </button>
-            <button className="btn-session btn-session-active" onClick={() => console.log('[TrainerSession] Active')}>
-              Live
-            </button>
+
           </div>
         </div>
       </div>
@@ -1641,8 +1592,6 @@ const TrainerSession = () => {
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
           <LearningProgramSidebar
-            learningProgramSearch={learningProgramSearch}
-            handleLearningProgramSearch={handleLearningProgramSearch}
             sessionInfo={sessionInfo}
             filteredLearningGoals={filteredLearningGoals}
             selectedPromptLevel={selectedPromptLevel}
@@ -1706,8 +1655,6 @@ const TrainerSession = () => {
                 setColor={setColor}
                 lineWidth={lineWidth}
                 setLineWidth={setLineWidth}
-                bucketColor={bucketColor}
-                setBucketColor={setBucketColor}
                 buckets={buckets}
                 setBuckets={setBuckets}
                 clearCanvasTrigger={clearCanvasTrigger}
@@ -1741,19 +1688,19 @@ const TrainerSession = () => {
                 <span>{cameraEnabled ? '📹' : '📷'}</span>
                 <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span>
               </button>
+              {recordingService && sessionInfo && (
+                <div className="flex items-center ml-3">
+                  <RecordingControls
+                    recordingService={recordingService}
+                    sessionStatus={connectionStatus}
+                    sessionId={sessionInfo.id}
+                  />
+                </div>
+              )}
             </div>
+
           </div>
           {/* Whiteboard Drawing Tools - Beautiful Heading */}
-          <div className="session-whiteboard-tools w-full" style={{ marginBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-                <div className="session-section-header bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded shadow-md flex items-center" style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
-                  <span style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}>🎨</span>
-                  <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 1rem)' }}>Whiteboard Drawing Tools</div>
-                </div>
-              </div>
-            </div>
-          </div>
           <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
             {/* Drawing tool buttons */}
             <div className="flex" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
@@ -1770,7 +1717,7 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${tool === 'pen' && toolActive && !eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                className={`${tool === 'pen' && toolActive && !eraserActive ? wbBtnActive : wbBtnBase}`}
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Pen Tool (Click to activate/deactivate)"
               >
@@ -1792,7 +1739,7 @@ const TrainerSession = () => {
                     setEraseAllActive(false);
                   }
                 }}
-                className={`${eraserActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                className={`${eraserActive ? wbBtnActive : wbBtnBase}`}
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Eraser Tool (Click to activate/deactivate)"
               >
@@ -1802,46 +1749,46 @@ const TrainerSession = () => {
               </button>
               <button
                 onClick={() => {
-                  if (eraseAllActive) {
-                    // Deactivate erase all
-                    setEraseAllActive(false);
-                  } else {
-                    // Activate erase all - deactivate other tools first
-                    setEraseAllActive(true);
-                    setEraserActive(false);
-                    setToolActive(false);
-                    eraseAllPen();
-                  }
+                  // One-click: clear only pen strokes
+                  eraseAllPen();
                 }}
-                className={`${eraseAllActive ? 'bg-orange-500 border-orange-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                className={wbBtnBase}
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
                 title="Erase All Pen Strokes"
               >
                 <Emoji emoji="🗑️" size="base" />
                 <span className="hidden sm:inline">Erase All</span>
-                {eraseAllActive}
+              </button>
+              {/* Clear Canvas Button */}
+              <button
+                onClick={() => {
+                  setCanvasItems([]);
+                  setBuckets([]);
+                  setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
+                  if (whiteboardService) {
+                    whiteboardService.send('clear_canvas', {
+                      timestamp: Date.now()
+                    });
+                  }
+                }}
+                className={wbBtnBase}
+                style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
+                title="Clear All Canvas Items and Pen Strokes"
+              >
+                <Emoji emoji="🗑️" size="base" />
+                <span className="hidden sm:inline">Clear All</span>
               </button>
               <button
                 onClick={() => {
-                  if (tool === 'bucket' && toolActive) {
-                    // Bucket is active, add a new bucket
-                    addBucket();
-                  } else {
-                    // Activate bucket tool - deactivate other tools first
-                    setTool('bucket');
-                    setToolActive(true);
-                    setEraserActive(false);
-                    setEraseAllActive(false);
-                    toast.info('Bucket tool activated - click again to add buckets');
-                  }
+                  // Single-click: immediately add a new bucket
+                  addBucket();
                 }}
-                className={`${tool === 'bucket' && toolActive ? 'bg-blue-500 border-blue-500 text-white shadow-lg' : 'bg-white border-gray-300 hover:bg-gray-100'} border-2 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center`}
+                className={wbBtnBase}
                 style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
-                title="Bucket Tool (Click to activate, click again to add bucket)"
+                title="Add Bucket"
               >
                 <Emoji emoji="🪣" size="base" />
                 <span className="hidden xs:inline">Bucket</span>
-                {tool === 'bucket' && toolActive}
               </button>
             </div>
 
@@ -1860,17 +1807,7 @@ const TrainerSession = () => {
                 />
               </div>
 
-              <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
-                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
-                <input
-                  type="color"
-                  value={bucketColor}
-                  onChange={(e) => setBucketColor(e.target.value)}
-                  className="rounded cursor-pointer border border-gray-300"
-                  style={{ width: 'clamp(1.25rem, 3vw, 1.75rem)', height: 'clamp(1.25rem, 3vw, 1.75rem)' }}
-                  title="Bucket Color"
-                />
-              </div>
+
 
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                 <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
@@ -1913,139 +1850,51 @@ const TrainerSession = () => {
               </div>
             </div>
 
-            {/* Clear Canvas Button */}
-            <button
-              onClick={() => {
-                setCanvasItems([]);
-                setBuckets([]);
-                setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
-                if (whiteboardService) {
-                  whiteboardService.send('clear_canvas', {
-                    timestamp: Date.now()
-                  });
-                }
-              }}
-              className="bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition-colors flex items-center"
-              style={{ padding: 'clamp(0.375rem, 1.5vw, 0.625rem) clamp(0.5rem, 2vw, 1rem)', fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)', gap: 'clamp(0.125rem, 0.5vw, 0.25rem)' }}
-              title="Clear All Canvas Items and Pen Strokes"
-            >
-              <Emoji emoji="🗑️" size="base" />
-              <span className="hidden sm:inline">Clear All</span>
-            </button>
-          </div>
+            {/* All tools group - learner access + trainer interactive buttons */}
+            <div className="all-tools-group w-full">
+              {/* Learner Tool Access Controls */}
+              <div className="session-tools-section w-full flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3">
+                {/* Select Tool Toggle */}
+                <button
+                  onClick={() => toggleLearnerToolAccess('select')}
+                  className={`${learnerToolAccess.select ? wbSmallBtnActive : wbSmallBtnBase}`}
+                  title={learnerToolAccess.select ? 'Click to disable Select' : 'Click to enable Select'}
+                >
+                  <span>✋</span>
+                  <span>Select</span>
+                </button>
 
-          {/* Toolbar */}
-          <div className="session-tools-section flex flex-wrap bg-white rounded" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)', padding: 'clamp(0.5rem, 2vw, 1rem)', marginTop: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-            <div className="flex items-center justify-between w-full" style={{ marginBottom: '0.5rem' }}>
-              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
-                <div className="session-section-header bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded shadow-sm flex items-center" style={{ padding: 'clamp(0.25rem, 1.5vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)', gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
-                  <Emoji emoji="🛠️" size="sm" />
-                  <div className="font-semibold" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.75rem)' }}>Whiteboard Tools & Learner Access</div>
-                </div>              </div>
+                {/* Drag Tool Toggle */}
+                <button
+                  onClick={() => toggleLearnerToolAccess('drag')}
+                  className={`${learnerToolAccess.drag ? wbSmallBtnActive : wbSmallBtnBase}`}
+                  title={learnerToolAccess.drag ? 'Click to disable Drag' : 'Click to enable Drag'}
+                >
+                  <span>↔️</span>
+                  <span>Drag</span>
+                </button>
 
+                {/* Keyboard Trigger */}
+                <button
+                  onClick={() => {
+                    // Toggle keyboard access for learner
+                    toggleLearnerToolAccess('keyboard');
+                    // If enabling, also send an immediate trigger so the keyboard appears right away
+                    if (!learnerToolAccess.keyboard) {
+                      triggerLearnerKeyboard();
+                    }
+                  }}
+                  className={`${learnerToolAccess.keyboard ? wbSmallBtnActive : wbSmallBtnBase}`}
+                  title={learnerToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
+                >
+                  <span>⌨️</span>
+                  <span>Keyboard</span>
+                </button>
 
-            </div>
-
-            {/* Learner Tool Access Controls */}
-            <div className="session-tools-section w-full flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3">
-              {/* Select Tool Toggle */}
-              <button
-                onClick={() => toggleLearnerToolAccess('select')}
-                className={`${learnerToolAccess.select
-                  ? 'bg-blue-500 hover:bg-blue-600 border-blue-600 shadow-lg text-white'
-                  : 'bg-white hover:bg-gray-50 border-gray-400 text-slate-800'
-                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
-                title={learnerToolAccess.select ? 'Click to disable Select' : 'Click to enable Select'}
-              >
-                <span>✋</span>
-                <span>Select</span>
-              </button>
-
-              {/* Drag Tool Toggle */}
-              <button
-                onClick={() => toggleLearnerToolAccess('drag')}
-                className={`${learnerToolAccess.drag
-                  ? 'bg-blue-500 hover:bg-blue-600 border-blue-600 shadow-lg text-white'
-                  : 'bg-white hover:bg-gray-50 border-gray-400 text-slate-800'
-                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
-                title={learnerToolAccess.drag ? 'Click to disable Drag' : 'Click to enable Drag'}
-              >
-                <span>↔️</span>
-                <span>Drag</span>
-              </button>
-
-              {/* Keyboard Trigger */}
-              <button
-                onClick={() => {
-                  // Toggle keyboard access for learner
-                  toggleLearnerToolAccess('keyboard');
-                  // If enabling, also send an immediate trigger so the keyboard appears right away
-                  if (!learnerToolAccess.keyboard) {
-                    triggerLearnerKeyboard();
-                  }
-                }}
-                className={`${learnerToolAccess.keyboard ? 'bg-blue-500 border-blue-600 text-white hover:bg-blue-600' : 'bg-white border-gray-400 text-blue-600 hover:bg-blue-50'} border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
-                title={learnerToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
-              >
-                <span>⌨️</span>
-                <span>Keyboard</span>
-              </button>
-
-              {/* FILL IN THE BLANKS - CREATE EXERCISE */}
-              <button
-                onClick={() => {
-                  // Toggle learner interaction permission
-                  const willEnable = !learnerToolAccess.fillBlanks;
-                  toggleLearnerToolAccess('fillBlanks');
-
-                  // Update all existing fill-in-blanks exercises with the permission state
-                  setCanvasItems(prev => prev.map(item =>
-                    item.type === 'fill-in-blanks'
-                      ? { ...item, allowLearnerInteraction: willEnable }
-                      : item
-                  ));
-
-                  // Broadcast the permission change to all participants
-                  if (whiteboardService) {
-                    whiteboardService.send('fillBlanksPermission', {
-                      allowed: willEnable,
-                      timestamp: Date.now()
-                    });
-                  }
-
-                  toast.success(willEnable ? '✅ Learners can now fill in the blanks!' : '🔒 Fill in the blanks locked');
-                }}
-                className={`${learnerToolAccess.fillBlanks
-                  ? 'bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 border-green-600 text-white shadow-lg'
-                  : 'bg-white border-gray-400 text-slate-800 hover:bg-gray-50'
-                  } border-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1`}
-                title={learnerToolAccess.fillBlanks ? 'Click to lock fill in the blanks' : 'Click to allow learners to fill in the blanks'}
-              >
-                <span>{learnerToolAccess.fillBlanks ? '✏️' : '📝'}</span>
-                <span>Fill Blanks</span>
-              </button>
-            </div>
-
-
-            {/* Trainer Whiteboard Tools */}
-            <div className="session-interactive-buttons w-full">
-              <div className="w-full mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="session-section-header bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 rounded shadow-md flex items-center gap-2 sm:gap-3">
-                      <Emoji emoji="⏲️" size="lg" />
-                      <div>
-                        <div className="text-xs sm:text-sm font-semibold">Timers</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="session-interactive-buttons flex items-center gap-2">
+                {/* Fill Blanks tool removed */}
                 <button
                   onClick={() => setShowStopwatch(prev => !prev)}
-                  className={`inline-flex items-center gap-1 sm:gap-2 my-1 sm:my-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-semibold ${showStopwatch ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`}
+                  className={`${showStopwatch ? wbSmallBtnActive : wbSmallBtnBase}`}
                   aria-expanded={showStopwatch}
                   aria-controls="stopwatch-panel"
                   title="Toggle stopwatch panel"
@@ -2053,16 +1902,6 @@ const TrainerSession = () => {
                   <Emoji emoji="⏲️" size="base" />
                   <span className="hidden sm:inline">Stopwatch</span>
                 </button>
-              </div>
-
-
-
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <div className="session-section-header bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
-                  <span className="text-xs sm:text-sm">✨</span>
-                  <div className="text-[10px] sm:text-xs font-semibold">Feedback & Emojis</div>
-                </div>              </div>
-              <div className="session-interactive-buttons flex flex-wrap gap-0.5 sm:gap-1 w-full">
                 {[
                   { label: 'Good Job!', icon: '👍' },
                   { label: 'Wow!', icon: '🌟' },
@@ -2077,16 +1916,12 @@ const TrainerSession = () => {
                   { label: 'Wait', icon: '⏳' }
                 ].map((t, i) => {
                   // Use pastel colors for Bubbles, Smileys, Balloons, Stars - no shadow/border
-                  const isFloatingEmoji = ['Bubbles', 'Smileys', 'Balloons', 'Stars'].includes(t.label);
-                  const baseClass = isFloatingEmoji
-                    ? (activeIcons[t.label] ? 'bg-blue-200 text-gray-800' : 'bg-pink-100 hover:bg-pink-200 text-gray-800')
-                    : (activeIcons[t.label] ? 'bg-blue-500 border-blue-600 shadow-lg text-white' : 'bg-white border-2 border-gray-300 hover:bg-gray-100');
-
+                  // Use unified button theme for feedback/tool buttons
                   return (
                     <button
                       key={i}
                       onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                      className={`${baseClass} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
+                      className={`${activeIcons[t.label] ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
                       title={t.label}
                     >
                       <Emoji emoji={t.icon} size="base" className="inline-block" />
@@ -2095,28 +1930,9 @@ const TrainerSession = () => {
                   );
                 })}
               </div>
-            </div>
+            </div>{/* end .all-tools-group */}
 
-            {/* CREATE EXERCISES SECTION */}
-            <div className="session-create-exercise w-full">
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <div className="session-section-header bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded shadow-sm flex items-center gap-1 sm:gap-2">
-                  <Emoji emoji="📚" size="sm" />
-                  <div className="text-[10px] sm:text-xs font-semibold">Create Exercises</div>
-                </div>
-              </div>
-              <div className="session-create-exercise flex flex-wrap gap-1 sm:gap-2 w-full">
-                {/* Create Fill in the Blanks Exercise */}
-                <button
-                  onClick={() => handleToolClick('📝 Fill Blanks')}
-                  className="bg-gradient-to-r from-purple-400 to-indigo-400 hover:from-purple-500 hover:to-indigo-500 border-2 border-purple-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-bold cursor-pointer transition-all duration-200 flex items-center gap-1 shadow-lg"
-                  title="Create a new Fill in the Blanks exercise"
-                >
-                  <span>📝</span>
-                  <span>Create</span>
-                </button>
-              </div>
-            </div>
+            {/* Create Exercises section removed */}
             <div className="session-notes-section border-2 border-gray-300 my-2 sm:my-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
               <div className="flex justify-between items-center mb-2">
                 <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>📝 Session Notes</div>
@@ -2205,6 +2021,16 @@ const TrainerSession = () => {
               sessionInfo={sessionInfo}
               connectionStatus={connectionStatus}
             />
+            {/* Recording Controls */}
+            {recordingService && sessionInfo && (
+              <div className="mt-2">
+                <RecordingControls
+                  recordingService={recordingService}
+                  sessionStatus={connectionStatus}
+                  sessionId={sessionInfo.id}
+                />
+              </div>
+            )}
           </div>
           {/* Learning Content - 25% height */}
           <div className=" learning-content-container">
@@ -2231,8 +2057,6 @@ const TrainerSession = () => {
 
             <div className="section-content">
               <LearningProgramSidebar
-                learningProgramSearch={learningProgramSearch}
-                handleLearningProgramSearch={handleLearningProgramSearch}
                 sessionInfo={sessionInfo}
                 filteredLearningGoals={filteredLearningGoals}
                 selectedPromptLevel={selectedPromptLevel}
@@ -2284,23 +2108,10 @@ const TrainerSession = () => {
           >
             ⏹️ <span className="xs:inline">End Session</span>
           </button>
-          <button
-            className="btn-pause-session"
-            onClick={() => console.log('[TrainerSession] Pause clicked')}
-            title="Pause"
-          >
-            <Emoji emoji="⏸️" size="sm" /> <span className="xs:inline">Pause</span>
-          </button>
         </div>
       </div>
 
-      {/* Fill in the Blanks Creator Modal */}
-      <FillBlanksCreator
-        isOpen={showFillBlanksCreator}
-        onClose={() => setShowFillBlanksCreator(false)}
-        onSend={handleSendExercise}
-        learnerName={sessionInfo?.learner_name || 'Learner'}
-      />
+      {/* Fill in the Blanks feature removed */}
     </div>
   );
 };

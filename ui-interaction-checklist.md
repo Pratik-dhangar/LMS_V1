@@ -35,7 +35,6 @@ This checklist covers trainer and learner interaction flows for live sessions, i
 - **Data Channel / WS Chat**: Messages sent via WebRTC data channel or WS signaling should appear in chat pane and optionally on the whiteboard. Validate ordering and persistence (if applicable).
 
 **Interactive Exercises**
-- **Create Exercise (Trainer)**: `FillBlanksCreator` → send item via `sendItemUpdate` → learners render interactive fields. Validate edit/submit flows and trainer push updates.
 - **Learner Answer Flow**: Learner types (virtual keyboard) → `text_added`/`item_update` → trainer sees responses; ensure permissions gating on keyboard access.
 
 **Session Notes & Reports**
@@ -65,7 +64,7 @@ This checklist covers trainer and learner interaction flows for live sessions, i
 - **4. Share Prompt / Content**: Use prompt input or content panel → send `prompt_update` and/or `media_control` messages; also attach content IDs to session via session APIs if persistent.
 - **5. Run Stopwatch / Timers**: Start stopwatch → send `stopwatch_sync` periodically → learners update UI and sounds; on finish optionally tag in report.
 - **6. Feedback & Meters**: Adjust prompt/reinforcement meters → call `videoConferenceService.sendPromptMeter` / `sendReinforcementMeter` → learners display meters and server stores values.
-- **7. Interactive Exercises**: Create or push fill-in-the-blanks → send `item_update` / `text_added` → learners render interactive fields; collect responses through WS and save to notes/report.
+- **7. Interactive Exercises**: Create or push interactive exercises → send `item_update` / `text_added` → learners render interactive fields; collect responses through WS and save to notes/report.
 - **8. Auto-save Notes**: Notes auto-save periodically via `/session-notes/{sessionId}` and on cleanup use `navigator.sendBeacon`.
 - **9. End Session**: Click `End` → POST `/sessions/{sessionId}/end` with summary → broadcast `session_end` over WS → close media/WS and finalize report creation.
 
@@ -76,7 +75,7 @@ This checklist covers trainer and learner interaction flows for live sessions, i
 - **4. Receive Tool Access**: Handle `tool_access` messages to enable/disable learner UI (drawing, keyboard, media controls).
 - **5. Respond to Prompts**: Display `prompt_update`; if keyboard access allowed, show virtual keyboard and send `text_added` events to trainer via WS.
 - **6. Stopwatch & Sounds**: Update stopwatch via `stopwatch_sync`; play tick/celebration sounds per trainer commands and show time warnings.
-- **7. Interactive Exercises**: Render fill-in exercises upon `item_update`; submit answers via WS and show instructor feedback messages.
+- **7. Interactive Exercises**: Render interactive exercises upon `item_update`; submit answers via WS and show instructor feedback messages.
 - **8. Local Notes & Cleanup**: Optionally save local notes; on session end close WS/peerConnection, stop tracks, and persist any final notes to the server.
 
 ---

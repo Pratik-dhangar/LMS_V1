@@ -6,7 +6,7 @@ import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
 import MediaPopup from './MediaPopup';
 import { useMediaControl } from '../../context/MediaControlContext';
-import FillInTheBlanks from './FillInTheBlanks';
+// Fill-in-the-blanks removed
 
 // Memoized Video Overlay Component
 const VideoOverlay = React.memo(({
@@ -2170,287 +2170,252 @@ const Whiteboard = ({
                         })}
 
                         {/* Render Buckets as Overlays - Visible to both trainer and learner */}
-                        {buckets.map(bucket => (
-                            <div
-                                key={bucket.id}
-                                className="absolute"
-                                style={{
-                                    left: `${bucket.x}px`,
-                                    top: `${bucket.y}px`,
-                                    width: `${bucket.width}px`,
-                                    height: `${bucket.height}px`,
-                                    pointerEvents: 'none',
-                                    zIndex: 10,
-                                    cursor: 'default'
-                                }}
-                            >
-                                {/* Fish Bowl - Rounded Pot Shape */}
-                                <svg width={bucket.width} height={bucket.height} style={{ position: 'absolute', top: 0, left: 0 }} viewBox="0 0 200 200">
-                                    <defs>
-                                        {/* Glass material - soft blue tint */}
-                                        <linearGradient id={`glassColor-${bucket.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style={{ stopColor: '#E3F2FD', stopOpacity: 0.9 }} />
-                                            <stop offset="100%" style={{ stopColor: '#B3E5FC', stopOpacity: 0.8 }} />
-                                        </linearGradient>
+                        {buckets.map(bucket => {
+                            const dotSize = Math.max(12, Math.round(Math.min(bucket.width || 80, bucket.height || 80) * 0.12));
+                            const borderPx = Math.max(1, Math.round(dotSize * 0.12));
+                            // Map a fixed SVG anchor point (viewBox coords) to bucket pixels so the dot sits at the intended outline spot.
+                            // Default anchor chosen near the bottom-right outline of the pot (viewBox 0..200): {x:142, y:148}.
+                            const defaultAnchor = { x: 142, y: 148 };
+                            const anchor = bucket.dotAnchor || defaultAnchor;
+                            const offsetOut = bucket.dotOffset !== undefined ? bucket.dotOffset : 6; // px outward offset from anchor
+                            const anchorPx = (anchor.x / 200) * (bucket.width || 80) + offsetOut;
+                            const anchorPy = (anchor.y / 200) * (bucket.height || 80) + offsetOut;
+                            return (
+                                <div
+                                    key={bucket.id}
+                                    className="absolute"
+                                    style={{
+                                        left: `${bucket.x}px`,
+                                        top: `${bucket.y}px`,
+                                        width: `${bucket.width}px`,
+                                        height: `${bucket.height}px`,
+                                        pointerEvents: 'none',
+                                        zIndex: 10,
+                                        cursor: 'default'
+                                    }}
+                                >
+                                    {/* Fish Bowl - Rounded Pot Shape */}
+                                    <svg width={bucket.width} height={bucket.height} style={{ position: 'absolute', top: 0, left: 0 }} viewBox="0 0 200 200">
+                                        <defs>
+                                            {/* Glass material - soft blue tint */}
+                                            <linearGradient id={`glassColor-${bucket.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" style={{ stopColor: '#E3F2FD', stopOpacity: 0.9 }} />
+                                                <stop offset="100%" style={{ stopColor: '#B3E5FC', stopOpacity: 0.8 }} />
+                                            </linearGradient>
 
-                                        {/* Rim material - smooth metallic finish */}
-                                        <linearGradient id={`rimFinish-${bucket.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                            <stop offset="0%" style={{ stopColor: '#FFFFFF', stopOpacity: 1 }} />
-                                            <stop offset="50%" style={{ stopColor: '#64B5F6', stopOpacity: 0.7 }} />
-                                            <stop offset="100%" style={{ stopColor: '#1976D2', stopOpacity: 0.8 }} />
-                                        </linearGradient>
+                                            {/* Rim material - smooth metallic finish */}
+                                            <linearGradient id={`rimFinish-${bucket.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" style={{ stopColor: '#FFFFFF', stopOpacity: 1 }} />
+                                                <stop offset="50%" style={{ stopColor: '#64B5F6', stopOpacity: 0.7 }} />
+                                                <stop offset="100%" style={{ stopColor: '#1976D2', stopOpacity: 0.8 }} />
+                                            </linearGradient>
 
-                                        {/* Subtle distortion filter */}
-                                        <filter id={`glassDistort-${bucket.id}`}>
-                                            <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
-                                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.5" />
-                                        </filter>
-                                    </defs>
+                                            {/* Subtle distortion filter */}
+                                            <filter id={`glassDistort-${bucket.id}`}>
+                                                <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" result="noise" />
+                                                <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.5" />
+                                            </filter>
+                                        </defs>
 
-                                    {/* Main pot body - rounded bulbous shape */}
-                                    <path
-                                        d="M 45 50 Q 30 65 32 90 Q 35 115 65 135 Q 100 155 135 135 Q 165 115 168 90 Q 170 65 155 50"
-                                        fill={`url(#glassColor-${bucket.id})`}
-                                        stroke="#0D47A1"
-                                        strokeWidth="5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-
-                                    {/* Top rim - rounded collar */}
-                                    <g>
-                                        {/* Rim outer edge */}
-                                        <ellipse
-                                            cx="100"
-                                            cy="35"
-                                            rx="65"
-                                            ry="12"
-                                            fill="#1976D2"
+                                        {/* Main pot body - rounded bulbous shape */}
+                                        <path
+                                            d="M 45 50 Q 30 65 32 90 Q 35 115 65 135 Q 100 155 135 135 Q 165 115 168 90 Q 170 65 155 50"
+                                            fill={`url(#glassColor-${bucket.id})`}
                                             stroke="#0D47A1"
+                                            strokeWidth="5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+
+                                        {/* Top rim - rounded collar */}
+                                        <g>
+                                            {/* Rim outer edge */}
+                                            <ellipse
+                                                cx="100"
+                                                cy="35"
+                                                rx="65"
+                                                ry="12"
+                                                fill="#1976D2"
+                                                stroke="#0D47A1"
+                                                strokeWidth="3"
+                                            />
+
+                                            {/* Rim main surface */}
+                                            <ellipse
+                                                cx="100"
+                                                cy="32"
+                                                rx="62"
+                                                ry="9"
+                                                fill={`url(#rimFinish-${bucket.id})`}
+                                            />
+
+                                            {/* Rim bright highlight */}
+                                            <ellipse
+                                                cx="100"
+                                                cy="28"
+                                                rx="60"
+                                                ry="6"
+                                                fill="white"
+                                                opacity="0.9"
+                                            />
+
+                                            {/* Rim inner shadow */}
+                                            <ellipse
+                                                cx="100"
+                                                cy="38"
+                                                rx="58"
+                                                ry="5"
+                                                fill="rgba(13, 71, 161, 0.3)"
+                                            />
+                                        </g>
+
+                                        {/* Pot body outer contour - depth */}
+                                        <path
+                                            d="M 48 52 Q 35 68 37 92 Q 40 113 65 130 Q 100 150 135 130 Q 160 113 163 92 Q 165 68 152 52"
+                                            fill="none"
+                                            stroke="rgba(13, 71, 161, 0.2)"
                                             strokeWidth="3"
                                         />
 
-                                        {/* Rim main surface */}
+                                        {/* Primary light reflection - left side */}
                                         <ellipse
-                                            cx="100"
-                                            cy="32"
-                                            rx="62"
-                                            ry="9"
-                                            fill={`url(#rimFinish-${bucket.id})`}
-                                        />
-
-                                        {/* Rim bright highlight */}
-                                        <ellipse
-                                            cx="100"
-                                            cy="28"
-                                            rx="60"
-                                            ry="6"
+                                            cx="55"
+                                            cy="65"
+                                            rx="16"
+                                            ry="32"
                                             fill="white"
-                                            opacity="0.9"
+                                            opacity="0.45"
+                                            filter={`url(#glassDistort-${bucket.id})`}
                                         />
 
-                                        {/* Rim inner shadow */}
+                                        {/* Secondary light reflection - center left */}
+                                        <ellipse
+                                            cx="75"
+                                            cy="95"
+                                            rx="14"
+                                            ry="24"
+                                            fill="rgba(255, 255, 255, 0.3)"
+                                        />
+
+                                        {/* Tertiary reflection - right side softer */}
+                                        <ellipse
+                                            cx="140"
+                                            cy="75"
+                                            rx="13"
+                                            ry="28"
+                                            fill="rgba(179, 229, 252, 0.35)"
+                                        />
+
+                                        {/* Bottom curve - rounded base */}
                                         <ellipse
                                             cx="100"
-                                            cy="38"
-                                            rx="58"
-                                            ry="5"
-                                            fill="rgba(13, 71, 161, 0.3)"
+                                            cy="143"
+                                            rx="38"
+                                            ry="10"
+                                            fill="rgba(13, 71, 161, 0.2)"
                                         />
-                                    </g>
 
-                                    {/* Pot body outer contour - depth */}
-                                    <path
-                                        d="M 48 52 Q 35 68 37 92 Q 40 113 65 130 Q 100 150 135 130 Q 160 113 163 92 Q 165 68 152 52"
-                                        fill="none"
-                                        stroke="rgba(13, 71, 161, 0.2)"
-                                        strokeWidth="3"
-                                    />
+                                        {/* Bottom highlight - rounded bottom */}
+                                        <ellipse
+                                            cx="100"
+                                            cy="140"
+                                            rx="36"
+                                            ry="8"
+                                            fill="rgba(227, 242, 253, 0.4)"
+                                        />
 
-                                    {/* Primary light reflection - left side */}
-                                    <ellipse
-                                        cx="55"
-                                        cy="65"
-                                        rx="16"
-                                        ry="32"
-                                        fill="white"
-                                        opacity="0.45"
-                                        filter={`url(#glassDistort-${bucket.id})`}
-                                    />
+                                        {/* Glass surface shine spots */}
+                                        <g opacity="0.65">
+                                            <circle cx="52" cy="60" r="2.5" fill="white" />
+                                            <circle cx="90" cy="70" r="2" fill="white" />
+                                            <circle cx="145" cy="65" r="2" fill="white" />
+                                        </g>
+                                    </svg>
 
-                                    {/* Secondary light reflection - center left */}
-                                    <ellipse
-                                        cx="75"
-                                        cy="95"
-                                        rx="14"
-                                        ry="24"
-                                        fill="rgba(255, 255, 255, 0.3)"
-                                    />
-
-                                    {/* Tertiary reflection - right side softer */}
-                                    <ellipse
-                                        cx="140"
-                                        cy="75"
-                                        rx="13"
-                                        ry="28"
-                                        fill="rgba(179, 229, 252, 0.35)"
-                                    />
-
-                                    {/* Bottom curve - rounded base */}
-                                    <ellipse
-                                        cx="100"
-                                        cy="143"
-                                        rx="38"
-                                        ry="10"
-                                        fill="rgba(13, 71, 161, 0.2)"
-                                    />
-
-                                    {/* Bottom highlight - rounded bottom */}
-                                    <ellipse
-                                        cx="100"
-                                        cy="140"
-                                        rx="36"
-                                        ry="8"
-                                        fill="rgba(227, 242, 253, 0.4)"
-                                    />
-
-                                    {/* Glass surface shine spots */}
-                                    <g opacity="0.65">
-                                        <circle cx="52" cy="60" r="2.5" fill="white" />
-                                        <circle cx="90" cy="70" r="2" fill="white" />
-                                        <circle cx="145" cy="65" r="2" fill="white" />
-                                    </g>
-                                </svg>
-
-                                {/* Bucket Label - Editable for trainers only */}
-                                <div
-                                    className="bucket-label"
-                                    style={{
-                                        backgroundColor: bucket.color || bucketColor,
-                                        pointerEvents: isTrainer ? 'auto' : 'none',
-                                        cursor: editingBucketId !== bucket.id ? 'pointer' : 'default',
-                                        // place label at the top of the bowl (slightly above the rim)
-                                        top: `-${bucket.height * 0.12}px`
-                                    }}
-                                >
-                                    <span
-                                        onDoubleClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!isTrainer) return;
-                                            handleBucketLabelClick(bucket, e);
-                                        }}
-                                        style={{ cursor: editingBucketId !== bucket.id ? 'pointer' : 'default' }}
-                                    >
-                                        {editingBucketId === bucket.id ? (
-                                            <input
-                                                type="text"
-                                                value={editingBucketLabel}
-                                                onChange={handleBucketLabelChange}
-                                                onBlur={handleBucketLabelBlur}
-                                                onKeyPress={(e) => e.key === 'Enter' && handleBucketLabelBlur()}
-                                                onClick={(e) => e.stopPropagation()}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                autoFocus
-                                                className="bucket-input"
-                                                style={{ backgroundColor: bucket.color || bucketColor }}
-                                            />
-                                        ) : (
-                                            <span>{bucket.label}</span>
-                                        )}
-                                    </span>
-
-                                    {/* Remove Bucket Button */}
-                                    {isTrainer && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeBucket(bucket.id);
-                                            }}
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                            className="bucket-close-button"
-                                            title="Remove Bucket"
-                                        >
-                                            ×
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Resize Handle Visual (Trainer only) - Larger and more visible */}
-                                {isTrainer && (
+                                    {/* Bucket Label - Editable for trainers only */}
                                     <div
-                                        className="bucket-color-indicator"
+                                        className="bucket-label"
                                         style={{
                                             backgroundColor: bucket.color || bucketColor,
-                                            pointerEvents: 'auto',  // Changed from 'none' to 'auto'
-                                            transform: 'translate(-50%, -50%)',
-                                            cursor: 'nwse-resize'  // Added resize cursor
+                                            pointerEvents: isTrainer ? 'auto' : 'none',
+                                            cursor: editingBucketId !== bucket.id ? 'pointer' : 'default',
+                                            // place label at the top of the bowl (slightly above the rim)
+                                            top: `-${bucket.height * 0.12}px`
                                         }}
-                                        title="Drag to resize"
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setSelectedItem({ ...bucket, type: 'bucket' });
-                                            setIsResizingItem(true);
-                                            prevPosRef.current = { x: e.clientX - canvasRef.current.getBoundingClientRect().left, y: e.clientY - canvasRef.current.getBoundingClientRect().top };
-                                        }}
-                                    />
-                                )}
-                            </div>
-                        ))}
+                                    >
+                                        <span
+                                            onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!isTrainer) return;
+                                                handleBucketLabelClick(bucket, e);
+                                            }}
+                                            style={{ cursor: editingBucketId !== bucket.id ? 'pointer' : 'default' }}
+                                        >
+                                            {editingBucketId === bucket.id ? (
+                                                <input
+                                                    type="text"
+                                                    value={editingBucketLabel}
+                                                    onChange={handleBucketLabelChange}
+                                                    onBlur={handleBucketLabelBlur}
+                                                    onKeyPress={(e) => e.key === 'Enter' && handleBucketLabelBlur()}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                    autoFocus
+                                                    className="bucket-input"
+                                                    style={{ backgroundColor: bucket.color || bucketColor }}
+                                                />
+                                            ) : (
+                                                <span>{bucket.label}</span>
+                                            )}
+                                        </span>
 
-                        {/* FILL IN THE BLANKS EXERCISES */}
-                        {canvasItems.filter(item => item.type === 'fill-in-blanks').map(exercise => {
-                            const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === exercise.id;
-                            const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === exercise.id;
-                            const isDraggable = (isTrainer && isSelectedByTrainer) || (!isTrainer && isSelectedByLearner);
+                                        {/* Remove Bucket Button */}
+                                        {isTrainer && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeBucket(bucket.id);
+                                                }}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                className="bucket-close-button"
+                                                title="Remove Bucket"
+                                            >
+                                                ×
+                                            </button>
+                                        )}
+                                    </div>
 
-                            return (
-                                <FillInTheBlanks
-                                    key={exercise.id}
-                                    exercise={exercise}
-                                    isTrainer={isTrainer}
-                                    allowLearnerInteraction={exercise.allowLearnerInteraction === true}
-                                    onAnswerChange={(exerciseId, answers) => {
-                                        // Update the exercise answers in canvasItems
-                                        setCanvasItems(prev => prev.map(item =>
-                                            item.id === exerciseId
-                                                ? { ...item, answers }
-                                                : item
-                                        ));
-
-                                        // Sync to other participants via whiteboard service
-                                        if (whiteboardService) {
-                                            whiteboardService.sendItemUpdate({
-                                                id: exerciseId,
-                                                answers,
-                                                type: 'fill-in-blanks'
-                                            });
-                                        }
-                                    }}
-                                    onEdit={(exerciseData) => {
-                                        if (isTrainer) {
-                                            // Store the exercise being edited
-                                            setSelectedItem({
-                                                ...exerciseData,
-                                                editMode: true
-                                            });
-                                        }
-                                    }}
-                                    x={exercise.x}
-                                    y={exercise.y}
-                                    width={exercise.width}
-                                    height={exercise.height}
-                                    isSelected={isSelectedByTrainer || isSelectedByLearner}
-                                    isDraggable={isDraggable}
-                                    onMouseDown={(e) => {
-                                        if (e.button === 0) {
-                                            e.stopPropagation();
-                                            startDrawing(e);
-                                        }
-                                    }}
-                                />
+                                    {/* Resize Handle Visual (Trainer only) - Larger and more visible */}
+                                    {isTrainer && (
+                                        <div
+                                            className="bucket-color-indicator"
+                                            style={{
+                                                backgroundColor: bucket.color || bucketColor,
+                                                pointerEvents: 'auto',
+                                                width: `${dotSize}px`,
+                                                height: `${dotSize}px`,
+                                                left: `${Math.round(anchorPx - dotSize / 2)}px`,
+                                                top: `${Math.round(anchorPy - dotSize / 2)}px`,
+                                                transform: 'translate(0,0)',
+                                                cursor: 'nwse-resize',
+                                                border: `${borderPx}px solid white`,
+                                                borderRadius: '9999px'
+                                            }}
+                                            title="Drag to resize"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setSelectedItem({ ...bucket, type: 'bucket' });
+                                                setIsResizingItem(true);
+                                                prevPosRef.current = { x: e.clientX - canvasRef.current.getBoundingClientRect().left, y: e.clientY - canvasRef.current.getBoundingClientRect().top };
+                                            }}
+                                        />
+                                    )}
+                                </div>
                             );
                         })}
+
+                        {/* Fill-in-the-blanks exercises removed */}
 
                         {/* REACTION BUTTONS - Show button labels */}
                         {canvasItems.filter(item => item.type === 'reaction').map(reaction => (
