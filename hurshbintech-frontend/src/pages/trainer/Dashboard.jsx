@@ -157,13 +157,44 @@ const TrainerDashboard = () => {
     navigate(`/trainer/session/${sessionId}`);
   };
 
-  const handleViewRecording = (recordingUrl) => {
-    if (!recordingUrl) {
-      toast.info("Recording not available");
+  const handleViewRecording = async (session) => {
+    if (!session.recording_url) {
+      toast.info("Recording not available yet");
       return;
     }
-    // open recording in new tab
-    window.open(recordingUrl, "_blank");
+
+    // Check recording status
+    if (session.recording_status === "processing") {
+      toast.info("Recording is still being processed. Please try again later.");
+      return;
+    }
+
+    if (session.recording_status === "failed") {
+      toast.error("Recording failed to process");
+      return;
+    }
+
+    try {
+      // Fetch playback URL from backend
+      const response = await sessionService.getRecordingUrl(session.id);
+
+      if (response.playback_url) {
+        // Open recording in new tab
+        window.open(response.playback_url, "_blank");
+      } else {
+        toast.error("Failed to generate playback URL");
+      }
+    } catch (error) {
+      console.error("Error fetching recording URL:", error);
+
+      if (error.response?.status === 404) {
+        toast.error("Recording not found");
+      } else if (error.response?.status === 425) {
+        toast.info("Recording is still being processed");
+      } else {
+        toast.error("Failed to load recording");
+      }
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -315,12 +346,25 @@ const TrainerDashboard = () => {
                                 )}
 
                                 <div className="flex gap-2 mt-2">
-                                  <button
-                                    onClick={() => handleViewRecording(session.recording_url)}
-                                    className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
-                                  >
-                                    ▶️ Watch
-                                  </button>
+                                  {session.recording_url && session.recording_status === "completed" && (
+                                    <button
+                                      onClick={() => handleViewRecording(session)}
+                                      className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
+                                      title="Watch recording"
+                                    >
+                                      ▶️ Watch
+                                    </button>
+                                  )}
+                                  {session.recording_status === "processing" && (
+                                    <span className="text-sm px-3 py-1 text-yellow-600" title="Recording is being processed">
+                                      ⏳ Processing...
+                                    </span>
+                                  )}
+                                  {session.recording_status === "failed" && (
+                                    <span className="text-sm px-3 py-1 text-red-600" title="Recording failed">
+                                      ❌ Failed
+                                    </span>
+                                  )}
                                   <button
                                     onClick={() => navigate(`/trainer/session/${session.session_id || session.id}`)}
                                     className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
@@ -439,7 +483,15 @@ const TrainerDashboard = () => {
                         <button onClick={() => navigate(`/trainer/session/${s.session_id || s.id}/notes`)} className="text-sm text-blue-600">📝 View</button>
                       </td>
                       <td className="py-3 pr-4">
-                        <button onClick={() => handleViewRecording(s.recording_url)} className="text-sm text-blue-600">▶️ Watch</button>
+                        {s.recording_url && s.recording_status === "completed" ? (
+                          <button onClick={() => handleViewRecording(s)} className="text-sm text-blue-600 hover:underline">▶️ Watch</button>
+                        ) : s.recording_status === "processing" ? (
+                          <span className="text-sm text-yellow-600">⏳ Processing</span>
+                        ) : s.recording_status === "failed" ? (
+                          <span className="text-sm text-red-600">❌ Failed</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -283,3 +283,31 @@ svg {
     opacity: 0;
   }
 }
+
+/* ============================================================================
+   SCREEN CAPTURE RECORDING - Hide Browser Indicator Border
+   ============================================================================ */
+/* Hide the blue/red border that browsers show during screen recording */
+*::-webkit-media-controls-panel {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+*::--webkit-media-controls-play-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+*::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+/* Hide Chrome's screen sharing indicator */
+[data-recording="true"],
+[aria-label*="sharing"],
+[aria-label*="recording"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}

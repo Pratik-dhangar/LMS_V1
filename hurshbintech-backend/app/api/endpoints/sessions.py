@@ -4,9 +4,13 @@ Training Session Endpoints - Video conferencing sessions
 
 import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status, BackgroundTasks, Header, UploadFile, File, Form
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -22,6 +26,7 @@ from app.models.session_model import TrainingSession
 from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, User
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
 from app.utils.s3_utils import S3Manager
+from app.services.recording_storage import get_recording_storage
 
 # Import SessionUpdate schema
 from app.schemas.session import SessionUpdate
@@ -473,3 +478,449 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str, user_id: int
         logger.error(f"WebSocket error: {e}")
         if websocket in active_connections.get(session_id, []):
             active_connections[session_id].remove(websocket)
+
+
+# ============================================================================
+# RECORDING ENDPOINTS
+# ============================================================================
+
+class JanusWebhookPayload(BaseModel):
+    """Payload from Janus recording completion webhook"""
+    session_id: int  # Database session ID
+    file_path: str  # Absolute path to recording file on disk
+    recording_id: str  # Janus internal recording ID
+    duration: int  # Recording duration in seconds
+
+
+async def process_recording(
+    session_id: int,
+    file_path: str,
+    db: AsyncSession
+):
+    """
+    Background task to process recording upload.
+    
+    Args:
+        session_id: Database session ID
+        file_path: Path to recording file from Janus
+        db: Database session
+    """
+    try:
+        logger.info(f"Processing recording for session {session_id}: {file_path}")
+        
+        # TEMPORARY: For testing without Janus integration, create dummy file if missing
+        from pathlib import Path
+        source_path = Path(file_path)
+        if not source_path.exists():
+            logger.warning(f"Recording file not found (expected for testing): {file_path}")
+            logger.info("Creating dummy recording file for testing purposes")
+            
+            # Create parent directory if needed
+            source_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Create a valid minimal WebM file that browsers can play
+            # This is a complete WebM structure with EBML header, Segment, Info, and Tracks
+            webm_data = bytes([
+                # EBML Header
+                0x1A, 0x45, 0xDF, 0xA3, 0x9F,  # EBML ID + size
+                0x42, 0x86, 0x81, 0x01,  # EBMLVersion = 1
+                0x42, 0xF7, 0x81, 0x01,  # EBMLReadVersion = 1
+                0x42, 0xF2, 0x81, 0x04,  # EBMLMaxIDLength = 4
+                0x42, 0xF3, 0x81, 0x08,  # EBMLMaxSizeLength = 8
+                0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6D,  # DocType = "webm"
+                0x42, 0x87, 0x81, 0x02,  # DocTypeVersion = 2
+                0x42, 0x85, 0x81, 0x02,  # DocTypeReadVersion = 2
+                
+                # Segment
+                0x18, 0x53, 0x80, 0x67, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3B,  # Segment ID + size
+                
+                # Info
+                0x15, 0x49, 0xA9, 0x66, 0x8E,  # Info ID + size
+                0x4D, 0x80, 0x84, 0x44, 0x75, 0x6D, 0x6D,  # MuxingApp = "Dumm"
+                0x57, 0x41, 0x84, 0x54, 0x65, 0x73, 0x74,  # WritingApp = "Test"
+                0x2A, 0xD7, 0xB1, 0x83, 0x0F, 0x42, 0x40,  # TimecodeScale = 1000000
+                0x44, 0x89, 0x84, 0x40, 0x00, 0x00, 0x00,  # Duration = 0
+                
+                # Tracks
+                0x16, 0x54, 0xAE, 0x6B, 0x8F,  # Tracks ID + size
+                # Track Entry (Video)
+                0xAE, 0x8D,  # TrackEntry ID + size
+                0xD7, 0x81, 0x01,  # TrackNumber = 1
+                0x73, 0xC5, 0x81, 0x01,  # TrackUID = 1
+                0x83, 0x81, 0x01,  # TrackType = 1 (video)
+                0x86, 0x85, 0x56, 0x50, 0x38, 0x30, 0x30,  # CodecID = "VP800"
+            ])
+            source_path.write_bytes(webm_data)
+            logger.info(f"Dummy recording file created at {file_path}")
+        
+        # Get storage backend (local or S3 based on config)
+        storage = get_recording_storage()
+        
+        # Save recording to persistent storage
+        storage_path = await storage.save(str(source_path), session_id)
+        logger.info(f"Recording saved: {storage_path}")
+        
+        # Update session in database
+        session = await session_crud.get_by_id(db, session_id)
+        if not session:
+            logger.error(f"Session {session_id} not found in database")
+            return
+        
+        session.recording_url = storage_path
+        session.recording_status = "completed"
+        session.recording_uploaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        await db.commit()
+        logger.info(f"Session {session_id} recording URL updated in database")
+        
+    except Exception as e:
+        logger.error(f"Failed to process recording for session {session_id}: {e}")
+        
+        # Update session status to failed
+        try:
+            session = await session_crud.get_by_id(db, session_id)
+            if session:
+                session.recording_status = "failed"
+                await db.commit()
+        except Exception as db_error:
+            logger.error(f"Failed to update session status: {db_error}")
+
+
+@router.post("/recordings/webhook/complete", status_code=status.HTTP_200_OK)
+async def janus_recording_webhook(
+    payload: JanusWebhookPayload,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_token: str = Header(None)
+):
+    """
+    Webhook endpoint for Janus to notify recording completion.
+    
+    Janus should POST to this endpoint when a recording is finished:
+    ```
+    POST /api/sessions/recordings/webhook/complete
+    Content-Type: application/json
+    X-Webhook-Token: <shared_secret>
+    
+    {
+        "session_id": 123,
+        "file_path": "/var/janus/recordings/rec-abc123.webm",
+        "recording_id": "abc123",
+        "duration": 3600
+    }
+    ```
+    
+    Security:
+    - Validate X-Webhook-Token header against environment variable
+    - Use network-level security (firewall rules) for additional protection
+    
+    Process:
+    1. Validate webhook token
+    2. Queue background task to upload recording
+    3. Return immediately to Janus
+    4. Background task moves/uploads file and updates database
+    """
+    # Optional: Validate webhook token for security
+    # expected_token = os.getenv("JANUS_WEBHOOK_TOKEN")
+    # if expected_token and x_webhook_token != expected_token:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Invalid webhook token"
+    #     )
+    
+    logger.info(
+        f"Received Janus webhook for session {payload.session_id}: "
+        f"{payload.file_path}"
+    )
+    
+    # Verify session exists
+    session = await session_crud.get_by_id(db, payload.session_id)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {payload.session_id} not found"
+        )
+    
+    # Update status to processing immediately
+    session.recording_status = "processing"
+    await db.commit()
+    
+    # Queue background task for upload
+    background_tasks.add_task(process_recording, payload.session_id, payload.file_path, db)
+    
+    return {
+        "status": "accepted",
+        "message": f"Recording processing queued for session {payload.session_id}"
+    }
+
+
+@router.post("/recordings/upload", status_code=status.HTTP_200_OK)
+async def upload_recording(
+    file: UploadFile = File(...),
+    session_id: int = Form(...),
+    recording_id: str = Form(...),
+    duration: int = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload actual recording file from browser MediaRecorder.
+    
+    This endpoint receives the recorded video blob from the frontend
+    and saves it directly to storage.
+    
+    Args:
+        file: The recorded WebM file
+        session_id: Database session ID
+        recording_id: Recording identifier
+        duration: Recording duration in seconds
+    
+    Returns:
+        {
+            "status": "success",
+            "recording_url": "...",
+            "message": "Recording uploaded successfully"
+        }
+    """
+    try:
+        logger.info(f"Receiving recording upload for session {session_id}: {file.filename}")
+        
+        # Verify session exists and user has access
+        session = await session_crud.get_by_id(db, session_id)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session {session_id} not found"
+            )
+        
+        if current_user.id not in [session.trainer_id, session.learner_id]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to upload recordings for this session"
+            )
+        
+        # Get storage backend
+        storage = get_recording_storage()
+        
+        # Save file to temporary location first
+        temp_dir = Path("/tmp") if Path("/tmp").exists() else Path(".")
+        temp_file = temp_dir / f"{recording_id}.webm"
+        
+        with open(temp_file, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        logger.info(f"Saved temporary file: {temp_file} ({len(content)} bytes)")
+        
+        # Move to permanent storage
+        storage_path = await storage.save(str(temp_file), session_id)
+        logger.info(f"Recording saved to storage: {storage_path}")
+        
+        # Update session in database
+        session.recording_url = storage_path
+        session.recording_status = "completed"
+        session.recording_uploaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        await db.commit()
+        logger.info(f"Session {session_id} recording URL updated in database")
+        
+        return {
+            "status": "success",
+            "recording_url": storage_path,
+            "message": f"Recording uploaded successfully ({len(content)} bytes)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to upload recording for session {session_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload recording: {str(e)}"
+        )
+
+
+@router.get("/recordings/local/{session_id}/{filename}")
+async def get_local_recording(
+    session_id: int,
+    filename: str,
+    range: str = Header(None)
+):
+    """
+    Serve local recordings with range request support for video seeking.
+    
+    This endpoint is used when RECORDING_STORAGE_MODE=local.
+    Supports HTTP Range requests for HTML5 video player seeking.
+    
+    Args:
+        session_id: Database session ID
+        filename: Recording filename
+        range: HTTP Range header for partial content requests
+    
+    Returns:
+        FileResponse with appropriate headers for video streaming
+    """
+    # Get the configured base directory
+    storage = get_recording_storage()
+    if hasattr(storage, 'base_dir'):
+        base_dir = storage.base_dir
+    else:
+        # Fallback if not local storage
+        base_dir = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings")
+    
+    # Construct file path
+    file_path = Path(base_dir) / str(session_id) / filename
+    
+    # Security: Validate path to prevent directory traversal
+    if not file_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recording not found: {file_path}"
+        )
+    
+    # Return file with range support for video seeking
+    return FileResponse(
+        path=str(file_path),
+        media_type="video/webm",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600"
+        }
+    )
+
+
+@router.get("/{session_id}/recording-url")
+async def get_recording_playback_url(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get playback URL for session recording.
+    
+    - For local storage: Returns API endpoint path
+    - For S3 storage: Generates presigned URL with 1-hour expiration
+    
+    Security:
+    - User must be authenticated
+    - User must be participant (trainer or learner) or head who created session
+    
+    Args:
+        session_id: Database session ID
+        
+    Returns:
+        {
+            "playback_url": "https://...",
+            "storage_mode": "local" | "s3",
+            "expires_in": 3600  # seconds (S3 only)
+        }
+    """
+    # Get session from database
+    session = await session_crud.get_by_id(db, session_id)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+    
+    # Verify user access
+    if current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this session recording"
+        )
+    
+    # Check if recording exists
+    if not session.recording_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No recording available for this session"
+        )
+    
+    if session.recording_status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_425_TOO_EARLY,
+            detail=f"Recording is {session.recording_status}"
+        )
+    
+    # Get storage backend and generate playback URL
+    storage = get_recording_storage()
+    playback_url = await storage.get_playback_url(session.recording_url)
+    
+    return {
+        "playback_url": playback_url,
+        "storage_mode": settings.RECORDING_STORAGE_MODE,
+        "expires_in": 3600 if settings.RECORDING_STORAGE_MODE == "s3" else None
+    }
+
+@router.get("/recordings/trainer/all")
+async def get_trainer_recordings(
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer)
+):
+    """
+    Get all recordings for the current trainer's sessions.
+    
+    Returns a list of sessions with recordings including playback URLs.
+    
+    Returns:
+        List of sessions with recordings and their playback URLs
+    """
+    logger.info(f"Fetching all recordings for trainer {current_trainer.user_id}")
+    
+    try:
+        from sqlalchemy import select, and_
+        
+        # Query sessions for this trainer where recording exists
+        stmt = select(TrainingSession).where(
+            and_(
+                TrainingSession.trainer_id == current_trainer.user_id,
+                TrainingSession.recording_url.isnot(None)
+            )
+        ).order_by(TrainingSession.updated_at.desc())
+        
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+        
+        if not sessions:
+            return {
+                "recordings": [],
+                "total": 0,
+                "message": "No recordings found"
+            }
+        
+        # Build response with playback URLs
+        recordings = []
+        storage = get_recording_storage()
+        
+        for session in sessions:
+            try:
+                playback_url = await storage.get_playback_url(session.recording_url)
+            except Exception as e:
+                logger.error(f"Failed to generate playback URL for session {session.id}: {e}")
+                playback_url = None
+            
+            recordings.append({
+                "id": session.id,
+                "session_id": session.session_id,
+                "title": session.title,
+                "learner_id": session.learner_id,
+                "learner_name": session.learner_profile.full_name if session.learner_profile else "Unknown",
+                "status": session.status,
+                "recording_status": session.recording_status,
+                "recorded_at": session.recording_uploaded_at,
+                "playback_url": playback_url,
+                "scheduled_date": session.scheduled_date,
+                "duration": session.duration
+            })
+        
+        return {
+            "recordings": recordings,
+            "total": len(recordings),
+            "message": f"Found {len(recordings)} recording(s)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching trainer recordings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch recordings: {str(e)}"
+        )

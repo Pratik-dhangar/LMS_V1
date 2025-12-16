@@ -122,7 +122,6 @@ const LearnerSession = () => {
 
   // Buckets and whiteboard settings from trainer
   const [buckets, setBuckets] = useState([]);
-  const [bucketColor, setBucketColor] = useState('#9333ea');
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
@@ -478,14 +477,14 @@ const LearnerSession = () => {
     whiteboardService.onItemUpdate = (data) => {
       console.log('[LearnerSession] Item update received:', data);
       if (data?.id && data?.type) {
-        // Filter exercises by targetLearnerId - only show if meant for this learner
-        if (data.type === 'fill-in-blanks' && data.targetLearnerId) {
+        // If the item has a `targetLearnerId`, only show it to that learner
+        if (data.targetLearnerId) {
           // Convert both IDs to strings for comparison to handle string/number mismatches
           const targetId = String(data.targetLearnerId);
           const myId = String(sessionInfo?.learner_id || '');
 
-          console.log('[LearnerSession] Exercise targeting check:', {
-            exerciseId: data.id,
+          console.log('[LearnerSession] Targeted item check:', {
+            itemId: data.id,
             targetLearnerId: targetId,
             myLearnerId: myId,
             sessionInfoLoaded: !!sessionInfo,
@@ -493,11 +492,11 @@ const LearnerSession = () => {
           });
 
           if (myId && targetId !== myId) {
-            console.log('[LearnerSession] Exercise not for this learner, ignoring');
-            return; // Don't add this exercise
+            console.log('[LearnerSession] Item not for this learner, ignoring');
+            return; // Don't add this item
           }
 
-          console.log('[LearnerSession] Exercise is for this learner, adding to canvas');
+          console.log('[LearnerSession] Item is for this learner, adding to canvas');
         }
 
         setCanvasItems(prev => {
@@ -987,8 +986,6 @@ const LearnerSession = () => {
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 buckets={buckets}
                 setBuckets={setBuckets}
-                bucketColor={bucketColor}
-                setBucketColor={setBucketColor}
                 tool={tool}
                 setTool={setTool}
                 color={color}

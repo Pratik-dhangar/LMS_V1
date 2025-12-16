@@ -4,8 +4,6 @@ import { FaMicrophone } from 'react-icons/fa';
 import '../../styles/LearningProgram.css';
 
 const LearningProgramSidebar = ({
-  learningProgramSearch,
-  handleLearningProgramSearch,
   sessionInfo,
   filteredLearningGoals,
   selectedPromptLevel,
@@ -37,22 +35,7 @@ const LearningProgramSidebar = ({
       </div>
 
       <div className="sidebar-content">
-        <div className="sidebar-search-box">
-          <input
-            type="text"
-            className="sidebar-search-input"
-            placeholder="🔍 Search Child Name / IIP..."
-            value={learningProgramSearch}
-            onChange={handleLearningProgramSearch}
-          />
-        </div>
-
-        <div className="sidebar-info-box">
-          <div className="sidebar-info-text">
-            Selected: {sessionInfo?.learner_name ?? '—'} {sessionInfo?.iip_id ? `- ${sessionInfo.iip_id}` : ''}
-          </div>
-        </div>
-
+        {/* Search removed - list shows full program items */}
         <div className="sidebar-section-title">Program Items</div>
         <div className="sidebar-scrollable">
           {filteredLearningGoals.length > 0 ? (
@@ -68,7 +51,7 @@ const LearningProgramSidebar = ({
                 <div className="sidebar-badge" title="Click to record prompt level">—</div>
               </div>
             ))
-          ) : <div className="sidebar-empty-text">No matching program items found.</div>
+          ) : <div className="sidebar-empty-text">No program items found.</div>
           }
         </div>
 

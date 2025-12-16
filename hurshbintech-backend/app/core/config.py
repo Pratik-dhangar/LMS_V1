@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION: str = "ap-south-1"
     S3_BUCKET_NAME: str = "hurshbintech-media-bucket"
+    
+    # Recording Storage Configuration
+    # Options: "local" (stores in /var/recordings) or "s3" (uploads to S3)
+    RECORDING_STORAGE_MODE: str = "local"  # local | s3
+    # Optional: base directory for local recording storage. If empty, factory will
+    # default to backend `uploads/recordings` directory.
+    RECORDINGS_BASE_DIR: Optional[str] = ""
 
     @property
     def DATABASE_URI(self) -> str:

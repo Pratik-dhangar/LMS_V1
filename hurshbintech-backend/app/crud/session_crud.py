@@ -33,6 +33,22 @@ async def get_all_sessions_by_head(db: AsyncSession, head_user_id: int) -> List[
     return result.unique().scalars().all()
 
 
+async def get_by_id(db: AsyncSession, session_pk: int) -> Optional[TrainingSession]:
+    """Get session by integer primary key (id) with relationships."""
+    result = await db.execute(
+        select(TrainingSession)
+        .options(
+            joinedload(TrainingSession.trainer),
+            joinedload(TrainingSession.learner),
+            joinedload(TrainingSession.created_by),
+            joinedload(TrainingSession.learning_contents),
+            joinedload(TrainingSession.learning_goals),
+        )
+        .where(TrainingSession.id == session_pk)
+    )
+    return result.unique().scalar_one_or_none()
+
+
 async def create_session(
     db: AsyncSession, session_data: SessionCreate, created_by_id: int
 ) -> TrainingSession:

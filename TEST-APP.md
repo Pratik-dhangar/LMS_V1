@@ -68,13 +68,13 @@ This section lists features available to the `trainer` during a live training se
 
 - **Chat / Messages & Floating Feedback**: Real-time text chat between trainer and learner; ability to send floating feedback animations (bubbles, emojis, stars). Frontend: `useMessages` hook, `TrainerSession.jsx`; whiteboard WS messages `floating_animations` and `feedback_message`.
 
-- **Fill-in-the-Blanks & Exercise Creator**: Trainer can create interactive exercises (Fill Blanks) and push them to learner; UI in `FillBlanksCreator` and templates in `utils/fillInBlanksTemplates`.
+<!-- Interactive exercise feature removed from implementation; references removed. -->
 
 - **Moveable Video Feed & Layout Controls**: Trainer can move/resize the remote video feed and toggle mic/camera; components: `MoveableVideoFeed.jsx`, `TrainerVideoConference.jsx`, and layout state in `TrainerSession.jsx`.
 
 - **Media Controls & Auto-stopwatch**: When content ends, the trainer UI can auto-open the stopwatch; media visibility controlled by `mediaControl` context in frontend.
 
-- **Permission/Tool Access Control**: Trainer grants or revokes learner permissions (select, drag, keyboard, fillBlanks) through whiteboard `tool_access` messages.
+- **Permission/Tool Access Control**: Trainer grants or revokes learner permissions (select, drag, keyboard) through whiteboard `tool_access` messages.
 
 - **File Uploads / S3 Handling for Session Media**: Upload and serve large media assets via S3 manager or local storage with thumbnail generation. Backend: `learning_content.py`, `vlogs.py`, `s3_utils.py`; frontend uses `learningContentService.js` and S3 proxied URLs.
 
@@ -108,7 +108,7 @@ This section summarizes features available to the `learner` during a live sessio
 
 - **Virtual Keyboard & Input**: When granted, learners can use a virtual keyboard to type into whiteboard exercises or text items; keyboard visibility and caret position are synchronized. Handled by `LearnerSession.jsx` and `whiteboardService` (`trigger_keyboard`, `text_added`).
 
-- **Interactive Exercises (Fill-in-the-Blanks)**: Learners receive interactive exercises created by the trainer and can fill responses when permitted; trainer can push updates or evaluate. Frontend: `FillBlanksCreator` (trainer) and learner-side rendering in `Whiteboard` + `LearnerSession.jsx` handlers.
+- **Interactive Exercises**: Learners may receive interactive exercises created by the trainer and can respond when permitted; trainer can push updates or evaluate. Learner rendering is handled via the whiteboard and session handlers.
 
 - **Floating Animations & Feedback**: Learners see floating feedback (bubbles, smileys, stars, balloons) and can pop them; popping events are broadcast and may include sounds. Handlers: `floating_animations`, `animation_popped` in `whiteboardService.js` and `LearnerSession.jsx`.
 

@@ -90,12 +90,16 @@ class SessionResponse(BaseModel):
     session_start_time: Optional[datetime] = None  # When trainer started the session
     # Session notes from session_reports table
     session_notes: Optional[str] = None  # Notes stored in session_reports table
+    # Recording fields
+    recording_url: Optional[str] = None  # Playback URL for session recording
+    recording_status: Optional[str] = None  # Status: pending, processing, completed, failed
+    recording_uploaded_at: Optional[datetime] = None  # When recording was stored
     learning_contents: List[LearningContentInSession] = []
     learning_goals: List["LearningGoalInSession"] = []
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer("scheduled_date", "started_at", "ended_at", "created_at", "updated_at", "session_start_time")
+    @field_serializer("scheduled_date", "started_at", "ended_at", "created_at", "updated_at", "session_start_time", "recording_uploaded_at")
     def serialize_datetime(self, dt: Optional[datetime], _info):
         """Serialize datetime without timezone to preserve local time"""
         if dt is None:
