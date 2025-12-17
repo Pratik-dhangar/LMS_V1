@@ -41,7 +41,7 @@ const Login = () => {
       icon: <Users className="text-green-600 w-6 h-6" />,
     },
     {
-      id: "consultant",
+      id: "coach",
       name: "HurshBin Coaches/Consultants",
       description: "Consultation and guidance",
       icon: <UserCog className="text-orange-500 w-6 h-6" />,

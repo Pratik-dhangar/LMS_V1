@@ -12,11 +12,13 @@ import AdminDashboard from './pages/admin/Dashboard';
 import RegisterHead from './pages/admin/RegisterHead';
 import ManageHeads from './pages/admin/ManageHeads';
 import EditHead from './pages/admin/EditHead';
+import RegisterCoach from './pages/admin/RegisterCoach';
+import EditCoach from './pages/admin/EditCoach';
 import ManageLearningGoals from './pages/admin/ManageLearningGoals';
 import ManageLearningContent from './pages/admin/ManageLearningContent';
 import ViewLearners from './pages/admin/ViewLearners';
 import ViewTrainers from './pages/admin/ViewTrainers';
-import ViewConsultants from './pages/admin/ViewConsultants';
+import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
 import EditVlog from './pages/admin/EditVlog';
 
@@ -44,8 +46,8 @@ import ProgramGraphView from './pages/head/ProgramGraphView';
 import TrainerDashboard from './pages/trainer/Dashboard';
 import TrainerSession from './pages/trainer/TrainerSession';
 
-// Consultant Pages
-import ConsultantDashboard from './pages/consultant/Dashboard';
+// Coach Pages
+import CoachDashboard from './pages/coach/Dashboard';
 
 // Learner Pages
 import LearnerDashboard from './pages/learner/Dashboard';
@@ -104,7 +106,7 @@ function App() {
       admin: '/admin/dashboard',
       head: '/head/dashboard',
       trainer: '/trainer/dashboard',
-      consultant: '/consultant/dashboard',
+      coach: '/coach/dashboard',
       learner: '/learner/dashboard',
     };
     return dashboards[user.role] || '/';
@@ -189,7 +191,23 @@ function App() {
           path="/admin/manage-coaches"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <ViewConsultants />
+              <ManageCoaches />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/register-coach"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <RegisterCoach />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/edit-coach/:coachId"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <EditCoach />
             </ProtectedRoute>
           }
         />
@@ -344,12 +362,12 @@ function App() {
           }
         />
 
-        {/* Consultant Routes */}
+        {/* Coach Routes */}
         <Route
-          path="/consultant/dashboard"
+          path="/coach/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['consultant']}>
-              <ConsultantDashboard />
+            <ProtectedRoute allowedRoles={['coach']}>
+              <CoachDashboard />
             </ProtectedRoute>
           }
         />

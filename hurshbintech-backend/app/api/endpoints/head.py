@@ -1,5 +1,5 @@
 """
-Head CRUD endpoints - Manage Trainers and Consultants
+Head CRUD endpoints - Manage Trainers and Learners
 Only accessible by heads
 """
 
@@ -15,15 +15,13 @@ from app.crud import user_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile
 from app.schemas.user import (
-    ConsultantCreate,
-    ConsultantResponse,
-    ConsultantUpdate,
     LearnerCreate,
     LearnerResponse,
     LearnerUpdate,
     TrainerCreate,
     TrainerResponse,
     TrainerUpdate,
+    CoachResponse,
 )
 
 router = APIRouter(prefix="/head", tags=["Head Operations"])
@@ -148,115 +146,53 @@ async def delete_trainer_account(
     return {"message": result}
 
 
-# ----consultant management----
+# ----coach management----
 
 
-# create consultant
-@router.post("/consultants", response_model=ConsultantResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_consultant(
-    consultant_data: ConsultantCreate,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-
-    # Check if contact number already exists
-    existing_consultant = await user_crud.get_consultant_by_contact(db, consultant_data.contact_no)
-    if existing_consultant:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists with this contact number",
-        )
-
-    # Create consultant
-    new_consultant = await user_crud.create_consultant(db, consultant_data, current_head.id)
-    return ConsultantResponse.from_orm_with_user(new_consultant)
+# ---coach management (Read-only for heads) ---
+# NOTE: Coach creation/updates are now managed by admin endpoints
 
 
-# get all consultants
-@router.get("/consultants", response_model=List[ConsultantResponse])
-async def get_my_consultants(
+# get all coaches
+@router.get("/coaches", response_model=List[CoachResponse])
+async def get_my_coaches(
     db: AsyncSession = Depends(get_db), current_head: HeadProfile = Depends(get_current_head)
 ):
 
-    consultants = await user_crud.get_consultants_by_head(db, current_head.id)
-    return [ConsultantResponse.from_orm_with_user(consultant) for consultant in consultants]
+    coaches = await user_crud.get_coaches_by_head(db, current_head.id)
+    return [CoachResponse.from_orm_with_user(coach) for coach in coaches]
 
 
-# get consultant details
-@router.get("/consultants/{consultant_id}", response_model=ConsultantResponse)
-async def get_consultant_details(
-    consultant_id: int,
+# get coach details
+@router.get("/coaches/{coach_id}", response_model=CoachResponse)
+async def get_coach_details(
+    coach_id: int,
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
 
-    consultant = await user_crud.get_consultant_by_id(db, consultant_id)
+    coach = await user_crud.get_coach_by_id(db, coach_id)
 
-    if not consultant:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Consultant not found")
+    if not coach:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
 
-    # Verify consultant belongs to current head
-    if consultant.created_by_head_id != current_head.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this consultant"
-        )
-
-    return ConsultantResponse.from_orm_with_user(consultant)
+    return CoachResponse.from_orm_with_user(coach)
 
 
-# update consultant profile
-@router.patch("/consultants/{consultant_id}", response_model=ConsultantResponse)
-async def update_consultant_profile(
-    consultant_id: int,
-    consultant_update: ConsultantUpdate,
+# delete coach account
+@router.delete("/coaches/{coach_id}")
+async def delete_coach_account(
+    coach_id: int,
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
 
-    consultant = await user_crud.get_consultant_by_id(db, consultant_id)
+    coach = await user_crud.get_coach_by_id(db, coach_id)
 
-    if not consultant:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Consultant not found")
+    if not coach:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
 
-    # Verify consultant belongs to current head
-    if consultant.created_by_head_id != current_head.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this consultant"
-        )
-
-    # If updating contact number, check for duplicates
-    if consultant_update.contact_no and consultant_update.contact_no != consultant.contact_no:
-        existing = await user_crud.get_consultant_by_contact(db, consultant_update.contact_no)
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User already exists with this contact number",
-            )
-
-    updated_consultant = await user_crud.update_consultant(db, consultant_id, consultant_update)
-    return ConsultantResponse.from_orm_with_user(updated_consultant)
-
-
-# delete consultant account
-@router.delete("/consultants/{consultant_id}")
-async def delete_consultant_account(
-    consultant_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-
-    consultant = await user_crud.get_consultant_by_id(db, consultant_id)
-
-    if not consultant:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Consultant not found")
-
-    # Verify consultant belongs to current head
-    if consultant.created_by_head_id != current_head.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this consultant"
-        )
-
-    result = await user_crud.delete_consultant(db, consultant_id)
+    result = await user_crud.delete_coach(db, coach_id)
     return {"message": result}
 
 

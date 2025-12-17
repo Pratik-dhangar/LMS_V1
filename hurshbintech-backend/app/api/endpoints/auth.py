@@ -47,12 +47,12 @@ async def user_login(request: Request, credentials: UserLogin, db: AsyncSession 
     role_lower = credentials.role.lower()
 
     # Validate role
-    valid_roles = ["admin", "head", "trainer", "consultant", "learner"]
+    valid_roles = ["admin", "head", "trainer", "coach", "learner"]
     if role_lower not in valid_roles:
         logger.warning(f"Invalid role in login attempt: {role_lower}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid role. Must be 'admin', 'head', 'trainer', 'consultant' or 'learner'",
+            detail="Invalid role. Must be 'admin', 'head', 'trainer', 'coach' or 'learner'",
         )
 
     # Query User table by passcode and role

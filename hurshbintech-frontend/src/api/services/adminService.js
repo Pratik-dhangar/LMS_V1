@@ -96,12 +96,12 @@ const adminService = {
 
   /**
    * Get all Consultants/Coaches (system-wide, read-only)
-   * @returns {Promise} - Array of consultant objects
+   * @returns {Promise} - Array of coach objects
    */
   getAllConsultants: async () => {
-    console.log('Fetching all consultants (admin view)');
-    const response = await axiosInstance.get('/admin/consultants');
-    console.log('Received consultants data:', { count: response.data.length });
+    console.log('Fetching all coaches (admin view)');
+    const response = await axiosInstance.get('/admin/coaches');
+    console.log('Received coaches data:', { count: response.data.length });
     return response.data;
   },
 
