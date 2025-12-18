@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
+import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle } from 'lucide-react';
 import Footer from '../../components/layout/Footer';
 import AppointmentsManager from '../../components/coach/AppointmentsManager';
 import SessionsManager from '../../components/coach/SessionsManager';
@@ -113,9 +114,17 @@ const CoachDashboard = () => {
                     ) : (
                       appointments.slice(0, 5).map((appointment, index) => (
                         <div key={index} className="consultant-list-item consultant-list-item-green">
-                          <div className="consultant-date">
-                            {new Date(appointment.appointment_date).toLocaleDateString()} - {appointment.appointment_time}
-                          </div>
+                           <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="icon-sm text-blue-600" />
+                    <span className="font-semibold">
+                      {new Date(appointment.scheduled_date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short',
+                        day: 'numeric' 
+                      })}
+                    </span>
+                  </div>
                           <div className="consultant-client">
                             {appointment.user_name || 'User'} - Appointment
                           </div>
