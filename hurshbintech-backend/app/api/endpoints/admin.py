@@ -166,7 +166,7 @@ async def create_new_coach(
     specialization: str = Form(None),
     # File uploads
     profile_picture_url: UploadFile = File(None),
-    reference_files: list = File(None),
+    reference_files: List[UploadFile] = File(None),
     # Dependencies
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
@@ -253,38 +253,42 @@ async def create_new_coach(
     
     # Handle reference files upload
     if reference_files:
-        for ref_file in reference_files if isinstance(reference_files, list) else [reference_files]:
-            if ref_file:
-                try:
-                    file_extension = ref_file.filename.split(".")[-1]
-                    filename = f"coach_{new_coach.id}_ref_{ref_file.filename}"
-                    
-                    if settings.USE_S3:
-                        from app.utils.s3_utils import upload_to_s3
-                        s3_path = f"coach_references/{filename}"
-                        await ref_file.seek(0)
-                        file_url = await upload_to_s3(ref_file, s3_path)
-                    else:
-                        upload_dir = Path("uploads/coach_references")
-                        upload_dir.mkdir(parents=True, exist_ok=True)
-                        file_path = upload_dir / filename
-                        content = await ref_file.read()
-                        with open(file_path, "wb") as f:
-                            f.write(content)
-                        file_url = f"/uploads/coach_references/{filename}"
-                    
-                    # Save reference data entry in database
-                    from app.crud.coach_crud import create_coach_reference_data
-                    await create_coach_reference_data(
-                        db,
-                        coach_id=new_coach.id,
-                        file_url=file_url,
-                        file_type=file_extension,
-                        description=ref_file.filename
-                    )
-                except Exception as e:
+        for ref_file in reference_files:
+            # Skip if ref_file is None or empty
+            if not ref_file or not hasattr(ref_file, 'filename') or not ref_file.filename:
+                continue
+                
+            try:
+                file_extension = ref_file.filename.split(".")[-1]
+                filename = f"coach_{new_coach.id}_ref_{ref_file.filename}"
+                
+                if settings.USE_S3:
+                    from app.utils.s3_utils import upload_to_s3
+                    s3_path = f"coach_references/{filename}"
+                    await ref_file.seek(0)
+                    file_url = await upload_to_s3(ref_file, s3_path)
+                else:
+                    upload_dir = Path("uploads/coach_references")
+                    upload_dir.mkdir(parents=True, exist_ok=True)
+                    file_path = upload_dir / filename
+                    content = await ref_file.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                    file_url = f"/uploads/coach_references/{filename}"
+                
+                # Save reference data entry in database
+                from app.crud.coach_crud import create_coach_reference_data
+                await create_coach_reference_data(
+                    db,
+                    coach_id=new_coach.id,
+                    file_url=file_url,
+                    file_type=file_extension,
+                    description=ref_file.filename
+                )
+            except Exception as e:
                     # Log error but don't fail - coach is already created
-                    logging.warning(f"Failed to upload reference file {ref_file.filename}: {str(e)}")
+                    filename_str = getattr(ref_file, 'filename', 'unknown')
+                    logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
 
     return CoachResponse.from_orm_with_user(new_coach)
 
@@ -332,7 +336,7 @@ async def update_coach_profile(
     specialization: str = Form(None),
     # File uploads
     profile_picture_url: UploadFile = File(None),
-    reference_files: list = File(None),
+    reference_files: List[UploadFile] = File(None),
     # Dependencies
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
@@ -432,38 +436,42 @@ async def update_coach_profile(
     
     # Handle reference files upload
     if reference_files:
-        for ref_file in reference_files if isinstance(reference_files, list) else [reference_files]:
-            if ref_file:
-                try:
-                    file_extension = ref_file.filename.split(".")[-1]
-                    filename = f"coach_{coach_id}_ref_{ref_file.filename}"
-                    
-                    if settings.USE_S3:
-                        from app.utils.s3_utils import upload_to_s3
-                        s3_path = f"coach_references/{filename}"
-                        await ref_file.seek(0)
-                        file_url = await upload_to_s3(ref_file, s3_path)
-                    else:
-                        upload_dir = Path("uploads/coach_references")
-                        upload_dir.mkdir(parents=True, exist_ok=True)
-                        file_path = upload_dir / filename
-                        content = await ref_file.read()
-                        with open(file_path, "wb") as f:
-                            f.write(content)
-                        file_url = f"/uploads/coach_references/{filename}"
-                    
-                    # Save reference data entry in database
-                    from app.crud.coach_crud import create_coach_reference_data
-                    await create_coach_reference_data(
-                        db,
-                        coach_id=coach_id,
-                        file_url=file_url,
-                        file_type=file_extension,
-                        description=ref_file.filename
-                    )
-                except Exception as e:
-                    # Log error but don't fail
-                    logging.warning(f"Failed to upload reference file {ref_file.filename}: {str(e)}")
+        for ref_file in reference_files:
+            # Skip if ref_file is None or empty
+            if not ref_file or not hasattr(ref_file, 'filename') or not ref_file.filename:
+                continue
+                
+            try:
+                file_extension = ref_file.filename.split(".")[-1]
+                filename = f"coach_{coach_id}_ref_{ref_file.filename}"
+                
+                if settings.USE_S3:
+                    from app.utils.s3_utils import upload_to_s3
+                    s3_path = f"coach_references/{filename}"
+                    await ref_file.seek(0)
+                    file_url = await upload_to_s3(ref_file, s3_path)
+                else:
+                    upload_dir = Path("uploads/coach_references")
+                    upload_dir.mkdir(parents=True, exist_ok=True)
+                    file_path = upload_dir / filename
+                    content = await ref_file.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                    file_url = f"/uploads/coach_references/{filename}"
+                
+                # Save reference data entry in database
+                from app.crud.coach_crud import create_coach_reference_data
+                await create_coach_reference_data(
+                    db,
+                    coach_id=coach_id,
+                    file_url=file_url,
+                    file_type=file_extension,
+                    description=ref_file.filename
+                )
+            except Exception as e:
+                # Log error but don't fail
+                filename_str = getattr(ref_file, 'filename', 'unknown')
+                logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
     
     return CoachResponse.from_orm_with_user(updated_coach)
 

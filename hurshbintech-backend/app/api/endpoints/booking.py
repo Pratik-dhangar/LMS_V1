@@ -151,7 +151,9 @@ async def book_appointment_with_coach(
     payment_screenshot_path = None
     if payment_screenshot and payment_screenshot.filename:
         import os
+        import uuid
         from pathlib import Path
+        from app.core.config import settings
         
         # Validate file type
         allowed_extensions = {".jpg", ".jpeg", ".png", ".gif"}
@@ -170,20 +172,25 @@ async def book_appointment_with_coach(
                 detail="File size must be less than 5MB",
             )
         
-        # Create uploads directory if it doesn't exist
-        upload_dir = Path("uploads/payment_screenshots")
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        
         # Generate unique filename
-        import uuid
         unique_filename = f"{uuid.uuid4()}{file_ext}"
-        file_path = upload_dir / unique_filename
         
-        # Save file
-        with open(file_path, "wb") as f:
-            f.write(content)
-        
-        payment_screenshot_path = str(file_path)
+        if settings.USE_S3:
+            # Upload to S3
+            from app.utils.s3_utils import upload_to_s3
+            s3_path = f"payment_screenshots/{unique_filename}"
+            await payment_screenshot.seek(0)  # Reset file pointer after reading
+            payment_screenshot_path = await upload_to_s3(payment_screenshot, s3_path)
+        else:
+            # Save to local uploads folder (fallback for development)
+            upload_dir = Path("uploads/payment_screenshots")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            file_path = upload_dir / unique_filename
+            
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            payment_screenshot_path = f"/uploads/payment_screenshots/{unique_filename}"
     
     # Create appointment data
     appointment_data = AppointmentCreate(
