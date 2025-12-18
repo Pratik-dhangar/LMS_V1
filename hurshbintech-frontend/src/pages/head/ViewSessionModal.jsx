@@ -111,9 +111,9 @@ const ViewSessionModal = ({ session, onClose }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                        session.status === 'active' ? 'bg-green-100 text-green-800' :
-                                            session.status === 'ended' ? 'bg-gray-100 text-gray-800' :
-                                                'bg-red-100 text-red-800'
+                                    session.status === 'active' ? 'bg-green-100 text-green-800' :
+                                        session.status === 'ended' ? 'bg-gray-100 text-gray-800' :
+                                            'bg-red-100 text-red-800'
                                     }`}>
                                     {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                                 </span>
@@ -188,6 +188,18 @@ const ViewSessionModal = ({ session, onClose }) => {
                             </h3>
                             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                                 <p className="text-gray-700 whitespace-pre-wrap">{session.session_notes}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Head Notes (if any) */}
+                    {session.head_notes && String(session.head_notes).trim() && (
+                        <div className="mb-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <span>👔</span> Head Notes
+                            </h3>
+                            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <p className="text-gray-700 whitespace-pre-wrap">{session.head_notes}</p>
                             </div>
                         </div>
                     )}

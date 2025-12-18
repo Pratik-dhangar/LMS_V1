@@ -129,10 +129,39 @@ const TrainerSession = () => {
     };
   }, [webRTC, addReceivedMessage]);
   const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
-  const [sessionNotes, setSessionNotes] = useState(sessionInfo?.notes || '');
+  const [sessionNotes, setSessionNotes] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Load session notes from backend on mount
+  // 🔸 How it works: fetches existing notes if session exists, handles errors gracefully
+  // -----------------------------------------------------------
+  useEffect(() => {
+    const loadSessionNotes = async () => {
+      if (!sessionId) return;
+      try {
+        console.log('[TrainerSession] Loading session notes for sessionId:', sessionId);
+        const notesData = await sessionNotesService.getNotes(sessionId);
+        if (notesData && notesData.notes) {
+          console.log('[TrainerSession] ✅ Session notes loaded, version:', notesData.version);
+          setSessionNotes(notesData.notes);
+        } else {
+          console.log('[TrainerSession] ℹ️ No existing session notes found, starting fresh');
+          setSessionNotes('');
+        }
+      } catch (error) {
+        console.warn('[TrainerSession] ⚠️ Could not load session notes (may not exist yet):', error.message);
+        // Don't show error toast - this is expected if notes haven't been created yet
+        setSessionNotes('');
+      }
+    };
+
+    // Small delay to ensure sessionId is available
+    const timer = setTimeout(loadSessionNotes, 500);
+    return () => clearTimeout(timer);
+  }, [sessionId]);
 
   // Debug: Log when feedbackMessage changes
   useEffect(() => {
@@ -894,6 +923,66 @@ const TrainerSession = () => {
       }
     }, 2000);
   };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Clear session notes
+  // 🔸 How it works: clears local state and sends empty notes to backend
+  // -----------------------------------------------------------
+  const handleClearNotes = async () => {
+    try {
+      console.log('[TrainerSession] Clearing session notes');
+      setSessionNotes('');
+      // Clear the auto-save timer if one is pending
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      // Immediately save the clear action to backend
+      await sessionNotesService.clearNotes(sessionId);
+      console.log('[TrainerSession] ✅ Session notes cleared successfully');
+      toast.info('Session notes cleared');
+    } catch (error) {
+      console.error('[TrainerSession] ❌ Error clearing notes:', error);
+      toast.error('Failed to clear notes');
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Force save notes on disconnect/reconnect
+  // 🔸 How it works: immediately saves current notes bypassing debounce
+  // Used for disconnect recovery when connection is restored
+  // -----------------------------------------------------------
+  const handleForceSaveNotes = async () => {
+    try {
+      console.log('[TrainerSession] Force-saving notes (disconnect recovery)');
+      await sessionNotesService.forceSaveNotes(sessionId, sessionNotes);
+      console.log('[TrainerSession] ✅ Notes force-saved successfully');
+      toast.info('Notes recovered and saved');
+    } catch (error) {
+      console.error('[TrainerSession] ❌ Error force-saving notes:', error);
+      toast.error('Failed to recover notes');
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Add disconnect handler to force-save notes if connection is lost
+  // 🔸 How it works: listens for beforeunload and pagehide events to save notes
+  // -----------------------------------------------------------
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (sessionNotes && sessionNotes.trim()) {
+        // Try to force-save notes before unload
+        handleForceSaveNotes();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+    };
+  }, [sessionId, sessionNotes]);
 
   // -----------------------------------------------------------
 
@@ -1697,6 +1786,22 @@ const TrainerSession = () => {
                   />
                 </div>
               )}
+              {showStopwatch && (
+                <div className="ml-3" style={{ maxWidth: '280px' }}>
+                  <StopwatchDisplay
+                    formattedTime={stopwatch.formattedTime}
+                    isRunning={stopwatch.isRunning}
+                    onStart={stopwatch.start}
+                    onPause={stopwatch.pause}
+                    onResume={stopwatch.resume}
+                    onReset={stopwatch.reset}
+                    onSetTime={stopwatch.setTime}
+                    showControls={true}
+                    size="xs"
+                    variant="standard"
+                  />
+                </div>
+              )}
             </div>
 
           </div>
@@ -1937,9 +2042,7 @@ const TrainerSession = () => {
               <div className="flex justify-between items-center mb-2">
                 <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>📝 Session Notes</div>
                 <button
-                  onClick={() => {
-                    setSessionNotes('');
-                  }}
+                  onClick={handleClearNotes}
                   className="session-interactive-buttons bg-red-500 hover:bg-red-600 text-white rounded font-semibold transition-colors"
                   style={{ padding: 'clamp(0.25rem, 0.8vw, 0.375rem) clamp(0.5rem, 1.2vw, 0.75rem)', fontSize: 'clamp(0.5rem, 1.2vw, 0.625rem)' }}
                   title="Clear all notes"
@@ -2033,10 +2136,8 @@ const TrainerSession = () => {
             )}
           </div>
           {/* Learning Content - 25% height */}
-          <div className=" learning-content-container">
-            <div className="section-header">
-              <span>📚 Learning Content</span>
-            </div>
+          <div className=" learning-content-container ">
+            <span className='bg-green-600 text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
             <div className="section-content">
               <LearningContentSidebar
                 learningContentSearch={learningContentSearch}
@@ -2074,24 +2175,6 @@ const TrainerSession = () => {
               />
             </div>
           </div>
-
-
-
-          {/* Stopwatch - Below Learning Content */}
-          {showStopwatch && (
-            <StopwatchDisplay
-              formattedTime={stopwatch.formattedTime}
-              isRunning={stopwatch.isRunning}
-              onStart={stopwatch.start}
-              onPause={stopwatch.pause}
-              onResume={stopwatch.resume}
-              onReset={stopwatch.reset}
-              onSetTime={stopwatch.setTime}
-              showControls={true}
-              size="md"
-              variant="standard"
-            />
-          )}
         </div>
       </div>
 

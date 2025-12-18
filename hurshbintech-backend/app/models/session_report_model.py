@@ -32,9 +32,6 @@ class SessionReport(Base):
     reinforcement_meter = Column(
         String(10), nullable=False
     )  # Values: 'Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'
-    
-    # Session notes - stored at the session level (same for all report rows of a session)
-    session_notes = Column(Text, nullable=True)  # Trainer's notes for this session
 
     # Relationships
     session = relationship("TrainingSession", backref="session_reports")
