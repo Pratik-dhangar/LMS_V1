@@ -54,6 +54,12 @@ const StopwatchDisplay = ({
 
     // ==================== SIZE MAPPINGS ====================
     const sizeClasses = {
+        xs: {
+            time: 'text-sm',
+            label: 'text-[10px]',
+            button: 'px-1.5 py-0.5 text-[10px]',
+            container: 'p-1.5'
+        },
         sm: {
             time: 'text-xl',
             label: 'text-xs',

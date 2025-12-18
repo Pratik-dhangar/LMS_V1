@@ -23,6 +23,8 @@ from app.core.deps import (
 from app.crud import session_crud
 from app.db.session import get_db
 from app.models.session_model import TrainingSession
+from app.models.session_notes_model import SessionNotes
+from app.models.session_report_model import SessionReport
 from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, User
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
 from app.utils.s3_utils import S3Manager
@@ -96,7 +98,6 @@ async def get_all_sessions(
 # Helper function to build SessionResponse from TrainingSession model
 async def build_session_response(db: AsyncSession, session: TrainingSession) -> SessionResponse:
     """Build SessionResponse from TrainingSession model with notes and reports"""
-    from app.models.session_report_model import SessionReport
     from sqlalchemy import select
     
     # Get session reports to include prompt/reinforcement values for each goal
@@ -105,8 +106,12 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
     )
     reports = reports_result.scalars().all()
     
-    # Get session notes from the first report (all reports have same notes)
-    session_notes_text = reports[0].session_notes if reports and reports[0].session_notes else None
+    # Get session notes from independent session_notes table (use first() to avoid multiple results error)
+    notes_result = await db.execute(
+        select(SessionNotes).where(SessionNotes.session_id == session.id)
+    )
+    session_notes_obj = notes_result.scalars().first()
+    session_notes_text = session_notes_obj.notes if session_notes_obj else None
     
     # Create a map of program_id to report data
     report_map = {}

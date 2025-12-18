@@ -23,15 +23,19 @@ const useStopwatch = () => {
         hasPlayedCelebrationRef.current = false;
         lastTickSecondRef.current = null;
 
-        if (isCountdown) {
+        setIsRunning(true);
+
+        // Use refs to get current state values to avoid dependency array issues
+        const currentElapsedTime = elapsedTime;
+        const currentIsCountdown = isCountdown;
+
+        if (currentIsCountdown) {
             // Countdown mode
-            const startElapsed = elapsedTime;
             startTimeRef.current = Date.now();
-            setIsRunning(true);
 
             intervalRef.current = setInterval(() => {
                 const elapsed = Date.now() - startTimeRef.current;
-                const remaining = Math.max(0, startElapsed - elapsed);
+                const remaining = Math.max(0, currentElapsedTime - elapsed);
                 const remainingSeconds = Math.floor(remaining / 1000);
 
                 setElapsedTime(remaining);
@@ -58,8 +62,7 @@ const useStopwatch = () => {
             }, 50);
         } else {
             // Normal stopwatch (count up)
-            startTimeRef.current = Date.now() - elapsedTime;
-            setIsRunning(true);
+            startTimeRef.current = Date.now() - currentElapsedTime;
 
             intervalRef.current = setInterval(() => {
                 setElapsedTime(Date.now() - startTimeRef.current);

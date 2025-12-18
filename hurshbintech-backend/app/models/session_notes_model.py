@@ -1,5 +1,6 @@
 """
 Session Notes Model - For storing trainer's session notes with auto-save support
+Independent from SessionReport - can be created/updated anytime
 """
 
 from datetime import datetime, timezone
@@ -11,7 +12,7 @@ from app.db.session import Base
 
 
 class SessionNotes(Base):
-    """Session notes written by trainer during or after session"""
+    """Session notes written by trainer during or after session - Independent entity"""
 
     __tablename__ = "session_notes"
 
@@ -27,7 +28,7 @@ class SessionNotes(Base):
     is_finalized = Column(String(10), default="false", nullable=False)  # "true" when session ends, "false" during session
     
     # Relationships
-    session = relationship("TrainingSession", backref="session_notes_history")
+    session = relationship("TrainingSession", backref="session_notes")
     trainer = relationship("User", foreign_keys=[trainer_id])
 
     # Timestamps

@@ -57,11 +57,14 @@ import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
+import useNetworkSpeedNotifier from './hooks/useNetworkSpeedNotifier';
 
 import './App.css';
 
 function App() {
   const { isAuthenticated, user } = useAuth();
+
+  useNetworkSpeedNotifier();
 
   // Lock orientation to landscape on mobile and tablet devices
   useEffect(() => {
