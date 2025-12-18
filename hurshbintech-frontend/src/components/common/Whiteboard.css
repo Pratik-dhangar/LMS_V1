@@ -532,8 +532,8 @@ input[type="range"]::-webkit-slider-thumb {
 .bubble {
     position: absolute;
     border-radius: 50%;
-    background: rgba(100, 150, 255, 0.3);
-    border: 2px solid rgba(100, 150, 255, 0.6);
+    background: transparent;
+    border: none;
     pointer-events: none;
     z-index: 30;
 }
@@ -544,36 +544,36 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .bubble:nth-child(1) {
-    width: 30px;
-    height: 30px;
+    width: 50%;
+    height: 50%;
     left: 10%;
     animation-delay: 0s, 0s;
 }
 
 .bubble:nth-child(2) {
-    width: 45px;
-    height: 45px;
+    width: 10%;
+    height: 10%;
     left: 30%;
     animation-delay: 0.3s, 0.3s;
 }
 
 .bubble:nth-child(3) {
-    width: 25px;
-    height: 25px;
+    width: 10%;
+    height: 10%;
     left: 50%;
     animation-delay: 0.6s, 0.6s;
 }
 
 .bubble:nth-child(4) {
-    width: 40px;
-    height: 40px;
+    width: 10%;
+    height: 10%;
     left: 70%;
     animation-delay: 0.9s, 0.9s;
 }
 
 .bubble:nth-child(5) {
-    width: 35px;
-    height: 35px;
+    width: 10%;
+    height: 10%;
     left: 85%;
     animation-delay: 1.2s, 1.2s;
 }
@@ -1026,7 +1026,7 @@ input[type="range"]::-webkit-slider-thumb {
 .floating-animation {
     position: absolute;
     bottom: -100px;
-    font-size: 70px;
+    font-size: 140px;
     animation: floatUp 10s ease-in-out forwards;
     z-index: 100;
     will-change: transform, opacity;
@@ -1051,13 +1051,14 @@ input[type="range"]::-webkit-slider-thumb {
 .floating-emoji {
     display: inline-block;
     position: relative;
+    font-size: inherit;
 }
 
 /* Add pastel glow backgrounds for each type */
 
 .popped-emoji {
     display: inline-block;
-    font-size: 90px;
+    font-size: 180px;
     animation: explode 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
     filter: drop-shadow(0 0 20px rgba(255, 200, 100, 0.8));
 }
@@ -2216,15 +2217,15 @@ input[type="range"]::-webkit-slider-thumb {
     /* Feedback and waiting bubbles */
     .feedback-bubble {
         font-size: 24px;
-        padding: 16px 24px;
-        border-radius: 16px;
+        /* padding: 16px 24px; */
+        /* border-radius: 16px; */
         max-width: 85%;
     }
 
     .waiting-bubble {
         font-size: 20px;
-        padding: 14px 20px;
-        border-radius: 14px;
+        /* padding: 14px 20px;
+        border-radius: 14px; */
         max-width: 85%;
         gap: 10px;
     }
@@ -2422,8 +2423,8 @@ input[type="range"]::-webkit-slider-thumb {
     /* Feedback and waiting bubbles */
     .feedback-bubble {
         font-size: 38px;
-        padding: 28px 40px;
-        border-radius: 22px;
+        /* padding: 28px 40px;
+        border-radius: 22px; */
         max-width: 60%;
     }
 

@@ -2563,7 +2563,7 @@ const Whiteboard = ({
                             >
                                 {!animation.popped ? (
                                     <span className="floating-emoji">
-                                        <Emoji emoji={animation.emoji} size="lg" />
+                                        <Emoji emoji={animation.emoji} size="clamp(40px, 3vw, 80px)" />
                                     </span>
                                 ) : null}
                             </div>

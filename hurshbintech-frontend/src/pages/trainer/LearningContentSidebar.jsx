@@ -84,28 +84,6 @@ const LearningContentSidebar = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Header removed - section-header is now in parent container */}
-
-      {/* Status Message Display */}
-      {/* {statusMessage && (
-        <div
-          className={`mb-3 p-3 rounded text-sm font-medium ${statusMessage.type === 'success'
-              ? 'bg-green-100 text-green-800 border border-green-300'
-              : 'bg-red-100 text-red-800 border border-red-300'
-            }`}
-        >
-          {statusMessage.text}
-          {isProcessing && <span className="ml-2 animate-spin">⟳</span>}
-        </div>
-      )}
-
-      {/* Drag Over Indicator */}
-      {/*{isDragOver && (
-        <div className="mb-3 p-3 bg-blue-100 border-2 border-dashed border-blue-400 rounded text-center text-blue-700 font-medium text-sm">
-          Drop whiteboard image here to import
-        </div>
-      )} */}
-
       <div className="sidebar-search-box">
         <input
           type="text"

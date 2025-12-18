@@ -22,6 +22,7 @@ from slowapi.util import get_remote_address
 from app.api.endpoints.admin import router as admin_router
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.head import router as head_endpoint_router
+from app.api.endpoints.head_session_notes import router as head_session_notes_router
 from app.api.endpoints.health import router as health_router
 from app.api.endpoints.learning_content import router as learning_content_router
 from app.api.endpoints.learning_content_assignments import (
@@ -112,6 +113,7 @@ app.include_router(health_router, prefix="/api")  # Health check endpoint
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(head_endpoint_router, prefix="/api")
+app.include_router(head_session_notes_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(session_notes_router, prefix="/api")
