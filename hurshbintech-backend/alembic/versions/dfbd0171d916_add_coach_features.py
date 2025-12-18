@@ -46,13 +46,23 @@ def upgrade() -> None:
     op.execute("""
         CREATE TABLE IF NOT EXISTS coach_profiles (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
             age INTEGER,
             address TEXT,
             contact_no VARCHAR(20),
             qualification TEXT,
             experience TEXT,
             date_of_joining DATE,
+            experience_with_hurshbin TEXT,
+            interest TEXT,
+            self_description TEXT,
+            future_vision TEXT,
+            number_of_sessions_done INTEGER DEFAULT 0,
+            head_description TEXT,
+            learners_guardian_description TEXT,
+            input_at_hurshbin TEXT,
+            note_box TEXT,
+            message_box TEXT,
             availability_days VARCHAR(50),
             time_slots VARCHAR(100),
             specialization TEXT,
@@ -60,7 +70,6 @@ def upgrade() -> None:
             is_available BOOLEAN DEFAULT TRUE,
             unavailable_until TIMESTAMP,
             unavailable_reason VARCHAR(255),
-            created_by_admin_id INTEGER REFERENCES users(id),
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
