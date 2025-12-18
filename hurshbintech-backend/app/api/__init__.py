@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import admin, auth, head, head_session_notes, sessions, vlogs, websocket, booking
+from app.api.endpoints import admin, auth, head, head_session_notes, sessions, vlogs, websocket, booking, session_notes
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
