@@ -9,7 +9,7 @@ import Footer from '../../components/layout/Footer';
 import { FaFileAlt } from "react-icons/fa";
 
 // Import icons 
-import { FaUsers, FaBookOpen, FaComments, FaUserTie, FaChartBar } from 'react-icons/fa';
+import { FaUsers, FaBookOpen, FaComments, FaUserTie, FaChartBar, FaCalendarAlt } from 'react-icons/fa';
 
 // Head Dashboard Component
 const HeadDashboard = () => {
@@ -95,6 +95,13 @@ const HeadDashboard = () => {
       icon: <FaChartBar />,
       path: '/head/reports',
       color: 'teal'
+    },
+    {
+      title: 'Book Appointment with Coach',
+      description: 'Schedule appointments with HurshBin Coaches/Consultants',
+      icon: <FaCalendarAlt />,
+      path: '/book-appointment',
+      color: 'yellow'
     }
   ];
 
@@ -120,8 +127,8 @@ const HeadDashboard = () => {
       text: 'text-orange-500'
     },
     yellow: {
-      border: 'border-purple-500',
-      text: 'text-purple-500'
+      border: 'border-yellow-500',
+      text: 'text-yellow-500'
     },
     teal: {
       border: 'border-teal-500',
@@ -151,6 +158,7 @@ const HeadDashboard = () => {
             <p className="text-lg opacity-90">
               Bridge between Admin and Trainers - Program Coordination
             </p>
+           
           </div>
 
           {/* Stats Cards (Still commented out as in original file) */}

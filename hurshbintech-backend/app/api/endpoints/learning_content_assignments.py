@@ -97,7 +97,7 @@ async def get_assignments_by_learner(
 ):
     """Get all assignments for a specific learner"""
     # Allow access if user is head or if learner is requesting their own assignments
-    if current_user.role.value == "head" or current_user.id == learner_id:
+    if current_user.role.value == "HEAD" or current_user.id == learner_id:
         assignments = await learning_content_assignment_crud.get_assignments_by_learner(
             db, learner_id
         )

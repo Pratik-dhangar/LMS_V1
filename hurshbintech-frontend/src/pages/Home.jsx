@@ -1,11 +1,21 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import '../styles/pages/Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleBookAppointment = () => {
+    if (!user) {
+      navigate("/login", { state: { from: "/book-appointment" } });
+    } else {
+      navigate("/book-appointment");
+    }
+  };
 
   return (
     <div className="home-container">
@@ -31,11 +41,16 @@ const Home = () => {
           { title: "ABOUT US", text: "Learn more about our mission and approach" },
           { title: "READ BLOGS", text: "Educational articles and insights" },
           { title: "VIEW VLOGS", text: "Video content and tutorials" },
-          { title: "BOOK APPOINTMENT", text: "Schedule sessions with professionals" },
+          { title: "BOOK APPOINTMENT", text: "Schedule sessions with professionals", onClick: handleBookAppointment },
           { title: "SUBSCRIBE LEARNING CONTENT", text: "Access premium learning materials" },
           { title: "BUY LEARNING MATERIAL", text: "Purchase recommended resources" },
         ].map((item, i) => (
-          <div key={i} className="home-feature-card">
+          <div 
+            key={i} 
+            className="home-feature-card"
+            onClick={item.onClick}
+            style={item.onClick ? { cursor: 'pointer' } : {}}
+          >
             <h3 className="home-feature-card-title">{item.title}</h3>
             <p className="home-feature-card-text">{item.text}</p>
           </div>

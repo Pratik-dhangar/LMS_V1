@@ -40,7 +40,7 @@ const AdminDashboard = () => {
     { id: '1.2', title: 'View HurshBin Trainers', onClick: () => navigate('/admin/view-trainers') },
     { id: '1.3', title: 'Manage Learning Content', onClick: () => navigate('/admin/learning-content') },
     { id: '1.4', title: 'Manage Learning Goals', onClick: () => navigate('/admin/learning-goals') },
-    { id: '1.5', title: 'View HurshBin Coaches/Consultants', onClick: () => navigate('/admin/manage-coaches') },
+    { id: '1.5', title: 'Manage HurshBin Coaches', onClick: () => navigate('/admin/manage-coaches') },
     { id: '1.6', title: 'View HurshBin Learners', onClick: () => navigate('/admin/view-learners') },
     { id: '1.7', title: 'Manage Training Vlogs', onClick: () => navigate('/admin/vlogs') },
   ];

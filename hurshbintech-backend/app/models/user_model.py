@@ -14,12 +14,20 @@ from app.db.session import Base
 
 # Enum for user roles
 class UserRole(enum.Enum):
-    ADMIN = "admin"
-    HEAD = "head"
-    TRAINER = "trainer"
-    CONSULTANT = "consultant"
-    LEARNER = "learner"
+    ADMIN = "ADMIN"
+    HEAD = "HEAD"
+    TRAINER = "TRAINER"
+    COACH = "COACH"
+    LEARNER = "LEARNER"
 
+# Enum for appointment status
+class AppointmentStatus(str, enum.Enum):
+    PENDING = "pending"           # Appointment requested, awaiting coach confirmation
+    CONFIRMED = "confirmed"       # Coach confirmed the appointment
+    CANCELLED = "cancelled"       # Cancelled by user or coach
+    COMPLETED = "completed"       # Appointment finished
+    NO_SHOW = "no_show"          # User didn't attend
+    REJECTED = "rejected"         # Coach rejected the appointment
 
 # Enums for specific fields - learner model
 class CaesareanType(enum.Enum):
@@ -84,10 +92,10 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    consultant_profile = relationship(
-        "ConsultantProfile",
+    coach_profile = relationship(
+        "CoachProfile",
         back_populates="user",
-        foreign_keys="ConsultantProfile.user_id",
+        foreign_keys="CoachProfile.user_id",
         uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -159,7 +167,6 @@ class HeadProfile(Base):
         "User", foreign_keys=[created_by_admin_id], overlaps="created_heads"
     )
     trainers_created = relationship("TrainerProfile", back_populates="created_by_head")
-    consultants_created = relationship("ConsultantProfile", back_populates="created_by_head")
     learners_created = relationship("LearnerProfile", back_populates="created_by_head")
     reference_data = relationship(
         "HeadReferenceData", back_populates="head", cascade="all, delete-orphan"
@@ -215,17 +222,17 @@ class TrainerProfile(Base):
     )
 
 
-# Consultant user model
-class ConsultantProfile(Base):
+# Coach user model (formerly Consultant)
+class CoachProfile(Base):
 
-    __tablename__ = "consultant_profiles"
+    __tablename__ = "coach_profiles"
 
     # Primary Fields
     id = Column(Integer, primary_key=True, index=True)
 
     # --- Link to User Table (One-to-One) ---
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
-    user = relationship("User", back_populates="consultant_profile", foreign_keys=[user_id])
+    user = relationship("User", back_populates="coach_profile", foreign_keys=[user_id])
 
     # Contact & Personal Info
     age = Column(Integer)
@@ -247,16 +254,30 @@ class ConsultantProfile(Base):
     note_box = Column(Text)
     message_box = Column(Text)
 
-    # Foreign Keys & Timestamps
-    created_by_head_id = Column(
-        Integer, ForeignKey("head_profiles.id")
-    )  # Head who created this consultant
+    # NEW COACH SPECIFIC FIELDS
+    # Availability: JSON string of available days (Monday-Friday)
+    availability_days = Column(String(50))  # e.g., "Monday,Wednesday,Friday"
+    
+    # Time Slots: JSON string of available slots (10am, 1pm, 3pm, 5pm)
+    time_slots = Column(String(100))  # e.g., "10am,1pm,3pm,5pm"
+    
+    # Specialization
+    specialization = Column(Text)
+    
+    # Profile picture URL (local or S3)
+    profile_picture_url = Column(String(500))
+    
+    # Availability Status - Coach can mark themselves as available/unavailable
+    is_available = Column(Boolean, default=True)  # Can accept new appointments/sessions
+    unavailable_until = Column(DateTime, nullable=True)  # Optional: block until specific date/time
+    unavailable_reason = Column(String(255))  # e.g., "On leave", "Fully booked", "Personal"
+
+    # Timestamps
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
-    created_by_head = relationship("HeadProfile", back_populates="consultants_created")
     reference_data = relationship(
-        "ConsultantReferenceData", back_populates="consultant", cascade="all, delete-orphan"
+        "CoachReferenceData", back_populates="coach", cascade="all, delete-orphan"
     )
 
 
@@ -406,13 +427,13 @@ class TrainerReferenceData(Base):
     trainer = relationship("TrainerProfile", back_populates="reference_data")
 
 
-# Consultant Reference Data
-class ConsultantReferenceData(Base):
+# Coach Reference Data
+class CoachReferenceData(Base):
 
-    __tablename__ = "consultant_reference_data"
+    __tablename__ = "coach_reference_data"
 
     id = Column(Integer, primary_key=True, index=True)
-    consultant_id = Column(Integer, ForeignKey("consultant_profiles.id"), nullable=False)
+    coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=False)
     data_type = Column(SAEnum(ReferenceDataType), nullable=False)
     file_name = Column(String(255))
     file_path = Column(String(255), nullable=False)  # URL or file system path
@@ -420,4 +441,106 @@ class ConsultantReferenceData(Base):
     uploaded_at = Column(DateTime, default=func.now())
 
     # Relationships
-    consultant = relationship("ConsultantProfile", back_populates="reference_data")
+    coach = relationship("CoachProfile", back_populates="reference_data")
+
+
+# ===== APPOINTMENTS MODEL =====
+class Appointment(Base):
+    """
+    Appointments table - Trainers, Learners, and Heads can schedule appointments with Coaches
+    """
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Coach offering the appointment
+    coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=False, index=True)
+    
+    # User scheduling the appointment (could be trainer, learner, or head)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_role = Column(String(20), nullable=False)  # trainer, learner, head
+    
+    # Appointment Details
+    scheduled_date = Column(Date, nullable=False)
+    scheduled_time = Column(String(20), nullable=False)  # e.g., "10am", "1pm", "3pm", "5pm"
+    status = Column(
+        SAEnum(AppointmentStatus),
+        default=AppointmentStatus.PENDING,
+        nullable=False
+    )
+    
+    # Additional info
+    notes = Column(Text)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    coach = relationship("CoachProfile")
+    user = relationship("User")
+
+
+# ===== COACH SESSION MODEL =====
+class CoachSession(Base):
+    """
+    Coach Sessions - Coaches can schedule sessions with multiple users (trainers, learners, heads)
+    and optionally link to learning content
+    """
+    __tablename__ = "coach_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Coach conducting the session
+    coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=False, index=True)
+    
+    # Session Details
+    session_date = Column(Date, nullable=False)
+    session_time = Column(String(20), nullable=False)  # e.g., "10am", "1pm", "3pm", "5pm"
+    session_title = Column(String(255))
+    
+    # Optional learning content
+    learning_content_id = Column(Integer, ForeignKey("learning_contents.id"), nullable=True)
+    
+    # Session info
+    description = Column(Text)
+    status = Column(String(20), default="scheduled")  # scheduled, ongoing, completed, cancelled
+    notes = Column(Text)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    coach = relationship("CoachProfile")
+    participants = relationship("CoachSessionParticipant", cascade="all, delete-orphan")
+
+
+# ===== COACH SESSION PARTICIPANTS MODEL =====
+class CoachSessionParticipant(Base):
+    """
+    Participants in a coach session (many-to-many relationship)
+    """
+    __tablename__ = "coach_session_participants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Reference to the session
+    session_id = Column(Integer, ForeignKey("coach_sessions.id"), nullable=False, index=True)
+    
+    # Participant (could be trainer, learner, or head)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Participant role
+    participant_role = Column(String(20), nullable=False)  # trainer, learner, head
+    
+    # Attendance status
+    status = Column(String(20), default="invited")  # invited, accepted, declined, attended
+    
+    # Timestamps
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    session = relationship("CoachSession", back_populates="participants")
+    user = relationship("User")

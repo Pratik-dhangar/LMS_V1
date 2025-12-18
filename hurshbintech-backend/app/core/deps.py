@@ -14,6 +14,7 @@ from sqlalchemy.orm import joinedload
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user_model import (
+    CoachProfile,
     HeadProfile,
     LearnerProfile,
     TrainerProfile,
@@ -307,6 +308,52 @@ async def get_current_learner(
             )
 
         return learner
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+        )
+
+
+async def get_current_coach(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> CoachProfile:
+    """
+    Get current authenticated coach profile from JWT token
+    Used in coach-only routes
+    """
+    try:
+        # Decode JWT token
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+
+        # Verify role is coach
+        if role != "coach":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized as coach"
+            )
+
+        # Get coach profile from database
+        result = await db.execute(
+            select(CoachProfile)
+            .options(joinedload(CoachProfile.user))
+            .join(User, CoachProfile.user_id == User.id)
+            .where(User.id == user_id, User.role == UserRole.COACH)
+        )
+        coach = result.scalar_one_or_none()
+
+        if coach is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Coach profile not found"
+            )
+
+        return coach
 
     except JWTError:
         raise HTTPException(
