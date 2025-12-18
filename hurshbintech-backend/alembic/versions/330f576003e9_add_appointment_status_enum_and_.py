@@ -38,7 +38,13 @@ def upgrade() -> None:
     op.execute("""
         UPDATE appointments 
         SET status = 'PENDING' 
-        WHERE status = 'scheduled'
+        WHERE status = 'scheduled' OR status IS NULL
+    """)
+    
+    # Drop the default constraint if it exists (to avoid casting issues)
+    op.execute("""
+        ALTER TABLE appointments 
+        ALTER COLUMN status DROP DEFAULT
     """)
     
     # Alter column to use enum type
@@ -47,6 +53,12 @@ def upgrade() -> None:
                type_=appointmentstatus_enum,
                nullable=False,
                postgresql_using='status::appointmentstatus')
+    
+    # Set the new default using the enum type
+    op.execute("""
+        ALTER TABLE appointments 
+        ALTER COLUMN status SET DEFAULT 'PENDING'::appointmentstatus
+    """)
     
     op.drop_index(op.f('ix_coach_reference_data_coach_id'), table_name='coach_reference_data')
     # ### end Alembic commands ###
