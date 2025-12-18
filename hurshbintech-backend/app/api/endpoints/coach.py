@@ -259,13 +259,13 @@ async def get_coach_appointments(
             "coach_id": apt.coach_id,
             "user_id": apt.user_id,
             "user_role": apt.user_role,
-            "scheduled_date": apt.scheduled_date,
+            "scheduled_date": apt.scheduled_date.isoformat() if apt.scheduled_date else None,
             "scheduled_time": apt.scheduled_time,
             "status": apt.status.value if hasattr(apt.status, 'value') else apt.status,
             "notes": apt.notes,
             "user_name": apt.user.name if apt.user else None,
-            "created_at": apt.created_at,
-            "updated_at": apt.updated_at,
+            "created_at": apt.created_at.isoformat() if apt.created_at else None,
+            "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
         
         # Extract session_type and payment_screenshot from notes
