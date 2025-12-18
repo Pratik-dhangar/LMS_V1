@@ -116,11 +116,31 @@ def upgrade() -> None:
     op.execute("CREATE INDEX IF NOT EXISTS ix_coach_session_participants_id ON coach_session_participants(id)")
     op.execute("CREATE INDEX IF NOT EXISTS ix_coach_session_participants_session_id ON coach_session_participants(session_id)")
     op.execute("CREATE INDEX IF NOT EXISTS ix_coach_session_participants_user_id ON coach_session_participants(user_id)")
+    
+    # Create appointments table if not exists
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            coach_id INTEGER NOT NULL REFERENCES coach_profiles(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            user_role VARCHAR(20) NOT NULL,
+            scheduled_date DATE NOT NULL,
+            scheduled_time VARCHAR(20) NOT NULL,
+            status VARCHAR(20),
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_appointments_id ON appointments(id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_appointments_coach_id ON appointments(coach_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_appointments_user_id ON appointments(user_id)")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # Drop coach-related tables in correct order (drop dependent tables first)
+    op.execute("DROP TABLE IF EXISTS appointments CASCADE;")
     op.execute("DROP TABLE IF EXISTS coach_session_participants CASCADE;")
     op.execute("DROP TABLE IF EXISTS coach_sessions CASCADE;")
     op.execute("DROP TABLE IF EXISTS coach_reference_data CASCADE;")
@@ -128,7 +148,6 @@ def downgrade() -> None:
     
     # Drop enums
     op.execute("DROP TYPE IF EXISTS referencedatatype CASCADE;")
-    op.execute("DROP TABLE IF EXISTS coach_reference_data CASCADE;")
     
-    # Note: We don't drop the enums or 'coach' value from userrole enum
-    # because it might be referenced elsewhere and dropping enum values is complex
+    # Note: We don't drop the 'COACH' value from userrole enum
+    # because dropping enum values is complex and might be referenced elsewhere
