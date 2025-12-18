@@ -5,6 +5,7 @@ import { Search, Star, Calendar } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/BookAppointment.css';
 
 const BookAppointment = () => {
@@ -139,7 +140,7 @@ const BookAppointment = () => {
                     <div className="coach-avatar-wrapper">
                       {coach.profile_picture_url ? (
                         <img
-                          src={`http://127.0.0.1:8000${coach.profile_picture_url}`}
+                          src={getFileUrl(coach.profile_picture_url)}
                           alt={coach.name}
                           className="coach-avatar"
                           onError={(e) => {

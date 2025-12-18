@@ -67,12 +67,19 @@ async def upload_profile_picture(
 
     try:
         if settings.USE_S3:
-            # Save to S3
-            from app.utils.s3_utils import upload_to_s3
+            # Save to S3 - store in s3://bucket/key format
+            from app.utils.s3_utils import S3Manager
 
-            s3_path = f"profile_pictures/{filename}"
+            s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
             await file.seek(0)  # Reset file pointer
-            file_url = await upload_to_s3(file, s3_path)
+            file_content = await file.read()
+            s3_key = s3_manager.upload_file(
+                file_content,
+                folder="profile_pictures",
+                filename=filename,
+                content_type=file.content_type or "image/jpeg",
+            )
+            file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             
             # Update coach profile with S3 URL
             current_coach.profile_picture_url = file_url

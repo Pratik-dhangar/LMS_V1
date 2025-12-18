@@ -176,11 +176,16 @@ async def book_appointment_with_coach(
         unique_filename = f"{uuid.uuid4()}{file_ext}"
         
         if settings.USE_S3:
-            # Upload to S3
-            from app.utils.s3_utils import upload_to_s3
-            s3_path = f"payment_screenshots/{unique_filename}"
-            await payment_screenshot.seek(0)  # Reset file pointer after reading
-            payment_screenshot_path = await upload_to_s3(payment_screenshot, s3_path)
+            # Upload to S3 - store in s3://bucket/key format
+            from app.utils.s3_utils import S3Manager
+            s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+            s3_key = s3_manager.upload_file(
+                content,
+                folder="payment_screenshots",
+                filename=unique_filename,
+                content_type=payment_screenshot.content_type or "image/jpeg",
+            )
+            payment_screenshot_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
         else:
             # Save to local uploads folder (fallback for development)
             upload_dir = Path("uploads/payment_screenshots")

@@ -203,11 +203,18 @@ async def create_new_coach(
         
         try:
             if settings.USE_S3:
-                # Save to S3
-                from app.utils.s3_utils import upload_to_s3
-                s3_path = f"profile_pictures/{filename}"
+                # Save to S3 - store in s3://bucket/key format
+                from app.utils.s3_utils import S3Manager
+                s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
                 await profile_picture_url.seek(0)
-                profile_picture_path = await upload_to_s3(profile_picture_url, s3_path)
+                file_content = await profile_picture_url.read()
+                s3_key = s3_manager.upload_file(
+                    file_content,
+                    folder="profile_pictures",
+                    filename=filename,
+                    content_type=profile_picture_url.content_type or "image/jpeg",
+                )
+                profile_picture_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             else:
                 # Save to local uploads folder
                 upload_dir = Path("uploads/profile_pictures")
@@ -263,10 +270,19 @@ async def create_new_coach(
                 filename = f"coach_{new_coach.id}_ref_{ref_file.filename}"
                 
                 if settings.USE_S3:
-                    from app.utils.s3_utils import upload_to_s3
-                    s3_path = f"coach_references/{filename}"
+                    # Save to S3 - store in s3://bucket/key format
+                    from app.utils.s3_utils import S3Manager
+                    s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
                     await ref_file.seek(0)
-                    file_url = await upload_to_s3(ref_file, s3_path)
+                    file_content = await ref_file.read()
+                    content_type = ref_file.content_type or "application/octet-stream"
+                    s3_key = s3_manager.upload_file(
+                        file_content,
+                        folder="coach_references",
+                        filename=filename,
+                        content_type=content_type,
+                    )
+                    file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
                     upload_dir = Path("uploads/coach_references")
                     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -379,10 +395,18 @@ async def update_coach_profile(
         
         try:
             if settings.USE_S3:
-                from app.utils.s3_utils import upload_to_s3
-                s3_path = f"profile_pictures/{filename}"
+                # Save to S3 - store in s3://bucket/key format
+                from app.utils.s3_utils import S3Manager
+                s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
                 await profile_picture_url.seek(0)
-                profile_picture_path = await upload_to_s3(profile_picture_url, s3_path)
+                file_content = await profile_picture_url.read()
+                s3_key = s3_manager.upload_file(
+                    file_content,
+                    folder="profile_pictures",
+                    filename=filename,
+                    content_type=profile_picture_url.content_type or "image/jpeg",
+                )
+                profile_picture_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             else:
                 upload_dir = Path("uploads/profile_pictures")
                 upload_dir.mkdir(parents=True, exist_ok=True)
@@ -446,10 +470,19 @@ async def update_coach_profile(
                 filename = f"coach_{coach_id}_ref_{ref_file.filename}"
                 
                 if settings.USE_S3:
-                    from app.utils.s3_utils import upload_to_s3
-                    s3_path = f"coach_references/{filename}"
+                    # Save to S3 - store in s3://bucket/key format
+                    from app.utils.s3_utils import S3Manager
+                    s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
                     await ref_file.seek(0)
-                    file_url = await upload_to_s3(ref_file, s3_path)
+                    file_content = await ref_file.read()
+                    content_type = ref_file.content_type or "application/octet-stream"
+                    s3_key = s3_manager.upload_file(
+                        file_content,
+                        folder="coach_references",
+                        filename=filename,
+                        content_type=content_type,
+                    )
+                    file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
                     upload_dir = Path("uploads/coach_references")
                     upload_dir.mkdir(parents=True, exist_ok=True)
