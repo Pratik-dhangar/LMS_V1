@@ -781,18 +781,22 @@ class AppointmentResponse(BaseModel):
     coach_id: int
     user_id: int
     user_role: str
-    scheduled_date: date
+    scheduled_date: str  # Changed to str to ensure proper JSON serialization
     scheduled_time: str
     status: str
     notes: Optional[str] = None
     user_name: Optional[str] = None
     session_type: Optional[str] = None
     payment_screenshot_url: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: str  # Changed to str for consistent serialization
+    updated_at: str  # Changed to str for consistent serialization
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            date: lambda v: v.isoformat() if v else None,
+            datetime: lambda v: v.isoformat() if v else None,
+        }
 
 
 class AvailableSlotsResponse(BaseModel):
