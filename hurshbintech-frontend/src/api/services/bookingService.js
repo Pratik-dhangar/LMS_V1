@@ -47,6 +47,24 @@ const bookingService = {
       throw error;
     }
   },
+
+  /**
+   * Get available time slots for a coach on a specific date
+   * @param {number} coachId - ID of the coach
+   * @param {string} date - Date in YYYY-MM-DD format
+   * @returns {Promise<Object>} Available slots data
+   */
+  async getAvailableSlots(coachId, date) {
+    try {
+      const response = await api.get(`/booking/slots/${coachId}`, {
+        params: { date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      throw error;
+    }
+  },
 };
 
 export default bookingService;

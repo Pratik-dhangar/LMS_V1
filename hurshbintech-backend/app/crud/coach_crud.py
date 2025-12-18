@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models.user_model import (
     Appointment,
+    AppointmentStatus,
     CoachProfile,
     CoachSession,
     CoachSessionParticipant,
@@ -45,7 +46,7 @@ async def create_appointment(
         scheduled_date=appointment_data.scheduled_date,
         scheduled_time=appointment_data.scheduled_time,
         notes=appointment_data.notes,
-        status="scheduled",
+        status=AppointmentStatus.PENDING,
     )
     db.add(new_appointment)
     await db.commit()
@@ -97,6 +98,16 @@ async def update_appointment(
 
     update_data = appointment_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
+        # Convert status to enum if it's a string
+        if field == 'status' and isinstance(value, str):
+            try:
+                value = AppointmentStatus(value.lower())
+            except ValueError:
+                # If the status is already in enum format or uppercase, try as is
+                try:
+                    value = AppointmentStatus[value.upper()]
+                except (KeyError, AttributeError):
+                    pass
         setattr(appointment, field, value)
 
     await db.commit()
@@ -113,6 +124,103 @@ async def delete_appointment(db: AsyncSession, appointment_id: int) -> bool:
     await db.delete(appointment)
     await db.commit()
     return True
+
+
+# ============ AVAILABILITY CHECKING FUNCTIONS ============
+
+
+async def get_available_slots(
+    db: AsyncSession,
+    coach_id: int,
+    target_date: date,
+) -> list[str]:
+    """
+    Calculate available time slots for a coach on a specific date.
+    
+    Args:
+        db: Database session
+        coach_id: ID of the coach
+        target_date: Date to check availability for
+    
+    Returns:
+        List of available time slot strings (e.g., ["10am", "3pm"])
+    """
+    from sqlalchemy import and_
+    from app.models.user_model import AppointmentStatus
+    
+    # Get coach profile with time slots
+    result = await db.execute(
+        select(CoachProfile).where(CoachProfile.id == coach_id)
+    )
+    coach = result.scalar_one_or_none()
+    
+    if not coach:
+        return []
+    
+    # Parse coach's available time slots
+    all_slots = []
+    if coach.time_slots:
+        all_slots = [slot.strip() for slot in coach.time_slots.split(',')]
+    
+    # Get existing appointments for this coach on the target date
+    existing_appointments = await db.execute(
+        select(Appointment).where(
+            and_(
+                Appointment.coach_id == coach_id,
+                Appointment.scheduled_date == target_date,
+                Appointment.status.in_([
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                ])  # Only consider active appointments
+            )
+        )
+    )
+    booked_slots = [apt.scheduled_time for apt in existing_appointments.scalars().all()]
+    
+    # Filter out booked slots
+    available_slots = [slot for slot in all_slots if slot not in booked_slots]
+    
+    return available_slots
+
+
+async def check_slot_availability(
+    db: AsyncSession,
+    coach_id: int,
+    scheduled_date: date,
+    scheduled_time: str,
+) -> bool:
+    """
+    Check if a specific time slot is available for booking.
+    
+    Args:
+        db: Database session
+        coach_id: ID of the coach
+        scheduled_date: Date of the appointment
+        scheduled_time: Time slot (e.g., "10am")
+    
+    Returns:
+        True if slot is available, False if already booked
+    """
+    from sqlalchemy import and_
+    from app.models.user_model import AppointmentStatus
+    
+    # Check for existing appointments at this time
+    result = await db.execute(
+        select(Appointment).where(
+            and_(
+                Appointment.coach_id == coach_id,
+                Appointment.scheduled_date == scheduled_date,
+                Appointment.scheduled_time == scheduled_time,
+                Appointment.status.in_([
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                ])
+            )
+        )
+    )
+    existing_appointment = result.scalar_one_or_none()
+    
+    return existing_appointment is None  # Available if no existing appointment
 
 
 # ============ COACH SESSION CRUD ============

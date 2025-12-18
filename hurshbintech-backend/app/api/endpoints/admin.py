@@ -202,7 +202,7 @@ async def create_new_coach(
         filename = f"coach_profile_{contact_no}.{file_extension}"
         
         try:
-            if settings.ENVIRONMENT == "production":
+            if settings.USE_S3:
                 # Save to S3
                 from app.utils.s3_utils import upload_to_s3
                 s3_path = f"profile_pictures/{filename}"
@@ -259,7 +259,7 @@ async def create_new_coach(
                     file_extension = ref_file.filename.split(".")[-1]
                     filename = f"coach_{new_coach.id}_ref_{ref_file.filename}"
                     
-                    if settings.ENVIRONMENT == "production":
+                    if settings.USE_S3:
                         from app.utils.s3_utils import upload_to_s3
                         s3_path = f"coach_references/{filename}"
                         await ref_file.seek(0)
@@ -374,7 +374,7 @@ async def update_coach_profile(
         filename = f"coach_profile_{coach.id}.{file_extension}"
         
         try:
-            if settings.ENVIRONMENT == "production":
+            if settings.USE_S3:
                 from app.utils.s3_utils import upload_to_s3
                 s3_path = f"profile_pictures/{filename}"
                 await profile_picture_url.seek(0)
@@ -438,7 +438,7 @@ async def update_coach_profile(
                     file_extension = ref_file.filename.split(".")[-1]
                     filename = f"coach_{coach_id}_ref_{ref_file.filename}"
                     
-                    if settings.ENVIRONMENT == "production":
+                    if settings.USE_S3:
                         from app.utils.s3_utils import upload_to_s3
                         s3_path = f"coach_references/{filename}"
                         await ref_file.seek(0)

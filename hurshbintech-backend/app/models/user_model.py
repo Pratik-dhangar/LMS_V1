@@ -20,6 +20,15 @@ class UserRole(enum.Enum):
     COACH = "COACH"
     LEARNER = "LEARNER"
 
+# Enum for appointment status
+class AppointmentStatus(str, enum.Enum):
+    PENDING = "pending"           # Appointment requested, awaiting coach confirmation
+    CONFIRMED = "confirmed"       # Coach confirmed the appointment
+    CANCELLED = "cancelled"       # Cancelled by user or coach
+    COMPLETED = "completed"       # Appointment finished
+    NO_SHOW = "no_show"          # User didn't attend
+    REJECTED = "rejected"         # Coach rejected the appointment
+
 # Enums for specific fields - learner model
 class CaesareanType(enum.Enum):
     ELECTIVE = "elective"
@@ -454,7 +463,11 @@ class Appointment(Base):
     # Appointment Details
     scheduled_date = Column(Date, nullable=False)
     scheduled_time = Column(String(20), nullable=False)  # e.g., "10am", "1pm", "3pm", "5pm"
-    status = Column(String(20), default="scheduled")  # scheduled, confirmed, cancelled, completed
+    status = Column(
+        SAEnum(AppointmentStatus),
+        default=AppointmentStatus.PENDING,
+        nullable=False
+    )
     
     # Additional info
     notes = Column(Text)

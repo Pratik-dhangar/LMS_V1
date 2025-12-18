@@ -795,6 +795,19 @@ class AppointmentResponse(BaseModel):
         from_attributes = True
 
 
+class AvailableSlotsResponse(BaseModel):
+    """Schema for available time slots response"""
+    
+    coach_id: int
+    date: date
+    available_slots: List[str]  # e.g., ["10am", "1pm", "3pm"]
+    all_slots: List[str]        # Coach's configured time slots
+    booked_slots: List[str]     # Already booked time slots
+    
+    class Config:
+        from_attributes = True
+
+
 # ============ COACH SESSION SCHEMAS ============
 
 

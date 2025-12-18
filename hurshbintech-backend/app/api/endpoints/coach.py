@@ -44,8 +44,7 @@ async def upload_profile_picture(
 ):
     """
     Upload profile picture for coach
-    Saves to uploads/profile_pictures for development
-    Saves to S3 for production
+    Saves to S3 if USE_S3=true, otherwise saves locally
     """
     # Validate file
     if not file.content_type.startswith("image/"):
@@ -67,7 +66,7 @@ async def upload_profile_picture(
     filename = f"coach_{current_coach.id}_{current_coach.user_id}.{file_extension}"
 
     try:
-        if settings.ENVIRONMENT == "production":
+        if settings.USE_S3:
             # Save to S3
             from app.utils.s3_utils import upload_to_s3
 
@@ -262,7 +261,7 @@ async def get_coach_appointments(
             "user_role": apt.user_role,
             "scheduled_date": apt.scheduled_date,
             "scheduled_time": apt.scheduled_time,
-            "status": apt.status,
+            "status": apt.status.value if hasattr(apt.status, 'value') else apt.status,
             "notes": apt.notes,
             "user_name": apt.user.name if apt.user else None,
             "created_at": apt.created_at,

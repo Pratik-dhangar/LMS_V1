@@ -4,13 +4,13 @@ Accessible by all authenticated users (head, trainer, learner).
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 
 from app.core.deps import get_db, get_current_user
 from app.models.user_model import User
-from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse
+from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.crud import user_crud, coach_crud
 
 router = APIRouter()
@@ -27,6 +27,52 @@ async def get_available_coaches(
     """
     coaches = await user_crud.get_all_coaches_system_wide(db)
     return [CoachResponse.from_orm_with_user(coach) for coach in coaches]
+
+
+@router.get("/slots/{coach_id}", response_model=AvailableSlotsResponse)
+async def get_available_slots_for_coach(
+    coach_id: int,
+    date: date = Query(..., description="Date to check availability (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get available time slots for a specific coach on a given date.
+    Returns only slots that are not already booked.
+    
+    Args:
+        coach_id: ID of the coach
+        date: Date to check (YYYY-MM-DD format)
+    
+    Returns:
+        AvailableSlotsResponse with available, all, and booked slots
+    """
+    # Verify coach exists
+    coach = await user_crud.get_coach_by_id(db, coach_id)
+    if not coach:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Coach not found",
+        )
+    
+    # Get available slots
+    available_slots = await coach_crud.get_available_slots(db, coach_id, date)
+    
+    # Get all configured slots
+    all_slots = []
+    if coach.time_slots:
+        all_slots = [slot.strip() for slot in coach.time_slots.split(',')]
+    
+    # Calculate booked slots
+    booked_slots = [slot for slot in all_slots if slot not in available_slots]
+    
+    return AvailableSlotsResponse(
+        coach_id=coach_id,
+        date=date,
+        available_slots=available_slots,
+        all_slots=all_slots,
+        booked_slots=booked_slots,
+    )
 
 
 @router.post("/book-appointment", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
@@ -78,6 +124,28 @@ async def book_appointment_with_coach(
         coach.unavailable_until = None
         coach.unavailable_reason = None
         await db.commit()
+    
+    # ✅ CHECK SLOT AVAILABILITY - Prevent double-booking
+    is_slot_available = await coach_crud.check_slot_availability(
+        db, coach_id, scheduled_date, scheduled_time
+    )
+    
+    if not is_slot_available:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Time slot {scheduled_time} on {scheduled_date} is already booked. Please choose another slot.",
+        )
+    
+    # Verify the slot is in coach's available time slots
+    coach_slots = []
+    if coach.time_slots:
+        coach_slots = [slot.strip() for slot in coach.time_slots.split(',')]
+    
+    if scheduled_time not in coach_slots:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid time slot. Coach only offers: {', '.join(coach_slots)}",
+        )
     
     # Handle payment screenshot upload if provided
     payment_screenshot_path = None

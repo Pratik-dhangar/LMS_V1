@@ -58,6 +58,7 @@ import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
 import BookAppointmentForm from './pages/common/BookAppointmentForm';
+import MyAppointments from './pages/common/MyAppointments';
 
 
 
@@ -385,6 +386,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-appointments"
+          element={
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+              <MyAppointments />
             </ProtectedRoute>
           }
         />

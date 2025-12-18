@@ -80,6 +80,14 @@ const coachService = {
     const response = await api.get('/coaches/appointments');
     return response.data;
   },
+
+  /**
+   * Update appointment status (accept/reject)
+   */
+  updateAppointmentStatus: async (appointmentId, status) => {
+    const response = await api.patch(`/coaches/appointments/${appointmentId}`, { status });
+    return response.data;
+  },
 };
 
 export default coachService;

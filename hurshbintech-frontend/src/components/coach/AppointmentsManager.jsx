@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import coachService from '../../api/services/coachService';
-import { Calendar, Clock, User, AlertCircle, X, FileText } from 'lucide-react';
+import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 import '../../styles/Dashboards.css';
 import '../../styles/Coach.css';
 
@@ -10,6 +11,7 @@ const AppointmentsManager = () => {
   const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -37,6 +39,34 @@ const AppointmentsManager = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedAppointment(null);
+  };
+
+  const handleStatusUpdate = async (appointmentId, newStatus) => {
+    try {
+      setUpdating(true);
+      // Convert status to lowercase to match backend enum values
+      const statusValue = newStatus.toLowerCase();
+      await coachService.updateAppointmentStatus(appointmentId, statusValue);
+      
+      // Update local state with lowercase status
+      setAppointments(prev => 
+        prev.map(apt => 
+          apt.id === appointmentId ? { ...apt, status: statusValue } : apt
+        )
+      );
+      
+      // Update selected appointment if modal is open
+      if (selectedAppointment?.id === appointmentId) {
+        setSelectedAppointment(prev => ({ ...prev, status: statusValue }));
+      }
+      
+      toast.success(`Appointment ${newStatus.toLowerCase()} successfully!`);
+    } catch (err) {
+      console.error('Error updating appointment status:', err);
+      toast.error(err.response?.data?.detail || 'Failed to update appointment status');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const formatSessionType = (type) => {
@@ -226,9 +256,31 @@ const AppointmentsManager = () => {
 
             {/* Modal Footer */}
             <div className="modal-footer">
-              <button onClick={closeModal} className="btn-secondary">
-                Close
-              </button>
+              {(selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending') && (
+                <>
+                  <button 
+                    onClick={() => handleStatusUpdate(selectedAppointment.id, 'REJECTED')}
+                    className="btn-secondary flex items-center gap-2"
+                    disabled={updating}
+                  >
+                    <XCircle className="w-4 h-4" />
+                    {updating ? 'Updating...' : 'Reject'}
+                  </button>
+                  <button 
+                    onClick={() => handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')}
+                    className="btn-primary flex items-center gap-2"
+                    disabled={updating}
+                  >
+                    <Check className="w-4 h-4" />
+                    {updating ? 'Updating...' : 'Accept'}
+                  </button>
+                </>
+              )}
+              {selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && (
+                <button onClick={closeModal} className="btn-secondary">
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ const BookAppointmentForm = () => {
   const coach = location.state?.coach;
 
   const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [formData, setFormData] = useState({
     appointment_date: '',
@@ -29,38 +30,49 @@ const BookAppointmentForm = () => {
     { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3500 },
   ];
 
+  // Fetch available slots when date changes
   useEffect(() => {
-    if (coachId) {
-      fetchAvailableSlots();
-    }
-  }, [coachId]);
-
-  const fetchAvailableSlots = async () => {
-    try {
-      // Use coach's time_slots if available, otherwise use default
-      if (coach && coach.time_slots) {
-        // time_slots is a comma-separated string like "10am,1pm,3pm,5pm"
-        const slots = coach.time_slots.split(',').map(slot => slot.trim());
-        setAvailableSlots(slots);
-      } else {
-        // Fallback to default time slots
-        const defaultSlots = [
-          '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-          '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
-        ];
-        setAvailableSlots(defaultSlots);
+    const fetchAvailableSlotsForDate = async () => {
+      if (!formData.appointment_date || !coachId) return;
+      
+      try {
+        setLoadingSlots(true);
+        const slotsData = await bookingService.getAvailableSlots(coachId, formData.appointment_date);
+        setAvailableSlots(slotsData.available_slots || []);
+      } catch (error) {
+        console.error('Error fetching available slots:', error);
+        toast.error('Failed to load available time slots');
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
       }
-    } catch (error) {
-      console.error('Error fetching available slots:', error);
-      toast.error('Failed to load available time slots');
+    };
+    
+    fetchAvailableSlotsForDate();
+  }, [formData.appointment_date, coachId]);
+
+  // Format time slot for display (e.g., "10am" -> "10:00 AM")
+  const formatTimeSlot = (slot) => {
+    if (!slot) return '';
+    // If already formatted, return as is
+    if (slot.includes(':')) return slot;
+    // Convert "10am" to "10:00 AM"
+    const match = slot.match(/(\d+)(am|pm)/i);
+    if (match) {
+      const hour = match[1];
+      const period = match[2].toUpperCase();
+      return `${hour}:00 ${period}`;
     }
+    return slot;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // Reset time when date changes
+      ...(name === 'appointment_date' ? { appointment_time: '' } : {})
     }));
   };
 
@@ -147,7 +159,25 @@ const BookAppointmentForm = () => {
       navigate(-1); // Go back to coaches list
     } catch (error) {
       console.error('Error booking appointment:', error);
-      toast.error(error.response?.data?.detail || 'Failed to book appointment');
+      
+      // Handle 409 Conflict (double-booking)
+      if (error.response?.status === 409) {
+        toast.error(error.response.data.detail || 'This time slot was just booked by someone else. Please select another slot.');
+        
+        // Refresh available slots
+        if (formData.appointment_date) {
+          try {
+            const slotsData = await bookingService.getAvailableSlots(coachId, formData.appointment_date);
+            setAvailableSlots(slotsData.available_slots || []);
+            // Reset selected time
+            setFormData(prev => ({ ...prev, appointment_time: '' }));
+          } catch (err) {
+            console.error('Error refreshing slots:', err);
+          }
+        }
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to book appointment');
+      }
     } finally {
       setLoading(false);
     }
@@ -225,18 +255,49 @@ const BookAppointmentForm = () => {
 
                   <div className="form-field">
                     <label className="field-label">Time Slot *</label>
-                    <select
-                      name="appointment_time"
-                      value={formData.appointment_time}
-                      onChange={handleInputChange}
-                      className="field-input"
-                      required
-                    >
-                      <option value="">Select time slot</option>
-                      {availableSlots.map(slot => (
-                        <option key={slot} value={slot}>{slot}</option>
-                      ))}
-                    </select>
+                    {loadingSlots ? (
+                      <div className="field-input" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280' }}>
+                        <div className="spinner-sm"></div>
+                        Loading available slots...
+                      </div>
+                    ) : (
+                      <>
+                        <select
+                          name="appointment_time"
+                          value={formData.appointment_time}
+                          onChange={handleInputChange}
+                          className="field-input"
+                          required
+                          disabled={!formData.appointment_date || availableSlots.length === 0}
+                        >
+                          <option value="">
+                            {!formData.appointment_date 
+                              ? "Select a date first" 
+                              : availableSlots.length === 0 
+                                ? "No slots available on this date" 
+                                : "Select a time slot"
+                            }
+                          </option>
+                          {availableSlots.map(slot => (
+                            <option key={slot} value={slot}>{formatTimeSlot(slot)}</option>
+                          ))}
+                        </select>
+                        
+                        {/* Show message if no slots available */}
+                        {formData.appointment_date && availableSlots.length === 0 && (
+                          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+                            All time slots are booked for this date. Please choose another date.
+                          </p>
+                        )}
+                        
+                        {/* Show available slots count */}
+                        {formData.appointment_date && availableSlots.length > 0 && (
+                          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#10b981' }}>
+                            {availableSlots.length} slot{availableSlots.length !== 1 ? 's' : ''} available
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

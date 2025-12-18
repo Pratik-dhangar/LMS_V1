@@ -93,8 +93,18 @@ const BookAppointment = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-            <h1 className="page-title">Book an Appointment</h1>
-            <p className="page-description">Choose from our experienced coaches</p>
+            <div>
+              <h1 className="page-title">Book an Appointment</h1>
+              <p className="page-description">Choose from our experienced coaches</p>
+            </div>
+            <button 
+              onClick={() => navigate('/my-appointments')}
+              className="btn-primary flex items-center gap-2"
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <Calendar className="w-4 h-4" />
+              My Appointments
+            </button>
           </div>
 
           {/* Search Bar */}
