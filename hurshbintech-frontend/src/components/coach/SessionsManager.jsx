@@ -282,7 +282,7 @@ const SessionsManager = () => {
               <div className="form-group">
                 <label className="form-label">Search People</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 icon-sm text-gray-400" />
+                  <Search className="absolute left-4 top-6 icon-sm text-gray-400" />
                   <input
                     type="text"
                     value={searchQuery}

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import coachService from '../../api/services/coachService';
-import { Calendar, Clock, User, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, AlertCircle, X, FileText } from 'lucide-react';
 import '../../styles/Dashboards.css';
+import '../../styles/Coach.css';
 
 const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -24,6 +27,21 @@ const AppointmentsManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedAppointment(null);
+  };
+
+  const formatSessionType = (type) => {
+    if (!type) return 'N/A';
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   if (loading) {
@@ -63,41 +81,158 @@ const AppointmentsManager = () => {
         ) : (
           appointments.map(apt => (
             <div key={apt.id} className="session-card">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
+                  {/* Date */}
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="icon-sm text-blue-600" />
                     <span className="font-semibold">
-                      {new Date(apt.scheduled_date).toLocaleDateString()}
+                      {new Date(apt.scheduled_date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
                     </span>
-                    <Clock className="icon-sm text-gray-500 ml-2" />
-                    <span>{apt.scheduled_time}</span>
                   </div>
                   
-                  {apt.user_name && (
-                    <div className="flex items-center gap-2 text-gray-600 mb-2">
-                      <User className="icon-sm" />
-                      <span>With: {apt.user_name}</span>
-                    </div>
-                  )}
+                  {/* Time */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="icon-sm text-gray-500" />
+                    <span className="text-gray-700">{apt.scheduled_time}</span>
+                  </div>
                   
+                  {/* User Name */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="icon-sm text-green-600" />
+                    <span className="text-gray-700 font-medium">{apt.user_name || 'Unknown User'}</span>
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">{apt.user_role}</span>
+                  </div>
+                  
+                  {/* Status Badge */}
                   <div className="mt-2">
                     <span className={`status-badge status-${apt.status || 'scheduled'}`}>
                       {apt.status || 'scheduled'}
                     </span>
                   </div>
-                  
-                  {apt.notes && (
-                    <p className="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded">
-                      <strong>Notes:</strong> {apt.notes}
-                    </p>
-                  )}
                 </div>
+                
+                {/* View Details Button */}
+                <button
+                  onClick={() => handleViewDetails(apt)}
+                  className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Modal for Appointment Details */}
+      {showModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h3 className="modal-title">Appointment Details</h3>
+              <button onClick={closeModal} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body space-y-4">
+              {/* Client Name */}
+              <div className="detail-row">
+                <label className="detail-label">
+                  <User className="icon-sm" />
+                  Client Name
+                </label>
+                <p className="detail-value">{selectedAppointment.user_name || 'Unknown User'}</p>
+              </div>
+
+              {/* Date */}
+              <div className="detail-row">
+                <label className="detail-label">
+                  <Calendar className="icon-sm" />
+                  Date
+                </label>
+                <p className="detail-value">
+                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </p>
+              </div>
+
+              {/* Time */}
+              <div className="detail-row">
+                <label className="detail-label">
+                  <Clock className="icon-sm" />
+                  Time
+                </label>
+                <p className="detail-value">{selectedAppointment.scheduled_time}</p>
+              </div>
+
+              {/* Session Type */}
+              <div className="detail-row">
+                <label className="detail-label">
+                  <FileText className="icon-sm" />
+                  Session Type
+                </label>
+                <p className="detail-value">{formatSessionType(selectedAppointment.session_type)}</p>
+              </div>
+
+              {/* Payment Screenshot */}
+              {selectedAppointment.payment_screenshot_url && (
+                <div className="detail-row">
+                  <label className="detail-label">Payment Screenshot</label>
+                  <div className="mt-2">
+                    <a
+                      href={`http://127.0.0.1:8000${selectedAppointment.payment_screenshot_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Payment Screenshot
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedAppointment.notes && (
+                <div className="detail-row">
+                  <label className="detail-label">Additional Notes</label>
+                  <p className="detail-value text-gray-600 bg-gray-50 p-3 rounded">
+                    {selectedAppointment.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="detail-row">
+                <label className="detail-label">Status</label>
+                <span className={`status-badge status-${selectedAppointment.status || 'scheduled'}`}>
+                  {selectedAppointment.status || 'scheduled'}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer">
+              <button onClick={closeModal} className="btn-secondary">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

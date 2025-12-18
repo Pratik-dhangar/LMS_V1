@@ -55,6 +55,10 @@ import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 
+// Common Pages
+import BookAppointment from './pages/common/BookAppointment';
+import BookAppointmentForm from './pages/common/BookAppointmentForm';
+
 
 
 // Components
@@ -378,6 +382,22 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/book-appointment"
+          element={
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+              <BookAppointment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/book-appointment/:coachId"
+          element={
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+              <BookAppointmentForm />
             </ProtectedRoute>
           }
         />

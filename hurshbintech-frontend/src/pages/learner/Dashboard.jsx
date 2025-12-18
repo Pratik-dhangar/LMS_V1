@@ -236,6 +236,7 @@ const LearnerDashboard = () => {
               Welcome, {user?.name || "Learner"}!
             </h2>
             <p className="text-white/90">Your personalized learning journey starts here</p>
+           
           </div>
 
           {/* Quick Access Cards */}
@@ -275,7 +276,7 @@ const LearnerDashboard = () => {
                 icon: "📅",
                 title: "Book Appointment",
                 desc: "Schedule with professionals",
-                onClick: () => navigate("/learner/appointment"), // optional
+                onClick: () => navigate("/book-appointment"), // New booking page
               },
             ].map((card, index) => (
               <div

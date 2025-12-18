@@ -249,9 +249,43 @@ async def get_coach_appointments(
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
-    """Get all appointments for the current coach"""
+    """Get all appointments for the current coach with user details"""
     appointments = await coach_crud.get_appointments_by_coach(db, current_coach.id)
-    return [AppointmentResponse.from_orm(apt) for apt in appointments]
+    
+    # Add user name, session type, and payment screenshot to each appointment
+    result = []
+    for apt in appointments:
+        apt_dict = {
+            "id": apt.id,
+            "coach_id": apt.coach_id,
+            "user_id": apt.user_id,
+            "user_role": apt.user_role,
+            "scheduled_date": apt.scheduled_date,
+            "scheduled_time": apt.scheduled_time,
+            "status": apt.status,
+            "notes": apt.notes,
+            "user_name": apt.user.name if apt.user else None,
+            "created_at": apt.created_at,
+            "updated_at": apt.updated_at,
+        }
+        
+        # Extract session_type and payment_screenshot from notes
+        if apt.notes:
+            # Session type is in format "Session Type: initial_consultation"
+            if "Session Type:" in apt.notes:
+                session_type_line = [line for line in apt.notes.split('\n') if 'Session Type:' in line]
+                if session_type_line:
+                    apt_dict["session_type"] = session_type_line[0].split('Session Type:')[1].strip()
+            
+            # Payment screenshot is in format "Payment Screenshot: uploads/..."
+            if "Payment Screenshot:" in apt.notes:
+                payment_line = [line for line in apt.notes.split('\n') if 'Payment Screenshot:' in line]
+                if payment_line:
+                    apt_dict["payment_screenshot_url"] = "/" + payment_line[0].split('Payment Screenshot:')[1].strip()
+        
+        result.append(AppointmentResponse(**apt_dict))
+    
+    return result
 
 
 @router.get("/appointments/{appointment_id}", response_model=AppointmentResponse)

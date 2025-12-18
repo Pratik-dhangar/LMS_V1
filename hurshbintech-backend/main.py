@@ -21,6 +21,7 @@ from slowapi.util import get_remote_address
 # Import all routers
 from app.api.endpoints.admin import router as admin_router
 from app.api.endpoints.auth import router as auth_router
+from app.api.endpoints.booking import router as booking_router
 from app.api.endpoints.coach import router as coach_router
 from app.api.endpoints.head import router as head_endpoint_router
 from app.api.endpoints.health import router as health_router
@@ -111,6 +112,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 # ✅ Include routers WITH prefix
 app.include_router(health_router, prefix="/api")  # Health check endpoint
 app.include_router(auth_router, prefix="/api")
+app.include_router(booking_router, prefix="/api/booking")
 app.include_router(admin_router, prefix="/api")
 app.include_router(head_endpoint_router, prefix="/api")
 app.include_router(coach_router, prefix="/api")

@@ -785,6 +785,9 @@ class AppointmentResponse(BaseModel):
     scheduled_time: str
     status: str
     notes: Optional[str] = None
+    user_name: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_screenshot_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

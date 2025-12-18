@@ -336,11 +336,9 @@ async def reveal_user_passcode(
     
     # Verify user belongs to current head (check profile created_by_head_id)
     is_authorized = False
-    if user.role.value == "trainer" and user.trainer_profile:
+    if user.role.value == "TRAINER" and user.trainer_profile:
         is_authorized = user.trainer_profile.created_by_head_id == current_head.id
-    elif user.role.value == "consultant" and user.consultant_profile:
-        is_authorized = user.consultant_profile.created_by_head_id == current_head.id
-    elif user.role.value == "learner" and user.learner_profile:
+    elif user.role.value == "LEARNER" and user.learner_profile:
         is_authorized = user.learner_profile.created_by_head_id == current_head.id
     
     if not is_authorized:

@@ -130,7 +130,7 @@ const RegisterCoach = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error('Please fill Mandatory fields correctly');
       return;
     }
 
