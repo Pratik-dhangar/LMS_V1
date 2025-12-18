@@ -120,7 +120,7 @@ const AppointmentsManager = () => {
                       {new Date(apt.scheduled_date).toLocaleDateString('en-US', { 
                         weekday: 'short', 
                         year: 'numeric', 
-                        month: 'short', 
+                        month: 'short',
                         day: 'numeric' 
                       })}
                     </span>
