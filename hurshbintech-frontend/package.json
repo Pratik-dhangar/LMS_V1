@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate-speedtest": "node scripts/generate-speedtest.cjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

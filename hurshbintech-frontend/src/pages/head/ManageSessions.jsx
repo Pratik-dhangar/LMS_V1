@@ -5,9 +5,12 @@ import Emoji from '../../components/common/Emoji';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
+import headSessionNotesService from '../../api/services/headSessionNotesService';
+import { useAuth } from '../../context/AuthContext';
 import SearchBar from '../../components/common/SearchBar';
 import EditSessionModal from './EditSessionModal';
 import ViewSessionModal from './ViewSessionModal';
+import HeadSessionNotesModal from './HeadSessionNotesModal';
 import SessionTooltip from '../../components/common/SessionTooltip';
 import '../../styles/Pages.css';
 
@@ -20,6 +23,8 @@ const ManageSessions = () => {
   const [dateFilter, setDateFilter] = useState('');
   const [editingSession, setEditingSession] = useState(null);
   const [viewingSession, setViewingSession] = useState(null);
+  const [editingHeadNotes, setEditingHeadNotes] = useState(null);
+  const { user } = useAuth();
   const [hoveredSession, setHoveredSession] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   // const [showSearch, setShowSearch] = useState(false);
@@ -352,6 +357,17 @@ const ManageSessions = () => {
                                 👁️ View
                               </button>
                             )}
+                            {/* Add Head Notes button for completed sessions for Head/Manager/Trainer roles */}
+                            {session.status === 'ended' && (user?.role === 'head' || user?.role === 'manager' || user?.role === 'trainer') && (
+                              <button
+                                onClick={() => setEditingHeadNotes(session)}
+                                className="btn-primary"
+                                title="Add head notes for this completed session"
+                                style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                              >
+                                📝 Head Notes
+                              </button>
+                            )}
                             {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
                               <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
                                 Can't edit/delete
@@ -385,6 +401,15 @@ const ManageSessions = () => {
         <ViewSessionModal
           session={viewingSession}
           onClose={() => setViewingSession(null)}
+        />
+      )}
+
+      {/* Head Session Notes Modal */}
+      {editingHeadNotes && (
+        <HeadSessionNotesModal
+          session={editingHeadNotes}
+          onClose={() => setEditingHeadNotes(null)}
+          onSuccess={handleEditSuccess}
         />
       )}
 
