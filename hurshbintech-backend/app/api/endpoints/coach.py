@@ -647,8 +647,8 @@ async def get_learning_contents(
             "id": content.id,
             "title": content.title,
             "description": content.description,
-            "file_path": content.file_path,
-            "file_type": content.file_type,
+            "file_url": content.file_url,
+            "content_type": content.content_type.value if hasattr(content.content_type, 'value') else content.content_type,
             "created_at": content.created_at
         }
         for content in contents
