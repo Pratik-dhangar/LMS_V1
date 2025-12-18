@@ -222,7 +222,7 @@ const ManageHeads = () => {
                           </td>
                           <td className="data-table-td">
                             <div className="data-table-name">{head.name}</div>
-                            <div className="data-table-subtext">{head.role}</div>
+                            
                           </td>
                           <td className="data-table-td">
                             <div className="passcode-display-inline">

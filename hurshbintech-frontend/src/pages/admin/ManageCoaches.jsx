@@ -1,9 +1,12 @@
-// ViewConsultants.jsx - Admin view of all registered consultants/coaches (read-only)
+
+// ViewConsultants.jsx - Admin view of all registered consultants/coaches
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
     Users,
+    Edit3,
     AlertCircle,
     Loader2,
     Eye,
@@ -17,8 +20,9 @@ import SearchBar from '../../components/common/SearchBar';
 import '../../styles/Pages.css';
 
 
-// ViewConsultants Component - Admin can view all consultants (no edit capability)
+// ViewConsultants Component - Admin can view, add and edit coaches
 const ViewConsultants = () => {
+    const navigate = useNavigate();
     const { user: _user } = useAuth();
 
     // State management for consultant data and filtering
@@ -94,6 +98,14 @@ const ViewConsultants = () => {
         }
     };
 
+    /**
+     * Navigate to edit coach page
+     * @param {number} coachId - The coach ID to edit
+     */
+    const handleEditCoach = (coachId) => {
+        navigate(`/admin/edit-coach/${coachId}`);
+    };
+
     return (
         <div className="page-container">
             <Navbar />
@@ -103,17 +115,26 @@ const ViewConsultants = () => {
                     <div className="page-header">
 
                         <h1 className="page-title">
-                            View HurshBin Coaches/Consultants
+                            Register HurshBin Coaches
                         </h1>
-                        <p className="page-description">View all registered coaches/consultants in the system</p>
+                        <p className="page-description">View and manage all registered coaches/consultants in the system</p>
                     </div>
 
-                    {/* Search Bar */}
+                    {/* Search Bar and Add New Coach Button */}
                     <div className="search-section">
                         <SearchBar
                             onSearch={handleSearch}
                             placeholder="Search by name, passcode, contact number..."
                         />
+                        <button
+                            onClick={() => navigate('/admin/register-coach')}
+                            className="btn-success btn-icon"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                            </svg>
+                            Add New Coach
+                        </button>
                     </div>
                     {activeSearchQuery && (
                         <div className="search-results-info">
@@ -137,7 +158,7 @@ const ViewConsultants = () => {
                     {loading ? (
                         <div className="loading-container">
                             <Loader2 className="loading-spinner-icon" />
-                            <p className="loading-text">Loading consultants...</p>
+                            <p className="loading-text">Loading coaches...</p>
                         </div>
                     ) : (
                         /* Table */
@@ -146,55 +167,68 @@ const ViewConsultants = () => {
                                 <div className="empty-state">
                                     <Users className="empty-state-icon" />
                                     <p className="empty-state-title">
-                                        {activeSearchQuery ? 'No consultants found' : 'No consultants registered yet'}
+                                        {activeSearchQuery ? 'No coaches found' : 'No coaches registered yet'}
                                     </p>
-                                    <p className="text-gray-500">
+                                    <p className="empty-state-description">
                                         {activeSearchQuery
                                             ? 'Try adjusting your search criteria'
-                                            : 'No consultants have been registered in the system'
+                                            : 'Register your first coach to get started'
                                         }
                                     </p>
+                                    {!activeSearchQuery && (
+                                        <button
+                                            onClick={() => navigate('/admin/register-coach')}
+                                            className="btn-success"
+                                        >
+                                            Register Coach
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="admin-table-container">
-                                    <table className="admin-table">
-                                        <thead>
+                                <div className="table-wrapper">
+                                    <table className="data-table">
+                                        <thead className="data-table-header">
                                             <tr>
-                                                <th className="admin-table-th">
+                                                <th className="data-table-th">
                                                     Sr. No.
                                                 </th>
-                                                <th className="admin-table-th">
+                                                <th className="data-table-th">
                                                     Name
                                                 </th>
-                                                <th className="admin-table-th">
+                                                <th className="data-table-th">
                                                     Passcode
                                                 </th>
-                                                <th className="admin-table-th">
+                                                <th className="data-table-th">
                                                     Contact Number
                                                 </th>
-                                                <th className="admin-table-th">
+                                                <th className="data-table-th">
                                                     Date Joined
+                                                </th>
+                                                <th className="data-table-th data-table-th-center">
+                                                    Actions
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="data-table-body">
                                             {filteredConsultants.map((consultant, index) => (
-                                                <tr key={consultant.id}>
-                                                    <td className="admin-table-td admin-table-td-center">
+                                                <tr
+                                                    key={consultant.id}
+                                                    className="data-table-row"
+                                                >
+                                                    <td className="data-table-td data-table-td-center">
                                                         {index + 1}
                                                     </td>
-                                                    <td className="admin-table-td">
+                                                    <td className="data-table-td">
                                                         <div className="data-table-name">{consultant.name}</div>
-                                                        <div className="data-table-subtext">{consultant.role}</div>
                                                     </td>
-                                                    <td className="admin-table-td">
-                                                        <div className="passcode-container">
+                                                    <td className="data-table-td">
+                                                        <div className="passcode-display-inline">
                                                             <span className="passcode-badge">
                                                                 {visiblePasscodes[consultant.id] ? visiblePasscodes[consultant.id] : '••••••'}
                                                             </span>
                                                             <button
                                                                 onClick={() => togglePasscodeVisibility(consultant.id, consultant.user_id)}
-                                                                className="passcode-toggle-btn"
+                                                                className="icon-btn"
                                                                 title={visiblePasscodes[consultant.id] ? 'Hide passcode' : 'Show passcode'}
                                                             >
                                                                 {visiblePasscodes[consultant.id] ? (
@@ -205,14 +239,23 @@ const ViewConsultants = () => {
                                                             </button>
                                                         </div>
                                                     </td>
-                                                    <td className="admin-table-td">
+                                                    <td className="data-table-td">
                                                         {consultant.contact_no || 'N/A'}
                                                     </td>
-                                                    <td className="admin-table-td">
+                                                    <td className="data-table-td">
                                                         {consultant.date_of_joining
                                                             ? new Date(consultant.date_of_joining).toLocaleDateString()
                                                             : 'N/A'
                                                         }
+                                                    </td>
+                                                    <td className="data-table-td">
+                                                        <button
+                                                            onClick={() => handleEditCoach(consultant.id)}
+                                                            className="btn-primary btn-sm btn-icon"
+                                                        >
+                                                            <Edit3 className="icon-sm" />
+                                                            Edit Profile
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -226,7 +269,7 @@ const ViewConsultants = () => {
                     {/* Summary */}
                     {!loading && filteredConsultants.length > 0 && (
                         <div className="page-summary">
-                            Showing {filteredConsultants.length} of {consultants.length} consultant{consultants.length !== 1 ? 's' : ''}
+                            Showing {filteredConsultants.length} of {consultants.length} coach{consultants.length !== 1 ? 'es' : ''}
                         </div>
                     )}
                 </div>

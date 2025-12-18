@@ -133,6 +133,63 @@ const headService = {
     return response.data;
   },
 
+  // Coach Management APIs (ADMIN ONLY)
+  /**
+   * Create a new Coach (ADMIN ONLY - use /admin/coaches instead)
+   * @param {Object} coachData 
+   * @returns {Promise} 
+   */
+  createCoach: async (coachData) => {
+    console.log('Creating new coach:', { name: coachData.get ? coachData.get('name') : coachData.name });
+    const response = await axiosInstance.post('/admin/coaches', coachData);
+    console.log('Coach created successfully:', { id: response.data.id, passcode: response.data.passcode });
+    return response.data;
+  },
+
+  /**
+   * Get all Coaches (ADMIN - all coaches in system)
+   * @returns {Promise} 
+   */
+  getAllCoaches: async () => {
+    console.log('Fetching all Coaches (admin)');
+    const response = await axiosInstance.get('/admin/coaches');
+    console.log('Received coaches data:', { count: response.data.length });
+    return response.data;
+  },
+
+  /**
+   * Get Coach by ID (ADMIN or HEAD)
+   * @param {number} coachId
+   * @returns {Promise} - Coach object
+   */
+  getCoachById: async (coachId) => {
+    console.log('Fetching coach details:', { coachId });
+    const response = await axiosInstance.get(`/admin/coaches/${coachId}`);
+    console.log('Coach details received:', { id: response.data.id, name: response.data.name });
+    return response.data;
+  },
+
+  /**
+   * Update Coach (ADMIN ONLY)
+   * @param {number} coachId
+   * @param {Object} updateData
+   * @returns {Promise} - Updated coach object
+   */
+  updateCoach: async (coachId, updateData) => {
+    const response = await axiosInstance.patch(`/admin/coaches/${coachId}`, updateData);
+    return response.data;
+  },
+
+  /**
+   * Delete Coach (HEAD only - deletes their own coach)
+   * @param {number} coachId
+   * @returns {Promise} - Success message
+   */
+  deleteCoach: async (coachId) => {
+    const response = await axiosInstance.delete(`/head/coaches/${coachId}`);
+    return response.data;
+  },
+
   /**
    * Reveal (decrypt) a user's passcode
    * @param {number} userId - The user ID to reveal passcode for

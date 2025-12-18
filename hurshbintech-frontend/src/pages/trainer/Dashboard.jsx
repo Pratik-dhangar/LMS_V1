@@ -233,6 +233,12 @@ const TrainerDashboard = () => {
           <div className="rounded-xl p-8 bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white shadow-md">
             <h2 className="text-2xl font-semibold mb-2">Welcome, {user?.name || "Trainer"}!</h2>
             <p className="text-sm">Ready to make a difference today?</p>
+            <button
+              onClick={() => navigate('/book-appointment')}
+              className="mt-4 px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg inline-flex items-center gap-2"
+            >
+              📅 Book Appointment with Coach
+            </button>
           </div>
 
           {/* Quick Stats */}

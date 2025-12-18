@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       admin: '/admin/dashboard',
       head: '/head/dashboard',
       trainer: '/trainer/dashboard',
-      consultant: '/consultant/dashboard',
+      coach: '/coach/dashboard',
       learner: '/learner/dashboard',
     };
     
