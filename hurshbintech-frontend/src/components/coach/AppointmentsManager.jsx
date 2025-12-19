@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import coachService from '../../api/services/coachService';
 import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/Dashboards.css';
 import '../../styles/Coach.css';
 
@@ -223,7 +224,7 @@ const AppointmentsManager = () => {
                   <label className="detail-label">Payment Screenshot</label>
                   <div className="mt-2">
                     <a
-                      href={`http://127.0.0.1:8000${selectedAppointment.payment_screenshot_url}`}
+                      href={getFileUrl(selectedAppointment.payment_screenshot_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"

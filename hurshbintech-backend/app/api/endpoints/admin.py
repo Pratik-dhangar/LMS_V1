@@ -278,19 +278,19 @@ async def create_new_coach(
                     content_type = ref_file.content_type or "application/octet-stream"
                     s3_key = s3_manager.upload_file(
                         file_content,
-                        folder="coach_references",
+                        folder="reference_data",
                         filename=filename,
                         content_type=content_type,
                     )
                     file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
-                    upload_dir = Path("uploads/coach_references")
+                    upload_dir = Path("uploads/reference_data")
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     file_path = upload_dir / filename
                     content = await ref_file.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    file_url = f"/uploads/coach_references/{filename}"
+                    file_url = f"/uploads/reference_data/{filename}"
                 
                 # Save reference data entry in database
                 from app.crud.coach_crud import create_coach_reference_data
@@ -478,19 +478,19 @@ async def update_coach_profile(
                     content_type = ref_file.content_type or "application/octet-stream"
                     s3_key = s3_manager.upload_file(
                         file_content,
-                        folder="coach_references",
+                        folder="reference_data",
                         filename=filename,
                         content_type=content_type,
                     )
                     file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
-                    upload_dir = Path("uploads/coach_references")
+                    upload_dir = Path("uploads/reference_data")
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     file_path = upload_dir / filename
                     content = await ref_file.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    file_url = f"/uploads/coach_references/{filename}"
+                    file_url = f"/uploads/reference_data/{filename}"
                 
                 # Save reference data entry in database
                 from app.crud.coach_crud import create_coach_reference_data

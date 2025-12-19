@@ -298,11 +298,13 @@ async def get_coach_appointments(
                 if session_type_line:
                     apt_dict["session_type"] = session_type_line[0].split('Session Type:')[1].strip()
             
-            # Payment screenshot is in format "Payment Screenshot: uploads/..."
+            # Payment screenshot is in format "Payment Screenshot: s3://bucket/key or /uploads/path"
             if "Payment Screenshot:" in apt.notes:
                 payment_line = [line for line in apt.notes.split('\n') if 'Payment Screenshot:' in line]
                 if payment_line:
-                    apt_dict["payment_screenshot_url"] = "/" + payment_line[0].split('Payment Screenshot:')[1].strip()
+                    payment_url = payment_line[0].split('Payment Screenshot:')[1].strip()
+                    # Return the URL as-is (s3://... or /uploads/...) for frontend to convert
+                    apt_dict["payment_screenshot_url"] = payment_url
         
         result.append(AppointmentResponse(**apt_dict))
     
