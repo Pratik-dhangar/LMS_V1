@@ -14,7 +14,7 @@ const WhiteboardSection = ({
   keyboardPosition,
   setKeyboardPosition,
   isFrozen,
-  learnerSelectedItemId,
+  learnerSelectedItemIds,
   textMessages,
   setTextMessages,
   handleToolClick,
@@ -40,7 +40,7 @@ const WhiteboardSection = ({
         keyboardPosition={keyboardPosition}
         setKeyboardPosition={setKeyboardPosition}
         isFrozen={isFrozen}
-        learnerSelectedItemId={learnerSelectedItemId}
+        learnerSelectedItemIds={learnerSelectedItemIds}
         textMessages={textMessages}
         setTextMessages={setTextMessages}
       />

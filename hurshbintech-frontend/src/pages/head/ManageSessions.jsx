@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Emoji from '../../components/common/Emoji';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
-import headSessionNotesService from '../../api/services/headSessionNotesService';
+// import headSessionNotesService from '../../api/services/headSessionNotesService';
 import { useAuth } from '../../context/AuthContext';
 import SearchBar from '../../components/common/SearchBar';
 import EditSessionModal from './EditSessionModal';
@@ -262,127 +261,136 @@ const ManageSessions = () => {
                     </tr>
                   </thead>
                   <tbody className="data-table-body">
-                    {filteredSessions.map((session) => (
-                      <tr key={session.id} className="data-table-row">
-                        <td className="data-table-td">
-                          <div
-                            className="data-table-primary"
-                            onClick={(e) => handleSessionTitleClick(session, e)}
-                            style={{ cursor: 'pointer', position: 'relative' }}
-                          >
-                            {session.title}
-                          </div>
-                          {session.description && (
-                            <div className="data-table-secondary data-table-truncate">{session.description}</div>
-                          )}
-                        </td>
-                        <td className="data-table-td">
-                          <div className="data-table-text">
-                            {session.trainer_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="data-table-td">
-                          <div className="data-table-text">
-                            {session.learner_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="data-table-td">
-                          <div className="data-table-text">
-                            {session.scheduled_date
-                              ? new Date(session.scheduled_date).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })
-                              : 'N/A'}
-                          </div>
-                        </td>
-                        <td className="data-table-td">
-                          <div className="data-table-text">{session.duration} min</div>
-                        </td>
-                        <td className="data-table-td">
-                          <span className={`status-badge ${getStatusBadge(session.status)}`}>
-                            {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="data-table-td">
-                          <div className="materials-list">
-                            {session.learning_goals && session.learning_goals.length > 0 && (
-                              <span className="material-badge material-badge-green">
-                                {session.learning_goals.length} Goal(s)
-                              </span>
+                    {filteredSessions.map((session) => {
+                      const statusNorm = String(session.status || '').trim().toLowerCase();
+                      const canView = statusNorm === 'active' || statusNorm === 'ended';
+                      const canHeadNotes = statusNorm === 'ended';
+                      return (
+                        <tr key={session.id} className="data-table-row">
+                          <td className="data-table-td">
+                            <div
+                              className="data-table-primary"
+                              onClick={(e) => handleSessionTitleClick(session, e)}
+                              style={{ cursor: 'pointer', position: 'relative' }}
+                            >
+                              {session.title}
+                            </div>
+                            {session.description && (
+                              <div className="data-table-secondary data-table-truncate">{session.description}</div>
                             )}
-                            {session.learning_contents && session.learning_contents.length > 0 && (
-                              <span className="material-badge material-badge-blue">
-                                {session.learning_contents.length} Content(s)
-                              </span>
-                            )}
-                            {(!session.learning_goals || session.learning_goals.length === 0) &&
-                              (!session.learning_contents || session.learning_contents.length === 0) && (
-                                <span className="material-badge material-badge-gray">No materials</span>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="data-table-text">
+                              {session.trainer_name || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="data-table-text">
+                              {session.learner_name || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="data-table-text">
+                              {session.scheduled_date
+                                ? new Date(session.scheduled_date).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                                : 'N/A'}
+                            </div>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="data-table-text">{session.duration} min</div>
+                          </td>
+                          <td className="data-table-td">
+                            <span className={`status-badge ${getStatusBadge(session.status)}`}>
+                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="materials-list">
+                              {session.learning_goals && session.learning_goals.length > 0 && (
+                                <span className="material-badge material-badge-green">
+                                  {session.learning_goals.length} Goal(s)
+                                </span>
                               )}
-                          </div>
-                        </td>
-                        <td className="data-table-td">
-                          <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {session.status === 'scheduled' && (
-                              <>
-                                <button
-                                  onClick={() => handleEditSession(session)}
-                                  className="btn-primary"
-                                  title="Edit this scheduled session"
-                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                >
-                                  ✏️ Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSession(session.session_id, session.title)}
-                                  className="btn-danger"
-                                  title="Delete this scheduled session"
-                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                >
-                                  <Emoji emoji="🗑️" size="sm" /> Delete
-                                </button>
-                              </>
-                            )}
-                            {(session.status === 'active' || session.status === 'ended') && (
+                              {session.learning_contents && session.learning_contents.length > 0 && (
+                                <span className="material-badge material-badge-blue">
+                                  {session.learning_contents.length} Content(s)
+                                </span>
+                              )}
+                              {(!session.learning_goals || session.learning_goals.length === 0) &&
+                                (!session.learning_contents || session.learning_contents.length === 0) && (
+                                  <span className="material-badge material-badge-gray">No materials</span>
+                                )}
+                            </div>
+                          </td>
+                          <td className="data-table-td">
+                            <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {session.status === 'scheduled' && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditSession(session)}
+                                    className="btn-primary"
+                                    title="Edit this scheduled session"
+                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                  >
+                                    ✏️ Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSession(session.session_id, session.title)}
+                                    className="btn-danger"
+                                    title="Delete this scheduled session"
+                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </>
+                              )}
+                              {/* View action: always visible but only active when session is active/ended */}
                               <button
-                                onClick={() => handleViewSession(session)}
-                                className="btn-secondary"
-                                title={`View this ${session.status === 'active' ? 'ongoing' : 'completed'} session`}
+                                onClick={() => canView && handleViewSession(session)}
+                                disabled={!canView}
+                                className="btn btn-secondary"
+                                title={canView ? `View this ${statusNorm === 'active' ? 'ongoing' : 'completed'} session` : 'View available when session is active or completed'}
                                 style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
                                 👁️ View
                               </button>
-                            )}
-                            {/* Add Head Notes button for completed sessions for Head/Manager/Trainer roles */}
-                            {session.status === 'ended' && (user?.role === 'head' || user?.role === 'manager' || user?.role === 'trainer') && (
-                              <button
-                                onClick={() => setEditingHeadNotes(session)}
-                                className="btn-primary"
-                                title="Add head notes for this completed session"
-                                style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                              >
-                                📝 Head Notes
-                              </button>
-                            )}
-                            {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
-                              <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
-                                Can't edit/delete
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {/* Head Notes action should display for all accessible rows but only be active once session ended */}
+                              {(user?.role === 'head' || user?.role === 'manager' || user?.role === 'trainer') && (
+                                <button
+                                  onClick={() => canHeadNotes && setEditingHeadNotes(session)}
+                                  disabled={!canHeadNotes}
+                                  className="btn btn-primary"
+                                  title={canHeadNotes ? 'Add head notes for this completed session' : 'Head notes available after session completion'}
+                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                >
+                                  📝 Head Notes
+                                </button>
+                              )}
+                              {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
+                                <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                                  Can't edit/delete
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+
             )}
           </div>
+
         </div>
+
 
       </main>
       <Footer />

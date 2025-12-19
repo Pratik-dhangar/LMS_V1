@@ -156,7 +156,7 @@ const RecordingControls = ({ recordingService, sessionStatus, sessionId }) => {
           title={sessionStatus !== 'connected' ? 'Connect session to record' : 'Start recording'}
         >
           <span className="text-lg">⏺️</span>
-          <span>Record</span>
+          {/* <span>Record</span> */}
         </button>
 
         <button
@@ -167,7 +167,7 @@ const RecordingControls = ({ recordingService, sessionStatus, sessionId }) => {
           title="Stop recording"
         >
           <span className="text-lg">⏹️</span>
-          <span>Stop</span>
+          {/* <span>Stop</span> */}
         </button>
       </div>
 

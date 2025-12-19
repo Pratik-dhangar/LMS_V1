@@ -138,7 +138,8 @@ const PDFOverlay = React.memo(({
     onDoubleClick,
     onTouchStart,
     onTouchMove,
-    onTouchEnd
+    onTouchEnd,
+    selectionStyle = {}
 }) => (
     <div
         key={`pdf-${item.id}`}
@@ -149,14 +150,13 @@ const PDFOverlay = React.memo(({
             width: `${item.width}px`,
             height: `${item.height}px`,
             zIndex: 20,
-            border: isSelectedByTrainer || isSelectedByLearner || isSelectedByRemoteLearner
-                ? `3px solid ${isSelectedByRemoteLearner ? '#4caf50' : isSelectedByTrainer ? '#007bff' : '#4caf50'}`
-                : 'none',
+            border: 'none',
             borderRadius: '4px',
             overflow: 'hidden',
             cursor: 'pointer',
             backgroundColor: '#f5f5f5',
-            position: 'absolute'
+            position: 'absolute',
+            ...selectionStyle
         }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
@@ -200,7 +200,8 @@ PDFOverlay.propTypes = {
     onDoubleClick: PropTypes.func,
     onTouchStart: PropTypes.func,
     onTouchMove: PropTypes.func,
-    onTouchEnd: PropTypes.func
+    onTouchEnd: PropTypes.func,
+    selectionStyle: PropTypes.object
 };
 
 // Memoized Image Overlay Component - for images that can be dragged to sidebar
@@ -217,7 +218,8 @@ const ImageOverlay = React.memo(({
     onDragStart,
     onTouchStart,
     onTouchMove,
-    onTouchEnd
+    onTouchEnd,
+    selectionStyle = {}
 }) => (
     <div
         key={`image-${item.id}`}
@@ -233,17 +235,16 @@ const ImageOverlay = React.memo(({
             width: `${item.width}px`,
             height: `${item.height}px`,
             zIndex: 20,
-            border: isSelectedByTrainer || isSelectedByLearner || isSelectedByRemoteLearner
-                ? `3px solid ${isSelectedByRemoteLearner ? '#4caf50' : isSelectedByTrainer ? '#007bff' : '#4caf50'}`
-                : '2px solid #ccc',
+            border: '2px solid #ccc',
             borderRadius: '4px',
             overflow: 'hidden',
             cursor: isSelectedByTrainer || isSelectedByLearner ? 'grab' : 'pointer',
             backgroundColor: '#f5f5f5',
             position: 'absolute',
             userSelect: 'none',
-            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
-            boxShadow: isSelectedByTrainer || isSelectedByLearner ? '0 8px 16px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'
+            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            ...selectionStyle
         }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
@@ -299,7 +300,8 @@ ImageOverlay.propTypes = {
     onDragStart: PropTypes.func,
     onTouchStart: PropTypes.func,
     onTouchMove: PropTypes.func,
-    onTouchEnd: PropTypes.func
+    onTouchEnd: PropTypes.func,
+    selectionStyle: PropTypes.object
 };
 
 // Helper function to lighten a hex color
@@ -324,7 +326,7 @@ const Whiteboard = ({
     canvasItems = [],
     setCanvasItems,
     toolAccess = { select: false, drag: false },
-    learnerSelectedItemId = null,
+    learnerSelectedItemIds = [],
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
@@ -380,6 +382,10 @@ const Whiteboard = ({
         return item.src.toLowerCase().includes('.pdf') || item.type === 'pdf';
     }, []);
 
+    const hasActiveFloatingAnimation = useCallback((type) => {
+        return floatingAnimations.some(animation => animation.type === type && !animation.popped);
+    }, [floatingAnimations]);
+
     // Handle opening media (video/PDF)
     const handleMediaOpen = useCallback((item) => {
         if (isVideoItem(item) || isPdfItem(item)) {
@@ -404,11 +410,37 @@ const Whiteboard = ({
     const [isDraggingItem, setIsDraggingItem] = useState(false);
     const [isResizingItem, setIsResizingItem] = useState(false);
     const [resizingVideo, setResizingVideo] = useState(null); // For video/item resizing
-    const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedItems, setSelectedItems] = useState([]); // Array for multiple selection
     const [editingBucketId, setEditingBucketId] = useState(null);
     const [editingBucketLabel, setEditingBucketLabel] = useState('');
     const [animatingItemId, setAnimatingItemId] = useState(null); // For drop animation
     const [isDragOverCanvas, setIsDragOverCanvas] = useState(false); // For visual feedback during drag over
+
+    const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner) => {
+        if (!isSelectedByLearner && !isSelectedByRemoteLearner) {
+            return {};
+        }
+
+        let selectionColor = null;
+        let gradientAccent = null;
+        if (isSelectedByRemoteLearner) {
+            selectionColor = 'var(--color-baby-rose, #ff86c1)';
+            gradientAccent = 'rgba(255, 164, 199, 0.65)';
+        } else if (isSelectedByLearner) {
+            selectionColor = 'var(--color-baby-blue, #7ae7ff)';
+            gradientAccent = 'rgba(122, 231, 255, 0.65)';
+        }
+
+        if (!selectionColor) return {};
+
+        return {
+            border: '3px solid transparent',
+            borderImage: `linear-gradient(135deg, ${selectionColor} 0%, ${gradientAccent || selectionColor} 60%, #ffffff 100%)`,
+            borderImageSlice: 1,
+            boxShadow: `0 0 25px ${selectionColor}, 0 15px 30px ${gradientAccent || selectionColor}`,
+            animation: 'selectionPulse 1.5s ease-in-out infinite'
+        };
+    };
 
     // Inline video state for 50-50 split mode
     const [inlineVideo, setInlineVideo] = useState(null); // { id, src, title }
@@ -931,7 +963,7 @@ const Whiteboard = ({
         }, 16);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [learnerSelectedItemId, selectedItem]);
+    }, [learnerSelectedItemIds, selectedItems]);
 
     const redrawCanvas = useCallback((items = canvasItems) => {
         const canvas = canvasRef.current;
@@ -958,9 +990,9 @@ const Whiteboard = ({
                 const cachedImg = imageCacheRef.current.get(item.src);
                 if (cachedImg && (isVideoItem(item) || isPdfItem(item))) {
                     // Determine if item is selected by trainer or learner
-                    const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === item.id;
-                    const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === item.id;
-                    const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemId === item.id;
+                    const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
+                    const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
+                    const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
 
                     // Set border color and width based on who selected it
                     if (isSelectedByRemoteLearner) {
@@ -1018,7 +1050,7 @@ const Whiteboard = ({
                 }
             }
         });
-    }, [canvasItems, isTrainer, selectedItem, learnerSelectedItemId, color, isVideoItem, isPdfItem, preloadImages]);
+    }, [canvasItems, isTrainer, selectedItems, learnerSelectedItemIds, color, isVideoItem, isPdfItem, preloadImages]);
 
     const drawOnCanvas = (data) => {
         const canvas = canvasRef.current;
@@ -1123,8 +1155,8 @@ const Whiteboard = ({
         }));
 
         // Deselect item if it was selected
-        if (selectedItem && selectedItem.id === itemId) {
-            setSelectedItem(null);
+        if (selectedItems.some(si => si.id === itemId)) {
+            setSelectedItems(prev => prev.filter(si => si.id !== itemId));
         }
 
         // Send update to other participants
@@ -1208,7 +1240,7 @@ const Whiteboard = ({
             if (bucket) {
                 // Check if clicking on resize handle
                 if (isBucketResizeHandle(x, y, bucket)) {
-                    setSelectedItem({ ...bucket, type: 'bucket' });
+                    setSelectedItems([{ ...bucket, type: 'bucket' }]);
                     setIsResizingItem(true);
                     prevPosRef.current = { x, y };
                     e.preventDefault();
@@ -1216,7 +1248,7 @@ const Whiteboard = ({
                 }
 
                 // Otherwise, drag the bucket
-                setSelectedItem({ ...bucket, type: 'bucket' });
+                setSelectedItems([{ ...bucket, type: 'bucket' }]);
                 setIsDraggingItem(true);
                 prevPosRef.current = { x, y };
                 e.preventDefault();
@@ -1240,20 +1272,32 @@ const Whiteboard = ({
                     return; // No permission - do nothing
                 }
 
-                // Select the item (required for both select and drag)
-                setSelectedItem(itemWithOriginalSize);
+                // Handle multiple selection - toggle items on/off
+                const isAlreadySelected = selectedItems.some(si => si.id === item.id);
+
+                if (isAlreadySelected) {
+                    // Unselect this item
+                    setSelectedItems(prev => prev.filter(si => si.id !== item.id));
+                } else {
+                    // Add to selection
+                    setSelectedItems(prev => [...prev, itemWithOriginalSize]);
+                }
 
                 // Send selection to trainer via websocket
                 if (whiteboardService) {
+                    const newSelectedIds = isAlreadySelected
+                        ? selectedItems.filter(si => si.id !== item.id).map(si => si.id)
+                        : [...selectedItems.map(si => si.id), item.id];
+
                     whiteboardService.send('item_selected', {
-                        itemId: item.id,
+                        itemIds: newSelectedIds,
                         selectedBy: 'learner',
                         timestamp: Date.now()
                     });
                 }
 
-                // Check if learner can also drag
-                if (toolAccess.drag) {
+                // Check if learner can also drag (only when selecting, not unselecting)
+                if (toolAccess.drag && !isAlreadySelected) {
                     if (isResizeHandle(x, y, item)) {
                         setIsResizingItem(true);
                     } else {
@@ -1265,7 +1309,7 @@ const Whiteboard = ({
             }
 
             // Trainer has full access
-            setSelectedItem(itemWithOriginalSize);
+            setSelectedItems([itemWithOriginalSize]);
             if (isResizeHandle(x, y, item)) {
                 setIsResizingItem(true);
             } else {
@@ -1344,9 +1388,10 @@ const Whiteboard = ({
         }
 
         // Handle dragging buckets (trainer only)
-        if (isDraggingItem && selectedItem && selectedItem.type === 'bucket') {
+        if (isDraggingItem && selectedItems.length > 0 && selectedItems[0].type === 'bucket') {
             if (!isTrainer) return;
 
+            const selectedItem = selectedItems[0];
             const dx = currX - prevPosRef.current.x;
             const dy = currY - prevPosRef.current.y;
             const updatedBucket = {
@@ -1371,7 +1416,7 @@ const Whiteboard = ({
             setBuckets(prev => prev.map(bucket =>
                 bucket.id === selectedItem.id ? updatedBucket : bucket
             ));
-            setSelectedItem(updatedBucket);
+            setSelectedItems([updatedBucket]);
 
             // Send update to other participants
             whiteboardService?.send('bucket_update', updatedBucket);
@@ -1392,12 +1437,13 @@ const Whiteboard = ({
         }
 
         // Handle dragging items (for both trainer and learner with permission)
-        if (isDraggingItem && selectedItem && selectedItem.type !== 'bucket') {
+        if (isDraggingItem && selectedItems.length > 0 && selectedItems[0].type !== 'bucket') {
             // Learners need drag permission
             if (!isTrainer && !toolAccess.drag) {
                 return;
             }
 
+            const selectedItem = selectedItems[0];
             const dx = currX - prevPosRef.current.x;
             const dy = currY - prevPosRef.current.y;
             const updatedItem = {
@@ -1477,7 +1523,7 @@ const Whiteboard = ({
                 item.id === selectedItem.id ? updatedItem : item
             );
             setCanvasItems(newItems);
-            setSelectedItem(updatedItem);
+            setSelectedItems([updatedItem]);
 
             // Send update to other participants
             whiteboardService?.sendItemUpdate({
@@ -1493,7 +1539,8 @@ const Whiteboard = ({
         }
 
         // Handle resizing items (for both trainer and learner with permission)
-        if (isResizingItem && selectedItem) {
+        if (isResizingItem && selectedItems.length > 0) {
+            const selectedItem = selectedItems[0];
             // Handle bucket resizing (trainer only)
             if (selectedItem.type === 'bucket') {
                 if (!isTrainer) return;
@@ -1509,7 +1556,7 @@ const Whiteboard = ({
                 setBuckets(prev => prev.map(bucket =>
                     bucket.id === selectedItem.id ? updatedBucket : bucket
                 ));
-                setSelectedItem(updatedBucket);
+                setSelectedItems([updatedBucket]);
 
                 // Send update to other participants
                 whiteboardService?.send('bucket_update', updatedBucket);
@@ -1534,7 +1581,7 @@ const Whiteboard = ({
                 item.id === selectedItem.id ? updatedItem : item
             );
             setCanvasItems(newItems);
-            setSelectedItem(updatedItem);
+            setSelectedItems([updatedItem]);
             // Don't call redrawCanvas here - state update triggers redraw via useEffect
             whiteboardService?.sendItemUpdate({
                 id: selectedItem.id,
@@ -1958,9 +2005,10 @@ const Whiteboard = ({
 
                         {/* Render PDF Items as Overlays */}
                         {canvasItems.filter(item => isPdfItem(item)).map(item => {
-                            const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === item.id;
-                            const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === item.id;
-                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemId === item.id;
+                            const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
+                            const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
+                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
+                            const selectionStyle = getSelectionStyles(isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner);
 
                             return (
                                 <div key={`pdf-wrapper-${item.id}`}>
@@ -1969,6 +2017,7 @@ const Whiteboard = ({
                                         isSelectedByTrainer={isSelectedByTrainer}
                                         isSelectedByLearner={isSelectedByLearner}
                                         isSelectedByRemoteLearner={isSelectedByRemoteLearner}
+                                        selectionStyle={selectionStyle}
                                         onMouseDown={(e) => {
                                             e.stopPropagation();
                                             startDrawing(e);
@@ -2016,7 +2065,7 @@ const Whiteboard = ({
                                             }}
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
-                                                setSelectedItem(item);
+                                                setSelectedItems([item]);
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX, y: e.clientY };
                                             }}
@@ -2049,10 +2098,11 @@ const Whiteboard = ({
 
                         {/* Render Image Items as Overlays */}
                         {canvasItems.filter(item => item.src && !isVideoItem(item) && !isPdfItem(item)).map(item => {
-                            const isSelectedByTrainer = isTrainer && selectedItem && selectedItem.id === item.id;
-                            const isSelectedByLearner = !isTrainer && selectedItem && selectedItem.id === item.id;
-                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemId === item.id;
-                            console.log('[Whiteboard] Rendering image item:', { id: item.id, src: item.src, isVideo: isVideoItem(item), isPdf: isPdfItem(item) });
+                            const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
+                            const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
+                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
+                            const selectionStyle = getSelectionStyles(isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner);
+                            // console.log('[Whiteboard] Rendering image item:', { id: item.id, src: item.src, isVideo: isVideoItem(item), isPdf: isPdfItem(item) });
 
                             return (
                                 <div key={`image-wrapper-${item.id}`}>
@@ -2061,6 +2111,7 @@ const Whiteboard = ({
                                         isSelectedByTrainer={isSelectedByTrainer}
                                         isSelectedByLearner={isSelectedByLearner}
                                         isSelectedByRemoteLearner={isSelectedByRemoteLearner}
+                                        selectionStyle={selectionStyle}
                                         isAnimating={animatingItemId === item.id}
                                         onMouseDown={(e) => {
                                             if (e.button === 0) {
@@ -2138,7 +2189,7 @@ const Whiteboard = ({
                                             }}
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
-                                                setSelectedItem(item);
+                                                setSelectedItems([item]);
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX, y: e.clientY };
                                             }}
@@ -2405,7 +2456,7 @@ const Whiteboard = ({
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                setSelectedItem({ ...bucket, type: 'bucket' });
+                                                setSelectedItems([{ ...bucket, type: 'bucket' }]);
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX - canvasRef.current.getBoundingClientRect().left, y: e.clientY - canvasRef.current.getBoundingClientRect().top };
                                             }}
@@ -2441,7 +2492,7 @@ const Whiteboard = ({
                         ))}
 
                         {/* BUBBLES ANIMATION */}
-                        {canvasItems.filter(item => item.type === 'animation' && item.animationType === 'bubbles').map((animation, idx) => (
+                        {!hasActiveFloatingAnimation('bubble') && canvasItems.filter(item => item.type === 'animation' && item.animationType === 'bubbles').map((animation, idx) => (
                             <div key={animation.id} style={{ position: 'absolute', width: '100%', height: '100%' }}>
                                 {[1, 2, 3, 4, 5].map(i => (
                                     <div key={`bubble-${idx}-${i}`} className="bubble" style={{ bottom: '0%' }} />
@@ -2450,7 +2501,7 @@ const Whiteboard = ({
                         ))}
 
                         {/* SMILEYS ANIMATION */}
-                        {canvasItems.filter(item => item.type === 'animation' && item.animationType === 'smileys').map((animation) => (
+                        {!hasActiveFloatingAnimation('smiley') && canvasItems.filter(item => item.type === 'animation' && item.animationType === 'smileys').map((animation) => (
                             <div key={animation.id} style={{ position: 'absolute', width: '100%', height: '100%', bottom: '0' }}>
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={`smiley-${animation.id}-${i}`} className="smiley" style={{ bottom: '0%' }}>
@@ -2461,7 +2512,7 @@ const Whiteboard = ({
                         ))}
 
                         {/* BALLOONS ANIMATION */}
-                        {canvasItems.filter(item => item.type === 'animation' && item.animationType === 'balloons').map((animation) => (
+                        {!hasActiveFloatingAnimation('balloon') && canvasItems.filter(item => item.type === 'animation' && item.animationType === 'balloons').map((animation) => (
                             <div key={animation.id} style={{ position: 'absolute', width: '100%', height: '100%', bottom: '0' }}>
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={`balloon-${animation.id}-${i}`} className="balloon" style={{ bottom: '0%' }} />
@@ -2470,7 +2521,7 @@ const Whiteboard = ({
                         ))}
 
                         {/* STARS ANIMATION */}
-                        {canvasItems.filter(item => item.type === 'animation' && item.animationType === 'stars').map((animation) => (
+                        {!hasActiveFloatingAnimation('star') && canvasItems.filter(item => item.type === 'animation' && item.animationType === 'stars').map((animation) => (
                             <div key={animation.id} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                                     <div key={`star-${animation.id}-${i}`} className="star">
@@ -2563,7 +2614,15 @@ const Whiteboard = ({
                             >
                                 {!animation.popped ? (
                                     <span className="floating-emoji">
-                                        <Emoji emoji={animation.emoji} size="clamp(40px, 3vw, 80px)" />
+                                        {animation.asset?.type === 'svg' && animation.asset?.src ? (
+                                            <img
+                                                src={animation.asset.src}
+                                                alt={animation.asset.alt || animation.type}
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <Emoji emoji={animation.emoji || '✨'} size="clamp(40px, 3vw, 80px)" />
+                                        )}
                                     </span>
                                 ) : null}
                             </div>
