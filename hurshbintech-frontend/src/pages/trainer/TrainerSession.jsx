@@ -36,6 +36,29 @@ import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import '../../styles/Pages.css';
 
+const REACTION_SVG_ASSETS = {
+  smiley: {
+    type: 'svg',
+    src: '/reactions/realistic-pastel-smile.svg',
+    alt: 'Realistic Pastel Smile'
+  },
+  bubble: {
+    type: 'svg',
+    src: '/reactions/realistic-bubble.svg',
+    alt: 'Realistic Soap Bubble'
+  },
+  balloon: {
+    type: 'svg',
+    src: '/reactions/realistic-balloon.svg',
+    alt: 'Realistic Balloon'
+  },
+  star: {
+    type: 'svg',
+    src: '/reactions/realistic-oil-pastel-star.svg',
+    alt: 'Realistic Oil Pastel Star'
+  }
+};
+
 
 // -------------------------------------------------------------
 // 🔹 Purpose: TrainerSession component
@@ -133,6 +156,7 @@ const TrainerSession = () => {
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
+  const activeFloatingAnimationTypesRef = useRef(new Set());
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Load session notes from backend on mount
@@ -279,7 +303,7 @@ const TrainerSession = () => {
     }
   }, [whiteboardService, stopwatch.elapsedTime, stopwatch.isRunning]);
 
-  const [selectedItemId, setSelectedItemId] = useState(null); // Track which item is selected by learner
+  const [selectedItemIds, setSelectedItemIds] = useState([]); // Track which items are selected by learner (multiple)
 
   // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
@@ -498,9 +522,14 @@ const TrainerSession = () => {
 
     // Set up callback for item selection by learner
     whiteboardService.onItemSelected = (data) => {
-      console.log('[TrainerSession] Learner selected item:', data);
+      // console.log('[TrainerSession] Learner selected items:', data);
       if (data.selectedBy === 'learner') {
-        setSelectedItemId(data.itemId);
+        // Handle both old format (itemId) and new format (itemIds array)
+        if (data.itemIds) {
+          setSelectedItemIds(data.itemIds);
+        } else if (data.itemId) {
+          setSelectedItemIds([data.itemId]);
+        }
         // Visual highlight will show on canvas - no need for toast
       }
     };
@@ -1224,23 +1253,45 @@ const TrainerSession = () => {
   // 🔹 Purpose: Spawn floating animations (bubbles, smileys, balloons, stars)
   // 🔸 How it works: creates 10 floating items that rise from bottom and can be popped
   // -----------------------------------------------------------
-  const spawnFloatingAnimation = (type, emoji) => {
-    const count = 10; // 10 items
-    const newAnimations = [];
-    const baseId = Date.now();
+  const generateSpacedPositions = (count, minPercent = 5, maxPercent = 95) => {
+    if (count <= 1) return [50];
+    const range = maxPercent - minPercent;
+    const step = range / (count - 1);
+    return Array.from({ length: count }, (_, index) => {
+      const base = minPercent + step * index;
+      const maxJitter = step * 0.35;
+      const jitter = (Math.random() - 0.5) * maxJitter;
+      return Math.min(maxPercent, Math.max(minPercent, base + jitter));
+    });
+  };
 
-    for (let i = 0; i < count; i++) {
-      const animation = {
-        id: `${baseId}-${type}-${i}-${Math.random()}`,
-        type: type,
-        emoji: emoji,
-        x: Math.random() * 90 + 5, // 5-95% from left
-        startDelay: Math.random() * 1000, // 0-1s staggered start
-        duration: 8000 + Math.random() * 4000, // 8-12s to float up
-        popped: false
-      };
-      newAnimations.push(animation);
+  const spawnFloatingAnimation = (type, asset) => {
+    if (activeFloatingAnimationTypesRef.current.has(type)) {
+      console.log(`[TrainerSession] ${type} animation still running, ignoring duplicate tap`);
+      return;
     }
+
+    activeFloatingAnimationTypesRef.current.add(type);
+
+    const count = 8; // 8 items
+    const baseId = Date.now();
+    const positions = generateSpacedPositions(count);
+    const newAnimations = positions.map((position, i) => ({
+      id: `${baseId}-${type}-${i}-${Math.random()}`,
+      type,
+      asset: asset ? { ...asset } : null,
+      x: position,
+      startDelay: Math.random() * 1000, // 0-1s staggered start
+      duration: 8000 + Math.random() * 4000, // 8-12s to float up
+      popped: false
+    }));
+
+    const cleanupAnimations = () => {
+      setFloatingAnimations(prev =>
+        prev.filter(a => !newAnimations.find(na => na.id === a.id))
+      );
+      activeFloatingAnimationTypesRef.current.delete(type);
+    };
 
     // Add to local state
     setFloatingAnimations(prev => [...prev, ...newAnimations]);
@@ -1254,11 +1305,7 @@ const TrainerSession = () => {
     }
 
     // Auto-remove after animation completes (12s max duration + 1s buffer)
-    setTimeout(() => {
-      setFloatingAnimations(prev =>
-        prev.filter(a => !newAnimations.find(na => na.id === a.id))
-      );
-    }, 13000);
+    setTimeout(cleanupAnimations, 13000);
   };
 
   // -----------------------------------------------------------
@@ -1539,32 +1586,31 @@ const TrainerSession = () => {
             timestamp: Date.now()
           });
         }
-        // toast removed: Relax feedback
         setTimeout(() => setFeedbackMessage(''), 3000);
         return;
       }
 
       case '🫧 Bubbles': {
         console.log('[TrainerSession] Spawning bubble animation');
-        spawnFloatingAnimation('bubble', '🫧');
+        spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
         return;
       }
 
       case '😊 Smileys': {
         console.log('[TrainerSession] Spawning smileys animation');
-        spawnFloatingAnimation('smiley', '😊');
+        spawnFloatingAnimation('smiley', REACTION_SVG_ASSETS.smiley);
         return;
       }
 
       case '🎈 Balloons': {
         console.log('[TrainerSession] Spawning balloons animation');
-        spawnFloatingAnimation('balloon', '🎈');
+        spawnFloatingAnimation('balloon', REACTION_SVG_ASSETS.balloon);
         return;
       }
 
       case '⭐ Stars': {
         console.log('[TrainerSession] Spawning stars animation');
-        spawnFloatingAnimation('star', '⭐');
+        spawnFloatingAnimation('star', REACTION_SVG_ASSETS.star);
         return;
       }
 
@@ -1731,7 +1777,7 @@ const TrainerSession = () => {
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemId={selectedItemId}
+                learnerSelectedItemIds={selectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
@@ -1766,7 +1812,7 @@ const TrainerSession = () => {
                 title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
               >
                 <span>{micEnabled ? '🎤' : '🔇'}</span>
-                <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span>
+                {/* <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span> */}
               </button>
               <button
                 onClick={handleToggleCamera}
@@ -1775,7 +1821,7 @@ const TrainerSession = () => {
                 title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
               >
                 <span>{cameraEnabled ? '📹' : '📷'}</span>
-                <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span>
+                {/* <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span> */}
               </button>
               {recordingService && sessionInfo && (
                 <div className="flex items-center ml-3">
@@ -1783,22 +1829,6 @@ const TrainerSession = () => {
                     recordingService={recordingService}
                     sessionStatus={connectionStatus}
                     sessionId={sessionInfo.id}
-                  />
-                </div>
-              )}
-              {showStopwatch && (
-                <div className="ml-3" style={{ maxWidth: '280px' }}>
-                  <StopwatchDisplay
-                    formattedTime={stopwatch.formattedTime}
-                    isRunning={stopwatch.isRunning}
-                    onStart={stopwatch.start}
-                    onPause={stopwatch.pause}
-                    onResume={stopwatch.resume}
-                    onReset={stopwatch.reset}
-                    onSetTime={stopwatch.setTime}
-                    showControls={true}
-                    size="xs"
-                    variant="standard"
                   />
                 </div>
               )}
@@ -2037,7 +2067,7 @@ const TrainerSession = () => {
               </div>
             </div>{/* end .all-tools-group */}
 
-            {/* Create Exercises section removed */}
+            {/* Session Notes */}
             <div className="session-notes-section border-2 border-gray-300 my-2 sm:my-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
               <div className="flex justify-between items-center mb-2">
                 <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>📝 Session Notes</div>
@@ -2109,36 +2139,10 @@ const TrainerSession = () => {
 
         {/* Right Column - 30% on mobile/tablet (Learning Content + Learning Program) */}
         <div className="session-right-column">
-          {/* Video Conference - 25% height - Hidden on tablet/mobile */}
-          <div className="video-section-container hidden-mobile-tablet">
-            <div className="section-header">
-              <span>📹 Video Conferencing</span>
-            </div>
-            <VideoSection
-              remoteStream={remoteStream}
-              remoteVideoRef={remoteVideoRef}
-              micEnabled={micEnabled}
-              cameraEnabled={cameraEnabled}
-              handleToggleMic={handleToggleMic}
-              handleToggleCamera={handleToggleCamera}
-              sessionInfo={sessionInfo}
-              connectionStatus={connectionStatus}
-            />
-            {/* Recording Controls */}
-            {recordingService && sessionInfo && (
-              <div className="mt-2">
-                <RecordingControls
-                  recordingService={recordingService}
-                  sessionStatus={connectionStatus}
-                  sessionId={sessionInfo.id}
-                />
-              </div>
-            )}
-          </div>
           {/* Learning Content - 25% height */}
           <div className=" learning-content-container ">
-            <span className='bg-green-600 text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
             <div className="section-content">
+              <span className='bg-green-600 text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
               <LearningContentSidebar
                 learningContentSearch={learningContentSearch}
                 handleLearningContentSearch={handleLearningContentSearch}
@@ -2152,6 +2156,24 @@ const TrainerSession = () => {
               />
             </div>
           </div>
+
+          {/* Stopwatch */}
+          {showStopwatch && (
+            <div className="ml-3" style={{ maxWidth: '280px' }}>
+              <StopwatchDisplay
+                formattedTime={stopwatch.formattedTime}
+                isRunning={stopwatch.isRunning}
+                onStart={stopwatch.start}
+                onPause={stopwatch.pause}
+                onResume={stopwatch.resume}
+                onReset={stopwatch.reset}
+                onSetTime={stopwatch.setTime}
+                showControls={true}
+                size="xs"
+                variant="standard"
+              />
+            </div>
+          )}
 
           {/* Learning Program - 25% height - Tablet/Mobile */}
           <div className="learning-program-container">
