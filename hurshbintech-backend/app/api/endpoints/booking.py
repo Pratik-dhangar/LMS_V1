@@ -221,7 +221,22 @@ async def book_appointment_with_coach(
         await db.commit()
         await db.refresh(appointment)
     
-    return AppointmentResponse.from_orm(appointment)
+    # Manually serialize date fields for Pydantic v2 compatibility
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user_name,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_screenshot_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.get("/my-appointments", response_model=List[AppointmentResponse])
@@ -233,4 +248,21 @@ async def get_my_appointments(
     Get all appointments booked by the current user.
     """
     appointments = await coach_crud.get_appointments_by_user(db, current_user.id)
-    return [AppointmentResponse.from_orm(apt) for apt in appointments]
+    return [
+        AppointmentResponse(
+            id=apt.id,
+            coach_id=apt.coach_id,
+            user_id=apt.user_id,
+            user_role=apt.user_role,
+            scheduled_date=apt.scheduled_date.isoformat() if isinstance(apt.scheduled_date, date) else str(apt.scheduled_date),
+            scheduled_time=apt.scheduled_time,
+            status=apt.status,
+            notes=apt.notes,
+            user_name=apt.user_name,
+            session_type=apt.session_type,
+            payment_screenshot_url=apt.payment_screenshot_url,
+            created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
+            updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
+        )
+        for apt in appointments
+    ]

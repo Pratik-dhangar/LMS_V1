@@ -4,6 +4,7 @@ Accessible by coaches and their heads
 """
 
 import os
+from datetime import date
 from typing import Optional
 from pathlib import Path
 
@@ -247,7 +248,21 @@ async def create_appointment(
     appointment = await coach_crud.create_appointment(
         db, appointment_data, current_user.id, user_role
     )
-    return AppointmentResponse.from_orm(appointment)
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user_name,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_screenshot_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.get("/appointments", response_model=list[AppointmentResponse])
@@ -315,7 +330,21 @@ async def get_appointment_details(
             detail="Not authorized to view this appointment",
         )
 
-    return AppointmentResponse.from_orm(appointment)
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user_name,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_screenshot_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.patch("/appointments/{appointment_id}", response_model=AppointmentResponse)
@@ -341,7 +370,21 @@ async def update_appointment(
         )
 
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
-    return AppointmentResponse.from_orm(updated)
+    return AppointmentResponse(
+        id=updated.id,
+        coach_id=updated.coach_id,
+        user_id=updated.user_id,
+        user_role=updated.user_role,
+        scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+        scheduled_time=updated.scheduled_time,
+        status=updated.status,
+        notes=updated.notes,
+        user_name=updated.user_name,
+        session_type=updated.session_type,
+        payment_screenshot_url=updated.payment_screenshot_url,
+        created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
+        updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
+    )
 
 
 @router.delete("/appointments/{appointment_id}")
