@@ -12,7 +12,11 @@ const AppointmentsManager = () => {
   const [error, setError] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [refundReceipt, setRefundReceipt] = useState(null);
+  const [refundPreview, setRefundPreview] = useState(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -40,6 +44,95 @@ const AppointmentsManager = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedAppointment(null);
+  };
+
+  const handleOpenRejectModal = () => {
+    setShowRejectModal(true);
+  };
+
+  const handleCloseRejectModal = () => {
+    setShowRejectModal(false);
+    setRejectReason('');
+    setRefundReceipt(null);
+    setRefundPreview(null);
+  };
+
+  const handleRefundReceiptChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file');
+        return;
+      }
+
+      setRefundReceipt(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRefundPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeRefundReceipt = () => {
+    setRefundReceipt(null);
+    setRefundPreview(null);
+  };
+
+  const handleRejectAppointment = async () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please provide a rejection reason');
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      // Create FormData for file upload
+      const submitData = new FormData();
+      submitData.append('rejection_reason', rejectReason);
+      
+      if (refundReceipt) {
+        submitData.append('refund_receipt', refundReceipt);
+      }
+
+      await coachService.rejectAppointment(selectedAppointment.id, submitData);
+
+      // Update local state
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === selectedAppointment.id
+            ? { ...apt, status: 'REJECTED', rejection_reason: rejectReason, refund_receipt_url: refundPreview }
+            : apt
+        )
+      );
+
+      // Update selected appointment
+      if (selectedAppointment?.id) {
+        setSelectedAppointment(prev => ({
+          ...prev,
+          status: 'REJECTED',
+          rejection_reason: rejectReason,
+          refund_receipt_url: refundPreview
+        }));
+      }
+
+      toast.success('Appointment rejected successfully!');
+      handleCloseRejectModal();
+      closeModal();
+    } catch (err) {
+      console.error('Error rejecting appointment:', err);
+      toast.error(err.response?.data?.detail || 'Failed to reject appointment');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
@@ -260,7 +353,7 @@ const AppointmentsManager = () => {
               {(selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending') && (
                 <>
                   <button 
-                    onClick={() => handleStatusUpdate(selectedAppointment.id, 'REJECTED')}
+                    onClick={handleOpenRejectModal}
                     className="btn-secondary flex items-center gap-2"
                     disabled={updating}
                   >
@@ -282,6 +375,107 @@ const AppointmentsManager = () => {
                   Close
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Modal */}
+      {showRejectModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={handleCloseRejectModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h3 className="modal-title">Reject Appointment</h3>
+              <button onClick={handleCloseRejectModal} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body space-y-4">
+              {/* Appointment Info */}
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="text-sm text-gray-600 mb-1">Appointment for:</p>
+                <p className="font-semibold">{selectedAppointment.user_name || 'Unknown User'}</p>
+                <p className="text-sm text-gray-600">
+                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric'
+                  })} at {selectedAppointment.scheduled_time}
+                </p>
+              </div>
+
+              {/* Rejection Reason */}
+              <div className="form-field">
+                <label className="field-label">Rejection Reason *</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explain why you're rejecting this appointment..."
+                  className="field-input"
+                  rows="4"
+                  style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                  required
+                />
+                {rejectReason && (
+                  <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                    {rejectReason.length} characters
+                  </p>
+                )}
+              </div>
+
+              {/* Refund Receipt Upload */}
+              <div className="form-field">
+                <label className="field-label">Refund Receipt (Optional)</label>
+                
+                {!refundPreview ? (
+                  <label className="file-upload-area">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleRefundReceiptChange}
+                      className="file-input-hidden"
+                    />
+                    <FileText className="w-6 h-6" style={{ color: '#9ca3af' }} />
+                    <p className="upload-text" style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                      Click to upload refund receipt
+                    </p>
+                    <p className="upload-hint">PNG, JPG up to 5MB</p>
+                  </label>
+                ) : (
+                  <div className="image-preview-container">
+                    <img src={refundPreview} alt="Refund receipt" className="image-preview" />
+                    <button
+                      type="button"
+                      onClick={removeRefundReceipt}
+                      className="remove-image-btn"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer">
+              <button
+                onClick={handleCloseRejectModal}
+                className="btn-secondary"
+                disabled={updating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectAppointment}
+                className="btn-secondary flex items-center gap-2"
+                disabled={updating || !rejectReason.trim()}
+              >
+                <XCircle className="w-4 h-4" />
+                {updating ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>

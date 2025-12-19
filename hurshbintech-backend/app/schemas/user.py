@@ -776,6 +776,8 @@ class AppointmentUpdate(BaseModel):
     notes: Optional[str] = None
     session_type: Optional[str] = None
     payment_receipt_url: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    refund_receipt_url: Optional[str] = None
 
 
 class AppointmentResponse(BaseModel):
@@ -793,6 +795,8 @@ class AppointmentResponse(BaseModel):
     session_type: Optional[str] = None
     payment_screenshot_url: Optional[str] = None
     payment_receipt_url: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    refund_receipt_url: Optional[str] = None
     created_at: str  # Changed to str for consistent serialization
     updated_at: str  # Changed to str for consistent serialization
 

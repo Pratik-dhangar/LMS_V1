@@ -406,6 +406,107 @@ async def delete_appointment(
     return {"message": "Failed to delete appointment"}
 
 
+@router.post("/appointments/{appointment_id}/reject", response_model=AppointmentResponse)
+async def reject_appointment(
+    appointment_id: int,
+    rejection_reason: str = None,
+    refund_receipt: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """
+    Reject an appointment with a reason and optional refund receipt
+    """
+    appointment = await coach_crud.get_appointment_by_id(db, appointment_id)
+
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found",
+        )
+
+    if appointment.coach_id != current_coach.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to reject this appointment",
+        )
+
+    # Handle refund receipt upload if provided
+    refund_receipt_path = None
+    if refund_receipt and refund_receipt.filename:
+        import uuid
+
+        # Validate file type
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".gif"}
+        file_ext = os.path.splitext(refund_receipt.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        # Validate file size (max 5MB)
+        content = await refund_receipt.read()
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size must be less than 5MB",
+            )
+
+        # Generate unique filename
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+
+        if settings.USE_S3:
+            # Upload to S3
+            from app.utils.s3_utils import S3Manager
+
+            s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+            s3_key = s3_manager.upload_file(
+                content,
+                folder="refund_receipts",
+                filename=unique_filename,
+                content_type=refund_receipt.content_type or "image/jpeg",
+            )
+            refund_receipt_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+        else:
+            # Save to local uploads folder
+            upload_dir = Path("uploads/refund_receipts")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            file_path = upload_dir / unique_filename
+
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            refund_receipt_path = f"/uploads/refund_receipts/{unique_filename}"
+
+    # Update appointment with rejection info
+    appointment_update = AppointmentUpdate(
+        status="REJECTED",
+        rejection_reason=rejection_reason,
+        refund_receipt_url=refund_receipt_path,
+    )
+    updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
+
+    return AppointmentResponse(
+        id=updated.id,
+        coach_id=updated.coach_id,
+        user_id=updated.user_id,
+        user_role=updated.user_role,
+        scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+        scheduled_time=updated.scheduled_time,
+        status=updated.status,
+        notes=updated.notes,
+        user_name=updated.user.name if updated.user else None,
+        session_type=updated.session_type,
+        payment_screenshot_url=updated.payment_receipt_url,
+        payment_receipt_url=updated.payment_receipt_url,
+        rejection_reason=updated.rejection_reason,
+        refund_receipt_url=updated.refund_receipt_url,
+        created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
+        updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
+    )
+
+
 # ============ COACH SESSIONS ============
 
 

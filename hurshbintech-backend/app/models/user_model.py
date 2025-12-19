@@ -476,6 +476,10 @@ class Appointment(Base):
     payment_receipt_url = Column(String(500), nullable=True)  # URL to payment screenshot
     session_type = Column(String(50), nullable=True)  # e.g., initial_consultation, follow_up
     
+    # Rejection Info
+    rejection_reason = Column(Text, nullable=True)  # Reason for rejecting the appointment
+    refund_receipt_url = Column(String(500), nullable=True)  # URL to refund receipt/screenshot
+    
     # Timestamps
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
