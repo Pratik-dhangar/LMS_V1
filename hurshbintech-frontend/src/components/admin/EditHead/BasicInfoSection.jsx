@@ -26,6 +26,17 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
       />
 
       <InputField
+        label="Email"
+        name="email"
+        type="email"
+        value={formData.email}
+        onChange={handleChange}
+        required
+        placeholder="Enter email address"
+        error={errors.email}
+      />
+
+      <InputField
         label="Age"
         name="age"
         type="number"

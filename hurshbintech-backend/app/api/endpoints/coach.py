@@ -3,6 +3,7 @@ Coach endpoints - Profile picture upload, appointments, and sessions
 Accessible by coaches and their heads
 """
 
+import logging
 import os
 from datetime import date
 from typing import Optional
@@ -20,6 +21,7 @@ from app.crud import user_crud
 from app.db.session import get_db
 from app.models.learning_content_model import LearningContent
 from app.models.user_model import CoachProfile, User, UserRole
+from app.services.email_service import EmailService
 from app.schemas.user import (
     AppointmentCreate,
     AppointmentResponse,
@@ -32,6 +34,7 @@ from app.schemas.user import (
 )
 
 router = APIRouter(prefix="/coaches", tags=["Coach Operations"])
+logger = logging.getLogger(__name__)
 
 
 # ============ PROFILE PICTURE UPLOAD ============
@@ -360,7 +363,34 @@ async def update_appointment(
             detail="Not authorized to update this appointment",
         )
 
+    # Store previous status for email logic
+    previous_status = appointment.status
+    
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
+    
+    # Send confirmation email if status changed to CONFIRMED
+    if previous_status != "CONFIRMED" and updated.status == "CONFIRMED":
+        user_email = updated.user.email if updated.user else None
+        user_name = updated.user.name if updated.user else "User"
+        
+        if not user_email:
+            logger.warning(f"Cannot send confirmation email - User {user_name} (ID: {updated.user_id}) has no email address")
+        else:
+            logger.info(f"Sending confirmation email to: {user_email} (User: {user_name}) for appointment {updated.id}")
+            email_sent = await EmailService.send_appointment_confirmed(
+                recipient_email=user_email,
+                recipient_name=user_name,
+                coach_name=current_coach.user.name if current_coach.user else "Coach",
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                session_type=updated.session_type,
+                appointment_id=updated.id,
+            )
+            if email_sent:
+                logger.info(f"✓ Confirmation email sent successfully to {user_email}")
+            else:
+                logger.warning(f"✗ Failed to send confirmation email to {user_email}")
+    
     return AppointmentResponse(
         id=updated.id,
         coach_id=updated.coach_id,
@@ -374,6 +404,8 @@ async def update_appointment(
         session_type=updated.session_type,
         payment_screenshot_url=updated.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
         payment_receipt_url=updated.payment_receipt_url,
+        rejection_reason=updated.rejection_reason,
+        refund_receipt_url=updated.refund_receipt_url,
         created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
         updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
     )
@@ -486,6 +518,28 @@ async def reject_appointment(
         refund_receipt_url=refund_receipt_path,
     )
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
+
+    # Send rejection email
+    user_email = updated.user.email if updated.user else None
+    user_name = updated.user.name if updated.user else "User"
+    
+    if not user_email:
+        logger.warning(f"Cannot send rejection email - User {user_name} (ID: {updated.user_id}) has no email address")
+    else:
+        logger.info(f"Sending rejection email to: {user_email} (User: {user_name}) for appointment {updated.id}")
+        email_sent = await EmailService.send_appointment_rejected(
+            recipient_email=user_email,
+            recipient_name=user_name,
+            coach_name=current_coach.user.name if current_coach.user else "Coach",
+            rejection_reason=rejection_reason,
+            scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+            scheduled_time=updated.scheduled_time,
+            appointment_id=updated.id,
+        )
+        if email_sent:
+            logger.info(f"✓ Rejection email sent successfully to {user_email}")
+        else:
+            logger.warning(f"✗ Failed to send rejection email to {user_email}")
 
     return AppointmentResponse(
         id=updated.id,

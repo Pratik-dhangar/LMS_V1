@@ -331,6 +331,7 @@ async def update_coach_profile(
     coach_id: int,
     # Text fields using Form (all optional for PATCH)
     name: str = Form(None),
+    email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
     contact_no: str = Form(None),
@@ -434,6 +435,7 @@ async def update_coach_profile(
     # Prepare update data
     coach_update = CoachUpdate(
         name=name,
+        email=email,
         age=age,
         address=address,
         contact_no=contact_no,

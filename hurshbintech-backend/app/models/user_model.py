@@ -552,3 +552,32 @@ class CoachSessionParticipant(Base):
     # Relationships
     session = relationship("CoachSession", back_populates="participants")
     user = relationship("User")
+
+
+# ===== EMAIL LOGS MODEL =====
+class EmailLog(Base):
+    """
+    Email logs - Track all sent emails for debugging and audit purposes
+    """
+    __tablename__ = "email_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Email details
+    recipient_email = Column(String(255), nullable=False, index=True)
+    recipient_name = Column(String(255), nullable=False)
+    subject = Column(String(255), nullable=False)
+    email_type = Column(String(50), nullable=False)  # confirmed, rejected, user_created, etc.
+    
+    # Related entities
+    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=True)
+    coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Status tracking
+    status = Column(String(20), default="sent")  # sent, failed, bounced
+    error_message = Column(Text, nullable=True)
+    
+    # Timestamps
+    sent_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now())

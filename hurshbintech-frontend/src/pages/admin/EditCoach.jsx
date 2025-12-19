@@ -20,6 +20,7 @@ const EditCoach = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     age: '',
     address: '',
     contact_no: '',
@@ -61,6 +62,7 @@ const EditCoach = () => {
       const coach = await headService.getCoachById(coachId);
       setFormData({
         name: coach.name || '',
+        email: coach.email || '',
         age: coach.age || '',
         address: coach.address || '',
         contact_no: coach.contact_no || '',
