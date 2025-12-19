@@ -85,8 +85,8 @@ export const AuthProvider = ({ children }) => {
         navigate('/head/dashboard');
       } else if (response.role === 'trainer') {
         navigate('/trainer/dashboard');
-      } else if (response.role === 'consultant') {
-        navigate('/consultant/dashboard');
+      } else if (response.role === 'coach') {
+        navigate('/coach/dashboard');
       } else if (response.role === 'admin') {
         navigate('/admin/dashboard');
       } else if (response.role === 'learner') {

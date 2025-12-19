@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models.user_model import (
     Admin,
-    ConsultantProfile,
+    CoachProfile,
     HeadProfile,
     LearnerProfile,
     TrainerProfile,
@@ -20,8 +20,8 @@ from app.models.user_model import (
     UserRole,
 )
 from app.schemas.user import (
-    ConsultantCreate,
-    ConsultantUpdate,
+    CoachCreate,
+    CoachUpdate,
     HeadCreate,
     HeadUpdate,
     LearnerCreate,
@@ -54,7 +54,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
         .options(
             joinedload(User.head_profile),
             joinedload(User.trainer_profile),
-            joinedload(User.consultant_profile),
+            joinedload(User.coach_profile),
             joinedload(User.learner_profile),
         )
         .where(User.id == user_id)
@@ -66,7 +66,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
 async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: str) -> User | None:
     """
     Query User table by passcode and role for authentication
-    Supports: admin, head, trainer, consultant, learner
+    Supports: admin, head, trainer, coach, learner
     Uses bcrypt verification for password matching
     """
     logger.debug(f"Querying User table for role={role}")
@@ -76,7 +76,7 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
         "admin": UserRole.ADMIN,
         "head": UserRole.HEAD,
         "trainer": UserRole.TRAINER,
-        "consultant": UserRole.CONSULTANT,
+        "coach": UserRole.COACH,
         "learner": UserRole.LEARNER,
     }
 
@@ -364,56 +364,56 @@ async def delete_trainer(db: AsyncSession, trainer_id: int) -> str | bool:
     return "Trainer deleted successfully"
 
 
-# ============ CONSULTANT CRUD ============
-# Get consultant by ID
-async def get_consultant_by_id(db: AsyncSession, consultant_id: int):
-    """Get consultant profile with user data by profile ID"""
+# ============ COACH CRUD ============
+# Get coach by ID
+async def get_coach_by_id(db: AsyncSession, coach_id: int):
+    """Get coach profile with user data by profile ID"""
     result = await db.execute(
-        select(ConsultantProfile)
-        .options(joinedload(ConsultantProfile.user))
-        .where(ConsultantProfile.id == consultant_id)
+        select(CoachProfile)
+        .options(joinedload(CoachProfile.user))
+        .where(CoachProfile.id == coach_id)
     )
     return result.scalar_one_or_none()
 
 
-# Get consultant by passcode
-async def get_consultant_by_passcode(db: AsyncSession, passcode: str):
-    """Get consultant by passcode (from User table)"""
+# Get coach by passcode
+async def get_coach_by_passcode(db: AsyncSession, passcode: str):
+    """Get coach by passcode (from User table)"""
     result = await db.execute(
         select(User)
-        .options(joinedload(User.consultant_profile))
-        .where(User.passcode == passcode, User.role == UserRole.CONSULTANT)
+        .options(joinedload(User.coach_profile))
+        .where(User.passcode == passcode, User.role == UserRole.COACH)
     )
     return result.scalar_one_or_none()
 
 
-# Get consultant by contact number
-async def get_consultant_by_contact(db: AsyncSession, contact_no: str):
-    """Get consultant profile by contact number"""
+# Get coach by contact number
+async def get_coach_by_contact(db: AsyncSession, contact_no: str):
+    """Get coach profile by contact number"""
     result = await db.execute(
-        select(ConsultantProfile).where(ConsultantProfile.contact_no == contact_no)
+        select(CoachProfile).where(CoachProfile.contact_no == contact_no)
     )
     return result.scalar_one_or_none()
 
 
-# Get consultants by head
-async def get_consultants_by_head(db: AsyncSession, head_id: int):
-    """Get all consultants created by a specific head"""
+# Get coaches by head
+async def get_coaches_by_head(db: AsyncSession, head_id: int):
+    """Get all coaches in the system (all heads can see all coaches)"""
     result = await db.execute(
-        select(ConsultantProfile)
-        .options(joinedload(ConsultantProfile.user))
-        .where(ConsultantProfile.created_by_head_id == head_id)
+        select(CoachProfile)
+        .options(joinedload(CoachProfile.user))
+        .order_by(CoachProfile.id)
     )
     return list(result.scalars().all())
 
 
-# Create consultant
-async def create_consultant(
-    db: AsyncSession, consultant_data: ConsultantCreate, created_by_head_id: int
+# Create coach
+async def create_coach(
+    db: AsyncSession, coach_data: CoachCreate
 ):
-    """Create a new consultant with User and ConsultantProfile records"""
+    """Create a new coach with User and CoachProfile records"""
     # Generate passcode if not provided
-    passcode = consultant_data.passcode or generate_passcode("CONSULTANT", consultant_data.name)
+    passcode = coach_data.passcode or generate_passcode("COACH", coach_data.name)
 
     # Encrypt passcode for storage, hash for verification
     encrypted_passcode = encrypt_passcode(passcode)
@@ -421,73 +421,76 @@ async def create_consultant(
 
     # Create User record first
     new_user = User(
-        name=consultant_data.name,
+        name=coach_data.name,
         passcode=encrypted_passcode,  # Store encrypted, not plaintext
         passcode_hash=passcode_hash,
         email=None,
-        role=UserRole.CONSULTANT,
+        role=UserRole.COACH,
         is_active=True,
     )
     db.add(new_user)
     await db.flush()
 
-    # Create ConsultantProfile record
-    new_consultant_profile = ConsultantProfile(
+    # Create CoachProfile record
+    new_coach_profile = CoachProfile(
         user_id=new_user.id,
-        age=consultant_data.age,
-        address=consultant_data.address,
-        contact_no=consultant_data.contact_no,
-        qualification=consultant_data.qualification,
-        experience=consultant_data.experience,
-        date_of_joining=consultant_data.date_of_joining,
-        created_by_head_id=created_by_head_id,
+        age=coach_data.age,
+        address=coach_data.address,
+        contact_no=coach_data.contact_no,
+        qualification=coach_data.qualification,
+        experience=coach_data.experience,
+        date_of_joining=coach_data.date_of_joining,
+        availability_days=coach_data.availability_days,
+        time_slots=coach_data.time_slots,
+        specialization=coach_data.specialization,
+        profile_picture_url=coach_data.profile_picture_url,
     )
 
-    db.add(new_consultant_profile)
+    db.add(new_coach_profile)
     await db.commit()
-    await db.refresh(new_consultant_profile)
+    await db.refresh(new_coach_profile)
     await db.refresh(new_user)
 
-    new_consultant_profile.user = new_user
+    new_coach_profile.user = new_user
     # Store plaintext passcode as temporary attribute for response
-    new_consultant_profile.plaintext_passcode = passcode
-    return new_consultant_profile
+    new_coach_profile.plaintext_passcode = passcode
+    return new_coach_profile
 
 
-# Update consultant profile
-async def update_consultant(
-    db: AsyncSession, consultant_id: int, consultant_update: ConsultantUpdate
+# Update coach profile
+async def update_coach(
+    db: AsyncSession, coach_id: int, coach_update: CoachUpdate
 ):
-    """Update consultant profile"""
-    consultant = await get_consultant_by_id(db, consultant_id)
-    if not consultant:
+    """Update coach profile"""
+    coach = await get_coach_by_id(db, coach_id)
+    if not coach:
         return None
 
     # Update only provided fields
-    update_data = consultant_update.model_dump(exclude_unset=True)
+    update_data = coach_update.model_dump(exclude_unset=True)
 
     # Handle name separately if provided
     if "name" in update_data:
-        consultant.user.name = update_data.pop("name")
+        coach.user.name = update_data.pop("name")
 
     for field, value in update_data.items():
-        setattr(consultant, field, value)
+        setattr(coach, field, value)
 
     await db.commit()
-    await db.refresh(consultant)
-    return consultant
+    await db.refresh(coach)
+    return coach
 
 
-async def delete_consultant(db: AsyncSession, consultant_id: int) -> str | bool:
-    """Delete a consultant profile and associated user record"""
-    consultant = await get_consultant_by_id(db, consultant_id)
-    if not consultant:
+async def delete_coach(db: AsyncSession, coach_id: int) -> str | bool:
+    """Delete a coach profile and associated user record"""
+    coach = await get_coach_by_id(db, coach_id)
+    if not coach:
         return False
 
-    user = consultant.user
+    user = coach.user
     await db.delete(user)
     await db.commit()
-    return "Consultant deleted successfully"
+    return "Coach deleted successfully"
 
 
 # ============ DASHBOARD STATS ============
@@ -512,28 +515,28 @@ async def get_admin_dashboard_stats(db: AsyncSession) -> dict:
     trainer_count = await db.execute(select(func.count(TrainerProfile.id)))
     total_trainers = trainer_count.scalar() or 0
 
-    # Count consultants
-    logger.debug("Counting consultants")
-    consultant_count = await db.execute(select(func.count(ConsultantProfile.id)))
-    total_consultants = consultant_count.scalar() or 0
+    # Count coaches
+    logger.debug("Counting coaches")
+    coach_count = await db.execute(select(func.count(CoachProfile.id)))
+    total_coaches = coach_count.scalar() or 0
 
     # Total users
-    total_users = total_admins + total_heads + total_trainers + total_consultants
+    total_users = total_admins + total_heads + total_trainers + total_coaches
     logger.debug(
-        f"Total users count: {total_users} (Admins: {total_admins}, Heads: {total_heads}, Trainers: {total_trainers}, Consultants: {total_consultants})"
+        f"Total users count: {total_users} (Admins: {total_admins}, Heads: {total_heads}, Trainers: {total_trainers}, Coaches: {total_coaches})"
     )
 
     # Active sessions - sum of all sessions done (from all roles)
     head_sessions = await db.execute(select(func.sum(HeadProfile.number_of_sessions_done)))
     trainer_sessions = await db.execute(select(func.sum(TrainerProfile.number_of_sessions_done)))
-    consultant_sessions = await db.execute(
-        select(func.sum(ConsultantProfile.number_of_sessions_done))
+    coach_sessions = await db.execute(
+        select(func.sum(CoachProfile.number_of_sessions_done))
     )
 
     active_sessions = (
         (head_sessions.scalar() or 0)
         + (trainer_sessions.scalar() or 0)
-        + (consultant_sessions.scalar() or 0)
+        + (coach_sessions.scalar() or 0)
     )
 
     return {
@@ -561,14 +564,14 @@ async def get_head_dashboard_stats(db: AsyncSession) -> dict:
     # Active sessions - sum of all sessions done (from all roles)
     head_sessions = await db.execute(select(func.sum(HeadProfile.number_of_sessions_done)))
     trainer_sessions = await db.execute(select(func.sum(TrainerProfile.number_of_sessions_done)))
-    consultant_sessions = await db.execute(
-        select(func.sum(ConsultantProfile.number_of_sessions_done))
+    coach_sessions = await db.execute(
+        select(func.sum(CoachProfile.number_of_sessions_done))
     )
 
     active_sessions = (
         (head_sessions.scalar() or 0)
         + (trainer_sessions.scalar() or 0)
-        + (consultant_sessions.scalar() or 0)
+        + (coach_sessions.scalar() or 0)
     )
 
     return {
@@ -784,6 +787,17 @@ async def get_all_trainers_system_wide(db: AsyncSession):
     trainers = result.scalars().unique().all()
     logger.info(f"Found {len(trainers)} trainers system-wide")
     return trainers
+
+
+async def get_all_coaches_system_wide(db: AsyncSession):
+    """Get all coaches across all heads (for admin view)"""
+    logger.info("Fetching all coaches system-wide for admin")
+    result = await db.execute(
+        select(CoachProfile).options(joinedload(CoachProfile.user)).order_by(CoachProfile.id)
+    )
+    coaches = result.scalars().unique().all()
+    logger.info(f"Found {len(coaches)} coaches system-wide")
+    return coaches
 
 
 async def get_all_learners_system_wide(db: AsyncSession):

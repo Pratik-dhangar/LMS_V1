@@ -193,7 +193,14 @@ class S3Manager:
 
     def create_s3_folders(self) -> bool:
         """Create standard folder structure in S3"""
-        folders = ["uploads/learning-content/", "uploads/vlogs/", "uploads/reference_data/"]
+        folders = [
+            "uploads/learning-content/",
+            "uploads/vlogs/",
+            "uploads/reference_data/",
+            "uploads/profile_pictures/",
+            "uploads/coach_references/",
+            "payment_screenshots/",
+        ]
 
         try:
             for folder in folders:
@@ -204,3 +211,60 @@ class S3Manager:
         except ClientError as e:
             logger.error(f"Error creating S3 folders: {str(e)}")
             return False
+
+
+# ============ HELPER FUNCTIONS ============
+
+
+async def upload_to_s3(file: "UploadFile", s3_path: str) -> str:
+    """
+    Helper function to upload file to S3 and return public URL
+    
+    Args:
+        file: FastAPI UploadFile object
+        s3_path: Path within bucket (e.g., 'profile_pictures/filename.jpg')
+    
+    Returns:
+        Public URL to access the file
+    
+    Raises:
+        Exception if upload fails
+    """
+    from app.core.config import settings
+    
+    if not settings.USE_S3:
+        raise ValueError("S3 is not enabled. Set USE_S3=true in environment")
+    
+    try:
+        # Initialize S3 manager
+        s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Determine content type
+        content_type = file.content_type or "application/octet-stream"
+        
+        # Extract filename from s3_path
+        filename = s3_path.split("/")[-1]
+        
+        # Get folder from s3_path (everything except the filename)
+        folder = "/".join(s3_path.split("/")[:-1]) if "/" in s3_path else ""
+        
+        # Upload to S3
+        s3_key = s3_manager.upload_file(
+            file_content=file_content,
+            folder=folder,
+            filename=filename,
+            content_type=content_type,
+        )
+        
+        # Return public URL
+        public_url = s3_manager.get_public_url(s3_key)
+        
+        logger.info(f"Successfully uploaded {s3_path} to S3: {public_url}")
+        return public_url
+        
+    except Exception as e:
+        logger.error(f"Failed to upload {s3_path} to S3: {str(e)}")
+        raise

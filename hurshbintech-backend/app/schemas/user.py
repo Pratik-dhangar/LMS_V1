@@ -296,11 +296,11 @@ class TrainerResponse(BaseModel):
         from_attributes = True
 
 
-# ============ CONSULTANT SCHEMAS ============
+# ============ COACH SCHEMAS ============
 
 
-class ConsultantCreate(BaseModel):
-    """Schema for creating a new consultant"""
+class CoachCreate(BaseModel):
+    """Schema for creating a new coach"""
 
     name: str
     passcode: Optional[str] = None  # Auto-generated if not provided
@@ -310,10 +310,16 @@ class ConsultantCreate(BaseModel):
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
+    
+    # Coach specific fields
+    availability_days: Optional[str] = None  # e.g., "Monday,Wednesday,Friday"
+    time_slots: Optional[str] = None  # e.g., "10am,1pm,3pm,5pm"
+    specialization: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
 
-class ConsultantUpdate(BaseModel):
-    """Schema for updating consultant profile"""
+class CoachUpdate(BaseModel):
+    """Schema for updating coach profile"""
 
     name: Optional[str] = None
     age: Optional[int] = None
@@ -321,16 +327,26 @@ class ConsultantUpdate(BaseModel):
     contact_no: Optional[str] = None
     qualification: Optional[str] = None
     experience: Optional[str] = None
+    date_of_joining: Optional[date] = None
     experience_with_hurshbin: Optional[str] = None
     interest: Optional[str] = None
     self_description: Optional[str] = None
     future_vision: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
+    
+    # Coach specific fields
+    availability_days: Optional[str] = None  # e.g., "Monday,Wednesday,Friday"
+    time_slots: Optional[str] = None  # e.g., "10am,1pm,3pm,5pm"
+    specialization: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    is_available: Optional[bool] = None
+    unavailable_until: Optional[datetime] = None
+    unavailable_reason: Optional[str] = None
 
 
-class ConsultantResponse(BaseModel):
-    """Schema for consultant response - combines User and Profile data"""
+class CoachResponse(BaseModel):
+    """Schema for coach response - combines User and Profile data"""
 
     id: int  # Profile ID
     user_id: int  # User ID from users table
@@ -338,8 +354,31 @@ class ConsultantResponse(BaseModel):
     role: str  # From User
     passcode: str  # From User
     age: Optional[int] = None
+    address: Optional[str] = None
     contact_no: Optional[str] = None
+    qualification: Optional[str] = None
+    experience: Optional[str] = None
     date_of_joining: Optional[date] = None
+    experience_with_hurshbin: Optional[str] = None
+    interest: Optional[str] = None
+    self_description: Optional[str] = None
+    future_vision: Optional[str] = None
+    number_of_sessions_done: Optional[int] = 0
+    head_description: Optional[str] = None
+    learners_guardian_description: Optional[str] = None
+    input_at_hurshbin: Optional[str] = None
+    note_box: Optional[str] = None
+    message_box: Optional[str] = None
+    
+    # Coach specific fields
+    availability_days: Optional[str] = None
+    time_slots: Optional[str] = None
+    specialization: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    is_available: Optional[bool] = True
+    unavailable_until: Optional[datetime] = None
+    unavailable_reason: Optional[str] = None
+    
     created_at: datetime  # From User
 
     @classmethod
@@ -358,9 +397,36 @@ class ConsultantResponse(BaseModel):
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
             "created_at": user.created_at,
-            "age": profile.age,
-            "contact_no": profile.contact_no,
-            "date_of_joining": profile.date_of_joining,
+            # Profile fields
+            **{
+                field: getattr(profile, field)
+                for field in [
+                    "age",
+                    "address",
+                    "contact_no",
+                    "qualification",
+                    "experience",
+                    "date_of_joining",
+                    "experience_with_hurshbin",
+                    "interest",
+                    "self_description",
+                    "future_vision",
+                    "number_of_sessions_done",
+                    "head_description",
+                    "learners_guardian_description",
+                    "input_at_hurshbin",
+                    "note_box",
+                    "message_box",
+                    "availability_days",
+                    "time_slots",
+                    "specialization",
+                    "profile_picture_url",
+                    "is_available",
+                    "unavailable_until",
+                    "unavailable_reason",
+                ]
+                if hasattr(profile, field)
+            },
         }
         return cls(**data)
 
@@ -682,6 +748,135 @@ class LearnerResponse(BaseModel):
             data["dlb_concerns_checklist"] = []
 
         return cls(**data)
+
+    class Config:
+        from_attributes = True
+
+
+# ============ APPOINTMENT SCHEMAS ============
+
+
+class AppointmentCreate(BaseModel):
+    """Schema for creating a new appointment with a coach"""
+
+    coach_id: int
+    scheduled_date: date
+    scheduled_time: str  # e.g., "10am", "1pm", "3pm", "5pm"
+    notes: Optional[str] = None
+
+
+class AppointmentUpdate(BaseModel):
+    """Schema for updating an appointment"""
+
+    scheduled_date: Optional[date] = None
+    scheduled_time: Optional[str] = None
+    status: Optional[str] = None  # scheduled, confirmed, cancelled, completed
+    notes: Optional[str] = None
+
+
+class AppointmentResponse(BaseModel):
+    """Schema for appointment response"""
+
+    id: int
+    coach_id: int
+    user_id: int
+    user_role: str
+    scheduled_date: str  # Changed to str to ensure proper JSON serialization
+    scheduled_time: str
+    status: str
+    notes: Optional[str] = None
+    user_name: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_screenshot_url: Optional[str] = None
+    created_at: str  # Changed to str for consistent serialization
+    updated_at: str  # Changed to str for consistent serialization
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            date: lambda v: v.isoformat() if v else None,
+            datetime: lambda v: v.isoformat() if v else None,
+        }
+
+
+class AvailableSlotsResponse(BaseModel):
+    """Schema for available time slots response"""
+    
+    coach_id: int
+    date: date
+    available_slots: List[str]  # e.g., ["10am", "1pm", "3pm"]
+    all_slots: List[str]        # Coach's configured time slots
+    booked_slots: List[str]     # Already booked time slots
+    
+    class Config:
+        from_attributes = True
+
+
+# ============ COACH SESSION SCHEMAS ============
+
+
+class CoachSessionParticipantCreate(BaseModel):
+    """Schema for adding a participant to a coach session"""
+
+    user_id: int
+    participant_role: str  # trainer, learner, head
+
+
+class CoachSessionParticipantResponse(BaseModel):
+    """Schema for coach session participant response"""
+
+    id: int
+    session_id: int
+    user_id: int
+    participant_role: str
+    status: str  # invited, accepted, declined, attended
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CoachSessionCreate(BaseModel):
+    """Schema for creating a new coach session"""
+
+    session_date: date
+    session_time: str  # e.g., "10am", "1pm", "3pm", "5pm"
+    session_title: Optional[str] = None
+    learning_content_id: Optional[int] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    learner_ids: Optional[List[int]] = []
+    trainer_ids: Optional[List[int]] = []
+    head_ids: Optional[List[int]] = []
+
+
+class CoachSessionUpdate(BaseModel):
+    """Schema for updating a coach session"""
+
+    session_date: Optional[date] = None
+    session_time: Optional[str] = None
+    session_title: Optional[str] = None
+    learning_content_id: Optional[int] = None
+    description: Optional[str] = None
+    status: Optional[str] = None  # scheduled, ongoing, completed, cancelled
+    notes: Optional[str] = None
+
+
+class CoachSessionResponse(BaseModel):
+    """Schema for coach session response"""
+
+    id: int
+    coach_id: int
+    session_date: date
+    session_time: str
+    session_title: Optional[str] = None
+    learning_content_id: Optional[int] = None
+    description: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    participants: List[CoachSessionParticipantResponse] = []
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

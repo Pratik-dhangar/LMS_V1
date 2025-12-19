@@ -10,6 +10,19 @@ const axiosInstance = axios.create({
   },
 });
 
+// Request interceptor - Handle FormData (remove Content-Type for multipart)
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Request interceptor - Add token to all requests
 axiosInstance.interceptors.request.use(
   (config) => {

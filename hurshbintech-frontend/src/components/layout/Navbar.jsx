@@ -18,7 +18,7 @@ const Navbar = () => {
   const isAdminPage = location.pathname.includes("/admin/dashboard");
   const isHeadPage = location.pathname.includes("/head/dashboard");
   const isTrainerPage = location.pathname.includes("/trainer/dashboard");
-  const isConsultantPage = location.pathname.includes("/consultant/dashboard");
+  const isConsultantPage = location.pathname.includes("/coach/dashboard");
   const isLearnerPage = location.pathname.includes("/learner/dashboard");
 
   // Helper function to close menu on navigation
@@ -83,9 +83,9 @@ const Navbar = () => {
             <button
               className={`navbar-btn ${isConsultantPage ? "active" : ""}`}
               onClick={() => {
-                navigate("/consultant/dashboard");
+                navigate("/coach/dashboard");
               }}
-              disabled={!user || user.role !== "consultant"}
+              disabled={!user || user.role !== "coach"}
             >
               Coach
             </button>
