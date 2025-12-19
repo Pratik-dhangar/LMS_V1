@@ -48,13 +48,15 @@ const MyAppointments = () => {
     return status?.toUpperCase().replace(/_/g, ' ') || 'Unknown';
   };
 
-  const formatSessionType = (notes) => {
-    if (!notes) return 'N/A';
-    const match = notes.match(/Session Type: ([^\n]+)/);
-    if (match) {
-      return match[1].split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-    return 'N/A';
+  const formatSessionType = (session_type) => {
+    const sessionTypeMap = {
+      'initial_consultation': 'Initial Consultation',
+      'follow_up': 'Follow-up Session',
+      'extended': 'Extended Session',
+    };
+    
+    if (!session_type) return 'General Coaching Session';
+    return sessionTypeMap[session_type] || session_type;
   };
 
   const formatDate = (dateString) => {
@@ -169,7 +171,7 @@ const MyAppointments = () => {
                       <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Session Type</p>
-                        <p className="text-gray-900 font-medium">{formatSessionType(apt.notes)}</p>
+                        <p className="text-gray-900 font-medium">{formatSessionType(apt.session_type)}</p>
                       </div>
                     </div>
                   </div>

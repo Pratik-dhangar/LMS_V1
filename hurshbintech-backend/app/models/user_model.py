@@ -472,6 +472,10 @@ class Appointment(Base):
     # Additional info
     notes = Column(Text)
     
+    # Payment and Session Info
+    payment_receipt_url = Column(String(500), nullable=True)  # URL to payment screenshot
+    session_type = Column(String(50), nullable=True)  # e.g., initial_consultation, follow_up
+    
     # Timestamps
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

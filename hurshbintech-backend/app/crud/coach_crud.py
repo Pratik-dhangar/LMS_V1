@@ -46,6 +46,8 @@ async def create_appointment(
         scheduled_date=appointment_data.scheduled_date,
         scheduled_time=appointment_data.scheduled_time,
         notes=appointment_data.notes,
+        session_type=appointment_data.session_type,
+        payment_receipt_url=appointment_data.payment_receipt_url,
         status=AppointmentStatus.PENDING,
     )
     db.add(new_appointment)

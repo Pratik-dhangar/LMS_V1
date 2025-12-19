@@ -763,6 +763,8 @@ class AppointmentCreate(BaseModel):
     scheduled_date: date
     scheduled_time: str  # e.g., "10am", "1pm", "3pm", "5pm"
     notes: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
 
 
 class AppointmentUpdate(BaseModel):
@@ -772,6 +774,8 @@ class AppointmentUpdate(BaseModel):
     scheduled_time: Optional[str] = None
     status: Optional[str] = None  # scheduled, confirmed, cancelled, completed
     notes: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
 
 
 class AppointmentResponse(BaseModel):
@@ -788,6 +792,7 @@ class AppointmentResponse(BaseModel):
     user_name: Optional[str] = None
     session_type: Optional[str] = None
     payment_screenshot_url: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
     created_at: str  # Changed to str for consistent serialization
     updated_at: str  # Changed to str for consistent serialization
 

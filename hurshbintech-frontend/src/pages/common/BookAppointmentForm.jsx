@@ -121,6 +121,15 @@ const BookAppointmentForm = () => {
     return sessionType ? sessionType.fee : 0;
   };
 
+  const isFormComplete = () => {
+    return (
+      formData.appointment_date &&
+      formData.appointment_time &&
+      formData.session_type &&
+      formData.payment_screenshot
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -307,7 +316,7 @@ const BookAppointmentForm = () => {
               <div className="form-section">
                 <h3 className="section-heading">
                   <Clock className="w-5 h-5" />
-                  Session Type
+                  Session Type <span style={{ color: '#ef4444' }}>*</span>
                 </h3>
                 <div className="session-types-grid">
                   {sessionTypes.map(type => (
@@ -322,6 +331,7 @@ const BookAppointmentForm = () => {
                         checked={formData.session_type === type.value}
                         onChange={handleInputChange}
                         className="session-type-radio"
+                        required
                       />
                       <div className="session-type-content">
                         <p className="session-type-label">{type.label}</p>
@@ -334,6 +344,11 @@ const BookAppointmentForm = () => {
                     </label>
                   ))}
                 </div>
+                {!formData.session_type && (
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+                    Please select a session type
+                  </p>
+                )}
               </div>
 
               {/* Payment Section */}
@@ -376,6 +391,7 @@ const BookAppointmentForm = () => {
                         accept="image/*"
                         onChange={handleFileChange}
                         className="file-input-hidden"
+                        required
                       />
                       <Upload className="upload-icon" />
                       <p className="upload-text">Click to upload or drag and drop</p>
@@ -393,6 +409,11 @@ const BookAppointmentForm = () => {
                       </button>
                     </div>
                   )}
+                  {!previewImage && (
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
+                      Payment screenshot is required
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -409,7 +430,8 @@ const BookAppointmentForm = () => {
                 <button
                   type="submit"
                   className="btn-confirm"
-                  disabled={loading}
+                  disabled={loading || !isFormComplete()}
+                  title={!isFormComplete() ? 'Please fill in all required fields' : 'Confirm your booking'}
                 >
                   {loading ? (
                     <>

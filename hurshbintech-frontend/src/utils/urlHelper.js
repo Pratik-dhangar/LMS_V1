@@ -6,10 +6,21 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.lume
 const MEDIA_PROXY_URL = import.meta.env.VITE_MEDIA_PROXY_URL || 'https://hurshbin.lumesoftai.in:3001';
 
 /**
+ * Get backend base URL (without /api prefix)
+ * API_BASE_URL typically ends with /api, so we remove it for static file serving
+ */
+const getBackendBaseUrl = () => {
+  if (API_BASE_URL.endsWith('/api')) {
+    return API_BASE_URL.slice(0, -4); // Remove '/api' from the end
+  }
+  return API_BASE_URL;
+};
+
+/**
  * Convert S3 URLs or local paths to accessible URLs
  * Handles:
  * - s3://bucket/key -> https://media-proxy/s3/bucket/key
- * - /uploads/path -> https://api-base/uploads/path
+ * - /uploads/path -> https://backend-base/uploads/path (without /api)
  * - https://... -> returns as is
  */
 export const getFileUrl = (url) => {
@@ -27,12 +38,12 @@ export const getFileUrl = (url) => {
     return `${MEDIA_PROXY_URL}/s3/${s3Path}`;
   }
 
-  // Handle local uploads paths (/uploads/...)
+  // Handle local uploads paths (/uploads/...) - use backend base URL without /api
   if (url.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${url}`;
+    return `${getBackendBaseUrl()}${url}`;
   }
 
-  // Default: assume it's a local path
+  // Default: assume it's a local path with /api prefix needed (for API responses)
   return `${API_BASE_URL}${url}`;
 };
 

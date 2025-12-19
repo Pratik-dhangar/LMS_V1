@@ -197,12 +197,14 @@ async def book_appointment_with_coach(
             
             payment_screenshot_path = f"/uploads/payment_screenshots/{unique_filename}"
     
-    # Create appointment data
+    # Create appointment data with new columns
     appointment_data = AppointmentCreate(
         coach_id=coach_id,
         scheduled_date=scheduled_date,
         scheduled_time=scheduled_time,
-        notes=f"Session Type: {session_type}\n{notes if notes else ''}",
+        notes=notes if notes else None,
+        session_type=session_type,
+        payment_receipt_url=payment_screenshot_path,
     )
     
     # Get current user's role
@@ -212,14 +214,6 @@ async def book_appointment_with_coach(
     appointment = await coach_crud.create_appointment(
         db, appointment_data, current_user.id, user_role
     )
-    
-    # If payment screenshot was uploaded, update appointment with payment info
-    if payment_screenshot_path:
-        # Note: You may want to add a payment_screenshot field to the Appointment model
-        # For now, we can append it to notes
-        appointment.notes = f"{appointment.notes}\nPayment Screenshot: {payment_screenshot_path}"
-        await db.commit()
-        await db.refresh(appointment)
     
     # Manually serialize date fields for Pydantic v2 compatibility
     return AppointmentResponse(
@@ -231,9 +225,10 @@ async def book_appointment_with_coach(
         scheduled_time=appointment.scheduled_time,
         status=appointment.status,
         notes=appointment.notes,
-        user_name=appointment.user_name,
+        user_name=appointment.user.name if appointment.user else None,
         session_type=appointment.session_type,
-        payment_screenshot_url=appointment.payment_screenshot_url,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
         created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
         updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
     )
@@ -258,9 +253,10 @@ async def get_my_appointments(
             scheduled_time=apt.scheduled_time,
             status=apt.status,
             notes=apt.notes,
-            user_name=apt.user_name,
+            user_name=apt.user.name if apt.user else None,
             session_type=apt.session_type,
-            payment_screenshot_url=apt.payment_screenshot_url,
+            payment_screenshot_url=apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+            payment_receipt_url=apt.payment_receipt_url,
             created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
             updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
         )

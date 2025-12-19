@@ -257,9 +257,10 @@ async def create_appointment(
         scheduled_time=appointment.scheduled_time,
         status=appointment.status,
         notes=appointment.notes,
-        user_name=appointment.user_name,
+        user_name=appointment.user.name if appointment.user else None,
         session_type=appointment.session_type,
-        payment_screenshot_url=appointment.payment_screenshot_url,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
         created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
         updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
     )
@@ -273,7 +274,7 @@ async def get_coach_appointments(
     """Get all appointments for the current coach with user details"""
     appointments = await coach_crud.get_appointments_by_coach(db, current_coach.id)
     
-    # Add user name, session type, and payment screenshot to each appointment
+    # Add user name and new column data to each appointment
     result = []
     for apt in appointments:
         apt_dict = {
@@ -286,25 +287,12 @@ async def get_coach_appointments(
             "status": apt.status.value if hasattr(apt.status, 'value') else apt.status,
             "notes": apt.notes,
             "user_name": apt.user.name if apt.user else None,
+            "session_type": apt.session_type,  # Read directly from column
+            "payment_screenshot_url": apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url for frontend
+            "payment_receipt_url": apt.payment_receipt_url,  # Also include in response
             "created_at": apt.created_at.isoformat() if apt.created_at else None,
             "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
-        
-        # Extract session_type and payment_screenshot from notes
-        if apt.notes:
-            # Session type is in format "Session Type: initial_consultation"
-            if "Session Type:" in apt.notes:
-                session_type_line = [line for line in apt.notes.split('\n') if 'Session Type:' in line]
-                if session_type_line:
-                    apt_dict["session_type"] = session_type_line[0].split('Session Type:')[1].strip()
-            
-            # Payment screenshot is in format "Payment Screenshot: s3://bucket/key or /uploads/path"
-            if "Payment Screenshot:" in apt.notes:
-                payment_line = [line for line in apt.notes.split('\n') if 'Payment Screenshot:' in line]
-                if payment_line:
-                    payment_url = payment_line[0].split('Payment Screenshot:')[1].strip()
-                    # Return the URL as-is (s3://... or /uploads/...) for frontend to convert
-                    apt_dict["payment_screenshot_url"] = payment_url
         
         result.append(AppointmentResponse(**apt_dict))
     
@@ -341,9 +329,10 @@ async def get_appointment_details(
         scheduled_time=appointment.scheduled_time,
         status=appointment.status,
         notes=appointment.notes,
-        user_name=appointment.user_name,
+        user_name=appointment.user.name if appointment.user else None,
         session_type=appointment.session_type,
-        payment_screenshot_url=appointment.payment_screenshot_url,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
         created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
         updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
     )
@@ -381,9 +370,10 @@ async def update_appointment(
         scheduled_time=updated.scheduled_time,
         status=updated.status,
         notes=updated.notes,
-        user_name=updated.user_name,
+        user_name=updated.user.name if updated.user else None,
         session_type=updated.session_type,
-        payment_screenshot_url=updated.payment_screenshot_url,
+        payment_screenshot_url=updated.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=updated.payment_receipt_url,
         created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
         updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
     )
