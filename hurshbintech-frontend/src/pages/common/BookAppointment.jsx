@@ -28,6 +28,13 @@ const BookAppointment = () => {
       setLoading(true);
       // Fetch all available coaches from booking service
       const data = await bookingService.getAvailableCoaches();
+      console.log('Fetched coaches:', data);
+      data?.forEach((coach, index) => {
+        console.log(`Coach ${index}: ${coach.name}, profile_picture_url: ${coach.profile_picture_url}`);
+        if (coach.profile_picture_url) {
+          console.log(`  Full image URL would be: ${getFileUrl(coach.profile_picture_url)}`);
+        }
+      });
       setCoaches(data || []);
       setFilteredCoaches(data || []);
     } catch (error) {
@@ -144,6 +151,7 @@ const BookAppointment = () => {
                           alt={coach.name}
                           className="coach-avatar"
                           onError={(e) => {
+                            console.error(`Failed to load image for ${coach.name}: ${e.target.src}`);
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                           }}

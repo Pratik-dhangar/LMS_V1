@@ -219,6 +219,7 @@ const BookAppointmentForm = () => {
                       src={getFileUrl(coach.profile_picture_url)}
                       alt={coach.name}
                       onError={(e) => {
+                        console.error(`[BookAppointmentForm] Failed to load image for ${coach.name}: ${e.target.src}`);
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
                       }}

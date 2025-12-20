@@ -782,6 +782,8 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
 
     await db.commit()
     await db.refresh(learner)
+    # Ensure user relationship is loaded after refresh
+    await db.refresh(learner.user)
     return learner
 
 

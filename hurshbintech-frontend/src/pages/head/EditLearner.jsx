@@ -27,6 +27,7 @@ const EditLearner = () => {
   const [formData, setFormData] = useState({
     // Personal details
     name: '',
+    email: '',
     age: '',
     dob: '',
     date_of_assessment: '',
@@ -108,6 +109,7 @@ const EditLearner = () => {
       // Format dates and handle null/undefined values
       const formattedData = {
         name: data.name || '',
+        email: data.email || '',
         age: data.age || '',
         dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : '',
         date_of_assessment: data.date_of_assessment ? new Date(data.date_of_assessment).toISOString().split('T')[0] : '',
