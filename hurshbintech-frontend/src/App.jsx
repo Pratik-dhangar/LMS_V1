@@ -34,8 +34,8 @@ import RegisterLearner from './pages/head/RegisterLearner';
 import ScheduleSession from './pages/head/ScheduleSession';
 import ManageSessions from './pages/head/ManageSessions';
 import ViewVlogs from './pages/head/ViewVlogs';
-import ManageAssignedPrograms from "./pages/head/ManageAssignedPrograms";
 import ManageAssignedLearningContent from './pages/head/ManageAssignedLearningContent';
+import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
 import LearnerProgramsView from './pages/head/LearnerProgramsView';
@@ -319,13 +319,17 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/head/manage-assigned-programs"
-          element={<ManageAssignedPrograms
-          />}
-        />
         <Route path="/head/manage-assigned-learning-content"
           element={<ManageAssignedLearningContent
           />}
+        />
+        <Route
+          path="/head/manage-program-assignments"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ManageProgramAssignments />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/head/reports"

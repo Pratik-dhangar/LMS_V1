@@ -10,7 +10,8 @@ const MANUAL_TEST_THRESHOLD_MBPS = 1.0
 const MANUAL_TEST_URL = '/speedtest.bin'
 
 const makeSlowMessage = (reason) =>
-    `Your network quality is slow${reason ? ` (${reason})` : ''}. Some features may take longer.`
+    // `Your network quality is slow${reason ? ` (${reason})` : ''}. Some features may take longer.`
+    `Network Slowdown`
 
 const showSlowToast = (reason) => {
     if (toast.isActive(SLOW_TOAST_ID)) return

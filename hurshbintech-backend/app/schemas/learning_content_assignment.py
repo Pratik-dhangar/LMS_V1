@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class LearningContentAssignmentCreate(BaseModel):
     learner_id: int
     learning_content_id: int
+    assigned_by_head_id: int | None = None
 
 
 class LearningContentAssignmentResponse(BaseModel):

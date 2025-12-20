@@ -111,7 +111,19 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 3000,
-      https: getHttpsConfig()
+      https: getHttpsConfig(),
+      proxy: {
+        '/uploads': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false
+        },
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     }
   };
 });

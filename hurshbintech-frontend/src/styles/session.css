@@ -96,7 +96,7 @@
     width: 18rem;
     flex-shrink: 0;
     gap: clamp(0.75rem, 1.5vw, 1rem);
-    overflow-y: auto;
+    /* overflow-y: auto; */
     padding-left: 0.5rem;
   }
 
@@ -1175,7 +1175,7 @@ body.sidebar-open {
 
   /* Learning content in right column - full height */
   .session-right-column {
-    height: auto;
+    height: fit-content;
     gap: clamp(0.75rem, 1.5vw, 1rem);
   }
 
