@@ -2,6 +2,15 @@ from app.models.learning_content_assignment_model import LearningContentAssignme
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.learning_goals_model import LearningGoals
+from app.models.program_assignment_attachment_model import (
+    ProgramAssignmentAttachment,
+    AttachmentType,
+)
+from app.models.program_assignment_model import (
+    ProgramAssignment,
+    CompletionStatus,
+)
+from app.models.program_learning_content_model import ProgramLearningContent
 from app.models.session_model import TrainingSession
 from app.models.user_model import (
     Admin,
@@ -41,5 +50,10 @@ __all__ = [
     "LearningGoals",
     "LearningGoalAssignment",
     "LearningContentAssignment",
+    "ProgramAssignment",
+    "CompletionStatus",
+    "ProgramAssignmentAttachment",
+    "AttachmentType",
+    "ProgramLearningContent",
     "Vlog",
 ]

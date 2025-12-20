@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -64,6 +64,8 @@ async def update_learning_goal(
         goal.goal = goal_data.goal
     if goal_data.goal_description is not None:
         goal.goal_description = goal_data.goal_description
+    if goal_data.program_type is not None:
+        goal.program_type = goal_data.program_type
 
     goal.updated_by_id = user_id
 
@@ -80,12 +82,24 @@ async def update_learning_goal(
 
 
 async def delete_learning_goal(db: AsyncSession, goal_id: int) -> bool:
-    """Delete learning goal (admin only)"""
+    """Delete learning goal (admin only)
+    
+    Note: This will cascade delete any program assignments with ondelete=CASCADE
+    """
     goal = await get_learning_goal_by_id(db, goal_id)
 
     if not goal:
         return False
 
-    await db.delete(goal)
-    await db.commit()
-    return True
+    try:
+        # First delete any orphaned assignments or clean up relations
+        await db.execute(
+            delete(LearningGoals)
+            .where(LearningGoals.id == goal_id)
+        )
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        # Re-raise so endpoint can handle appropriately
+        raise e

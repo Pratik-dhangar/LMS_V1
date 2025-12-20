@@ -78,12 +78,26 @@ async def delete_goal_admin(
     current_admin: User = Depends(get_current_admin),
 ):
     """Admin deletes learning goal"""
-    success = await learning_goals_crud.delete_learning_goal(db, goal_id)
+    try:
+        success = await learning_goals_crud.delete_learning_goal(db, goal_id)
 
-    if not success:
-        raise HTTPException(status_code=404, detail="Goal not found")
+        if not success:
+            raise HTTPException(status_code=404, detail="Goal not found")
 
-    return None
+        return None
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error deleting goal {goal_id}: {str(e)}")
+        
+        # If it's a foreign key constraint error, provide helpful message
+        if "foreign key" in str(e).lower() or "constraint" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete this program because it has active assignments. Please delete all assignments first."
+            )
+        raise HTTPException(status_code=500, detail="Failed to delete goal")
 
 
 # ============ HEAD ENDPOINTS ============#

@@ -76,10 +76,10 @@ const HeadDashboard = () => {
       color: 'red'
     },
     {
-      title: 'Manage Assigned Programs',
+      title: 'Manage Program Assignments',
       description: 'Assign and manage learning programs for learners',
-      icon: <FaBookOpen />,   // same icon as manage training or change if you need
-      path: '/head/manage-assigned-programs',
+      icon: <FaBookOpen />,
+      path: '/head/manage-program-assignments',
       color: 'orange'
     },
     {
@@ -158,7 +158,7 @@ const HeadDashboard = () => {
             <p className="text-lg opacity-90">
               Bridge between Admin and Trainers - Program Coordination
             </p>
-           
+
           </div>
 
           {/* Stats Cards (Still commented out as in original file) */}
