@@ -3,7 +3,7 @@ import axiosInstance from "../axios";
 const learningProgramsService = {
   // ✅ Get all programs (learning_goals created by admin)
   getAllPrograms: async () => {
-    const res = await axiosInstance.get("/head/learning-programs");
+    const res = await axiosInstance.get("/learning-goals/head");
     return res.data;
   },
 

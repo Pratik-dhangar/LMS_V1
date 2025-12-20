@@ -1,0 +1,12 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="balloonGrad" cx="40%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFADAD" />
+      <stop offset="100%" stop-color="#D64545" />
+    </radialGradient>
+  </defs>
+  <path d="M50 85 Q45 92 50 100" stroke="#BDBDBD" stroke-width="2" fill="none" />
+  <path d="M50 85 C20 85 10 60 10 40 C10 15 28 5 50 5 C72 5 90 15 90 40 C90 60 80 85 50 85 Z" fill="url(#balloonGrad)" />
+  <path d="M46 85 L54 85 L50 78 Z" fill="#D64545" />
+  <ellipse cx="35" cy="25" rx="6" ry="10" fill="white" opacity="0.3" transform="rotate(20 35 25)" />
+</svg>

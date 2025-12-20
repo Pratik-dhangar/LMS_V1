@@ -11,7 +11,7 @@ const MANUAL_TEST_URL = '/speedtest.bin'
 
 const makeSlowMessage = (reason) =>
     // `Your network quality is slow${reason ? ` (${reason})` : ''}. Some features may take longer.`
-    `We’re noticing a slower internet connection. Learning will continue, but a few features may load more slowly.`
+    `Network Slowdown`
 
 const showSlowToast = (reason) => {
     if (toast.isActive(SLOW_TOAST_ID)) return

@@ -1144,6 +1144,8 @@ input[type="range"]::-webkit-slider-thumb {
     animation-duration: 11s;
     animation-timing-function: linear;
     will-change: transform, opacity;
+    --floating-emoji-size: 9rem;
+    /* change to desired size */
 }
 
 .floating-animation.balloon .floating-emoji {
@@ -1163,11 +1165,10 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* ============================================================================
    STAR SPARKLE EFFECT - Production-Ready, Baby-Friendly Animation
-   - Light golden sparkle animations that attract babies' attention
    - Hardware-accelerated transforms for 60fps performance
    - Single burst effect with auto-removal
    - Diamond-shaped sparkles with light golden glow
-   ============================================================================ */
+   =========================================================================== */
 
 /* Diamond Sparkle Shape - Using pseudo-elements */
 .sparkle-particle {
@@ -1626,6 +1627,11 @@ input[type="range"]::-webkit-slider-thumb {
         font-size: 60px;
     }
 
+    /* Larger balloons on tablet/desktop range */
+    .floating-animation.balloon {
+        --floating-emoji-size: 120px;
+    }
+
     .popped-emoji {
         font-size: 75px;
     }
@@ -1711,6 +1717,11 @@ input[type="range"]::-webkit-slider-thumb {
 
     .floating-animation {
         font-size: 45px;
+    }
+
+    /* Slightly smaller balloons on mobile */
+    .floating-animation.balloon {
+        --floating-emoji-size: 90px;
     }
 
     .popped-emoji {
