@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import headService from '../../api/services/headService';
 import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
 import ProfessionalInfoSection from '../../components/admin/EditHead/ProfessionalInfoSection';
@@ -47,6 +48,8 @@ const EditCoach = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [submitError, setSubmitError] = useState('');
   
   const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -235,6 +238,35 @@ const EditCoach = () => {
     navigate('/admin/manage-coaches');
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+
+    try {
+      await headService.deleteCoach(coachId);
+
+      toast.success('Coach deleted successfully!', {
+        position: "top-center",
+        autoClose: 2000,
+        theme: "colored",
+      });
+
+      setTimeout(() => {
+        navigate('/admin/manage-coaches');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error deleting coach:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to delete coach. Please try again.';
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 5000,
+        theme: "colored",
+      });
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-container">
@@ -253,6 +285,20 @@ const EditCoach = () => {
   return (
     <div className="page-container">
       <Navbar />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Coach"
+        message={`Are you sure you want to delete ${formData.name}? All associated data will be permanently removed.`}
+        confirmText="Delete Coach"
+        cancelText="Cancel"
+        loading={deleting}
+        variant="danger"
+      />
+
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -419,22 +465,48 @@ const EditCoach = () => {
             />
 
             {/* Form Actions */}
-            <div className="form-actions">
+            <div className="form-actions-split">
               <button
                 type="button"
-                onClick={handleCancel}
-                className="btn-secondary"
-                disabled={saving}
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={saving || deleting}
+                className="btn-danger btn-icon"
               >
-                Cancel
+                <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Delete Coach
               </button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+
+              <div className="form-actions-group">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={saving || deleting}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="btn-primary btn-icon"
+                >
+                  {saving ? (
+                    <>
+                      <div className="btn-spinner"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>

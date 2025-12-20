@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import InputField from '../../../components/common/InputField';
 import TextAreaField from '../../../components/common/TextAreaField';
 import vlogService from '../../../api/services/vlogService';
-import '../../../styles/components/admin/CreateVlogModal.css';
 
 const CreateVlogModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -57,12 +56,12 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="create-vlog-overlay">
-      <div className="create-vlog-modal">
-        <h2 className="create-vlog-title">Create New Vlog</h2>
+    <div className="modal-overlay">
+      <div className="modal-content modal-sm">
+        <h2 className="modal-title">Create New Vlog</h2>
 
         {error && (
-          <div className="create-vlog-error">
+          <div className="alert alert-error">
             {error}
           </div>
         )}
@@ -84,9 +83,9 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
             required
           />
 
-          <div className="create-vlog-field">
-            <label className="create-vlog-label">
-              Video File
+          <div className="form-field">
+            <label className="form-label">
+              Video File <span className="form-required">*</span>
             </label>
             <input
               type="file"
@@ -94,13 +93,13 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="video/*"
               onChange={handleFileChange}
               required
-              className="create-vlog-file-input"
+              className="form-input"
             />
           </div>
 
-          <div className="create-vlog-field">
-            <label className="create-vlog-label">
-              Thumbnail Image
+          <div className="form-field">
+            <label className="form-label">
+              Thumbnail Image <span className="form-required">*</span>
             </label>
             <input
               type="file"
@@ -108,22 +107,22 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="image/*"
               onChange={handleFileChange}
               required
-              className="create-vlog-file-input"
+              className="form-input"
             />
           </div>
 
-          <div className="create-vlog-buttons">
+          <div className="modal-actions">
             <button
               type="button"
               onClick={onClose}
-              className="create-vlog-btn-cancel"
+              className="btn-secondary"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="create-vlog-btn-submit"
+              className="btn-primary"
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create'}
