@@ -31,8 +31,10 @@ from app.api.endpoints.learning_content_assignments import (
     router as learning_content_assignments_router,
 )
 from app.api.endpoints.learning_goals import router as learning_goals_router
-from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
-from app.api.endpoints.learning_program_assignments import learner_router
+# NOTE: Old learning_program_assignments replaced by program_assignments
+# from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
+# from app.api.endpoints.learning_program_assignments import learner_router
+from app.api.endpoints.program_assignments import router as program_assignments_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
 from app.api.endpoints.sessions import router as sessions_router
@@ -82,6 +84,10 @@ allowed_origins = (
     else [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
         "https://hurshbin.lumesoftai.in:3001",  # ✅ PWA Frontend (Domain)
         "https://hurshbin.lumesoftai.in:8001",  # ✅ PWA Backend (Domain)
         "https://43.204.218.16:3001",            # IP Access (Backup)
@@ -127,9 +133,12 @@ app.include_router(learning_content_assignments_router, prefix="/api")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 
-# ✅ Learning Program routers (correct)
-app.include_router(head_lp_router, prefix="/api")  # Already has prefix="/api/head"
-app.include_router(learner_router, prefix="/api")  # Already has prefix="/api/learner"
+# NOTE: Old learning_program_assignments routes removed - replaced by program_assignments
+# app.include_router(head_lp_router, prefix="/api")
+# app.include_router(learner_router, prefix="/api")
+
+# ✅ Program Assignments router (new - replaces old learning_program_assignments)
+app.include_router(program_assignments_router, prefix="/api")
 
 # ✅ WebSocket should NOT have /api prefix
 app.include_router(websocket_router)

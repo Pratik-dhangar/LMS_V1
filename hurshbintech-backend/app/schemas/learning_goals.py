@@ -2,22 +2,26 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
+from app.models.learning_goals_model import ProgramType
 
 
 class LearningGoalsCreate(BaseModel):
     goal: str = Field(..., min_length=3, max_length=255)
     goal_description: Optional[str] = None
+    program_type: ProgramType = ProgramType.IIP
 
 
 class LearningGoalsUpdate(BaseModel):
     goal: Optional[str] = Field(None, min_length=3, max_length=255)
     goal_description: Optional[str] = None
+    program_type: Optional[ProgramType] = None
 
 
 class LearningGoalsResponse(BaseModel):
     id: int
     goal: str
     goal_description: Optional[str]
+    program_type: ProgramType
     created_by_admin_id: int
     created_by_name: str
     updated_by_id: Optional[int]
@@ -34,6 +38,7 @@ class LearningGoalsResponse(BaseModel):
             id=goal.id,
             goal=goal.goal,
             goal_description=goal.goal_description,
+            program_type=goal.program_type,
             created_by_admin_id=goal.created_by_admin_id,
             created_by_name=goal.created_by.name if goal.created_by else "Unknown",
             updated_by_id=goal.updated_by_id,
