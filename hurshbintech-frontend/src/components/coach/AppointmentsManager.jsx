@@ -17,6 +17,9 @@ const AppointmentsManager = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [refundReceipt, setRefundReceipt] = useState(null);
   const [refundPreview, setRefundPreview] = useState(null);
+  const [filterDate, setFilterDate] = useState('');
+  const [filterTime, setFilterTime] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
     fetchAppointments();
@@ -168,6 +171,37 @@ const AppointmentsManager = () => {
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  // Filter appointments based on selected filters
+  const filteredAppointments = appointments.filter(apt => {
+    // Filter by date
+    if (filterDate) {
+      const appointmentDate = new Date(apt.scheduled_date).toISOString().split('T')[0];
+      if (appointmentDate !== filterDate) return false;
+    }
+
+    // Filter by time
+    if (filterTime) {
+      const appointmentTime = apt.scheduled_time?.replace(/\s/g, '').toLowerCase();
+      const filterTimeNorm = filterTime.replace(/\s/g, '').toLowerCase();
+      if (!appointmentTime?.includes(filterTimeNorm)) return false;
+    }
+
+    // Filter by status
+    if (filterStatus) {
+      if (apt.status?.toUpperCase() !== filterStatus) return false;
+    }
+
+    return true;
+  });
+
+  const clearFilters = () => {
+    setFilterDate('');
+    setFilterTime('');
+    setFilterStatus('');
+  };
+
+  const hasActiveFilters = filterDate || filterTime || filterStatus;
+
   if (loading) {
     return <div className="stat-loading">Loading appointments...</div>;
   }
@@ -192,18 +226,89 @@ const AppointmentsManager = () => {
         </div>
       )}
 
+      {/* Filter Section */}
+      <div className="appointments-filter-section">
+        <div className="filter-controls">
+          <div className="filter-group">
+            <label htmlFor="filter-date-coach" className="filter-label">Date</label>
+            <input
+              id="filter-date-coach"
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="filter-input"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="filter-time-coach" className="filter-label">Time</label>
+            <input
+              id="filter-time-coach"
+              type="text"
+              placeholder="e.g., 10am, 2:30 PM"
+              value={filterTime}
+              onChange={(e) => setFilterTime(e.target.value)}
+              className="filter-input"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="filter-status-coach" className="filter-label">Status</label>
+            <select
+              id="filter-status-coach"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="filter-input"
+            >
+              <option value="">All Status</option>
+              <option value="PENDING">Pending</option>
+              <option value="CONFIRMED">Confirmed</option>          
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="filter-clear-btn"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+
+        {hasActiveFilters && (
+          <div className="filter-results-info">
+            Showing {filteredAppointments.length} of {appointments.length} appointments
+          </div>
+        )}
+      </div>
+
       {/* Appointments List */}
       <div className="space-y-4">
-        {appointments.length === 0 ? (
+        {filteredAppointments.length === 0 ? (
           <div className="empty-state text-center py-12">
             <Calendar className="empty-state-icon mx-auto mb-4" style={{ width: '64px', height: '64px', color: '#9ca3af' }} />
-            <p className="empty-state-title text-lg font-semibold mb-2">No appointments scheduled yet</p>
-            <p className="empty-state-description text-gray-600">
-              When other users schedule appointments with you, they will appear here
+            <p className="empty-state-title text-lg font-semibold mb-2">
+              {appointments.length === 0 ? 'No appointments scheduled yet' : 'No appointments match your filters'}
             </p>
+            <p className="empty-state-description text-gray-600">
+              {appointments.length === 0 
+                ? 'When other users schedule appointments with you, they will appear here'
+                : 'Try adjusting your filter criteria'
+              }
+            </p>
+            {appointments.length > 0 && (
+              <button
+                onClick={clearFilters}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
-          appointments.map(apt => (
+          filteredAppointments.map(apt => (
             <div key={apt.id} className="session-card">
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
@@ -235,7 +340,7 @@ const AppointmentsManager = () => {
                   
                   {/* Status Badge */}
                   <div className="mt-2">
-                    <span className={`status-badge status-${apt.status || 'scheduled'}`}>
+                    <span className={`status-badge status-${apt.status || 'scheduled'} text-xs bg-gray-300`}>
                       {apt.status || 'scheduled'}
                     </span>
                   </div>

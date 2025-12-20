@@ -9,7 +9,7 @@ from datetime import date
 from typing import Optional
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -364,12 +364,18 @@ async def update_appointment(
         )
 
     # Store previous status for email logic
-    previous_status = appointment.status
+    previous_status = str(appointment.status.value if hasattr(appointment.status, 'value') else appointment.status).upper()
     
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
     
+    # Capture new status safely
+    new_status = str(updated.status.value if hasattr(updated.status, 'value') else updated.status).upper()
+
+    # Debug log to help verify what's happening
+    logger.info(f"Appointment {appointment_id} update: '{previous_status}' -> '{new_status}'")
+    
     # Send confirmation email if status changed to CONFIRMED
-    if previous_status != "CONFIRMED" and updated.status == "CONFIRMED":
+    if previous_status not in ["CONFIRMED", "ACCEPTED"] and new_status in ["CONFIRMED", "ACCEPTED"]:
         user_email = updated.user.email if updated.user else None
         user_name = updated.user.name if updated.user else "User"
         
@@ -387,9 +393,9 @@ async def update_appointment(
                 appointment_id=updated.id,
             )
             if email_sent:
-                logger.info(f"✓ Confirmation email sent successfully to {user_email}")
+                logger.info(f"Confirmation email sent successfully to {user_email}")
             else:
-                logger.warning(f"✗ Failed to send confirmation email to {user_email}")
+                logger.warning(f"Failed to send confirmation email to {user_email}")
     
     return AppointmentResponse(
         id=updated.id,
@@ -441,7 +447,7 @@ async def delete_appointment(
 @router.post("/appointments/{appointment_id}/reject", response_model=AppointmentResponse)
 async def reject_appointment(
     appointment_id: int,
-    rejection_reason: str = None,
+    rejection_reason: str = Form(None),
     refund_receipt: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
@@ -519,9 +525,12 @@ async def reject_appointment(
     )
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
 
-    # Send rejection email
+    # Send rejection email - use rejection_reason from DB if available, otherwise use provided reason
     user_email = updated.user.email if updated.user else None
     user_name = updated.user.name if updated.user else "User"
+    
+    # Use the saved rejection reason from DB (updated.rejection_reason) with fallback to the provided reason
+    final_rejection_reason = updated.rejection_reason or rejection_reason
     
     if not user_email:
         logger.warning(f"Cannot send rejection email - User {user_name} (ID: {updated.user_id}) has no email address")
@@ -531,15 +540,15 @@ async def reject_appointment(
             recipient_email=user_email,
             recipient_name=user_name,
             coach_name=current_coach.user.name if current_coach.user else "Coach",
-            rejection_reason=rejection_reason,
+            rejection_reason=final_rejection_reason,
             scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
             scheduled_time=updated.scheduled_time,
             appointment_id=updated.id,
         )
         if email_sent:
-            logger.info(f"✓ Rejection email sent successfully to {user_email}")
+            logger.info(f"Rejection email sent successfully to {user_email}")
         else:
-            logger.warning(f"✗ Failed to send rejection email to {user_email}")
+            logger.warning(f"Failed to send rejection email to {user_email}")
 
     return AppointmentResponse(
         id=updated.id,

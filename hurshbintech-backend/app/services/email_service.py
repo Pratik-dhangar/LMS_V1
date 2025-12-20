@@ -31,7 +31,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
 
-        subject = "✓ Appointment Confirmed"
+        subject = "Appointment Confirmed"
         
         session_info = ""
         if session_type:
@@ -44,33 +44,33 @@ class EmailService:
                 <meta charset="UTF-8">
                 <style>
                     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }}
-                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 10px; background-color: #076620; }}
+                    .header {{ background-color: #2c3e50; padding: 30px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
                     .content {{ background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                    .details-box {{ background-color: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }}
+                    .details-box {{ background-color: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2c3e50; }}
                     .detail-item {{ margin: 10px 0; }}
-                    .detail-label {{ font-weight: 600; color: #667eea; }}
+                    .detail-label {{ font-weight: 600; color: #2c3e50; }}
                     .detail-value {{ color: #555; margin-left: 10px; }}
                     .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }}
-                    .btn {{ display: inline-block; padding: 12px 30px; background-color: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }}
-                    h2 {{ color: #667eea; margin: 0; }}
+                    .btn {{ display: inline-block; padding: 12px 30px; background-color: #2c3e50; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }}
+                    h2 {{ color: #2c3e50; margin: 0; }}
                     p {{ margin: 10px 0; }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 28px;">✓ Appointment Confirmed!</h1>
+                        <h1 style="margin: 0; font-size: 26px;">Appointment Confirmed</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking is all set</p>
                     </div>
                     
                     <div class="content">
                         <p>Hi <strong>{recipient_name}</strong>,</p>
                         
-                        <p>Great news! Your appointment request has been <strong>confirmed</strong> and is ready to go.</p>
+                        <p>Your appointment request has been confirmed and is ready to go.</p>
                         
                         <div class="details-box">
-                            <h3 style="margin-top: 0; color: #667eea;">Appointment Details:</h3>
+                            <h3 style="margin-top: 0; color: #2c3e50;">Appointment Details</h3>
                             <div class="detail-item">
                                 <span class="detail-label">Coach:</span>
                                 <span>{coach_name}</span>
@@ -90,14 +90,14 @@ class EmailService:
                             </div>
                         </div>
                         
-                        <p><strong>Next Steps:</strong></p>
+                        <p><strong>What's Next:</strong></p>
                         <ul style="color: #555;">
-                            <li>Make sure to join the session on time</li>
+                            <li>Join the session on time</li>
                             <li>Have all necessary materials ready</li>
-                            <li>If you need to reschedule, contact your coach as soon as possible</li>
+                            <li>Contact your coach if you need to reschedule</li>
                         </ul>
                         
-                        <p style="color: #666; font-size: 14px;">If you have any questions about your appointment, please reach out to <strong>{coach_name}</strong> or our support team.</p>
+                        <p style="color: #666; font-size: 14px;">If you have any questions about your appointment, please contact <strong>{coach_name}</strong> or our support team.</p>
                         
                         <div class="footer">
                             <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
@@ -133,7 +133,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
 
-        subject = "✗ Appointment Not Confirmed"
+        subject = "Appointment Status Update"
         
         reason_text = rejection_reason or "We were unable to accommodate this appointment at this time."
         
@@ -143,15 +143,15 @@ class EmailService:
                 <meta charset="UTF-8">
                 <style>
                     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }}
-                    .header {{ background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 30px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 10px; background-color: #5c0606; }}
+                    .header {{ background-color: #34495e; padding: 30px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
                     .content {{ background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                    .details-box {{ background-color: #fff5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f5576c; }}
-                    .reason-box {{ background-color: #fff3cd; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #ffc107; }}
+                    .details-box {{ background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #34495e; }}
+                    .reason-box {{ background-color: #fff8e1; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #fbc02d; }}
                     .detail-item {{ margin: 10px 0; }}
-                    .detail-label {{ font-weight: 600; color: #666; }}
+                    .detail-label {{ font-weight: 600; color: #34495e; }}
                     .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }}
-                    h2 {{ color: #f5576c; margin: 0; }}
+                    h2 {{ color: #34495e; margin: 0; }}
                     p {{ margin: 10px 0; }}
                     .next-steps {{ background-color: #e8f5e9; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #4caf50; }}
                     .next-steps strong {{ color: #2e7d32; }}
@@ -160,7 +160,7 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 28px;">✗ Appointment Update</h1>
+                        <h1 style="margin: 0; font-size: 28px;">Appointment Status Update</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking status has changed</p>
                     </div>
                     
@@ -170,7 +170,7 @@ class EmailService:
                         <p>We're writing to inform you that your appointment request with <strong>{coach_name}</strong> could not be confirmed at this time.</p>
                         
                         <div class="details-box">
-                            <h3 style="margin-top: 0; color: #d32f2f;">Appointment Details:</h3>
+                            <h3 style="margin-top: 0; color: #34495e;">Appointment Details</h3>
                             <div class="detail-item">
                                 <span class="detail-label">Coach:</span>
                                 <span>{coach_name}</span>
@@ -190,16 +190,16 @@ class EmailService:
                         </div>
                         
                         <div class="reason-box">
-                            <h4 style="margin-top: 0; color: #f5576c;">Reason for Rejection:</h4>
+                            <h4 style="margin-top: 0; color: #f57f17;">Reason for Update</h4>
                             <p style="margin-bottom: 0; color: #555;">{reason_text}</p>
                         </div>
                         
                         <div class="next-steps">
-                            <strong style="display: block; margin-bottom: 8px;">What You Can Do:</strong>
+                            <strong style="display: block; margin-bottom: 8px;">What You Can Do</strong>
                             <ul style="margin: 10px 0; padding-left: 20px;">
                                 <li>Try scheduling another appointment at a different time</li>
                                 <li>Request an appointment with a different coach</li>
-                                <li>Contact support if you have any questions or concerns</li>
+                                <li>Contact support if you have any questions</li>
                             </ul>
                         </div>
                         
