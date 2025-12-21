@@ -12,6 +12,7 @@ from app.core.deps import get_db, get_current_user
 from app.models.user_model import User
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.crud import user_crud, coach_crud
+from app.services.email_service import EmailService
 
 router = APIRouter()
 
@@ -214,6 +215,26 @@ async def book_appointment_with_coach(
     appointment = await coach_crud.create_appointment(
         db, appointment_data, current_user.id, user_role
     )
+    
+    # Send email notification to coach about new appointment request
+    try:
+        # Refresh coach object to ensure we have latest data with user relationship
+        await db.refresh(coach)
+        if coach and coach.user and coach.user.email:
+            await EmailService.send_appointment_requested(
+                recipient_email=coach.user.email,
+                recipient_name=coach.user.name,
+                client_name=current_user.name,
+                scheduled_date=appointment.scheduled_date.strftime('%B %d, %Y') if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+                scheduled_time=appointment.scheduled_time,
+                session_type=appointment.session_type,
+                appointment_id=appointment.id,
+            )
+    except Exception as email_error:
+        # Log error but don't fail appointment creation
+        import logging
+        logging.error(f"Failed to send email notification: {str(email_error)}")
+        print(f"Failed to send email notification: {str(email_error)}")
     
     # Manually serialize date fields for Pydantic v2 compatibility
     return AppointmentResponse(
