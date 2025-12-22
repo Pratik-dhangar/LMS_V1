@@ -365,6 +365,8 @@ async def get_coach_appointments(
             "session_type": apt.session_type,  # Read directly from column
             "payment_screenshot_url": apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url for frontend
             "payment_receipt_url": apt.payment_receipt_url,  # Also include in response
+            "rejection_reason": apt.rejection_reason,  # Reason for appointment rejection
+            "refund_receipt_url": apt.refund_receipt_url,  # URL to refund receipt
             "created_at": apt.created_at.isoformat() if apt.created_at else None,
             "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
