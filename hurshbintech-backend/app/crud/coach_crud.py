@@ -190,9 +190,13 @@ async def check_slot_availability(
     coach_id: int,
     scheduled_date: date,
     scheduled_time: str,
-) -> bool:
+) -> tuple:
     """
     Check if a specific time slot is available for booking.
+    Validates:
+    1. Coach's availability_days (e.g., only books Monday, Wednesday)
+    2. Coach's time_slots (e.g., only 10am, 1pm, 3pm, 5pm)
+    3. No existing appointments at that time
     
     Args:
         db: Database session
@@ -201,10 +205,33 @@ async def check_slot_availability(
         scheduled_time: Time slot (e.g., "10am")
     
     Returns:
-        True if slot is available, False if already booked
+        Tuple of (is_available: bool, reason: str)
     """
     from sqlalchemy import and_
-    from app.models.user_model import AppointmentStatus
+    from app.models.user_model import AppointmentStatus, CoachProfile
+    
+    # Get coach profile to check availability_days and time_slots
+    coach_result = await db.execute(
+        select(CoachProfile).where(CoachProfile.id == coach_id)
+    )
+    coach = coach_result.scalar_one_or_none()
+    
+    if not coach:
+        return False, "Coach not found"
+    
+    # Check if the day of the week is in coach's availability_days
+    if coach.availability_days:
+        day_name = scheduled_date.strftime('%A')  # Get day name (Monday, Tuesday, etc.)
+        available_days = [day.strip() for day in coach.availability_days.split(',')]
+        
+        if day_name not in available_days:
+            return False, f"Coach is not available on {day_name}s. Available days: {coach.availability_days}"
+    
+    # Check if time slot is in coach's time_slots
+    if coach.time_slots:
+        available_slots = [slot.strip() for slot in coach.time_slots.split(',')]
+        if scheduled_time not in available_slots:
+            return False, f"Time slot {scheduled_time} is not available. Available slots: {coach.time_slots}"
     
     # Check for existing appointments at this time
     result = await db.execute(
@@ -222,7 +249,10 @@ async def check_slot_availability(
     )
     existing_appointment = result.scalar_one_or_none()
     
-    return existing_appointment is None  # Available if no existing appointment
+    if existing_appointment:
+        return False, f"Time slot {scheduled_time} on {scheduled_date} is already booked"
+    
+    return True, "Slot is available"
 
 
 # ============ COACH SESSION CRUD ============

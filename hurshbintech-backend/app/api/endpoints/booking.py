@@ -126,26 +126,15 @@ async def book_appointment_with_coach(
         coach.unavailable_reason = None
         await db.commit()
     
-    # ✅ CHECK SLOT AVAILABILITY - Prevent double-booking
-    is_slot_available = await coach_crud.check_slot_availability(
+    # ✅ CHECK SLOT AVAILABILITY - Validate day, time, and prevent double-booking
+    is_slot_available, availability_reason = await coach_crud.check_slot_availability(
         db, coach_id, scheduled_date, scheduled_time
     )
     
     if not is_slot_available:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Time slot {scheduled_time} on {scheduled_date} is already booked. Please choose another slot.",
-        )
-    
-    # Verify the slot is in coach's available time slots
-    coach_slots = []
-    if coach.time_slots:
-        coach_slots = [slot.strip() for slot in coach.time_slots.split(',')]
-    
-    if scheduled_time not in coach_slots:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid time slot. Coach only offers: {', '.join(coach_slots)}",
+            status_code=status.HTTP_409_CONFLICT if "already booked" in availability_reason else status.HTTP_400_BAD_REQUEST,
+            detail=availability_reason,
         )
     
     # Handle payment screenshot upload if provided

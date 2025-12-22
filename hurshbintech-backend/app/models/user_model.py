@@ -269,7 +269,8 @@ class CoachProfile(Base):
     
     # Availability Status - Coach can mark themselves as available/unavailable
     is_available = Column(Boolean, default=True)  # Can accept new appointments/sessions
-    unavailable_until = Column(DateTime, nullable=True)  # Optional: block until specific date/time
+    unavailable_from = Column(DateTime, nullable=True)  # Start of unavailability period
+    unavailable_until = Column(DateTime, nullable=True)  # End of unavailability period
     unavailable_reason = Column(String(255))  # e.g., "On leave", "Fully booked", "Personal"
 
     # Timestamps

@@ -120,16 +120,19 @@ async def upload_profile_picture(
 @router.patch("/availability")
 async def update_coach_availability(
     is_available: bool,
-    unavailable_until: Optional[str] = None,  # ISO format datetime string
+    unavailable_from: Optional[str] = None,  # ISO format date string
+    unavailable_until: Optional[str] = None,  # ISO format date string
     unavailable_reason: Optional[str] = None,
+    availability_days: Optional[str] = None,  # "Monday, Wednesday, Friday"
+    time_slots: Optional[str] = None,  # "10am, 1pm, 3pm"
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """
-    Update coach availability status
+    Update coach availability status and schedule
     
     When is_available=False, users cannot schedule appointments with this coach.
-    Optionally set unavailable_until (ISO datetime) and unavailable_reason.
+    Optionally set unavailable_from/until (ISO date format), reason, working days, and time slots.
     """
     from datetime import datetime
     
@@ -138,19 +141,49 @@ async def update_coach_availability(
         current_coach.is_available = is_available
         current_coach.unavailable_reason = unavailable_reason
         
-        # Parse unavailable_until if provided
-        if unavailable_until and not is_available:
+        # Parse unavailable_from if provided
+        if unavailable_from and not is_available:
             try:
-                current_coach.unavailable_until = datetime.fromisoformat(unavailable_until)
+                # Handle both date and datetime formats
+                if 'T' in unavailable_from:
+                    current_coach.unavailable_from = datetime.fromisoformat(unavailable_from)
+                else:
+                    current_coach.unavailable_from = datetime.fromisoformat(unavailable_from + "T00:00:00")
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid datetime format. Use ISO format (e.g., 2025-12-25T18:00:00)",
+                    detail="Invalid datetime format for unavailable_from. Use ISO format (e.g., 2025-12-25 or 2025-12-25T18:00:00)",
+                )
+        elif is_available:
+            current_coach.unavailable_from = None
+        
+        # Parse unavailable_until if provided
+        if unavailable_until and not is_available:
+            try:
+                # Handle both date and datetime formats
+                if 'T' in unavailable_until:
+                    current_coach.unavailable_until = datetime.fromisoformat(unavailable_until)
+                else:
+                    current_coach.unavailable_until = datetime.fromisoformat(unavailable_until + "T23:59:59")
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid datetime format for unavailable_until. Use ISO format (e.g., 2025-12-25 or 2025-12-25T18:00:00)",
                 )
         elif is_available:
             # Clear unavailable fields when marking as available
             current_coach.unavailable_until = None
             current_coach.unavailable_reason = None
+        
+        # Update availability days
+        if availability_days:
+            # Normalize the comma-separated days
+            current_coach.availability_days = ', '.join([day.strip() for day in availability_days.split(',')])
+        
+        # Update time slots
+        if time_slots:
+            # Normalize the comma-separated times
+            current_coach.time_slots = ', '.join([slot.strip() for slot in time_slots.split(',')])
         
         await db.commit()
         await db.refresh(current_coach)
@@ -158,8 +191,11 @@ async def update_coach_availability(
         return {
             "message": f"Availability updated to {'available' if is_available else 'unavailable'}",
             "is_available": current_coach.is_available,
+            "unavailable_from": current_coach.unavailable_from,
             "unavailable_until": current_coach.unavailable_until,
             "unavailable_reason": current_coach.unavailable_reason,
+            "availability_days": current_coach.availability_days,
+            "time_slots": current_coach.time_slots,
         }
     
     except HTTPException:
@@ -172,14 +208,49 @@ async def update_coach_availability(
 
 
 @router.get("/availability")
-async def get_coach_availability(
+async def get_current_coach_availability(
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """
+    Get current coach's availability settings (authenticated endpoint)
+    
+    Returns the logged-in coach's availability status and schedule.
+    """
+    from datetime import datetime
+    
+    # Check if unavailable_until has passed
+    is_currently_available = current_coach.is_available
+    if current_coach.unavailable_until and datetime.utcnow() >= current_coach.unavailable_until:
+        # Auto-reset availability
+        current_coach.is_available = True
+        current_coach.unavailable_until = None
+        current_coach.unavailable_reason = None
+        await db.commit()
+        is_currently_available = True
+    
+    return {
+        "coach_id": current_coach.id,
+        "coach_name": current_coach.user.name,
+        "is_available": is_currently_available,
+        "unavailable_from": current_coach.unavailable_from,
+        "unavailable_until": current_coach.unavailable_until,
+        "unavailable_reason": current_coach.unavailable_reason,
+        "availability_days": current_coach.availability_days,
+        "time_slots": current_coach.time_slots,
+    }
+
+
+@router.get("/availability/public/{coach_id}")
+async def get_coach_availability_public(
     coach_id: int,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get coach availability status (public endpoint)
+    Get coach availability status by ID (public endpoint)
     
     Returns whether a coach is currently available to accept appointments.
+    Used by appointment booking system and coach profile pages.
     """
     coach = await user_crud.get_coach_by_id(db, coach_id)
     if not coach:
@@ -204,6 +275,7 @@ async def get_coach_availability(
         "coach_id": coach.id,
         "coach_name": coach.user.name,
         "is_available": is_currently_available,
+        "unavailable_from": coach.unavailable_from,
         "unavailable_until": coach.unavailable_until,
         "unavailable_reason": coach.unavailable_reason,
         "availability_days": coach.availability_days,

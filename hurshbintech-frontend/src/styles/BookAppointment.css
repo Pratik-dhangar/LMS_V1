@@ -61,6 +61,8 @@
   padding: 2rem;
   transition: all 0.3s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
 .coach-card:hover {
@@ -924,4 +926,94 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: #1e40af;
+}
+
+/* ============================================
+   COACH UNAVAILABILITY STYLES
+   ============================================ */
+
+/* Unavailable Coach Card - Still interactive */
+.coach-card-unavailable {
+  /* Card remains fully interactive, just visual indicator */
+}
+
+.coach-card-unavailable:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  border-color: #3b82f6;
+}
+
+/* Greyscale effect for unavailable coach avatar */
+.greyscale {
+  filter: grayscale(60%);
+  opacity: 0.8;
+}
+
+/* Availability Badge - Top right corner, small */
+.availability-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+/* Green badge for available coaches */
+.badge-available {
+  background: rgba(16, 185, 129, 0.95);
+  color: white;
+  border: 1px solid rgba(16, 185, 129, 1);
+}
+
+/* Red badge for unavailable coaches */
+.badge-unavailable {
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+  border: 1px solid rgba(239, 68, 68, 1);
+}
+
+.badge-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.badge-text {
+  display: none;
+}
+
+/* Show badge text on hover */
+.coach-card:hover .badge-text {
+  display: inline;
+}
+
+/* Unavailable message instead of button */
+.coach-unavailable-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.coach-unavailable-message svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #ef4444;
 }
