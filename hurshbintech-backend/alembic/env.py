@@ -16,7 +16,6 @@ from app.models import (
     learning_goals_model,
     session_model
 )
-from app.models.learning_content_assignment_model import LearningContentAssignment
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.vlog_model import Vlog
 from app.models.session_report_model import SessionReport

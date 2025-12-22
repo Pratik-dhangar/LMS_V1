@@ -27,9 +27,6 @@ from app.api.endpoints.head import router as head_endpoint_router
 from app.api.endpoints.head_session_notes import router as head_session_notes_router
 from app.api.endpoints.health import router as health_router
 from app.api.endpoints.learning_content import router as learning_content_router
-from app.api.endpoints.learning_content_assignments import (
-    router as learning_content_assignments_router,
-)
 from app.api.endpoints.learning_goals import router as learning_goals_router
 # NOTE: Old learning_program_assignments replaced by program_assignments
 # from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
@@ -95,6 +92,8 @@ allowed_origins = (
     ]
 )
 
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -129,7 +128,6 @@ app.include_router(sessions_router, prefix="/api")
 app.include_router(session_notes_router, prefix="/api")
 app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
-app.include_router(learning_content_assignments_router, prefix="/api")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 

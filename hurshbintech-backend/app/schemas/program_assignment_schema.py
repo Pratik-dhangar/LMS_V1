@@ -112,6 +112,8 @@ class ProgramAssignmentResponse(BaseModel):
     notification_sent: bool
     assigned_at: datetime
     updated_at: datetime
+    is_overdue: bool = False
+    is_late_submission: bool = False
 
     class Config:
         from_attributes = True
@@ -130,6 +132,8 @@ class ProgramAssignmentListResponse(BaseModel):
     completion_status: CompletionStatus
     completed_at: Optional[datetime]
     assigned_at: datetime
+    is_overdue: bool = False
+    is_late_submission: bool = False
 
     class Config:
         from_attributes = True

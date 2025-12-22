@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
@@ -6,19 +6,22 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
 import learningProgramsService from "../../api/services/learningProgramsService";
-import learningContentAssignmentService from "../../api/services/learningContentAssignmentService";
 import programAssignmentService from "../../api/services/programAssignmentService";
 
 const LearnerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Track if we've shown the initial error toast
+  const sessionErrorToastShownRef = useRef(false);
+  const programErrorToastShownRef = useRef(false);
+
   const [sessions, setSessions] = useState([]);
   const [learningPrograms, setLearningPrograms] = useState([]);
-  const [assignedContents, setAssignedContents] = useState([]);
+  const [programContents, setProgramContents] = useState({}); // { programId: [contents] }
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
-  const [loadingContents, setLoadingContents] = useState(true);
+  const [loadingContents, setLoadingContents] = useState(false);
   const [showContentModal, setShowContentModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
@@ -28,22 +31,8 @@ const LearnerDashboard = () => {
   useEffect(() => {
     fetchSessions();
     fetchAssignedPrograms();
-    fetchAssignedContents();
 
-    // Add keyboard event listener for ESC key to close modal
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && showContentModal) {
-        handleCloseModal();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showContentModal]);
-
-  // Auto-refresh sessions every 30 seconds
-  useEffect(() => {
+    // Auto-refresh sessions every 30 seconds
     const refreshInterval = setInterval(() => {
       console.log('[LearnerDashboard] Auto-refreshing sessions...');
       fetchSessions();
@@ -59,7 +48,11 @@ const LearnerDashboard = () => {
       setSessions(data);
     } catch (error) {
       console.error("Error fetching sessions:", error);
-      toast.error("Failed to load sessions");
+      // Show error toast only once on initial login
+      if (!sessionErrorToastShownRef.current) {
+        toast.info("No active sessions created yet");
+        sessionErrorToastShownRef.current = true;
+      }
     } finally {
       setLoadingSessions(false);
     }
@@ -73,38 +66,49 @@ const LearnerDashboard = () => {
       setLearningPrograms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching assigned programs:", error);
-      toast.error("Failed to load assigned home programs. Please try refreshing the page.");
+      // Show error toast only once on initial login
+      if (!programErrorToastShownRef.current) {
+        toast.info("No programs assigned yet");
+        programErrorToastShownRef.current = true;
+      }
       setLearningPrograms([]); // Set to empty array on error
     } finally {
       setLoadingPrograms(false);
     }
   };
 
-  const fetchAssignedContents = async () => {
+  const fetchProgramContents = async () => {
+    if (learningPrograms.length === 0) return;
+    setLoadingContents(true);
     try {
-      console.log('Fetching content for learner ID:', user.id);
-      const data = await learningContentAssignmentService.getAssignmentsByLearner(user.id);
-      console.log("Fetched assigned contents data:", data); // Debug log
-      console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
+      const contentsMap = {};
 
-      // Ensure data is an array to prevent runtime errors
-      setAssignedContents(Array.isArray(data) ? data : []);
-
-      if (data && data.length > 0) {
-        console.log(`Successfully loaded ${data.length} assigned content(s)`);
-        console.log('First content:', data[0]);
-      } else {
-        console.log('No content assignments found for this learner');
+      // Fetch contents for each program
+      for (const program of learningPrograms) {
+        try {
+          const contents = await programAssignmentService.getProgramContents(program.id);
+          contentsMap[program.id] = Array.isArray(contents) ? contents : [];
+        } catch (error) {
+          console.error(`Error fetching contents for program ${program.id}:`, error);
+          contentsMap[program.id] = [];
+        }
       }
+
+      setProgramContents(contentsMap);
     } catch (error) {
-      console.error("Error fetching assigned contents:", error);
-      console.error("Error details:", error.response?.data || error.message);
-      toast.error("Failed to load assigned learning contents. Please try refreshing the page.");
-      setAssignedContents([]); // Set to empty array on error
+      console.error("Error fetching program contents:", error);
+      toast.error("Failed to load learning contents");
     } finally {
       setLoadingContents(false);
     }
   };
+
+  // Fetch contents when programs are loaded
+  useEffect(() => {
+    if (learningPrograms.length > 0) {
+      fetchProgramContents();
+    }
+  }, [learningPrograms]);
 
   const handleJoinSession = (sessionId) => {
     navigate(`/learner/session/${sessionId}`);
@@ -136,8 +140,7 @@ const LearnerDashboard = () => {
   const renderContentViewer = () => {
     if (!selectedContent) return null;
 
-    const { content_type, file_url, content_title } = selectedContent;
-    // Use file_url directly - Vite proxy will handle routing to backend
+    const { content_type, file_url, title } = selectedContent;
     const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
 
     const handleLoad = () => {
@@ -156,13 +159,13 @@ const LearnerDashboard = () => {
       toast.error("Failed to load content");
     };
 
-    switch (content_type.toLowerCase()) {
+    switch (content_type?.toLowerCase()) {
       case 'image':
         return (
           <div className="flex justify-center">
             <img
               src={fullUrl}
-              alt={content_title}
+              alt={title}
               className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
               onLoad={handleLoad}
               onError={handleError}
@@ -207,7 +210,7 @@ const LearnerDashboard = () => {
             <iframe
               src={fullUrl}
               className="w-full h-[70vh] border rounded-lg shadow-lg"
-              title={content_title}
+              title={title}
               onLoad={handleLoad}
               onError={handleError}
             />
@@ -457,45 +460,77 @@ const LearnerDashboard = () => {
             )}
           </div>
 
-          {/* ✅ Assigned Learning Contents */}
-          <div id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6">
+          {/* ✅ Auto-Assigned Learning Contents by Program */}
+          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Your Assigned Learning Content
+              Learning Content
             </h2>
 
             {loadingContents ? (
-              <p className="text-gray-500">Loading assigned contents...</p>
-            ) : assignedContents.length === 0 ? (
-              <p className="text-gray-500">No learning content assigned yet.</p>
+              <p className="text-gray-500">Loading learning contents...</p>
+            ) : Object.keys(programContents).length === 0 || Object.values(programContents).every(arr => arr.length === 0) ? (
+              <p className="text-gray-500">No learning content available yet.</p>
             ) : (
-              <div className="space-y-6">
-                {assignedContents.map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
-                  >
-                    <h3 className="font-semibold text-gray-800 mb-1">
-                      {assignment.content_title || 'Untitled Content'}
-                    </h3>
+              <div className="space-y-4">
+                {learningPrograms.map((program) => {
+                  const contents = programContents[program.id] || [];
+                  if (contents.length === 0) return null;
 
-                    <p className="text-sm text-gray-600 mb-2">
-                      Type: {assignment.content_type} | Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
-                    </p>
-
-                    {assignment.assigned_by_name && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        Assigned by: {assignment.assigned_by_name}
-                      </p>
-                    )}
-
-                    <button
-                      className="mt-3 bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700"
-                      onClick={() => handleViewContent(assignment)}
+                  return (
+                    <div
+                      key={program.id}
+                      className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
                     >
-                      View Content
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-800">
+                            {program.program_name || program.name || 'Unnamed Program'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {contents.length} content item{contents.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            // Scroll to show all contents or open a view
+                            const contentArea = document.getElementById(`program-contents-${program.id}`);
+                            if (contentArea) {
+                              contentArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                          }}
+                          className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          View Contents
+                        </button>
+                      </div>
+
+                      {/* Contents List */}
+                      <div id={`program-contents-${program.id}`} className="mt-4 space-y-2">
+                        {contents.map((content, idx) => (
+                          <div
+                            key={`${program.id}-${content.id}-${idx}`}
+                            className="flex items-center justify-between p-3 bg-white rounded border border-gray-200 hover:border-blue-400 transition"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-800 truncate">
+                                {content.title || 'Untitled Content'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {content.content_type || 'Unknown Type'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleViewContent(content)}
+                              className="ml-3 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                            >
+                              View
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }).filter(Boolean)}
               </div>
             )}
           </div>
@@ -511,21 +546,13 @@ const LearnerDashboard = () => {
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-gray-800 truncate">
-                  {selectedContent?.content_title}
+                  {selectedContent?.title}
                 </h3>
                 <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     {selectedContent?.content_type}
                   </span>
-                  <span className="flex items-center gap-1">
-                    📅 {new Date(selectedContent?.assigned_at).toLocaleDateString()}
-                  </span>
-                  {selectedContent?.assigned_by_name && (
-                    <span className="flex items-center gap-1">
-                      👤 {selectedContent.assigned_by_name}
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-4">

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { toast } from "react-toastify";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
@@ -15,6 +16,7 @@ const ViewAssignedPrograms = () => {
   const [learnerNotes, setLearnerNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAssignments();
@@ -267,7 +269,7 @@ const ViewAssignedPrograms = () => {
                   </div>
 
                   <button
-                    onClick={() => handleViewDetails(assignment)}
+                    onClick={() => navigate(`/learner/program-assignment/${assignment.id}`)}
                     className="btn-primary btn-full"
                   >
                     View Details

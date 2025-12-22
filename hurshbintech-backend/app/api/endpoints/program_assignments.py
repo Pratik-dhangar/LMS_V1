@@ -40,6 +40,8 @@ from app.schemas.program_assignment_schema import (
 )
 from app.utils.s3_utils import S3Manager
 from app.core.config import settings
+from pathlib import Path
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/program-assignments", tags=["Program Assignments"])
@@ -596,11 +598,41 @@ async def upload_attachment(
                 detail="Failed to upload file"
             )
     else:
-        # Local storage fallback (implement if needed)
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Local storage not implemented for attachments"
-        )
+        # Local storage fallback
+        try:
+            upload_dir = Path("uploads/program-assignments")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            local_path = upload_dir / unique_filename
+            with open(local_path, "wb") as f:
+                f.write(file_content)
+
+            # Public path served by static files (nginx or backend static route)
+            file_path = f"/uploads/program-assignments/{unique_filename}"
+
+            # Generate thumbnail for images/videos
+            if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
+                try:
+                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    if thumbnail_content:
+                        thumb_dir = Path("uploads/program-assignments/thumbnails")
+                        thumb_dir.mkdir(parents=True, exist_ok=True)
+                        thumb_filename = f"thumb_{uuid.uuid4().hex}.jpg"
+                        thumb_path = thumb_dir / thumb_filename
+                        with open(thumb_path, "wb") as tf:
+                            tf.write(thumbnail_content)
+                        thumbnail_url = f"/uploads/program-assignments/thumbnails/{thumb_filename}"
+                except Exception as e:
+                    logger.warning(f"Failed to generate local thumbnail: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Failed to save file locally: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save file locally"
+            )
     
     # Create attachment record
     attachment = await program_assignment_attachment_crud.create_attachment(
@@ -732,22 +764,37 @@ async def get_my_assignments(
     if len(assignments) == 0:
         logger.warning(f"Learner {current_user.id} ({current_user.name}) has no assignments - check if assignments exist in database for this learner")
     
-    return [
-        ProgramAssignmentListResponse(
-            id=a.id,
-            learner_id=a.learner_id,
-            learner_name=a.learner.name,
-            program_id=a.program_id,
-            program_name=a.program.goal,
-            start_date=a.start_date,
-            end_date=a.end_date,
-            duration_days=a.duration_days,
-            completion_status=a.completion_status,
-            completed_at=a.completed_at,
-            assigned_at=a.assigned_at
+    today = date.today()
+    result = []
+    for a in assignments:
+        # Calculate if assignment is overdue
+        is_overdue = today > a.end_date
+        
+        # Check if submission is late
+        is_late_submission = False
+        if a.completed_at:
+            completion_date = a.completed_at.date() if isinstance(a.completed_at, datetime) else a.completed_at
+            is_late_submission = completion_date > a.end_date
+        
+        result.append(
+            ProgramAssignmentListResponse(
+                id=a.id,
+                learner_id=a.learner_id,
+                learner_name=a.learner.name,
+                program_id=a.program_id,
+                program_name=a.program.goal,
+                start_date=a.start_date,
+                end_date=a.end_date,
+                duration_days=a.duration_days,
+                completion_status=a.completion_status,
+                completed_at=a.completed_at,
+                assigned_at=a.assigned_at,
+                is_overdue=is_overdue,
+                is_late_submission=is_late_submission
+            )
         )
-        for a in assignments
-    ]
+    
+    return result
 
 
 @router.get("/learner/assignments/stats", response_model=CompletionStatsResponse)
@@ -795,6 +842,16 @@ async def get_my_assignment_details(
             detail="Not authorized to view this assignment"
         )
     
+    # Calculate if assignment is overdue (today is after end_date)
+    today = date.today()
+    is_overdue = today > assignment.end_date
+    
+    # Check if submission is late (submitted after end_date)
+    is_late_submission = False
+    if assignment.completed_at:
+        completion_date = assignment.completed_at.date() if isinstance(assignment.completed_at, datetime) else assignment.completed_at
+        is_late_submission = completion_date > assignment.end_date
+    
     # Build response with learning contents
     learning_contents = []
     if hasattr(assignment.program, 'program_contents'):
@@ -841,7 +898,9 @@ async def get_my_assignment_details(
         completed_at=assignment.completed_at,
         notification_sent=assignment.notification_sent,
         assigned_at=assignment.assigned_at,
-        updated_at=assignment.updated_at
+        updated_at=assignment.updated_at,
+        is_overdue=is_overdue,
+        is_late_submission=is_late_submission
     )
 
 
@@ -1023,11 +1082,41 @@ async def upload_my_attachment(
                 detail="Failed to upload file"
             )
     else:
-        # Local storage fallback (implement if needed)
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Local storage not implemented for attachments"
-        )
+        # Local storage fallback
+        try:
+            upload_dir = Path("uploads/program-assignments")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            local_path = upload_dir / unique_filename
+            with open(local_path, "wb") as f:
+                f.write(file_content)
+
+            # Public path served by static files (nginx or backend static route)
+            file_path = f"/uploads/program-assignments/{unique_filename}"
+
+            # Generate thumbnail for images/videos
+            if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
+                try:
+                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    if thumbnail_content:
+                        thumb_dir = Path("uploads/program-assignments/thumbnails")
+                        thumb_dir.mkdir(parents=True, exist_ok=True)
+                        thumb_filename = f"thumb_{uuid.uuid4().hex}.jpg"
+                        thumb_path = thumb_dir / thumb_filename
+                        with open(thumb_path, "wb") as tf:
+                            tf.write(thumbnail_content)
+                        thumbnail_url = f"/uploads/program-assignments/thumbnails/{thumb_filename}"
+                except Exception as e:
+                    logger.warning(f"Failed to generate local thumbnail: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Failed to save file locally: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save file locally"
+            )
     
     # Create attachment record
     attachment = await program_assignment_attachment_crud.create_attachment(

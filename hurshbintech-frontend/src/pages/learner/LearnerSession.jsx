@@ -114,6 +114,8 @@ const LearnerSession = () => {
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [_selectedItemId] = useState(null); // Track learner's own selection
+  const [isShiftActive, setIsShiftActive] = useState(false); // For shift/caps lock
+  const [isCapsLock, setIsCapsLock] = useState(false); // For persistent caps lock
 
   // Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
@@ -773,10 +775,51 @@ const LearnerSession = () => {
   const handleKeyboardKeyPress = (key) => {
     if (key === 'SPACE') {
       setKeyboardText(prev => prev + ' ');
+      setIsShiftActive(false);
     } else if (key === 'BACKSPACE') {
       setKeyboardText(prev => prev.slice(0, -1));
+      setIsShiftActive(false);
+    } else if (key === 'SHIFT') {
+      setIsShiftActive(!isShiftActive);
+    } else if (key === 'CAPS') {
+      setIsCapsLock(!isCapsLock);
+      setIsShiftActive(false);
+    } else if (key === 'ENTER') {
+      setKeyboardText(prev => prev + '\n');
+      setIsShiftActive(false);
+    } else if (key === 'TAB') {
+      setKeyboardText(prev => prev + '\t');
+      setIsShiftActive(false);
     } else {
-      setKeyboardText(prev => prev + key);
+      // Apply shift/caps logic for letters
+      let finalKey = key;
+      if (typeof key === 'string' && key.length === 1) {
+        const isLetter = /[a-z]/i.test(key);
+        if (isLetter) {
+          if (isShiftActive || isCapsLock) {
+            finalKey = key.toUpperCase();
+          } else {
+            finalKey = key.toLowerCase();
+          }
+          // Auto-deactivate shift after typing a letter
+          if (isShiftActive) {
+            setIsShiftActive(false);
+          }
+        } else {
+          // For non-letters, apply shift mapping for special characters
+          const shiftMap = {
+            '1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
+            '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
+            '-': '_', '=': '+', '[': '{', ']': '}', '\\': '|',
+            ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '`': '~'
+          };
+          if (isShiftActive && shiftMap[key]) {
+            finalKey = shiftMap[key];
+            setIsShiftActive(false);
+          }
+        }
+      }
+      setKeyboardText(prev => prev + finalKey);
     }
   };
 
@@ -1103,66 +1146,91 @@ const LearnerSession = () => {
                   ✨ Send
                 </button>
               </div>
-              <div className="bg-white bg-opacity-80 rounded-2xl p-3 sm:p-5 shadow-md">
+              <div className="bg-white bg-opacity-80 rounded-2xl p-3 sm:p-5 shadow-md overflow-x-auto">
                 <div className="grid gap-2 sm:gap-3">
+                  {/* Number Row */}
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='].map(char => {
+                      const shiftMap = { '1': '!', '2': '@', '3': '#', '4': '$', '5': '%', '6': '^', '7': '&', '8': '*', '9': '(', '0': ')', '-': '_', '=': '+' };
+                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
+                      return (
+                        <button
+                          key={char}
+                          className="keyboard-key bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                          onClick={() => handleKeyboardKeyPress(char)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleKeyboardKeyPress(char);
+                          }}
+                        >
+                          {displayChar}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Q Row */}
                   <div className="grid grid-cols-10 md:grid-cols-10 gap-1 sm:gap-2">
-                    {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(letter => (
+                    {['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
                           handleKeyboardKeyPress(letter);
                         }}
                       >
-                        {letter}
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
                       </button>
                     ))}
                   </div>
+
+                  {/* A Row */}
                   <div className="grid grid-cols-9 md:grid-cols-9 gap-1 sm:gap-2 md:ml-3">
-                    {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(letter => (
+                    {['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
                           handleKeyboardKeyPress(letter);
                         }}
                       >
-                        {letter}
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 md:grid-cols-7 gap-1 sm:gap-2 md:ml-6">
-                    {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map(letter => (
-                      <button
-                        key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
-                        onClick={() => handleKeyboardKeyPress(letter)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(letter);
-                        }}
-                      >
-                        {letter}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2 mt-2">
+
+                  {/* Z Row and Special Chars */}
+                  <div className="flex gap-1 sm:gap-2">
                     <button
-                      className="col-span-7 sm:col-span-8 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
-                      onClick={() => handleKeyboardKeyPress('SPACE')}
+                      className={`flex-1 keyboard-key rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center ${isShiftActive ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900' : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-100 hover:from-gray-800 hover:to-gray-900'
+                        }`}
+                      onClick={() => handleKeyboardKeyPress('SHIFT')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
-                        handleKeyboardKeyPress('SPACE');
+                        handleKeyboardKeyPress('SHIFT');
                       }}
                     >
-                      <Emoji emoji="🌟" size="sm" /> SPACE <Emoji emoji="🌟" size="sm" />
+                      ⇧ SHIFT
                     </button>
+                    {['z', 'x', 'c', 'v', 'b', 'n', 'm'].map(letter => (
+                      <button
+                        key={letter}
+                        className="flex-1 keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                        onClick={() => handleKeyboardKeyPress(letter)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handleKeyboardKeyPress(letter);
+                        }}
+                      >
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
+                      </button>
+                    ))}
                     <button
-                      className="col-span-5 sm:col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                      className="flex-1 keyboard-key bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
                       onClick={() => handleKeyboardKeyPress('BACKSPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1171,6 +1239,79 @@ const LearnerSession = () => {
                     >
                       ⌫ DEL
                     </button>
+                  </div>
+
+                  {/* Symbol and Control Row */}
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                    <button
+                      className={`col-span-2 keyboard-key rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center ${isCapsLock ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900' : 'bg-gradient-to-br from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800'
+                        }`}
+                      onClick={() => handleKeyboardKeyPress('CAPS')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('CAPS');
+                      }}
+                    >
+                      {isCapsLock ? '🔒 CAPS' : '🔓 CAPS'}
+                    </button>
+                    {['[', ']', ';', '\'', ',', '.', '/', '\\', '`'].map(char => {
+                      const shiftMap = { '[': '{', ']': '}', ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '\\': '|', '`': '~' };
+                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
+                      return (
+                        <button
+                          key={char}
+                          className="keyboard-key bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                          onClick={() => handleKeyboardKeyPress(char)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleKeyboardKeyPress(char);
+                          }}
+                        >
+                          {displayChar}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Space and Emoji Row */}
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                    <button
+                      className="col-span-9 keyboard-key bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-2 sm:py-3 rounded transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                      onClick={() => handleKeyboardKeyPress('SPACE')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('SPACE');
+                      }}
+                    >
+                      🌟 SPACE 🌟
+                    </button>
+                    <button
+                      className="col-span-3 keyboard-key bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 sm:py-3 rounded transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                      onClick={() => handleKeyboardKeyPress('ENTER')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('ENTER');
+                      }}
+                    >
+                      ↵ ENTER
+                    </button>
+                  </div>
+
+                  {/* Emoji Row */}
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-lg p-2 sm:p-3">
+                    {['😀', '😂', '😍', '😎', '👍', '❤️', '🎉', '🌟', '✨', '💯', '🔥', '⭐'].map(emoji => (
+                      <button
+                        key={emoji}
+                        className="keyboard-key bg-white hover:bg-gradient-to-br hover:from-yellow-200 hover:to-pink-200 border-2 border-pink-300 rounded py-2 sm:py-3 transition-all duration-150 shadow-sm hover:shadow-md active:scale-90 text-lg sm:text-xl flex items-center justify-center"
+                        onClick={() => handleKeyboardKeyPress(emoji)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handleKeyboardKeyPress(emoji);
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

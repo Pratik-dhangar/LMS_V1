@@ -34,7 +34,6 @@ import RegisterLearner from './pages/head/RegisterLearner';
 import ScheduleSession from './pages/head/ScheduleSession';
 import ManageSessions from './pages/head/ManageSessions';
 import ViewVlogs from './pages/head/ViewVlogs';
-import ManageAssignedLearningContent from './pages/head/ManageAssignedLearningContent';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
@@ -54,6 +53,7 @@ import LearnerDashboard from './pages/learner/Dashboard';
 import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
+import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
 
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
@@ -319,10 +319,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/head/manage-assigned-learning-content"
-          element={<ManageAssignedLearningContent
-          />}
-        />
         <Route
           path="/head/manage-program-assignments"
           element={
@@ -436,6 +432,14 @@ function App() {
         <Route
           path="/learner/learning-program/:id"
           element={<LearningProgramDetails />}
+        />
+        <Route
+          path="/learner/program-assignment/:id"
+          element={
+            <ProtectedRoute allowedRoles={["learner"]}>
+              <LearnerProgramAssignmentDetails />
+            </ProtectedRoute>
+          }
         />
 
 
