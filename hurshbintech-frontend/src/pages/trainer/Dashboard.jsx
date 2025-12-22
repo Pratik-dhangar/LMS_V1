@@ -25,9 +25,22 @@ const TrainerDashboard = () => {
   const [_loadingExtras, setLoadingExtras] = useState(true);
   const [learnerQuery, setLearnerQuery] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-refresh sessions every 30 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log('[TrainerDashboard] Auto-refreshing sessions...');
+      fetchSessions();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(refreshInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -195,6 +208,16 @@ const TrainerDashboard = () => {
         toast.error("Failed to load recording");
       }
     }
+  };
+
+  const handleViewSessionDetails = (session) => {
+    setSelectedSession(session);
+    setShowSessionDetailsModal(true);
+  };
+
+  const closeSessionDetailsModal = () => {
+    setShowSessionDetailsModal(false);
+    setSelectedSession(null);
   };
 
   const getStatusBadge = (status) => {
@@ -372,7 +395,7 @@ const TrainerDashboard = () => {
                                     </span>
                                   )}
                                   <button
-                                    onClick={() => navigate(`/trainer/session/${session.session_id || session.id}`)}
+                                    onClick={() => handleViewSessionDetails(session)}
                                     className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
                                   >
                                     View Details
@@ -582,6 +605,168 @@ const TrainerDashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* Session Details Modal */}
+      {showSessionDetailsModal && selectedSession && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeSessionDetailsModal}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Session Details</h2>
+              <button
+                onClick={closeSessionDetailsModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Title */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Session Title</label>
+                <p className="text-lg text-gray-800">{selectedSession.title || `Session with ${selectedSession.learner?.name || selectedSession.learner_name || "Learner"}`}</p>
+              </div>
+
+              {/* Learner Info */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Learner</label>
+                <p className="text-gray-800">{selectedSession.learner?.name || selectedSession.learner_name || "Unknown Learner"}</p>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Status</label>
+                <span className={getStatusBadge(selectedSession.status)}>{(selectedSession.status || "scheduled").charAt(0).toUpperCase() + (selectedSession.status || "scheduled").slice(1)}</span>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Date</label>
+                  <p className="text-gray-800">
+                    {selectedSession.scheduled_date
+                      ? new Date(selectedSession.scheduled_date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Time</label>
+                  <p className="text-gray-800">
+                    {selectedSession.scheduled_date
+                      ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Duration & Program */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Duration</label>
+                  <p className="text-gray-800">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Program / IIP</label>
+                  <p className="text-gray-800">
+                    {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
+                      ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedSession.description && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Description</label>
+                  <p className="text-gray-800 whitespace-pre-wrap">{selectedSession.description}</p>
+                </div>
+              )}
+
+              {/* Recording Status */}
+              {selectedSession.recording_url || selectedSession.recording_status && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Recording Status</label>
+                  {selectedSession.recording_status === "completed" && (
+                    <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      ✓ Completed
+                    </span>
+                  )}
+                  {selectedSession.recording_status === "processing" && (
+                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                      ⏳ Processing...
+                    </span>
+                  )}
+                  {selectedSession.recording_status === "failed" && (
+                    <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                      ❌ Failed
+                    </span>
+                  )}
+                  {!selectedSession.recording_status && (
+                    <span className="inline-block bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Not Started
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Additional Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Scheduled:</strong> {selectedSession.scheduled_date
+                    ? new Date(selectedSession.scheduled_date).toLocaleString()
+                    : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 p-6 flex justify-end gap-3">
+              <button
+                onClick={closeSessionDetailsModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Close
+              </button>
+              {selectedSession.status === "scheduled" && (
+                <button
+                  onClick={() => {
+                    closeSessionDetailsModal();
+                    handleStartSession(selectedSession.session_id || selectedSession.id);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                >
+                  Start Session
+                </button>
+              )}
+              {selectedSession.status === "active" && (
+                <button
+                  onClick={() => {
+                    closeSessionDetailsModal();
+                    handleResumeSession(selectedSession.session_id || selectedSession.id);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                >
+                  Resume Session
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

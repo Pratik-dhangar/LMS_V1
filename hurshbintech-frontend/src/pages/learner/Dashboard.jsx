@@ -42,6 +42,17 @@ const LearnerDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showContentModal]);
 
+  // Auto-refresh sessions every 30 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log('[LearnerDashboard] Auto-refreshing sessions...');
+      fetchSessions();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(refreshInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchSessions = async () => {
     try {
       const data = await sessionService.getLearnerSessions();
@@ -221,11 +232,6 @@ const LearnerDashboard = () => {
     }
   };
 
-  // Get next active or scheduled session
-  const nextSession = sessions.find(
-    (s) => s.status === "active" || s.status === "scheduled"
-  );
-
   const formatShortDate = (dateStr) => {
     if (!dateStr) return 'TBD';
     const d = new Date(dateStr);
@@ -316,34 +322,81 @@ const LearnerDashboard = () => {
           {/* Upcoming Sessions */}
           <div className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Upcoming Sessions
+              My Sessions
             </h2>
 
             {loadingSessions ? (
               <div className="text-center py-6 text-gray-500">Loading sessions...</div>
             ) : sessions.length === 0 ? (
               <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
-            ) : nextSession ? (
-              <div className="border rounded-lg p-4 flex items-center justify-between bg-white">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {nextSession.title || 'Next Session'}: {formatShortDate(nextSession.scheduled_date ?? nextSession.started_at)}
-                  </h3>
-                  <p className="text-xs text-gray-500 truncate mt-1">
-                    Time: {nextSession.scheduled_date ? new Date(nextSession.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} | Trainer: {nextSession.trainer?.name || nextSession.trainer_name || '—'}
-                  </p>
-                </div>
+            ) : (
+              <div className="space-y-3">
+                {sessions
+                  .sort((a, b) => {
+                    // Sort by status priority: active first, then scheduled, then others
+                    const statusPriority = { active: 0, scheduled: 1, ended: 2 };
+                    const aPriority = statusPriority[a.status] ?? 3;
+                    const bPriority = statusPriority[b.status] ?? 3;
+                    if (aPriority !== bPriority) return aPriority - bPriority;
+                    // Within same status, sort by date (newest first)
+                    return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                  })
+                  .map((session) => {
+                    const isActive = session.status === 'active';
+                    const isScheduled = session.status === 'scheduled';
+                    const isEnded = session.status === 'ended';
+                    const statusColor = isActive ? 'border-green-500 bg-green-50' :
+                      isScheduled ? 'border-blue-500 bg-blue-50' :
+                        'border-gray-300 bg-gray-50';
+                    const statusBadge = isActive ? 'bg-green-100 text-green-800' :
+                      isScheduled ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800';
 
-                <div className="ml-4">
-                  <button
-                    onClick={() => handleJoinSession(nextSession.session_id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
-                  >
-                    Join Session
-                  </button>
-                </div>
+                    return (
+                      <div
+                        key={session.session_id || session.id}
+                        className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-gray-800 truncate">
+                              {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
+                              {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                            <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
+                            {session.scheduled_date && (
+                              <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            )}
+                            <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
+                            {session.duration && <span>⏱️ {session.duration} min</span>}
+                          </div>
+                          {session.program && (
+                            <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
+                          )}
+                        </div>
+
+                        <div className="ml-4 flex-shrink-0">
+                          {(isActive || isScheduled) && (
+                            <button
+                              onClick={() => handleJoinSession(session.session_id)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                            >
+                              {isActive ? 'Resume' : 'Join'} Session
+                            </button>
+                          )}
+                          {isEnded && (
+                            <span className="text-gray-500 text-sm">Completed</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* ✅ Assigned Home Programs */}

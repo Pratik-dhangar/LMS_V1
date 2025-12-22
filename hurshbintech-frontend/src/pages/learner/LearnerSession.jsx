@@ -129,6 +129,7 @@ const LearnerSession = () => {
   const [_isPaused] = useState(false);
   const [_isFrozen] = useState(false);
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
+  const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -673,6 +674,7 @@ const LearnerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[LearnerSession] Remote stream received from trainer');
         setRemoteStream(stream);
+        setTrainerJoined(true); // Trainer has joined
       };
 
       // Set callback for connection state changes
@@ -686,7 +688,13 @@ const LearnerSession = () => {
           'failed': 'failed',
           'closed': 'disconnected'
         };
-        setConnectionStatus(statusMap[state] || state);
+        const mappedStatus = statusMap[state] || state;
+        setConnectionStatus(mappedStatus);
+
+        // If disconnected or failed, trainer might have left
+        if (state === 'disconnected' || state === 'closed') {
+          setTrainerJoined(false);
+        }
       };
 
       // Set error callback
@@ -811,6 +819,68 @@ const LearnerSession = () => {
     return (
       <div className="loading-container">
         <div className="session-loader"></div>
+      </div>
+    );
+  }
+
+  // Show waiting overlay if trainer hasn't joined yet
+  if (!loading && !trainerJoined && sessionInfo?.status === 'scheduled') {
+    return (
+      <div className="session-page">
+        {/* Navigation / Header */}
+        <div className="session-header">
+          <div className="session-header-main">
+            <div>
+              <div className="session-header-title">HurshBin Learner</div>
+              <div className="session-header-subtitle">
+                {sessionInfo?.title ?? 'Training Session'} — Trainer: {sessionInfo?.trainer_name ?? 'Trainer'}
+              </div>
+            </div>
+            <div className="session-header-controls">
+              <button
+                className="btn-session btn-session-end"
+                onClick={() => navigate('/learner/dashboard')}
+              >
+                🏠 Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Waiting Overlay */}
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
+          <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+            <div className="text-6xl mb-4 animate-bounce">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Waiting for Trainer
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your session is scheduled and you're ready to join!
+            </p>
+            <p className="text-gray-600 mb-6">
+              Please wait while <strong>{sessionInfo?.trainer_name ?? 'your trainer'}</strong> joins the session.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Connecting...</span>
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-gray-700">
+                <strong>Session Details:</strong>
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                {sessionInfo?.scheduled_date && (
+                  <>📅 {new Date(sessionInfo.scheduled_date).toLocaleString()}</>
+                )}
+              </p>
+              {sessionInfo?.duration && (
+                <p className="text-xs text-gray-600 mt-1">
+                  ⏱️ Duration: {sessionInfo.duration} minutes
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
