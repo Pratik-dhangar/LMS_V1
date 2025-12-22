@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone } from 'lucide-react';
+import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import bookingService from "../../api/services/bookingService";
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/Pages.css";
 import "../../styles/BookAppointment.css";
 
@@ -293,6 +294,33 @@ const MyAppointments = () => {
                       <p className="appointment-notes-content">
                         {apt.notes}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Rejection Reason - For Rejected Appointments */}
+                  {apt.status?.toUpperCase() === 'REJECTED' && apt.rejection_reason && (
+                    <div className="appointment-rejection-section" style={{ backgroundColor: '#fef2f2', borderLeft: '4px solid #ef4444', padding: '12px', borderRadius: '4px', marginBottom: '12px' }}>
+                      <p className="appointment-detail-label" style={{ color: '#991b1b', fontWeight: '600' }}>Rejection Reason</p>
+                      <p className="appointment-notes-content" style={{ color: '#7f1d1d', marginTop: '6px' }}>
+                        {apt.rejection_reason}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Refund Receipt - For Rejected Appointments */}
+                  {apt.status?.toUpperCase() === 'REJECTED' && apt.refund_receipt_url && (
+                    <div className="appointment-refund-section" style={{ marginBottom: '12px' }}>
+                      <p className="appointment-detail-label" style={{ marginBottom: '8px' }}>Refund Receipt</p>
+                      <a
+                        href={getFileUrl(apt.refund_receipt_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <Download className="w-4 h-4" />
+                        View Refund Receipt
+                      </a>
                     </div>
                   )}
 

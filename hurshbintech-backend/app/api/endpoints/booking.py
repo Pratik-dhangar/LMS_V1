@@ -9,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 
 from app.core.deps import get_db, get_current_user
+from app.core.config import settings
 from app.models.user_model import User
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.crud import user_crud, coach_crud
 from app.services.email_service import EmailService
+from app.utils.s3_utils import convert_s3_url_to_signed
 
 router = APIRouter()
 
@@ -27,7 +29,17 @@ async def get_available_coaches(
     Accessible by any authenticated user (head, trainer, learner).
     """
     coaches = await user_crud.get_all_coaches_system_wide(db)
-    return [CoachResponse.from_orm_with_user(coach) for coach in coaches]
+    
+    # Convert responses and update S3 URLs to signed URLs
+    responses = [CoachResponse.from_orm_with_user(coach) for coach in coaches]
+    
+    # Convert S3 profile pictures to signed URLs if using S3
+    if settings.USE_S3:
+        for coach_response in responses:
+            if coach_response.profile_picture_url and coach_response.profile_picture_url.startswith('s3://'):
+                coach_response.profile_picture_url = convert_s3_url_to_signed(coach_response.profile_picture_url)
+    
+    return responses
 
 
 @router.get("/slots/{coach_id}", response_model=AvailableSlotsResponse)
@@ -253,8 +265,10 @@ async def get_my_appointments(
     Get all appointments booked by the current user.
     """
     appointments = await coach_crud.get_appointments_by_user(db, current_user.id)
-    return [
-        AppointmentResponse(
+    
+    responses = []
+    for apt in appointments:
+        response = AppointmentResponse(
             id=apt.id,
             coach_id=apt.coach_id,
             user_id=apt.user_id,
@@ -267,8 +281,21 @@ async def get_my_appointments(
             session_type=apt.session_type,
             payment_screenshot_url=apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
             payment_receipt_url=apt.payment_receipt_url,
+            rejection_reason=apt.rejection_reason,  # Reason for rejection
+            refund_receipt_url=apt.refund_receipt_url,  # Refund receipt URL
             created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
             updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
         )
-        for apt in appointments
-    ]
+        
+        # Convert S3 URLs to signed URLs if using S3
+        if settings.USE_S3:
+            if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
+                response.payment_screenshot_url = convert_s3_url_to_signed(response.payment_screenshot_url)
+            if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
+                response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
+            if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
+                response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
+        
+        responses.append(response)
+    
+    return responses
