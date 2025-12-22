@@ -513,13 +513,6 @@ const ManageLearningContent = () => {
 
               <div className="modal-actions">
                 <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={uploading || !formData.file_url}
-                >
-                  Create
-                </button>
-                <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
@@ -535,6 +528,13 @@ const ManageLearningContent = () => {
                   className="btn-secondary"
                 >
                   Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={uploading || !formData.file_url}
+                >
+                  Create
                 </button>
               </div>
             </form>
@@ -590,15 +590,15 @@ const ManageLearningContent = () => {
               </div>
 
               <div className="modal-actions">
-                <button type="submit" className="btn-primary">
-                  Update
-                </button>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
                   className="btn-secondary"
                 >
                   Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Update
                 </button>
               </div>
             </form>

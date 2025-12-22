@@ -164,9 +164,9 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
     # Create User record first
     new_user = User(
         name=head_data.name,
+        email=head_data.email,
         passcode=encrypted_passcode,  # Store encrypted, not plaintext
         passcode_hash=passcode_hash,
-        email=None,  # Email optional for heads
         role=UserRole.HEAD,
         is_active=True,
     )
@@ -217,9 +217,12 @@ async def update_head(db: AsyncSession, head_id: int, head_update: HeadUpdate):
     # Update only provided profile fields
     update_data = head_update.model_dump(exclude_unset=True)
 
-    # Handle name separately if provided (update User table)
+    # Handle name and email separately if provided (update User table)
     if "name" in update_data:
         head.user.name = update_data.pop("name")
+    
+    if "email" in update_data:
+        head.user.email = update_data.pop("email")
 
     # Update profile fields
     for field, value in update_data.items():
@@ -293,7 +296,12 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
 
     # Create User record first
     new_user = User(
-        name=trainer_data.name, passcode=encrypted_passcode, passcode_hash=passcode_hash, email=None, role=UserRole.TRAINER, is_active=True
+        name=trainer_data.name, 
+        email=trainer_data.email,
+        passcode=encrypted_passcode, 
+        passcode_hash=passcode_hash, 
+        role=UserRole.TRAINER, 
+        is_active=True
     )
     db.add(new_user)
     await db.flush()
@@ -340,9 +348,12 @@ async def update_trainer(db: AsyncSession, trainer_id: int, trainer_update: Trai
     # Update only provided fields
     update_data = trainer_update.model_dump(exclude_unset=True)
 
-    # Handle name separately if provided
+    # Handle name and email separately if provided
     if "name" in update_data:
         trainer.user.name = update_data.pop("name")
+    
+    if "email" in update_data:
+        trainer.user.email = update_data.pop("email")
 
     for field, value in update_data.items():
         setattr(trainer, field, value)
@@ -422,9 +433,9 @@ async def create_coach(
     # Create User record first
     new_user = User(
         name=coach_data.name,
+        email=coach_data.email,
         passcode=encrypted_passcode,  # Store encrypted, not plaintext
         passcode_hash=passcode_hash,
-        email=None,
         role=UserRole.COACH,
         is_active=True,
     )
@@ -469,9 +480,12 @@ async def update_coach(
     # Update only provided fields
     update_data = coach_update.model_dump(exclude_unset=True)
 
-    # Handle name separately if provided
+    # Handle name and email separately if provided
     if "name" in update_data:
         coach.user.name = update_data.pop("name")
+    
+    if "email" in update_data:
+        coach.user.email = update_data.pop("email")
 
     for field, value in update_data.items():
         setattr(coach, field, value)
@@ -653,7 +667,12 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
 
     # Create User record first
     new_user = User(
-        name=learner_data.name, passcode=encrypted_passcode, passcode_hash=passcode_hash, email=None, role=UserRole.LEARNER, is_active=True
+        name=learner_data.name, 
+        email=learner_data.email,
+        passcode=encrypted_passcode, 
+        passcode_hash=passcode_hash, 
+        role=UserRole.LEARNER, 
+        is_active=True
     )
     db.add(new_user)
     await db.flush()
@@ -746,9 +765,12 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
     # Update only provided fields
     update_data = learner_update.model_dump(exclude_unset=True)
 
-    # Handle name separately if provided
+    # Handle name and email separately if provided
     if "name" in update_data:
         learner.user.name = update_data.pop("name")
+    
+    if "email" in update_data:
+        learner.user.email = update_data.pop("email")
 
     # Convert enum objects to their string values for database storage
     for field, value in update_data.items():
@@ -760,6 +782,8 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
 
     await db.commit()
     await db.refresh(learner)
+    # Ensure user relationship is loaded after refresh
+    await db.refresh(learner.user)
     return learner
 
 

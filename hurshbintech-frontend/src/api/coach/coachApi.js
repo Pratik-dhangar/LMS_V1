@@ -15,7 +15,7 @@ const getAuthConfig = () => {
 
 // ============ COACH AVAILABILITY ============
 
-export const updateCoachAvailability = async (isAvailable, unavailableUntil = null, unavailableReason = null) => {
+export const updateCoachAvailability = async (payload) => {
   try {
     const response = await axios.patch(
       `${COACH_API}/availability`,
@@ -23,9 +23,12 @@ export const updateCoachAvailability = async (isAvailable, unavailableUntil = nu
       {
         ...getAuthConfig(),
         params: {
-          is_available: isAvailable,
-          unavailable_until: unavailableUntil,
-          unavailable_reason: unavailableReason,
+          is_available: payload.is_available,
+          unavailable_from: payload.unavailable_from,
+          unavailable_until: payload.unavailable_until,
+          unavailable_reason: payload.unavailable_reason,
+          availability_days: payload.availability_days,
+          time_slots: payload.time_slots,
         },
       }
     );
@@ -35,14 +38,22 @@ export const updateCoachAvailability = async (isAvailable, unavailableUntil = nu
   }
 };
 
-export const getCoachAvailability = async (coachId) => {
+export const getCoachAvailability = async () => {
   try {
     const response = await axios.get(
       `${COACH_API}/availability`,
-      {
-        ...getAuthConfig(),
-        params: { coach_id: coachId },
-      }
+      getAuthConfig()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getCoachAvailabilityPublic = async (coachId) => {
+  try {
+    const response = await axios.get(
+      `${COACH_API}/availability/public/${coachId}`
     );
     return response.data;
   } catch (error) {

@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     # default to backend `uploads/recordings` directory.
     RECORDINGS_BASE_DIR: Optional[str] = ""
 
+    # Email Configuration (Brevo API)
+    BREVO_API_KEY: Optional[str] = None  # Brevo API key
+    SENDER_NAME: str = "Hurshbintech"
+    SENDER_EMAIL: str = "noreply@hurshbintech.com"
+    ENABLE_EMAIL: bool = True  # Toggle email sending on/off
+
     @property
     def DATABASE_URI(self) -> str:
         if self.DATABASE_URL:

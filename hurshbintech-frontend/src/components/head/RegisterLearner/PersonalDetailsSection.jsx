@@ -27,6 +27,23 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
           {errors.name && <p className="register-error-text">{errors.name}</p>}
         </div>
 
+        {/* Email */}
+        <div>
+          <label htmlFor="email" className="register-field-label">
+            Email <span className="register-required">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className={`register-input ${errors.email ? 'register-input-error' : ''}`}
+            placeholder="Enter email address"
+          />
+          {errors.email && <p className="register-error-text">{errors.email}</p>}
+        </div>
+
         {/* Age */}
         <div>
           <label htmlFor="age" className="register-field-label">

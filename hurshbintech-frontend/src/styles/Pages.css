@@ -81,6 +81,51 @@
     border-top: 1px solid #e5e7eb;
 }
 
+/* Form Actions Split - Delete on left, other buttons on right */
+.form-actions-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.form-actions-split .btn-danger {
+    order: -1; /* Push to left */
+}
+
+/* Form Actions Group - for grouping Cancel and Save buttons */
+.form-actions-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .form-actions-split {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+    
+    .form-actions-split .btn-danger {
+        order: 0;
+        width: 100%;
+    }
+    
+    .form-actions-group {
+        width: 100%;
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions-group button {
+        width: 100%;
+    }
+}
+
 /* Buttons */
 .btn-add {
     background: #10b981;
@@ -159,21 +204,49 @@
 .btn-primary {
     background: #3b82f6;
     color: white;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .btn-primary:hover {
     background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-secondary {
     border-radius: 0.5rem;
-    padding: .5rem 1rem;
-    background: #3b82f6;
-    color: white;
+    padding: 0.625rem 1.25rem;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .btn-secondary:hover {
-    background: #2563eb;
+    background: #e5e7eb;
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:disabled {
+    background: #f9fafb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
 }
 
 
@@ -453,9 +526,23 @@
     background: white;
     border-radius: 0.5rem;
     width: 100%;
+    max-width: 600px;
     padding: 0;
     box-sizing: border-box;
     position: relative;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-content.modal-sm {
+    max-width: 500px;
+}
+
+.modal-content.modal-lg {
+    max-width: 800px;
+}
+
+.modal-content form {
+    padding: 1.5rem;
 }
 
 /* Modal header/content helper classes (used by ViewSessionModal) */
@@ -501,12 +588,15 @@
 
 /* Modal actions container (matches footer spacing) */
 .modal-actions {
-    display: flex;
-    justify-content: flex-end;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center;
     gap: 0.75rem;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
+    margin-top: 0;
     border-top: 1px solid #e5e7eb;
-    background: #ffffff;
+    background: #f9fafb;
+    border-radius: 0 0 0.5rem 0.5rem;
 }
 
 .modal-header {
@@ -522,6 +612,9 @@
     font-size: 1.5rem;
     font-weight: 700;
     color: #1f2937;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
 }
 
 .modal-close {
@@ -1412,13 +1505,6 @@
     gap: 0.75rem;
 }
 
-.modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    padding-top: 1rem;
-}
-
 /* Chart Summary Cards */
 .chart-summary-grid {
     display: grid;
@@ -1942,6 +2028,41 @@
 
     .form-actions {
         flex-direction: column;
+    }
+
+    .form-actions-split {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+    
+    .form-actions-split .btn-danger {
+        order: 0;
+        width: 100%;
+    }
+    
+    .form-actions-group {
+        width: 100%;
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions-group button {
+        width: 100%;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse !important;
+        padding: 1rem !important;
+        gap: 0.5rem;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+    }
+
+    .modal-content {
+        max-width: 95%;
+        margin: 0.5rem;
     }
 
     .btn {
