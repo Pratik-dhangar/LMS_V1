@@ -22,6 +22,7 @@ const EditTrainer = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     age: '',
     address: '',
     contact_no: '',
@@ -64,6 +65,7 @@ const EditTrainer = () => {
       // Format date for input and handle null/undefined values
       const formattedData = {
         name: data.name || '',
+        email: data.email || '',
         age: data.age || '',
         address: data.address || '',
         contact_no: data.contact_no || '',

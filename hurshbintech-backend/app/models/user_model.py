@@ -269,7 +269,8 @@ class CoachProfile(Base):
     
     # Availability Status - Coach can mark themselves as available/unavailable
     is_available = Column(Boolean, default=True)  # Can accept new appointments/sessions
-    unavailable_until = Column(DateTime, nullable=True)  # Optional: block until specific date/time
+    unavailable_from = Column(DateTime, nullable=True)  # Start of unavailability period
+    unavailable_until = Column(DateTime, nullable=True)  # End of unavailability period
     unavailable_reason = Column(String(255))  # e.g., "On leave", "Fully booked", "Personal"
 
     # Timestamps
@@ -472,6 +473,14 @@ class Appointment(Base):
     # Additional info
     notes = Column(Text)
     
+    # Payment and Session Info
+    payment_receipt_url = Column(String(500), nullable=True)  # URL to payment screenshot
+    session_type = Column(String(50), nullable=True)  # e.g., initial_consultation, follow_up
+    
+    # Rejection Info
+    rejection_reason = Column(Text, nullable=True)  # Reason for rejecting the appointment
+    refund_receipt_url = Column(String(500), nullable=True)  # URL to refund receipt/screenshot
+    
     # Timestamps
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -544,3 +553,32 @@ class CoachSessionParticipant(Base):
     # Relationships
     session = relationship("CoachSession", back_populates="participants")
     user = relationship("User")
+
+
+# ===== EMAIL LOGS MODEL =====
+class EmailLog(Base):
+    """
+    Email logs - Track all sent emails for debugging and audit purposes
+    """
+    __tablename__ = "email_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Email details
+    recipient_email = Column(String(255), nullable=False, index=True)
+    recipient_name = Column(String(255), nullable=False)
+    subject = Column(String(255), nullable=False)
+    email_type = Column(String(50), nullable=False)  # confirmed, rejected, user_created, etc.
+    
+    # Related entities
+    appointment_id = Column(Integer, ForeignKey("appointments.id"), nullable=True)
+    coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Status tracking
+    status = Column(String(20), default="sent")  # sent, failed, bounced
+    error_message = Column(Text, nullable=True)
+    
+    # Timestamps
+    sent_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now())

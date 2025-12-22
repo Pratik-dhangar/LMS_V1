@@ -199,7 +199,7 @@ class S3Manager:
             "uploads/reference_data/",
             "uploads/profile_pictures/",
             "uploads/coach_references/",
-            "payment_screenshots/",
+            "uploads/payment_screenshots/",
         ]
 
         try:

@@ -53,6 +53,7 @@ class HeadCreate(BaseModel):
     """Schema for creating a new head"""
 
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     address: Optional[str] = None
@@ -76,6 +77,7 @@ class HeadUpdate(BaseModel):
     """Schema for updating head profile"""
 
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
     contact_no: Optional[str] = None
@@ -100,6 +102,7 @@ class HeadResponse(BaseModel):
     id: int  # Profile ID
     user_id: int  # From Profile - needed for reveal passcode endpoint
     name: str  # From User
+    email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
     age: Optional[int] = None
@@ -137,6 +140,7 @@ class HeadResponse(BaseModel):
             "id": profile.id,
             "user_id": profile.user_id,
             "name": user.name,
+            "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
             "created_at": user.created_at,
@@ -178,6 +182,7 @@ class TrainerCreate(BaseModel):
     """Schema for creating a new trainer"""
 
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     address: Optional[str] = None
@@ -201,6 +206,7 @@ class TrainerUpdate(BaseModel):
     """Schema for updating trainer profile"""
 
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
     contact_no: Optional[str] = None
@@ -225,6 +231,7 @@ class TrainerResponse(BaseModel):
     id: int  # Profile ID
     user_id: int  # User ID from users table
     name: str  # From User
+    email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
     age: Optional[int] = None
@@ -262,6 +269,7 @@ class TrainerResponse(BaseModel):
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
+            "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
             "created_at": user.created_at,
@@ -303,6 +311,7 @@ class CoachCreate(BaseModel):
     """Schema for creating a new coach"""
 
     name: str
+    email: Optional[str] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
     address: Optional[str] = None
@@ -322,6 +331,7 @@ class CoachUpdate(BaseModel):
     """Schema for updating coach profile"""
 
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
     contact_no: Optional[str] = None
@@ -351,6 +361,7 @@ class CoachResponse(BaseModel):
     id: int  # Profile ID
     user_id: int  # User ID from users table
     name: str  # From User
+    email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
     age: Optional[int] = None
@@ -394,6 +405,7 @@ class CoachResponse(BaseModel):
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
+            "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
             "created_at": user.created_at,
@@ -441,6 +453,7 @@ class LearnerCreate(BaseModel):
 
     # --- Personal details ---
     name: str  # Name is required
+    email: Optional[str] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
     dob: Optional[date] = None
@@ -522,6 +535,7 @@ class LearnerUpdate(BaseModel):
 
     # --- Personal details ---
     name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None
@@ -604,6 +618,7 @@ class LearnerResponse(BaseModel):
     id: int
     user_id: int  # User ID from users table
     name: str
+    email: Optional[str] = None  # From User
     passcode: str
     age: Optional[int] = None
     dob: Optional[date] = None
@@ -681,6 +696,7 @@ class LearnerResponse(BaseModel):
             "id": profile.id,
             "user_id": user.id,
             "name": user.name,
+            "email": user.email,
             "passcode": passcode,
             "created_at": user.created_at,
             "updated_at": profile.updated_at,
@@ -763,6 +779,8 @@ class AppointmentCreate(BaseModel):
     scheduled_date: date
     scheduled_time: str  # e.g., "10am", "1pm", "3pm", "5pm"
     notes: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
 
 
 class AppointmentUpdate(BaseModel):
@@ -772,6 +790,10 @@ class AppointmentUpdate(BaseModel):
     scheduled_time: Optional[str] = None
     status: Optional[str] = None  # scheduled, confirmed, cancelled, completed
     notes: Optional[str] = None
+    session_type: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    refund_receipt_url: Optional[str] = None
 
 
 class AppointmentResponse(BaseModel):
@@ -788,6 +810,9 @@ class AppointmentResponse(BaseModel):
     user_name: Optional[str] = None
     session_type: Optional[str] = None
     payment_screenshot_url: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    refund_receipt_url: Optional[str] = None
     created_at: str  # Changed to str for consistent serialization
     updated_at: str  # Changed to str for consistent serialization
 

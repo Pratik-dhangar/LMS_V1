@@ -88,6 +88,18 @@ const coachService = {
     const response = await api.patch(`/coaches/appointments/${appointmentId}`, { status });
     return response.data;
   },
+
+  /**
+   * Reject an appointment with reason and optional refund receipt
+   */
+  rejectAppointment: async (appointmentId, formData) => {
+    const response = await api.post(`/coaches/appointments/${appointmentId}/reject`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
 
 export default coachService;

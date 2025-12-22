@@ -26,6 +26,7 @@ const RegisterLearner = () => {
   const [formData, setFormData] = useState({
     // Personal details
     name: '',
+    email: '',
     age: '',
     dob: '',
     date_of_assessment: '',
@@ -129,6 +130,12 @@ const RegisterLearner = () => {
     // Required fields validation
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
     // Age is required
