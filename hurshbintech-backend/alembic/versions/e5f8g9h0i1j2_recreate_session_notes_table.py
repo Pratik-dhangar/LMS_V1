@@ -57,12 +57,12 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(op.f('ix_head_session_notes_head_id'), table_name='head_session_notes')
-    op.drop_index(op.f('ix_head_session_notes_session_id'), table_name='head_session_notes')
-    op.drop_index(op.f('ix_head_session_notes_id'), table_name='head_session_notes')
-    op.drop_table('head_session_notes')
+    op.drop_index(op.f('ix_head_session_notes_head_id'), table_name='head_session_notes', if_exists=True)
+    op.drop_index(op.f('ix_head_session_notes_session_id'), table_name='head_session_notes', if_exists=True)
+    op.drop_index(op.f('ix_head_session_notes_id'), table_name='head_session_notes', if_exists=True)
+    op.drop_table('head_session_notes', if_exists=True)
     
-    op.drop_index(op.f('ix_session_notes_trainer_id'), table_name='session_notes')
-    op.drop_index(op.f('ix_session_notes_session_id'), table_name='session_notes')
-    op.drop_index(op.f('ix_session_notes_id'), table_name='session_notes')
-    op.drop_table('session_notes')
+    op.drop_index(op.f('ix_session_notes_trainer_id'), table_name='session_notes', if_exists=True)
+    op.drop_index(op.f('ix_session_notes_session_id'), table_name='session_notes', if_exists=True)
+    op.drop_index(op.f('ix_session_notes_id'), table_name='session_notes', if_exists=True)
+    op.drop_table('session_notes', if_exists=True)
