@@ -12,6 +12,7 @@ from app.core.deps import get_db, get_current_user
 from app.models.user_model import User
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.crud import user_crud, coach_crud
+from app.services.email_service import EmailService
 
 router = APIRouter()
 
@@ -125,26 +126,15 @@ async def book_appointment_with_coach(
         coach.unavailable_reason = None
         await db.commit()
     
-    # ✅ CHECK SLOT AVAILABILITY - Prevent double-booking
-    is_slot_available = await coach_crud.check_slot_availability(
+    # ✅ CHECK SLOT AVAILABILITY - Validate day, time, and prevent double-booking
+    is_slot_available, availability_reason = await coach_crud.check_slot_availability(
         db, coach_id, scheduled_date, scheduled_time
     )
     
     if not is_slot_available:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Time slot {scheduled_time} on {scheduled_date} is already booked. Please choose another slot.",
-        )
-    
-    # Verify the slot is in coach's available time slots
-    coach_slots = []
-    if coach.time_slots:
-        coach_slots = [slot.strip() for slot in coach.time_slots.split(',')]
-    
-    if scheduled_time not in coach_slots:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid time slot. Coach only offers: {', '.join(coach_slots)}",
+            status_code=status.HTTP_409_CONFLICT if "already booked" in availability_reason else status.HTTP_400_BAD_REQUEST,
+            detail=availability_reason,
         )
     
     # Handle payment screenshot upload if provided
@@ -197,12 +187,14 @@ async def book_appointment_with_coach(
             
             payment_screenshot_path = f"/uploads/payment_screenshots/{unique_filename}"
     
-    # Create appointment data
+    # Create appointment data with new columns
     appointment_data = AppointmentCreate(
         coach_id=coach_id,
         scheduled_date=scheduled_date,
         scheduled_time=scheduled_time,
-        notes=f"Session Type: {session_type}\n{notes if notes else ''}",
+        notes=notes if notes else None,
+        session_type=session_type,
+        payment_receipt_url=payment_screenshot_path,
     )
     
     # Get current user's role
@@ -213,15 +205,43 @@ async def book_appointment_with_coach(
         db, appointment_data, current_user.id, user_role
     )
     
-    # If payment screenshot was uploaded, update appointment with payment info
-    if payment_screenshot_path:
-        # Note: You may want to add a payment_screenshot field to the Appointment model
-        # For now, we can append it to notes
-        appointment.notes = f"{appointment.notes}\nPayment Screenshot: {payment_screenshot_path}"
-        await db.commit()
-        await db.refresh(appointment)
+    # Send email notification to coach about new appointment request
+    try:
+        # Refresh coach object to ensure we have latest data with user relationship
+        await db.refresh(coach)
+        if coach and coach.user and coach.user.email:
+            await EmailService.send_appointment_requested(
+                recipient_email=coach.user.email,
+                recipient_name=coach.user.name,
+                client_name=current_user.name,
+                scheduled_date=appointment.scheduled_date.strftime('%B %d, %Y') if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+                scheduled_time=appointment.scheduled_time,
+                session_type=appointment.session_type,
+                appointment_id=appointment.id,
+            )
+    except Exception as email_error:
+        # Log error but don't fail appointment creation
+        import logging
+        logging.error(f"Failed to send email notification: {str(email_error)}")
+        print(f"Failed to send email notification: {str(email_error)}")
     
-    return AppointmentResponse.from_orm(appointment)
+    # Manually serialize date fields for Pydantic v2 compatibility
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user.name if appointment.user else None,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.get("/my-appointments", response_model=List[AppointmentResponse])
@@ -233,4 +253,22 @@ async def get_my_appointments(
     Get all appointments booked by the current user.
     """
     appointments = await coach_crud.get_appointments_by_user(db, current_user.id)
-    return [AppointmentResponse.from_orm(apt) for apt in appointments]
+    return [
+        AppointmentResponse(
+            id=apt.id,
+            coach_id=apt.coach_id,
+            user_id=apt.user_id,
+            user_role=apt.user_role,
+            scheduled_date=apt.scheduled_date.isoformat() if isinstance(apt.scheduled_date, date) else str(apt.scheduled_date),
+            scheduled_time=apt.scheduled_time,
+            status=apt.status,
+            notes=apt.notes,
+            user_name=apt.user.name if apt.user else None,
+            session_type=apt.session_type,
+            payment_screenshot_url=apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+            payment_receipt_url=apt.payment_receipt_url,
+            created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
+            updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
+        )
+        for apt in appointments
+    ]

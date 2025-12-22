@@ -7,6 +7,7 @@ import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
 import learningProgramsService from "../../api/services/learningProgramsService";
 import learningContentAssignmentService from "../../api/services/learningContentAssignmentService";
+import programAssignmentService from "../../api/services/programAssignmentService";
 
 const LearnerDashboard = () => {
   const { user } = useAuth();
@@ -55,13 +56,13 @@ const LearnerDashboard = () => {
 
   const fetchAssignedPrograms = async () => {
     try {
-      const data = await learningProgramsService.getAssignedProgramsForLearner();
+      const data = await programAssignmentService.getMyAssignments();
       console.log("Fetched assigned programs data:", data); // Debug log
       // Ensure data is an array to prevent runtime errors
       setLearningPrograms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching assigned programs:", error);
-      toast.error("Failed to load assigned learning programs. Please try refreshing the page.");
+      toast.error("Failed to load assigned home programs. Please try refreshing the page.");
       setLearningPrograms([]); // Set to empty array on error
     } finally {
       setLoadingPrograms(false);
@@ -70,12 +71,23 @@ const LearnerDashboard = () => {
 
   const fetchAssignedContents = async () => {
     try {
+      console.log('Fetching content for learner ID:', user.id);
       const data = await learningContentAssignmentService.getAssignmentsByLearner(user.id);
       console.log("Fetched assigned contents data:", data); // Debug log
+      console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
+
       // Ensure data is an array to prevent runtime errors
       setAssignedContents(Array.isArray(data) ? data : []);
+
+      if (data && data.length > 0) {
+        console.log(`Successfully loaded ${data.length} assigned content(s)`);
+        console.log('First content:', data[0]);
+      } else {
+        console.log('No content assignments found for this learner');
+      }
     } catch (error) {
       console.error("Error fetching assigned contents:", error);
+      console.error("Error details:", error.response?.data || error.message);
       toast.error("Failed to load assigned learning contents. Please try refreshing the page.");
       setAssignedContents([]); // Set to empty array on error
     } finally {
@@ -114,7 +126,8 @@ const LearnerDashboard = () => {
     if (!selectedContent) return null;
 
     const { content_type, file_url, content_title } = selectedContent;
-    const fullUrl = `http://127.0.0.1:8000${file_url}`;
+    // Use file_url directly - Vite proxy will handle routing to backend
+    const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
 
     const handleLoad = () => {
       setContentLoading(false);
@@ -236,7 +249,7 @@ const LearnerDashboard = () => {
               Welcome, {user?.name || "Learner"}!
             </h2>
             <p className="text-white/90">Your personalized learning journey starts here</p>
-           
+
           </div>
 
           {/* Quick Access Cards */}
@@ -244,7 +257,7 @@ const LearnerDashboard = () => {
             {[
               {
                 icon: "📚",
-                title: "Learning Program",
+                title: "Home Program (HP)",
                 desc: "View IIP and Home Programs",
                 onClick: () => navigate("/learner/learning-programs"),
               },
@@ -252,7 +265,13 @@ const LearnerDashboard = () => {
                 icon: "📖",
                 title: "Learning Content",
                 desc: "Access assigned learning content",
-                onClick: () => navigate("/learner/learning-content"), // ✅ new navigation path
+                onClick: () => {
+                  // Scroll to learning content section
+                  const contentSection = document.getElementById('learning-content-section');
+                  if (contentSection) {
+                    contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                },
               },
               {
                 icon: "🛒",
@@ -327,45 +346,66 @@ const LearnerDashboard = () => {
             ) : null}
           </div>
 
-          {/* ✅ Assigned Learning Programs */}
+          {/* ✅ Assigned Home Programs */}
           <div className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Your Learning Programs
+              Your Home Programs (HP)
             </h2>
 
             {loadingPrograms ? (
               <p className="text-gray-500">Loading assigned programs...</p>
             ) : learningPrograms.length === 0 ? (
-              <p className="text-gray-500">No learning programs assigned yet.</p>
+              <p className="text-gray-500">No home programs assigned yet.</p>
             ) : (
-              <div className="space-y-6">
-                {learningPrograms.map((prog) => (
-                  <div
-                    key={prog.id}
-                    className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
-                  >
-                    <h3 className="font-semibold text-gray-800 mb-1">
-                      {prog.name || prog.program_title}
-                    </h3>
+              <div className="space-y-4">
+                {learningPrograms.map((prog) => {
+                  // Calculate completion percentage
+                  const completionPercentage = prog.completion_percentage || 0;
 
-                    <p className="text-sm text-gray-600 mb-2">
-                      {prog.description || prog.program_description}
-                    </p>
-
-                    <button
-                      className="mt-3 bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700"
-                      onClick={() => navigate(`/learner/learning-program/${prog.id}`)}
+                  return (
+                    <div
+                      key={prog.id}
+                      className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
                     >
-                      View Details
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-800 mb-1">
+                            {prog.program_name || prog.name || 'Unnamed Program'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                          onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
+                        >
+                          Start
+                        </button>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-gray-600">Progress</span>
+                          <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                            style={{ width: `${completionPercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* ✅ Assigned Learning Contents */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
+          <div id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
               Your Assigned Learning Content
             </h2>
@@ -376,22 +416,28 @@ const LearnerDashboard = () => {
               <p className="text-gray-500">No learning content assigned yet.</p>
             ) : (
               <div className="space-y-6">
-                {assignedContents.map((content) => (
+                {assignedContents.map((assignment) => (
                   <div
-                    key={content.id}
+                    key={assignment.id}
                     className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
                   >
                     <h3 className="font-semibold text-gray-800 mb-1">
-                      {content.content_title}
+                      {assignment.content_title || 'Untitled Content'}
                     </h3>
 
                     <p className="text-sm text-gray-600 mb-2">
-                      Type: {content.content_type} | Assigned: {new Date(content.assigned_at).toLocaleDateString()}
+                      Type: {assignment.content_type} | Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
                     </p>
+
+                    {assignment.assigned_by_name && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        Assigned by: {assignment.assigned_by_name}
+                      </p>
+                    )}
 
                     <button
                       className="mt-3 bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700"
-                      onClick={() => handleViewContent(content)}
+                      onClick={() => handleViewContent(assignment)}
                     >
                       View Content
                     </button>
@@ -431,7 +477,7 @@ const LearnerDashboard = () => {
               </div>
               <div className="flex items-center gap-2 ml-4">
                 <a
-                  href={`http://127.0.0.1:8000${selectedContent?.file_url}`}
+                  href={selectedContent?.file_url?.startsWith('http') ? selectedContent.file_url : selectedContent?.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"

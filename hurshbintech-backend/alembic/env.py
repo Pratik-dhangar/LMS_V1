@@ -20,6 +20,10 @@ from app.models.learning_content_assignment_model import LearningContentAssignme
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.vlog_model import Vlog
 from app.models.session_report_model import SessionReport
+# New Program Assignment Models
+from app.models.program_learning_content_model import ProgramLearningContent
+from app.models.program_assignment_model import ProgramAssignment
+from app.models.program_assignment_attachment_model import ProgramAssignmentAttachment
 
 
 # this is the Alembic Config object

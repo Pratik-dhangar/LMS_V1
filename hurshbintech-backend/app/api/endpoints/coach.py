@@ -3,11 +3,13 @@ Coach endpoints - Profile picture upload, appointments, and sessions
 Accessible by coaches and their heads
 """
 
+import logging
 import os
+from datetime import date
 from typing import Optional
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,7 @@ from app.crud import user_crud
 from app.db.session import get_db
 from app.models.learning_content_model import LearningContent
 from app.models.user_model import CoachProfile, User, UserRole
+from app.services.email_service import EmailService
 from app.schemas.user import (
     AppointmentCreate,
     AppointmentResponse,
@@ -31,6 +34,7 @@ from app.schemas.user import (
 )
 
 router = APIRouter(prefix="/coaches", tags=["Coach Operations"])
+logger = logging.getLogger(__name__)
 
 
 # ============ PROFILE PICTURE UPLOAD ============
@@ -116,16 +120,19 @@ async def upload_profile_picture(
 @router.patch("/availability")
 async def update_coach_availability(
     is_available: bool,
-    unavailable_until: Optional[str] = None,  # ISO format datetime string
+    unavailable_from: Optional[str] = None,  # ISO format date string
+    unavailable_until: Optional[str] = None,  # ISO format date string
     unavailable_reason: Optional[str] = None,
+    availability_days: Optional[str] = None,  # "Monday, Wednesday, Friday"
+    time_slots: Optional[str] = None,  # "10am, 1pm, 3pm"
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """
-    Update coach availability status
+    Update coach availability status and schedule
     
     When is_available=False, users cannot schedule appointments with this coach.
-    Optionally set unavailable_until (ISO datetime) and unavailable_reason.
+    Optionally set unavailable_from/until (ISO date format), reason, working days, and time slots.
     """
     from datetime import datetime
     
@@ -134,19 +141,49 @@ async def update_coach_availability(
         current_coach.is_available = is_available
         current_coach.unavailable_reason = unavailable_reason
         
-        # Parse unavailable_until if provided
-        if unavailable_until and not is_available:
+        # Parse unavailable_from if provided
+        if unavailable_from and not is_available:
             try:
-                current_coach.unavailable_until = datetime.fromisoformat(unavailable_until)
+                # Handle both date and datetime formats
+                if 'T' in unavailable_from:
+                    current_coach.unavailable_from = datetime.fromisoformat(unavailable_from)
+                else:
+                    current_coach.unavailable_from = datetime.fromisoformat(unavailable_from + "T00:00:00")
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid datetime format. Use ISO format (e.g., 2025-12-25T18:00:00)",
+                    detail="Invalid datetime format for unavailable_from. Use ISO format (e.g., 2025-12-25 or 2025-12-25T18:00:00)",
+                )
+        elif is_available:
+            current_coach.unavailable_from = None
+        
+        # Parse unavailable_until if provided
+        if unavailable_until and not is_available:
+            try:
+                # Handle both date and datetime formats
+                if 'T' in unavailable_until:
+                    current_coach.unavailable_until = datetime.fromisoformat(unavailable_until)
+                else:
+                    current_coach.unavailable_until = datetime.fromisoformat(unavailable_until + "T23:59:59")
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid datetime format for unavailable_until. Use ISO format (e.g., 2025-12-25 or 2025-12-25T18:00:00)",
                 )
         elif is_available:
             # Clear unavailable fields when marking as available
             current_coach.unavailable_until = None
             current_coach.unavailable_reason = None
+        
+        # Update availability days
+        if availability_days:
+            # Normalize the comma-separated days
+            current_coach.availability_days = ', '.join([day.strip() for day in availability_days.split(',')])
+        
+        # Update time slots
+        if time_slots:
+            # Normalize the comma-separated times
+            current_coach.time_slots = ', '.join([slot.strip() for slot in time_slots.split(',')])
         
         await db.commit()
         await db.refresh(current_coach)
@@ -154,8 +191,11 @@ async def update_coach_availability(
         return {
             "message": f"Availability updated to {'available' if is_available else 'unavailable'}",
             "is_available": current_coach.is_available,
+            "unavailable_from": current_coach.unavailable_from,
             "unavailable_until": current_coach.unavailable_until,
             "unavailable_reason": current_coach.unavailable_reason,
+            "availability_days": current_coach.availability_days,
+            "time_slots": current_coach.time_slots,
         }
     
     except HTTPException:
@@ -168,14 +208,49 @@ async def update_coach_availability(
 
 
 @router.get("/availability")
-async def get_coach_availability(
+async def get_current_coach_availability(
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """
+    Get current coach's availability settings (authenticated endpoint)
+    
+    Returns the logged-in coach's availability status and schedule.
+    """
+    from datetime import datetime
+    
+    # Check if unavailable_until has passed
+    is_currently_available = current_coach.is_available
+    if current_coach.unavailable_until and datetime.utcnow() >= current_coach.unavailable_until:
+        # Auto-reset availability
+        current_coach.is_available = True
+        current_coach.unavailable_until = None
+        current_coach.unavailable_reason = None
+        await db.commit()
+        is_currently_available = True
+    
+    return {
+        "coach_id": current_coach.id,
+        "coach_name": current_coach.user.name,
+        "is_available": is_currently_available,
+        "unavailable_from": current_coach.unavailable_from,
+        "unavailable_until": current_coach.unavailable_until,
+        "unavailable_reason": current_coach.unavailable_reason,
+        "availability_days": current_coach.availability_days,
+        "time_slots": current_coach.time_slots,
+    }
+
+
+@router.get("/availability/public/{coach_id}")
+async def get_coach_availability_public(
     coach_id: int,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get coach availability status (public endpoint)
+    Get coach availability status by ID (public endpoint)
     
     Returns whether a coach is currently available to accept appointments.
+    Used by appointment booking system and coach profile pages.
     """
     coach = await user_crud.get_coach_by_id(db, coach_id)
     if not coach:
@@ -200,6 +275,7 @@ async def get_coach_availability(
         "coach_id": coach.id,
         "coach_name": coach.user.name,
         "is_available": is_currently_available,
+        "unavailable_from": coach.unavailable_from,
         "unavailable_until": coach.unavailable_until,
         "unavailable_reason": coach.unavailable_reason,
         "availability_days": coach.availability_days,
@@ -247,7 +323,22 @@ async def create_appointment(
     appointment = await coach_crud.create_appointment(
         db, appointment_data, current_user.id, user_role
     )
-    return AppointmentResponse.from_orm(appointment)
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user.name if appointment.user else None,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.get("/appointments", response_model=list[AppointmentResponse])
@@ -258,7 +349,7 @@ async def get_coach_appointments(
     """Get all appointments for the current coach with user details"""
     appointments = await coach_crud.get_appointments_by_coach(db, current_coach.id)
     
-    # Add user name, session type, and payment screenshot to each appointment
+    # Add user name and new column data to each appointment
     result = []
     for apt in appointments:
         apt_dict = {
@@ -271,23 +362,12 @@ async def get_coach_appointments(
             "status": apt.status.value if hasattr(apt.status, 'value') else apt.status,
             "notes": apt.notes,
             "user_name": apt.user.name if apt.user else None,
+            "session_type": apt.session_type,  # Read directly from column
+            "payment_screenshot_url": apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url for frontend
+            "payment_receipt_url": apt.payment_receipt_url,  # Also include in response
             "created_at": apt.created_at.isoformat() if apt.created_at else None,
             "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
-        
-        # Extract session_type and payment_screenshot from notes
-        if apt.notes:
-            # Session type is in format "Session Type: initial_consultation"
-            if "Session Type:" in apt.notes:
-                session_type_line = [line for line in apt.notes.split('\n') if 'Session Type:' in line]
-                if session_type_line:
-                    apt_dict["session_type"] = session_type_line[0].split('Session Type:')[1].strip()
-            
-            # Payment screenshot is in format "Payment Screenshot: uploads/..."
-            if "Payment Screenshot:" in apt.notes:
-                payment_line = [line for line in apt.notes.split('\n') if 'Payment Screenshot:' in line]
-                if payment_line:
-                    apt_dict["payment_screenshot_url"] = "/" + payment_line[0].split('Payment Screenshot:')[1].strip()
         
         result.append(AppointmentResponse(**apt_dict))
     
@@ -315,7 +395,22 @@ async def get_appointment_details(
             detail="Not authorized to view this appointment",
         )
 
-    return AppointmentResponse.from_orm(appointment)
+    return AppointmentResponse(
+        id=appointment.id,
+        coach_id=appointment.coach_id,
+        user_id=appointment.user_id,
+        user_role=appointment.user_role,
+        scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+        scheduled_time=appointment.scheduled_time,
+        status=appointment.status,
+        notes=appointment.notes,
+        user_name=appointment.user.name if appointment.user else None,
+        session_type=appointment.session_type,
+        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=appointment.payment_receipt_url,
+        created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+        updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+    )
 
 
 @router.patch("/appointments/{appointment_id}", response_model=AppointmentResponse)
@@ -340,8 +435,58 @@ async def update_appointment(
             detail="Not authorized to update this appointment",
         )
 
+    # Store previous status for email logic
+    previous_status = str(appointment.status.value if hasattr(appointment.status, 'value') else appointment.status).upper()
+    
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
-    return AppointmentResponse.from_orm(updated)
+    
+    # Capture new status safely
+    new_status = str(updated.status.value if hasattr(updated.status, 'value') else updated.status).upper()
+
+    # Debug log to help verify what's happening
+    logger.info(f"Appointment {appointment_id} update: '{previous_status}' -> '{new_status}'")
+    
+    # Send confirmation email if status changed to CONFIRMED
+    if previous_status not in ["CONFIRMED", "ACCEPTED"] and new_status in ["CONFIRMED", "ACCEPTED"]:
+        user_email = updated.user.email if updated.user else None
+        user_name = updated.user.name if updated.user else "User"
+        
+        if not user_email:
+            logger.warning(f"Cannot send confirmation email - User {user_name} (ID: {updated.user_id}) has no email address")
+        else:
+            logger.info(f"Sending confirmation email to: {user_email} (User: {user_name}) for appointment {updated.id}")
+            email_sent = await EmailService.send_appointment_confirmed(
+                recipient_email=user_email,
+                recipient_name=user_name,
+                coach_name=current_coach.user.name if current_coach.user else "Coach",
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                session_type=updated.session_type,
+                appointment_id=updated.id,
+            )
+            if email_sent:
+                logger.info(f"Confirmation email sent successfully to {user_email}")
+            else:
+                logger.warning(f"Failed to send confirmation email to {user_email}")
+    
+    return AppointmentResponse(
+        id=updated.id,
+        coach_id=updated.coach_id,
+        user_id=updated.user_id,
+        user_role=updated.user_role,
+        scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+        scheduled_time=updated.scheduled_time,
+        status=updated.status,
+        notes=updated.notes,
+        user_name=updated.user.name if updated.user else None,
+        session_type=updated.session_type,
+        payment_screenshot_url=updated.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_receipt_url=updated.payment_receipt_url,
+        rejection_reason=updated.rejection_reason,
+        refund_receipt_url=updated.refund_receipt_url,
+        created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
+        updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
+    )
 
 
 @router.delete("/appointments/{appointment_id}")
@@ -369,6 +514,132 @@ async def delete_appointment(
     if success:
         return {"message": "Appointment deleted successfully"}
     return {"message": "Failed to delete appointment"}
+
+
+@router.post("/appointments/{appointment_id}/reject", response_model=AppointmentResponse)
+async def reject_appointment(
+    appointment_id: int,
+    rejection_reason: str = Form(None),
+    refund_receipt: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """
+    Reject an appointment with a reason and optional refund receipt
+    """
+    appointment = await coach_crud.get_appointment_by_id(db, appointment_id)
+
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found",
+        )
+
+    if appointment.coach_id != current_coach.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to reject this appointment",
+        )
+
+    # Handle refund receipt upload if provided
+    refund_receipt_path = None
+    if refund_receipt and refund_receipt.filename:
+        import uuid
+
+        # Validate file type
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".gif"}
+        file_ext = os.path.splitext(refund_receipt.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        # Validate file size (max 5MB)
+        content = await refund_receipt.read()
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size must be less than 5MB",
+            )
+
+        # Generate unique filename
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+
+        if settings.USE_S3:
+            # Upload to S3
+            from app.utils.s3_utils import S3Manager
+
+            s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+            s3_key = s3_manager.upload_file(
+                content,
+                folder="refund_receipts",
+                filename=unique_filename,
+                content_type=refund_receipt.content_type or "image/jpeg",
+            )
+            refund_receipt_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+        else:
+            # Save to local uploads folder
+            upload_dir = Path("uploads/refund_receipts")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            file_path = upload_dir / unique_filename
+
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            refund_receipt_path = f"/uploads/refund_receipts/{unique_filename}"
+
+    # Update appointment with rejection info
+    appointment_update = AppointmentUpdate(
+        status="REJECTED",
+        rejection_reason=rejection_reason,
+        refund_receipt_url=refund_receipt_path,
+    )
+    updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
+
+    # Send rejection email - use rejection_reason from DB if available, otherwise use provided reason
+    user_email = updated.user.email if updated.user else None
+    user_name = updated.user.name if updated.user else "User"
+    
+    # Use the saved rejection reason from DB (updated.rejection_reason) with fallback to the provided reason
+    final_rejection_reason = updated.rejection_reason or rejection_reason
+    
+    if not user_email:
+        logger.warning(f"Cannot send rejection email - User {user_name} (ID: {updated.user_id}) has no email address")
+    else:
+        logger.info(f"Sending rejection email to: {user_email} (User: {user_name}) for appointment {updated.id}")
+        email_sent = await EmailService.send_appointment_rejected(
+            recipient_email=user_email,
+            recipient_name=user_name,
+            coach_name=current_coach.user.name if current_coach.user else "Coach",
+            rejection_reason=final_rejection_reason,
+            scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+            scheduled_time=updated.scheduled_time,
+            appointment_id=updated.id,
+        )
+        if email_sent:
+            logger.info(f"Rejection email sent successfully to {user_email}")
+        else:
+            logger.warning(f"Failed to send rejection email to {user_email}")
+
+    return AppointmentResponse(
+        id=updated.id,
+        coach_id=updated.coach_id,
+        user_id=updated.user_id,
+        user_role=updated.user_role,
+        scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+        scheduled_time=updated.scheduled_time,
+        status=updated.status,
+        notes=updated.notes,
+        user_name=updated.user.name if updated.user else None,
+        session_type=updated.session_type,
+        payment_screenshot_url=updated.payment_receipt_url,
+        payment_receipt_url=updated.payment_receipt_url,
+        rejection_reason=updated.rejection_reason,
+        refund_receipt_url=updated.refund_receipt_url,
+        created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
+        updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
+    )
 
 
 # ============ COACH SESSIONS ============

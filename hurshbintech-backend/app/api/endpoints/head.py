@@ -226,6 +226,9 @@ async def get_my_learners(
 ):
 
     learners = await user_crud.get_learners_by_head(db, current_head.id)
+    logger.info(f"Head {current_head.user_id} (ID: {current_head.id}) has {len(learners)} learners")
+    for learner in learners:
+        logger.info(f"  - Learner {learner.user.id}: {learner.user.name} (role: {learner.user.role.value})")
     return [LearnerResponse.from_orm_with_user(learner) for learner in learners]
 
 

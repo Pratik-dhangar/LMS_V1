@@ -19,6 +19,7 @@ const RegisterTrainer = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     age: '',
     address: '',
     contact_no: '',
@@ -72,6 +73,12 @@ const RegisterTrainer = () => {
     // Required fields validation
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.contact_no.trim()) {

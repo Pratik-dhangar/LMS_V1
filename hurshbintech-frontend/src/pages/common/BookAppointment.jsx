@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Search, Star, Calendar } from 'lucide-react';
+import { Search, Star, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
+import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/BookAppointment.css';
 
@@ -14,6 +15,7 @@ const BookAppointment = () => {
   const [filteredCoaches, setFilteredCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
 
   useEffect(() => {
     fetchCoaches();
@@ -28,13 +30,49 @@ const BookAppointment = () => {
       setLoading(true);
       // Fetch all available coaches from booking service
       const data = await bookingService.getAvailableCoaches();
+      console.log('Fetched coaches:', data);
+      data?.forEach((coach, index) => {
+        console.log(`Coach ${index}: ${coach.name}, profile_picture_url: ${coach.profile_picture_url}`);
+        if (coach.profile_picture_url) {
+          console.log(`  Full image URL would be: ${getFileUrl(coach.profile_picture_url)}`);
+        }
+      });
       setCoaches(data || []);
       setFilteredCoaches(data || []);
+      
+      // Fetch availability for each coach
+      if (data && data.length > 0) {
+        await fetchAllCoachAvailability(data);
+      }
     } catch (error) {
       console.error('Error fetching coaches:', error);
       toast.error('Failed to load coaches');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllCoachAvailability = async (coachesList) => {
+    try {
+      const availabilityMap = {};
+      
+      // Fetch availability for each coach in parallel
+      const promises = coachesList.map(coach =>
+        getCoachAvailabilityPublic(coach.id)
+          .then(data => {
+            availabilityMap[coach.id] = data;
+          })
+          .catch(error => {
+            console.error(`Failed to fetch availability for coach ${coach.id}:`, error);
+            // Set default available if fetch fails
+            availabilityMap[coach.id] = { is_available: true };
+          })
+      );
+      
+      await Promise.all(promises);
+      setCoachAvailability(availabilityMap);
+    } catch (error) {
+      console.error('Error fetching coach availability:', error);
     }
   };
 
@@ -133,77 +171,109 @@ const BookAppointment = () => {
             </div>
           ) : (
             <div className="coaches-grid">
-              {filteredCoaches.map((coach) => (
-                <div key={coach.id} className="coach-card">
-                  <div className="coach-card-content">
-                    {/* Profile Picture */}
-                    <div className="coach-avatar-wrapper">
-                      {coach.profile_picture_url ? (
-                        <img
-                          src={getFileUrl(coach.profile_picture_url)}
-                          alt={coach.name}
-                          className="coach-avatar"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className="coach-avatar-placeholder" style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
-                        {coach.name?.charAt(0).toUpperCase() || 'C'}
-                      </div>
+              {filteredCoaches.map((coach) => {
+                const availability = coachAvailability[coach.id];
+                const isUnavailable = availability && !availability.is_available;
+                
+                return (
+                  <div key={coach.id} className={`coach-card ${isUnavailable ? 'coach-card-unavailable' : ''}`}>
+                    {/* Availability Badge - Always show */}
+                    <div className={`availability-badge ${isUnavailable ? 'badge-unavailable' : 'badge-available'}`}>
+                      {isUnavailable ? (
+                        <>
+                          <AlertCircle className="badge-icon" />
+                          <span className="badge-text">Unavailable</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="badge-icon" />
+                          <span className="badge-text">Available</span>
+                        </>
+                      )}
                     </div>
-
-                    {/* Coach Info */}
-                    <div className="coach-info">
-                      <h3 className="coach-name">{coach.name}</h3>
-                      
-                      {coach.specialization && (
-                        <p className="coach-specialization">
-                          <span className="label">Specialization:</span> {coach.specialization}
-                        </p>
-                      )}
-
-                      {coach.years_of_experience && (
-                        <p className="coach-experience">
-                          {coach.years_of_experience} years experience
-                        </p>
-                      )}
-
-                      {/* Rating */}
-                      <div className="coach-rating">
-                        <div className="stars">
-                          {renderStars(coach.rating)}
+                    
+                    <div className="coach-card-content">
+                      {/* Profile Picture */}
+                      <div className={`coach-avatar-wrapper ${isUnavailable ? 'greyscale' : ''}`}>
+                        {coach.profile_picture_url ? (
+                          <img
+                            src={getFileUrl(coach.profile_picture_url)}
+                            alt={coach.name}
+                            className="coach-avatar"
+                            onError={(e) => {
+                              console.error(`Failed to load image for ${coach.name}: ${e.target.src}`);
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="coach-avatar-placeholder" style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
+                          {coach.name?.charAt(0).toUpperCase() || 'C'}
                         </div>
-                        <span className="rating-text">
-                          ({coach.rating || '4.5'}/5)
-                        </span>
-                        {coach.total_reviews && (
-                          <span className="reviews-count">
-                            - {coach.total_reviews} reviews
+                      </div>
+
+                      {/* Coach Info */}
+                      <div className="coach-info">
+                        <h3 className="coach-name">{coach.name}</h3>
+                        
+                        {coach.specialization && (
+                          <p className="coach-specialization">
+                            <span className="label">Specialization:</span> {coach.specialization}
+                          </p>
+                        )}
+
+                        {coach.years_of_experience && (
+                          <p className="coach-experience">
+                            {coach.years_of_experience} years experience
+                          </p>
+                        )}
+
+                        {/* Rating */}
+                        <div className="coach-rating">
+                          <div className="stars">
+                            {renderStars(coach.rating)}
+                          </div>
+                          <span className="rating-text">
+                            ({coach.rating || '4.5'}/5)
                           </span>
+                          {coach.total_reviews && (
+                            <span className="reviews-count">
+                              - {coach.total_reviews} reviews
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Session Fee */}
+                        {coach.session_fee && (
+                          <p className="coach-fee">
+                            Session Fee: ₹{coach.session_fee}
+                          </p>
                         )}
                       </div>
 
-                      {/* Session Fee */}
-                      {coach.session_fee && (
-                        <p className="coach-fee">
-                          Session Fee: ₹{coach.session_fee}
-                        </p>
+                      {/* Book Button or Unavailable Message */}
+                      {isUnavailable ? (
+                        <button
+                          disabled
+                          className="btn-book-appointment"
+                          style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                        >
+                          <Calendar className="w-5 h-5" />
+                          Unavailable
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleBookAppointment(coach)}
+                          className="btn-book-appointment"
+                        >
+                          <Calendar className="w-5 h-5" />
+                          Book Appointment
+                        </button>
                       )}
                     </div>
-
-                    {/* Book Button */}
-                    <button
-                      onClick={() => handleBookAppointment(coach)}
-                      className="btn-book-appointment"
-                    >
-                      <Calendar className="w-5 h-5" />
-                      Book Appointment
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

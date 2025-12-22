@@ -278,19 +278,19 @@ async def create_new_coach(
                     content_type = ref_file.content_type or "application/octet-stream"
                     s3_key = s3_manager.upload_file(
                         file_content,
-                        folder="coach_references",
+                        folder="reference_data",
                         filename=filename,
                         content_type=content_type,
                     )
                     file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
-                    upload_dir = Path("uploads/coach_references")
+                    upload_dir = Path("uploads/reference_data")
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     file_path = upload_dir / filename
                     content = await ref_file.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    file_url = f"/uploads/coach_references/{filename}"
+                    file_url = f"/uploads/reference_data/{filename}"
                 
                 # Save reference data entry in database
                 from app.crud.coach_crud import create_coach_reference_data
@@ -331,6 +331,7 @@ async def update_coach_profile(
     coach_id: int,
     # Text fields using Form (all optional for PATCH)
     name: str = Form(None),
+    email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
     contact_no: str = Form(None),
@@ -434,6 +435,7 @@ async def update_coach_profile(
     # Prepare update data
     coach_update = CoachUpdate(
         name=name,
+        email=email,
         age=age,
         address=address,
         contact_no=contact_no,
@@ -478,19 +480,19 @@ async def update_coach_profile(
                     content_type = ref_file.content_type or "application/octet-stream"
                     s3_key = s3_manager.upload_file(
                         file_content,
-                        folder="coach_references",
+                        folder="reference_data",
                         filename=filename,
                         content_type=content_type,
                     )
                     file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
-                    upload_dir = Path("uploads/coach_references")
+                    upload_dir = Path("uploads/reference_data")
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     file_path = upload_dir / filename
                     content = await ref_file.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    file_url = f"/uploads/coach_references/{filename}"
+                    file_url = f"/uploads/reference_data/{filename}"
                 
                 # Save reference data entry in database
                 from app.crud.coach_crud import create_coach_reference_data
@@ -571,3 +573,111 @@ async def reveal_user_passcode_admin(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to decrypt passcode"
         )
+
+
+# ============= PROGRAM-CONTENT MANAGEMENT =============
+
+@router.post("/learning-goals/{program_id}/contents", status_code=status.HTTP_201_CREATED)
+async def add_content_to_program(
+    program_id: int,
+    content_id: int = Form(...),
+    sequence_order: int = Form(None),
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Add a learning content to a program with optional sequence order"""
+    from app.crud import program_learning_content_crud
+    
+    # Check if already linked
+    already_linked = await program_learning_content_crud.check_content_in_program(
+        db, program_id, content_id
+    )
+    
+    if already_linked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Content already linked to this program"
+        )
+    
+    link = await program_learning_content_crud.add_content_to_program(
+        db, program_id, content_id, sequence_order
+    )
+    
+    return {
+        "id": link.id,
+        "program_id": link.program_id,
+        "content_id": link.content_id,
+        "sequence_order": link.sequence_order
+    }
+
+
+@router.get("/learning-goals/{program_id}/contents")
+async def get_program_contents(
+    program_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get all learning contents for a program, ordered by sequence"""
+    from app.crud import program_learning_content_crud
+    
+    links = await program_learning_content_crud.get_program_contents(db, program_id)
+    
+    return [
+        {
+            "id": link.id,
+            "program_id": link.program_id,
+            "content_id": link.content_id,
+            "content_title": link.content.title,
+            "content_type": link.content.content_type.value,
+            "file_url": link.content.file_url,
+            "thumbnail_url": link.content.thumbnail_url,
+            "sequence_order": link.sequence_order
+        }
+        for link in links
+    ]
+
+
+@router.patch("/learning-goals/{program_id}/contents/reorder")
+async def reorder_program_contents(
+    program_id: int,
+    content_orders: List[dict],
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Update sequence order for multiple contents in a program"""
+    from app.crud import program_learning_content_crud
+    
+    success = await program_learning_content_crud.reorder_program_contents(
+        db, program_id, content_orders
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to reorder contents"
+        )
+    
+    return {"message": "Contents reordered successfully"}
+
+
+@router.delete("/learning-goals/{program_id}/contents/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_content_from_program(
+    program_id: int,
+    content_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Remove a learning content from a program"""
+    from app.crud import program_learning_content_crud
+    
+    success = await program_learning_content_crud.remove_content_from_program(
+        db, program_id, content_id
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content not found in this program"
+        )
+    
+    return None
