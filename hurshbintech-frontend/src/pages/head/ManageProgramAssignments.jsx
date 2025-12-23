@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import programAssignmentService from '../../api/services/programAssignmentService';
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
+import learningContentService from '../../api/services/learningContentService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/Pages.css';
@@ -12,6 +13,7 @@ const ManageProgramAssignments = () => {
   const [programs, setPrograms] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [overview, setOverview] = useState([]);
+  const [allLearningContents, setAllLearningContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
@@ -27,10 +29,12 @@ const ManageProgramAssignments = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [searchLearner, setSearchLearner] = useState('');
   const [searchProgram, setSearchProgram] = useState('');
+  const [searchExtraContent, setSearchExtraContent] = useState('');
 
   const [formData, setFormData] = useState({
     learner_ids: [],
     program_ids: [],  // Changed from program_id to program_ids array
+    extra_content_ids: [],  // Additional learning contents to assign
     start_date: '',
     end_date: '',
     duration_days: '',
@@ -62,17 +66,19 @@ const ManageProgramAssignments = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [learnersData, programsData, assignmentsData, overviewData] = await Promise.all([
+      const [learnersData, programsData, assignmentsData, overviewData, learningContentsData] = await Promise.all([
         headService.getAllLearners(),
         learningProgramsService.getAllPrograms(),
         programAssignmentService.getAssignments(),
         programAssignmentService.getAssignmentsOverview(),
+        learningContentService.getAllContentsForHead(),
       ]);
 
       setLearners(learnersData);
       setPrograms(programsData);
       setAssignments(assignmentsData);
       setOverview(overviewData);
+      setAllLearningContents(learningContentsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
@@ -144,6 +150,21 @@ const ManageProgramAssignments = () => {
     }
   };
 
+  const handleExtraContentSelect = (contentId) => {
+    const id = parseInt(contentId);
+    if (formData.extra_content_ids.includes(id)) {
+      setFormData({
+        ...formData,
+        extra_content_ids: formData.extra_content_ids.filter(cid => cid !== id),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        extra_content_ids: [...formData.extra_content_ids, id],
+      });
+    }
+  };
+
   const handleProgramChange = async (programId) => {
     setFormData({ ...formData, program_id: programId });
 
@@ -184,16 +205,22 @@ const ManageProgramAssignments = () => {
       let totalFailed = 0;
       const failedAssignments = [];
 
+      console.log('[ManageProgramAssignments] Form data:', formData);
+      console.log('[ManageProgramAssignments] Extra content IDs:', formData.extra_content_ids);
+
       // Loop through each selected program and create assignments
       for (const programId of formData.program_ids) {
         const payload = {
           learner_ids: formData.learner_ids,
           program_id: parseInt(programId),
+          extra_content_ids: formData.extra_content_ids && formData.extra_content_ids.length > 0 ? formData.extra_content_ids : [],
           start_date: formData.start_date,
           end_date: formData.end_date,
           duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
           head_notes: formData.head_notes || null,
         };
+
+        console.log('[ManageProgramAssignments] Payload for program', programId, ':', payload);
 
         try {
           const result = await programAssignmentService.createAssignments(payload);
@@ -228,6 +255,7 @@ const ManageProgramAssignments = () => {
       setFormData({
         learner_ids: [],
         program_ids: [],
+        extra_content_ids: [],
         start_date: '',
         end_date: '',
         duration_days: '',
@@ -235,6 +263,7 @@ const ManageProgramAssignments = () => {
         manual_duration: false,
       });
       setSelectedProgram(null);
+      setSearchExtraContent('');
     } catch (error) {
       console.error('Failed to create assignments:', error);
       toast.error(error.response?.data?.detail || 'Failed to create assignments');
@@ -307,11 +336,11 @@ const ManageProgramAssignments = () => {
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    if (!window.confirm('Delete this assignment? This action cannot be undone.')) return;
+    if (!window.confirm('Delete this assignment?\n\n⚠️ This will delete:\n- The program assignment\n- All auto-assigned content\n- All manually assigned content\n\nThis action cannot be undone.')) return;
 
     try {
       await programAssignmentService.deleteAssignment(assignmentId);
-      toast.success('Assignment deleted');
+      toast.success('Assignment and all associated content deleted');
       fetchAssignments();
     } catch (error) {
       toast.error('Failed to delete assignment');
@@ -321,9 +350,13 @@ const ManageProgramAssignments = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'COMPLETED':
+      case 'REVIEWED':
         return 'status-success';
       case 'IN_PROGRESS':
+      case 'SUBMITTED':
         return 'status-warning';
+      case 'LATE_SUBMITTED':
+        return 'status-danger';
       case 'NOT_STARTED':
         return 'status-info';
       default:
@@ -332,7 +365,22 @@ const ManageProgramAssignments = () => {
   };
 
   const getStatusLabel = (status) => {
-    return status.replace('_', ' ');
+    return status.replace(/_/g, ' ');
+  };
+
+  const handleReviewContent = async (contentAssignmentId) => {
+    if (!window.confirm('Mark this content as reviewed?')) return;
+
+    try {
+      await programAssignmentService.reviewContent(contentAssignmentId);
+      toast.success('Content marked as reviewed');
+
+      // Refresh assignment details
+      const assignmentDetails = await programAssignmentService.getAssignmentById(selectedAssignment.id);
+      setSelectedAssignment(assignmentDetails);
+    } catch (error) {
+      toast.error('Failed to review content');
+    }
   };
 
   return (
@@ -560,7 +608,7 @@ const ManageProgramAssignments = () => {
                                   className="btn-primary btn-sm"
                                   title="View Tracking"
                                 >
-                                  View
+                                  Track
                                 </button>
                                 <button
                                   onClick={() => handleDeleteAssignment(assignment.id)}
@@ -725,6 +773,62 @@ const ManageProgramAssignments = () => {
                 </div>
               </div>
 
+              {/* Extra Learning Content Selection */}
+              <div className="form-field">
+                <label className="form-label">
+                  Additional Learning Content (Optional)
+                  <span className="form-hint">({formData.extra_content_ids.length} selected)</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-2">
+                  Select extra learning materials to assign along with the programs
+                </p>
+                <input
+                  type="text"
+                  placeholder="🔍 Search learning content..."
+                  className="form-input"
+                  value={searchExtraContent}
+                  onChange={(e) => setSearchExtraContent(e.target.value)}
+                  style={{ marginBottom: '1rem' }}
+                />
+                <div className="checkbox-grid" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {allLearningContents
+                    .filter(content =>
+                      content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                      (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                    )
+                    .map(content => (
+                      <div key={content.id} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`extra-content-${content.id}`}
+                          checked={formData.extra_content_ids.includes(content.id)}
+                          onChange={() => handleExtraContentSelect(content.id)}
+                          className="form-checkbox"
+                        />
+                        <label htmlFor={`extra-content-${content.id}`} className="checkbox-label">
+                          <div>
+                            <div className="font-semibold">{content.title}</div>
+                            {content.description && (
+                              <div className="text-xs text-gray-500 mt-1">{content.description}</div>
+                            )}
+                            <div className="text-xs text-purple-600 mt-1">
+                              📄 {content.content_type}
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  {allLearningContents.filter(content =>
+                    content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                    (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                  ).length === 0 && (
+                      <div className="text-center text-gray-500 py-4">
+                        No learning content found{searchExtraContent ? ` matching "${searchExtraContent}"` : ''}
+                      </div>
+                    )}
+                </div>
+              </div>
+
               {/* Date Range */}
               <div className="form-row">
                 <div className="form-field">
@@ -803,7 +907,8 @@ const ManageProgramAssignments = () => {
                     setShowAssignModal(false);
                     setFormData({
                       learner_ids: [],
-                      program_id: '',
+                      program_ids: [],
+                      extra_content_ids: [],
                       start_date: '',
                       end_date: '',
                       duration_days: '',
@@ -811,6 +916,7 @@ const ManageProgramAssignments = () => {
                       manual_duration: false,
                     });
                     setSelectedProgram(null);
+                    setSearchExtraContent('');
                   }}
                   className="btn-secondary"
                 >
@@ -931,26 +1037,67 @@ const ManageProgramAssignments = () => {
                 )}
               </div>
 
-              {/* Learning Contents */}
-              {selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
+              {/* Learning Contents - Both Auto and Manual */}
+              {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 && (
                 <div className="contents-section">
-                  <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                  <h4 className="subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
                   <div className="contents-list">
-                    {selectedAssignment.program.contents.map((content, index) => (
-                      <div key={content.id} className="content-item">
+                    {selectedAssignment.content_assignments.map((assignment, index) => (
+                      <div key={assignment.id} className="content-item">
                         <span className="content-order">{index + 1}</span>
-                        {content.thumbnail_url && (
-                          <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                        {assignment.learning_content?.thumbnail_url && (
+                          <img src={assignment.learning_content.thumbnail_url} alt="" className="content-thumbnail" />
                         )}
                         <div className="content-info">
-                          <div className="content-title">{content.title}</div>
-                          <div className="content-type">{content.content_type}</div>
+                          <div className="content-title">
+                            {assignment.learning_content?.title || 'Untitled Content'}
+                          </div>
+                          <div className="content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
+                          <div className="content-meta" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span className={`status-badge ${assignment.is_from_program ? 'status-info' : 'status-warning'}`} style={{ fontSize: '0.75rem' }}>
+                              {assignment.is_from_program ? '🔄 Auto-assigned' : '➕ Manual'}
+                            </span>
+                            <span className={`status-badge ${getStatusColor(assignment.completion_status)}`} style={{ fontSize: '0.75rem' }}>
+                              {getStatusLabel(assignment.completion_status)}
+                            </span>
+                            {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
+                              <button
+                                onClick={() => handleReviewContent(assignment.id)}
+                                className="btn-primary btn-sm"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                              >
+                                ✓ Mark Reviewed
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* Fallback: Show program contents if content_assignments not available */}
+              {(!selectedAssignment?.content_assignments || selectedAssignment.content_assignments.length === 0) &&
+                selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
+                  <div className="contents-section">
+                    <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                    <div className="contents-list">
+                      {selectedAssignment.program.contents.map((content, index) => (
+                        <div key={content.id} className="content-item">
+                          <span className="content-order">{index + 1}</span>
+                          {content.thumbnail_url && (
+                            <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                          )}
+                          <div className="content-info">
+                            <div className="content-title">{content.title}</div>
+                            <div className="content-type">{content.content_type}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Head Notes */}
               {selectedAssignment.head_notes && (

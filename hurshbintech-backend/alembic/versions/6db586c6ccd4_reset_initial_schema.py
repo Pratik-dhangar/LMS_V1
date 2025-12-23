@@ -239,20 +239,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_learner_profiles_id'), 'learner_profiles', ['id'], unique=False)
     op.create_index(op.f('ix_learner_profiles_user_id'), 'learner_profiles', ['user_id'], unique=True)
-    op.create_table('learning_content_assignments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('learner_id', sa.Integer(), nullable=False),
-    sa.Column('learning_content_id', sa.Integer(), nullable=False),
-    sa.Column('assigned_by_head', sa.Integer(), nullable=True),
-    sa.Column('assigned_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_by_head'], ['users.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['learning_content_id'], ['learning_contents.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_learning_content_assignments_id'), 'learning_content_assignments', ['id'], unique=False)
-    op.create_index(op.f('ix_learning_content_assignments_learner_id'), 'learning_content_assignments', ['learner_id'], unique=False)
-    op.create_index(op.f('ix_learning_content_assignments_learning_content_id'), 'learning_content_assignments', ['learning_content_id'], unique=False)
     op.create_table('learning_goal_assignments',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('learner_id', sa.Integer(), nullable=True),
@@ -388,10 +374,6 @@ def downgrade() -> None:
     op.drop_table('session_learning_content')
     op.drop_index(op.f('ix_learning_goal_assignments_id'), table_name='learning_goal_assignments')
     op.drop_table('learning_goal_assignments')
-    op.drop_index(op.f('ix_learning_content_assignments_learning_content_id'), table_name='learning_content_assignments')
-    op.drop_index(op.f('ix_learning_content_assignments_learner_id'), table_name='learning_content_assignments')
-    op.drop_index(op.f('ix_learning_content_assignments_id'), table_name='learning_content_assignments')
-    op.drop_table('learning_content_assignments')
     op.drop_index(op.f('ix_learner_profiles_user_id'), table_name='learner_profiles')
     op.drop_index(op.f('ix_learner_profiles_id'), table_name='learner_profiles')
     op.drop_table('learner_profiles')

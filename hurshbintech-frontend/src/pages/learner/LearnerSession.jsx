@@ -114,6 +114,8 @@ const LearnerSession = () => {
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [_selectedItemId] = useState(null); // Track learner's own selection
+  const [isShiftActive, setIsShiftActive] = useState(false); // For shift/caps lock
+  const [isCapsLock, setIsCapsLock] = useState(false); // For persistent caps lock
 
   // Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
@@ -129,6 +131,7 @@ const LearnerSession = () => {
   const [_isPaused] = useState(false);
   const [_isFrozen] = useState(false);
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
+  const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -673,6 +676,7 @@ const LearnerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[LearnerSession] Remote stream received from trainer');
         setRemoteStream(stream);
+        setTrainerJoined(true); // Trainer has joined
       };
 
       // Set callback for connection state changes
@@ -686,7 +690,13 @@ const LearnerSession = () => {
           'failed': 'failed',
           'closed': 'disconnected'
         };
-        setConnectionStatus(statusMap[state] || state);
+        const mappedStatus = statusMap[state] || state;
+        setConnectionStatus(mappedStatus);
+
+        // If disconnected or failed, trainer might have left
+        if (state === 'disconnected' || state === 'closed') {
+          setTrainerJoined(false);
+        }
       };
 
       // Set error callback
@@ -765,10 +775,51 @@ const LearnerSession = () => {
   const handleKeyboardKeyPress = (key) => {
     if (key === 'SPACE') {
       setKeyboardText(prev => prev + ' ');
+      setIsShiftActive(false);
     } else if (key === 'BACKSPACE') {
       setKeyboardText(prev => prev.slice(0, -1));
+      setIsShiftActive(false);
+    } else if (key === 'SHIFT') {
+      setIsShiftActive(!isShiftActive);
+    } else if (key === 'CAPS') {
+      setIsCapsLock(!isCapsLock);
+      setIsShiftActive(false);
+    } else if (key === 'ENTER') {
+      setKeyboardText(prev => prev + '\n');
+      setIsShiftActive(false);
+    } else if (key === 'TAB') {
+      setKeyboardText(prev => prev + '\t');
+      setIsShiftActive(false);
     } else {
-      setKeyboardText(prev => prev + key);
+      // Apply shift/caps logic for letters
+      let finalKey = key;
+      if (typeof key === 'string' && key.length === 1) {
+        const isLetter = /[a-z]/i.test(key);
+        if (isLetter) {
+          if (isShiftActive || isCapsLock) {
+            finalKey = key.toUpperCase();
+          } else {
+            finalKey = key.toLowerCase();
+          }
+          // Auto-deactivate shift after typing a letter
+          if (isShiftActive) {
+            setIsShiftActive(false);
+          }
+        } else {
+          // For non-letters, apply shift mapping for special characters
+          const shiftMap = {
+            '1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
+            '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
+            '-': '_', '=': '+', '[': '{', ']': '}', '\\': '|',
+            ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '`': '~'
+          };
+          if (isShiftActive && shiftMap[key]) {
+            finalKey = shiftMap[key];
+            setIsShiftActive(false);
+          }
+        }
+      }
+      setKeyboardText(prev => prev + finalKey);
     }
   };
 
@@ -811,6 +862,68 @@ const LearnerSession = () => {
     return (
       <div className="loading-container">
         <div className="session-loader"></div>
+      </div>
+    );
+  }
+
+  // Show waiting overlay if trainer hasn't joined yet
+  if (!loading && !trainerJoined && sessionInfo?.status === 'scheduled') {
+    return (
+      <div className="session-page">
+        {/* Navigation / Header */}
+        <div className="session-header">
+          <div className="session-header-main">
+            <div>
+              <div className="session-header-title">HurshBin Learner</div>
+              <div className="session-header-subtitle">
+                {sessionInfo?.title ?? 'Training Session'} — Trainer: {sessionInfo?.trainer_name ?? 'Trainer'}
+              </div>
+            </div>
+            <div className="session-header-controls">
+              <button
+                className="btn-session btn-session-end"
+                onClick={() => navigate('/learner/dashboard')}
+              >
+                🏠 Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Waiting Overlay */}
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
+          <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+            <div className="text-6xl mb-4 animate-bounce">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Waiting for Trainer
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your session is scheduled and you're ready to join!
+            </p>
+            <p className="text-gray-600 mb-6">
+              Please wait while <strong>{sessionInfo?.trainer_name ?? 'your trainer'}</strong> joins the session.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Connecting...</span>
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-gray-700">
+                <strong>Session Details:</strong>
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                {sessionInfo?.scheduled_date && (
+                  <>📅 {new Date(sessionInfo.scheduled_date).toLocaleString()}</>
+                )}
+              </p>
+              {sessionInfo?.duration && (
+                <p className="text-xs text-gray-600 mt-1">
+                  ⏱️ Duration: {sessionInfo.duration} minutes
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1004,95 +1117,179 @@ const LearnerSession = () => {
           </div>
           {showKeyboard && (
             <div
-              className="bg-gradient-to-b from-sky-100 via-blue-100 to-cyan-100 border-4 border-sky-300 rounded-3xl p-4 sm:p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-5"
+              className="rounded-3xl p-6 sm:p-8 shadow-2xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-6"
               style={{
                 touchAction: 'none',
-                boxShadow: '0 10px 30px rgba(14, 165, 233, 0.15)'
+                background: 'linear-gradient(135deg, #3d3531 0%, #4a4238 100%)',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
               }}
               onMouseDown={handleKeyboardMouseDown}
               onTouchStart={handleKeyboardMouseDown}
             >
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="text-3xl sm:text-4xl">🎹</span>
-                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 text-lg sm:text-xl font-bold cursor-move">
+              <div className="flex justify-between items-center mb-6 sm:mb-7">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <span className="text-4xl sm:text-5xl drop-shadow-lg">⌨️</span>
+                  <h4 className="m-0 text-amber-100 text-xl sm:text-2xl font-bold tracking-wider cursor-move" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
                     Magic Keyboard
                   </h4>
                 </div>
               </div>
-              <div className="mb-4 sm:mb-5 flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch">
-                <div className="flex-1 bg-white border-3 border-sky-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
-                  <p className="text-sm sm:text-base text-gray-700 font-medium whitespace-pre-wrap break-words min-h-[44px] flex items-center">
-                    {keyboardText || <span className="text-gray-400 italic">✨ Start typing...</span>}
+              <div className="mb-6 sm:mb-7 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch">
+                <div
+                  className="flex-1 rounded-2xl px-5 sm:px-6 py-3 sm:py-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
+                    boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <p className="text-sm sm:text-base text-amber-50 font-medium whitespace-pre-wrap break-words min-h-[48px] flex items-center">
+                    {keyboardText || <span className="text-amber-200 italic opacity-60">✨ Start typing...</span>}
                   </p>
                 </div>
                 <button
                   onClick={handleSendText}
-                  className="bg-gradient-to-br from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-sm sm:text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
+                  className="text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95 whitespace-nowrap"
+                  style={{
+                    background: 'linear-gradient(135deg, #A8A8D8 0%, #9090C8 100%)',
+                    boxShadow: '0 8px 25px rgba(168, 168, 216, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)'
+                  }}
                 >
                   ✨ Send
                 </button>
               </div>
-              <div className="bg-white bg-opacity-80 rounded-2xl p-3 sm:p-5 shadow-md">
-                <div className="grid gap-2 sm:gap-3">
-                  <div className="grid grid-cols-10 md:grid-cols-10 gap-1 sm:gap-2">
-                    {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(letter => (
+              <div
+                className="rounded-2xl p-5 sm:p-7 shadow-xl overflow-x-auto"
+                style={{
+                  background: 'linear-gradient(135deg, #4a4238 0%, #3d3531 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <div className="grid gap-3 sm:gap-3">
+                  {/* Number Row */}
+                  <div className="grid grid-cols-12 gap-2.5">
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='].map(char => {
+                      const shiftMap = { '1': '!', '2': '@', '3': '#', '4': '$', '5': '%', '6': '^', '7': '&', '8': '*', '9': '(', '0': ')', '-': '_', '=': '+' };
+                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
+                      return (
+                        <button
+                          key={char}
+                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                          style={{
+                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(0, 0, 0, 0.15)'
+                          }}
+                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onClick={() => handleKeyboardKeyPress(char)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleKeyboardKeyPress(char);
+                          }}
+                        >
+                          {displayChar}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Q Row */}
+                  <div className="grid grid-cols-10 md:grid-cols-10 gap-2.5">
+                    {['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
                           handleKeyboardKeyPress(letter);
                         }}
                       >
-                        {letter}
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-9 md:grid-cols-9 gap-1 sm:gap-2 md:ml-3">
-                    {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(letter => (
+
+                  {/* A Row */}
+                  <div className="grid grid-cols-9 md:grid-cols-9 gap-2.5 md:ml-6">
+                    {['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
                           handleKeyboardKeyPress(letter);
                         }}
                       >
-                        {letter}
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 md:grid-cols-7 gap-1 sm:gap-2 md:ml-6">
-                    {['Z', 'X', 'C', 'V', 'B', 'N', 'M'].map(letter => (
-                      <button
-                        key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold rounded-full py-2 sm:py-4 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
-                        onClick={() => handleKeyboardKeyPress(letter)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(letter);
-                        }}
-                      >
-                        {letter}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2 mt-2">
+
+                  {/* Z Row and Special Chars */}
+                  <div className="flex gap-2.5">
                     <button
-                      className="col-span-7 sm:col-span-8 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
-                      onClick={() => handleKeyboardKeyPress('SPACE')}
+                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: isShiftActive ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                        boxShadow: isShiftActive ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: isShiftActive ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
+                        color: isShiftActive ? 'white' : '#3a3a3a'
+                      }}
+                      onClick={() => handleKeyboardKeyPress('SHIFT')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
-                        handleKeyboardKeyPress('SPACE');
+                        handleKeyboardKeyPress('SHIFT');
                       }}
                     >
-                      <Emoji emoji="🌟" size="sm" /> SPACE <Emoji emoji="🌟" size="sm" />
+                      ⇧ SHIFT
                     </button>
+                    {['z', 'x', 'c', 'v', 'b', 'n', 'm'].map(letter => (
+                      <button
+                        key={letter}
+                        className="flex-1 keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onClick={() => handleKeyboardKeyPress(letter)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handleKeyboardKeyPress(letter);
+                        }}
+                      >
+                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
+                      </button>
+                    ))}
                     <button
-                      className="col-span-5 sm:col-span-4 bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-600 font-bold py-2 sm:py-4 rounded-full transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-base flex items-center justify-center"
+                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #D8A0A0 0%, #C88080 100%)',
+                        boxShadow: '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(216, 160, 160, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                       onClick={() => handleKeyboardKeyPress('BACKSPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1101,6 +1298,124 @@ const LearnerSession = () => {
                     >
                       ⌫ DEL
                     </button>
+                  </div>
+
+                  {/* Symbol and Control Row */}
+                  <div className="grid grid-cols-12 gap-2.5">
+                    <button
+                      className="col-span-2 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: isCapsLock ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                        boxShadow: isCapsLock ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: isCapsLock ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
+                        color: isCapsLock ? 'white' : '#3a3a3a'
+                      }}
+                      onClick={() => handleKeyboardKeyPress('CAPS')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('CAPS');
+                      }}
+                    >
+                      {isCapsLock ? '🔒 CAPS' : '🔓 CAPS'}
+                    </button>
+                    {['[', ']', ';', '\'', ',', '.', '/', '\\', '`'].map(char => {
+                      const shiftMap = { '[': '{', ']': '}', ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '\\': '|', '`': '~' };
+                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
+                      return (
+                        <button
+                          key={char}
+                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                          style={{
+                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(0, 0, 0, 0.15)'
+                          }}
+                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onClick={() => handleKeyboardKeyPress(char)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            handleKeyboardKeyPress(char);
+                          }}
+                        >
+                          {displayChar}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Space and Control Row */}
+                  <div className="grid grid-cols-12 gap-2.5">
+                    <button
+                      className="col-span-9 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #A8C8E8 0%, #98B8D8 100%)',
+                        boxShadow: '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(168, 200, 232, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onClick={() => handleKeyboardKeyPress('SPACE')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('SPACE');
+                      }}
+                    >
+                      🌟 SPACE 🌟
+                    </button>
+                    <button
+                      className="col-span-3 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #B0D8A8 0%, #A0C898 100%)',
+                        boxShadow: '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(176, 216, 168, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onClick={() => handleKeyboardKeyPress('ENTER')}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleKeyboardKeyPress('ENTER');
+                      }}
+                    >
+                      ↵ ENTER
+                    </button>
+                  </div>
+
+                  {/* Emoji Row */}
+                  <div
+                    className="grid grid-cols-12 gap-2.5 rounded-2xl p-4 sm:p-5"
+                    style={{
+                      background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    {['😀', '😂', '😍', '😎', '👍', '❤️', '🎉', '🌟', '✨', '💯', '🔥', '⭐'].map(emoji => (
+                      <button
+                        key={emoji}
+                        className="keyboard-key rounded-lg py-3 sm:py-4 transition-all duration-150 text-lg sm:text-2xl flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #E8A89A 0%, #D89080 100%)';
+                          e.target.style.boxShadow = '0 6px 16px rgba(232, 168, 154, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)';
+                          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
+                        }}
+                        onClick={() => handleKeyboardKeyPress(emoji)}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handleKeyboardKeyPress(emoji);
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

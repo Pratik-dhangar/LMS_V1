@@ -11,8 +11,10 @@ const Home = () => {
 
   const handleBookAppointment = () => {
     if (!user) {
-      navigate("/login", { state: { from: "/book-appointment" } });
+      // Redirect to guest booking flow for unauthenticated users
+      navigate("/guest-booking");
     } else {
+      // Redirect to authenticated booking flow
       navigate("/book-appointment");
     }
   };

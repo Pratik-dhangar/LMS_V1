@@ -34,7 +34,6 @@ import RegisterLearner from './pages/head/RegisterLearner';
 import ScheduleSession from './pages/head/ScheduleSession';
 import ManageSessions from './pages/head/ManageSessions';
 import ViewVlogs from './pages/head/ViewVlogs';
-import ManageAssignedLearningContent from './pages/head/ManageAssignedLearningContent';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
@@ -54,11 +53,19 @@ import LearnerDashboard from './pages/learner/Dashboard';
 import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
+import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
 
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
 import BookAppointmentForm from './pages/common/BookAppointmentForm';
 import MyAppointments from './pages/common/MyAppointments';
+
+// Guest Booking Pages
+import GuestBookingStep1 from './pages/common/GuestBookingStep1';
+import GuestBookingStep2 from './pages/common/GuestBookingStep2';
+import GuestBookingStep3Pending from './pages/common/GuestBookingStep3Pending';
+import GuestPaymentUpload from './pages/common/GuestPaymentUpload';
+import GuestPaymentUploadSuccess from './pages/common/GuestPaymentUploadSuccess';
 
 
 
@@ -319,10 +326,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/head/manage-assigned-learning-content"
-          element={<ManageAssignedLearningContent
-          />}
-        />
         <Route
           path="/head/manage-program-assignments"
           element={
@@ -437,8 +440,21 @@ function App() {
           path="/learner/learning-program/:id"
           element={<LearningProgramDetails />}
         />
+        <Route
+          path="/learner/program-assignment/:id"
+          element={
+            <ProtectedRoute allowedRoles={["learner"]}>
+              <LearnerProgramAssignmentDetails />
+            </ProtectedRoute>
+          }
+        />
 
-
+        {/* Guest Booking Routes - Public, no authentication required */}
+        <Route path="/guest-booking" element={<GuestBookingStep1 />} />
+        <Route path="/guest-booking/details" element={<GuestBookingStep2 />} />
+        <Route path="/guest-booking/pending" element={<GuestBookingStep3Pending />} />
+        <Route path="/guest-payment/:uploadToken" element={<GuestPaymentUpload />} />
+        <Route path="/guest-payment/success" element={<GuestPaymentUploadSuccess />} />
 
         {/* 404 - Redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -100,16 +100,16 @@ async def update_appointment(
 
     update_data = appointment_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        # Convert status to enum if it's a string
+        # Convert status to enum if it's a string (using same pattern as UserRole)
         if field == 'status' and isinstance(value, str):
             try:
-                value = AppointmentStatus(value.lower())
-            except ValueError:
-                # If the status is already in enum format or uppercase, try as is
+                value = AppointmentStatus[value.upper()]  # Try as enum NAME (uppercase)
+            except (KeyError, ValueError):
+                # If invalid, try as enum VALUE
                 try:
-                    value = AppointmentStatus[value.upper()]
-                except (KeyError, AttributeError):
-                    pass
+                    value = AppointmentStatus(value)
+                except (KeyError, ValueError):
+                    pass  # Keep original value if conversion fails
         setattr(appointment, field, value)
 
     await db.commit()

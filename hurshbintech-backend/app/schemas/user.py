@@ -801,8 +801,8 @@ class AppointmentResponse(BaseModel):
 
     id: int
     coach_id: int
-    user_id: int
-    user_role: str
+    user_id: Optional[int] = None  # NULL for guest bookings
+    user_role: Optional[str] = None  # NULL for guest bookings
     scheduled_date: str  # Changed to str to ensure proper JSON serialization
     scheduled_time: str
     status: str
@@ -815,6 +815,11 @@ class AppointmentResponse(BaseModel):
     refund_receipt_url: Optional[str] = None
     created_at: str  # Changed to str for consistent serialization
     updated_at: str  # Changed to str for consistent serialization
+    # Guest booking fields
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+    guest_phone: Optional[str] = None
+    upload_token_expires_at: Optional[str] = None
 
     class Config:
         from_attributes = True
