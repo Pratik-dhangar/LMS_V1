@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, CheckCircle, Loader, Lock } from 'lucide-react';
+import { CheckCircle, Loader, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
@@ -97,7 +97,7 @@ const GuestBookingStep1 = () => {
     <>
       <Navbar />
       <div className="page-container">
-        <div className="page-main">
+        <div className="page-main-guest">
           <div className="page-header">
             <h1 className="page-title">Guest Booking - Email Verification</h1>
             <p className="page-subtitle">Book a session with our coaches without an account</p>
@@ -122,7 +122,7 @@ const GuestBookingStep1 = () => {
                 </div>
               </div>
 
-              <div className="guest-booking-form">
+              <div className="guest-booking-form centered">
                 {step === 'email' ? (
                   <>
                     <div className="instruction-box">
@@ -141,18 +141,15 @@ const GuestBookingStep1 = () => {
                     <form onSubmit={handleSendOTP}>
                       <div className="form-group">
                         <label htmlFor="email">Email Address *</label>
-                        <div className="input-with-icon">
-                          <Mail size={18} />
-                          <input
-                            type="email"
-                            id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="your@email.com"
-                            disabled={loading}
-                            required
-                          />
-                        </div>
+                        <input
+                          type="email"
+                          id="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="your@email.com"
+                          disabled={loading}
+                          required
+                        />
                         <small>We'll send an OTP to this email</small>
                       </div>
 

@@ -361,6 +361,12 @@ async def verify_guest_otp(
     No authentication required - public endpoint.
     """
     email = email.lower().strip()
+    otp = otp.strip()
+    
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Verifying OTP for email: {email}, otp: {otp}")
     
     # Check if OTP is valid (doesn't mark as used)
     from sqlalchemy import and_
@@ -376,6 +382,14 @@ async def verify_guest_otp(
     otp_record = result.scalar_one_or_none()
     
     if not otp_record:
+        # Additional debug: find any OTP for this email
+        debug_stmt = select(GuestOTP).where(GuestOTP.email == email).order_by(GuestOTP.created_at.desc())
+        debug_result = await db.execute(debug_stmt)
+        debug_record = debug_result.scalar_one_or_none()
+        if debug_record:
+            logger.warning(f"OTP mismatch - DB has: code={debug_record.otp_code}, expires_at={debug_record.expires_at}, is_used={debug_record.is_used}, now={datetime.utcnow()}")
+        else:
+            logger.warning(f"No OTP record found for email: {email}")
         raise HTTPException(status_code=401, detail="Invalid or expired OTP")
     
     return {"message": "OTP verified successfully"}
