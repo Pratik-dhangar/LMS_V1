@@ -568,7 +568,7 @@ async def guest_upload_payment(
     
     # Step 1-2: Find and validate token (eagerly load coach and user)
     stmt = select(Appointment).options(
-        joinedload(Appointment.coach).joinedload(Coach.user)
+        joinedload(Appointment.coach).joinedload(CoachProfile.user)
     ).where(
         Appointment.upload_token == upload_token,
         Appointment.status == AppointmentStatus.GUEST_INTENT,
