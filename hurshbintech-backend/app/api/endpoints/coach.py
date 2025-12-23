@@ -23,6 +23,7 @@ from app.db.session import get_db
 from app.models.learning_content_model import LearningContent
 from app.models.user_model import CoachProfile, User, UserRole, Appointment, AppointmentStatus
 from app.services.email_service import EmailService
+from app.utils.s3_utils import convert_s3_url_to_signed
 from app.schemas.user import (
     AppointmentCreate,
     AppointmentResponse,
@@ -373,7 +374,18 @@ async def get_coach_appointments(
             "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
         
-        result.append(AppointmentResponse(**apt_dict))
+        response = AppointmentResponse(**apt_dict)
+        
+        # Convert S3 URLs to signed URLs if using S3
+        if settings.USE_S3:
+            if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
+                response.payment_screenshot_url = convert_s3_url_to_signed(response.payment_screenshot_url)
+            if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
+                response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
+            if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
+                response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
+        
+        result.append(response)
     
     return result
 
@@ -399,7 +411,7 @@ async def get_appointment_details(
             detail="Not authorized to view this appointment",
         )
 
-    return AppointmentResponse(
+    response = AppointmentResponse(
         id=appointment.id,
         coach_id=appointment.coach_id,
         user_id=appointment.user_id,
@@ -410,11 +422,20 @@ async def get_appointment_details(
         notes=appointment.notes,
         user_name=appointment.user.name if appointment.user else None,
         session_type=appointment.session_type,
-        payment_screenshot_url=appointment.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
+        payment_screenshot_url=appointment.payment_receipt_url,
         payment_receipt_url=appointment.payment_receipt_url,
         created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
         updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
     )
+    
+    # Convert S3 URLs to signed URLs if using S3
+    if settings.USE_S3:
+        if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
+            response.payment_screenshot_url = convert_s3_url_to_signed(response.payment_screenshot_url)
+        if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
+            response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
+    
+    return response
 
 
 @router.patch("/appointments/{appointment_id}", response_model=AppointmentResponse)
