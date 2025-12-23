@@ -4,7 +4,7 @@ Accessible by all authenticated users (head, trainer, learner).
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -325,26 +325,37 @@ import uuid
 
 @router.post("/guest/send-otp")
 async def send_guest_otp(
-    request: GuestOTPRequest,
+    request: Request,
+    payload: GuestOTPRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Send OTP to guest email for verification.
     No authentication required - public endpoint.
     
-    Rate limiting should be implemented at API gateway level.
+    Rate limiting: 3 OTPs per day per IP address.
     """
-    email = request.email.lower().strip()
+    email = payload.email.lower().strip()
+    
+    # Extract client IP address for rate limiting
+    client_ip = request.client.host if request.client else None
+    # Handle proxied requests (check X-Forwarded-For header)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
     
     try:
-        # Generate OTP (6-digit code, 10-minute expiry)
-        otp_code = await GuestOTPService.generate_otp(email, db)
+        # Generate OTP (6-digit code, 10-minute expiry) with rate limiting
+        otp_code = await GuestOTPService.generate_otp(email, db, ip_address=client_ip)
         
         # Send via email service
         await EmailService.send_guest_otp_email(email, otp_code)
         
         return {"message": f"OTP sent to {email}. Valid for 10 minutes."}
     
+    except HTTPException as http_err:
+        # Re-raise HTTP exceptions (e.g., rate limit exceeded)
+        raise http_err
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Failed to send OTP: {str(err)}")
 
@@ -390,7 +401,7 @@ async def verify_guest_otp(
             logger.warning(f"OTP mismatch - DB has: code={debug_record.otp_code}, expires_at={debug_record.expires_at}, is_used={debug_record.is_used}, now={datetime.utcnow()}")
         else:
             logger.warning(f"No OTP record found for email: {email}")
-        raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+        raise HTTPException(status_code=400, detail="Wrong OTP. Please check and try again.")
     
     return {"message": "OTP verified successfully"}
 
