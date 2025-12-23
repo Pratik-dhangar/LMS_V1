@@ -8,16 +8,35 @@
   background: linear-gradient(135deg, #f3f4f6 0%, #f9fafb 100%);
 }
 
-.page-main {
+.page-main-guest {
   flex: 1;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 2rem 1rem;
+  background: #f5f6fa;
+  padding: 0.5rem;
+  margin: 1.5rem 6rem;
+  min-height: 100vh;
+}
+
+@media (max-width: 1024px) {
+  .page-main-guest {
+    margin: 1.5rem 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-main-guest {
+    margin: 1rem 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-main-guest {
+    margin: 0.5rem;
+    padding: 0.5rem;
+  }
 }
 
 .page-content {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .page-header {
@@ -184,21 +203,21 @@
   padding-bottom: 0;
 }
 
-.section-header {
+.section-header-guest {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.section-header h3 {
+.section-header-guest h3 {
   font-size: 1.125rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.section-header svg {
+.section-header-guest svg {
   color: #41a67e;
   flex-shrink: 0;
 }
@@ -208,6 +227,73 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Centered Form for Email/OTP Step */
+.guest-booking-form.centered {
+  align-items: center;
+  text-align: center;
+}
+
+.guest-booking-form.centered form {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.guest-booking-form.centered .form-group {
+  width: 100%;
+}
+
+.guest-booking-form.centered .form-group label {
+  text-align: left;
+}
+
+.guest-booking-form.centered .instruction-box {
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.guest-booking-form.centered .btn-link {
+  background: none;
+  border: none;
+  color: #41a67e;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.guest-booking-form.centered .btn-link:hover {
+  color: #10b981;
+  text-decoration: underline;
+}
+
+.guest-booking-form.centered .btn-link:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Input with Icon */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  left: 0.75rem;
+  color: #6b7280;
+  pointer-events: none;
+}
+
+.input-with-icon input {
+  padding-left: 2.5rem;
+  width: 100%;
 }
 
 .form-group {
@@ -313,9 +399,9 @@
 
 .otp-input-box:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  background: #f0f9ff;
+  border-color: #41a67e;
+  box-shadow: 0 0 0 3px rgba(65, 166, 126, 0.15);
+  background: #f0fdf4;
 }
 
 .otp-input-box:disabled {
@@ -343,13 +429,38 @@
 
 /* Instruction Box */
 .instruction-box {
-  background: #f0f9ff;
+  background: #f9fafb;
   border-left: 4px solid #41a67e;
   padding: 1rem;
   border-radius: 0.5rem;
   margin: 1rem 0;
   font-size: 0.95rem;
   color: #1f2937;
+}
+
+.instruction-box h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.instruction-box h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.instruction-box ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+}
+
+.instruction-box ul li {
+  margin: 0.35rem 0;
+  color: #4b5563;
+  font-size: 0.9rem;
 }
 
 .instruction-box p {
@@ -898,14 +1009,14 @@
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background: #f0f9ff;
-  border: 1px solid #bfdbfe;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
   border-radius: 0.5rem;
   margin: 1.5rem 0;
 }
 
 .info-box svg {
-  color: #2563eb;
+  color: #41a67e;
   flex-shrink: 0;
 }
 
@@ -1012,6 +1123,30 @@
   .page-subtitle {
     font-size: 0.9rem;
   }
+
+  .guest-booking-form.centered form {
+    max-width: 100%;
+    padding: 0 0.5rem;
+  }
+
+  .guest-booking-form.centered .instruction-box {
+    max-width: 100%;
+  }
+
+  .progress-indicator {
+    padding: 1rem;
+  }
+
+  .step-number {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.875rem;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+    max-width: 70px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1019,8 +1154,19 @@
     padding: 1rem 0.5rem;
   }
 
+  .page-header {
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
   .guest-booking-card {
-    margin: 0 -0.5rem;
+    margin: 0;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
   }
 
   .form-row {
@@ -1037,5 +1183,67 @@
 
   .action-buttons .btn {
     width: 100%;
+  }
+
+  .success-title {
+    font-size: 1.35rem;
+  }
+
+  .success-icon-large svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .timeline {
+    padding: 1rem;
+  }
+
+  .timeline-item {
+    gap: 0.75rem;
+  }
+
+  .timeline-check,
+  .timeline-loader {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .timeline-item::before {
+    left: 13px;
+  }
+
+  .instruction-box {
+    padding: 0.875rem;
+    font-size: 0.9rem;
+  }
+
+  .instruction-list li,
+  .tips-list li {
+    font-size: 0.85rem;
+  }
+
+  .info-box {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: left;
+  }
+
+  .token-expiry-box {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .file-input-label {
+    padding: 1.5rem 1rem;
+  }
+
+  .appointment-summary {
+    padding: 1rem;
+  }
+
+  .appointment-summary h3 {
+    font-size: 1rem;
   }
 }
