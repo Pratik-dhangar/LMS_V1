@@ -73,6 +73,12 @@ const programAssignmentService = {
 
   // ============= LEARNER METHODS =============
 
+  // Get my learning contents
+  getMyLearningContents: async () => {
+    const response = await api.get('/program-assignments/learner/my-learning-contents');
+    return response.data;
+  },
+
   // Get my assignments
   getMyAssignments: async (status = null) => {
     const params = status ? `?status=${status}` : '';
@@ -163,6 +169,32 @@ const programAssignmentService = {
   // Remove content from program
   removeContentFromProgram: async (programId, contentId) => {
     await api.delete(`/admin/learning-goals/${programId}/contents/${contentId}`);
+  },
+
+  // Get all learning contents for a specific assignment (auto + manual)
+  getAssignmentLearnerContents: async (assignmentId) => {
+    const response = await api.get(`/program-assignments/head/assignments/${assignmentId}/learner-contents`);
+    return response.data;
+  },
+
+  // ============= CONTENT STATUS METHODS =============
+
+  // Learner: Start content
+  startContent: async (contentAssignmentId) => {
+    const response = await api.patch(`/program-assignments/content-assignments/${contentAssignmentId}/start`);
+    return response.data;
+  },
+
+  // Learner: Submit content
+  submitContent: async (contentAssignmentId) => {
+    const response = await api.patch(`/program-assignments/content-assignments/${contentAssignmentId}/submit`);
+    return response.data;
+  },
+
+  // Head: Review content
+  reviewContent: async (contentAssignmentId) => {
+    const response = await api.patch(`/program-assignments/head/content-assignments/${contentAssignmentId}/review`);
+    return response.data;
   },
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
@@ -6,19 +6,23 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
 import learningProgramsService from "../../api/services/learningProgramsService";
-import learningContentAssignmentService from "../../api/services/learningContentAssignmentService";
 import programAssignmentService from "../../api/services/programAssignmentService";
 
 const LearnerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Track if we've shown the initial error toast
+  const sessionErrorToastShownRef = useRef(false);
+  const programErrorToastShownRef = useRef(false);
+
   const [sessions, setSessions] = useState([]);
   const [learningPrograms, setLearningPrograms] = useState([]);
-  const [assignedContents, setAssignedContents] = useState([]);
+  const [learningContents, setLearningContents] = useState([]); // All assigned learning contents
+  const [programContents, setProgramContents] = useState({}); // { programId: [contents] }
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
-  const [loadingContents, setLoadingContents] = useState(true);
+  const [loadingContents, setLoadingContents] = useState(false);
   const [showContentModal, setShowContentModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
@@ -28,19 +32,17 @@ const LearnerDashboard = () => {
   useEffect(() => {
     fetchSessions();
     fetchAssignedPrograms();
-    fetchAssignedContents();
+    fetchAllLearningContents();
 
-    // Add keyboard event listener for ESC key to close modal
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && showContentModal) {
-        handleCloseModal();
-      }
-    };
+    // Auto-refresh sessions every 30 seconds
+    const refreshInterval = setInterval(() => {
+      console.log('[LearnerDashboard] Auto-refreshing sessions...');
+      fetchSessions();
+    }, 30000); // 30 seconds
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => clearInterval(refreshInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showContentModal]);
+  }, []);
 
   const fetchSessions = async () => {
     try {
@@ -48,7 +50,11 @@ const LearnerDashboard = () => {
       setSessions(data);
     } catch (error) {
       console.error("Error fetching sessions:", error);
-      toast.error("Failed to load sessions");
+      // Show error toast only once on initial login
+      if (!sessionErrorToastShownRef.current) {
+        toast.info("No active sessions created yet");
+        sessionErrorToastShownRef.current = true;
+      }
     } finally {
       setLoadingSessions(false);
     }
@@ -62,34 +68,35 @@ const LearnerDashboard = () => {
       setLearningPrograms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching assigned programs:", error);
-      toast.error("Failed to load assigned home programs. Please try refreshing the page.");
+      // Show error toast only once on initial login
+      if (!programErrorToastShownRef.current) {
+        toast.info("No programs assigned yet");
+        programErrorToastShownRef.current = true;
+      }
       setLearningPrograms([]); // Set to empty array on error
     } finally {
       setLoadingPrograms(false);
     }
   };
 
-  const fetchAssignedContents = async () => {
+  const fetchAllLearningContents = async () => {
     try {
-      console.log('Fetching content for learner ID:', user.id);
-      const data = await learningContentAssignmentService.getAssignmentsByLearner(user.id);
-      console.log("Fetched assigned contents data:", data); // Debug log
-      console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
+      setLoadingContents(true);
+      const contents = await programAssignmentService.getMyLearningContents();
+      console.log("🔍 API Response - Fetched all learning contents:", contents); // Debug log
+      console.log(`📊 Total items in response: ${Array.isArray(contents) ? contents.length : 'NOT AN ARRAY'}`); // Debug log
 
-      // Ensure data is an array to prevent runtime errors
-      setAssignedContents(Array.isArray(data) ? data : []);
-
-      if (data && data.length > 0) {
-        console.log(`Successfully loaded ${data.length} assigned content(s)`);
-        console.log('First content:', data[0]);
-      } else {
-        console.log('No content assignments found for this learner');
+      if (Array.isArray(contents)) {
+        contents.forEach((item, idx) => {
+          console.log(`  ${idx + 1}. ${item.title} (ID: ${item.id}, Type: ${item.content_type}, From Program: ${item.from_program})`);
+        });
       }
+
+      setLearningContents(Array.isArray(contents) ? contents : []);
+      console.log(`✅ State updated with ${Array.isArray(contents) ? contents.length : 0} contents`); // Debug log
     } catch (error) {
-      console.error("Error fetching assigned contents:", error);
-      console.error("Error details:", error.response?.data || error.message);
-      toast.error("Failed to load assigned learning contents. Please try refreshing the page.");
-      setAssignedContents([]); // Set to empty array on error
+      console.error("❌ Error fetching learning contents:", error);
+      setLearningContents([]);
     } finally {
       setLoadingContents(false);
     }
@@ -125,8 +132,7 @@ const LearnerDashboard = () => {
   const renderContentViewer = () => {
     if (!selectedContent) return null;
 
-    const { content_type, file_url, content_title } = selectedContent;
-    // Use file_url directly - Vite proxy will handle routing to backend
+    const { content_type, file_url, title } = selectedContent;
     const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
 
     const handleLoad = () => {
@@ -145,13 +151,13 @@ const LearnerDashboard = () => {
       toast.error("Failed to load content");
     };
 
-    switch (content_type.toLowerCase()) {
+    switch (content_type?.toLowerCase()) {
       case 'image':
         return (
           <div className="flex justify-center">
             <img
               src={fullUrl}
-              alt={content_title}
+              alt={title}
               className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
               onLoad={handleLoad}
               onError={handleError}
@@ -196,7 +202,7 @@ const LearnerDashboard = () => {
             <iframe
               src={fullUrl}
               className="w-full h-[70vh] border rounded-lg shadow-lg"
-              title={content_title}
+              title={title}
               onLoad={handleLoad}
               onError={handleError}
             />
@@ -220,11 +226,6 @@ const LearnerDashboard = () => {
         );
     }
   };
-
-  // Get next active or scheduled session
-  const nextSession = sessions.find(
-    (s) => s.status === "active" || s.status === "scheduled"
-  );
 
   const formatShortDate = (dateStr) => {
     if (!dateStr) return 'TBD';
@@ -316,34 +317,81 @@ const LearnerDashboard = () => {
           {/* Upcoming Sessions */}
           <div className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Upcoming Sessions
+              My Sessions
             </h2>
 
             {loadingSessions ? (
               <div className="text-center py-6 text-gray-500">Loading sessions...</div>
             ) : sessions.length === 0 ? (
               <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
-            ) : nextSession ? (
-              <div className="border rounded-lg p-4 flex items-center justify-between bg-white">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {nextSession.title || 'Next Session'}: {formatShortDate(nextSession.scheduled_date ?? nextSession.started_at)}
-                  </h3>
-                  <p className="text-xs text-gray-500 truncate mt-1">
-                    Time: {nextSession.scheduled_date ? new Date(nextSession.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'} | Trainer: {nextSession.trainer?.name || nextSession.trainer_name || '—'}
-                  </p>
-                </div>
+            ) : (
+              <div className="space-y-3">
+                {sessions
+                  .sort((a, b) => {
+                    // Sort by status priority: active first, then scheduled, then others
+                    const statusPriority = { active: 0, scheduled: 1, ended: 2 };
+                    const aPriority = statusPriority[a.status] ?? 3;
+                    const bPriority = statusPriority[b.status] ?? 3;
+                    if (aPriority !== bPriority) return aPriority - bPriority;
+                    // Within same status, sort by date (newest first)
+                    return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                  })
+                  .map((session) => {
+                    const isActive = session.status === 'active';
+                    const isScheduled = session.status === 'scheduled';
+                    const isEnded = session.status === 'ended';
+                    const statusColor = isActive ? 'border-green-500 bg-green-50' :
+                      isScheduled ? 'border-blue-500 bg-blue-50' :
+                        'border-gray-300 bg-gray-50';
+                    const statusBadge = isActive ? 'bg-green-100 text-green-800' :
+                      isScheduled ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800';
 
-                <div className="ml-4">
-                  <button
-                    onClick={() => handleJoinSession(nextSession.session_id)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
-                  >
-                    Join Session
-                  </button>
-                </div>
+                    return (
+                      <div
+                        key={session.session_id || session.id}
+                        className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-gray-800 truncate">
+                              {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
+                              {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                            <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
+                            {session.scheduled_date && (
+                              <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            )}
+                            <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
+                            {session.duration && <span>⏱️ {session.duration} min</span>}
+                          </div>
+                          {session.program && (
+                            <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
+                          )}
+                        </div>
+
+                        <div className="ml-4 flex-shrink-0">
+                          {(isActive || isScheduled) && (
+                            <button
+                              onClick={() => handleJoinSession(session.session_id)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                            >
+                              {isActive ? 'Resume' : 'Join'} Session
+                            </button>
+                          )}
+                          {isEnded && (
+                            <span className="text-gray-500 text-sm">Completed</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* ✅ Assigned Home Programs */}
@@ -404,42 +452,58 @@ const LearnerDashboard = () => {
             )}
           </div>
 
-          {/* ✅ Assigned Learning Contents */}
+          {/* ✅ Learning Contents Assigned by Head */}
           <div id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Your Assigned Learning Content
+              Learning Content ({learningContents.length})
             </h2>
 
             {loadingContents ? (
-              <p className="text-gray-500">Loading assigned contents...</p>
-            ) : assignedContents.length === 0 ? (
+              <p className="text-gray-500">Loading learning contents...</p>
+            ) : learningContents.length === 0 ? (
               <p className="text-gray-500">No learning content assigned yet.</p>
             ) : (
-              <div className="space-y-6">
-                {assignedContents.map((assignment) => (
+              <div className="space-y-2">
+                {learningContents.map((content, idx) => (
                   <div
-                    key={assignment.id}
-                    className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
+                    key={`content-${content.id}-${idx}`}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-gray-100 transition"
                   >
-                    <h3 className="font-semibold text-gray-800 mb-1">
-                      {assignment.content_title || 'Untitled Content'}
-                    </h3>
-
-                    <p className="text-sm text-gray-600 mb-2">
-                      Type: {assignment.content_type} | Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
-                    </p>
-
-                    {assignment.assigned_by_name && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        Assigned by: {assignment.assigned_by_name}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 truncate text-base">
+                        {content.title || 'Untitled Content'}
                       </p>
-                    )}
-
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded border">
+                          {content.content_type || 'Unknown Type'}
+                        </span>
+                        {content.assigned_by && (
+                          <span className="text-xs text-gray-500">
+                            Assigned by: {content.assigned_by}
+                          </span>
+                        )}
+                        {content.from_program && (
+                          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                            📚 From Program
+                          </span>
+                        )}
+                        {!content.from_program && (
+                          <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                            ✨ Extra Material
+                          </span>
+                        )}
+                      </div>
+                      {content.description && (
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                          {content.description}
+                        </p>
+                      )}
+                    </div>
                     <button
-                      className="mt-3 bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700"
-                      onClick={() => handleViewContent(assignment)}
+                      onClick={() => handleViewContent(content)}
+                      className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm"
                     >
-                      View Content
+                      View
                     </button>
                   </div>
                 ))}
@@ -458,21 +522,13 @@ const LearnerDashboard = () => {
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-gray-800 truncate">
-                  {selectedContent?.content_title}
+                  {selectedContent?.title}
                 </h3>
                 <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     {selectedContent?.content_type}
                   </span>
-                  <span className="flex items-center gap-1">
-                    📅 {new Date(selectedContent?.assigned_at).toLocaleDateString()}
-                  </span>
-                  {selectedContent?.assigned_by_name && (
-                    <span className="flex items-center gap-1">
-                      👤 {selectedContent.assigned_by_name}
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-4">

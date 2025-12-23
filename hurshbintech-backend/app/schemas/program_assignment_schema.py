@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.models.program_assignment_model import CompletionStatus
 from app.models.program_assignment_attachment_model import AttachmentType
+from app.models.learner_content_assignment_model import ContentCompletionStatus
 
 
 # ============= Program Learning Content Schemas =============
@@ -35,6 +36,36 @@ class LearningContentInProgram(BaseModel):
         from_attributes = True
 
 
+class LearningContentBasic(BaseModel):
+    """Basic learning content info"""
+    id: int
+    title: str
+    description: Optional[str]
+    content_type: str
+    file_url: str
+    thumbnail_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class ContentAssignmentInProgram(BaseModel):
+    """Schema for content assignment within a program assignment"""
+    id: int
+    content_id: int
+    learning_content: LearningContentBasic
+    is_from_program: bool  # True if auto-assigned from program, False if manually assigned
+    completion_status: ContentCompletionStatus
+    assigned_at: datetime
+    started_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by_head: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ProgramWithContents(BaseModel):
     """Schema for program with its learning contents"""
     id: int
@@ -56,6 +87,7 @@ class ProgramAssignmentCreate(BaseModel):
     end_date: date
     duration_days: Optional[int] = None
     head_notes: Optional[str] = None
+    extra_content_ids: Optional[List[int]] = Field(default=None, description="Additional learning content IDs to assign")
 
 
 class ProgramAssignmentUpdate(BaseModel):
@@ -112,6 +144,9 @@ class ProgramAssignmentResponse(BaseModel):
     notification_sent: bool
     assigned_at: datetime
     updated_at: datetime
+    is_overdue: bool = False
+    is_late_submission: bool = False
+    content_assignments: List[ContentAssignmentInProgram] = []  # All content assignments (auto + manual)
 
     class Config:
         from_attributes = True
@@ -130,6 +165,8 @@ class ProgramAssignmentListResponse(BaseModel):
     completion_status: CompletionStatus
     completed_at: Optional[datetime]
     assigned_at: datetime
+    is_overdue: bool = False
+    is_late_submission: bool = False
 
     class Config:
         from_attributes = True
@@ -150,6 +187,13 @@ class BulkAssignmentResult(BaseModel):
     failed_count: int
     failed_learners: List[dict] = []  # [{"learner_id": 1, "learner_name": "...", "reason": "..."}]
     created_assignments: List[int] = []  # List of created assignment IDs
+
+
+# ============= Content Assignment Status Schemas =============
+
+class ContentStatusUpdate(BaseModel):
+    """Schema for updating content assignment status"""
+    status: ContentCompletionStatus
 
 
 # ============= Attachment Schemas =============

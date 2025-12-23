@@ -1,7 +1,7 @@
-from app.models.learning_content_assignment_model import LearningContentAssignment
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.learning_goals_model import LearningGoals
+from app.models.learner_content_assignment_model import LearnerContentAssignment
 from app.models.program_assignment_attachment_model import (
     ProgramAssignmentAttachment,
     AttachmentType,
@@ -49,7 +49,7 @@ __all__ = [
     "LearningContent",
     "LearningGoals",
     "LearningGoalAssignment",
-    "LearningContentAssignment",
+    "LearnerContentAssignment",
     "ProgramAssignment",
     "CompletionStatus",
     "ProgramAssignmentAttachment",

@@ -14,6 +14,7 @@ const VideoOverlay = React.memo(({
     isSelectedByTrainer,
     isSelectedByLearner,
     isSelectedByRemoteLearner,
+    isDragging,
     onMouseDown,
     onMouseMove,
     onMouseUp,
@@ -35,7 +36,10 @@ const VideoOverlay = React.memo(({
             borderRadius: '4px',
             overflow: 'hidden',
             cursor: 'pointer',
-            position: 'absolute'
+            position: 'absolute',
+            transition: isDragging ? 'left 0.08s ease-out, top 0.08s ease-out' : 'left 0.15s ease-out, top 0.15s ease-out, width 0.2s ease-out, height 0.2s ease-out, border 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            willChange: isDragging ? 'left, top' : 'auto'
         }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
@@ -119,6 +123,7 @@ VideoOverlay.propTypes = {
     isSelectedByTrainer: PropTypes.bool,
     isSelectedByLearner: PropTypes.bool,
     isSelectedByRemoteLearner: PropTypes.bool,
+    isDragging: PropTypes.bool,
     onMouseDown: PropTypes.func,
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
@@ -132,6 +137,7 @@ const PDFOverlay = React.memo(({
     isSelectedByTrainer,
     isSelectedByLearner,
     isSelectedByRemoteLearner,
+    isDragging,
     onMouseDown,
     onMouseMove,
     onMouseUp,
@@ -156,6 +162,9 @@ const PDFOverlay = React.memo(({
             cursor: 'pointer',
             backgroundColor: '#f5f5f5',
             position: 'absolute',
+            transition: isDragging ? 'left 0.08s ease-out, top 0.08s ease-out' : 'left 0.15s ease-out, top 0.15s ease-out, width 0.2s ease-out, height 0.2s ease-out, transform 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            willChange: isDragging ? 'left, top' : 'auto',
             ...selectionStyle
         }}
         onMouseDown={onMouseDown}
@@ -194,6 +203,7 @@ PDFOverlay.propTypes = {
     isSelectedByTrainer: PropTypes.bool,
     isSelectedByLearner: PropTypes.bool,
     isSelectedByRemoteLearner: PropTypes.bool,
+    isDragging: PropTypes.bool,
     onMouseDown: PropTypes.func,
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
@@ -211,6 +221,7 @@ const ImageOverlay = React.memo(({
     isSelectedByLearner,
     isSelectedByRemoteLearner,
     isAnimating,
+    isDragging,
     onMouseDown,
     onMouseMove,
     onMouseUp,
@@ -224,7 +235,7 @@ const ImageOverlay = React.memo(({
     <div
         key={`image-${item.id}`}
         className={`absolute group ${isAnimating ? 'bucket-drop-animation' : ''}`}
-        draggable={isSelectedByTrainer || isSelectedByLearner}
+        draggable={isSelectedByTrainer}
         onDragStart={onDragStart}
         onDragEnd={(e) => {
             e.preventDefault();
@@ -238,12 +249,13 @@ const ImageOverlay = React.memo(({
             border: '2px solid #ccc',
             borderRadius: '4px',
             overflow: 'hidden',
-            cursor: isSelectedByTrainer || isSelectedByLearner ? 'grab' : 'pointer',
+            cursor: isSelectedByTrainer || isSelectedByLearner ? 'move' : 'pointer',
             backgroundColor: '#f5f5f5',
             position: 'absolute',
             userSelect: 'none',
-            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
+            transition: isDragging ? 'left 0.08s ease-out, top 0.08s ease-out' : 'left 0.15s ease-out, top 0.15s ease-out, width 0.2s ease-out, height 0.2s ease-out, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
             boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            willChange: isDragging ? 'left, top' : 'auto',
             ...selectionStyle
         }}
         onMouseDown={onMouseDown}
@@ -267,7 +279,7 @@ const ImageOverlay = React.memo(({
                 userSelect: 'none'
             }}
             onError={(e) => {
-                console.error('[Whiteboard] Failed to load image:', item.src);
+                // console.error('[Whiteboard] Failed to load image:', item.src);
                 e.target.style.display = 'none';
             }}
             draggable={false}
@@ -293,6 +305,7 @@ ImageOverlay.propTypes = {
     isSelectedByLearner: PropTypes.bool,
     isSelectedByRemoteLearner: PropTypes.bool,
     isAnimating: PropTypes.bool,
+    isDragging: PropTypes.bool,
     onMouseDown: PropTypes.func,
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
@@ -363,7 +376,7 @@ const Whiteboard = ({
     // Debug log for feedback message
     useEffect(() => {
         if (feedbackMessage) {
-            console.log('[Whiteboard] Feedback message received:', feedbackMessage);
+            // console.log('[Whiteboard] Feedback message received:', feedbackMessage);
         }
     }, [feedbackMessage]);
 
@@ -393,7 +406,7 @@ const Whiteboard = ({
             const mediaUrl = item.src;
             const mediaId = item.id;
 
-            console.log('[Whiteboard] Opening media:', { mediaId, mediaType, mediaUrl });
+            // console.log('[Whiteboard] Opening media:', { mediaId, mediaType, mediaUrl });
 
             // Open media popup through MediaControlContext
             mediaControl.openMedia(mediaId, mediaType, mediaUrl);
@@ -415,6 +428,12 @@ const Whiteboard = ({
     const [editingBucketLabel, setEditingBucketLabel] = useState('');
     const [animatingItemId, setAnimatingItemId] = useState(null); // For drop animation
     const [isDragOverCanvas, setIsDragOverCanvas] = useState(false); // For visual feedback during drag over
+
+    // Performance optimization refs for 60fps
+    const rafIdRef = useRef(null);
+    const lastNetworkUpdateRef = useRef(0);
+    const dragOffsetRef = useRef({ x: 0, y: 0 }); // Store click offset within dragged item
+    const dragStateUpdateTimeRef = useRef(0); // For throttling state updates during drag
 
     const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner) => {
         if (!isSelectedByLearner && !isSelectedByRemoteLearner) {
@@ -524,7 +543,7 @@ const Whiteboard = ({
             };
 
             img.onerror = (err) => {
-                console.error('[Whiteboard] Failed to load image:', src, err);
+                // console.error('[Whiteboard] Failed to load image:', src, err);
                 reject(err);
             };
 
@@ -579,7 +598,7 @@ const Whiteboard = ({
                     src: fullUrl
                 };
 
-                console.log('[Whiteboard] Activating inline video split mode (touch):', videoData);
+                // console.log('[Whiteboard] Activating inline video split mode (touch):', videoData);
                 setInlineVideo({ id: videoData.id, src: videoData.src });
 
                 whiteboardService?.sendMediaControl({
@@ -660,7 +679,7 @@ const Whiteboard = ({
             whiteboardService.onImage = (data) => {
                 // Add the image to canvasItems if not already present
                 // The useEffect will handle redrawing via redrawCanvas()
-                console.log('[Whiteboard] onImage received:', data);
+                // console.log('[Whiteboard] onImage received:', data);
                 setCanvasItems(prev => {
                     const exists = prev.find(item => item.id === data.id);
                     if (!exists) {
@@ -679,7 +698,7 @@ const Whiteboard = ({
                             originalFilename: data.originalFilename,
                             mimeType: data.mimeType
                         };
-                        console.log('[Whiteboard] Adding image item to canvasItems:', newItem);
+                        // console.log('[Whiteboard] Adding image item to canvasItems:', newItem);
 
                         // Auto-open popup if it's a video/PDF and this is a trainer adding it
                         if (isTrainer) {
@@ -692,7 +711,7 @@ const Whiteboard = ({
                                 const mediaType = isVideo ? 'video' : 'pdf';
                                 // Schedule popup open for next tick to avoid state conflicts
                                 setTimeout(() => {
-                                    console.log('[Whiteboard] Auto-opening media on add:', { id: data.id, mediaType });
+                                    // console.log('[Whiteboard] Auto-opening media on add:', { id: data.id, mediaType });
                                     mediaControl.openMedia(data.id, mediaType, data.src);
                                 }, 50);
                             }
@@ -707,7 +726,7 @@ const Whiteboard = ({
             };
 
             whiteboardService.onItemUpdate = (data) => {
-                console.log('[Whiteboard] Item update received:', data);
+                // console.log('[Whiteboard] Item update received:', data);
 
                 // Handle bucket removal
                 if (data.removed_from_bucket) {
@@ -735,14 +754,14 @@ const Whiteboard = ({
             };
 
             whiteboardService.onItemRemove = (data) => {
-                console.log('[Whiteboard] Item removed:', data);
+                // console.log('[Whiteboard] Item removed:', data);
                 setCanvasItems(prev => prev.filter(item => item.id !== data.id));
             };
 
             /* Inline video/media handler moved to consolidated onMediaControl handler below. */
 
             whiteboardService.onBucketAdded = (data) => {
-                console.log('[Whiteboard] Bucket added:', data);
+                // console.log('[Whiteboard] Bucket added:', data);
                 setBuckets(prev => {
                     const exists = prev.find(bucket => bucket.id === data.id);
                     if (!exists) {
@@ -753,7 +772,7 @@ const Whiteboard = ({
             };
 
             whiteboardService.onBucketUpdate = (data) => {
-                console.log('[Whiteboard] Bucket updated:', data);
+                // console.log('[Whiteboard] Bucket updated:', data);
                 if (data.removed) {
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
@@ -766,7 +785,7 @@ const Whiteboard = ({
             };
 
             whiteboardService.onTextAdded = (data) => {
-                console.log('[Whiteboard] Text added:', data);
+                // console.log('[Whiteboard] Text added:', data);
                 // Add text message to display as alert
                 const newMessage = {
                     id: data.id,
@@ -784,14 +803,14 @@ const Whiteboard = ({
             };
 
             whiteboardService.onVideoStateUpdate = (data) => {
-                console.log('[Whiteboard] Video state received:', data);
+                // console.log('[Whiteboard] Video state received:', data);
                 // Apply video state synchronization from trainer to learners
                 // Note: setVideoStates would need to be passed as a prop or managed differently
-                console.log('[Whiteboard] Video state update:', data.videoId, data.isPlaying);
+                // console.log('[Whiteboard] Video state update:', data.videoId, data.isPlaying);
             };
 
             whiteboardService.onMediaControl = (data) => {
-                console.log('[Whiteboard] Media control event received:', data);
+                // console.log('[Whiteboard] Media control event received:', data);
 
                 // If this is an inline video open command, handle inline split-video
                 if (data && data.action === 'open' && data.src) {
@@ -806,7 +825,7 @@ const Whiteboard = ({
                 try {
                     mediaControl.handleMediaControlEvent(data);
                 } catch (err) {
-                    console.warn('[Whiteboard] mediaControl.handleMediaControlEvent error:', err);
+                    // console.warn('[Whiteboard] mediaControl.handleMediaControlEvent error:', err);
                 }
 
                 // Additionally support inline split-video synchronization for play/pause/seek/close
@@ -846,7 +865,7 @@ const Whiteboard = ({
                 ctx.putImageData(imageData, 0, 0);
             } catch (error) {
                 // If cross-origin error, just resize without preserving data
-                console.warn('[Whiteboard] Could not preserve canvas data during resize:', error.message);
+                // console.warn('[Whiteboard] Could not preserve canvas data during resize:', error.message);
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
                 ctx.scale(dpr, dpr);
@@ -1272,38 +1291,58 @@ const Whiteboard = ({
                     return; // No permission - do nothing
                 }
 
-                // Handle multiple selection - toggle items on/off
                 const isAlreadySelected = selectedItems.some(si => si.id === item.id);
 
-                if (isAlreadySelected) {
-                    // Unselect this item
-                    setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-                } else {
-                    // Add to selection
-                    setSelectedItems(prev => [...prev, itemWithOriginalSize]);
-                }
+                // When drag permission is active, only allow single-item selection for dragging
+                // Disable multiselect to prevent confusion during drag operations
+                if (toolAccess.drag) {
+                    // Single selection mode when drag is enabled
+                    setSelectedItems([itemWithOriginalSize]);
 
-                // Send selection to trainer via websocket
-                if (whiteboardService) {
-                    const newSelectedIds = isAlreadySelected
-                        ? selectedItems.filter(si => si.id !== item.id).map(si => si.id)
-                        : [...selectedItems.map(si => si.id), item.id];
+                    // Send selection to trainer via websocket
+                    if (whiteboardService) {
+                        whiteboardService.send('item_selected', {
+                            itemIds: [item.id],
+                            selectedBy: 'learner',
+                            timestamp: Date.now()
+                        });
+                    }
 
-                    whiteboardService.send('item_selected', {
-                        itemIds: newSelectedIds,
-                        selectedBy: 'learner',
-                        timestamp: Date.now()
-                    });
-                }
-
-                // Check if learner can also drag (only when selecting, not unselecting)
-                if (toolAccess.drag && !isAlreadySelected) {
+                    // Start dragging or resizing
                     if (isResizeHandle(x, y, item)) {
                         setIsResizingItem(true);
                     } else {
+                        // Store offset from cursor to item's top-left corner for smooth dragging
+                        dragOffsetRef.current = {
+                            x: x - item.x,
+                            y: y - item.y
+                        };
                         setIsDraggingItem(true);
                     }
                     prevPosRef.current = { x, y };
+                } else {
+                    // Multiselect mode when drag is disabled (select-only permission)
+                    // Handle multiple selection - toggle items on/off
+                    if (isAlreadySelected) {
+                        // Unselect this item
+                        setSelectedItems(prev => prev.filter(si => si.id !== item.id));
+                    } else {
+                        // Add to selection
+                        setSelectedItems(prev => [...prev, itemWithOriginalSize]);
+                    }
+
+                    // Send selection to trainer via websocket
+                    if (whiteboardService) {
+                        const newSelectedIds = isAlreadySelected
+                            ? selectedItems.filter(si => si.id !== item.id).map(si => si.id)
+                            : [...selectedItems.map(si => si.id), item.id];
+
+                        whiteboardService.send('item_selected', {
+                            itemIds: newSelectedIds,
+                            selectedBy: 'learner',
+                            timestamp: Date.now()
+                        });
+                    }
                 }
                 return;
             }
@@ -1313,6 +1352,11 @@ const Whiteboard = ({
             if (isResizeHandle(x, y, item)) {
                 setIsResizingItem(true);
             } else {
+                // Store offset from cursor to item's top-left corner for smooth dragging
+                dragOffsetRef.current = {
+                    x: x - item.x,
+                    y: y - item.y
+                };
                 setIsDraggingItem(true);
             }
             prevPosRef.current = { x, y };
@@ -1336,6 +1380,29 @@ const Whiteboard = ({
     };
 
     const draw = (e) => {
+        // Use requestAnimationFrame for smooth 60fps updates
+        if (rafIdRef.current !== null) {
+            return; // Already scheduled, skip duplicate calls
+        }
+
+        rafIdRef.current = requestAnimationFrame(() => {
+            rafIdRef.current = null;
+            performDraw(e);
+        });
+    };
+
+    // Throttled state update for drag operations - update state at most every 16ms (60fps)
+    const updateDragState = useCallback((updatedItem, updatedItems) => {
+        const now = Date.now();
+        // Throttle state updates to 16ms (60fps) to reduce re-renders
+        if (now - dragStateUpdateTimeRef.current > 16) {
+            setCanvasItems(updatedItems);
+            setSelectedItems([updatedItem]);
+            dragStateUpdateTimeRef.current = now;
+        }
+    }, []);
+
+    const performDraw = (e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
 
@@ -1372,16 +1439,25 @@ const Whiteboard = ({
             const newItems = canvasItems.map(item =>
                 item.id === resizingVideo.id ? updatedVideo : item
             );
-            setCanvasItems(newItems);
 
-            // Send update to other participants
-            whiteboardService?.sendItemUpdate({
-                id: resizingVideo.id,
-                x: updatedVideo.x,
-                y: updatedVideo.y,
-                width: updatedVideo.width,
-                height: updatedVideo.height
-            });
+            // Performance: Throttle state updates to reduce re-renders (16ms = 60fps)
+            const now = Date.now();
+            if (now - dragStateUpdateTimeRef.current > 16) {
+                setCanvasItems(newItems);
+                dragStateUpdateTimeRef.current = now;
+            }
+
+            // Throttle network updates to every 50ms
+            if (now - lastNetworkUpdateRef.current > 50) {
+                whiteboardService?.sendItemUpdate({
+                    id: resizingVideo.id,
+                    x: updatedVideo.x,
+                    y: updatedVideo.y,
+                    width: updatedVideo.width,
+                    height: updatedVideo.height
+                });
+                lastNetworkUpdateRef.current = now;
+            }
 
             prevPosRef.current = { x: currX, y: currY };
             return;
@@ -1411,26 +1487,34 @@ const Whiteboard = ({
                 }
                 return item;
             });
-            setCanvasItems(updatedItems);
 
-            setBuckets(prev => prev.map(bucket =>
-                bucket.id === selectedItem.id ? updatedBucket : bucket
-            ));
-            setSelectedItems([updatedBucket]);
+            // Performance: Throttle state updates to reduce re-renders (16ms = 60fps)
+            const now = Date.now();
+            if (now - dragStateUpdateTimeRef.current > 16) {
+                setCanvasItems(updatedItems);
+                setBuckets(prev => prev.map(bucket =>
+                    bucket.id === selectedItem.id ? updatedBucket : bucket
+                ));
+                setSelectedItems([updatedBucket]);
+                dragStateUpdateTimeRef.current = now;
+            }
 
-            // Send update to other participants
-            whiteboardService?.send('bucket_update', updatedBucket);
-            updatedItems.forEach(item => {
-                if (item.inBucket === selectedItem.id) {
-                    whiteboardService?.sendItemUpdate({
-                        id: item.id,
-                        x: item.x,
-                        y: item.y,
-                        width: item.width,
-                        height: item.height
-                    });
-                }
-            });
+            // Throttle network updates to every 50ms
+            if (now - lastNetworkUpdateRef.current > 50) {
+                whiteboardService?.send('bucket_update', updatedBucket);
+                updatedItems.forEach(item => {
+                    if (item.inBucket === selectedItem.id) {
+                        whiteboardService?.sendItemUpdate({
+                            id: item.id,
+                            x: item.x,
+                            y: item.y,
+                            width: item.width,
+                            height: item.height
+                        });
+                    }
+                });
+                lastNetworkUpdateRef.current = now;
+            }
 
             prevPosRef.current = { x: currX, y: currY };
             return;
@@ -1444,12 +1528,12 @@ const Whiteboard = ({
             }
 
             const selectedItem = selectedItems[0];
-            const dx = currX - prevPosRef.current.x;
-            const dy = currY - prevPosRef.current.y;
+            // Use cursor position with stored offset for precise positioning
+            // This keeps the item at the exact same position relative to cursor as when drag started
             const updatedItem = {
                 ...selectedItem,
-                x: selectedItem.x + dx,
-                y: selectedItem.y + dy
+                x: currX - dragOffsetRef.current.x,
+                y: currY - dragOffsetRef.current.y
             };
 
             // Find if item is in any bucket now
@@ -1522,19 +1606,24 @@ const Whiteboard = ({
             const newItems = canvasItems.map(item =>
                 item.id === selectedItem.id ? updatedItem : item
             );
-            setCanvasItems(newItems);
-            setSelectedItems([updatedItem]);
 
-            // Send update to other participants
-            whiteboardService?.sendItemUpdate({
-                id: selectedItem.id,
-                x: updatedItem.x,
-                y: updatedItem.y,
-                width: updatedItem.width,
-                height: updatedItem.height,
-                inBucket: updatedItem.inBucket || null
-            });
-            prevPosRef.current = { x: currX, y: currY };
+            // Performance: Throttle state updates to reduce re-renders (16ms = 60fps)
+            updateDragState(updatedItem, newItems);
+
+            // Throttle network updates to every 50ms for smooth performance
+            const now = Date.now();
+            if (now - lastNetworkUpdateRef.current > 50) {
+                whiteboardService?.sendItemUpdate({
+                    id: selectedItem.id,
+                    x: updatedItem.x,
+                    y: updatedItem.y,
+                    width: updatedItem.width,
+                    height: updatedItem.height,
+                    inBucket: updatedItem.inBucket || null
+                });
+                lastNetworkUpdateRef.current = now;
+            }
+            // No need to update prevPosRef - we use absolute cursor position with stored offset
             return;
         }
 
@@ -1553,13 +1642,21 @@ const Whiteboard = ({
                     height: Math.max(100, selectedItem.height + dy)
                 };
 
-                setBuckets(prev => prev.map(bucket =>
-                    bucket.id === selectedItem.id ? updatedBucket : bucket
-                ));
-                setSelectedItems([updatedBucket]);
+                // Performance: Throttle state updates to reduce re-renders (16ms = 60fps)
+                const now = Date.now();
+                if (now - dragStateUpdateTimeRef.current > 16) {
+                    setBuckets(prev => prev.map(bucket =>
+                        bucket.id === selectedItem.id ? updatedBucket : bucket
+                    ));
+                    setSelectedItems([updatedBucket]);
+                    dragStateUpdateTimeRef.current = now;
+                }
 
-                // Send update to other participants
-                whiteboardService?.send('bucket_update', updatedBucket);
+                // Throttle network updates to every 50ms
+                if (now - lastNetworkUpdateRef.current > 50) {
+                    whiteboardService?.send('bucket_update', updatedBucket);
+                    lastNetworkUpdateRef.current = now;
+                }
 
                 prevPosRef.current = { x: currX, y: currY };
                 return;
@@ -1580,16 +1677,22 @@ const Whiteboard = ({
             const newItems = canvasItems.map(item =>
                 item.id === selectedItem.id ? updatedItem : item
             );
-            setCanvasItems(newItems);
-            setSelectedItems([updatedItem]);
-            // Don't call redrawCanvas here - state update triggers redraw via useEffect
-            whiteboardService?.sendItemUpdate({
-                id: selectedItem.id,
-                x: updatedItem.x,
-                y: updatedItem.y,
-                width: updatedItem.width,
-                height: updatedItem.height
-            });
+
+            // Performance: Throttle state updates to reduce re-renders (16ms = 60fps)
+            updateDragState(updatedItem, newItems);
+
+            // Throttle network updates to every 50ms
+            const now = Date.now();
+            if (now - lastNetworkUpdateRef.current > 50) {
+                whiteboardService?.sendItemUpdate({
+                    id: selectedItem.id,
+                    x: updatedItem.x,
+                    y: updatedItem.y,
+                    width: updatedItem.width,
+                    height: updatedItem.height
+                });
+                lastNetworkUpdateRef.current = now;
+            }
             prevPosRef.current = { x: currX, y: currY };
             return;
         }
@@ -1617,6 +1720,12 @@ const Whiteboard = ({
     };
 
     const stopDrawing = () => {
+        // Cancel any pending animation frame
+        if (rafIdRef.current) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
+        }
+
         // No need to check bucket on stop - it's handled in draw() in real-time
         setIsDrawing(false);
         setIsDraggingItem(false);
@@ -2018,6 +2127,7 @@ const Whiteboard = ({
                                         isSelectedByLearner={isSelectedByLearner}
                                         isSelectedByRemoteLearner={isSelectedByRemoteLearner}
                                         selectionStyle={selectionStyle}
+                                        isDragging={isDraggingItem && selectedItems.some(si => si.id === item.id)}
                                         onMouseDown={(e) => {
                                             e.stopPropagation();
                                             startDrawing(e);
@@ -2113,6 +2223,7 @@ const Whiteboard = ({
                                         isSelectedByRemoteLearner={isSelectedByRemoteLearner}
                                         selectionStyle={selectionStyle}
                                         isAnimating={animatingItemId === item.id}
+                                        isDragging={isDraggingItem && selectedItems.some(si => si.id === item.id)}
                                         onMouseDown={(e) => {
                                             if (e.button === 0) {
                                                 e.stopPropagation();
@@ -2159,22 +2270,15 @@ const Whiteboard = ({
                                                     action: 'remove-from-whiteboard'
                                                 };
                                                 e.dataTransfer.effectAllowed = 'move';
-                                                e.dataTransfer.dropEffect = 'move';
                                                 e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
 
-                                                // Add smooth drag visual feedback
-                                                const dragImage = new Image();
-                                                dragImage.src = item.src;
-                                                dragImage.onload = () => {
-                                                    try {
-                                                        e.dataTransfer.setDragImage(dragImage, 50, 50);
-                                                    } catch (err) {
-                                                        console.warn('[Whiteboard] Could not set drag image:', err);
-                                                    }
-                                                };
+                                                // No opacity change - keep content crisp during drag
                                             } catch (error) {
                                                 console.error('[Whiteboard] Error preparing drag payload:', error);
                                             }
+                                        }}
+                                        onDragEnd={(e) => {
+                                            // Drag ended - no opacity restoration needed
                                         }}
                                     />
 

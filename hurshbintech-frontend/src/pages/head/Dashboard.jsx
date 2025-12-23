@@ -15,38 +15,14 @@ import { FaUsers, FaBookOpen, FaComments, FaUserTie, FaChartBar, FaCalendarAlt }
 const HeadDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-
-
-  // const [stats, setStats] = useState({
-  //   total_users: 0,
-  //   active_sessions: 0,
-  //   total_trainers: 0
-  // });
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState(null);
-
-  // Fetch stats on component mount
-  // useEffect(() => {
-  //   fetchDashboardStats();
-  // }, []);
-
-  // Fetch dashboard statistics
-  // const fetchDashboardStats = async () => {
-  //   try {
-  //     setLoading(true);
-  //     setError(null);
-  //     const data = await headService.getDashboardStats();
-  //     setStats(data);
-  //   } catch (err) {
-  //     console.error('Error fetching dashboard stats:', err);
-  //     setError('Failed to load dashboard statistics');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-
   const menuItems = [
+    {
+      title: 'Manage Trainers',
+      description: 'Register and manage HurshBin Trainers',
+      icon: <FaUserTie />,
+      path: '/head/manage-trainers',
+      color: 'red'
+    },
     {
       title: 'Manage Learners',
       description: 'View and manage learner profiles, assessments, and progress',
@@ -68,26 +44,13 @@ const HeadDashboard = () => {
       path: '/head/communication', // Added a placeholder path
       color: 'green'
     },
+    
     {
-      title: 'Manage Trainers',
-      description: 'Register and manage HurshBin Trainers',
-      icon: <FaUserTie />,
-      path: '/head/manage-trainers',
-      color: 'red'
-    },
-    {
-      title: 'Manage Program Assignments',
+      title: 'Manage Home Program ',
       description: 'Assign and manage learning programs for learners',
       icon: <FaBookOpen />,
       path: '/head/manage-program-assignments',
       color: 'orange'
-    },
-    {
-      title: 'Manage Assigned Learning Content',
-      description: 'Assign and manage learning content for learners',
-      icon: <FaFileAlt />,          // Change icon if you want
-      path: '/head/manage-assigned-learning-content',
-      color: 'purple'
     },
     {
       title: 'Session Reports',
