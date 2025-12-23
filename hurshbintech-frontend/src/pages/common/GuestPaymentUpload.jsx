@@ -251,7 +251,7 @@ const GuestPaymentUpload = () => {
               {/* Upload Form */}
               <form onSubmit={handleUpload} className="guest-booking-form">
                 <div className="form-section">
-                  <div className="section-header">
+                  <div className="section-header-guest">
                     <Upload size={20} />
                     <h3>Upload Payment Receipt</h3>
                   </div>

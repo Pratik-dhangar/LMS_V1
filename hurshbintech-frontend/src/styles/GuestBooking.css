@@ -203,21 +203,21 @@
   padding-bottom: 0;
 }
 
-.section-header {
+.section-header-guest {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.section-header h3 {
+.section-header-guest h3 {
   font-size: 1.125rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.section-header svg {
+.section-header-guest svg {
   color: #41a67e;
   flex-shrink: 0;
 }
