@@ -17,7 +17,7 @@ from pathlib import Path
 
 from app.core.deps import get_db, get_current_user
 from app.core.config import settings
-from app.models.user_model import User, Appointment, AppointmentStatus
+from app.models.user_model import User, Appointment, AppointmentStatus, CoachProfile
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.schemas.guest_booking import GuestIntentResponse, GuestPaymentUploadResponse
 from app.crud import user_crud, coach_crud
@@ -568,7 +568,7 @@ async def guest_upload_payment(
     
     # Step 1-2: Find and validate token (eagerly load coach and user)
     stmt = select(Appointment).options(
-        joinedload(Appointment.coach).joinedload(Appointment.coach.user)
+        joinedload(Appointment.coach).joinedload(Coach.user)
     ).where(
         Appointment.upload_token == upload_token,
         Appointment.status == AppointmentStatus.GUEST_INTENT,
