@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -13,7 +13,21 @@ const GuestBookingStep1 = () => {
   const [email, setEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const otpInputs = useRef([]);
+
+  // Timer for resend OTP countdown
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((time) => time - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resendTimer]);
 
   // Step 1: Send OTP to email
   const handleSendOTP = async (e) => {
@@ -28,10 +42,33 @@ const GuestBookingStep1 = () => {
       setLoading(true);
       await bookingService.sendGuestOTP({ email });
       setStep('otp');
+      setResendTimer(60); // 1 minute countdown
       toast.success('OTP sent! Check your email.');
     } catch (err) {
-      toast.error(err.detail || 'Failed to send OTP');
+      const errorMsg = err.response?.data?.detail || err.detail || 'Failed to send OTP';
+      toast.error(errorMsg);
       console.error('Error sending OTP:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP function
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return; // Prevent resend if timer active
+
+    try {
+      setLoading(true);
+      await bookingService.sendGuestOTP({ email });
+      setResendTimer(60); // Reset 1 minute countdown
+      toast.success('OTP resent! Check your email.');
+      // Clear existing OTP digits
+      setOtpDigits(['', '', '', '', '', '']);
+      otpInputs.current[0]?.focus();
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.detail || 'Failed to resend OTP';
+      toast.error(errorMsg);
+      console.error('Error resending OTP:', err);
     } finally {
       setLoading(false);
     }
@@ -61,7 +98,9 @@ const GuestBookingStep1 = () => {
         });
       }, 1500);
     } catch (err) {
-      toast.error(err.detail || 'Invalid or expired OTP');
+      // Extract error message from response
+      const errorMsg = err.response?.data?.detail || err.detail || 'Invalid or expired OTP';
+      toast.error(errorMsg);
       console.error('Error verifying OTP:', err);
       // Clear OTP fields on error
       setOtpDigits(['', '', '', '', '', '']);
@@ -208,9 +247,24 @@ const GuestBookingStep1 = () => {
                           ))}
                         </div>
                         
-                        <small style={{ marginTop: '10px', display: 'block', color: '#666' }}>
-                          Didn't receive the code? Check your spam folder
-                        </small>
+                        {/* Resend OTP Section */}
+                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                          {resendTimer > 0 ? (
+                            <small style={{ color: '#666' }}>
+                              Resend OTP in {resendTimer} seconds
+                            </small>
+                          ) : (
+                            <button 
+                              type="button"
+                              onClick={handleResendOTP}
+                              disabled={loading}
+                              className="btn btn-link"
+                              style={{ fontSize: '14px', padding: '5px 10px' }}
+                            >
+                              Resend OTP
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <button 

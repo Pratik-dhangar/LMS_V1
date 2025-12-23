@@ -22,12 +22,13 @@ class S3RecordingStorage(RecordingStorage):
     
     Recordings are organized in S3 with the following structure:
     s3://bucket-name/
-        └── recordings/
-            ├── 123/
-            │   ├── abc123.webm
-            │   └── def456.webm
-            └── 124/
-                └── ghi789.webm
+        └── uploads/
+            └── session_recordings/
+                ├── 123/
+                │   ├── abc123.webm
+                │   └── def456.webm
+                └── 124/
+                    └── ghi789.webm
     
     Each recording gets a unique UUID filename to avoid collisions.
     """
@@ -62,7 +63,7 @@ class S3RecordingStorage(RecordingStorage):
             session_id: Session database ID
             
         Returns:
-            S3 object key (e.g., "recordings/123/abc123.webm")
+            S3 object key (e.g., "uploads/session_recordings/123/abc123.webm")
             
         Raises:
             FileNotFoundError: If source file doesn't exist
@@ -76,19 +77,22 @@ class S3RecordingStorage(RecordingStorage):
         # Generate unique S3 key with session ID prefix
         file_extension = source.suffix
         unique_filename = f"{uuid4()}{file_extension}"
-        s3_key = f"recordings/{session_id}/{unique_filename}"
         
         try:
-            # Upload to S3 using existing S3Manager
-            success = self.s3_manager.upload_file(
-                file_path=str(source),
-                folder="recordings",
-                session_id=session_id,
-                custom_filename=unique_filename
-            )
+            # Read file content
+            with open(source, 'rb') as f:
+                file_content = f.read()
             
-            if not success:
-                raise IOError(f"S3 upload returned False for {local_path}")
+            # Determine content type
+            content_type = "video/webm" if file_extension == ".webm" else "application/octet-stream"
+            
+            # Upload to S3 using existing S3Manager (folder will be prepended with 'uploads/')
+            s3_key = self.s3_manager.upload_file(
+                file_content=file_content,
+                folder=f"session_recordings/{session_id}",
+                filename=unique_filename,
+                content_type=content_type
+            )
             
             logger.info(f"Recording uploaded to S3: {s3_key}")
             
@@ -110,7 +114,7 @@ class S3RecordingStorage(RecordingStorage):
         Delete a recording from S3.
         
         Args:
-            storage_path: S3 object key (e.g., "recordings/123/abc123.webm")
+            storage_path: S3 object key (e.g., "uploads/session_recordings/123/abc123.webm")
             
         Raises:
             IOError: If deletion fails
@@ -132,7 +136,7 @@ class S3RecordingStorage(RecordingStorage):
         Generate presigned URL for S3 recording playback.
         
         Args:
-            storage_path: S3 object key (e.g., "recordings/123/abc123.webm")
+            storage_path: S3 object key (e.g., "uploads/session_recordings/123/abc123.webm")
             expires_in: URL expiration time in seconds (default: 1 hour)
             
         Returns:
@@ -142,9 +146,9 @@ class S3RecordingStorage(RecordingStorage):
             ValueError: If storage_path is invalid
         """
         try:
-            presigned_url = self.s3_manager.generate_presigned_url(
-                object_key=storage_path,
-                expiration=expires_in
+            presigned_url = self.s3_manager.generate_signed_url(
+                s3_key=storage_path,
+                expiration_seconds=expires_in
             )
             
             if not presigned_url:
