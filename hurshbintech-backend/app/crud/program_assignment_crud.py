@@ -3,7 +3,7 @@
 from datetime import datetime, date
 from typing import List, Optional
 
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -11,6 +11,7 @@ from app.models.program_assignment_model import ProgramAssignment, CompletionSta
 from app.models.program_learning_content_model import ProgramLearningContent
 from app.models.learning_goals_model import LearningGoals
 from app.models.user_model import User
+from app.models.learner_content_assignment_model import LearnerContentAssignment, ContentCompletionStatus
 
 
 async def check_duplicate_active_assignment(
@@ -103,13 +104,17 @@ async def get_assignment_by_id(
     assignment_id: int
 ) -> Optional[ProgramAssignment]:
     """Get assignment by ID with all relationships loaded"""
+    from app.models.learner_content_assignment_model import LearnerContentAssignment
+    from app.models.learning_content_model import LearningContent
+    
     result = await db.execute(
         select(ProgramAssignment)
         .options(
             joinedload(ProgramAssignment.learner),
             joinedload(ProgramAssignment.program).joinedload(LearningGoals.program_contents).joinedload(ProgramLearningContent.content),
             joinedload(ProgramAssignment.assigned_by),
-            joinedload(ProgramAssignment.attachments)
+            joinedload(ProgramAssignment.attachments),
+            joinedload(ProgramAssignment.content_assignments).joinedload(LearnerContentAssignment.content)
         )
         .where(ProgramAssignment.id == assignment_id)
     )
@@ -222,3 +227,57 @@ async def get_learner_completion_stats(
         "not_started": not_started_count,
         "completion_percentage": round(completion_percentage, 2)
     }
+
+
+async def update_program_status_from_content(
+    db: AsyncSession,
+    program_assignment_id: int
+) -> None:
+    """
+    Update program assignment status based on its content assignments
+    - If any content is IN_PROGRESS, SUBMITTED, or LATE_SUBMITTED -> Program is IN_PROGRESS
+    - If all content is REVIEWED -> Program is COMPLETED
+    - Otherwise -> Program is NOT_STARTED
+    """
+    # Get all content assignments for this program
+    result = await db.execute(
+        select(LearnerContentAssignment.completion_status)
+        .where(LearnerContentAssignment.program_assignment_id == program_assignment_id)
+    )
+    content_statuses = [row[0] for row in result.all()]
+    
+    if not content_statuses:
+        # No content assignments, keep as is
+        return
+    
+    # Determine program status based on content statuses
+    new_program_status = None
+    
+    # Check if all reviewed
+    if all(status == ContentCompletionStatus.REVIEWED for status in content_statuses):
+        new_program_status = CompletionStatus.COMPLETED
+    # Check if any content is in progress or submitted
+    elif any(status in [
+        ContentCompletionStatus.IN_PROGRESS,
+        ContentCompletionStatus.SUBMITTED,
+        ContentCompletionStatus.LATE_SUBMITTED
+    ] for status in content_statuses):
+        new_program_status = CompletionStatus.IN_PROGRESS
+    # All not started
+    elif all(status == ContentCompletionStatus.NOT_STARTED for status in content_statuses):
+        new_program_status = CompletionStatus.NOT_STARTED
+    else:
+        # Mixed states, default to IN_PROGRESS
+        new_program_status = CompletionStatus.IN_PROGRESS
+    
+    # Update program assignment status
+    if new_program_status:
+        await db.execute(
+            update(ProgramAssignment)
+            .where(ProgramAssignment.id == program_assignment_id)
+            .values(
+                completion_status=new_program_status,
+                completed_at=datetime.utcnow() if new_program_status == CompletionStatus.COMPLETED else None
+            )
+        )
+        await db.commit()

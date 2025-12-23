@@ -3,11 +3,21 @@ Tracks direct assignment of learning content to learners (beyond program-based c
 """
 
 from datetime import datetime
+import enum
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, func
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, func
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+
+
+class ContentCompletionStatus(enum.Enum):
+    """Enum for content completion status"""
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    SUBMITTED = "SUBMITTED"
+    LATE_SUBMITTED = "LATE_SUBMITTED"
+    REVIEWED = "REVIEWED"
 
 
 class LearnerContentAssignment(Base):
@@ -39,10 +49,22 @@ class LearnerContentAssignment(Base):
         index=True
     )
     
+    # Status tracking
+    completion_status = Column(
+        Enum(ContentCompletionStatus),
+        default=ContentCompletionStatus.NOT_STARTED,
+        nullable=False
+    )
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by_head = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
     assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     learner = relationship("User", foreign_keys=[learner_id], backref="content_assignments")
     content = relationship("LearningContent", backref="learner_assignments")
     assigned_by = relationship("User", foreign_keys=[assigned_by_head])
+    reviewer = relationship("User", foreign_keys=[reviewed_by_head])
     program_assignment = relationship("ProgramAssignment", backref="content_assignments")

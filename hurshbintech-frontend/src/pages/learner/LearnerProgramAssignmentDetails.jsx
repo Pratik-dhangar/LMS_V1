@@ -12,6 +12,7 @@ const LearnerProgramAssignmentDetails = () => {
     const navigate = useNavigate();
 
     const [assignment, setAssignment] = useState(null);
+    const [assignedContents, setAssignedContents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [showContentModal, setShowContentModal] = useState(false);
@@ -28,11 +29,30 @@ const LearnerProgramAssignmentDetails = () => {
     const fetchAssignment = async () => {
         try {
             setLoading(true);
+            console.log(`\n📖 FETCHING ASSIGNMENT ${id} DETAILS`);
+
             const data = await programAssignmentService.getMyAssignmentById(id);
+            console.log(`✅ Got assignment details:`, data);
             setAssignment(data);
             setLearnerNotes(data.learner_notes || '');
+
+            // Fetch all assigned learning contents
+            console.log(`🔄 Fetching all assigned learning contents...`);
+            const allContents = await programAssignmentService.getMyLearningContents();
+            console.log(`✅ API returned ${allContents ? allContents.length : 0} contents`);
+            console.log(`📚 Content details:`, allContents);
+
+            if (allContents && allContents.length > 0) {
+                allContents.forEach((c, idx) => {
+                    console.log(`  [${idx + 1}] ${c.title} - Type: ${c.content_type}, From Program: ${c.from_program}`);
+                });
+            }
+
+            setAssignedContents(allContents);
+            console.log(`✅ Set state with ${(allContents || []).length} contents\n`);
         } catch (e) {
-            console.error('Failed to load assignment:', e);
+            console.error('❌ Failed to load assignment:', e);
+            console.error('Stack:', e.stack);
             toast.error('Failed to load assignment details');
         } finally {
             setLoading(false);
@@ -244,12 +264,12 @@ const LearnerProgramAssignmentDetails = () => {
                         </div>
                     )}
 
-                    {assignment.program.contents && assignment.program.contents.length > 0 && (
+                    {assignedContents && assignedContents.length > 0 && (
                         <div className="contents-section">
-                            <h4 className="subsection-title">Learning Content ({assignment.program.contents.length})</h4>
+                            <h4 className="subsection-title">Learning Content ({assignedContents.length})</h4>
                             <ul className="content-list">
-                                {assignment.program.contents.map(c => (
-                                    <li key={c.id} className="content-list-item">
+                                {assignedContents.map(c => (
+                                    <li key={`content-${c.id}`} className="content-list-item">
                                         <span className="content-title">{c.title}</span>
                                         <button
                                             className="view-btn"
@@ -260,6 +280,12 @@ const LearnerProgramAssignmentDetails = () => {
                                     </li>
                                 ))}
                             </ul>
+                        </div>
+                    )}
+                    {(!assignedContents || assignedContents.length === 0) && assignment && (
+                        <div className="contents-section">
+                            <h4 className="subsection-title">Learning Content (0)</h4>
+                            <p style={{ color: '#666' }}>No content assigned for this program</p>
                         </div>
                     )}
 

@@ -27,14 +27,20 @@ def upgrade() -> None:
         ALTER COLUMN status TYPE VARCHAR(50)
     """)
     
-    # Step 2: Update all existing values to uppercase
+    # Step 2: Drop the DEFAULT constraint to avoid casting issues
+    op.execute("""
+        ALTER TABLE appointments
+        ALTER COLUMN status DROP DEFAULT
+    """)
+    
+    # Step 3: Update all existing values to uppercase
     op.execute("""
         UPDATE appointments
         SET status = UPPER(status)
         WHERE status IS NOT NULL
     """)
     
-    # Step 3: Create the new enum type with all values (old + new) in UPPERCASE
+    # Step 4: Create the new enum type with all values (old + new) in UPPERCASE
     op.execute("""
         CREATE TYPE appointmentstatus_new AS ENUM (
             'PENDING',
@@ -49,15 +55,21 @@ def upgrade() -> None:
         )
     """)
     
-    # Step 4: Convert the status column back to the new enum type
+    # Step 5: Convert the status column back to the new enum type
     op.execute("""
         ALTER TABLE appointments
         ALTER COLUMN status TYPE appointmentstatus_new USING status::appointmentstatus_new
     """)
     
-    # Step 5: Drop the old enum and rename the new one
+    # Step 6: Drop the old enum and rename the new one
     op.execute("DROP TYPE appointmentstatus")
     op.execute("ALTER TYPE appointmentstatus_new RENAME TO appointmentstatus")
+    
+    # Step 7: Add back the DEFAULT constraint with the new uppercase value
+    op.execute("""
+        ALTER TABLE appointments
+        ALTER COLUMN status SET DEFAULT 'PENDING'
+    """)
 
 
 def downgrade() -> None:

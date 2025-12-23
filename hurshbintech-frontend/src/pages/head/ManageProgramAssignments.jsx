@@ -205,17 +205,22 @@ const ManageProgramAssignments = () => {
       let totalFailed = 0;
       const failedAssignments = [];
 
+      console.log('[ManageProgramAssignments] Form data:', formData);
+      console.log('[ManageProgramAssignments] Extra content IDs:', formData.extra_content_ids);
+
       // Loop through each selected program and create assignments
       for (const programId of formData.program_ids) {
         const payload = {
           learner_ids: formData.learner_ids,
           program_id: parseInt(programId),
-          extra_content_ids: formData.extra_content_ids.length > 0 ? formData.extra_content_ids : null,
+          extra_content_ids: formData.extra_content_ids && formData.extra_content_ids.length > 0 ? formData.extra_content_ids : [],
           start_date: formData.start_date,
           end_date: formData.end_date,
           duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
           head_notes: formData.head_notes || null,
         };
+
+        console.log('[ManageProgramAssignments] Payload for program', programId, ':', payload);
 
         try {
           const result = await programAssignmentService.createAssignments(payload);
@@ -331,11 +336,11 @@ const ManageProgramAssignments = () => {
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    if (!window.confirm('Delete this assignment? This action cannot be undone.')) return;
+    if (!window.confirm('Delete this assignment?\n\n⚠️ This will delete:\n- The program assignment\n- All auto-assigned content\n- All manually assigned content\n\nThis action cannot be undone.')) return;
 
     try {
       await programAssignmentService.deleteAssignment(assignmentId);
-      toast.success('Assignment deleted');
+      toast.success('Assignment and all associated content deleted');
       fetchAssignments();
     } catch (error) {
       toast.error('Failed to delete assignment');
@@ -345,9 +350,13 @@ const ManageProgramAssignments = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'COMPLETED':
+      case 'REVIEWED':
         return 'status-success';
       case 'IN_PROGRESS':
+      case 'SUBMITTED':
         return 'status-warning';
+      case 'LATE_SUBMITTED':
+        return 'status-danger';
       case 'NOT_STARTED':
         return 'status-info';
       default:
@@ -356,7 +365,22 @@ const ManageProgramAssignments = () => {
   };
 
   const getStatusLabel = (status) => {
-    return status.replace('_', ' ');
+    return status.replace(/_/g, ' ');
+  };
+
+  const handleReviewContent = async (contentAssignmentId) => {
+    if (!window.confirm('Mark this content as reviewed?')) return;
+
+    try {
+      await programAssignmentService.reviewContent(contentAssignmentId);
+      toast.success('Content marked as reviewed');
+
+      // Refresh assignment details
+      const assignmentDetails = await programAssignmentService.getAssignmentById(selectedAssignment.id);
+      setSelectedAssignment(assignmentDetails);
+    } catch (error) {
+      toast.error('Failed to review content');
+    }
   };
 
   return (
@@ -584,7 +608,7 @@ const ManageProgramAssignments = () => {
                                   className="btn-primary btn-sm"
                                   title="View Tracking"
                                 >
-                                  View
+                                  Track
                                 </button>
                                 <button
                                   onClick={() => handleDeleteAssignment(assignment.id)}
@@ -1013,26 +1037,67 @@ const ManageProgramAssignments = () => {
                 )}
               </div>
 
-              {/* Learning Contents */}
-              {selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
+              {/* Learning Contents - Both Auto and Manual */}
+              {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 && (
                 <div className="contents-section">
-                  <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                  <h4 className="subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
                   <div className="contents-list">
-                    {selectedAssignment.program.contents.map((content, index) => (
-                      <div key={content.id} className="content-item">
+                    {selectedAssignment.content_assignments.map((assignment, index) => (
+                      <div key={assignment.id} className="content-item">
                         <span className="content-order">{index + 1}</span>
-                        {content.thumbnail_url && (
-                          <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                        {assignment.learning_content?.thumbnail_url && (
+                          <img src={assignment.learning_content.thumbnail_url} alt="" className="content-thumbnail" />
                         )}
                         <div className="content-info">
-                          <div className="content-title">{content.title}</div>
-                          <div className="content-type">{content.content_type}</div>
+                          <div className="content-title">
+                            {assignment.learning_content?.title || 'Untitled Content'}
+                          </div>
+                          <div className="content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
+                          <div className="content-meta" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span className={`status-badge ${assignment.is_from_program ? 'status-info' : 'status-warning'}`} style={{ fontSize: '0.75rem' }}>
+                              {assignment.is_from_program ? '🔄 Auto-assigned' : '➕ Manual'}
+                            </span>
+                            <span className={`status-badge ${getStatusColor(assignment.completion_status)}`} style={{ fontSize: '0.75rem' }}>
+                              {getStatusLabel(assignment.completion_status)}
+                            </span>
+                            {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
+                              <button
+                                onClick={() => handleReviewContent(assignment.id)}
+                                className="btn-primary btn-sm"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                              >
+                                ✓ Mark Reviewed
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* Fallback: Show program contents if content_assignments not available */}
+              {(!selectedAssignment?.content_assignments || selectedAssignment.content_assignments.length === 0) &&
+                selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
+                  <div className="contents-section">
+                    <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                    <div className="contents-list">
+                      {selectedAssignment.program.contents.map((content, index) => (
+                        <div key={content.id} className="content-item">
+                          <span className="content-order">{index + 1}</span>
+                          {content.thumbnail_url && (
+                            <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                          )}
+                          <div className="content-info">
+                            <div className="content-title">{content.title}</div>
+                            <div className="content-type">{content.content_type}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               {/* Head Notes */}
               {selectedAssignment.head_notes && (
