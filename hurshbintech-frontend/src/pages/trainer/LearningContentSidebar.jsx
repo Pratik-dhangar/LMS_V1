@@ -162,7 +162,15 @@ const LearningContentSidebar = ({
                 key={content.id}
                 className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1.5 sm:p-2 my-1.5 sm:my-2 cursor-grab shadow-sm hover:shadow-md transition-shadow"
                 draggable
-                onDragStart={(e) => onDragStartContent(e, content)}
+                onDragStart={(e) => {
+                  onDragStartContent(e, content);
+                  // Add visual feedback
+                  e.currentTarget.style.opacity = '0.5';
+                }}
+                onDragEnd={(e) => {
+                  // Restore opacity after drag
+                  e.currentTarget.style.opacity = '1';
+                }}
                 onTouchStart={(e) => {
                   // Store content data for touch drag
                   const touch = e.touches[0];
@@ -188,6 +196,7 @@ const LearningContentSidebar = ({
                 }}
                 onTouchEnd={(e) => {
                   const target = e.currentTarget;
+                  // Always restore opacity
                   target.style.opacity = '1';
 
                   if (!target.dataset.touchContent) return;

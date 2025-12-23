@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { toast } from "react-toastify";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
@@ -12,9 +13,11 @@ const ViewAssignedPrograms = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [assignedContents, setAssignedContents] = useState([]);
   const [learnerNotes, setLearnerNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAssignments();
@@ -50,14 +53,39 @@ const ViewAssignedPrograms = () => {
 
   const handleViewDetails = async (assignment) => {
     try {
+      console.log(`\n📖 OPENING ASSIGNMENT DETAILS`);
+      console.log(`Assignment ID: ${assignment.id}, Program ID: ${assignment.program_id}`);
+
       const details = await programAssignmentService.getMyAssignmentById(assignment.id);
+      console.log(`✅ Got assignment details:`, details);
+
       const attachmentsData = await programAssignmentService.getAttachments(assignment.id);
+      console.log(`✅ Got attachments:`, attachmentsData);
+
+      // Fetch all assigned learning contents
+      console.log(`🔄 Fetching all assigned learning contents...`);
+      const allContents = await programAssignmentService.getMyLearningContents();
+      console.log(`✅ API returned ${allContents ? allContents.length : 0} contents`);
+      console.log(`📚 Content details:`, allContents);
+
+      if (allContents && allContents.length > 0) {
+        allContents.forEach((c, idx) => {
+          console.log(`  [${idx + 1}] ${c.title} - Type: ${c.content_type}, From Program: ${c.from_program}`);
+        });
+      }
+
+      // Set the contents to display
+      setAssignedContents(allContents || []);
+      console.log(`✅ Set assignedContents state to ${(allContents || []).length} items`);
 
       setSelectedAssignment(details);
       setLearnerNotes(details.learner_notes || '');
       setAttachments(attachmentsData);
       setShowDetailModal(true);
+      console.log(`✅ Modal should be visible now\n`);
     } catch (error) {
+      console.error(`❌ ERROR in handleViewDetails:`, error);
+      console.error(`Stack:`, error.stack);
       toast.error("Failed to load assignment details");
     }
   };
@@ -267,7 +295,7 @@ const ViewAssignedPrograms = () => {
                   </div>
 
                   <button
-                    onClick={() => handleViewDetails(assignment)}
+                    onClick={() => navigate(`/learner/program-assignment/${assignment.id}`)}
                     className="btn-primary btn-full"
                   >
                     View Details
@@ -335,23 +363,37 @@ const ViewAssignedPrograms = () => {
                   )}
 
                   {/* Learning Contents */}
-                  {selectedAssignment.program.contents && selectedAssignment.program.contents.length > 0 && (
+                  {assignedContents && assignedContents.length > 0 && (
                     <div className="contents-section">
-                      <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                      <h4 className="subsection-title">Learning Contents ({assignedContents.length})</h4>
                       <div className="contents-list">
-                        {selectedAssignment.program.contents.map((content, index) => (
-                          <div key={content.id} className="content-item">
+                        {assignedContents.map((content, index) => (
+                          <div key={`content-${content.id}`} className="content-item">
                             <span className="content-order">{index + 1}</span>
                             {content.thumbnail_url && (
                               <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
                             )}
                             <div className="content-info">
-                              <div className="content-title">{content.title}</div>
+                              <div className="content-title">
+                                {content.title}
+                                {content.from_program && (
+                                  <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#6b5b95', backgroundColor: '#f0e6ff', padding: '2px 6px', borderRadius: '3px', display: 'inline-block' }}>📚 From Program</span>
+                                )}
+                                {!content.from_program && (
+                                  <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#22863a', backgroundColor: '#e6fff0', padding: '2px 6px', borderRadius: '3px', display: 'inline-block' }}>✨ Extra Material</span>
+                                )}
+                              </div>
                               <div className="content-type">{content.content_type}</div>
                             </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                  {(!assignedContents || assignedContents.length === 0) && (
+                    <div className="contents-section">
+                      <h4 className="subsection-title">Learning Contents (0)</h4>
+                      <p style={{ color: '#666' }}>No content assigned for this program</p>
                     </div>
                   )}
 

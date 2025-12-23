@@ -17,6 +17,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import delete
 
 from app.core.deps import get_current_head, get_current_user
 from app.crud import program_assignment_crud, program_assignment_attachment_crud
@@ -24,6 +25,7 @@ from app.db.session import get_db
 from app.models.user_model import HeadProfile, User, UserRole
 from app.models.program_assignment_model import CompletionStatus
 from app.models.program_assignment_attachment_model import AttachmentType
+from app.models.learner_content_assignment_model import LearnerContentAssignment, ContentCompletionStatus
 from app.schemas.program_assignment_schema import (
     ProgramAssignmentCreate,
     ProgramAssignmentUpdate,
@@ -37,9 +39,14 @@ from app.schemas.program_assignment_schema import (
     ProgramBasic,
     ProgramWithContents,
     LearningContentInProgram,
+    LearningContentBasic,
+    ContentAssignmentInProgram,
+    ContentStatusUpdate,
 )
 from app.utils.s3_utils import S3Manager
 from app.core.config import settings
+from pathlib import Path
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/program-assignments", tags=["Program Assignments"])
@@ -138,39 +145,56 @@ async def create_program_assignments(
             
             # Auto-assign learning contents associated with this program
             try:
-                from app.crud import program_learning_content_crud, learning_content_assignment_crud
-                from app.schemas.learning_content_assignment import LearningContentAssignmentCreate
+                from app.crud import program_learning_content_crud, learner_content_assignment_crud
                 
                 # Get all contents associated with this program
                 program_contents = await program_learning_content_crud.get_program_contents(db, assignment_data.program_id)
                 
-                # Create learning content assignments for each content
+                # Create learner content assignments for each content in the program
                 for program_content in program_contents:
                     try:
-                        content_assignment_data = LearningContentAssignmentCreate(
-                            learner_id=learner_id,
-                            learning_content_id=program_content.content_id
-                        )
-                        
                         # Check if already assigned
-                        existing_content_assignments = await learning_content_assignment_crud.get_assignments_by_learner(db, learner_id)
-                        content_already_assigned = any(
-                            a.learning_content_id == program_content.content_id for a in existing_content_assignments
+                        already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
+                            db, learner_id, program_content.content_id
                         )
                         
-                        if not content_already_assigned:
-                            await learning_content_assignment_crud.create_assignment(
-                                db, 
-                                content_assignment_data, 
-                                assigned_by_head=current_head.user_id
+                        if not already_assigned:
+                            await learner_content_assignment_crud.create_assignment(
+                                db=db,
+                                learner_id=learner_id,
+                                content_id=program_content.content_id,
+                                assigned_by_head=current_head.user_id,
+                                program_assignment_id=new_assignment.id
                             )
                             logger.info(f"Auto-assigned content {program_content.content_id} to learner {learner_id}")
                         
                     except Exception as content_error:
                         logger.warning(f"Failed to auto-assign content {program_content.content_id} to learner {learner_id}: {str(content_error)}")
+                
+                # Assign extra/manual learning contents if provided
+                if assignment_data.extra_content_ids and len(assignment_data.extra_content_ids) > 0:
+                    for content_id in assignment_data.extra_content_ids:
+                        try:
+                            # Check if already assigned
+                            already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
+                                db, learner_id, content_id
+                            )
+                            
+                            if not already_assigned:
+                                await learner_content_assignment_crud.create_assignment(
+                                    db=db,
+                                    learner_id=learner_id,
+                                    content_id=content_id,
+                                    assigned_by_head=current_head.user_id,
+                                    program_assignment_id=new_assignment.id
+                                )
+                                logger.info(f"Manually assigned extra content {content_id} to learner {learner_id}")
+                        
+                        except Exception as content_error:
+                            logger.warning(f"Failed to assign extra content {content_id} to learner {learner_id}: {str(content_error)}")
                         
             except Exception as content_error:
-                logger.warning(f"Failed to auto-assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
+                logger.warning(f"Failed to assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
             
             success_count += 1
             created_assignments.append(new_assignment.id)
@@ -305,6 +329,9 @@ async def get_assignment_details(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """Get detailed assignment information with learning contents"""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.learning_content_model import LearningContent
     
     assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
@@ -321,7 +348,7 @@ async def get_assignment_details(
             detail="Not authorized to view this assignment"
         )
     
-    # Build response with learning contents
+    # Build response with learning contents from program
     learning_contents = []
     if hasattr(assignment.program, 'program_contents'):
         for pc in sorted(assignment.program.program_contents, key=lambda x: x.sequence_order):
@@ -334,6 +361,41 @@ async def get_assignment_details(
                     file_url=pc.content.file_url,
                     thumbnail_url=pc.content.thumbnail_url,
                     sequence_order=pc.sequence_order
+                )
+            )
+    
+    # Fetch all content assignments for this program assignment
+    content_assignments_list = []
+    if hasattr(assignment, 'content_assignments'):
+        # Get program content IDs for checking if content is from program
+        program_content_ids = {pc.content_id for pc in assignment.program.program_contents} if hasattr(assignment.program, 'program_contents') else set()
+        
+        for ca in assignment.content_assignments:
+            # Get actual completion status from the assignment
+            completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NOT_STARTED
+            
+            # Check if this content is from the program or manually assigned
+            is_from_program = ca.content_id in program_content_ids
+            
+            content_assignments_list.append(
+                ContentAssignmentInProgram(
+                    id=ca.id,
+                    content_id=ca.content_id,
+                    learning_content=LearningContentBasic(
+                        id=ca.content.id,
+                        title=ca.content.title,
+                        description=ca.content.description,
+                        content_type=ca.content.content_type.value,
+                        file_url=ca.content.file_url,
+                        thumbnail_url=ca.content.thumbnail_url,
+                    ),
+                    is_from_program=is_from_program,
+                    completion_status=completion_status,
+                    assigned_at=ca.assigned_at,
+                    started_at=ca.started_at if hasattr(ca, 'started_at') else None,
+                    submitted_at=ca.submitted_at if hasattr(ca, 'submitted_at') else None,
+                    reviewed_at=ca.reviewed_at if hasattr(ca, 'reviewed_at') else None,
+                    reviewed_by_head=ca.reviewed_by_head if hasattr(ca, 'reviewed_by_head') else None
                 )
             )
     
@@ -367,7 +429,8 @@ async def get_assignment_details(
         completed_at=assignment.completed_at,
         notification_sent=assignment.notification_sent,
         assigned_at=assignment.assigned_at,
-        updated_at=assignment.updated_at
+        updated_at=assignment.updated_at,
+        content_assignments=content_assignments_list
     )
 
 
@@ -497,7 +560,7 @@ async def delete_assignment(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Delete an assignment"""
+    """Delete an assignment and all associated content assignments"""
     
     assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
@@ -513,7 +576,20 @@ async def delete_assignment(
             detail="Not authorized to delete this assignment"
         )
     
+    # Delete all associated learner content assignments (both auto and manual)
+    # Delete all content assignments for this program assignment
+    await db.execute(
+        delete(LearnerContentAssignment).where(
+            LearnerContentAssignment.program_assignment_id == assignment_id
+        )
+    )
+    await db.commit()
+    logger.info(f"Deleted all content assignments for program assignment {assignment_id}")
+    
+    # Now delete the program assignment itself
     await program_assignment_crud.delete_assignment(db, assignment_id)
+    logger.info(f"Deleted program assignment {assignment_id}")
+    
     return None
 
 
@@ -596,11 +672,41 @@ async def upload_attachment(
                 detail="Failed to upload file"
             )
     else:
-        # Local storage fallback (implement if needed)
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Local storage not implemented for attachments"
-        )
+        # Local storage fallback
+        try:
+            upload_dir = Path("uploads/program-assignments")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            local_path = upload_dir / unique_filename
+            with open(local_path, "wb") as f:
+                f.write(file_content)
+
+            # Public path served by static files (nginx or backend static route)
+            file_path = f"/uploads/program-assignments/{unique_filename}"
+
+            # Generate thumbnail for images/videos
+            if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
+                try:
+                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    if thumbnail_content:
+                        thumb_dir = Path("uploads/program-assignments/thumbnails")
+                        thumb_dir.mkdir(parents=True, exist_ok=True)
+                        thumb_filename = f"thumb_{uuid.uuid4().hex}.jpg"
+                        thumb_path = thumb_dir / thumb_filename
+                        with open(thumb_path, "wb") as tf:
+                            tf.write(thumbnail_content)
+                        thumbnail_url = f"/uploads/program-assignments/thumbnails/{thumb_filename}"
+                except Exception as e:
+                    logger.warning(f"Failed to generate local thumbnail: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Failed to save file locally: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save file locally"
+            )
     
     # Create attachment record
     attachment = await program_assignment_attachment_crud.create_attachment(
@@ -629,6 +735,180 @@ async def upload_attachment(
         uploaded_at=attachment.uploaded_at
     )
 
+
+# ============= CONTENT ASSIGNMENT STATUS ENDPOINTS =============
+
+@router.patch("/content-assignments/{content_assignment_id}/start")
+async def start_content(
+    content_assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark content as started by learner"""
+    from sqlalchemy import select, update
+    
+    # Get the content assignment
+    result = await db.execute(
+        select(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+    )
+    content_assignment = result.scalar_one_or_none()
+    
+    if not content_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content assignment not found"
+        )
+    
+    # Verify user is the learner
+    if content_assignment.learner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this content"
+        )
+    
+    # Update status to IN_PROGRESS
+    await db.execute(
+        update(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+        .values(
+            completion_status=ContentCompletionStatus.IN_PROGRESS,
+            started_at=datetime.utcnow()
+        )
+    )
+    await db.commit()
+    
+    # Update program assignment status if this content belongs to a program
+    if content_assignment.program_assignment_id:
+        await program_assignment_crud.update_program_status_from_content(
+            db, content_assignment.program_assignment_id
+        )
+    
+    return {"message": "Content started", "status": "IN_PROGRESS"}
+
+
+@router.patch("/content-assignments/{content_assignment_id}/submit")
+async def submit_content(
+    content_assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Submit content assignment (checks if late)"""
+    from sqlalchemy import select, update
+    
+    # Get the content assignment with program assignment
+    result = await db.execute(
+        select(LearnerContentAssignment)
+        .options(joinedload(LearnerContentAssignment.program_assignment))
+        .where(LearnerContentAssignment.id == content_assignment_id)
+    )
+    content_assignment = result.scalar_one_or_none()
+    
+    if not content_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content assignment not found"
+        )
+    
+    # Verify user is the learner
+    if content_assignment.learner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this content"
+        )
+    
+    # Check if submission is late
+    now = datetime.utcnow()
+    is_late = False
+    
+    if content_assignment.program_assignment:
+        end_date = content_assignment.program_assignment.end_date
+        # Convert date to datetime for comparison
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        is_late = now > end_datetime
+    
+    new_status = ContentCompletionStatus.LATE_SUBMITTED if is_late else ContentCompletionStatus.SUBMITTED
+    
+    # Update status
+    await db.execute(
+        update(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+        .values(
+            completion_status=new_status,
+            submitted_at=now
+        )
+    )
+    await db.commit()
+    
+    # Update program assignment status if this content belongs to a program
+    if content_assignment.program_assignment_id:
+        await program_assignment_crud.update_program_status_from_content(
+            db, content_assignment.program_assignment_id
+        )
+    
+    return {
+        "message": "Content submitted",
+        "status": new_status.value,
+        "is_late": is_late
+    }
+
+
+@router.patch("/head/content-assignments/{content_assignment_id}/review")
+async def review_content(
+    content_assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Mark content as reviewed by head"""
+    from sqlalchemy import select, update
+    
+    # Get the content assignment
+    result = await db.execute(
+        select(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+    )
+    content_assignment = result.scalar_one_or_none()
+    
+    if not content_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content assignment not found"
+        )
+    
+    # Verify the head assigned this content or its program
+    if content_assignment.assigned_by_head != current_head.user_id:
+        # Check if it's from a program assignment by this head
+        if content_assignment.program_assignment:
+            if content_assignment.program_assignment.assigned_by_head != current_head.user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not authorized to review this content"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to review this content"
+            )
+    
+    # Update status to REVIEWED
+    await db.execute(
+        update(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+        .values(
+            completion_status=ContentCompletionStatus.REVIEWED,
+            reviewed_at=datetime.utcnow(),
+            reviewed_by_head=current_head.user_id
+        )
+    )
+    await db.commit()
+    
+    # Update program assignment status if this content belongs to a program
+    if content_assignment.program_assignment_id:
+        await program_assignment_crud.update_program_status_from_content(
+            db, content_assignment.program_assignment_id
+        )
+    
+    return {"message": "Content reviewed", "status": "REVIEWED"}
 
 @router.get("/head/assignments/{assignment_id}/attachments", response_model=List[AttachmentResponse])
 async def get_attachments(
@@ -732,22 +1012,103 @@ async def get_my_assignments(
     if len(assignments) == 0:
         logger.warning(f"Learner {current_user.id} ({current_user.name}) has no assignments - check if assignments exist in database for this learner")
     
-    return [
-        ProgramAssignmentListResponse(
-            id=a.id,
-            learner_id=a.learner_id,
-            learner_name=a.learner.name,
-            program_id=a.program_id,
-            program_name=a.program.goal,
-            start_date=a.start_date,
-            end_date=a.end_date,
-            duration_days=a.duration_days,
-            completion_status=a.completion_status,
-            completed_at=a.completed_at,
-            assigned_at=a.assigned_at
+    today = date.today()
+    result = []
+    for a in assignments:
+        # Calculate if assignment is overdue
+        is_overdue = today > a.end_date
+        
+        # Check if submission is late
+        is_late_submission = False
+        if a.completed_at:
+            completion_date = a.completed_at.date() if isinstance(a.completed_at, datetime) else a.completed_at
+            is_late_submission = completion_date > a.end_date
+        
+        result.append(
+            ProgramAssignmentListResponse(
+                id=a.id,
+                learner_id=a.learner_id,
+                learner_name=a.learner.name,
+                program_id=a.program_id,
+                program_name=a.program.goal,
+                start_date=a.start_date,
+                end_date=a.end_date,
+                duration_days=a.duration_days,
+                completion_status=a.completion_status,
+                completed_at=a.completed_at,
+                assigned_at=a.assigned_at,
+                is_overdue=is_overdue,
+                is_late_submission=is_late_submission
+            )
         )
-        for a in assignments
-    ]
+    
+    return result
+
+
+@router.get("/learner/my-learning-contents")
+async def get_my_learning_contents(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all learning contents assigned to the current learner"""
+    
+    if current_user.role != UserRole.LEARNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only learners can access this endpoint"
+        )
+    
+    from app.crud import learner_content_assignment_crud
+    
+    try:
+        # Get all content assignments for this learner
+        assignments = await learner_content_assignment_crud.get_assignments_by_learner(db, current_user.id)
+        logger.info(f"Found {len(assignments)} content assignments for learner {current_user.id}")
+        
+        # Convert S3 URLs to public URLs if using S3
+        result = []
+        for assignment in assignments:
+            try:
+                content = assignment.content
+                file_url = content.file_url
+                thumbnail_url = content.thumbnail_url
+                
+                # Convert S3 URLs to public HTTP URLs
+                if settings.USE_S3 and s3_manager:
+                    if file_url and file_url.startswith("s3://"):
+                        s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+                        file_url = s3_manager.get_public_url(s3_key)
+                    
+                    if thumbnail_url and thumbnail_url.startswith("s3://"):
+                        s3_key = thumbnail_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+                        thumbnail_url = s3_manager.get_public_url(s3_key)
+                
+                content_type_str = content.content_type.value if hasattr(content.content_type, 'value') else str(content.content_type)
+                
+                result.append({
+                    "id": content.id,
+                    "title": content.title,
+                    "description": content.description,
+                    "content_type": content_type_str,
+                    "file_url": file_url,
+                    "thumbnail_url": thumbnail_url,
+                    "assigned_at": assignment.assigned_at.isoformat() if hasattr(assignment.assigned_at, 'isoformat') else str(assignment.assigned_at),
+                    "assigned_by": assignment.assigned_by.name if assignment.assigned_by else None,
+                    "from_program": assignment.program_assignment_id is not None
+                })
+            except Exception as e:
+                logger.error(f"Error processing content assignment {assignment.id}: {str(e)}")
+                continue
+        
+        logger.info(f"Returning {len(result)} learning contents for learner {current_user.id}")
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error fetching learning contents for learner {current_user.id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch learning contents: {str(e)}"
+        )
 
 
 @router.get("/learner/assignments/stats", response_model=CompletionStatsResponse)
@@ -795,6 +1156,16 @@ async def get_my_assignment_details(
             detail="Not authorized to view this assignment"
         )
     
+    # Calculate if assignment is overdue (today is after end_date)
+    today = date.today()
+    is_overdue = today > assignment.end_date
+    
+    # Check if submission is late (submitted after end_date)
+    is_late_submission = False
+    if assignment.completed_at:
+        completion_date = assignment.completed_at.date() if isinstance(assignment.completed_at, datetime) else assignment.completed_at
+        is_late_submission = completion_date > assignment.end_date
+    
     # Build response with learning contents
     learning_contents = []
     if hasattr(assignment.program, 'program_contents'):
@@ -841,7 +1212,9 @@ async def get_my_assignment_details(
         completed_at=assignment.completed_at,
         notification_sent=assignment.notification_sent,
         assigned_at=assignment.assigned_at,
-        updated_at=assignment.updated_at
+        updated_at=assignment.updated_at,
+        is_overdue=is_overdue,
+        is_late_submission=is_late_submission
     )
 
 
@@ -1023,11 +1396,41 @@ async def upload_my_attachment(
                 detail="Failed to upload file"
             )
     else:
-        # Local storage fallback (implement if needed)
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Local storage not implemented for attachments"
-        )
+        # Local storage fallback
+        try:
+            upload_dir = Path("uploads/program-assignments")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            local_path = upload_dir / unique_filename
+            with open(local_path, "wb") as f:
+                f.write(file_content)
+
+            # Public path served by static files (nginx or backend static route)
+            file_path = f"/uploads/program-assignments/{unique_filename}"
+
+            # Generate thumbnail for images/videos
+            if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
+                try:
+                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    if thumbnail_content:
+                        thumb_dir = Path("uploads/program-assignments/thumbnails")
+                        thumb_dir.mkdir(parents=True, exist_ok=True)
+                        thumb_filename = f"thumb_{uuid.uuid4().hex}.jpg"
+                        thumb_path = thumb_dir / thumb_filename
+                        with open(thumb_path, "wb") as tf:
+                            tf.write(thumbnail_content)
+                        thumbnail_url = f"/uploads/program-assignments/thumbnails/{thumb_filename}"
+                except Exception as e:
+                    logger.warning(f"Failed to generate local thumbnail: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Failed to save file locally: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save file locally"
+            )
     
     # Create attachment record
     attachment = await program_assignment_attachment_crud.create_attachment(
