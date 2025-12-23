@@ -36,6 +36,14 @@ class Settings(BaseSettings):
 
     # CORS for backend origin settings
     BACKEND_CORS_ORIGINS: List[str] = []
+    
+    # Frontend URL for email links (environment-specific)
+    FRONTEND_URL: str = "http://localhost:3000"  # Default to local port 3000
+    # Can be overridden with FRONTEND_URL env var
+    # Examples:
+    # - Local: http://localhost:3000
+    # - EC2: http://your-ec2-domain:3001 or https://your-ec2-domain
+    # - Production: https://hurshbintech.com
 
     # Environment
     ENVIRONMENT: Optional[str] = "development"

@@ -21,13 +21,19 @@ class UserRole(enum.Enum):
     LEARNER = "LEARNER"
 
 # Enum for appointment status
-class AppointmentStatus(str, enum.Enum):
-    PENDING = "pending"           # Appointment requested, awaiting coach confirmation
-    CONFIRMED = "confirmed"       # Coach confirmed the appointment
-    CANCELLED = "cancelled"       # Cancelled by user or coach
-    COMPLETED = "completed"       # Appointment finished
-    NO_SHOW = "no_show"          # User didn't attend
-    REJECTED = "rejected"         # Coach rejected the appointment
+class AppointmentStatus(enum.Enum):
+    # Authenticated user workflow
+    PENDING = "PENDING"           # Appointment requested, awaiting coach confirmation
+    CONFIRMED = "CONFIRMED"       # Coach confirmed the appointment
+    CANCELLED = "CANCELLED"       # Cancelled by user or coach
+    COMPLETED = "COMPLETED"       # Appointment finished
+    NO_SHOW = "NO_SHOW"          # User didn't attend
+    REJECTED = "REJECTED"         # Coach rejected the appointment
+    
+    # Guest user workflow
+    GUEST_INTENT = "GUEST_INTENT"              # Guest submitted intent, awaiting coach review
+    PAYMENT_PENDING = "PAYMENT_PENDING"        # Coach approved, guest uploads payment
+    VERIFICATION_PENDING = "VERIFICATION_PENDING"  # Guest uploaded payment, coach reviews
 
 # Enums for specific fields - learner model
 class CaesareanType(enum.Enum):
@@ -448,7 +454,9 @@ class CoachReferenceData(Base):
 # ===== APPOINTMENTS MODEL =====
 class Appointment(Base):
     """
-    Appointments table - Trainers, Learners, and Heads can schedule appointments with Coaches
+    Appointments table - Trainers, Learners, Heads, and Guests can schedule appointments with Coaches
+    - For authenticated users: user_id is set, guest_* fields are NULL
+    - For guest users: user_id is NULL, guest_* fields are set, upload_token used for payment link
     """
     __tablename__ = "appointments"
 
@@ -457,9 +465,18 @@ class Appointment(Base):
     # Coach offering the appointment
     coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=False, index=True)
     
-    # User scheduling the appointment (could be trainer, learner, or head)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user_role = Column(String(20), nullable=False)  # trainer, learner, head
+    # User scheduling the appointment (NULL for guest bookings)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Changed: nullable=True for guests
+    user_role = Column(String(20), nullable=True)  # trainer, learner, head, NULL for guests
+    
+    # Guest-specific fields (for non-authenticated bookings)
+    guest_name = Column(String(255), nullable=True)
+    guest_email = Column(String(255), nullable=True, index=True)
+    guest_phone = Column(String(20), nullable=True)
+    
+    # Security token for guest payment upload (UUID, valid 24 hours)
+    upload_token = Column(String(100), nullable=True, unique=True, index=True)  # Secure upload link token
+    upload_token_expires_at = Column(DateTime, nullable=True)  # Token expiry time
     
     # Appointment Details
     scheduled_date = Column(Date, nullable=False)
@@ -487,7 +504,7 @@ class Appointment(Base):
     
     # Relationships
     coach = relationship("CoachProfile")
-    user = relationship("User")
+    user = relationship("User")  # Will be None for guest bookings
 
 
 # ===== COACH SESSION MODEL =====

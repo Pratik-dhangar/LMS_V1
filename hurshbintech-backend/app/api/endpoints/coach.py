@@ -5,7 +5,8 @@ Accessible by coaches and their heads
 
 import logging
 import os
-from datetime import date
+import uuid
+from datetime import date, datetime, timedelta
 from typing import Optional
 from pathlib import Path
 
@@ -20,7 +21,7 @@ from app.crud import coach_crud
 from app.crud import user_crud
 from app.db.session import get_db
 from app.models.learning_content_model import LearningContent
-from app.models.user_model import CoachProfile, User, UserRole
+from app.models.user_model import CoachProfile, User, UserRole, Appointment, AppointmentStatus
 from app.services.email_service import EmailService
 from app.schemas.user import (
     AppointmentCreate,
@@ -359,9 +360,10 @@ async def get_coach_appointments(
             "user_role": apt.user_role,
             "scheduled_date": apt.scheduled_date.isoformat() if apt.scheduled_date else None,
             "scheduled_time": apt.scheduled_time,
-            "status": apt.status.value if hasattr(apt.status, 'value') else apt.status,
+            "status": apt.status.value,  # Extract UPPERCASE value from enum
             "notes": apt.notes,
-            "user_name": apt.user.name if apt.user else None,
+            # For guest appointments: use guest_name; for authenticated: use user.name
+            "user_name": apt.guest_name if apt.guest_name else (apt.user.name if apt.user else None),
             "session_type": apt.session_type,  # Read directly from column
             "payment_screenshot_url": apt.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url for frontend
             "payment_receipt_url": apt.payment_receipt_url,  # Also include in response
@@ -438,18 +440,95 @@ async def update_appointment(
         )
 
     # Store previous status for email logic
-    previous_status = str(appointment.status.value if hasattr(appointment.status, 'value') else appointment.status).upper()
+    previous_status = appointment.status.value  # Already UPPERCASE
     
+    # Special handling for guest booking approval (GUEST_INTENT)
+    # Coach tries to change to CONFIRMED, but we intercept and just send payment link
+    if appointment.guest_name and previous_status == "GUEST_INTENT" and appointment_update.status and appointment_update.status.upper() == "CONFIRMED":
+        logger.info(f"Coach approving guest booking {appointment_id} for {appointment.guest_name}")
+        
+        # Don't change status - keep GUEST_INTENT until guest uploads payment
+        # Just generate token and send email
+        
+        upload_token = str(uuid.uuid4())
+        upload_token_expires_at = datetime.utcnow() + timedelta(hours=24)
+        
+        # Update appointment with token
+        appointment.upload_token = upload_token
+        appointment.upload_token_expires_at = upload_token_expires_at
+        await db.commit()
+        await db.refresh(appointment)
+        
+        # Construct payment upload URL
+        upload_url = f"{settings.FRONTEND_URL}/guest-payment/{upload_token}"
+        
+        # Send email to guest with payment upload link
+        try:
+            await EmailService.send_payment_upload_link_to_guest(
+                guest_email=appointment.guest_email,
+                guest_name=appointment.guest_name,
+                upload_url=upload_url,
+                token_expires_in_hours=24,
+                coach_name=current_coach.user.name if current_coach.user else "Coach"
+            )
+            logger.info(f"Payment upload link sent to guest {appointment.guest_email}")
+        except Exception as e:
+            logger.error(f"Failed to send payment upload link: {str(e)}", exc_info=True)
+        
+        # Return response with GUEST_INTENT status (not changed)
+        return AppointmentResponse(
+            id=appointment.id,
+            coach_id=appointment.coach_id,
+            user_id=appointment.user_id,
+            user_role=appointment.user_role,
+            scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+            scheduled_time=appointment.scheduled_time,
+            status=appointment.status.value,
+            notes=appointment.notes,
+            user_name=appointment.guest_name if appointment.guest_name else (appointment.user.name if appointment.user else None),
+            session_type=appointment.session_type,
+            payment_screenshot_url=appointment.payment_receipt_url,
+            payment_receipt_url=appointment.payment_receipt_url,
+            rejection_reason=appointment.rejection_reason,
+            refund_receipt_url=appointment.refund_receipt_url,
+            created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+            updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+            guest_name=appointment.guest_name,
+            guest_email=appointment.guest_email,
+            guest_phone=appointment.guest_phone,
+            upload_token_expires_at=appointment.upload_token_expires_at.isoformat() if hasattr(appointment.upload_token_expires_at, 'isoformat') else str(appointment.upload_token_expires_at),
+        )
+    
+    # Normal status update for non-guest appointments or other status changes
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
     
     # Capture new status safely
-    new_status = str(updated.status.value if hasattr(updated.status, 'value') else updated.status).upper()
+    new_status = updated.status.value  # Already UPPERCASE
 
     # Debug log to help verify what's happening
     logger.info(f"Appointment {appointment_id} update: '{previous_status}' -> '{new_status}'")
     
-    # Send confirmation email if status changed to CONFIRMED
-    if previous_status not in ["CONFIRMED", "ACCEPTED"] and new_status in ["CONFIRMED", "ACCEPTED"]:
+    # Handle guest payment confirmation (VERIFICATION_PENDING → CONFIRMED)
+    if updated.guest_name and previous_status == "VERIFICATION_PENDING" and new_status == "CONFIRMED":
+        logger.info(f"Confirming payment for guest booking {appointment_id}")
+        
+        # Send confirmation email to guest
+        try:
+            await EmailService.send_appointment_confirmed(
+                recipient_email=updated.guest_email,
+                recipient_name=updated.guest_name,
+                coach_name=current_coach.user.name if current_coach.user else "Coach",
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                session_type=updated.session_type,
+                appointment_id=updated.id,
+            )
+            logger.info(f"Confirmation email sent to guest {updated.guest_email}")
+        except Exception as e:
+            logger.error(f"Failed to send confirmation email to guest: {str(e)}", exc_info=True)
+    
+    # Handle authenticated user confirmation (PENDING → CONFIRMED)
+    elif updated.user and previous_status not in ["CONFIRMED", "ACCEPTED"] and new_status in ["CONFIRMED", "ACCEPTED"]:
         user_email = updated.user.email if updated.user else None
         user_name = updated.user.name if updated.user else "User"
         
@@ -478,9 +557,10 @@ async def update_appointment(
         user_role=updated.user_role,
         scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
         scheduled_time=updated.scheduled_time,
-        status=updated.status,
+        status=updated.status.value,  # Use .value to get UPPERCASE string
         notes=updated.notes,
-        user_name=updated.user.name if updated.user else None,
+        # For guest appointments: use guest_name; for authenticated: use user.name
+        user_name=updated.guest_name if updated.guest_name else (updated.user.name if updated.user else None),
         session_type=updated.session_type,
         payment_screenshot_url=updated.payment_receipt_url,  # Return payment_receipt_url as payment_screenshot_url
         payment_receipt_url=updated.payment_receipt_url,
@@ -600,29 +680,46 @@ async def reject_appointment(
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
 
     # Send rejection email - use rejection_reason from DB if available, otherwise use provided reason
-    user_email = updated.user.email if updated.user else None
-    user_name = updated.user.name if updated.user else "User"
-    
-    # Use the saved rejection reason from DB (updated.rejection_reason) with fallback to the provided reason
     final_rejection_reason = updated.rejection_reason or rejection_reason
     
-    if not user_email:
-        logger.warning(f"Cannot send rejection email - User {user_name} (ID: {updated.user_id}) has no email address")
+    # Handle guest rejection
+    if updated.guest_name and updated.guest_email:
+        logger.info(f"Sending rejection email to guest: {updated.guest_email} for appointment {updated.id}")
+        try:
+            await EmailService.send_appointment_rejected(
+                recipient_email=updated.guest_email,
+                recipient_name=updated.guest_name,
+                coach_name=current_coach.user.name if current_coach.user else "Coach",
+                rejection_reason=final_rejection_reason,
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                appointment_id=updated.id,
+            )
+            logger.info(f"Rejection email sent successfully to guest {updated.guest_email}")
+        except Exception as e:
+            logger.error(f"Failed to send rejection email to guest: {str(e)}", exc_info=True)
+    # Handle authenticated user rejection
     else:
-        logger.info(f"Sending rejection email to: {user_email} (User: {user_name}) for appointment {updated.id}")
-        email_sent = await EmailService.send_appointment_rejected(
-            recipient_email=user_email,
-            recipient_name=user_name,
-            coach_name=current_coach.user.name if current_coach.user else "Coach",
-            rejection_reason=final_rejection_reason,
-            scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
-            scheduled_time=updated.scheduled_time,
-            appointment_id=updated.id,
-        )
-        if email_sent:
-            logger.info(f"Rejection email sent successfully to {user_email}")
+        user_email = updated.user.email if updated.user else None
+        user_name = updated.user.name if updated.user else "User"
+        
+        if not user_email:
+            logger.warning(f"Cannot send rejection email - User {user_name} (ID: {updated.user_id}) has no email address")
         else:
-            logger.warning(f"Failed to send rejection email to {user_email}")
+            logger.info(f"Sending rejection email to: {user_email} (User: {user_name}) for appointment {updated.id}")
+            email_sent = await EmailService.send_appointment_rejected(
+                recipient_email=user_email,
+                recipient_name=user_name,
+                coach_name=current_coach.user.name if current_coach.user else "Coach",
+                rejection_reason=final_rejection_reason,
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                appointment_id=updated.id,
+            )
+            if email_sent:
+                logger.info(f"Rejection email sent successfully to {user_email}")
+            else:
+                logger.warning(f"Failed to send rejection email to {user_email}")
 
     return AppointmentResponse(
         id=updated.id,
@@ -631,9 +728,10 @@ async def reject_appointment(
         user_role=updated.user_role,
         scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
         scheduled_time=updated.scheduled_time,
-        status=updated.status,
+        status=updated.status.value,  # Use .value to get UPPERCASE string
         notes=updated.notes,
-        user_name=updated.user.name if updated.user else None,
+        # For guest appointments: use guest_name; for authenticated: use user.name
+        user_name=updated.guest_name if updated.guest_name else (updated.user.name if updated.user else None),
         session_type=updated.session_type,
         payment_screenshot_url=updated.payment_receipt_url,
         payment_receipt_url=updated.payment_receipt_url,
@@ -642,6 +740,81 @@ async def reject_appointment(
         created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
         updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
     )
+
+
+# ============ GUEST BOOKING APPROVAL ============
+
+
+@router.post("/appointments/{appointment_id}/approve-guest-intent", response_model=dict)
+async def coach_approve_guest_intent(
+    appointment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """
+    Coach approves guest booking intent.
+    
+    Generates a 24-hour upload token and emails guest the payment upload link.
+    Status: GUEST_INTENT (unchanged - guest must upload payment first)
+    
+    Security:
+    - Verifies current user is the coach assigned to appointment
+    - Verifies appointment is in GUEST_INTENT status
+    - Generates UUID token (cryptographically secure)
+    - Token expires in 24 hours
+    """
+    from app.models.user_model import Appointment, AppointmentStatus
+    from datetime import datetime, timedelta
+    import uuid
+    
+    # Find appointment
+    appointment = await coach_crud.get_appointment_by_id(db, appointment_id)
+    
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found",
+        )
+    
+    if appointment.status != AppointmentStatus.GUEST_INTENT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Can only approve guest intents. Current status: {appointment.status}",
+        )
+    
+    if appointment.coach_id != current_coach.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to approve this appointment",
+        )
+    
+    # Generate secure upload token (UUID)
+    upload_token = str(uuid.uuid4())
+    appointment.upload_token = upload_token
+    appointment.upload_token_expires_at = datetime.utcnow() + timedelta(hours=24)
+    # Keep status as GUEST_INTENT - don't change it
+    
+    await db.commit()
+    
+    # Email guest with payment upload link
+    try:
+        upload_url = f"{settings.FRONTEND_URL}/guest-payment/{upload_token}"
+        await EmailService.send_payment_upload_link_to_guest(
+            guest_email=appointment.guest_email,
+            guest_name=appointment.guest_name,
+            upload_url=upload_url,
+            token_expires_in_hours=24,
+            coach_name=current_coach.user.name if current_coach.user else "Coach"
+        )
+    except Exception as err:
+        logger.warning(f"Failed to send upload link email: {str(err)}")
+    
+    return {
+        "message": "Guest intent approved. Payment upload link sent to guest.",
+        "appointment_id": appointment.id,
+        "upload_url": f"{settings.FRONTEND_URL}/guest-payment/{upload_token}",
+        "token_expires_in_hours": 24
+    }
 
 
 # ============ COACH SESSIONS ============

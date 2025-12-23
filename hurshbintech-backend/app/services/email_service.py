@@ -529,3 +529,590 @@ class EmailService:
                 f"Error: {str(e)} | Type: {type(e).__name__}"
             )
             return False
+
+    # ========== GUEST BOOKING EMAILS ==========
+
+    @staticmethod
+    async def send_guest_otp_email(
+        recipient_email: str,
+        otp_code: str,
+    ) -> bool:
+        """Send OTP to guest email for verification"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = "Your OTP for Hurshbintech Booking - Valid for 10 Minutes"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .otp-box {{
+                        background-color: #f3f4f6;
+                        border-left: 4px solid #41A67E;
+                        padding: 20px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                        text-align: center;
+                    }}
+                    .otp-code {{
+                        font-size: 32px;
+                        font-weight: bold;
+                        color: #41A67E;
+                        letter-spacing: 4px;
+                        font-family: 'Courier New', monospace;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    .warning {{
+                        background-color: #fff3cd;
+                        border: 1px solid #ffc107;
+                        padding: 15px;
+                        border-radius: 4px;
+                        margin: 20px 0;
+                        font-size: 14px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 24px;">Verify Your Email</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hi,</p>
+                        <p>Your OTP for booking with Hurshbintech is ready:</p>
+                        
+                        <div class="otp-box">
+                            <div class="otp-code">{otp_code}</div>
+                        </div>
+                        
+                        <div class="warning">
+                            ⏱️ <strong>This OTP is valid for 10 minutes only.</strong> If you don't use it within 10 minutes, you'll need to request a new one.
+                        </div>
+                        
+                        <p><strong>What's next?</strong></p>
+                        <ol>
+                            <li>Enter this OTP on the booking page</li>
+                            <li>Provide your details (name, phone, preferred date/time)</li>
+                            <li>Wait for coach approval</li>
+                            <li>Coach will send you a payment upload link</li>
+                        </ol>
+                        
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 30px;">
+                            If you didn't request this OTP, please ignore this email.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "sender": {
+                        "name": "Hurshbintech",
+                        "email": settings.SENDER_EMAIL,
+                    },
+                    "to": [{"email": recipient_email}],
+                    "subject": subject,
+                    "htmlContent": html_body,
+                }
+                
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.post(BREVO_API_URL, json=payload, headers=headers, timeout=timeout) as response:
+                    if response.status == 201:
+                        logger.info(f"✓ OTP email sent successfully to {recipient_email}")
+                        return True
+                    else:
+                        logger.error(f"✗ Brevo API error: {response.status}")
+                        return False
+        
+        except asyncio.TimeoutError:
+            logger.error(f"✗ Brevo API timeout while sending OTP email to {recipient_email}")
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send OTP email: {str(e)}")
+            return False
+
+    @staticmethod
+    async def send_guest_intent_notification_to_coach(
+        coach_email: str,
+        coach_name: str,
+        guest_name: str,
+        guest_email: str,
+        appointment_id: int,
+        scheduled_date,
+        scheduled_time: str,
+    ) -> bool:
+        """Send notification to coach about new guest booking intent"""
+        
+        if not settings.ENABLE_EMAIL or not coach_email:
+            logger.warning(f"Email sending disabled or no coach email")
+            return False
+
+        subject = f"New Guest Booking Request - {guest_name}"
+        
+        date_str = scheduled_date.isoformat() if hasattr(scheduled_date, 'isoformat') else str(scheduled_date)
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .details-box {{
+                        background-color: #f9f9f9;
+                        border-left: 4px solid #41A67E;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #41A67E;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 24px;">New Guest Booking Request</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hi {coach_name},</p>
+                        <p>You have a new booking request from a guest:</p>
+                        
+                        <div class="details-box">
+                            <p><strong>Guest Name:</strong> {guest_name}</p>
+                            <p><strong>Guest Email:</strong> {guest_email}</p>
+                            <p><strong>Requested Date:</strong> {date_str}</p>
+                            <p><strong>Requested Time:</strong> {scheduled_time}</p>
+                            <p><strong>Status:</strong> <span style="color: #f59e0b;">Awaiting Your Review</span></p>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Review the guest's request on your Hurshbintech dashboard</li>
+                            <li>Click <strong>"Approve"</strong> to send them a payment upload link</li>
+                            <li>Guest will upload payment screenshot</li>
+                            <li>Review and confirm the appointment</li>
+                        </ol>
+                        
+                        <a href="{settings.FRONTEND_URL}/coach/dashboard" class="btn">View on Dashboard</a>
+                        
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 30px;">
+                            This is an automated notification from Hurshbintech.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "sender": {
+                        "name": "Hurshbintech",
+                        "email": settings.SENDER_EMAIL,
+                    },
+                    "to": [{"email": coach_email}],
+                    "subject": subject,
+                    "htmlContent": html_body,
+                }
+                
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.post(BREVO_API_URL, json=payload, headers=headers, timeout=timeout) as response:
+                    if response.status == 201:
+                        logger.info(f"✓ Guest intent notification sent to {coach_email}")
+                        return True
+                    else:
+                        logger.error(f"✗ Brevo API error: {response.status}")
+                        return False
+        
+        except asyncio.TimeoutError:
+            logger.error(f"✗ Brevo API timeout sending guest intent notification")
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send guest intent notification: {str(e)}")
+            return False
+
+    @staticmethod
+    async def send_payment_upload_link_to_guest(
+        guest_email: str,
+        guest_name: str,
+        upload_url: str,
+        token_expires_in_hours: int = 24,
+        coach_name: str = "Your Coach",
+    ) -> bool:
+        """Send payment upload link to guest after coach approval"""
+        
+        if not settings.ENABLE_EMAIL or not guest_email:
+            logger.warning(f"Email sending disabled or no guest email")
+            return False
+
+        subject = "Payment Upload Link - Hurshbintech Booking Approved!"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #10b981;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .success-message {{
+                        background-color: #d1fae5;
+                        border-left: 4px solid #10b981;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #10b981;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .warning {{
+                        background-color: #fff3cd;
+                        border: 1px solid #ffc107;
+                        padding: 15px;
+                        border-radius: 4px;
+                        margin: 20px 0;
+                        font-size: 14px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 24px;">✓ Booking Approved!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hi {guest_name},</p>
+                        
+                        <div class="success-message">
+                            <p style="margin: 0;"><strong>Great news!</strong> {coach_name} has approved your booking request. Now you just need to upload your payment screenshot.</p>
+                        </div>
+                        
+                        <p><strong>Upload Your Payment Receipt:</strong></p>
+                        <p>Click the button below to upload your payment screenshot. This link is secure and unique to your booking.</p>
+                        
+                        <a href="{upload_url}" class="btn">Upload Payment</a>
+                        
+                        <div class="warning">
+                            ⏱️ <strong>This link expires in {token_expires_in_hours} hours.</strong> Please upload your payment screenshot before the link expires.
+                        </div>
+                        
+                        <p><strong>What to upload:</strong></p>
+                        <ul>
+                            <li>Screenshot of your payment confirmation</li>
+                            <li>Bank transfer receipt</li>
+                            <li>Payment gateway confirmation (UPI, card, etc.)</li>
+                        </ul>
+                        
+                        <p style="color: #6b7280; margin-top: 20px;">
+                            After you upload, {coach_name} will review your payment and confirm the final booking.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        <p><strong>Note:</strong> This is a secure link. Do not share it with others.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "sender": {
+                        "name": "Hurshbintech",
+                        "email": settings.SENDER_EMAIL,
+                    },
+                    "to": [{"email": guest_email}],
+                    "subject": subject,
+                    "htmlContent": html_body,
+                }
+                
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.post(BREVO_API_URL, json=payload, headers=headers, timeout=timeout) as response:
+                    if response.status == 201:
+                        logger.info(f"✓ Payment upload link sent to {guest_email}")
+                        return True
+                    else:
+                        logger.error(f"✗ Brevo API error: {response.status}")
+                        return False
+        
+        except asyncio.TimeoutError:
+            logger.error(f"✗ Brevo API timeout sending payment upload link")
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send payment upload link: {str(e)}")
+            return False
+
+    @staticmethod
+    async def send_guest_payment_uploaded_notification_to_coach(
+        coach_email: str,
+        coach_name: str,
+        guest_name: str,
+        appointment_id: int,
+    ) -> bool:
+        """Notify coach that guest has uploaded payment screenshot"""
+        
+        if not settings.ENABLE_EMAIL or not coach_email:
+            logger.warning(f"Email sending disabled or no coach email")
+            return False
+
+        subject = f"Payment Uploaded - {guest_name}'s Booking Ready for Review"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #3b82f6;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .info-box {{
+                        background-color: #eff6ff;
+                        border-left: 4px solid #3b82f6;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #3b82f6;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 24px;">Payment Screenshot Received</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hi {coach_name},</p>
+                        
+                        <div class="info-box">
+                            <p style="margin: 0;"><strong>{guest_name}</strong> has uploaded their payment screenshot and is awaiting your review.</p>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Review the payment receipt on your dashboard</li>
+                            <li>Verify the amount and transaction details</li>
+                            <li>Click <strong>"Confirm"</strong> to finalize the booking</li>
+                        </ol>
+                        
+                        <a href="{settings.FRONTEND_URL}/coach/dashboard" class="btn">Review Payment</a>
+                        
+                        <p style="color: #6b7280; margin-top: 20px;">
+                            Appointment ID: <strong>#{appointment_id}</strong>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "sender": {
+                        "name": "Hurshbintech",
+                        "email": settings.SENDER_EMAIL,
+                    },
+                    "to": [{"email": coach_email}],
+                    "subject": subject,
+                    "htmlContent": html_body,
+                }
+                
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.post(BREVO_API_URL, json=payload, headers=headers, timeout=timeout) as response:
+                    if response.status == 201:
+                        logger.info(f"✓ Payment uploaded notification sent to {coach_email}")
+                        return True
+                    else:
+                        logger.error(f"✗ Brevo API error: {response.status}")
+                        return False
+        
+        except asyncio.TimeoutError:
+            logger.error(f"✗ Brevo API timeout sending payment uploaded notification")
+            return False
+        except Exception as e:
+            logger.error(f"✗ Failed to send payment uploaded notification: {str(e)}")
+            return False
+

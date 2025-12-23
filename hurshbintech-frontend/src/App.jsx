@@ -60,6 +60,13 @@ import BookAppointment from './pages/common/BookAppointment';
 import BookAppointmentForm from './pages/common/BookAppointmentForm';
 import MyAppointments from './pages/common/MyAppointments';
 
+// Guest Booking Pages
+import GuestBookingStep1 from './pages/common/GuestBookingStep1';
+import GuestBookingStep2 from './pages/common/GuestBookingStep2';
+import GuestBookingStep3Pending from './pages/common/GuestBookingStep3Pending';
+import GuestPaymentUpload from './pages/common/GuestPaymentUpload';
+import GuestPaymentUploadSuccess from './pages/common/GuestPaymentUploadSuccess';
+
 
 
 // Components
@@ -442,7 +449,12 @@ function App() {
           }
         />
 
-
+        {/* Guest Booking Routes - Public, no authentication required */}
+        <Route path="/guest-booking" element={<GuestBookingStep1 />} />
+        <Route path="/guest-booking/details" element={<GuestBookingStep2 />} />
+        <Route path="/guest-booking/pending" element={<GuestBookingStep3Pending />} />
+        <Route path="/guest-payment/:uploadToken" element={<GuestPaymentUpload />} />
+        <Route path="/guest-payment/success" element={<GuestPaymentUploadSuccess />} />
 
         {/* 404 - Redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />

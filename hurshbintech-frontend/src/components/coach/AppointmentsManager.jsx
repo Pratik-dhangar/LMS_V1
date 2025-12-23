@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import coachService from '../../api/services/coachService';
-import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle } from 'lucide-react';
+import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle, Mail, Phone } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/Dashboards.css';
@@ -264,6 +264,8 @@ const AppointmentsManager = () => {
               <option value="PENDING">Pending</option>
               <option value="CONFIRMED">Confirmed</option>          
               <option value="REJECTED">Rejected</option>
+              <option value="GUEST_INTENT">Guest Intent</option>
+              <option value="VERIFICATION_PENDING">Payment Review</option>
             </select>
           </div>
 
@@ -312,6 +314,15 @@ const AppointmentsManager = () => {
             <div key={apt.id} className="session-card">
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
+                  {/* Guest Badge */}
+                  {apt.guest_name && (
+                    <div className="mb-2">
+                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-semibold">
+                        GUEST BOOKING
+                      </span>
+                    </div>
+                  )}
+
                   {/* Date */}
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="icon-sm text-blue-600" />
@@ -334,8 +345,8 @@ const AppointmentsManager = () => {
                   {/* User Name */}
                   <div className="flex items-center gap-2 mb-3">
                     <User className="icon-sm text-green-600" />
-                    <span className="text-gray-700 font-medium">{apt.user_name || 'Unknown User'}</span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">{apt.user_role}</span>
+                    <span className="text-gray-700 font-medium">{apt.guest_name || apt.user_name || 'Unknown User'}</span>
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">{apt.user_role || (apt.guest_name ? 'Guest' : '')}</span>
                   </div>
                   
                   {/* Status Badge */}
@@ -373,14 +384,49 @@ const AppointmentsManager = () => {
 
             {/* Modal Body */}
             <div className="modal-body space-y-4">
+              {/* Guest Badge */}
+              {selectedAppointment.guest_name && (
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded">
+                  <p className="text-sm font-semibold text-orange-900">Guest Booking</p>
+                </div>
+              )}
+
               {/* Client Name */}
               <div className="detail-row">
                 <label className="detail-label">
                   <User className="icon-sm" />
-                  Client Name
+                  {selectedAppointment.guest_name ? 'Guest Name' : 'Client Name'}
                 </label>
-                <p className="detail-value">{selectedAppointment.user_name || 'Unknown User'}</p>
+                <p className="detail-value">{selectedAppointment.guest_name || selectedAppointment.user_name || 'Unknown User'}</p>
               </div>
+
+              {/* Guest Contact Info */}
+              {selectedAppointment.guest_name && (
+                <>
+                  <div className="detail-row">
+                    <label className="detail-label">
+                      <Mail className="icon-sm" />
+                      Guest Email
+                    </label>
+                    <p className="detail-value">
+                      <a href={`mailto:${selectedAppointment.guest_email}`} className="text-blue-600 hover:underline">
+                        {selectedAppointment.guest_email}
+                      </a>
+                    </p>
+                  </div>
+                  <div className="detail-row">
+                    <label className="detail-label">
+                      <Phone className="icon-sm" />
+                      Guest Phone
+                    </label>
+                    <p className="detail-value">
+                      <a href={`tel:${selectedAppointment.guest_phone}`} className="text-blue-600 hover:underline">
+                        {selectedAppointment.guest_phone}
+                      </a>
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* Date */}
               <div className="detail-row">
@@ -434,6 +480,32 @@ const AppointmentsManager = () => {
                 </div>
               )}
 
+              {/* Payment Receipt - Guest Booking */}
+              {selectedAppointment.payment_receipt_url && selectedAppointment.guest_name && (
+                <div className="detail-row">
+                  <label className="detail-label">
+                    <FileText className="icon-sm" />
+                    Payment Receipt
+                  </label>
+                  <div className="mt-2">
+                    <a
+                      href={getFileUrl(selectedAppointment.payment_receipt_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Payment Receipt
+                    </a>
+                  </div>
+                  {selectedAppointment.status === 'VERIFICATION_PENDING' && (
+                    <div className="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-500 rounded text-sm text-yellow-900">
+                      Review the payment receipt and confirm to complete the booking.
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Notes */}
               {selectedAppointment.notes && (
                 <div className="detail-row">
@@ -455,7 +527,7 @@ const AppointmentsManager = () => {
 
             {/* Modal Footer */}
             <div className="modal-footer">
-              {(selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending') && (
+              {(selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
                 <>
                   <button 
                     onClick={handleOpenRejectModal}
@@ -471,11 +543,11 @@ const AppointmentsManager = () => {
                     disabled={updating}
                   >
                     <Check className="w-4 h-4" />
-                    {updating ? 'Updating...' : 'Accept'}
+                    {updating ? 'Updating...' : selectedAppointment.status === 'GUEST_INTENT' ? 'Send Payment Link' : selectedAppointment.status === 'VERIFICATION_PENDING' ? 'Confirm Payment' : 'Accept'}
                   </button>
                 </>
               )}
-              {selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && (
+              {selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && selectedAppointment.status !== 'GUEST_INTENT' && selectedAppointment.status !== 'VERIFICATION_PENDING' && (
                 <button onClick={closeModal} className="btn-secondary">
                   Close
                 </button>
