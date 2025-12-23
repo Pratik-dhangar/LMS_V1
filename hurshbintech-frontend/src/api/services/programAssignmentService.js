@@ -73,6 +73,12 @@ const programAssignmentService = {
 
   // ============= LEARNER METHODS =============
 
+  // Get my learning contents
+  getMyLearningContents: async () => {
+    const response = await api.get('/program-assignments/learner/my-learning-contents');
+    return response.data;
+  },
+
   // Get my assignments
   getMyAssignments: async (status = null) => {
     const params = status ? `?status=${status}` : '';

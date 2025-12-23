@@ -1117,46 +1117,72 @@ const LearnerSession = () => {
           </div>
           {showKeyboard && (
             <div
-              className="bg-gradient-to-b from-sky-100 via-blue-100 to-cyan-100 border-4 border-sky-300 rounded-3xl p-4 sm:p-6 shadow-xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-5"
+              className="rounded-3xl p-6 sm:p-8 shadow-2xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-6"
               style={{
                 touchAction: 'none',
-                boxShadow: '0 10px 30px rgba(14, 165, 233, 0.15)'
+                background: 'linear-gradient(135deg, #3d3531 0%, #4a4238 100%)',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
               }}
               onMouseDown={handleKeyboardMouseDown}
               onTouchStart={handleKeyboardMouseDown}
             >
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="text-3xl sm:text-4xl">🎹</span>
-                  <h4 className="m-0 text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 text-lg sm:text-xl font-bold cursor-move">
+              <div className="flex justify-between items-center mb-6 sm:mb-7">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <span className="text-4xl sm:text-5xl drop-shadow-lg">⌨️</span>
+                  <h4 className="m-0 text-amber-100 text-xl sm:text-2xl font-bold tracking-wider cursor-move" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
                     Magic Keyboard
                   </h4>
                 </div>
               </div>
-              <div className="mb-4 sm:mb-5 flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch">
-                <div className="flex-1 bg-white border-3 border-sky-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
-                  <p className="text-sm sm:text-base text-gray-700 font-medium whitespace-pre-wrap break-words min-h-[44px] flex items-center">
-                    {keyboardText || <span className="text-gray-400 italic">✨ Start typing...</span>}
+              <div className="mb-6 sm:mb-7 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch">
+                <div
+                  className="flex-1 rounded-2xl px-5 sm:px-6 py-3 sm:py-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
+                    boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <p className="text-sm sm:text-base text-amber-50 font-medium whitespace-pre-wrap break-words min-h-[48px] flex items-center">
+                    {keyboardText || <span className="text-amber-200 italic opacity-60">✨ Start typing...</span>}
                   </p>
                 </div>
                 <button
                   onClick={handleSendText}
-                  className="bg-gradient-to-br from-sky-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-2xl font-bold text-sm sm:text-base transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 whitespace-nowrap"
+                  className="text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95 whitespace-nowrap"
+                  style={{
+                    background: 'linear-gradient(135deg, #A8A8D8 0%, #9090C8 100%)',
+                    boxShadow: '0 8px 25px rgba(168, 168, 216, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)'
+                  }}
                 >
                   ✨ Send
                 </button>
               </div>
-              <div className="bg-white bg-opacity-80 rounded-2xl p-3 sm:p-5 shadow-md overflow-x-auto">
-                <div className="grid gap-2 sm:gap-3">
+              <div
+                className="rounded-2xl p-5 sm:p-7 shadow-xl overflow-x-auto"
+                style={{
+                  background: 'linear-gradient(135deg, #4a4238 0%, #3d3531 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <div className="grid gap-3 sm:gap-3">
                   {/* Number Row */}
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                  <div className="grid grid-cols-12 gap-2.5">
                     {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='].map(char => {
                       const shiftMap = { '1': '!', '2': '@', '3': '#', '4': '$', '5': '%', '6': '^', '7': '&', '8': '*', '9': '(', '0': ')', '-': '_', '=': '+' };
                       const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
                       return (
                         <button
                           key={char}
-                          className="keyboard-key bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                          style={{
+                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(0, 0, 0, 0.15)'
+                          }}
+                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                           onClick={() => handleKeyboardKeyPress(char)}
                           onTouchEnd={(e) => {
                             e.preventDefault();
@@ -1170,11 +1196,18 @@ const LearnerSession = () => {
                   </div>
 
                   {/* Q Row */}
-                  <div className="grid grid-cols-10 md:grid-cols-10 gap-1 sm:gap-2">
+                  <div className="grid grid-cols-10 md:grid-cols-10 gap-2.5">
                     {['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1187,11 +1220,18 @@ const LearnerSession = () => {
                   </div>
 
                   {/* A Row */}
-                  <div className="grid grid-cols-9 md:grid-cols-9 gap-1 sm:gap-2 md:ml-3">
+                  <div className="grid grid-cols-9 md:grid-cols-9 gap-2.5 md:ml-6">
                     {['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map(letter => (
                       <button
                         key={letter}
-                        className="keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1204,10 +1244,15 @@ const LearnerSession = () => {
                   </div>
 
                   {/* Z Row and Special Chars */}
-                  <div className="flex gap-1 sm:gap-2">
+                  <div className="flex gap-2.5">
                     <button
-                      className={`flex-1 keyboard-key rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center ${isShiftActive ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900' : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-100 hover:from-gray-800 hover:to-gray-900'
-                        }`}
+                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: isShiftActive ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                        boxShadow: isShiftActive ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: isShiftActive ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
+                        color: isShiftActive ? 'white' : '#3a3a3a'
+                      }}
                       onClick={() => handleKeyboardKeyPress('SHIFT')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1219,7 +1264,14 @@ const LearnerSession = () => {
                     {['z', 'x', 'c', 'v', 'b', 'n', 'm'].map(letter => (
                       <button
                         key={letter}
-                        className="flex-1 keyboard-key bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-gray-100 font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                        className="flex-1 keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                         onClick={() => handleKeyboardKeyPress(letter)}
                         onTouchEnd={(e) => {
                           e.preventDefault();
@@ -1230,7 +1282,14 @@ const LearnerSession = () => {
                       </button>
                     ))}
                     <button
-                      className="flex-1 keyboard-key bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #D8A0A0 0%, #C88080 100%)',
+                        boxShadow: '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(216, 160, 160, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                       onClick={() => handleKeyboardKeyPress('BACKSPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1242,10 +1301,15 @@ const LearnerSession = () => {
                   </div>
 
                   {/* Symbol and Control Row */}
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                  <div className="grid grid-cols-12 gap-2.5">
                     <button
-                      className={`col-span-2 keyboard-key rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center ${isCapsLock ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900' : 'bg-gradient-to-br from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800'
-                        }`}
+                      className="col-span-2 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: isCapsLock ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                        boxShadow: isCapsLock ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: isCapsLock ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
+                        color: isCapsLock ? 'white' : '#3a3a3a'
+                      }}
                       onClick={() => handleKeyboardKeyPress('CAPS')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1260,7 +1324,14 @@ const LearnerSession = () => {
                       return (
                         <button
                           key={char}
-                          className="keyboard-key bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded py-2 sm:py-3 transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                          style={{
+                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(0, 0, 0, 0.15)'
+                          }}
+                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                           onClick={() => handleKeyboardKeyPress(char)}
                           onTouchEnd={(e) => {
                             e.preventDefault();
@@ -1273,10 +1344,17 @@ const LearnerSession = () => {
                     })}
                   </div>
 
-                  {/* Space and Emoji Row */}
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2">
+                  {/* Space and Control Row */}
+                  <div className="grid grid-cols-12 gap-2.5">
                     <button
-                      className="col-span-9 keyboard-key bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-2 sm:py-3 rounded transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                      className="col-span-9 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #A8C8E8 0%, #98B8D8 100%)',
+                        boxShadow: '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(168, 200, 232, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                       onClick={() => handleKeyboardKeyPress('SPACE')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1286,7 +1364,14 @@ const LearnerSession = () => {
                       🌟 SPACE 🌟
                     </button>
                     <button
-                      className="col-span-3 keyboard-key bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 sm:py-3 rounded transition-all duration-150 shadow-md hover:shadow-lg active:scale-90 text-xs sm:text-sm flex items-center justify-center"
+                      className="col-span-3 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
+                      style={{
+                        background: 'linear-gradient(135deg, #B0D8A8 0%, #A0C898 100%)',
+                        boxShadow: '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(176, 216, 168, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
+                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
                       onClick={() => handleKeyboardKeyPress('ENTER')}
                       onTouchEnd={(e) => {
                         e.preventDefault();
@@ -1298,11 +1383,30 @@ const LearnerSession = () => {
                   </div>
 
                   {/* Emoji Row */}
-                  <div className="grid grid-cols-12 gap-1 sm:gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-lg p-2 sm:p-3">
+                  <div
+                    className="grid grid-cols-12 gap-2.5 rounded-2xl p-4 sm:p-5"
+                    style={{
+                      background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
                     {['😀', '😂', '😍', '😎', '👍', '❤️', '🎉', '🌟', '✨', '💯', '🔥', '⭐'].map(emoji => (
                       <button
                         key={emoji}
-                        className="keyboard-key bg-white hover:bg-gradient-to-br hover:from-yellow-200 hover:to-pink-200 border-2 border-pink-300 rounded py-2 sm:py-3 transition-all duration-150 shadow-sm hover:shadow-md active:scale-90 text-lg sm:text-xl flex items-center justify-center"
+                        className="keyboard-key rounded-lg py-3 sm:py-4 transition-all duration-150 text-lg sm:text-2xl flex items-center justify-center active:scale-95"
+                        style={{
+                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(0, 0, 0, 0.15)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #E8A89A 0%, #D89080 100%)';
+                          e.target.style.boxShadow = '0 6px 16px rgba(232, 168, 154, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)';
+                          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
+                        }}
                         onClick={() => handleKeyboardKeyPress(emoji)}
                         onTouchEnd={(e) => {
                           e.preventDefault();

@@ -56,6 +56,7 @@ class ProgramAssignmentCreate(BaseModel):
     end_date: date
     duration_days: Optional[int] = None
     head_notes: Optional[str] = None
+    extra_content_ids: Optional[List[int]] = Field(default=None, description="Additional learning content IDs to assign")
 
 
 class ProgramAssignmentUpdate(BaseModel):

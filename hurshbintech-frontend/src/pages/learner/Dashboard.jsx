@@ -18,6 +18,7 @@ const LearnerDashboard = () => {
 
   const [sessions, setSessions] = useState([]);
   const [learningPrograms, setLearningPrograms] = useState([]);
+  const [learningContents, setLearningContents] = useState([]); // All assigned learning contents
   const [programContents, setProgramContents] = useState({}); // { programId: [contents] }
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
@@ -31,6 +32,7 @@ const LearnerDashboard = () => {
   useEffect(() => {
     fetchSessions();
     fetchAssignedPrograms();
+    fetchAllLearningContents();
 
     // Auto-refresh sessions every 30 seconds
     const refreshInterval = setInterval(() => {
@@ -74,531 +76,495 @@ const LearnerDashboard = () => {
       setLearningPrograms([]); // Set to empty array on error
     } finally {
       setLoadingPrograms(false);
-    }
-  };
 
-  const fetchProgramContents = async () => {
-    if (learningPrograms.length === 0) return;
-    setLoadingContents(true);
-    try {
-      const contentsMap = {};
 
-      // Fetch contents for each program
-      for (const program of learningPrograms) {
+      const fetchAllLearningContents = async () => {
         try {
-          const contents = await programAssignmentService.getProgramContents(program.id);
-          contentsMap[program.id] = Array.isArray(contents) ? contents : [];
+          setLoadingContents(true);
+          const contents = await programAssignmentService.getMyLearningContents();
+          console.log("Fetched all learning contents:", contents); // Debug log
+          setLearningContents(Array.isArray(contents) ? contents : []);
         } catch (error) {
-          console.error(`Error fetching contents for program ${program.id}:`, error);
-          contentsMap[program.id] = [];
+          console.error("Error fetching learning contents:", error);
+          setLearningContents([]);
+        } finally {
+          setLoadingContents(false);
         }
-      }
+      };
 
-      setProgramContents(contentsMap);
-    } catch (error) {
-      console.error("Error fetching program contents:", error);
-      toast.error("Failed to load learning contents");
-    } finally {
-      setLoadingContents(false);
-    }
-  };
+      const handleJoinSession = (sessionId) => {
+        navigate(`/learner/session/${sessionId}`);
+      };
 
-  // Fetch contents when programs are loaded
-  useEffect(() => {
-    if (learningPrograms.length > 0) {
-      fetchProgramContents();
-    }
-  }, [learningPrograms]);
+      const handleViewContent = (content) => {
+        setSelectedContent(content);
+        setShowContentModal(true);
+        setContentLoading(true);
 
-  const handleJoinSession = (sessionId) => {
-    navigate(`/learner/session/${sessionId}`);
-  };
+        // Set a timeout to stop loading after 3 seconds in case content fails to load
+        const timeout = setTimeout(() => {
+          setContentLoading(false);
+        }, 3000);
 
-  const handleViewContent = (content) => {
-    setSelectedContent(content);
-    setShowContentModal(true);
-    setContentLoading(true);
+        setLoadingTimeout(timeout);
+      };
 
-    // Set a timeout to stop loading after 3 seconds in case content fails to load
-    const timeout = setTimeout(() => {
-      setContentLoading(false);
-    }, 3000);
+      const handleCloseModal = () => {
+        setShowContentModal(false);
+        setSelectedContent(null);
+        setContentLoading(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          setLoadingTimeout(null);
+        }
+      };
 
-    setLoadingTimeout(timeout);
-  };
+      const renderContentViewer = () => {
+        if (!selectedContent) return null;
 
-  const handleCloseModal = () => {
-    setShowContentModal(false);
-    setSelectedContent(null);
-    setContentLoading(false);
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-      setLoadingTimeout(null);
-    }
-  };
+        const { content_type, file_url, title } = selectedContent;
+        const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
 
-  const renderContentViewer = () => {
-    if (!selectedContent) return null;
+        const handleLoad = () => {
+          setContentLoading(false);
+          if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+            setLoadingTimeout(null);
+          }
+        };
+        const handleError = () => {
+          setContentLoading(false);
+          if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+            setLoadingTimeout(null);
+          }
+          toast.error("Failed to load content");
+        };
 
-    const { content_type, file_url, title } = selectedContent;
-    const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
-
-    const handleLoad = () => {
-      setContentLoading(false);
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-        setLoadingTimeout(null);
-      }
-    };
-    const handleError = () => {
-      setContentLoading(false);
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-        setLoadingTimeout(null);
-      }
-      toast.error("Failed to load content");
-    };
-
-    switch (content_type?.toLowerCase()) {
-      case 'image':
-        return (
-          <div className="flex justify-center">
-            <img
-              src={fullUrl}
-              alt={title}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
-              onLoad={handleLoad}
-              onError={handleError}
-            />
-          </div>
-        );
-
-      case 'video':
-        return (
-          <div className="flex justify-center">
-            <video
-              src={fullUrl}
-              controls
-              className="max-w-full max-h-[70vh] rounded-lg shadow-lg"
-              onLoadedData={handleLoad}
-              onError={handleError}
-            >
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        );
-
-      case 'audio':
-        return (
-          <div className="flex justify-center">
-            <audio
-              src={fullUrl}
-              controls
-              className="w-full max-w-md"
-              onLoadedData={handleLoad}
-              onError={handleError}
-            >
-              Your browser does not support the audio tag.
-            </audio>
-          </div>
-        );
-
-      case 'pdf':
-      case 'document':
-        return (
-          <div className="flex justify-center">
-            <iframe
-              src={fullUrl}
-              className="w-full h-[70vh] border rounded-lg shadow-lg"
-              title={title}
-              onLoad={handleLoad}
-              onError={handleError}
-            />
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-4">📄</div>
-            <p className="text-gray-600 mb-4">This content type is not supported for inline viewing.</p>
-            <a
-              href={fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Open in New Tab
-            </a>
-          </div>
-        );
-    }
-  };
-
-  const formatShortDate = (dateStr) => {
-    if (!dateStr) return 'TBD';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
-
-      <main className="flex-1 p-6 md:p-4 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          {/* Page Header */}
-          <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-blue-600 pb-2 mb-6">
-            HurshBin Learner Dashboard
-          </h1>
-
-          {/* Welcome Banner */}
-          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-blue-400 to-cyan-400 shadow-md">
-            <h2 className="text-2xl font-semibold mb-2">
-              Welcome, {user?.name || "Learner"}!
-            </h2>
-            <p className="text-white/90">Your personalized learning journey starts here</p>
-
-          </div>
-
-          {/* Quick Access Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {[
-              {
-                icon: "📚",
-                title: "Home Program (HP)",
-                desc: "View IIP and Home Programs",
-                onClick: () => navigate("/learner/learning-programs"),
-              },
-              {
-                icon: "📖",
-                title: "Learning Content",
-                desc: "Access assigned learning content",
-                onClick: () => {
-                  // Scroll to learning content section
-                  const contentSection = document.getElementById('learning-content-section');
-                  if (contentSection) {
-                    contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                },
-              },
-              {
-                icon: "🛒",
-                title: "Learning Material",
-                desc: "Recommended resources to buy",
-                onClick: () => navigate("/learner/learning-material"), // Add path if available
-              },
-              {
-                icon: "🎓",
-                title: "Enter Learning Session",
-                desc: "Join your therapy session",
-                onClick: () => navigate("/learner/session"), // If you already have this route
-              },
-              {
-                icon: "💬",
-                title: "Communication",
-                desc: "Message your team",
-                onClick: () => navigate("/learner/communication"), // optional
-              },
-              {
-                icon: "📅",
-                title: "Book Appointment",
-                desc: "Schedule with professionals",
-                onClick: () => navigate("/book-appointment"), // New booking page
-              },
-            ].map((card, index) => (
-              <div
-                key={index}
-                onClick={card.onClick}
-                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-green-400 hover:border"
-              >
-                <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
-                  {card.icon}
-                </div>
-                <div className="text-lg font-semibold text-gray-800 mb-1">{card.title}</div>
-                <div className="text-sm text-gray-500">{card.desc}</div>
+        switch (content_type?.toLowerCase()) {
+          case 'image':
+            return (
+              <div className="flex justify-center">
+                <img
+                  src={fullUrl}
+                  alt={title}
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                  onLoad={handleLoad}
+                  onError={handleError}
+                />
               </div>
-            ))}
-          </div>
+            );
 
-
-          {/* Upcoming Sessions */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              My Sessions
-            </h2>
-
-            {loadingSessions ? (
-              <div className="text-center py-6 text-gray-500">Loading sessions...</div>
-            ) : sessions.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
-            ) : (
-              <div className="space-y-3">
-                {sessions
-                  .sort((a, b) => {
-                    // Sort by status priority: active first, then scheduled, then others
-                    const statusPriority = { active: 0, scheduled: 1, ended: 2 };
-                    const aPriority = statusPriority[a.status] ?? 3;
-                    const bPriority = statusPriority[b.status] ?? 3;
-                    if (aPriority !== bPriority) return aPriority - bPriority;
-                    // Within same status, sort by date (newest first)
-                    return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
-                  })
-                  .map((session) => {
-                    const isActive = session.status === 'active';
-                    const isScheduled = session.status === 'scheduled';
-                    const isEnded = session.status === 'ended';
-                    const statusColor = isActive ? 'border-green-500 bg-green-50' :
-                      isScheduled ? 'border-blue-500 bg-blue-50' :
-                        'border-gray-300 bg-gray-50';
-                    const statusBadge = isActive ? 'bg-green-100 text-green-800' :
-                      isScheduled ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800';
-
-                    return (
-                      <div
-                        key={session.session_id || session.id}
-                        className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-800 truncate">
-                              {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
-                            </h3>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
-                              {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                            <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
-                            {session.scheduled_date && (
-                              <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            )}
-                            <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
-                            {session.duration && <span>⏱️ {session.duration} min</span>}
-                          </div>
-                          {session.program && (
-                            <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
-                          )}
-                        </div>
-
-                        <div className="ml-4 flex-shrink-0">
-                          {(isActive || isScheduled) && (
-                            <button
-                              onClick={() => handleJoinSession(session.session_id)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
-                            >
-                              {isActive ? 'Resume' : 'Join'} Session
-                            </button>
-                          )}
-                          {isEnded && (
-                            <span className="text-gray-500 text-sm">Completed</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+          case 'video':
+            return (
+              <div className="flex justify-center">
+                <video
+                  src={fullUrl}
+                  controls
+                  className="max-w-full max-h-[70vh] rounded-lg shadow-lg"
+                  onLoadedData={handleLoad}
+                  onError={handleError}
+                >
+                  Your browser does not support the video tag.
+                </video>
               </div>
-            )}
-          </div>
+            );
 
-          {/* ✅ Assigned Home Programs */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Your Home Programs (HP)
-            </h2>
+          case 'audio':
+            return (
+              <div className="flex justify-center">
+                <audio
+                  src={fullUrl}
+                  controls
+                  className="w-full max-w-md"
+                  onLoadedData={handleLoad}
+                  onError={handleError}
+                >
+                  Your browser does not support the audio tag.
+                </audio>
+              </div>
+            );
 
-            {loadingPrograms ? (
-              <p className="text-gray-500">Loading assigned programs...</p>
-            ) : learningPrograms.length === 0 ? (
-              <p className="text-gray-500">No home programs assigned yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {learningPrograms.map((prog) => {
-                  // Calculate completion percentage
-                  const completionPercentage = prog.completion_percentage || 0;
+          case 'pdf':
+          case 'document':
+            return (
+              <div className="flex justify-center">
+                <iframe
+                  src={fullUrl}
+                  className="w-full h-[70vh] border rounded-lg shadow-lg"
+                  title={title}
+                  onLoad={handleLoad}
+                  onError={handleError}
+                />
+              </div>
+            );
 
-                  return (
-                    <div
-                      key={prog.id}
-                      className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800 mb-1">
-                            {prog.program_name || prog.name || 'Unnamed Program'}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <button
-                          className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                          onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
-                        >
-                          Start
-                        </button>
-                      </div>
+          default:
+            return (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">📄</div>
+                <p className="text-gray-600 mb-4">This content type is not supported for inline viewing.</p>
+                <a
+                  href={fullUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Open in New Tab
+                </a>
+              </div>
+            );
+        }
+      };
 
-                      {/* Progress Bar */}
-                      <div className="mt-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">Progress</span>
-                          <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                            style={{ width: `${completionPercentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
+      const formatShortDate = (dateStr) => {
+        if (!dateStr) return 'TBD';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <Navbar />
+
+          <main className="flex-1 p-6 md:p-4 bg-gray-50">
+            <div className="max-w-7xl mx-auto">
+              {/* Page Header */}
+              <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-blue-600 pb-2 mb-6">
+                HurshBin Learner Dashboard
+              </h1>
+
+              {/* Welcome Banner */}
+              <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-blue-400 to-cyan-400 shadow-md">
+                <h2 className="text-2xl font-semibold mb-2">
+                  Welcome, {user?.name || "Learner"}!
+                </h2>
+                <p className="text-white/90">Your personalized learning journey starts here</p>
+
+              </div>
+
+              {/* Quick Access Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                {[
+                  {
+                    icon: "📚",
+                    title: "Home Program (HP)",
+                    desc: "View IIP and Home Programs",
+                    onClick: () => navigate("/learner/learning-programs"),
+                  },
+                  {
+                    icon: "📖",
+                    title: "Learning Content",
+                    desc: "Access assigned learning content",
+                    onClick: () => {
+                      // Scroll to learning content section
+                      const contentSection = document.getElementById('learning-content-section');
+                      if (contentSection) {
+                        contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    },
+                  },
+                  {
+                    icon: "🛒",
+                    title: "Learning Material",
+                    desc: "Recommended resources to buy",
+                    onClick: () => navigate("/learner/learning-material"), // Add path if available
+                  },
+                  {
+                    icon: "🎓",
+                    title: "Enter Learning Session",
+                    desc: "Join your therapy session",
+                    onClick: () => navigate("/learner/session"), // If you already have this route
+                  },
+                  {
+                    icon: "💬",
+                    title: "Communication",
+                    desc: "Message your team",
+                    onClick: () => navigate("/learner/communication"), // optional
+                  },
+                  {
+                    icon: "📅",
+                    title: "Book Appointment",
+                    desc: "Schedule with professionals",
+                    onClick: () => navigate("/book-appointment"), // New booking page
+                  },
+                ].map((card, index) => (
+                  <div
+                    key={index}
+                    onClick={card.onClick}
+                    className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-green-400 hover:border"
+                  >
+                    <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
+                      {card.icon}
                     </div>
-                  );
-                })}
+                    <div className="text-lg font-semibold text-gray-800 mb-1">{card.title}</div>
+                    <div className="text-sm text-gray-500">{card.desc}</div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
 
-          {/* ✅ Auto-Assigned Learning Contents by Program */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Learning Content
-            </h2>
 
-            {loadingContents ? (
-              <p className="text-gray-500">Loading learning contents...</p>
-            ) : Object.keys(programContents).length === 0 || Object.values(programContents).every(arr => arr.length === 0) ? (
-              <p className="text-gray-500">No learning content available yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {learningPrograms.map((program) => {
-                  const contents = programContents[program.id] || [];
-                  if (contents.length === 0) return null;
+              {/* Upcoming Sessions */}
+              <div className="mt-10 bg-white rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                  My Sessions
+                </h2>
 
-                  return (
-                    <div
-                      key={program.id}
-                      className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">
-                            {program.program_name || program.name || 'Unnamed Program'}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {contents.length} content item{contents.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            // Scroll to show all contents or open a view
-                            const contentArea = document.getElementById(`program-contents-${program.id}`);
-                            if (contentArea) {
-                              contentArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }
-                          }}
-                          className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                        >
-                          View Contents
-                        </button>
-                      </div>
+                {loadingSessions ? (
+                  <div className="text-center py-6 text-gray-500">Loading sessions...</div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {sessions
+                      .sort((a, b) => {
+                        // Sort by status priority: active first, then scheduled, then others
+                        const statusPriority = { active: 0, scheduled: 1, ended: 2 };
+                        const aPriority = statusPriority[a.status] ?? 3;
+                        const bPriority = statusPriority[b.status] ?? 3;
+                        if (aPriority !== bPriority) return aPriority - bPriority;
+                        // Within same status, sort by date (newest first)
+                        return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                      })
+                      .map((session) => {
+                        const isActive = session.status === 'active';
+                        const isScheduled = session.status === 'scheduled';
+                        const isEnded = session.status === 'ended';
+                        const statusColor = isActive ? 'border-green-500 bg-green-50' :
+                          isScheduled ? 'border-blue-500 bg-blue-50' :
+                            'border-gray-300 bg-gray-50';
+                        const statusBadge = isActive ? 'bg-green-100 text-green-800' :
+                          isScheduled ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800';
 
-                      {/* Contents List */}
-                      <div id={`program-contents-${program.id}`} className="mt-4 space-y-2">
-                        {contents.map((content, idx) => (
+                        return (
                           <div
-                            key={`${program.id}-${content.id}-${idx}`}
-                            className="flex items-center justify-between p-3 bg-white rounded border border-gray-200 hover:border-blue-400 transition"
+                            key={session.session_id || session.id}
+                            className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-800 truncate">
-                                {content.title || 'Untitled Content'}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {content.content_type || 'Unknown Type'}
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="font-semibold text-gray-800 truncate">
+                                  {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
+                                </h3>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
+                                  {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                                <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
+                                {session.scheduled_date && (
+                                  <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                )}
+                                <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
+                                {session.duration && <span>⏱️ {session.duration} min</span>}
+                              </div>
+                              {session.program && (
+                                <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
+                              )}
+                            </div>
+
+                            <div className="ml-4 flex-shrink-0">
+                              {(isActive || isScheduled) && (
+                                <button
+                                  onClick={() => handleJoinSession(session.session_id)}
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                                >
+                                  {isActive ? 'Resume' : 'Join'} Session
+                                </button>
+                              )}
+                              {isEnded && (
+                                <span className="text-gray-500 text-sm">Completed</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* ✅ Assigned Home Programs */}
+              <div className="mt-10 bg-white rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                  Your Home Programs (HP)
+                </h2>
+
+                {loadingPrograms ? (
+                  <p className="text-gray-500">Loading assigned programs...</p>
+                ) : learningPrograms.length === 0 ? (
+                  <p className="text-gray-500">No home programs assigned yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {learningPrograms.map((prog) => {
+                      // Calculate completion percentage
+                      const completionPercentage = prog.completion_percentage || 0;
+
+                      return (
+                        <div
+                          key={prog.id}
+                          className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-800 mb-1">
+                                {prog.program_name || prog.name || 'Unnamed Program'}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
                               </p>
                             </div>
                             <button
-                              onClick={() => handleViewContent(content)}
-                              className="ml-3 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                              className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                              onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
                             >
-                              View
+                              Start
                             </button>
                           </div>
-                        ))}
+
+                          {/* Progress Bar */}
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs text-gray-600">Progress</span>
+                              <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div
+                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                                style={{ width: `${completionPercentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ✅ Learning Contents Assigned by Head */}
+              <div id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                  Learning Content
+                </h2>
+
+                {loadingContents ? (
+                  <p className="text-gray-500">Loading learning contents...</p>
+                ) : learningContents.length === 0 ? (
+                  <p className="text-gray-500">No learning content assigned yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {learningContents.map((content, idx) => (
+                      <div
+                        key={`content-${content.id}-${idx}`}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-gray-100 transition"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 truncate text-base">
+                            {content.title || 'Untitled Content'}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded border">
+                              {content.content_type || 'Unknown Type'}
+                            </span>
+                            {content.assigned_by && (
+                              <span className="text-xs text-gray-500">
+                                Assigned by: {content.assigned_by}
+                              </span>
+                            )}
+                            {content.from_program && (
+                              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                                📚 From Program
+                              </span>
+                            )}
+                            {!content.from_program && (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                ✨ Extra Material
+                              </span>
+                            )}
+                          </div>
+                          {content.description && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                              {content.description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleViewContent(content)}
+                          className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm"
+                        >
+                          View
+                        </button>
                       </div>
-                    </div>
-                  );
-                }).filter(Boolean)}
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-        </div>
-      </main>
-
-      {/* Content Viewer Modal */}
-      {showContentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-800 truncate">
-                  {selectedContent?.title}
-                </h3>
-                <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    {selectedContent?.content_type}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 ml-4">
-                <a
-                  href={selectedContent?.file_url?.startsWith('http') ? selectedContent.file_url : selectedContent?.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Open in new tab"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                  </svg>
-                </a>
-                <button
-                  onClick={handleCloseModal}
-                  className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Close"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
             </div>
+          </main>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-auto max-h-[calc(90vh-140px)]">
-              {contentLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading content...</p>
+          {/* Content Viewer Modal */}
+          {showContentModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-800 truncate">
+                      {selectedContent?.title}
+                    </h3>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        {selectedContent?.content_type}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <a
+                      href={selectedContent?.file_url?.startsWith('http') ? selectedContent.file_url : selectedContent?.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Open in new tab"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                      </svg>
+                    </a>
+                    <button
+                      onClick={handleCloseModal}
+                      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Close"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
                   </div>
                 </div>
-              ) : (
-                renderContentViewer()
-              )}
+
+                {/* Modal Content */}
+                <div className="p-6 overflow-auto max-h-[calc(90vh-140px)]">
+                  {contentLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading content...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    renderContentViewer()
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          <Footer />
         </div>
-      )}
+      );
+    };
 
-      <Footer />
-    </div>
-  );
-};
-
-export default LearnerDashboard;
+    export default LearnerDashboard;

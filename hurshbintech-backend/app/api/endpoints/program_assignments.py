@@ -140,39 +140,56 @@ async def create_program_assignments(
             
             # Auto-assign learning contents associated with this program
             try:
-                from app.crud import program_learning_content_crud, learning_content_assignment_crud
-                from app.schemas.learning_content_assignment import LearningContentAssignmentCreate
+                from app.crud import program_learning_content_crud, learner_content_assignment_crud
                 
                 # Get all contents associated with this program
                 program_contents = await program_learning_content_crud.get_program_contents(db, assignment_data.program_id)
                 
-                # Create learning content assignments for each content
+                # Create learner content assignments for each content in the program
                 for program_content in program_contents:
                     try:
-                        content_assignment_data = LearningContentAssignmentCreate(
-                            learner_id=learner_id,
-                            learning_content_id=program_content.content_id
-                        )
-                        
                         # Check if already assigned
-                        existing_content_assignments = await learning_content_assignment_crud.get_assignments_by_learner(db, learner_id)
-                        content_already_assigned = any(
-                            a.learning_content_id == program_content.content_id for a in existing_content_assignments
+                        already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
+                            db, learner_id, program_content.content_id
                         )
                         
-                        if not content_already_assigned:
-                            await learning_content_assignment_crud.create_assignment(
-                                db, 
-                                content_assignment_data, 
-                                assigned_by_head=current_head.user_id
+                        if not already_assigned:
+                            await learner_content_assignment_crud.create_assignment(
+                                db=db,
+                                learner_id=learner_id,
+                                content_id=program_content.content_id,
+                                assigned_by_head=current_head.user_id,
+                                program_assignment_id=new_assignment.id
                             )
                             logger.info(f"Auto-assigned content {program_content.content_id} to learner {learner_id}")
                         
                     except Exception as content_error:
                         logger.warning(f"Failed to auto-assign content {program_content.content_id} to learner {learner_id}: {str(content_error)}")
+                
+                # Assign extra/manual learning contents if provided
+                if assignment_data.extra_content_ids:
+                    for content_id in assignment_data.extra_content_ids:
+                        try:
+                            # Check if already assigned
+                            already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
+                                db, learner_id, content_id
+                            )
+                            
+                            if not already_assigned:
+                                await learner_content_assignment_crud.create_assignment(
+                                    db=db,
+                                    learner_id=learner_id,
+                                    content_id=content_id,
+                                    assigned_by_head=current_head.user_id,
+                                    program_assignment_id=new_assignment.id
+                                )
+                                logger.info(f"Manually assigned extra content {content_id} to learner {learner_id}")
+                            
+                        except Exception as content_error:
+                            logger.warning(f"Failed to assign extra content {content_id} to learner {learner_id}: {str(content_error)}")
                         
             except Exception as content_error:
-                logger.warning(f"Failed to auto-assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
+                logger.warning(f"Failed to assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
             
             success_count += 1
             created_assignments.append(new_assignment.id)
@@ -793,6 +810,57 @@ async def get_my_assignments(
                 is_late_submission=is_late_submission
             )
         )
+    
+    return result
+
+
+@router.get("/learner/my-learning-contents")
+async def get_my_learning_contents(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all learning contents assigned to the current learner"""
+    
+    if current_user.role != UserRole.LEARNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only learners can access this endpoint"
+        )
+    
+    from app.crud import learner_content_assignment_crud
+    from app.utils.s3_utils import S3Manager
+    
+    # Get all content assignments for this learner
+    assignments = await learner_content_assignment_crud.get_assignments_by_learner(db, current_user.id)
+    
+    # Convert S3 URLs to public URLs if using S3
+    result = []
+    for assignment in assignments:
+        content = assignment.content
+        file_url = content.file_url
+        thumbnail_url = content.thumbnail_url
+        
+        # Convert S3 URLs to public HTTP URLs
+        if settings.USE_S3 and s3_manager:
+            if file_url and file_url.startswith("s3://"):
+                s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+                file_url = s3_manager.get_public_url(s3_key)
+            
+            if thumbnail_url and thumbnail_url.startswith("s3://"):
+                s3_key = thumbnail_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+                thumbnail_url = s3_manager.get_public_url(s3_key)
+        
+        result.append({
+            "id": content.id,
+            "title": content.title,
+            "description": content.description,
+            "content_type": content.content_type.value if hasattr(content.content_type, 'value') else content.content_type,
+            "file_url": file_url,
+            "thumbnail_url": thumbnail_url,
+            "assigned_at": assignment.assigned_at,
+            "assigned_by": assignment.assigned_by.name if assignment.assigned_by else None,
+            "from_program": assignment.program_assignment_id is not None
+        })
     
     return result
 

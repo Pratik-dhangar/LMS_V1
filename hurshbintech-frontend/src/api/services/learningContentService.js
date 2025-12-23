@@ -93,6 +93,12 @@ const learningContentService = {
       const response = await api.patch(`/content/learning-content/head/${contentId}`, contentData);
       return response.data;
     }
+  },
+
+  // Convenience method for Head
+  getAllContentsForHead: async () => {
+    const response = await api.get('/content/learning-content/head');
+    return response.data;
   }
 };
 

@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import programAssignmentService from '../../api/services/programAssignmentService';
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
+import learningContentService from '../../api/services/learningContentService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/Pages.css';
@@ -12,6 +13,7 @@ const ManageProgramAssignments = () => {
   const [programs, setPrograms] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [overview, setOverview] = useState([]);
+  const [allLearningContents, setAllLearningContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
@@ -27,10 +29,12 @@ const ManageProgramAssignments = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [searchLearner, setSearchLearner] = useState('');
   const [searchProgram, setSearchProgram] = useState('');
+  const [searchExtraContent, setSearchExtraContent] = useState('');
 
   const [formData, setFormData] = useState({
     learner_ids: [],
     program_ids: [],  // Changed from program_id to program_ids array
+    extra_content_ids: [],  // Additional learning contents to assign
     start_date: '',
     end_date: '',
     duration_days: '',
@@ -62,17 +66,19 @@ const ManageProgramAssignments = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [learnersData, programsData, assignmentsData, overviewData] = await Promise.all([
+      const [learnersData, programsData, assignmentsData, overviewData, learningContentsData] = await Promise.all([
         headService.getAllLearners(),
         learningProgramsService.getAllPrograms(),
         programAssignmentService.getAssignments(),
         programAssignmentService.getAssignmentsOverview(),
+        learningContentService.getAllContentsForHead(),
       ]);
 
       setLearners(learnersData);
       setPrograms(programsData);
       setAssignments(assignmentsData);
       setOverview(overviewData);
+      setAllLearningContents(learningContentsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
@@ -144,6 +150,21 @@ const ManageProgramAssignments = () => {
     }
   };
 
+  const handleExtraContentSelect = (contentId) => {
+    const id = parseInt(contentId);
+    if (formData.extra_content_ids.includes(id)) {
+      setFormData({
+        ...formData,
+        extra_content_ids: formData.extra_content_ids.filter(cid => cid !== id),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        extra_content_ids: [...formData.extra_content_ids, id],
+      });
+    }
+  };
+
   const handleProgramChange = async (programId) => {
     setFormData({ ...formData, program_id: programId });
 
@@ -189,6 +210,7 @@ const ManageProgramAssignments = () => {
         const payload = {
           learner_ids: formData.learner_ids,
           program_id: parseInt(programId),
+          extra_content_ids: formData.extra_content_ids.length > 0 ? formData.extra_content_ids : null,
           start_date: formData.start_date,
           end_date: formData.end_date,
           duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
@@ -228,6 +250,7 @@ const ManageProgramAssignments = () => {
       setFormData({
         learner_ids: [],
         program_ids: [],
+        extra_content_ids: [],
         start_date: '',
         end_date: '',
         duration_days: '',
@@ -235,6 +258,7 @@ const ManageProgramAssignments = () => {
         manual_duration: false,
       });
       setSelectedProgram(null);
+      setSearchExtraContent('');
     } catch (error) {
       console.error('Failed to create assignments:', error);
       toast.error(error.response?.data?.detail || 'Failed to create assignments');
@@ -725,6 +749,62 @@ const ManageProgramAssignments = () => {
                 </div>
               </div>
 
+              {/* Extra Learning Content Selection */}
+              <div className="form-field">
+                <label className="form-label">
+                  Additional Learning Content (Optional)
+                  <span className="form-hint">({formData.extra_content_ids.length} selected)</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-2">
+                  Select extra learning materials to assign along with the programs
+                </p>
+                <input
+                  type="text"
+                  placeholder="🔍 Search learning content..."
+                  className="form-input"
+                  value={searchExtraContent}
+                  onChange={(e) => setSearchExtraContent(e.target.value)}
+                  style={{ marginBottom: '1rem' }}
+                />
+                <div className="checkbox-grid" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {allLearningContents
+                    .filter(content =>
+                      content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                      (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                    )
+                    .map(content => (
+                      <div key={content.id} className="checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`extra-content-${content.id}`}
+                          checked={formData.extra_content_ids.includes(content.id)}
+                          onChange={() => handleExtraContentSelect(content.id)}
+                          className="form-checkbox"
+                        />
+                        <label htmlFor={`extra-content-${content.id}`} className="checkbox-label">
+                          <div>
+                            <div className="font-semibold">{content.title}</div>
+                            {content.description && (
+                              <div className="text-xs text-gray-500 mt-1">{content.description}</div>
+                            )}
+                            <div className="text-xs text-purple-600 mt-1">
+                              📄 {content.content_type}
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  {allLearningContents.filter(content =>
+                    content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                    (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                  ).length === 0 && (
+                      <div className="text-center text-gray-500 py-4">
+                        No learning content found{searchExtraContent ? ` matching "${searchExtraContent}"` : ''}
+                      </div>
+                    )}
+                </div>
+              </div>
+
               {/* Date Range */}
               <div className="form-row">
                 <div className="form-field">
@@ -803,7 +883,8 @@ const ManageProgramAssignments = () => {
                     setShowAssignModal(false);
                     setFormData({
                       learner_ids: [],
-                      program_id: '',
+                      program_ids: [],
+                      extra_content_ids: [],
                       start_date: '',
                       end_date: '',
                       duration_days: '',
@@ -811,6 +892,7 @@ const ManageProgramAssignments = () => {
                       manual_duration: false,
                     });
                     setSelectedProgram(null);
+                    setSearchExtraContent('');
                   }}
                   className="btn-secondary"
                 >
