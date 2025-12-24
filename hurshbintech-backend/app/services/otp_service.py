@@ -5,8 +5,9 @@ Guest OTP Service - Generate and validate OTPs for guest email verification
 import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from app.models.guest_otp_model import GuestOTP
+from fastapi import HTTPException
 
 
 class GuestOTPService:
@@ -17,23 +18,64 @@ class GuestOTPService:
     - 6-digit random codes
     - 10-minute expiration
     - Single-use tokens (is_used flag)
-    - Rate limiting should be implemented at endpoint level
+    - IP-based rate limiting (10 OTPs per day per IP)
     """
 
     @staticmethod
-    async def generate_otp(email: str, db: AsyncSession) -> str:
+    async def check_rate_limit(ip_address: str, db: AsyncSession) -> bool:
+        """
+        Check if IP address has exceeded rate limit for OTP requests.
+        
+        Args:
+            ip_address: Client IP address
+            db: Database session
+            
+        Returns:
+            bool: True if within rate limit, False if exceeded
+        """
+        if not ip_address:
+            return True  # Allow if no IP (backward compatibility)
+        
+        # Count OTPs sent from this IP in the last 24 hours
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        stmt = select(func.count(GuestOTP.id)).where(
+            and_(
+                GuestOTP.ip_address == ip_address,
+                GuestOTP.created_at >= twenty_four_hours_ago
+            )
+        )
+        result = await db.execute(stmt)
+        count = result.scalar()
+        
+        return count < 10  # Max 10 OTPs per day per IP
+
+    @staticmethod
+    async def generate_otp(email: str, db: AsyncSession, ip_address: str = None) -> str:
         """
         Generate a 6-digit OTP and store in database.
         
         Args:
             email: Guest email address (will be lowercased)
             db: Database session
+            ip_address: Client IP address for rate limiting (optional)
             
         Returns:
             str: The generated OTP code (6-digit string)
+            
+        Raises:
+            HTTPException: If rate limit exceeded
         """
         # Normalize email (lowercase)
         email = email.lower().strip()
+        
+        # Check rate limit if IP provided
+        if ip_address:
+            is_within_limit = await GuestOTPService.check_rate_limit(ip_address, db)
+            if not is_within_limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many OTP requests. Maximum 3 OTPs per day allowed. Please try again tomorrow."
+                )
         
         # Generate 6-digit OTP
         otp_code = str(secrets.randbelow(1000000)).zfill(6)
@@ -46,7 +88,8 @@ class GuestOTPService:
             email=email,
             otp_code=otp_code,
             is_used=False,
-            expires_at=expires_at
+            expires_at=expires_at,
+            ip_address=ip_address
         )
         db.add(guest_otp)
         await db.commit()

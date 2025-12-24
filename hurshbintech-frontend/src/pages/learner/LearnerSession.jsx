@@ -30,6 +30,7 @@ const LearnerSession = () => {
 
   // Stream state (only remote - trainer's video)
   const [remoteStream, setRemoteStream] = useState(null);
+  const remoteVideoRef = useRef(null);
 
   // Video position and size for moveable video feed
   const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
@@ -91,6 +92,13 @@ const LearnerSession = () => {
     };
   }, [webRTC, addReceivedMessage]);
 
+  // Set up remote video stream
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
   // Meter states
   const [promptMeter, setPromptMeter] = useState(null);
   const [reinforcementMeter, setReinforcementMeter] = useState(null);
@@ -129,7 +137,8 @@ const LearnerSession = () => {
   const [lineWidth, setLineWidth] = useState(2);
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
   const [_isPaused] = useState(false);
-  const [_isFrozen] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
 
@@ -590,7 +599,7 @@ const LearnerSession = () => {
         setTimeLeft('00:00');
         setTimeExpired(true);
         toast.info('Session time has ended.');
-        handleLeaveSession(); // Auto-end session
+        cleanup(); // Auto-end session
         return;
       }
 
@@ -717,6 +726,52 @@ const LearnerSession = () => {
         setReinforcementMeter(value);
       };
 
+      // Set callback for freeze signal from trainer
+      videoService.onFreeze = async (message) => {
+        console.log('[LearnerSession] Freeze signal received:', message);
+        setIsFrozen(message.frozen);
+        if (message.frozen) {
+          // Show prompt for user to click - fullscreen MUST be triggered by user gesture
+          setShowFullscreenPrompt(true);
+          console.log('[LearnerSession] Waiting for user interaction to trigger fullscreen');
+
+          // Listen for first user interaction to trigger fullscreen
+          const triggerFullscreenOnInteraction = async (event) => {
+            console.log('[LearnerSession] User interaction detected, triggering fullscreen...');
+            try {
+              await enterKioskMode();
+              console.log('[LearnerSession] Successfully entered fullscreen mode');
+            } catch (err) {
+              console.log('[LearnerSession] Fullscreen entry failed, will retry on next interaction');
+              return; // Don't remove listener, keep trying
+            }
+            // Remove listeners once fullscreen is successful
+            document.removeEventListener('click', triggerFullscreenOnInteraction, true);
+            document.removeEventListener('touchstart', triggerFullscreenOnInteraction, true);
+            document.removeEventListener('keydown', triggerFullscreenOnInteraction, true);
+          };
+
+          // Add listeners for any user interaction
+          document.addEventListener('click', triggerFullscreenOnInteraction, true);
+          document.addEventListener('touchstart', triggerFullscreenOnInteraction, true);
+          document.addEventListener('keydown', triggerFullscreenOnInteraction, true);
+
+          // Store reference to remove if unfreeze happens
+          window.fullscreenTriggerHandler = triggerFullscreenOnInteraction;
+        } else {
+          setShowFullscreenPrompt(false);
+          // Remove interaction listeners if unfrozen before fullscreen activated
+          if (window.fullscreenTriggerHandler) {
+            document.removeEventListener('click', window.fullscreenTriggerHandler, true);
+            document.removeEventListener('touchstart', window.fullscreenTriggerHandler, true);
+            document.removeEventListener('keydown', window.fullscreenTriggerHandler, true);
+            window.fullscreenTriggerHandler = null;
+          }
+          exitKioskMode();
+          // Silent unfreeze - no toast notification
+        }
+      };
+
       // Initialize video conference (gets local media and sets up connection)
       await videoService.initialize();
       setWebRTC(videoService);
@@ -734,19 +789,334 @@ const LearnerSession = () => {
     navigate('/learner/dashboard');
   };
 
-  const handleLeaveSession = async () => {
-    if (window.confirm('Are you sure you want to leave this session?')) {
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Enter kiosk mode (freeze window)
+  // 🔸 How it works: Enters fullscreen and prevents window switching
+  // -----------------------------------------------------------
+  const enterKioskMode = async () => {
+    try {
+      console.log('[LearnerSession] Entering kiosk mode');
+
+      // Request fullscreen AGGRESSIVELY - must be triggered by user gesture
+      const elem = document.documentElement;
+      let fullscreenSuccess = false;
+
+      console.log('[LearnerSession] Requesting fullscreen...');
+      console.log('[LearnerSession] Current fullscreen element:', document.fullscreenElement);
+
       try {
-        await sessionService.leaveSession(sessionId);
-        cleanup();
-        toast.info('Left session');
-        navigate('/learner/dashboard');
-      } catch {
-        cleanup();
-        navigate('/learner/dashboard');
+        if (elem.requestFullscreen) {
+          console.log('[LearnerSession] Using requestFullscreen');
+          await elem.requestFullscreen({ navigationUI: 'hide' });
+          fullscreenSuccess = true;
+        } else if (elem.webkitRequestFullscreen) {
+          console.log('[LearnerSession] Using webkitRequestFullscreen');
+          await elem.webkitRequestFullscreen();
+          fullscreenSuccess = true;
+        } else if (elem.msRequestFullscreen) {
+          console.log('[LearnerSession] Using msRequestFullscreen');
+          await elem.msRequestFullscreen();
+          fullscreenSuccess = true;
+        } else if (elem.mozRequestFullScreen) {
+          console.log('[LearnerSession] Using mozRequestFullScreen');
+          await elem.mozRequestFullScreen();
+          fullscreenSuccess = true;
+        } else {
+          console.warn('[LearnerSession] No fullscreen API available');
+          // Silently fail - user will see the prompt to retry
+          throw new Error('Fullscreen API not available');
+        }
+
+        if (fullscreenSuccess) {
+          console.log('[LearnerSession] Fullscreen activated successfully');
+          setShowFullscreenPrompt(false);
+        }
+      } catch (err) {
+        console.warn('[LearnerSession] Fullscreen request failed (this is normal on first try):', err.message);
+        // Don't show error toast - user already sees the prompt to click
+        // Keep the prompt visible for retry
+        throw err;
       }
+
+      // Hide fullscreen exit button with CSS
+      const existingStyle = document.getElementById('freeze-fullscreen-style');
+      if (!existingStyle) {
+        const style = document.createElement('style');
+        style.id = 'freeze-fullscreen-style';
+        style.textContent = `
+          *::-webkit-full-screen-ancestor:not(iframe) {
+            display: none !important;
+          }
+          video::-webkit-media-controls-fullscreen-button {
+            display: none !important;
+          }
+          button[title="Exit full screen"],
+          button[aria-label="Exit full screen"],
+          .exit-fullscreen-button {
+            display: none !important;
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Prevent window closing
+      window.addEventListener('beforeunload', preventWindowClose);
+
+      // Prevent context menu
+      document.addEventListener('contextmenu', preventDefaultAction);
+
+      // Prevent ALL keyboard shortcuts aggressively
+      document.addEventListener('keydown', preventKeyboardShortcuts, true);
+      document.addEventListener('keyup', preventKeyboardShortcuts, true);
+
+      // Prevent window blur (switching windows)
+      window.addEventListener('blur', refocusWindow);
+      window.addEventListener('focusout', refocusWindow);
+
+      // Monitor visibility changes
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Prevent text selection during freeze
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+
+      // Prevent mouse clicks at top of screen (where exit button appears)
+      document.addEventListener('click', preventTopClicks, true);
+      document.addEventListener('mousedown', preventTopClicks, true);
+
+      // Lock screen orientation on mobile (separate try-catch to prevent blocking other features)
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {
+          // Try portrait if landscape fails
+          return screen.orientation.lock('portrait');
+        }).catch(err => {
+          console.log('[LearnerSession] Could not lock orientation:', err);
+        });
+      }
+
+      // Set up refocus interval (less aggressive to prevent flickering)
+      if (window.freezeRefocusInterval) {
+        clearInterval(window.freezeRefocusInterval);
+      }
+      window.freezeRefocusInterval = setInterval(() => {
+        if (document.hidden) {
+          window.focus();
+        }
+      }, 500);
+
+      // Set up fullscreen monitoring interval to keep fullscreen enforced (more frequent)
+      if (window.freezeFullscreenInterval) {
+        clearInterval(window.freezeFullscreenInterval);
+      }
+      window.freezeFullscreenInterval = setInterval(() => {
+        if (isFrozen && !document.fullscreenElement && !document.webkitFullscreenElement) {
+          console.log('[LearnerSession] Fullscreen exited, re-entering...');
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
+          } else if (elem.webkitRequestFullscreen) {
+            try {
+              elem.webkitRequestFullscreen();
+            } catch (err) { }
+          }
+          // Silent re-entry - no error toast to avoid spam
+        }
+      }, 300);
+
+      console.log('[LearnerSession] Kiosk mode activated');
+    } catch (error) {
+      console.warn('[LearnerSession] Kiosk mode setup incomplete (waiting for user interaction):', error.message);
     }
   };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Exit kiosk mode (unfreeze window)
+  // 🔸 How it works: Exits fullscreen and removes restrictions
+  // -----------------------------------------------------------
+  const exitKioskMode = () => {
+    try {
+      console.log('[LearnerSession] Exiting kiosk mode');
+
+      // Clear refocus interval
+      if (window.freezeRefocusInterval) {
+        clearInterval(window.freezeRefocusInterval);
+        window.freezeRefocusInterval = null;
+      }
+
+      // Clear fullscreen monitoring interval
+      if (window.freezeFullscreenInterval) {
+        clearInterval(window.freezeFullscreenInterval);
+        window.freezeFullscreenInterval = null;
+      }
+
+      // Exit fullscreen (only if currently in fullscreen)
+      try {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => {
+              console.warn('[LearnerSession] Exit fullscreen failed:', err);
+            });
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      } catch (fsError) {
+        console.warn('[LearnerSession] Fullscreen exit not supported or failed:', fsError);
+      }
+
+      // Remove event listeners
+      window.removeEventListener('beforeunload', preventWindowClose);
+      document.removeEventListener('contextmenu', preventDefaultAction);
+      document.removeEventListener('keydown', preventKeyboardShortcuts, true);
+      document.removeEventListener('keyup', preventKeyboardShortcuts, true);
+      window.removeEventListener('blur', refocusWindow);
+      window.removeEventListener('focusout', refocusWindow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', preventTopClicks, true);
+      document.removeEventListener('mousedown', preventTopClicks, true);
+
+      // Remove fullscreen CSS style
+      const freezeStyle = document.getElementById('freeze-fullscreen-style');
+      if (freezeStyle) {
+        freezeStyle.remove();
+      }
+
+      // Restore text selection
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+
+      // Unlock screen orientation
+      if (screen.orientation && screen.orientation.unlock) {
+        try {
+          screen.orientation.unlock();
+        } catch (err) {
+          console.log('[LearnerSession] Could not unlock orientation:', err);
+        }
+      }
+
+      console.log('[LearnerSession] Kiosk mode deactivated');
+    } catch (error) {
+      console.warn('[LearnerSession] Kiosk mode cleanup error:', error.message);
+    }
+  };
+
+  // Helper functions for kiosk mode
+  const preventWindowClose = (e) => {
+    e.preventDefault();
+    e.returnValue = 'The window is frozen by trainer. You cannot close it.';
+    return 'The window is frozen by trainer. You cannot close it.';
+  };
+
+  const preventDefaultAction = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  };
+
+  const preventTopClicks = (e) => {
+    // Prevent clicks in the top 100px of the screen (where fullscreen exit button appears)
+    if (e.clientY < 100) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
+    }
+  };
+
+  const preventKeyboardShortcuts = (e) => {
+    // Prevent ALL keyboard shortcuts and function keys
+    if (
+      e.altKey ||
+      e.metaKey ||
+      e.key === 'F11' ||
+      e.key === 'F4' ||
+      e.key === 'F5' ||
+      e.key === 'F12' || // Dev tools
+      e.key === 'Escape' ||
+      e.key === 'Esc' || // Alternative Escape key name
+      e.keyCode === 27 || // Escape keyCode
+      e.key === 'Tab' ||
+      (e.ctrlKey && (
+        e.key === 'w' ||
+        e.key === 'W' ||
+        e.key === 't' ||
+        e.key === 'T' ||
+        e.key === 'n' ||
+        e.key === 'N' ||
+        e.key === 'r' ||
+        e.key === 'R' ||
+        e.key === 'q' ||
+        e.key === 'Q' ||
+        e.shiftKey // Ctrl+Shift+... (dev tools shortcuts)
+      )) ||
+      (e.ctrlKey && e.shiftKey) // Block all Ctrl+Shift combinations
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      toast.warning('This action is blocked while window is frozen', { autoClose: 1000 });
+      return false;
+    }
+  };
+
+  const refocusWindow = (e) => {
+    if (isFrozen) {
+      e?.preventDefault();
+      window.focus();
+    }
+  };
+
+  const handleVisibilityChange = () => {
+    if (isFrozen && document.hidden) {
+      // Page is hidden, try to bring it back
+      window.focus();
+      toast.error('You cannot switch windows while frozen!', { autoClose: 2000 });
+    }
+  };
+
+  // Cleanup kiosk mode on unmount
+  useEffect(() => {
+    return () => {
+      if (isFrozen) {
+        exitKioskMode();
+      }
+    };
+  }, [isFrozen]);
+
+  // Monitor fullscreen changes - re-enter if user exits
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (isFrozen && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        // User tried to exit fullscreen while frozen - re-enter it
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(err => {
+            console.warn('[LearnerSession] Could not re-enter fullscreen:', err);
+          });
+        } else if (elem.webkitRequestFullscreen) {
+          try {
+            elem.webkitRequestFullscreen();
+          } catch (err) {
+            console.warn('[LearnerSession] Could not re-enter webkit fullscreen:', err);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, [isFrozen]);
+
+
+
 
   const cleanup = () => {
     try {
@@ -869,7 +1239,7 @@ const LearnerSession = () => {
   // Show waiting overlay if trainer hasn't joined yet
   if (!loading && !trainerJoined && sessionInfo?.status === 'scheduled') {
     return (
-      <div className="session-page">
+      <div className="learner-session-page">
         {/* Navigation / Header */}
         <div className="session-header">
           <div className="session-header-main">
@@ -929,7 +1299,7 @@ const LearnerSession = () => {
   }
 
   return (
-    <div className="session-page">
+    <div className="learner-session-page">
       {/* Navigation / Header - Similar to Trainer */}
       <div className="session-header">
         <div className="session-header-main">
@@ -947,15 +1317,6 @@ const LearnerSession = () => {
             <div className="session-header-info">
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
-            <button
-              className="btn-session btn-session-end"
-              onClick={() => navigate('/learner/dashboard')}
-            >
-              🏠 Dashboard
-            </button>
-            <button className="btn-session btn-session-active" onClick={() => console.log('[LearnerSession] Active')}>
-              Live
-            </button>
           </div>
         </div>
       </div>
@@ -979,11 +1340,44 @@ const LearnerSession = () => {
         />
       )}
 
+      {/* Fullscreen activation triggers on first user interaction */}
+      {showFullscreenPrompt && <div style={{ display: 'none' }} />}
+
+      {/* Frozen Mode Indicator
+      {isFrozen && (
+        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white py-3 px-4 text-center font-bold z-[9999] shadow-lg animate-pulse">
+          🔒 WINDOW FROZEN BY TRAINER - You cannot switch, minimize, or close this window
+        </div>
+      )} */}
+
       {/* Main Container - Responsive 3-column layout */}
-      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
+        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+          {/* Trainer Video Feed - Above Prompt Line */}
+          {remoteStream && (
+            <div className="mb-4 md:mb-5">
+              <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+                <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="absolute top-0 left-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                    Trainer
+                  </div>
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                    {connectionStatus}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Video Conferencing - Now on whiteboard */}
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-1 sm:p-4 md:p-5 mb-4 md:mb-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <button
@@ -1005,19 +1399,15 @@ const LearnerSession = () => {
               </div>
             )}
           </div>
-          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-4 md:p-5 mb-4 md:mb-5">
-            <div className="flex items-center gap-2 mb-2">
-              <Emoji emoji="📊" size="lg" />
-              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700">Current Session Metrics</h3>
-            </div>
+          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-1 md:p-5 mb-1 md:mb-1">
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
-              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3 md:p-4">
+              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3 md:p-1">
                 <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Prompt <br /> Level</div>
                 <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-600">
                   {promptMeter ?? 0}
                 </div>
               </div>
-              <div className="bg-white border border-green-300 rounded p-2 sm:p-3 md:p-4">
+              <div className="bg-white border border-green-300 rounded p-2 sm:p-3 md:p-1">
                 <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Reinforcement Level</div>
                 <div className="text-base sm:text-lg md:text-2xl font-bold text-green-600">
                   {reinforcementMeter ?? 0}
@@ -1061,24 +1451,8 @@ const LearnerSession = () => {
           </div>
         </div>
         {/* Whiteboard Area */}
-        <div className="w-full responsive-whiteboard-section mx-auto">
+        <div className="w-full learner-responsive-whiteboard-section mx-auto">
           <div className="session-whiteboard-container">
-            {/* Moveable Video Feed Overlay */}
-            {remoteStream && (
-              <MoveableVideoFeed
-                videoStream={remoteStream}
-                label="Trainer"
-                position={videoPosition}
-                size={videoSize}
-                onPositionChange={setVideoPosition}
-                onSizeChange={setVideoSize}
-                isDraggable={true}
-                isResizable={true}
-                connectionStatus={connectionStatus}
-                zIndex={100}
-              />
-            )}
-
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
@@ -1421,19 +1795,9 @@ const LearnerSession = () => {
               </div>
             </div>
           )}
-          <div className="px-4 pb-4 flex justify-center">
-            <button
-              onClick={handleLeaveSession}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold text-sm transition-colors shadow-md"
-            >
-              Leave Session
-            </button>
-          </div>
+
         </div>
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

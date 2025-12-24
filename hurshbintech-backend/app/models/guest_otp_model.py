@@ -34,5 +34,8 @@ class GuestOTP(Base):
     # OTP expiration time (10 minutes from generation)
     expires_at = Column(DateTime, nullable=False)
     
+    # Client IP address for rate limiting (nullable for backward compatibility)
+    ip_address = Column(String(45), nullable=True, index=True)  # IPv6 max length is 45
+    
     # Timestamps
     created_at = Column(DateTime, default=func.now())
