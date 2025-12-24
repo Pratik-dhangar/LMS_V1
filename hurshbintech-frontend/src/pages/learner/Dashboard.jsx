@@ -16,6 +16,11 @@ const LearnerDashboard = () => {
   const sessionErrorToastShownRef = useRef(false);
   const programErrorToastShownRef = useRef(false);
 
+  // Refs for auto-scroll
+  const sessionsRef = useRef(null);
+  const homeProgamsRef = useRef(null);
+  const learningContentRef = useRef(null);
+
   const [sessions, setSessions] = useState([]);
   const [learningPrograms, setLearningPrograms] = useState([]);
   const [learningContents, setLearningContents] = useState([]); // All assigned learning contents
@@ -27,6 +32,11 @@ const LearnerDashboard = () => {
   const [selectedContent, setSelectedContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(null);
+
+  // Toggle states for sections
+  const [showSessions, setShowSessions] = useState(false);
+  const [showLearningContent, setShowLearningContent] = useState(false);
+  const [showHomePrograms, setShowHomePrograms] = useState(false);
 
 
   useEffect(() => {
@@ -43,6 +53,33 @@ const LearnerDashboard = () => {
     return () => clearInterval(refreshInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-scroll to My Sessions when visible
+  useEffect(() => {
+    if (showSessions && sessionsRef.current) {
+      setTimeout(() => {
+        sessionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [showSessions]);
+
+  // Auto-scroll to Home Programs when visible
+  useEffect(() => {
+    if (showHomePrograms && homeProgamsRef.current) {
+      setTimeout(() => {
+        homeProgamsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [showHomePrograms]);
+
+  // Auto-scroll to Learning Content when visible
+  useEffect(() => {
+    if (showLearningContent && learningContentRef.current) {
+      setTimeout(() => {
+        learningContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [showLearningContent]);
 
   const fetchSessions = async () => {
     try {
@@ -259,43 +296,32 @@ const LearnerDashboard = () => {
               {
                 icon: "📚",
                 title: "Home Program (HP)",
-                desc: "View IIP and Home Programs",
-                onClick: () => navigate("/learner/learning-programs"),
+                onClick: () => setShowHomePrograms(!showHomePrograms),
               },
               {
                 icon: "📖",
                 title: "Learning Content",
-                desc: "Access assigned learning content",
-                onClick: () => {
-                  // Scroll to learning content section
-                  const contentSection = document.getElementById('learning-content-section');
-                  if (contentSection) {
-                    contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                },
+                onClick: () => setShowLearningContent(!showLearningContent),
               },
               {
                 icon: "🛒",
                 title: "Learning Material",
-                desc: "Recommended resources to buy",
                 onClick: () => navigate("/learner/learning-material"), // Add path if available
               },
               {
                 icon: "🎓",
-                title: "Enter Learning Session",
-                desc: "Join your therapy session",
-                onClick: () => navigate("/learner/session"), // If you already have this route
+                title: "IIP Programs",
+                onClick: () => setShowSessions(!showSessions),
               },
               {
                 icon: "💬",
                 title: "Communication",
-                desc: "Message your team",
                 onClick: () => navigate("/learner/communication"), // optional
               },
               {
                 icon: "📅",
                 title: "Book Appointment",
-                desc: "Schedule with professionals",
+                
                 onClick: () => navigate("/book-appointment"), // New booking page
               },
             ].map((card, index) => (
@@ -315,201 +341,207 @@ const LearnerDashboard = () => {
 
 
           {/* Upcoming Sessions */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              My Sessions
-            </h2>
+          {showSessions && (
+            <div ref={sessionsRef} className="mt-10 bg-white rounded-xl shadow-md p-6 animate-fadeInUp transition-all duration-500 ease-in-out">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                My Sessions
+              </h2>
 
-            {loadingSessions ? (
-              <div className="text-center py-6 text-gray-500">Loading sessions...</div>
-            ) : sessions.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
-            ) : (
-              <div className="space-y-3">
-                {sessions
-                  .sort((a, b) => {
-                    // Sort by status priority: active first, then scheduled, then others
-                    const statusPriority = { active: 0, scheduled: 1, ended: 2 };
-                    const aPriority = statusPriority[a.status] ?? 3;
-                    const bPriority = statusPriority[b.status] ?? 3;
-                    if (aPriority !== bPriority) return aPriority - bPriority;
-                    // Within same status, sort by date (newest first)
-                    return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
-                  })
-                  .map((session) => {
-                    const isActive = session.status === 'active';
-                    const isScheduled = session.status === 'scheduled';
-                    const isEnded = session.status === 'ended';
-                    const statusColor = isActive ? 'border-green-500 bg-green-50' :
-                      isScheduled ? 'border-blue-500 bg-blue-50' :
-                        'border-gray-300 bg-gray-50';
-                    const statusBadge = isActive ? 'bg-green-100 text-green-800' :
-                      isScheduled ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800';
+              {loadingSessions ? (
+                <div className="text-center py-6 text-gray-500">Loading sessions...</div>
+              ) : sessions.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">No sessions scheduled.</div>
+              ) : (
+                <div className="space-y-3">
+                  {sessions
+                    .sort((a, b) => {
+                      // Sort by status priority: active first, then scheduled, then others
+                      const statusPriority = { active: 0, scheduled: 1, ended: 2 };
+                      const aPriority = statusPriority[a.status] ?? 3;
+                      const bPriority = statusPriority[b.status] ?? 3;
+                      if (aPriority !== bPriority) return aPriority - bPriority;
+                      // Within same status, sort by date (newest first)
+                      return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                    })
+                    .map((session) => {
+                      const isActive = session.status === 'active';
+                      const isScheduled = session.status === 'scheduled';
+                      const isEnded = session.status === 'ended';
+                      const statusColor = isActive ? 'border-green-500 bg-green-50' :
+                        isScheduled ? 'border-blue-500 bg-blue-50' :
+                          'border-gray-300 bg-gray-50';
+                      const statusBadge = isActive ? 'bg-green-100 text-green-800' :
+                        isScheduled ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800';
+
+                      return (
+                        <div
+                          key={session.session_id || session.id}
+                          className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-gray-800 truncate">
+                                {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
+                              </h3>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
+                                {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                              <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
+                              {session.scheduled_date && (
+                                <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              )}
+                              <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
+                              {session.duration && <span>⏱️ {session.duration} min</span>}
+                            </div>
+                            {session.program && (
+                              <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
+                            )}
+                          </div>
+
+                          <div className="ml-4 flex-shrink-0">
+                            {(isActive || isScheduled) && (
+                              <button
+                                onClick={() => handleJoinSession(session.session_id)}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                              >
+                                {isActive ? 'Resume' : 'Join'} Session
+                              </button>
+                            )}
+                            {isEnded && (
+                              <span className="text-gray-500 text-sm">Completed</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ✅ Assigned Home Programs */}
+          {showHomePrograms && (
+            <div ref={homeProgamsRef} className="mt-10 bg-white rounded-xl shadow-md p-6 animate-fadeInUp transition-all duration-500 ease-in-out">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                Your Home Programs (HP)
+              </h2>
+
+              {loadingPrograms ? (
+                <p className="text-gray-500">Loading assigned programs...</p>
+              ) : learningPrograms.length === 0 ? (
+                <p className="text-gray-500">No home programs assigned yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {learningPrograms.map((prog) => {
+                    // Calculate completion percentage
+                    const completionPercentage = prog.completion_percentage || 0;
 
                     return (
                       <div
-                        key={session.session_id || session.id}
-                        className={`border-l-4 rounded-lg p-4 flex items-center justify-between ${statusColor} transition-all hover:shadow-md`}
+                        key={prog.id}
+                        className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-800 truncate">
-                              {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-800 mb-1">
+                              {prog.program_name || prog.name || 'Unnamed Program'}
                             </h3>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
-                              {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
-                            </span>
+                            <p className="text-sm text-gray-600">
+                              Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
+                            </p>
                           </div>
-                          <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                            <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
-                            {session.scheduled_date && (
-                              <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            )}
-                            <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
-                            {session.duration && <span>⏱️ {session.duration} min</span>}
-                          </div>
-                          {session.program && (
-                            <p className="text-xs text-gray-500 mt-1">Program: {session.program}</p>
-                          )}
+                          <button
+                            className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                            onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
+                          >
+                            Start
+                          </button>
                         </div>
 
-                        <div className="ml-4 flex-shrink-0">
-                          {(isActive || isScheduled) && (
-                            <button
-                              onClick={() => handleJoinSession(session.session_id)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
-                            >
-                              {isActive ? 'Resume' : 'Join'} Session
-                            </button>
-                          )}
-                          {isEnded && (
-                            <span className="text-gray-500 text-sm">Completed</span>
-                          )}
+                        {/* Progress Bar */}
+                        <div className="mt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs text-gray-600">Progress</span>
+                            <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                              style={{ width: `${completionPercentage}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     );
                   })}
-              </div>
-            )}
-          </div>
-
-          {/* ✅ Assigned Home Programs */}
-          <div className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Your Home Programs (HP)
-            </h2>
-
-            {loadingPrograms ? (
-              <p className="text-gray-500">Loading assigned programs...</p>
-            ) : learningPrograms.length === 0 ? (
-              <p className="text-gray-500">No home programs assigned yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {learningPrograms.map((prog) => {
-                  // Calculate completion percentage
-                  const completionPercentage = prog.completion_percentage || 0;
-
-                  return (
-                    <div
-                      key={prog.id}
-                      className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800 mb-1">
-                            {prog.program_name || prog.name || 'Unnamed Program'}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <button
-                          className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                          onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
-                        >
-                          Start
-                        </button>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">Progress</span>
-                          <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                            style={{ width: `${completionPercentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ✅ Learning Contents Assigned by Head */}
-          <div id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-              Learning Content ({learningContents.length})
-            </h2>
+          {showLearningContent && (
+            <div ref={learningContentRef} id="learning-content-section" className="mt-10 bg-white rounded-xl shadow-md p-6 animate-fadeInUp transition-all duration-500 ease-in-out">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
+                Learning Content ({learningContents.length})
+              </h2>
 
-            {loadingContents ? (
-              <p className="text-gray-500">Loading learning contents...</p>
-            ) : learningContents.length === 0 ? (
-              <p className="text-gray-500">No learning content assigned yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {learningContents.map((content, idx) => (
-                  <div
-                    key={`content-${content.id}-${idx}`}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-gray-100 transition"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 truncate text-base">
-                        {content.title || 'Untitled Content'}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded border">
-                          {content.content_type || 'Unknown Type'}
-                        </span>
-                        {content.assigned_by && (
-                          <span className="text-xs text-gray-500">
-                            Assigned by: {content.assigned_by}
+              {loadingContents ? (
+                <p className="text-gray-500">Loading learning contents...</p>
+              ) : learningContents.length === 0 ? (
+                <p className="text-gray-500">No learning content assigned yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {learningContents.map((content, idx) => (
+                    <div
+                      key={`content-${content.id}-${idx}`}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-gray-100 transition"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 truncate text-base">
+                          {content.title || 'Untitled Content'}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs text-gray-600 bg-white px-2 py-1 rounded border">
+                            {content.content_type || 'Unknown Type'}
                           </span>
-                        )}
-                        {content.from_program && (
-                          <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
-                            📚 From Program
-                          </span>
-                        )}
-                        {!content.from_program && (
-                          <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                            ✨ Extra Material
-                          </span>
+                          {content.assigned_by && (
+                            <span className="text-xs text-gray-500">
+                              Assigned by: {content.assigned_by}
+                            </span>
+                          )}
+                          {content.from_program && (
+                            <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                              📚 From Program
+                            </span>
+                          )}
+                          {!content.from_program && (
+                            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                              ✨ Extra Material
+                            </span>
+                          )}
+                        </div>
+                        {content.description && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                            {content.description}
+                          </p>
                         )}
                       </div>
-                      {content.description && (
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                          {content.description}
-                        </p>
-                      )}
+                      <button
+                        onClick={() => handleViewContent(content)}
+                        className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm"
+                      >
+                        View
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleViewContent(content)}
-                      className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm"
-                    >
-                      View
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </main>

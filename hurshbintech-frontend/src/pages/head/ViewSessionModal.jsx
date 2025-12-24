@@ -79,9 +79,15 @@ const ViewSessionModal = ({ session, onClose }) => {
         );
     };
 
+    // Prevent body scroll when modal is open
+    React.useEffect(() => {
+        document.body.classList.add('modal-open');
+        return () => document.body.classList.remove('modal-open');
+    }, []);
+
     return (
         <div className="modal-overlay">
-            <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh' }}>
                 {/* Modal Header */}
                 <div className="modal-header modal-header-blue">
                     <div className="modal-header-content">
@@ -98,7 +104,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                 </div>
 
                 {/* Modal Content */}
-                <div className="modal-content">
+                <div className="modal-content" style={{ maxWidth: 'none' }}>
                     {/* Session Information */}
                     <div className="grid grid-cols-2 gap-6 mb-6">
                         <div>
