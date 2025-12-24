@@ -794,7 +794,7 @@ const TrainerSession = () => {
       };
       webRTC.sendSignal(freezeSignal);
       console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
-      toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
+      // toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
     } else {
       console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
       toast.error('Unable to send freeze signal');
