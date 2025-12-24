@@ -2148,12 +2148,13 @@ body.modal-open {
 
 /* Learner Session - Full viewport height without scrolling */
 .learner-session-page {
-    height: 100vh;
+    min-height: 100vh;
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
     max-width: 100%;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Session Header - Sticky navigation bar */
@@ -2576,7 +2577,7 @@ body.modal-open {
     gap: 1rem;
     width: 100%;
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
     min-height: 0;
 }
 
@@ -2585,7 +2586,7 @@ body.modal-open {
         flex-direction: row;
         align-items: flex-start;
         gap: 1.25rem;
-        overflow: hidden;
+        overflow: visible;
     }
 }
 
@@ -2658,7 +2659,8 @@ body.modal-open {
     flex: 1;
     order: 2;
     min-width: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -2667,7 +2669,8 @@ body.modal-open {
     .learner-responsive-whiteboard-section {
         flex: 1 1 auto;
         min-width: 0;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         display: flex;
         flex-direction: column;
     }
