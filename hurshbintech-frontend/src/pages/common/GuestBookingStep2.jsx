@@ -181,7 +181,7 @@ const GuestBookingStep2 = () => {
               <form onSubmit={handleSubmit} className="guest-booking-form">
                 {/* Personal Details Section */}
                 <div className="form-section">
-                  <div className="section-header">
+                  <div className="section-header-guest">
                     <User size={20} />
                     <h3>Your Details</h3>
                   </div>
@@ -221,7 +221,7 @@ const GuestBookingStep2 = () => {
 
                 {/* Coach & Date Section */}
                 <div className="form-section">
-                  <div className="section-header">
+                  <div className="section-header-guest">
                     <Calendar size={20} />
                     <h3>Booking Details</h3>
                   </div>

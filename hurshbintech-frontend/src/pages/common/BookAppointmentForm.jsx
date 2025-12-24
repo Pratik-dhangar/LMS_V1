@@ -200,7 +200,7 @@ const BookAppointmentForm = () => {
   return (
     <div className="page-container">
       <Navbar />
-      <main className="page-main">
+      <main >
         <div className="page-content" style={{maxWidth: '900px'}}>
           {/* Back Button */}
           <button onClick={() => navigate(-1)} className="back-button">
