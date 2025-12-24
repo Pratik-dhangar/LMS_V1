@@ -282,7 +282,7 @@ const LearnerDashboard = () => {
               },
               {
                 icon: "🎓",
-                title: "Enter Learning Session",
+                title: "IIP Programs",
                 desc: "Join your therapy session",
                 onClick: () => navigate("/learner/session"), // If you already have this route
               },

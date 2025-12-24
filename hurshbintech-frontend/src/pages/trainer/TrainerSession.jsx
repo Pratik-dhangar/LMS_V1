@@ -218,6 +218,12 @@ const TrainerSession = () => {
   // These no longer trigger business logic (timer/stopwatch/emoji overlay/shuffle/clear).
   const [activeIcons, setActiveIcons] = useState({});
   const [showInfoBar, setShowInfoBar] = useState(true);
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Freeze mode state
+  // 🔸 How it works: tracks whether learner window is frozen
+  // -----------------------------------------------------------
+  const [isFrozen, setIsFrozen] = useState(false);
   const [showHeader, setShowHeader] = useState(true); // Show/hide header on mobile/tablet
   const [drawerOpen, setDrawerOpen] = useState({
     video: true,
@@ -769,6 +775,30 @@ const TrainerSession = () => {
       cleanup();
       toast.info('Left session');
       navigate('/trainer/dashboard');
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Toggle freeze mode for learner window
+  // 🔸 How it works: sends freeze/unfreeze signal via WebRTC to learner
+  // -----------------------------------------------------------
+  const handleFreeze = () => {
+    const newFreezeState = !isFrozen;
+    setIsFrozen(newFreezeState);
+
+    if (webRTC) {
+      const freezeSignal = {
+        type: 'freeze',
+        frozen: newFreezeState,
+        timestamp: new Date().toISOString()
+      };
+      webRTC.sendSignal(freezeSignal);
+      console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
+      toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
+    } else {
+      console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
+      toast.error('Unable to send freeze signal');
+      setIsFrozen(!newFreezeState); // Revert state
     }
   };
 
@@ -2206,6 +2236,13 @@ const TrainerSession = () => {
           <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
         </div>
         <div className="session-info-actions">
+          <button
+            className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
+            onClick={handleFreeze}
+            title={isFrozen ? "Unfreeze Learner Window" : "Freeze Learner Window"}
+          >
+            {isFrozen ? '🔓' : '🔒'} <span className="xs:inline">{isFrozen ? 'Unfreeze' : 'Freeze'}</span>
+          </button>
           <button
             className="btn-end-session"
             onClick={handleEndSession}
