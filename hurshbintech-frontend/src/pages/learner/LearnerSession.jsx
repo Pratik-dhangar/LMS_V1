@@ -1450,8 +1450,8 @@ const LearnerSession = () => {
             </div>
           </div>
         </div>
-        {/* Whiteboard Area */}
-        <div className="w-full learner-responsive-whiteboard-section mx-auto">
+        {/* Whiteboard Area - Scrollable Container */}
+        <div className="w-full learner-responsive-whiteboard-section mx-auto overflow-y-auto">
           <div className="session-whiteboard-container">
             <div className="w-full h-full">
               <Whiteboard
