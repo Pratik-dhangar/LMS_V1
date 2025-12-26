@@ -159,69 +159,70 @@ const ViewTrainers = () => {
                   </p>
                 </div>
               ) : (
-                <div className="admin-table-container">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th className="admin-table-th">
-                          Sr. No.
-                        </th>
-                        <th className="admin-table-th">
-                          Name
-                        </th>
-                        <th className="admin-table-th">
-                          Passcode
-                        </th>
-                        <th className="admin-table-th">
-                          Contact Number
-                        </th>
-                        <th className="admin-table-th">
-                          Date Joined
-                        </th>
+                <table className="data-table">
+                  <thead className="data-table-header">
+                    <tr>
+                      <th className="data-table-th">
+                        Sr. No.
+                      </th>
+                      <th className="data-table-th">
+                        Name
+                      </th>
+                      <th className="data-table-th">
+                        Passcode
+                      </th>
+                      <th className="data-table-th">
+                        Contact Number
+                      </th>
+                      <th className="data-table-th">
+                        Date Joined
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="data-table-body">
+                    {filteredTrainers.map((trainer, index) => (
+                      <tr
+                        key={trainer.id}
+                        className="data-table-row"
+                      >
+                        <td className="data-table-td data-table-td-center">
+                          {index + 1}
+                        </td>
+                        <td className="data-table-td">
+                          <div className="data-table-name">{trainer.name}</div>
+                          <div className="data-table-subtext">{trainer.role}</div>
+                        </td>
+                        <td className="data-table-td">
+                          <div className="passcode-container">
+                            <span className="passcode-badge">
+                              {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
+                            </span>
+                            <button
+                              onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
+                              className="passcode-toggle-btn"
+                              title={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
+                            >
+                              {visiblePasscodes[trainer.id] ? (
+                                <EyeOff className="icon-sm" />
+                              ) : (
+                                <Eye className="icon-sm" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="data-table-td">
+                          {trainer.contact_no || 'N/A'}
+                        </td>
+                        <td className="data-table-td">
+                          {trainer.date_of_joining
+                            ? new Date(trainer.date_of_joining).toLocaleDateString()
+                            : 'N/A'
+                          }
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filteredTrainers.map((trainer, index) => (
-                        <tr key={trainer.id}>
-                          <td className="admin-table-td admin-table-td-center">
-                            {index + 1}
-                          </td>
-                          <td className="admin-table-td">
-                            <div className="data-table-name">{trainer.name}</div>
-                            <div className="data-table-subtext">{trainer.role}</div>
-                          </td>
-                          <td className="admin-table-td">
-                            <div className="passcode-container">
-                              <span className="passcode-badge">
-                                {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
-                              </span>
-                              <button
-                                onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
-                                className="passcode-toggle-btn"
-                                title={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
-                              >
-                                {visiblePasscodes[trainer.id] ? (
-                                  <EyeOff className="icon-sm" />
-                                ) : (
-                                  <Eye className="icon-sm" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                          <td className="admin-table-td">
-                            {trainer.contact_no || 'N/A'}
-                          </td>
-                          <td className="admin-table-td">
-                            {trainer.date_of_joining
-                              ? new Date(trainer.date_of_joining).toLocaleDateString()
-                              : 'N/A'
-                            }
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}

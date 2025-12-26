@@ -377,9 +377,20 @@ const EditCoach = () => {
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
-          <div className="page-header">
-            <h1 className="page-title">Edit Coach</h1>
-            <p className="page-description">Update coach information</p>
+           <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/manage-coaches')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Manage Coaches
+            </button>
+            <h1 className="page-title">
+              Edit Coach Profile
+            </h1>
+            <p className="page-description">Update profile information for {formData.name}</p>
           </div>
 
           {/* Error Message */}
