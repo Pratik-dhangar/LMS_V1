@@ -34,6 +34,7 @@ import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import Emoji from '../../components/common/Emoji';
 import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
+import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import '../../styles/Pages.css';
 
 const REACTION_SVG_ASSETS = {
@@ -72,6 +73,9 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const { sessionId } = useParams();
   const navigate = useNavigate();
+
+  // Auto-hide navbar hook
+  const { navbarClassName, pageClassName } = useAutoHideNavbar();
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Base URL for websocket (fallback to localhost)
@@ -1706,9 +1710,9 @@ const TrainerSession = () => {
   }
 
   return (
-    <div className="session-page">
+    <div className={`session-page ${pageClassName}`}>
       {/* Navigation / Header - Auto-hide after 5s on mobile/tablet */}
-      <div className={`session-header ${!showHeader ? 'hidden' : ''}`} onClick={handleHeaderClick}>
+      <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Trainer</div>

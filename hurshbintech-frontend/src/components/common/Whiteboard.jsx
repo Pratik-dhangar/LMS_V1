@@ -435,6 +435,31 @@ const Whiteboard = ({
     const dragOffsetRef = useRef({ x: 0, y: 0 }); // Store click offset within dragged item
     const dragStateUpdateTimeRef = useRef(0); // For throttling state updates during drag
 
+    // Touch drag-back state
+    const [touchDragBackActive, setTouchDragBackActive] = useState(false);
+    const touchDragGhostRef = useRef(null);
+    const touchDragItemRef = useRef(null);
+    const touchStartPosRef = useRef({ x: 0, y: 0 });
+
+    // Advanced touch features
+    const [multiTouchActive, setMultiTouchActive] = useState(false);
+    const [pinchToResizeActive, setPinchToResizeActive] = useState(false);
+    const [showGestureHints, setShowGestureHints] = useState(false);
+    const pinchStartDistanceRef = useRef(0);
+    const pinchStartSizeRef = useRef({ width: 0, height: 0 });
+
+    // Gesture hints for first-time users
+    useEffect(() => {
+        const hasSeenHints = localStorage.getItem('whiteboard_gesture_hints_seen');
+        if (!hasSeenHints && isTrainer) {
+            setShowGestureHints(true);
+            setTimeout(() => {
+                setShowGestureHints(false);
+                localStorage.setItem('whiteboard_gesture_hints_seen', 'true');
+            }, 8000); // Show for 8 seconds
+        }
+    }, [isTrainer]);
+
     const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner) => {
         if (!isSelectedByLearner && !isSelectedByRemoteLearner) {
             return {};
@@ -646,6 +671,177 @@ const Whiteboard = ({
         canvas.addEventListener('touchDrop', handleTouchDrop);
         return () => canvas.removeEventListener('touchDrop', handleTouchDrop);
     }, [isTrainer, whiteboardService, setCanvasItems, setInlineVideo]);
+
+    // Pinch-to-resize gesture handler
+    const handlePinchResize = useCallback((e, item) => {
+        if (!isTrainer || e.touches.length !== 2) return;
+
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        const distance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+
+        if (!pinchToResizeActive) {
+            // Start pinch
+            setPinchToResizeActive(true);
+            pinchStartDistanceRef.current = distance;
+            pinchStartSizeRef.current = { width: item.width, height: item.height };
+        } else {
+            // Continue pinch - resize
+            const scale = distance / pinchStartDistanceRef.current;
+            const newWidth = Math.max(40, pinchStartSizeRef.current.width * scale);
+            const newHeight = Math.max(40, pinchStartSizeRef.current.height * scale);
+
+            setCanvasItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, width: newWidth, height: newHeight } : i
+            ));
+
+            // Throttled network update
+            const now = Date.now();
+            if (now - lastNetworkUpdateRef.current > 50) {
+                whiteboardService?.sendItemUpdate({
+                    id: item.id,
+                    width: newWidth,
+                    height: newHeight
+                });
+                lastNetworkUpdateRef.current = now;
+            }
+        }
+    }, [isTrainer, pinchToResizeActive, whiteboardService, setCanvasItems]);
+
+    const handlePinchEnd = useCallback(() => {
+        if (pinchToResizeActive) {
+            setPinchToResizeActive(false);
+        }
+    }, [pinchToResizeActive]);
+
+    // Handle touch drag-back (whiteboard items to sidebar)
+    const handleItemTouchStart = useCallback((e, item) => {
+        if (!isTrainer) return;
+
+        // Check for pinch gesture (2 fingers)
+        if (e.touches.length === 2) {
+            handlePinchResize(e, item);
+            return;
+        }
+
+        const touch = e.touches[0];
+        touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+        touchDragItemRef.current = item;
+
+        // Long-press indication
+        e.currentTarget.style.opacity = '0.7';
+    }, [isTrainer, handlePinchResize]);
+
+    const handleItemTouchMove = useCallback((e, item) => {
+        if (!isTrainer || !touchDragItemRef.current) return;
+
+        // Handle pinch gesture
+        if (e.touches.length === 2) {
+            handlePinchResize(e, item);
+            return;
+        }
+
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x);
+        const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+        // Activate drag mode after 15px movement
+        if ((deltaX > 15 || deltaY > 15) && !touchDragBackActive) {
+            setTouchDragBackActive(true);
+            e.currentTarget.style.opacity = '0.3';
+
+            // Create ghost element
+            if (!touchDragGhostRef.current) {
+                const ghost = document.createElement('div');
+                ghost.id = 'touch-drag-back-ghost';
+                ghost.style.position = 'fixed';
+                ghost.style.pointerEvents = 'none';
+                ghost.style.zIndex = '10000';
+                ghost.style.opacity = '0.7';
+                ghost.style.transform = 'scale(0.8)';
+                ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+                ghost.style.border = '3px dashed #3b82f6';
+                ghost.style.borderRadius = '8px';
+                ghost.style.backgroundColor = 'white';
+                ghost.style.padding = '8px';
+                ghost.style.fontSize = '12px';
+                ghost.style.fontWeight = 'bold';
+                ghost.style.color = '#1e40af';
+                ghost.style.display = 'flex';
+                ghost.style.alignItems = 'center';
+                ghost.style.justifyContent = 'center';
+                ghost.style.width = '120px';
+                ghost.style.height = '80px';
+                ghost.textContent = '↩️ Return';
+                document.body.appendChild(ghost);
+                touchDragGhostRef.current = ghost;
+            }
+        }
+
+        // Move ghost element
+        if (touchDragBackActive && touchDragGhostRef.current) {
+            // Note: Cannot use e.preventDefault() in passive listener - rely on CSS touch-action: none
+            touchDragGhostRef.current.style.left = touch.clientX - 60 + 'px';
+            touchDragGhostRef.current.style.top = touch.clientY - 40 + 'px';
+
+            // Highlight learning content sidebar as drop zone
+            const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+            const sidebar = elementAtPoint?.closest('.sidebar-container');
+            if (sidebar) {
+                sidebar.classList.add('touch-drop-zone-active');
+            } else {
+                document.querySelectorAll('.sidebar-container.touch-drop-zone-active').forEach(el => {
+                    el.classList.remove('touch-drop-zone-active');
+                });
+            }
+        }
+    }, [isTrainer, touchDragBackActive]);
+
+    const handleItemTouchEnd = useCallback((e, item) => {
+        if (!isTrainer) return;
+
+        // Handle pinch end
+        handlePinchEnd();
+
+        const touch = e.changedTouches[0];
+
+        // Cleanup ghost
+        if (touchDragGhostRef.current) {
+            touchDragGhostRef.current.remove();
+            touchDragGhostRef.current = null;
+        }
+
+        // Remove highlights
+        document.querySelectorAll('.touch-drop-zone-active').forEach(el => {
+            el.classList.remove('touch-drop-zone-active');
+        });
+
+        // Restore opacity
+        e.currentTarget.style.opacity = '1';
+
+        if (touchDragBackActive) {
+            // Check if dropped on sidebar
+            const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+            const sidebar = elementAtPoint?.closest('.sidebar-container');
+
+            if (sidebar) {
+                // Success feedback - remove item from whiteboard
+                setCanvasItems(prev => prev.filter(i => i.id !== item.id));
+                whiteboardService?.send('item_remove', { id: item.id });
+
+                // Clear selection
+                setSelectedItems([]);
+            }
+        }
+
+        setTouchDragBackActive(false);
+        touchDragItemRef.current = null;
+    }, [isTrainer, touchDragBackActive, whiteboardService, setCanvasItems, setSelectedItems, handlePinchEnd]);
 
     // Preload images when canvasItems change - debounced to prevent excessive calls
     useEffect(() => {
@@ -1980,6 +2176,57 @@ const Whiteboard = ({
 
     return (
         <div className={`whiteboard-container ${isTrainer ? 'trainer-mode' : 'learner-mode'}`}>
+            {/* Gesture Hints Tutorial - First Time Users */}
+            {showGestureHints && (
+                <div className="gesture-hints-overlay">
+                    <div className="gesture-hints-container">
+                        <button
+                            className="gesture-hints-close"
+                            onClick={() => {
+                                setShowGestureHints(false);
+                                localStorage.setItem('whiteboard_gesture_hints_seen', 'true');
+                            }}
+                            title="Close hints"
+                        >
+                            ×
+                        </button>
+                        <h3 className="gesture-hints-title">🎯 Touch Gestures Guide</h3>
+                        <div className="gesture-hints-grid">
+                            <div className="gesture-hint-item">
+                                <div className="gesture-hint-icon">👆</div>
+                                <div className="gesture-hint-text">
+                                    <strong>Drag to Whiteboard</strong>
+                                    <p>Touch & drag content from sidebar</p>
+                                </div>
+                            </div>
+                            <div className="gesture-hint-item">
+                                <div className="gesture-hint-icon">↩️</div>
+                                <div className="gesture-hint-text">
+                                    <strong>Drag Back</strong>
+                                    <p>Touch & drag items to sidebar to remove</p>
+                                </div>
+                            </div>
+                            <div className="gesture-hint-item">
+                                <div className="gesture-hint-icon">🤏</div>
+                                <div className="gesture-hint-text">
+                                    <strong>Pinch to Resize</strong>
+                                    <p>Use two fingers to resize items</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            className="gesture-hints-got-it"
+                            onClick={() => {
+                                setShowGestureHints(false);
+                                localStorage.setItem('whiteboard_gesture_hints_seen', 'true');
+                            }}
+                        >
+                            Got it! 👍
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Stopwatch Display - Top Right Corner */}
             {stopwatchFormattedTime && (
                 <div className="stopwatch-overlay">
@@ -2033,7 +2280,10 @@ const Whiteboard = ({
                         <video
                             ref={inlineVideoRef}
                             src={inlineVideo.src}
-                            controls={isTrainer}
+                            controls
+                            controlsList="nodownload"
+                            playsInline
+                            webkit-playsinline="true"
                             onPlay={handleVideoPlay}
                             onPause={handleVideoPause}
                             onSeeked={handleVideoSeeked}
@@ -2041,7 +2291,7 @@ const Whiteboard = ({
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'cover',
-                                // backgroundColor: '#000'
+                                backgroundColor: '#000'
                             }}
                         />
                         {isTrainer && (
@@ -2145,17 +2395,32 @@ const Whiteboard = ({
                                             if (!isTrainer && !toolAccess.select) {
                                                 return;
                                             }
+
+                                            // For trainer: enable touch drag-back to sidebar
+                                            if (isTrainer) {
+                                                handleItemTouchStart(e, item);
+                                            }
                                             startDrawing(e);
                                         }}
                                         onTouchMove={(e) => {
                                             e.stopPropagation();
                                             if (isDraggingItem || isResizingItem) {
-                                                e.preventDefault();
+                                                // Note: Cannot use e.preventDefault() in passive listener - rely on CSS touch-action: none
                                                 draw(e);
+                                            }
+
+                                            // Handle touch drag-back
+                                            if (isTrainer && touchDragItemRef.current?.id === item.id) {
+                                                handleItemTouchMove(e, item);
                                             }
                                         }}
                                         onTouchEnd={(e) => {
                                             e.stopPropagation();
+
+                                            // Handle touch drag-back completion
+                                            if (isTrainer && touchDragItemRef.current?.id === item.id) {
+                                                handleItemTouchEnd(e, item);
+                                            }
                                             stopDrawing();
                                         }}
                                         onDoubleClick={(e) => {
@@ -2244,17 +2509,32 @@ const Whiteboard = ({
                                             if (!isTrainer && !toolAccess.select) {
                                                 return;
                                             }
+
+                                            // For trainer: enable touch drag-back to sidebar
+                                            if (isTrainer) {
+                                                handleItemTouchStart(e, item);
+                                            }
                                             startDrawing(e);
                                         }}
                                         onTouchMove={(e) => {
                                             e.stopPropagation();
                                             if (isDraggingItem || isResizingItem) {
-                                                e.preventDefault(); // Prevent scrolling while dragging
+                                                // Note: Cannot use e.preventDefault() in passive listener - rely on CSS touch-action: none
                                                 draw(e);
+                                            }
+
+                                            // Handle touch drag-back
+                                            if (isTrainer && touchDragItemRef.current?.id === item.id) {
+                                                handleItemTouchMove(e, item);
                                             }
                                         }}
                                         onTouchEnd={(e) => {
                                             e.stopPropagation();
+
+                                            // Handle touch drag-back completion
+                                            if (isTrainer && touchDragItemRef.current?.id === item.id) {
+                                                handleItemTouchEnd(e, item);
+                                            }
                                             stopDrawing();
                                         }}
                                         onDragStart={(e) => {
@@ -2828,6 +3108,13 @@ const Whiteboard = ({
                 </div>
 
             </div>
+
+            {/* Pinch-to-Resize Indicator */}
+            {pinchToResizeActive && (
+                <div className="pinch-resize-indicator">
+                    🤏 Pinch to resize
+                </div>
+            )}
         </div>
     );
 
