@@ -37,8 +37,8 @@ class AppointmentStatus(enum.Enum):
 
 # Enums for specific fields - learner model
 class CaesareanType(enum.Enum):
-    ELECTIVE = "elective"
-    EMERGENCY = "emergency"
+    ELECTIVE = "ELECTIVE"
+    EMERGENCY = "EMERGENCY"
 
 
 class ConceptionType(enum.Enum):
