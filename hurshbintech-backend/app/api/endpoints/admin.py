@@ -155,6 +155,9 @@ async def create_new_head(
                 logger.error(f"Failed to upload reference file {filename_str}: {str(e)}")
                 # Continue with other files
     
+    # Refresh the head object to load reference_data relationship
+    await db.refresh(new_head, ['reference_data'])
+    
     return HeadResponse.from_orm_with_user(new_head)
 
 
@@ -587,6 +590,9 @@ async def create_new_coach(
                     filename_str = getattr(ref_file, 'filename', 'unknown')
                     logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
 
+    # Refresh coach to get the reference_data relationship
+    await db.refresh(new_coach, ['reference_data'])
+    
     return CoachResponse.from_orm_with_user(new_coach)
 
 

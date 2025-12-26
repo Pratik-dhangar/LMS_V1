@@ -147,8 +147,12 @@ async def get_head_by_contact(db: AsyncSession, contact_no: str):
 
 async def get_all_heads(db: AsyncSession):
     """Get all head profiles with user data"""
-    result = await db.execute(select(HeadProfile).options(joinedload(HeadProfile.user)))
-    return list(result.scalars().all())
+    result = await db.execute(
+        select(HeadProfile)
+        .options(joinedload(HeadProfile.user))
+        .options(joinedload(HeadProfile.reference_data))
+    )
+    return list(result.scalars().unique().all())
 
 
 async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_id: int):
@@ -817,7 +821,12 @@ async def get_all_trainers_system_wide(db: AsyncSession):
     """Get all trainers across all heads (for admin view)"""
     logger.info("Fetching all trainers system-wide for admin")
     result = await db.execute(
-        select(TrainerProfile).options(joinedload(TrainerProfile.user)).order_by(TrainerProfile.id)
+        select(TrainerProfile)
+        .options(
+            joinedload(TrainerProfile.user),
+            joinedload(TrainerProfile.reference_data)
+        )
+        .order_by(TrainerProfile.id)
     )
     trainers = result.scalars().unique().all()
     logger.info(f"Found {len(trainers)} trainers system-wide")
@@ -844,7 +853,12 @@ async def get_all_learners_system_wide(db: AsyncSession):
     """Get all learners across all heads (for admin view)"""
     logger.info("Fetching all learners system-wide for admin")
     result = await db.execute(
-        select(LearnerProfile).options(joinedload(LearnerProfile.user)).order_by(LearnerProfile.id)
+        select(LearnerProfile)
+        .options(
+            joinedload(LearnerProfile.user),
+            joinedload(LearnerProfile.reference_data)
+        )
+        .order_by(LearnerProfile.id)
     )
     learners = result.scalars().unique().all()
     logger.info(f"Found {len(learners)} learners system-wide")
