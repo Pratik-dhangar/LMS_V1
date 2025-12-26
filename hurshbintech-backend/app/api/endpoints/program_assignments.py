@@ -143,33 +143,9 @@ async def create_program_assignments(
                 head_notes=assignment_data.head_notes
             )
             
-            # Auto-assign learning contents associated with this program
+            # Assign manual learning contents if provided
             try:
-                from app.crud import program_learning_content_crud, learner_content_assignment_crud
-                
-                # Get all contents associated with this program
-                program_contents = await program_learning_content_crud.get_program_contents(db, assignment_data.program_id)
-                
-                # Create learner content assignments for each content in the program
-                for program_content in program_contents:
-                    try:
-                        # Check if already assigned
-                        already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
-                            db, learner_id, program_content.content_id
-                        )
-                        
-                        if not already_assigned:
-                            await learner_content_assignment_crud.create_assignment(
-                                db=db,
-                                learner_id=learner_id,
-                                content_id=program_content.content_id,
-                                assigned_by_head=current_head.user_id,
-                                program_assignment_id=new_assignment.id
-                            )
-                            logger.info(f"Auto-assigned content {program_content.content_id} to learner {learner_id}")
-                        
-                    except Exception as content_error:
-                        logger.warning(f"Failed to auto-assign content {program_content.content_id} to learner {learner_id}: {str(content_error)}")
+                from app.crud import learner_content_assignment_crud
                 
                 # Assign extra/manual learning contents if provided
                 if assignment_data.extra_content_ids and len(assignment_data.extra_content_ids) > 0:
@@ -188,10 +164,10 @@ async def create_program_assignments(
                                     assigned_by_head=current_head.user_id,
                                     program_assignment_id=new_assignment.id
                                 )
-                                logger.info(f"Manually assigned extra content {content_id} to learner {learner_id}")
+                                logger.info(f"Manually assigned content {content_id} to learner {learner_id}")
                         
                         except Exception as content_error:
-                            logger.warning(f"Failed to assign extra content {content_id} to learner {learner_id}: {str(content_error)}")
+                            logger.warning(f"Failed to assign content {content_id} to learner {learner_id}: {str(content_error)}")
                         
             except Exception as content_error:
                 logger.warning(f"Failed to assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
@@ -367,15 +343,9 @@ async def get_assignment_details(
     # Fetch all content assignments for this program assignment
     content_assignments_list = []
     if hasattr(assignment, 'content_assignments'):
-        # Get program content IDs for checking if content is from program
-        program_content_ids = {pc.content_id for pc in assignment.program.program_contents} if hasattr(assignment.program, 'program_contents') else set()
-        
         for ca in assignment.content_assignments:
             # Get actual completion status from the assignment
             completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NOT_STARTED
-            
-            # Check if this content is from the program or manually assigned
-            is_from_program = ca.content_id in program_content_ids
             
             content_assignments_list.append(
                 ContentAssignmentInProgram(
@@ -389,7 +359,6 @@ async def get_assignment_details(
                         file_url=ca.content.file_url,
                         thumbnail_url=ca.content.thumbnail_url,
                     ),
-                    is_from_program=is_from_program,
                     completion_status=completion_status,
                     assigned_at=ca.assigned_at,
                     started_at=ca.started_at if hasattr(ca, 'started_at') else None,

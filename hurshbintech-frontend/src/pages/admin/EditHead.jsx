@@ -328,24 +328,6 @@ const EditHead = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="form-container">
 
-            {/* Read-only Info */}
-            <div className="info-box">
-              <div className="info-grid">
-                <div>
-                  <p className="info-label">Head ID</p>
-                  <p className="info-value">#{originalData?.id}</p>
-                </div>
-                <div>
-                  <p className="info-label">Passcode</p>
-                  <p className="info-value">{originalData?.passcode}</p>
-                </div>
-                <div>
-                  <p className="info-label">Role</p>
-                  <p className="info-value">{originalData?.role}</p>
-                </div>
-              </div>
-            </div>
-
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}

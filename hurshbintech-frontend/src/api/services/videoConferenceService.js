@@ -73,6 +73,7 @@ class VideoConferenceService {
         this.onPromptMeterUpdate = null;
         this.onReinforcementMeterUpdate = null;
         this.onPromptText = null;
+        this.onFreeze = null;
     }
 
     /**
@@ -389,6 +390,12 @@ class VideoConferenceService {
                 case 'prompt_text':
                     if (this.onPromptText) {
                         this.onPromptText({ text: message.text });
+                    }
+                    break;
+
+                case 'freeze':
+                    if (this.onFreeze) {
+                        this.onFreeze(message);
                     }
                     break;
 

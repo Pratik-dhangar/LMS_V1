@@ -135,14 +135,14 @@ const TrainerDashboard = () => {
           prev.length
             ? prev
             : [
-                {
-                  id: "1",
-                  from: "Head",
-                  title: "Updated IIP for John Doe",
-                  time: "2 hours ago",
-                  body: "Please review before today's session.",
-                },
-              ]
+              {
+                id: "1",
+                from: "Head",
+                title: "Updated IIP for John Doe",
+                time: "2 hours ago",
+                body: "Please review before today's session.",
+              },
+            ]
         );
       }
     } catch {
@@ -160,25 +160,25 @@ const TrainerDashboard = () => {
           prev.length
             ? prev
             : [
-                {
-                  id: "n1",
-                  type: "reminder",
-                  title: "Session Reminder",
-                  body: "Session with John Doe starts in 2 hours (10:00 AM)",
-                },
-                {
-                  id: "n2",
-                  type: "content",
-                  title: "New Learning Content",
-                  body: "3 new activities added to Social Skills library",
-                },
-                {
-                  id: "n3",
-                  type: "update",
-                  title: "Platform Update",
-                  body: "New features available in whiteboard toolbar",
-                },
-              ]
+              {
+                id: "n1",
+                type: "reminder",
+                title: "Session Reminder",
+                body: "Session with John Doe starts in 2 hours (10:00 AM)",
+              },
+              {
+                id: "n2",
+                type: "content",
+                title: "New Learning Content",
+                body: "3 new activities added to Social Skills library",
+              },
+              {
+                id: "n3",
+                type: "update",
+                title: "Platform Update",
+                body: "New features available in whiteboard toolbar",
+              },
+            ]
         );
       }
     } catch {
@@ -285,29 +285,17 @@ const TrainerDashboard = () => {
       <Navbar />
       <main className="flex-1 p-6 md:p-8">
         <div className="max-w-[1400px] mx-auto space-y-6">
-          {/* Header / Welcome */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h1 className="text-[#2c3e50] text-2xl font-bold">
-              HurshBin Trainer Dashboard
-            </h1>
-            <div className="text-sm text-gray-600">
-              Welcome back,{" "}
-              <span className="font-semibold">{user?.name || "Trainer"}</span>
-            </div>
-          </div>
+          {/* Page Header */}
+          <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-purple-600 pb-2 mb-6">
+            HurshBin Trainer Dashboard
+          </h1>
 
-          {/* Hero Welcome */}
-          <div className="rounded-xl p-8 bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white shadow-md">
+          {/* Welcome Banner */}
+          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-purple-400 to-indigo-400 shadow-md">
             <h2 className="text-2xl font-semibold mb-2">
               Welcome, {user?.name || "Trainer"}!
             </h2>
-            <p className="text-sm">Ready to make a difference today?</p>
-            {/* <button
-              onClick={() => navigate('/book-appointment')}
-              className="mt-4 px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg inline-flex items-center gap-2"
-            >
-              📅 Book Appointment with Coach
-            </button> */}
+            <p className="text-white/90">Ready to guide and inspire your learners</p>
           </div>
 
           {/* Quick Stats */}
@@ -376,187 +364,183 @@ const TrainerDashboard = () => {
                   <div className="loader h-8 w-8 border-4 border-t-4 rounded-full animate-spin border-gray-300"></div>
                 </div>
               ) : // Filter sessions to those scheduled for today first, then show others
-              sessions.length === 0 ? (
-                <div className="text-center text-gray-500 py-6">
-                  No sessions scheduled yet.
-                </div>
-              ) : (
-                <>
-                  {sessions
-                    .sort(
-                      (a, b) =>
-                        new Date(b.scheduled_date || 0) -
-                        new Date(a.scheduled_date || 0)
-                    )
-                    .slice(0, itemsPerPage)
-                    .map((session) => {
-                      const scheduledDate = session.scheduled_date
-                        ? new Date(session.scheduled_date)
-                        : null;
-                      const timeLabel = scheduledDate
-                        ? scheduledDate.toLocaleTimeString([], {
+                sessions.length === 0 ? (
+                  <div className="text-center text-gray-500 py-6">
+                    No sessions scheduled yet.
+                  </div>
+                ) : (
+                  <>
+                    {sessions
+                      .sort(
+                        (a, b) =>
+                          new Date(b.scheduled_date || 0) -
+                          new Date(a.scheduled_date || 0)
+                      )
+                      .slice(0, itemsPerPage)
+                      .map((session) => {
+                        const scheduledDate = session.scheduled_date
+                          ? new Date(session.scheduled_date)
+                          : null;
+                        const timeLabel = scheduledDate
+                          ? scheduledDate.toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "—";
-                      const ampm = scheduledDate
-                        ? scheduledDate
+                          : "—";
+                        const ampm = scheduledDate
+                          ? scheduledDate
                             .toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                               hour12: true,
                             })
                             .split(" ")[1]
-                        : "";
-                      const borderColor =
-                        session.status === "active"
-                          ? "border-l-4 border-green-500"
-                          : session.status === "scheduled"
-                          ? "border-l-4 border-blue-500"
-                          : "border-l-4 border-yellow-400";
-                      return (
-                        <div
-                          key={session.id || session.session_id}
-                          className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 flex items-center gap-4">
-                              <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
-                                <div className="text-xl font-bold text-[#2c3e50]">
-                                  {timeLabel}
+                          : "";
+                        const borderColor =
+                          session.status === "active"
+                            ? "border-l-4 border-green-500"
+                            : session.status === "scheduled"
+                              ? "border-l-4 border-blue-500"
+                              : "border-l-4 border-yellow-400";
+                        return (
+                          <div
+                            key={session.id || session.session_id}
+                            className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 flex items-center gap-4">
+                                <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
+                                  <div className="text-xl font-bold text-[#2c3e50]">
+                                    {timeLabel}
+                                  </div>
+                                  {/* show AM/PM if available */}
+                                  <div className="text-xs text-gray-500">
+                                    {ampm}
+                                  </div>
                                 </div>
-                                {/* show AM/PM if available */}
-                                <div className="text-xs text-gray-500">
-                                  {ampm}
-                                </div>
-                              </div>
 
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3">
-                                  <div className="text-lg font-semibold text-gray-800">
-                                    {session.title ||
-                                      `Session with ${
-                                        session.learner?.name ||
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-lg font-semibold text-gray-800">
+                                      {session.title ||
+                                        `Session with ${session.learner?.name ||
                                         session.learner_name ||
                                         "Learner"
-                                      }`}
-                                  </div>
-                                  <span
-                                    className={getStatusBadge(session.status)}
-                                  >
-                                    {(session.status || "scheduled")
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      (session.status || "scheduled").slice(1)}
-                                  </span>
-                                </div>
-
-                                <div className="text-sm text-gray-500 mt-1">
-                                  Duration: {session.duration ?? "—"} minutes{" "}
-                                  {session.program
-                                    ? ` | IIP: ${session.program}`
-                                    : ""}
-                                </div>
-
-                                {session.description && (
-                                  <div className="text-xs text-gray-600 mt-2">
-                                    {session.description}
-                                  </div>
-                                )}
-                                {session.scheduled_date && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Scheduled:{" "}
-                                    {new Date(
-                                      session.scheduled_date
-                                    ).toLocaleString()}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                              {session.status === "scheduled" && (
-                                <button
-                                  onClick={() =>
-                                    handleStartSession(session.session_id)
-                                  }
-                                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-                                >
-                                  Start Session
-                                </button>
-                              )}
-                              {session.status === "active" && (
-                                <button
-                                  onClick={() =>
-                                    handleResumeSession(session.session_id)
-                                  }
-                                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-                                >
-                                  Resume Session
-                                </button>
-                              )}
-                              {session.status === "ended" && (
-                                <span className="text-gray-500 text-sm">
-                                  Completed
-                                </span>
-                              )}
-
-                              <div className="flex gap-2 mt-2">
-                                {session.recording_url &&
-                                  session.recording_status === "completed" && (
-                                    <button
-                                      onClick={() =>
-                                        handleViewRecording(session)
-                                      }
-                                      className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
-                                      title="Watch recording"
+                                        }`}
+                                    </div>
+                                    <span
+                                      className={getStatusBadge(session.status)}
                                     >
-                                      ▶️ Watch
-                                    </button>
+                                      {(session.status || "scheduled")
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                        (session.status || "scheduled").slice(1)}
+                                    </span>
+                                  </div>
+
+                                  <div className="text-sm text-gray-500 mt-1">
+                                    Duration: {session.duration ?? "—"} minutes{" "}
+                                    {session.program
+                                      ? ` | IIP: ${session.program}`
+                                      : ""}
+                                  </div>
+
+                                  {session.description && (
+                                    <div className="text-xs text-gray-600 mt-2">
+                                      {session.description}
+                                    </div>
                                   )}
-                                {session.recording_status === "processing" && (
-                                  <span
-                                    className="text-sm px-3 py-1 text-yellow-600"
-                                    title="Recording is being processed"
+                                  {session.scheduled_date && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Scheduled:{" "}
+                                      {new Date(
+                                        session.scheduled_date
+                                      ).toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                                {session.status === "scheduled" && (
+                                  <button
+                                    onClick={() =>
+                                      handleStartSession(session.session_id)
+                                    }
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
                                   >
-                                    ⏳ Processing...
+                                    Start Session
+                                  </button>
+                                )}
+                                {session.status === "active" && (
+                                  <button
+                                    onClick={() =>
+                                      handleResumeSession(session.session_id)
+                                    }
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                  >
+                                    Resume Session
+                                  </button>
+                                )}
+                                {session.status === "ended" && (
+                                  <span className="text-gray-500 text-sm">
+                                    Completed
                                   </span>
                                 )}
-                                {session.recording_status === "failed" && (
-                                  <span
-                                    className="text-sm px-3 py-1 text-red-600"
-                                    title="Recording failed"
+
+                                <div className="flex gap-2 mt-2">
+                                  {session.recording_url &&
+                                    session.recording_status === "completed" && (
+                                      <button
+                                        onClick={() =>
+                                          handleViewRecording(session)
+                                        }
+                                        className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
+                                        title="Watch recording"
+                                      >
+                                        ▶️ Watch
+                                      </button>
+                                    )}
+                                  {session.recording_status === "processing" && (
+                                    <span
+                                      className="text-sm px-3 py-1 text-yellow-600"
+                                      title="Recording is being processed"
+                                    >
+                                      ⏳ Processing...
+                                    </span>
+                                  )}
+                                  {session.recording_status === "failed" && (
+                                    <span
+                                      className="text-sm px-3 py-1 text-red-600"
+                                      title="Recording failed"
+                                    >
+                                      ❌ Failed
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSession(session);
+                                      setShowSessionDetailsModal(true);
+                                    }}
+                                    className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
                                   >
-                                    ❌ Failed
-                                  </span>
-                                )}
-                                <button
-                                  onClick={() =>
-                                    navigate(
-                                      `/trainer/session/${
-                                        session.session_id || session.id
-                                      }`
-                                    )
-                                  }
-                                  className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
-                                >
-                                  View Details
-                                </button>
+                                    View Details
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
 
-                  {/* Pagination Info */}
-                  {sessions.length > itemsPerPage && (
-                    <div className="text-sm text-gray-500 pt-4 border-t text-center">
-                      Showing {itemsPerPage} of {sessions.length} sessions
-                    </div>
-                  )}
-                </>
-              )}
+                    {/* Pagination Info */}
+                    {sessions.length > itemsPerPage && (
+                      <div className="text-sm text-gray-500 pt-4 border-t text-center">
+                        Showing {itemsPerPage} of {sessions.length} sessions
+                      </div>
+                    )}
+                  </>
+                )}
             </div>
           </div>
 
@@ -706,9 +690,9 @@ const TrainerDashboard = () => {
                         <div className="text-xs text-gray-400">
                           {s.scheduled_date
                             ? new Date(s.scheduled_date).toLocaleTimeString(
-                                [],
-                                { hour: "2-digit", minute: "2-digit" }
-                              )
+                              [],
+                              { hour: "2-digit", minute: "2-digit" }
+                            )
                             : ""}
                         </div>
                       </td>
@@ -734,7 +718,7 @@ const TrainerDashboard = () => {
                       </td>
                       <td className="py-3 pr-4">
                         {s.recording_url &&
-                        s.recording_status === "completed" ? (
+                          s.recording_status === "completed" ? (
                           <button
                             onClick={() => handleViewRecording(s)}
                             className="text-sm text-blue-600 hover:underline"
@@ -809,13 +793,12 @@ const TrainerDashboard = () => {
                 {notifications.slice(0, 5).map((n) => (
                   <div
                     key={n.id}
-                    className={`p-3 rounded ${
-                      n.type === "reminder"
-                        ? "bg-yellow-50 border-l-4 border-yellow-400"
-                        : n.type === "content"
+                    className={`p-3 rounded ${n.type === "reminder"
+                      ? "bg-yellow-50 border-l-4 border-yellow-400"
+                      : n.type === "content"
                         ? "bg-green-50 border-l-4 border-green-400"
                         : "bg-cyan-50 border-l-4 border-cyan-400"
-                    }`}
+                      }`}
                   >
                     <div className="font-semibold text-sm">{n.title}</div>
                     <div className="text-xs text-gray-700 mt-1">{n.body}</div>
@@ -831,7 +814,7 @@ const TrainerDashboard = () => {
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
               <button
                 onClick={() => navigate("/book-appointment")}
-                className="py-4 rounded-lg border text-sm hover:bg-gray-100" 
+                className="py-4 rounded-lg border text-sm hover:bg-gray-100"
               >
                 📅 Book Appointment with Coach
               </button>

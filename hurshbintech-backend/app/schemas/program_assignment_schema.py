@@ -54,7 +54,6 @@ class ContentAssignmentInProgram(BaseModel):
     id: int
     content_id: int
     learning_content: LearningContentBasic
-    is_from_program: bool  # True if auto-assigned from program, False if manually assigned
     completion_status: ContentCompletionStatus
     assigned_at: datetime
     started_at: Optional[datetime] = None
@@ -146,7 +145,7 @@ class ProgramAssignmentResponse(BaseModel):
     updated_at: datetime
     is_overdue: bool = False
     is_late_submission: bool = False
-    content_assignments: List[ContentAssignmentInProgram] = []  # All content assignments (auto + manual)
+    content_assignments: List[ContentAssignmentInProgram] = []  # All content assignments
 
     class Config:
         from_attributes = True
