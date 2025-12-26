@@ -25,7 +25,7 @@ const GuestPaymentUploadSuccess = () => {
   return (
     <>
       <Navbar />
-      <div className="page-container">
+      <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-content">
             <div className="guest-booking-card">

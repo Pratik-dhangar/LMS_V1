@@ -134,11 +134,16 @@ code {
 /* Prevent layout shift and horizontal scroll */
 img,
 video,
-canvas,
-svg {
+canvas {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* SVG specific - don't force block display to preserve inline SVGs */
+svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Responsive container */

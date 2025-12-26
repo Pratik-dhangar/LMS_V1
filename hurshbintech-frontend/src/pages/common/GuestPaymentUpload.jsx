@@ -203,7 +203,7 @@ const GuestPaymentUpload = () => {
   return (
     <>
       <Navbar />
-      <div className="page-container">
+      <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-header">
             <h1 className="page-title">Payment Receipt Upload</h1>

@@ -10,7 +10,7 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminRegisterCoach.css';
 
 const RegisterCoach = () => {
   const navigate = useNavigate();
@@ -48,6 +48,7 @@ const RegisterCoach = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [successData, setSuccessData] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,7 +71,7 @@ const RegisterCoach = () => {
       const isSelected = currentArray.includes(value);
       return {
         ...prev,
-        [name]: isSelected 
+        [name]: isSelected
           ? currentArray.filter(item => item !== value)
           : [...currentArray, value]
       };
@@ -147,7 +148,7 @@ const RegisterCoach = () => {
 
       // Prepare form data for submission
       const submitData = new FormData();
-      
+
       // Add all text fields
       Object.keys(formData).forEach(key => {
         if (key === 'availability_days' || key === 'time_slots') {
@@ -175,17 +176,27 @@ const RegisterCoach = () => {
       // Call the API to create a new coach
       const newCoach = await headService.createCoach(submitData);
       
-      toast.success('Coach registered successfully!', {
-        position: 'top-center',
-        autoClose: 3000,
-      });
+      // Set success data to show in overlay
+      setSuccessData(newCoach);
+      
+      toast.success(
+        `Coach registered successfully! Passcode: ${newCoach.passcode}`,
+        {
+          position: 'top-center',
+          autoClose: 5000,
+        }
+      );
 
-      // Redirect to manage coaches page
-      navigate('/admin/manage-coaches');
+      // Redirect after showing the success state
+      setTimeout(() => {
+        setLoading(false);
+        navigate('/admin/manage-coaches');
+      }, 3500);
     } catch (err) {
       console.error('Error registering coach:', err);
+      setLoading(false);
       let errorMessage = 'Failed to register coach. Please try again.';
-      
+
       if (err.response?.status === 422) {
         // Handle validation errors
         const validationErrors = err.response.data?.detail;
@@ -201,14 +212,12 @@ const RegisterCoach = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setSubmitError(errorMessage);
       toast.error(errorMessage, {
         position: 'top-center',
         autoClose: 5000,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -219,6 +228,42 @@ const RegisterCoach = () => {
   return (
     <div className="page-container">
       <Navbar />
+
+      {/* Loading/Success Overlay */}
+      {loading && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-sm modal-loading">
+            {!successData ? (
+              // Loading State
+              <>
+                <div className="loading-spinner-container">
+                  <div className="loading-spinner"></div>
+                </div>
+                <p className="modal-title modal-title-success">Registering Coach...</p>
+                <p className="modal-message">Please wait while we process your request</p>
+              </>
+            ) : (
+              // Success State
+              <>
+                <div className="success-icon-container">
+                  <div className="success-icon">
+                    <svg className="success-icon-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                      <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                </div>
+                <p className="modal-title modal-title-success">Coach Registered Successfully!</p>
+                <div className="passcode-display">
+                  <p className="passcode-label">Generated Passcode:</p>
+                  <p className="passcode-value">{successData.passcode}</p>
+                </div>
+                <p className="modal-message">Redirecting to manage coaches...</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -260,7 +305,7 @@ const RegisterCoach = () => {
             {/* Coach-Specific Fields */}
             <section className="section">
               <h2 className="section-title">Coach-Specific Information</h2>
-              
+
               <div className="grid-2">
                 {/* Availability Days - Multi Select */}
                 <div>

@@ -1,0 +1,94 @@
+/* Admin Edit Vlog Styles */
+.admin-edit-vlog-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f6fa;
+}
+
+.admin-edit-vlog-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-edit-vlog-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.admin-edit-vlog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2c3e50;
+}
+
+.admin-edit-vlog-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 700;
+}
+
+.admin-edit-vlog-form {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.admin-edit-vlog-section {
+    margin-bottom: 2rem;
+}
+
+.admin-edit-vlog-section:last-child {
+    margin-bottom: 0;
+}
+
+.admin-edit-vlog-section-title {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.admin-edit-vlog-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: #2563eb;
+}
+
+.admin-edit-vlog-error {
+    background: #fee2e2;
+    border: 1px solid #dc2626;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .admin-edit-vlog-main {
+        padding: 1rem;
+    }
+
+    .admin-edit-vlog-form {
+        padding: 1.5rem;
+    }
+
+    .admin-edit-vlog-title {
+        font-size: 1.5rem;
+    }
+
+    .admin-edit-vlog-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}

@@ -223,7 +223,7 @@ const RegisterLearner = () => {
       });
 
       console.log('Submitting learner data:', submitData);
-      const response = await headService.createLearner(submitData);
+      const response = await headService.createLearner(submitData, referenceFiles);
 
       console.log('Learner registered successfully:', response);
       setSuccessData(response);
@@ -296,32 +296,31 @@ const RegisterLearner = () => {
 
       {/* Loading/Success Modal */}
       {loading && (
-        <div className="modal-overlay modal-overlay-blur">
-          <div className="modal-success">
+        <div className="modal-overlay">
+          <div className="modal-content modal-sm modal-loading">
             {!successData ? (
               <>
-                <div className="spinner-wrapper">
-                  <div className="spinner-large"></div>
-                  <div className="spinner-center"></div>
+                <div className="loading-spinner-container">
+                  <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title">Registering Learner...</p>
-                <p className="modal-subtitle">Please wait while we process your request</p>
+                <p className="modal-title modal-title-success">Registering Learner...</p>
+                <p className="modal-message">Please wait while we process your request</p>
               </>
             ) : (
               <>
-                <div className="success-icon-wrapper">
+                <div className="success-icon-container">
                   <div className="success-icon">
-                    <svg className="icon-xl success-check" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="success-icon-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                       <path d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title success-title">Learner Registered Successfully!</p>
+                <p className="modal-title modal-title-success">Learner Registered Successfully!</p>
                 <div className="passcode-display">
                   <p className="passcode-label">Generated Passcode:</p>
                   <p className="passcode-value">{successData.passcode}</p>
                 </div>
-                <p className="modal-subtitle">Redirecting to manage learners...</p>
+                <p className="modal-message">Redirecting to manage learners...</p>
               </>
             )}
           </div>
@@ -358,9 +357,6 @@ const RegisterLearner = () => {
               formData={formData}
               errors={errors}
               handleChange={handleChange}
-              handleFileChange={handleFileChange}
-              referenceFiles={referenceFiles}
-              removeFile={removeFile}
             />
 
             {/* Delivery History */}

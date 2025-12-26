@@ -1,0 +1,29 @@
+/* Admin Styles Index - Import all admin-related CSS files */
+
+/* Core Admin Dashboard Styles */
+@import './AdminDashboard.css';
+@import './AdminHeader.css';
+@import './AdminStats.css';
+@import './AdminMenu.css';
+
+/* Admin Features */
+@import './AdminTable.css';
+@import './AdminForm.css';
+@import './AdminModal.css';
+
+/* Admin Utilities */
+@import './AdminUtils.css';
+
+/* Individual Admin Component Styles */
+@import './AdminRegisterCoach.css';
+@import './AdminEditCoach.css';
+@import './AdminManageCoaches.css';
+@import './AdminRegisterHead.css';
+@import './AdminEditHead.css';
+@import './AdminManageHeads.css';
+@import './AdminViewTrainers.css';
+@import './AdminViewLearners.css';
+@import './AdminManageLearningContent.css';
+@import './AdminManageLearningGoals.css';
+@import './AdminEditVlog.css';
+@import './AdminManageVlogs.css';

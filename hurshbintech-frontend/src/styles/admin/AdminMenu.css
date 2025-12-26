@@ -1,0 +1,426 @@
+/* Admin Menu Section Styles */
+.admin-dashboard-menu {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 2rem 0;
+    margin-top: 2rem;
+}
+
+.admin-menu-title {
+    margin-bottom: 2rem;
+}
+
+.admin-menu-title h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+    letter-spacing: 0px;
+}
+
+.admin-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 2rem;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Card Styles */
+.admin-menu-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+    border: 3px solid;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 220px;
+    flex: 1;
+    width: 100%;
+}
+
+.admin-menu-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Color Variants */
+.admin-menu-card-red {
+    border-color: #ef4444;
+}
+
+.admin-menu-card-red .admin-menu-card-icon {
+    color: #ef4444;
+}
+
+.admin-menu-card-red:hover {
+    background: rgba(239, 68, 68, 0.02);
+}
+
+.admin-menu-card-blue {
+    border-color: #2563eb;
+}
+
+.admin-menu-card-blue .admin-menu-card-icon {
+    color: #2563eb;
+}
+
+.admin-menu-card-blue:hover {
+    background: rgba(37, 99, 235, 0.02);
+}
+
+.admin-menu-card-purple {
+    border-color: #a855f7;
+}
+
+.admin-menu-card-purple .admin-menu-card-icon {
+    color: #a855f7;
+}
+
+.admin-menu-card-purple:hover {
+    background: rgba(168, 85, 247, 0.02);
+}
+
+.admin-menu-card-green {
+    border-color: #16a34a;
+}
+
+.admin-menu-card-green .admin-menu-card-icon {
+    color: #16a34a;
+}
+
+.admin-menu-card-green:hover {
+    background: rgba(22, 163, 74, 0.02);
+}
+
+.admin-menu-card-orange {
+    border-color: #f97316;
+}
+
+.admin-menu-card-orange .admin-menu-card-icon {
+    color: #f97316;
+}
+
+.admin-menu-card-orange:hover {
+    background: rgba(249, 115, 22, 0.02);
+}
+
+.admin-menu-card-teal {
+    border-color: #14b8a6;
+}
+
+.admin-menu-card-teal .admin-menu-card-icon {
+    color: #14b8a6;
+}
+
+.admin-menu-card-teal:hover {
+    background: rgba(20, 184, 166, 0.02);
+}
+
+.admin-menu-card-yellow {
+    border-color: #eab308;
+}
+
+.admin-menu-card-yellow .admin-menu-card-icon {
+    color: #eab308;
+}
+
+.admin-menu-card-yellow:hover {
+    background: rgba(234, 179, 8, 0.02);
+}
+
+.admin-menu-card-pink {
+    border-color: #ec4899;
+}
+
+.admin-menu-card-pink .admin-menu-card-icon {
+    color: #ec4899;
+}
+
+.admin-menu-card-pink:hover {
+    background: rgba(236, 72, 153, 0.02);
+}
+
+.admin-menu-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-menu-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0.5rem 0;
+    letter-spacing: 0px;
+}
+
+.admin-menu-card-description {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Card Styles */
+.admin-menu-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+    border: 3px solid;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 240px;
+    flex: 1;
+    width: 100%;
+}
+
+.admin-menu-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Color Variants */
+.admin-menu-card-red {
+    border-color: #ef4444;
+}
+
+.admin-menu-card-red .admin-menu-card-icon {
+    color: #ef4444;
+}
+
+.admin-menu-card-red:hover {
+    background: rgba(239, 68, 68, 0.02);
+}
+
+.admin-menu-card-blue {
+    border-color: #2563eb;
+}
+
+.admin-menu-card-blue .admin-menu-card-icon {
+    color: #2563eb;
+}
+
+.admin-menu-card-blue:hover {
+    background: rgba(37, 99, 235, 0.02);
+}
+
+.admin-menu-card-purple {
+    border-color: #a855f7;
+}
+
+.admin-menu-card-purple .admin-menu-card-icon {
+    color: #a855f7;
+}
+
+.admin-menu-card-purple:hover {
+    background: rgba(168, 85, 247, 0.02);
+}
+
+.admin-menu-card-green {
+    border-color: #16a34a;
+}
+
+.admin-menu-card-green .admin-menu-card-icon {
+    color: #16a34a;
+}
+
+.admin-menu-card-green:hover {
+    background: rgba(22, 163, 74, 0.02);
+}
+
+.admin-menu-card-orange {
+    border-color: #f97316;
+}
+
+.admin-menu-card-orange .admin-menu-card-icon {
+    color: #f97316;
+}
+
+.admin-menu-card-orange:hover {
+    background: rgba(249, 115, 22, 0.02);
+}
+
+.admin-menu-card-teal {
+    border-color: #14b8a6;
+}
+
+.admin-menu-card-teal .admin-menu-card-icon {
+    color: #14b8a6;
+}
+
+.admin-menu-card-teal:hover {
+    background: rgba(20, 184, 166, 0.02);
+}
+
+.admin-menu-card-yellow {
+    border-color: #eab308;
+}
+
+.admin-menu-card-yellow .admin-menu-card-icon {
+    color: #eab308;
+}
+
+.admin-menu-card-yellow:hover {
+    background: rgba(234, 179, 8, 0.02);
+}
+
+.admin-menu-card-pink {
+    border-color: #ec4899;
+}
+
+.admin-menu-card-pink .admin-menu-card-icon {
+    color: #ec4899;
+}
+
+.admin-menu-card-pink:hover {
+    background: rgba(236, 72, 153, 0.02);
+}
+
+.admin-menu-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.admin-menu-card:hover .admin-menu-card-icon {
+    transform: scale(1.1);
+}
+
+.admin-menu-card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0.5rem 0;
+    letter-spacing: 0px;
+    line-height: 1.3;
+}
+
+.admin-menu-card-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Simple Menu Item Styles - For old layout fallback */
+.admin-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+    border: 3px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 220px;
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-menu-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #2563eb;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.admin-menu-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    border-color: #2563eb;
+}
+
+.admin-menu-item:hover::before {
+    transform: scaleX(1);
+}
+
+.admin-menu-item-text {
+    color: #374151;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0px;
+    transition: color 0.3s ease;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.admin-menu-item:hover .admin-menu-item-text {
+    color: #2563eb;
+}
+
+.admin-menu-item-arrow {
+    width: 0;
+    height: 0;
+    color: transparent;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    stroke-width: 2;
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    .admin-menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-dashboard-menu {
+        padding: 1.5rem;
+    }
+
+    .admin-menu-title h2 {
+        font-size: 1rem;
+    }
+
+    .admin-menu-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .admin-menu-card {
+        padding: 1.5rem;
+        min-height: 160px;
+    }
+
+    .admin-menu-card-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .admin-menu-card-title {
+        font-size: 1rem;
+    }
+
+    .admin-menu-card-description {
+        font-size: 0.8rem;
+    }
+}

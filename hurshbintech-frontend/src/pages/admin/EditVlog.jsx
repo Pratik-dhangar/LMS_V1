@@ -7,7 +7,7 @@ import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminEditVlog.css';
 
 const EditVlog = () => {
   const { id } = useParams();

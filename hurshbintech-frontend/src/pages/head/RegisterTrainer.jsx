@@ -141,15 +141,23 @@ const RegisterTrainer = () => {
     setSuccessData(null);
 
     try {
-      // Prepare data for submission
-      const submitData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
-      };
+      // Prepare FormData for submission (to support file uploads)
+      const submitFormData = new FormData();
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== null && formData[key] !== '') {
+          submitFormData.append(key, formData[key]);
+        }
+      });
+
+      // Append reference files
+      referenceFiles.forEach(file => {
+        submitFormData.append('reference_files', file);
+      });
 
       // Create trainer
-      const result = await headService.createTrainer(submitData);
+      const result = await headService.createTrainer(submitFormData);
 
       // Set success data to show in overlay
       setSuccessData(result);
@@ -230,34 +238,33 @@ const RegisterTrainer = () => {
 
       {/* Loading/Success Overlay */}
       {loading && (
-        <div className="modal-overlay modal-overlay-blur">
-          <div className="modal-success">
+        <div className="modal-overlay">
+          <div className="modal-content modal-sm modal-loading">
             {!successData ? (
               // Loading State
               <>
-                <div className="spinner-wrapper">
-                  <div className="spinner-large"></div>
-                  <div className="spinner-center"></div>
+                <div className="loading-spinner-container">
+                  <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title">Registering Head...</p>
-                <p className="modal-subtitle">Please wait while we process your request</p>
+                <p className="modal-title modal-title-success">Registering Trainer...</p>
+                <p className="modal-message">Please wait while we process your request</p>
               </>
             ) : (
               // Success State
               <>
-                <div className="success-icon-wrapper">
+                <div className="success-icon-container">
                   <div className="success-icon">
-                    <svg className="icon-xl success-check" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="success-icon-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                       <path d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title success-title">Head Registered Successfully!</p>
+                <p className="modal-title modal-title-success">Trainer Registered Successfully!</p>
                 <div className="passcode-display">
                   <p className="passcode-label">Generated Passcode:</p>
                   <p className="passcode-value">{successData.passcode}</p>
                 </div>
-                <p className="modal-subtitle">Redirecting to dashboard...</p>
+                <p className="modal-message">Redirecting to dashboard...</p>
               </>
             )}
           </div>

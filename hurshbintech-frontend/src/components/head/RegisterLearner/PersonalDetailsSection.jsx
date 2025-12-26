@@ -2,7 +2,7 @@ import React from 'react';
 import ChecklistField from '../../common/ChecklistField';
 import '../../../styles/components/head/RegisterLearnerSections.css';
 
-const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChange, referenceFiles, removeFile }) => {
+const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
   return (
     <div className="register-section">
       <h2 className="register-section-title">
@@ -105,41 +105,6 @@ const PersonalDetailsSection = ({ formData, errors, handleChange, handleFileChan
           error={errors.dlb_concerns_checklist}
           required
         />
-      </div>
-
-      {/* Upload References */}
-      <div className="register-field-full">
-        <label htmlFor="personal_reference_files" className="register-field-label">
-          Upload References (Documents, Images, Videos)
-        </label>
-        <input
-          type="file"
-          id="personal_reference_files"
-          multiple
-          onChange={handleFileChange}
-          className="register-file-input"
-          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-        />
-        <p className="register-file-hint">
-          Supported formats: PDF, DOCX, Images, Videos
-        </p>
-
-        {referenceFiles.length > 0 && (
-          <div className="register-file-list">
-            {referenceFiles.map((file, index) => (
-              <div key={index} className="register-file-item">
-                <span className="register-file-name">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="register-file-remove"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* A box for notes */}
