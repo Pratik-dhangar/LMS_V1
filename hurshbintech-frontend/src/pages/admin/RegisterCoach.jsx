@@ -10,7 +10,7 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminRegisterCoach.css';
 
 const RegisterCoach = () => {
   const navigate = useNavigate();
@@ -70,7 +70,7 @@ const RegisterCoach = () => {
       const isSelected = currentArray.includes(value);
       return {
         ...prev,
-        [name]: isSelected 
+        [name]: isSelected
           ? currentArray.filter(item => item !== value)
           : [...currentArray, value]
       };
@@ -147,7 +147,7 @@ const RegisterCoach = () => {
 
       // Prepare form data for submission
       const submitData = new FormData();
-      
+
       // Add all text fields
       Object.keys(formData).forEach(key => {
         if (key === 'availability_days' || key === 'time_slots') {
@@ -174,7 +174,7 @@ const RegisterCoach = () => {
 
       // Call the API to create a new coach
       const newCoach = await headService.createCoach(submitData);
-      
+
       toast.success('Coach registered successfully!', {
         position: 'top-center',
         autoClose: 3000,
@@ -185,7 +185,7 @@ const RegisterCoach = () => {
     } catch (err) {
       console.error('Error registering coach:', err);
       let errorMessage = 'Failed to register coach. Please try again.';
-      
+
       if (err.response?.status === 422) {
         // Handle validation errors
         const validationErrors = err.response.data?.detail;
@@ -201,7 +201,7 @@ const RegisterCoach = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setSubmitError(errorMessage);
       toast.error(errorMessage, {
         position: 'top-center',
@@ -260,7 +260,7 @@ const RegisterCoach = () => {
             {/* Coach-Specific Fields */}
             <section className="section">
               <h2 className="section-title">Coach-Specific Information</h2>
-              
+
               <div className="grid-2">
                 {/* Availability Days - Multi Select */}
                 <div>

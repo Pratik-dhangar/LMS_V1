@@ -1,0 +1,110 @@
+/* Admin Edit Coach Styles */
+.admin-edit-coach-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f6fa;
+}
+
+.admin-edit-coach-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-edit-coach-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.admin-edit-coach-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2c3e50;
+}
+
+.admin-edit-coach-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 700;
+}
+
+.admin-edit-coach-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.admin-edit-coach-form {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.admin-edit-coach-section {
+    margin-bottom: 2rem;
+}
+
+.admin-edit-coach-section:last-child {
+    margin-bottom: 0;
+}
+
+.admin-edit-coach-section-title {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.admin-edit-coach-section-divider {
+    margin: 2rem 0;
+    border: none;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-edit-coach-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: #2563eb;
+}
+
+.admin-edit-coach-error {
+    background: #fee2e2;
+    border: 1px solid #dc2626;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .admin-edit-coach-main {
+        padding: 1rem;
+    }
+
+    .admin-edit-coach-form {
+        padding: 1.5rem;
+    }
+
+    .admin-edit-coach-title {
+        font-size: 1.5rem;
+    }
+
+    .admin-edit-coach-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .admin-edit-coach-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+}

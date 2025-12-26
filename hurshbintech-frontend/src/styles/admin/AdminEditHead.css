@@ -1,0 +1,94 @@
+/* Admin Edit Head Styles */
+.admin-edit-head-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f6fa;
+}
+
+.admin-edit-head-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-edit-head-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.admin-edit-head-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2c3e50;
+}
+
+.admin-edit-head-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 700;
+}
+
+.admin-edit-head-form {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.admin-edit-head-section {
+    margin-bottom: 2rem;
+}
+
+.admin-edit-head-section:last-child {
+    margin-bottom: 0;
+}
+
+.admin-edit-head-section-title {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.admin-edit-head-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: #2563eb;
+}
+
+.admin-edit-head-error {
+    background: #fee2e2;
+    border: 1px solid #dc2626;
+    color: #991b1b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .admin-edit-head-main {
+        padding: 1rem;
+    }
+
+    .admin-edit-head-form {
+        padding: 1.5rem;
+    }
+
+    .admin-edit-head-title {
+        font-size: 1.5rem;
+    }
+
+    .admin-edit-head-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}

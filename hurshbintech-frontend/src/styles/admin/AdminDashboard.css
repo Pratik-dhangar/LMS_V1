@@ -1,0 +1,19 @@
+/* Admin Dashboard Main Container Styles */
+.admin-dashboard-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+}
+
+.admin-dashboard-main {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+}
+
+.admin-dashboard-content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+}

@@ -12,7 +12,7 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminEditCoach.css';
 
 const EditCoach = () => {
   const { coachId } = useParams();
@@ -53,7 +53,7 @@ const EditCoach = () => {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  
+
   const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const TIME_SLOT_OPTIONS = ['10am', '1pm', '3pm', '5pm'];
 
@@ -89,7 +89,7 @@ const EditCoach = () => {
         specialization: coach.specialization || '',
         profile_picture_url: null,
       });
-      
+
       // Store existing profile picture separately
       setExistingProfilePicture(coach.profile_picture_url || null);
       setExistingReferenceData(coach.reference_data || []);
@@ -123,7 +123,7 @@ const EditCoach = () => {
       const isSelected = currentArray.includes(value);
       return {
         ...prev,
-        [name]: isSelected 
+        [name]: isSelected
           ? currentArray.filter(item => item !== value)
           : [...currentArray, value]
       };
@@ -206,9 +206,9 @@ const EditCoach = () => {
     try {
       // Update coach with null profile picture
       await adminService.updateCoach(coachId, { profile_picture_url: null });
-      
+
       setExistingProfilePicture(null);
-      
+
       toast.success('Profile picture removed successfully!', {
         position: 'top-center',
         autoClose: 2000,
@@ -263,7 +263,7 @@ const EditCoach = () => {
 
       // Prepare form data for submission
       const submitData = new FormData();
-      
+
       // Add all text fields
       Object.keys(formData).forEach(key => {
         if (key === 'availability_days' || key === 'time_slots') {
@@ -289,7 +289,7 @@ const EditCoach = () => {
       });
 
       await headService.updateCoach(coachId, submitData);
-      
+
       toast.success('Coach updated successfully!', {
         position: 'top-center',
         autoClose: 3000,
@@ -415,7 +415,7 @@ const EditCoach = () => {
             {/* Coach-Specific Fields */}
             <section className="section">
               <h2 className="section-title">Coach-Specific Information</h2>
-              
+
               <div className="grid-2">
                 {/* Availability Days - Multi Select */}
                 <div>
@@ -486,7 +486,7 @@ const EditCoach = () => {
                     accept="image/*"
                   />
                   <p className="form-hint">Supported formats: JPG, PNG, GIF</p>
-                  
+
                   {/* Existing Profile Picture */}
                   {existingProfilePicture && (
                     <div className="existing-files-section">
@@ -514,7 +514,7 @@ const EditCoach = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* New Profile Picture to Upload */}
                   {formData.profile_picture_url && (
                     <div className="new-files-section">

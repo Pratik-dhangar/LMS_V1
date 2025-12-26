@@ -7,7 +7,7 @@ import ErrorState from "../../components/common/ErrorState";
 import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminManageVlogs.css';
 
 const ManageVlogs = () => {
   const [vlogs, setVlogs] = useState([]);

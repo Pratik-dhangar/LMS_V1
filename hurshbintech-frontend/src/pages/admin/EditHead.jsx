@@ -13,7 +13,7 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminEditHead.css';
 
 const EditHead = () => {
   const navigate = useNavigate();
@@ -95,10 +95,10 @@ const EditHead = () => {
 
       setFormData(formattedData);
       setOriginalData(formattedData);
-      
+
       // Set existing reference files
       setExistingReferenceFiles(data.reference_data || []);
-      
+
     } catch (error) {
       console.error('Error fetching head data:', error);
       setFetchError('Failed to load head data. Please try again.');
@@ -198,14 +198,14 @@ const EditHead = () => {
     try {
       // Prepare FormData for submission (to handle file uploads)
       const submitData = new FormData();
-      
+
       // Add all text fields (only non-readonly fields)
       Object.keys(formData).forEach(key => {
         // Skip readonly fields
         if (['id', 'role', 'passcode', 'created_at', 'created_by'].includes(key)) {
           return;
         }
-        
+
         if (key === 'number_of_sessions_done') {
           submitData.append(key, parseInt(formData[key]) || 0);
         } else if (key === 'age') {
