@@ -1,7 +1,16 @@
 import React from 'react';
 import '../../../styles/components/head/RegisterLearnerSections.css';
 
-const InterventionHistorySection = ({ formData, handleChange, handleFileChange, referenceFiles, removeFile }) => {
+const InterventionHistorySection = ({ 
+  formData, 
+  handleChange, 
+  handleFileChange, 
+  referenceFiles, 
+  removeFile,
+  existingReferenceData,
+  handleViewFile,
+  handleDeleteExistingFile
+}) => {
   return (
     <div className="register-section">
       <h2 className="register-section-title">
@@ -25,8 +34,40 @@ const InterventionHistorySection = ({ formData, handleChange, handleFileChange, 
           Supported formats: PDF, DOCX, Images, Videos
         </p>
 
+        {/* Existing Reference Files */}
+        {existingReferenceData && existingReferenceData.length > 0 && (
+          <div className="existing-files-section" style={{ marginTop: '1rem' }}>
+            <h4 className="subsection-title">Existing Reference Files</h4>
+            <div className="file-list">
+              {existingReferenceData.map((file) => (
+                <div key={file.id} className="file-item">
+                  <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                  <div className="file-actions">
+                    <button
+                      type="button"
+                      onClick={(e) => handleViewFile(file.file_path, e)}
+                      className="btn-view-file"
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingFile(file.id)}
+                      className="file-remove-btn"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New Files to Upload */}
         {referenceFiles.length > 0 && (
           <div className="register-file-list">
+            <h4 className="subsection-title">New Files to Upload</h4>
             {referenceFiles.map((file, index) => (
               <div key={index} className="register-file-item">
                 <span className="register-file-name">{file.name}</span>

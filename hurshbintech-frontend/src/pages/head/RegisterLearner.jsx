@@ -223,7 +223,7 @@ const RegisterLearner = () => {
       });
 
       console.log('Submitting learner data:', submitData);
-      const response = await headService.createLearner(submitData);
+      const response = await headService.createLearner(submitData, referenceFiles);
 
       console.log('Learner registered successfully:', response);
       setSuccessData(response);
@@ -358,9 +358,6 @@ const RegisterLearner = () => {
               formData={formData}
               errors={errors}
               handleChange={handleChange}
-              handleFileChange={handleFileChange}
-              referenceFiles={referenceFiles}
-              removeFile={removeFile}
             />
 
             {/* Delivery History */}

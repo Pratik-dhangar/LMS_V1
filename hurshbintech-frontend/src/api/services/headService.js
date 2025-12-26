@@ -19,12 +19,16 @@ const headService = {
   // Trainer Management APIs
   /**
    * Create a new Trainer
-   * @param {Object} trainerData 
+   * @param {FormData} trainerData 
    * @returns {Promise} 
    */
   createTrainer: async (trainerData) => {
-    console.log('Creating new trainer:', { name: trainerData.name, contactNo: trainerData.contact_no });
-    const response = await axiosInstance.post('/head/trainers', trainerData);
+    console.log('Creating new trainer with FormData');
+    const response = await axiosInstance.post('/head/trainers', trainerData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
     console.log('Trainer created successfully:', { id: response.data.id, passcode: response.data.passcode });
     return response.data;
   },
@@ -55,11 +59,15 @@ const headService = {
   /**
    * Update Trainer
    * @param {number} trainerId
-   * @param {Object} updateData
+   * @param {FormData} updateData
    * @returns {Promise} - Updated trainer object
    */
   updateTrainer: async (trainerId, updateData) => {
-    const response = await axiosInstance.patch(`/head/trainers/${trainerId}`, updateData);
+    const response = await axiosInstance.patch(`/head/trainers/${trainerId}`, updateData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
     return response.data;
   },
 
@@ -73,16 +81,45 @@ const headService = {
     return response.data;
   },
 
+  /**
+   * Delete a trainer reference file
+   * @param {number} trainerId
+   * @param {number} referenceId
+   * @returns {Promise}
+   */
+  deleteTrainerReferenceFile: async (trainerId, referenceId) => {
+    const response = await axiosInstance.delete(`/head/trainers/${trainerId}/reference/${referenceId}`);
+    return response.data;
+  },
+
 
   // Learner Management APIs
   /**
    * Create a new Learner
-   * @param {Object} learnerData
+   * @param {Object} learnerData - Learner data
+   * @param {Array<File>} referenceFiles - Optional reference files
    * @returns {Promise}
    */
-  createLearner: async (learnerData) => {
+  createLearner: async (learnerData, referenceFiles = []) => {
     console.log('Creating new learner:', { name: learnerData.name });
-    const response = await axiosInstance.post('/head/learners', learnerData);
+    
+    const formData = new FormData();
+    
+    // Append learner_data as JSON string
+    formData.append('learner_data', JSON.stringify(learnerData));
+    
+    // Append reference files if any
+    if (referenceFiles && referenceFiles.length > 0) {
+      referenceFiles.forEach((file) => {
+        formData.append('reference_files', file);
+      });
+    }
+    
+    const response = await axiosInstance.post('/head/learners', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     console.log('Learner created successfully:', { id: response.data.id, passcode: response.data.passcode });
     return response.data;
   },
@@ -112,13 +149,30 @@ const headService = {
   },
 
   /**
-   * Update Learner
+   * Update Learner  
    * @param {number} learnerId
    * @param {Object} updateData
+   * @param {Array<File>} referenceFiles - Optional reference files
    * @returns {Promise} - Updated learner object
    */
-  updateLearner: async (learnerId, updateData) => {
-    const response = await axiosInstance.patch(`/head/learners/${learnerId}`, updateData);
+  updateLearner: async (learnerId, updateData, referenceFiles = []) => {
+    const formData = new FormData();
+    
+    // Always append learner_update as JSON string (even if empty)
+    formData.append('learner_update', JSON.stringify(updateData));
+    
+    // Append reference files if any
+    if (referenceFiles && referenceFiles.length > 0) {
+      referenceFiles.forEach((file) => {
+        formData.append('reference_files', file);
+      });
+    }
+    
+    const response = await axiosInstance.patch(`/head/learners/${learnerId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -130,6 +184,17 @@ const headService = {
    */
   deleteLearner: async (learnerId) => {
     const response = await axiosInstance.delete(`/head/learners/${learnerId}`);
+    return response.data;
+  },
+
+  /**
+   * Delete a learner reference file
+   * @param {number} learnerId
+   * @param {number} referenceId
+   * @returns {Promise}
+   */
+  deleteLearnerReferenceFile: async (learnerId, referenceId) => {
+    const response = await axiosInstance.delete(`/head/learners/${learnerId}/reference/${referenceId}`);
     return response.data;
   },
 

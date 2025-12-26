@@ -87,6 +87,7 @@ const EditLearner = () => {
   });
 
   const [originalData, setOriginalData] = useState(null);
+  const [existingReferenceData, setExistingReferenceData] = useState([]);
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -176,6 +177,7 @@ const EditLearner = () => {
 
       setFormData(formattedData);
       setOriginalData(formattedData);
+      setExistingReferenceData(data.reference_data || []);
     } catch (error) {
       console.error('Error fetching learner data:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to load learner data';
@@ -216,6 +218,38 @@ const EditLearner = () => {
 
   const removeFile = (index) => {
     setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteExistingFile = async (referenceId) => {
+    if (!window.confirm('Are you sure you want to delete this file?')) {
+      return;
+    }
+
+    try {
+      await headService.deleteLearnerReferenceFile(learnerId, referenceId);
+      setExistingReferenceData(prev => prev.filter(file => file.id !== referenceId));
+      toast.success('File deleted successfully', {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Failed to delete file', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleViewFile = (filePath, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
+    const backendUrl = apiBaseUrl.replace('/api', '');
+    const fullUrl = `${backendUrl}${filePath}`;
+    window.open(fullUrl, '_blank');
   };
 
   const validate = () => {
@@ -262,6 +296,9 @@ const EditLearner = () => {
 
   const hasChanges = () => {
     if (!originalData) return false;
+
+    // Check if there are new reference files to upload
+    if (referenceFiles.length > 0) return true;
 
     return Object.keys(formData).some(key => {
       if (key === 'id' || key === 'passcode' || key === 'created_at' || key === 'created_by') {
@@ -342,13 +379,23 @@ const EditLearner = () => {
       }
 
       console.log('Updating learner with data:', updateData);
-      await headService.updateLearner(learnerId, updateData);
+      console.log('Reference files to upload:', referenceFiles);
+      await headService.updateLearner(learnerId, updateData, referenceFiles);
 
       toast.success('Learner updated successfully!', {
         position: 'top-center',
         autoClose: 3000,
         theme: "colored",
       });
+
+      // Clear reference files after successful upload
+      setReferenceFiles([]);
+      
+      // Reset file input
+      const fileInput = document.getElementById('intervention_reference_files');
+      if (fileInput) {
+        fileInput.value = '';
+      }
 
       // Refresh data
       await fetchLearnerData();
@@ -508,9 +555,6 @@ const EditLearner = () => {
               formData={formData}
               errors={errors}
               handleChange={handleChange}
-              handleFileChange={handleFileChange}
-              referenceFiles={referenceFiles}
-              removeFile={removeFile}
             />
 
             <DeliveryHistorySection
@@ -534,6 +578,9 @@ const EditLearner = () => {
               handleFileChange={handleFileChange}
               referenceFiles={referenceFiles}
               removeFile={removeFile}
+              existingReferenceData={existingReferenceData}
+              handleViewFile={handleViewFile}
+              handleDeleteExistingFile={handleDeleteExistingFile}
             />
 
             <AssessmentBehaviourSection

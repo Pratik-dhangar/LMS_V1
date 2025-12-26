@@ -42,6 +42,7 @@ const EditTrainer = () => {
   });
 
   const [originalData, setOriginalData] = useState(null);
+  const [existingReferenceData, setExistingReferenceData] = useState([]);
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -94,6 +95,7 @@ const EditTrainer = () => {
 
       setFormData(formattedData);
       setOriginalData(formattedData);
+      setExistingReferenceData(data.reference_data || []);
     } catch (error) {
       console.error('Error fetching head data:', error);
       toast.error('Failed to load head data', {
@@ -126,6 +128,38 @@ const EditTrainer = () => {
 
   const removeFile = (index) => {
     setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteExistingFile = async (referenceId) => {
+    if (!window.confirm('Are you sure you want to delete this file?')) {
+      return;
+    }
+
+    try {
+      await headService.deleteTrainerReferenceFile(trainerId, referenceId);
+      setExistingReferenceData(prev => prev.filter(file => file.id !== referenceId));
+      toast.success('File deleted successfully', {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Failed to delete file', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleViewFile = (filePath, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
+    const backendUrl = apiBaseUrl.replace('/api', '');
+    const fullUrl = `${backendUrl}${filePath}`;
+    window.open(fullUrl, '_blank');
   };
 
   const validate = () => {
@@ -194,22 +228,25 @@ const EditTrainer = () => {
     setSaving(true);
 
     try {
-      // Prepare data for submission
-      const submitData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
-      };
+      // Prepare FormData for submission (to support file uploads)
+      const submitFormData = new FormData();
+      
+      // Append all form fields (except read-only ones)
+      Object.keys(formData).forEach(key => {
+        if (!['id', 'role', 'passcode', 'created_at', 'created_by'].includes(key)) {
+          if (formData[key] !== null && formData[key] !== '') {
+            submitFormData.append(key, formData[key]);
+          }
+        }
+      });
 
-      // Remove read-only fields
-      delete submitData.id;
-      delete submitData.role;
-      delete submitData.passcode;
-      delete submitData.created_at;
-      delete submitData.created_by;
+      // Append new reference files
+      referenceFiles.forEach(file => {
+        submitFormData.append('reference_files', file);
+      });
 
       // Update trainer
-      await headService.updateTrainer(trainerId, submitData);
+      await headService.updateTrainer(trainerId, submitFormData);
 
       toast.success('Trainer profile updated successfully!', {
         position: "top-center",
@@ -416,21 +453,54 @@ const EditTrainer = () => {
                   Supported formats: PDF, DOCX, Images, Videos
                 </p>
 
-                {/* File List */}
+                {/* Existing Reference Files */}
+                {existingReferenceData.length > 0 && (
+                  <div className="existing-files-section">
+                    <h4 className="subsection-title">Existing Reference Files</h4>
+                    <div className="file-list">
+                      {existingReferenceData.map((file) => (
+                        <div key={file.id} className="file-item">
+                          <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                          <div className="file-actions">
+                            <button
+                              type="button"
+                              onClick={(e) => handleViewFile(file.file_path, e)}
+                              className="btn-view-file"
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteExistingFile(file.id)}
+                              className="file-remove-btn"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New File List */}
                 {referenceFiles.length > 0 && (
-                  <div className="file-list">
-                    {referenceFiles.map((file, index) => (
-                      <div key={index} className="file-list-item">
-                        <span className="file-name">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="file-remove-btn"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                  <div className="new-files-section">
+                    <h4 className="subsection-title">New Files to Upload</h4>
+                    <div className="file-list">
+                      {referenceFiles.map((file, index) => (
+                        <div key={index} className="file-item">
+                          <span className="file-name">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="file-remove-btn"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

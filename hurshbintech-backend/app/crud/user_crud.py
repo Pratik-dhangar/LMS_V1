@@ -120,11 +120,13 @@ async def get_admin_by_passcode(db: AsyncSession, passcode: str) -> Admin | None
 
 
 async def get_head_by_id(db: AsyncSession, head_id: int):
-    """Get head profile with user data by profile ID"""
+    """Get head profile with user data and reference files by profile ID"""
     result = await db.execute(
-        select(HeadProfile).options(joinedload(HeadProfile.user)).where(HeadProfile.id == head_id)
+        select(HeadProfile)
+        .options(joinedload(HeadProfile.user), joinedload(HeadProfile.reference_data))
+        .where(HeadProfile.id == head_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_head_by_passcode(db: AsyncSession, passcode: str):
@@ -250,13 +252,13 @@ async def delete_head(db: AsyncSession, head_id: int) -> str | bool:
 
 
 async def get_trainer_by_id(db: AsyncSession, trainer_id: int):
-    """Get trainer profile with user data by profile ID"""
+    """Get trainer profile with user data and reference files by profile ID"""
     result = await db.execute(
         select(TrainerProfile)
-        .options(joinedload(TrainerProfile.user))
+        .options(joinedload(TrainerProfile.user), joinedload(TrainerProfile.reference_data))
         .where(TrainerProfile.id == trainer_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_trainer_by_passcode(db: AsyncSession, passcode: str):
@@ -279,10 +281,13 @@ async def get_trainers_by_head(db: AsyncSession, head_id: int):
     """Get all trainers created by a specific head"""
     result = await db.execute(
         select(TrainerProfile)
-        .options(joinedload(TrainerProfile.user))
+        .options(
+            joinedload(TrainerProfile.user),
+            joinedload(TrainerProfile.reference_data)
+        )
         .where(TrainerProfile.created_by_head_id == head_id)
     )
-    return list(result.scalars().all())
+    return list(result.scalars().unique().all())
 
 
 async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_by_head_id: int):
@@ -378,13 +383,13 @@ async def delete_trainer(db: AsyncSession, trainer_id: int) -> str | bool:
 # ============ COACH CRUD ============
 # Get coach by ID
 async def get_coach_by_id(db: AsyncSession, coach_id: int):
-    """Get coach profile with user data by profile ID"""
+    """Get coach profile with user data and reference files by profile ID"""
     result = await db.execute(
         select(CoachProfile)
-        .options(joinedload(CoachProfile.user))
+        .options(joinedload(CoachProfile.user), joinedload(CoachProfile.reference_data))
         .where(CoachProfile.id == coach_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 # Get coach by passcode
@@ -412,10 +417,13 @@ async def get_coaches_by_head(db: AsyncSession, head_id: int):
     """Get all coaches in the system (all heads can see all coaches)"""
     result = await db.execute(
         select(CoachProfile)
-        .options(joinedload(CoachProfile.user))
+        .options(
+            joinedload(CoachProfile.user),
+            joinedload(CoachProfile.reference_data)
+        )
         .order_by(CoachProfile.id)
     )
-    return list(result.scalars().all())
+    return list(result.scalars().unique().all())
 
 
 # Create coach
@@ -599,13 +607,13 @@ async def get_head_dashboard_stats(db: AsyncSession) -> dict:
 
 
 async def get_learner_by_id(db: AsyncSession, learner_id: int):
-    """Get learner profile with user data by profile ID"""
+    """Get learner profile with user data and reference files by profile ID"""
     result = await db.execute(
         select(LearnerProfile)
-        .options(joinedload(LearnerProfile.user))
+        .options(joinedload(LearnerProfile.user), joinedload(LearnerProfile.reference_data))
         .where(LearnerProfile.id == learner_id)
     )
-    learner = result.scalar_one_or_none()
+    learner = result.unique().scalar_one_or_none()
 
     # Convert enum objects to string values for response
     if learner:
@@ -641,10 +649,13 @@ async def get_learners_by_head(db: AsyncSession, head_id: int):
     """Get all learners created by a specific head"""
     result = await db.execute(
         select(LearnerProfile)
-        .options(joinedload(LearnerProfile.user))
+        .options(
+            joinedload(LearnerProfile.user),
+            joinedload(LearnerProfile.reference_data)
+        )
         .where(LearnerProfile.created_by_head_id == head_id)
     )
-    learners = list(result.scalars().all())
+    learners = list(result.scalars().unique().all())
 
     # Convert enum objects to string values for response
     for learner in learners:
@@ -817,7 +828,12 @@ async def get_all_coaches_system_wide(db: AsyncSession):
     """Get all coaches across all heads (for admin view)"""
     logger.info("Fetching all coaches system-wide for admin")
     result = await db.execute(
-        select(CoachProfile).options(joinedload(CoachProfile.user)).order_by(CoachProfile.id)
+        select(CoachProfile)
+        .options(
+            joinedload(CoachProfile.user),
+            joinedload(CoachProfile.reference_data)
+        )
+        .order_by(CoachProfile.id)
     )
     coaches = result.scalars().unique().all()
     logger.info(f"Found {len(coaches)} coaches system-wide")
@@ -833,3 +849,167 @@ async def get_all_learners_system_wide(db: AsyncSession):
     learners = result.scalars().unique().all()
     logger.info(f"Found {len(learners)} learners system-wide")
     return learners
+
+
+async def create_head_reference_data(
+    db: AsyncSession,
+    head_id: int,
+    file_url: str,
+    file_type: str,
+    description: str = None,
+) -> "HeadReferenceData":
+    """Create a new reference data entry for a head"""
+    from app.models.user_model import ReferenceDataType, HeadReferenceData
+    
+    # Map file extensions to ReferenceDataType enum
+    type_mapping = {
+        'pdf': 'PDF',
+        'doc': 'DOCX',
+        'docx': 'DOCX',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'gif': 'IMAGE',
+        'mp4': 'VIDEO',
+        'avi': 'VIDEO',
+        'mov': 'VIDEO',
+    }
+    
+    # Get enum value, default to the file type string
+    enum_value = type_mapping.get(file_type.lower(), 'LINK')
+    
+    new_reference = HeadReferenceData(
+        head_id=head_id,
+        data_type=enum_value,
+        file_path=file_url,
+        file_name=description,
+        description=description,
+    )
+    db.add(new_reference)
+    await db.commit()
+    await db.refresh(new_reference)
+    logger.info(f"Created head reference data: {file_url}")
+    return new_reference
+
+
+async def create_trainer_reference_data(
+    db: AsyncSession,
+    trainer_id: int,
+    file_url: str,
+    file_type: str,
+    description: str = None,
+) -> "TrainerReferenceData":
+    """Create a new reference data entry for a trainer"""
+    from app.models.user_model import ReferenceDataType, TrainerReferenceData
+    
+    # Map file extensions to ReferenceDataType enum
+    type_mapping = {
+        'pdf': 'PDF',
+        'doc': 'DOCX',
+        'docx': 'DOCX',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'gif': 'IMAGE',
+        'mp4': 'VIDEO',
+        'avi': 'VIDEO',
+        'mov': 'VIDEO',
+    }
+    
+    # Get enum value, default to the file type string
+    enum_value = type_mapping.get(file_type.lower(), 'LINK')
+    
+    new_reference = TrainerReferenceData(
+        trainer_id=trainer_id,
+        data_type=enum_value,
+        file_path=file_url,
+        file_name=description,
+        description=description,
+    )
+    db.add(new_reference)
+    await db.commit()
+    await db.refresh(new_reference)
+    logger.info(f"Created trainer reference data: {file_url}")
+    return new_reference
+
+
+async def create_coach_reference_data(
+    db: AsyncSession,
+    coach_id: int,
+    file_url: str,
+    file_type: str,
+    description: str = None,
+) -> "CoachReferenceData":
+    """Create a new reference data entry for a coach"""
+    from app.models.user_model import ReferenceDataType, CoachReferenceData
+    
+    # Map file extensions to ReferenceDataType enum
+    type_mapping = {
+        'pdf': 'PDF',
+        'doc': 'DOCX',
+        'docx': 'DOCX',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'gif': 'IMAGE',
+        'mp4': 'VIDEO',
+        'avi': 'VIDEO',
+        'mov': 'VIDEO',
+    }
+    
+    # Get enum value, default to the file type string
+    enum_value = type_mapping.get(file_type.lower(), 'LINK')
+    
+    new_reference = CoachReferenceData(
+        coach_id=coach_id,
+        data_type=enum_value,
+        file_path=file_url,
+        file_name=description,
+        description=description,
+    )
+    db.add(new_reference)
+    await db.commit()
+    await db.refresh(new_reference)
+    logger.info(f"Created coach reference data: {file_url}")
+    return new_reference
+
+
+async def create_learner_reference_data(
+    db: AsyncSession,
+    learner_id: int,
+    file_url: str,
+    file_type: str,
+    description: str = None,
+) -> "LearnerReferenceData":
+    """Create a new reference data entry for a learner"""
+    from app.models.user_model import ReferenceDataType, LearnerReferenceData
+    
+    # Map file extensions to ReferenceDataType enum
+    type_mapping = {
+        'pdf': 'PDF',
+        'doc': 'DOCX',
+        'docx': 'DOCX',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'gif': 'IMAGE',
+        'mp4': 'VIDEO',
+        'avi': 'VIDEO',
+        'mov': 'VIDEO',
+    }
+    
+    # Get enum value, default to the file type string
+    enum_value = type_mapping.get(file_type.lower(), 'LINK')
+    
+    new_reference = LearnerReferenceData(
+        learner_id=learner_id,
+        data_type=enum_value,
+        file_path=file_url,
+        file_name=description,
+        description=description,
+    )
+    db.add(new_reference)
+    await db.commit()
+    await db.refresh(new_reference)
+    logger.info(f"Created learner reference data: {file_url}")
+    return new_reference

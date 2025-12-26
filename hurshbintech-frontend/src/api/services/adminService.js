@@ -73,6 +73,28 @@ const adminService = {
   },
 
   /**
+   * Delete Head Reference File
+   * @param {number} headId
+   * @param {number} referenceId
+   * @returns {Promise} - Success message
+   */
+  deleteHeadReferenceFile: async (headId, referenceId) => {
+    const response = await axiosInstance.delete(`/admin/heads/${headId}/reference/${referenceId}`);
+    return response.data;
+  },
+
+  /**
+   * Delete Coach Reference File
+   * @param {number} coachId
+   * @param {number} referenceId
+   * @returns {Promise} - Success message
+   */
+  deleteCoachReferenceFile: async (coachId, referenceId) => {
+    const response = await axiosInstance.delete(`/admin/coaches/${coachId}/reference/${referenceId}`);
+    return response.data;
+  },
+
+  /**
    * Get all Trainers (system-wide, read-only)
    * @returns {Promise} - Array of trainer objects
    */

@@ -141,15 +141,23 @@ const RegisterTrainer = () => {
     setSuccessData(null);
 
     try {
-      // Prepare data for submission
-      const submitData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
-      };
+      // Prepare FormData for submission (to support file uploads)
+      const submitFormData = new FormData();
+      
+      // Append all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== null && formData[key] !== '') {
+          submitFormData.append(key, formData[key]);
+        }
+      });
+
+      // Append reference files
+      referenceFiles.forEach(file => {
+        submitFormData.append('reference_files', file);
+      });
 
       // Create trainer
-      const result = await headService.createTrainer(submitData);
+      const result = await headService.createTrainer(submitFormData);
 
       // Set success data to show in overlay
       setSuccessData(result);

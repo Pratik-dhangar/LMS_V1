@@ -913,6 +913,40 @@
     background: #fee2e2;
 }
 
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-view-file {
+    color: #3b82f6;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background 0.2s;
+    border: none;
+    background: transparent;
+}
+
+.btn-view-file:hover {
+    background: #dbeafe;
+}
+
+.existing-files-section,
+.new-files-section {
+    margin-top: 1rem;
+}
+
+.subsection-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
 /* Checkbox Group Styles */
 .checkbox-group {
     display: flex;

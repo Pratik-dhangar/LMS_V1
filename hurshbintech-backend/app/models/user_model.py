@@ -381,7 +381,7 @@ class LearnerReferenceData(Base):
     id = Column(Integer, primary_key=True, index=True)
     file_name = Column(String(255), nullable=False)
     file_path = Column(Text, nullable=False)  # Path to S3/local storage
-    file_type = Column(SAEnum(ReferenceDataType), nullable=False)
+    data_type = Column(SAEnum(ReferenceDataType), nullable=False)
 
     # To distinguish between 'personal' or 'intervention' uploads
     category = Column(String(100))

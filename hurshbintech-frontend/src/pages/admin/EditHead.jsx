@@ -42,7 +42,8 @@ const EditHead = () => {
   });
 
   const [originalData, setOriginalData] = useState(null);
-  const [referenceFiles, setReferenceFiles] = useState([]);
+  const [referenceFiles, setReferenceFiles] = useState([]); // New files to upload
+  const [existingReferenceFiles, setExistingReferenceFiles] = useState([]); // Existing files from backend
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,6 +95,10 @@ const EditHead = () => {
 
       setFormData(formattedData);
       setOriginalData(formattedData);
+      
+      // Set existing reference files
+      setExistingReferenceFiles(data.reference_data || []);
+      
     } catch (error) {
       console.error('Error fetching head data:', error);
       setFetchError('Failed to load head data. Please try again.');
@@ -125,6 +130,34 @@ const EditHead = () => {
 
   const removeFile = (index) => {
     setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteExistingFile = async (referenceId) => {
+    try {
+      await adminService.deleteHeadReferenceFile(headId, referenceId);
+      setExistingReferenceFiles(prev => prev.filter(file => file.id !== referenceId));
+      toast.success('Reference file deleted successfully', {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error deleting reference file:', error);
+      toast.error('Failed to delete reference file', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleViewFile = (filePath, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
+    const backendUrl = apiBaseUrl.replace('/api', '');
+    const fullUrl = `${backendUrl}${filePath}`;
+    window.open(fullUrl, '_blank');
   };
 
   const validate = () => {
@@ -163,19 +196,29 @@ const EditHead = () => {
     setSaving(true);
 
     try {
-      // Prepare data for submission
-      const submitData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
-      };
+      // Prepare FormData for submission (to handle file uploads)
+      const submitData = new FormData();
+      
+      // Add all text fields (only non-readonly fields)
+      Object.keys(formData).forEach(key => {
+        // Skip readonly fields
+        if (['id', 'role', 'passcode', 'created_at', 'created_by'].includes(key)) {
+          return;
+        }
+        
+        if (key === 'number_of_sessions_done') {
+          submitData.append(key, parseInt(formData[key]) || 0);
+        } else if (key === 'age') {
+          if (formData[key]) submitData.append(key, parseInt(formData[key]));
+        } else {
+          submitData.append(key, formData[key] || '');
+        }
+      });
 
-      // Remove read-only fields
-      delete submitData.id;
-      delete submitData.role;
-      delete submitData.passcode;
-      delete submitData.created_at;
-      delete submitData.created_by;
+      // Add reference files
+      referenceFiles.forEach(file => {
+        submitData.append('reference_files', file);
+      });
 
       // Update head
       await adminService.updateHead(headId, submitData);
@@ -349,21 +392,54 @@ const EditHead = () => {
                   Supported formats: PDF, DOCX, Images, Videos
                 </p>
 
-                {/* File List */}
+                {/* Existing Reference Files */}
+                {existingReferenceFiles.length > 0 && (
+                  <div className="existing-files-section">
+                    <h4 className="subsection-title">Existing Reference Files</h4>
+                    <div className="file-list">
+                      {existingReferenceFiles.map((file) => (
+                        <div key={file.id} className="file-item">
+                          <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                          <div className="file-actions">
+                            <button
+                              type="button"
+                              onClick={(e) => handleViewFile(file.file_path, e)}
+                              className="btn-view-file"
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteExistingFile(file.id)}
+                              className="file-remove-btn"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New File List */}
                 {referenceFiles.length > 0 && (
-                  <div className="file-list">
-                    {referenceFiles.map((file, index) => (
-                      <div key={index} className="file-item">
-                        <span className="file-name">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="file-remove-btn"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                  <div className="new-files-section">
+                    <h4 className="subsection-title">New Files to Upload</h4>
+                    <div className="file-list">
+                      {referenceFiles.map((file, index) => (
+                        <div key={index} className="file-item">
+                          <span className="file-name">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="file-remove-btn"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
