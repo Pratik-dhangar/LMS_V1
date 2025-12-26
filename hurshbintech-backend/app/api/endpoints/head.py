@@ -165,6 +165,9 @@ async def create_new_trainer(
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
     
+    # Refresh trainer to get the reference_data relationship
+    await db.refresh(new_trainer, ['reference_data'])
+    
     return TrainerResponse.from_orm_with_user(new_trainer)
 
 
