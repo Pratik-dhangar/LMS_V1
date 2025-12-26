@@ -12,8 +12,8 @@ from pydantic import BaseModel, field_validator
 
 # ============ ENUMERATIONS ============
 class CaesareanType(enum.Enum):
-    ELECTIVE = "elective"
-    EMERGENCY = "emergency"
+    ELECTIVE = "ELECTIVE"
+    EMERGENCY = "EMERGENCY"
 
 
 class ConceptionType(enum.Enum):

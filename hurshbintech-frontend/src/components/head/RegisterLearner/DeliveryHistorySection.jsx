@@ -164,8 +164,8 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
           >
             <option value="">Select type</option>
-            <option value="elective">Elective</option>
-            <option value="emergency">Emergency</option>
+            <option value="ELECTIVE">Elective</option>
+            <option value="EMERGENCY">Emergency</option>
           </select>
         </div>
       )}
