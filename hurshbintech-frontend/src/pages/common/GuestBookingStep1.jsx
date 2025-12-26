@@ -135,7 +135,7 @@ const GuestBookingStep1 = () => {
   return (
     <>
       <Navbar />
-      <div className="page-container">
+      <div className="guest-booking-flow page-container">
         <div className="page-main-guest">
           <div className="page-header">
             <h1 className="page-title">Guest Booking - Email Verification</h1>

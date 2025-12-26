@@ -149,7 +149,7 @@ const GuestBookingStep2 = () => {
   return (
     <>
       <Navbar />
-      <div className="page-container">
+      <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-header">
             <button className="btn-back" onClick={() => navigate(-1)}>
