@@ -41,9 +41,9 @@
     background: #1e88e5;
     color: white;
     font-weight: 600;
-    padding: 10px 12px;
+    padding: clamp(0.5rem, 1vw, 0.75rem);
     border-radius: 6px 6px 0 0;
-    font-size: 15px;
+    font-size: clamp(0.8rem, 1vw, 0.95rem);
     flex-shrink: 0;
 }
 

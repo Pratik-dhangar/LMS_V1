@@ -6,7 +6,7 @@ import learningProgramsService from '../../api/services/learningProgramsService'
 import learningContentService from '../../api/services/learningContentService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/Pages.css';
+import '../../styles/ManageProgramAssignments.css';
 
 const ManageProgramAssignments = () => {
   const [learners, setLearners] = useState([]);
@@ -336,7 +336,7 @@ const ManageProgramAssignments = () => {
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    if (!window.confirm('Delete this assignment?\n\n⚠️ This will delete:\n- The program assignment\n- All auto-assigned content\n- All manually assigned content\n\nThis action cannot be undone.')) return;
+    if (!window.confirm('Delete this assignment?\n\n⚠️ This will delete:\n- The program assignment\n- All assigned content\n\nThis action cannot be undone.')) return;
 
     try {
       await programAssignmentService.deleteAssignment(assignmentId);
@@ -396,23 +396,23 @@ const ManageProgramAssignments = () => {
             </div>
             <button
               onClick={() => setShowAssignModal(true)}
-              className="btn-gradient"
+              className="mpa-btn-assign-gradient"
             >
               + Assign Program
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="tabs-container">
-            <div className="tabs">
+          <div className="mpa-tabs-container">
+            <div className="mpa-tabs">
               <button
-                className={`tab-btn ${activeTab === 'overview' ? 'tab-btn-active' : ''}`}
+                className={`mpa-tab-btn ${activeTab === 'overview' ? 'mpa-tab-btn-active' : ''}`}
                 onClick={() => setActiveTab('overview')}
               >
                 📊 Overview by Learner
               </button>
               <button
-                className={`tab-btn ${activeTab === 'assignments' ? 'tab-btn-active' : ''}`}
+                className={`mpa-tab-btn ${activeTab === 'assignments' ? 'mpa-tab-btn-active' : ''}`}
                 onClick={() => setActiveTab('assignments')}
               >
                 📋 All Assignments
@@ -422,59 +422,59 @@ const ManageProgramAssignments = () => {
 
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="overview-section">
+            <div className="mpa-overview-section">
               {loading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
+                <div className="mpa-loading-container">
+                  <div className="mpa-loading-spinner"></div>
                 </div>
               ) : overview.length === 0 ? (
-                <div className="empty-state">
-                  <p className="empty-state-description">
+                <div className="mpa-empty-state">
+                  <p className="mpa-empty-state-description">
                     No assignments yet. Start by assigning programs to learners!
                   </p>
                 </div>
               ) : (
-                <div className="cards-grid">
+                <div className="mpa-cards-grid">
                   {overview.map((learnerData) => (
-                    <div key={learnerData.learner_id} className="overview-card">
-                      <div className="overview-card-header">
-                        <div className="overview-learner-info">
-                          <div className="avatar-circle">
+                    <div key={learnerData.learner_id} className="mpa-overview-card">
+                      <div className="mpa-overview-card-header">
+                        <div className="mpa-overview-learner-info">
+                          <div className="mpa-avatar-circle">
                             {learnerData.learner_name?.charAt(0)?.toUpperCase() || 'L'}
                           </div>
                           <div>
-                            <h3 className="overview-learner-name">{learnerData.learner_name}</h3>
-                            <p className="overview-learner-email">{learnerData.learner_email}</p>
+                            <h3 className="mpa-overview-learner-name">{learnerData.learner_name}</h3>
+                            <p className="mpa-overview-learner-email">{learnerData.learner_email}</p>
                           </div>
                         </div>
-                        <div className="overview-percentage">
-                          <span className="percentage-value">{learnerData.completion_percentage}%</span>
-                          <span className="percentage-label">Complete</span>
+                        <div className="mpa-overview-percentage">
+                          <span className="mpa-percentage-value">{learnerData.completion_percentage}%</span>
+                          <span className="mpa-percentage-label">Complete</span>
                         </div>
                       </div>
 
-                      <div className="overview-stats-row">
-                        <div className="overview-stat">
-                          <span className="stat-number stat-total">{learnerData.total_assignments}</span>
-                          <span className="stat-text">Total</span>
+                      <div className="mpa-overview-stats-row">
+                        <div className="mpa-overview-stat">
+                          <span className="mpa-stat-number mpa-stat-total">{learnerData.total_assignments}</span>
+                          <span className="mpa-stat-text">Total</span>
                         </div>
-                        <div className="overview-stat">
-                          <span className="stat-number stat-completed">{learnerData.completed}</span>
-                          <span className="stat-text">Done</span>
+                        <div className="mpa-overview-stat">
+                          <span className="mpa-stat-number mpa-stat-completed">{learnerData.completed}</span>
+                          <span className="mpa-stat-text">Done</span>
                         </div>
-                        <div className="overview-stat">
-                          <span className="stat-number stat-progress">{learnerData.in_progress}</span>
-                          <span className="stat-text">Active</span>
+                        <div className="mpa-overview-stat">
+                          <span className="mpa-stat-number mpa-stat-progress">{learnerData.in_progress}</span>
+                          <span className="mpa-stat-text">Active</span>
                         </div>
-                        <div className="overview-stat">
-                          <span className="stat-number stat-pending">{learnerData.not_started}</span>
-                          <span className="stat-text">Pending</span>
+                        <div className="mpa-overview-stat">
+                          <span className="mpa-stat-number mpa-stat-pending">{learnerData.not_started}</span>
+                          <span className="mpa-stat-text">Pending</span>
                         </div>
                       </div>
 
-                      <div className="progress-bar-container">
+                      <div className="mpa-progress-bar-container">
                         <div
-                          className="progress-bar-fill"
+                          className="mpa-progress-bar-fill"
                           style={{ width: `${learnerData.completion_percentage}%` }}
                         ></div>
                       </div>
@@ -492,7 +492,7 @@ const ManageProgramAssignments = () => {
                       </div>
 
                       <button
-                        className="btn-outline btn-sm btn-full"
+                        className="mpa-btn-outline mpa-btn-sm mpa-btn-full"
                         onClick={() => {
                           setFilterLearner(learnerData.learner_id.toString());
                           setActiveTab('assignments');
@@ -511,10 +511,10 @@ const ManageProgramAssignments = () => {
           {activeTab === 'assignments' && (
             <>
               {/* Filters */}
-              <div className="filters-section">
-                <div className="filters-group">
+              <div className="mpa-filters-section">
+                <div className="mpa-filters-group">
                   <select
-                    className="form-select"
+                    className="mpa-form-select"
                     value={filterLearner}
                     onChange={(e) => setFilterLearner(e.target.value)}
                   >
@@ -525,7 +525,7 @@ const ManageProgramAssignments = () => {
                   </select>
 
                   <select
-                    className="form-select"
+                    className="mpa-form-select"
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                   >
@@ -542,7 +542,7 @@ const ManageProgramAssignments = () => {
                         setFilterStatus('');
                         fetchAssignments();
                       }}
-                      className="btn-secondary"
+                      className="mpa-btn-secondary"
                     >
                       Clear Filters
                     </button>
@@ -552,67 +552,67 @@ const ManageProgramAssignments = () => {
 
               {/* Assignments Table */}
               {loading ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
+                <div className="mpa-loading-container">
+                  <div className="mpa-loading-spinner"></div>
                 </div>
               ) : assignments.length === 0 ? (
-                <div className="empty-state">
-                  <p className="empty-state-description">
+                <div className="mpa-empty-state">
+                  <p className="mpa-empty-state-description">
                     No assignments found. Start by assigning programs to learners!
                   </p>
                 </div>
               ) : (
-                <div className="data-table-container">
-                  <div className="table-wrapper table-desktop">
-                    <table className="data-table">
-                      <thead className="data-table-header">
+                <div className="mpa-data-table-container">
+                  <div className="mpa-table-wrapper mpa-table-desktop">
+                    <table className="mpa-data-table">
+                      <thead className="mpa-data-table-header">
                         <tr>
-                          <th className="data-table-th">Program</th>
-                          <th className="data-table-th">Learner</th>
-                          <th className="data-table-th">Start Date</th>
-                          <th className="data-table-th">End Date</th>
-                          <th className="data-table-th">Duration</th>
-                          <th className="data-table-th">Status</th>
-                          <th className="data-table-th data-table-th-center">Actions</th>
+                          <th className="mpa-data-table-th">Program</th>
+                          <th className="mpa-data-table-th">Learner</th>
+                          <th className="mpa-data-table-th">Start Date</th>
+                          <th className="mpa-data-table-th">End Date</th>
+                          <th className="mpa-data-table-th">Duration</th>
+                          <th className="mpa-data-table-th">Status</th>
+                          <th className="mpa-data-table-th mpa-data-table-th-center">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="data-table-body">
+                      <tbody className="mpa-data-table-body">
                         {assignments.map((assignment) => (
-                          <tr key={assignment.id} className="data-table-row">
-                            <td className="data-table-td">
-                              <div className="data-table-name">{assignment.program_name}</div>
-                              <div className="data-table-subtext">ID: {assignment.program_id}</div>
+                          <tr key={assignment.id} className="mpa-data-table-row">
+                            <td className="mpa-data-table-td">
+                              <div className="mpa-data-table-name">{assignment.program_name}</div>
+                              <div className="mpa-data-table-subtext">ID: {assignment.program_id}</div>
                             </td>
-                            <td className="data-table-td">
-                              <div className="data-table-name">{assignment.learner_name}</div>
+                            <td className="mpa-data-table-td">
+                              <div className="mpa-data-table-name">{assignment.learner_name}</div>
                             </td>
-                            <td className="data-table-td">
+                            <td className="mpa-data-table-td">
                               {new Date(assignment.start_date).toLocaleDateString()}
                             </td>
-                            <td className="data-table-td">
+                            <td className="mpa-data-table-td">
                               {new Date(assignment.end_date).toLocaleDateString()}
                             </td>
-                            <td className="data-table-td">
+                            <td className="mpa-data-table-td">
                               {assignment.duration_days ||
                                 calculateDuration(assignment.start_date, assignment.end_date)} days
                             </td>
-                            <td className="data-table-td">
-                              <span className={`status-badge ${getStatusColor(assignment.completion_status)}`}>
+                            <td className="mpa-data-table-td">
+                              <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
                                 {getStatusLabel(assignment.completion_status)}
                               </span>
                             </td>
-                            <td className="data-table-td data-table-td-center">
-                              <div className="action-buttons">
+                            <td className="mpa-data-table-td mpa-data-table-td-center">
+                              <div className="mpa-action-buttons">
                                 <button
                                   onClick={() => handleViewTracking(assignment)}
-                                  className="btn-primary btn-sm"
+                                  className="mpa-btn-primary mpa-btn-sm"
                                   title="View Tracking"
                                 >
                                   Track
                                 </button>
                                 <button
                                   onClick={() => handleDeleteAssignment(assignment.id)}
-                                  className="btn-danger btn-sm"
+                                  className="mpa-btn-danger mpa-btn-sm"
                                   title="Delete"
                                 >
                                   Delete
@@ -626,45 +626,45 @@ const ManageProgramAssignments = () => {
                   </div>
 
                   {/* Mobile Cards */}
-                  <div className="mobile-cards">
+                  <div className="mpa-mobile-cards">
                     {assignments.map((assignment) => (
-                      <div key={assignment.id} className="mobile-card">
-                        <div className="mobile-card-header">
-                          <h3 className="mobile-card-title">{assignment.program_name}</h3>
-                          <span className={`status-badge ${getStatusColor(assignment.completion_status)}`}>
+                      <div key={assignment.id} className="mpa-mobile-card">
+                        <div className="mpa-mobile-card-header">
+                          <h3 className="mpa-mobile-card-title">{assignment.program_name}</h3>
+                          <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
                             {getStatusLabel(assignment.completion_status)}
                           </span>
                         </div>
 
-                        <div className="mobile-card-info">
-                          <div className="info-row">
-                            <span className="info-label">Learner:</span>
-                            <span className="info-value">{assignment.learner_name}</span>
+                        <div className="mpa-mobile-card-info">
+                          <div className="mpa-info-row">
+                            <span className="mpa-info-label">Learner:</span>
+                            <span className="mpa-info-value">{assignment.learner_name}</span>
                           </div>
-                          <div className="info-row">
-                            <span className="info-label">Duration:</span>
-                            <span className="info-value">
+                          <div className="mpa-info-row">
+                            <span className="mpa-info-label">Duration:</span>
+                            <span className="mpa-info-value">
                               {new Date(assignment.start_date).toLocaleDateString()} - {new Date(assignment.end_date).toLocaleDateString()}
                             </span>
                           </div>
-                          <div className="info-row">
-                            <span className="info-label">Days:</span>
-                            <span className="info-value">
+                          <div className="mpa-info-row">
+                            <span className="mpa-info-label">Days:</span>
+                            <span className="mpa-info-value">
                               {assignment.duration_days || calculateDuration(assignment.start_date, assignment.end_date)} days
                             </span>
                           </div>
                         </div>
 
-                        <div className="mobile-card-actions">
+                        <div className="mpa-mobile-card-actions">
                           <button
                             onClick={() => handleViewTracking(assignment)}
-                            className="btn-primary"
+                            className="mpa-btn-primary"
                           >
                             View Tracking
                           </button>
                           <button
                             onClick={() => handleDeleteAssignment(assignment.id)}
-                            className="btn-danger"
+                            className="mpa-btn-danger"
                           >
                             Delete
                           </button>
@@ -682,43 +682,42 @@ const ManageProgramAssignments = () => {
 
       {/* Assign Program Modal */}
       {showAssignModal && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-lg">
-            <h2 className="modal-title">Assign Program to Learners</h2>
+        <div className="mpa-modal-overlay">
+          <div className="mpa-modal-content mpa-modal-lg">
+            <h2 className="mpa-modal-title">Assign Program to Learners</h2>
 
             <form onSubmit={handleSubmit}>
               {/* Learner Selection */}
-              <div className="form-field">
-                <label className="form-label">
-                  Select Learners <span className="form-required">*</span>
-                  <span className="form-hint">({formData.learner_ids.length} selected)</span>
+              <div className="mpa-form-field">
+                <label className="mpa-form-label">
+                  Select Learners <span className="mpa-form-required">*</span>
+                  <span className="mpa-form-hint">({formData.learner_ids.length} selected)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="🔍 Search learners..."
-                  className="form-input"
+                  className="mpa-form-input mpa-search-input-spacing"
                   value={searchLearner}
                   onChange={(e) => setSearchLearner(e.target.value)}
-                  style={{ marginBottom: '1rem' }}
                 />
-                <div className="checkbox-grid">
+                <div className="mpa-checkbox-grid">
                   {filteredLearners.length > 0 ? (
                     filteredLearners.map(learner => (
-                      <div key={learner.user_id} className="checkbox-item">
+                      <div key={learner.user_id} className="mpa-checkbox-item">
                         <input
                           type="checkbox"
                           id={`learner-${learner.user_id}`}
                           checked={formData.learner_ids.includes(learner.user_id)}
                           onChange={() => handleLearnerSelect(learner.user_id)}
-                          className="form-checkbox"
+                          className="mpa-form-checkbox"
                         />
-                        <label htmlFor={`learner-${learner.user_id}`} className="checkbox-label">
+                        <label htmlFor={`learner-${learner.user_id}`} className="mpa-checkbox-label">
                           {learner.name}
                         </label>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center text-gray-500 py-4">
+                    <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
                       No learners found matching "{searchLearner}"
                     </div>
                   )}
@@ -726,92 +725,85 @@ const ManageProgramAssignments = () => {
               </div>
 
               {/* Program Selection */}
-              <div className="form-field">
-                <label className="form-label">
-                  Select Programs <span className="form-required">*</span>
-                  <span className="form-hint">({formData.program_ids.length} selected)</span>
+              <div className="mpa-form-field">
+                <label className="mpa-form-label">
+                  Select Programs <span className="mpa-form-required">*</span>
+                  <span className="mpa-form-hint">({formData.program_ids.length} selected)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="🔍 Search programs..."
-                  className="form-input"
+                  className="mpa-form-input mpa-search-input-spacing"
                   value={searchProgram}
                   onChange={(e) => setSearchProgram(e.target.value)}
-                  style={{ marginBottom: '1rem' }}
                 />
-                <div className="checkbox-grid">
+                <div className="mpa-checkbox-grid">
                   {filteredPrograms.length > 0 ? (
                     filteredPrograms.map(program => (
-                      <div key={program.id} className="checkbox-item">
+                      <div key={program.id} className="mpa-checkbox-item">
                         <input
                           type="checkbox"
                           id={`program-${program.id}`}
                           checked={formData.program_ids.includes(program.id)}
                           onChange={() => handleProgramSelect(program.id)}
-                          className="form-checkbox"
+                          className="mpa-form-checkbox"
                         />
-                        <label htmlFor={`program-${program.id}`} className="checkbox-label">
+                        <label htmlFor={`program-${program.id}`} className="mpa-checkbox-label">
                           <div>
-                            <div className="font-semibold">{program.goal}</div>
+                            <div className="mpa-font-semibold">{program.goal}</div>
                             {program.goal_description && (
-                              <div className="text-xs text-gray-500 mt-1">{program.goal_description}</div>
-                            )}
-                            {program.contents && program.contents.length > 0 && (
-                              <div className="text-xs text-blue-600 mt-1">
-                                📖 {program.contents.length} content(s)
-                              </div>
+                              <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{program.goal_description}</div>
                             )}
                           </div>
                         </label>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center text-gray-500 py-4">
+                    <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
                       No programs found matching "{searchProgram}"
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Extra Learning Content Selection */}
-              <div className="form-field">
-                <label className="form-label">
-                  Additional Learning Content (Optional)
-                  <span className="form-hint">({formData.extra_content_ids.length} selected)</span>
+              {/* Learning Content Selection */}
+              <div className="mpa-form-field">
+                <label className="mpa-form-label">
+                  Assign Learning Content
+                  <span className="mpa-form-hint">({formData.extra_content_ids.length} selected)</span>
                 </label>
-                <p className="text-sm text-gray-600 mb-2">
-                  Select extra learning materials to assign along with the programs
+                <p className="mpa-text-sm mpa-text-gray-600 mpa-mb-2">
+                  Select learning materials to assign to learners
                 </p>
                 <input
                   type="text"
                   placeholder="🔍 Search learning content..."
-                  className="form-input"
+                  className="mpa-form-input mpa-search-input-spacing"
                   value={searchExtraContent}
                   onChange={(e) => setSearchExtraContent(e.target.value)}
-                  style={{ marginBottom: '1rem' }}
                 />
-                <div className="checkbox-grid" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <div className="mpa-checkbox-grid mpa-content-checkbox-grid">
                   {allLearningContents
                     .filter(content =>
                       content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
                       (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
                     )
                     .map(content => (
-                      <div key={content.id} className="checkbox-item">
+                      <div key={content.id} className="mpa-checkbox-item">
                         <input
                           type="checkbox"
                           id={`extra-content-${content.id}`}
                           checked={formData.extra_content_ids.includes(content.id)}
                           onChange={() => handleExtraContentSelect(content.id)}
-                          className="form-checkbox"
+                          className="mpa-form-checkbox"
                         />
-                        <label htmlFor={`extra-content-${content.id}`} className="checkbox-label">
+                        <label htmlFor={`extra-content-${content.id}`} className="mpa-checkbox-label">
                           <div>
-                            <div className="font-semibold">{content.title}</div>
+                            <div className="mpa-font-semibold">{content.title}</div>
                             {content.description && (
-                              <div className="text-xs text-gray-500 mt-1">{content.description}</div>
+                              <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{content.description}</div>
                             )}
-                            <div className="text-xs text-purple-600 mt-1">
+                            <div className="mpa-text-xs mpa-text-purple-600 mpa-mt-1">
                               📄 {content.content_type}
                             </div>
                           </div>
@@ -830,27 +822,27 @@ const ManageProgramAssignments = () => {
               </div>
 
               {/* Date Range */}
-              <div className="form-row">
-                <div className="form-field">
-                  <label className="form-label">
-                    Start Date <span className="form-required">*</span>
+              <div className="mpa-form-row">
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Start Date <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="mpa-form-input"
                     value={formData.start_date}
                     onChange={(e) => handleDateChange('start_date', e.target.value)}
                     required
                   />
                 </div>
 
-                <div className="form-field">
-                  <label className="form-label">
-                    End Date <span className="form-required">*</span>
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    End Date <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="date"
-                    className="form-input"
+                    className="mpa-form-input"
                     value={formData.end_date}
                     onChange={(e) => handleDateChange('end_date', e.target.value)}
                     min={formData.start_date}
@@ -860,28 +852,28 @@ const ManageProgramAssignments = () => {
               </div>
 
               {/* Duration */}
-              <div className="form-field">
-                <div className="form-group-inline">
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label">Duration (Days)</label>
+              <div className="mpa-form-field">
+                <div className="mpa-form-group-inline">
+                  <div className="mpa-duration-field-flex">
+                    <label className="mpa-form-label">Duration (Days)</label>
                     <input
                       type="number"
-                      className="form-input"
+                      className="mpa-form-input"
                       placeholder="Auto-calculated"
                       value={formData.duration_days}
                       onChange={(e) => setFormData({ ...formData, duration_days: e.target.value })}
                       disabled={!formData.manual_duration}
                     />
                   </div>
-                  <div className="checkbox-item" style={{ marginTop: '1.75rem' }}>
+                  <div className="mpa-checkbox-item mpa-manual-override-spacing">
                     <input
                       type="checkbox"
                       id="manual-duration"
                       checked={formData.manual_duration}
                       onChange={(e) => setFormData({ ...formData, manual_duration: e.target.checked })}
-                      className="form-checkbox"
+                      className="mpa-form-checkbox"
                     />
-                    <label htmlFor="manual-duration" className="checkbox-label">
+                    <label htmlFor="manual-duration" className="mpa-checkbox-label">
                       Manual Override
                     </label>
                   </div>
@@ -889,10 +881,10 @@ const ManageProgramAssignments = () => {
               </div>
 
               {/* Head Notes */}
-              <div className="form-field">
-                <label className="form-label">Notes for Learner (Optional)</label>
+              <div className="mpa-form-field">
+                <label className="mpa-form-label">Notes for Learner (Optional)</label>
                 <textarea
-                  className="form-textarea"
+                  className="mpa-form-textarea"
                   placeholder="Add any instructions or notes for the learner..."
                   rows="4"
                   value={formData.head_notes}
@@ -900,7 +892,7 @@ const ManageProgramAssignments = () => {
                 />
               </div>
 
-              <div className="modal-actions">
+              <div className="mpa-modal-actions">
                 <button
                   type="button"
                   onClick={() => {
@@ -918,11 +910,11 @@ const ManageProgramAssignments = () => {
                     setSelectedProgram(null);
                     setSearchExtraContent('');
                   }}
-                  className="btn-secondary"
+                  className="mpa-btn-secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-gradient">
+                <button type="submit" className="mpa-btn-assign-gradient">
                   Assign Program
                 </button>
               </div>
@@ -933,29 +925,29 @@ const ManageProgramAssignments = () => {
 
       {/* Contents Preview Modal */}
       {showContentsPreviewModal && selectedProgram && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 className="modal-title">Program Contents</h2>
+        <div className="mpa-modal-overlay">
+          <div className="mpa-modal-content">
+            <h2 className="mpa-modal-title">Program Contents</h2>
 
-            <div className="contents-preview-list">
+            <div className="mpa-contents-preview-list">
               {selectedProgram.contents.map((content, index) => (
-                <div key={content.content_id} className="content-preview-item">
-                  <div className="content-preview-order">{index + 1}</div>
+                <div key={content.content_id} className="mpa-content-preview-item">
+                  <div className="mpa-content-preview-order">{index + 1}</div>
                   {content.thumbnail_url && (
-                    <img src={content.thumbnail_url} alt="" className="content-preview-thumbnail" />
+                    <img src={content.thumbnail_url} alt="" className="mpa-content-preview-thumbnail" />
                   )}
-                  <div className="content-preview-info">
-                    <div className="content-preview-title">{content.content_title}</div>
-                    <div className="content-preview-type">{content.content_type}</div>
+                  <div className="mpa-content-preview-info">
+                    <div className="mpa-content-preview-title">{content.content_title}</div>
+                    <div className="mpa-content-preview-type">{content.content_type}</div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="modal-actions">
+            <div className="mpa-modal-actions">
               <button
                 onClick={() => setShowContentsPreviewModal(false)}
-                className="btn-secondary"
+                className="mpa-btn-secondary"
               >
                 Close
               </button>
@@ -966,35 +958,35 @@ const ManageProgramAssignments = () => {
 
       {/* Tracking Modal */}
       {showTrackingModal && selectedAssignment && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-lg">
-            <h2 className="modal-title">Assignment Tracking</h2>
+        <div className="mpa-modal-overlay">
+          <div className="mpa-modal-content mpa-modal-lg">
+            <h2 className="mpa-modal-title">Assignment Tracking</h2>
 
             {/* Completion Stats */}
             {completionStats && (
-              <div className="stats-card">
-                <h3 className="stats-title">Overall Progress for {selectedAssignment.learner.name}</h3>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-value">{completionStats.total_assignments}</div>
-                    <div className="stat-label">Total Programs</div>
+              <div className="mpa-stats-card">
+                <h3 className="mpa-stats-title">Overall Progress for {selectedAssignment.learner.name}</h3>
+                <div className="mpa-stats-grid">
+                  <div className="mpa-stat-item">
+                    <div className="mpa-stat-value">{completionStats.total_assignments}</div>
+                    <div className="mpa-stat-label">Total Programs</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{completionStats.completed}</div>
-                    <div className="stat-label">Completed</div>
+                  <div className="mpa-stat-item">
+                    <div className="mpa-stat-value">{completionStats.completed}</div>
+                    <div className="mpa-stat-label">Completed</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{completionStats.in_progress}</div>
-                    <div className="stat-label">In Progress</div>
+                  <div className="mpa-stat-item">
+                    <div className="mpa-stat-value">{completionStats.in_progress}</div>
+                    <div className="mpa-stat-label">In Progress</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-value">{completionStats.completion_percentage}%</div>
-                    <div className="stat-label">Completion Rate</div>
+                  <div className="mpa-stat-item">
+                    <div className="mpa-stat-value">{completionStats.completion_percentage}%</div>
+                    <div className="mpa-stat-label">Completion Rate</div>
                   </div>
                 </div>
-                <div className="progress-bar-container">
+                <div className="mpa-progress-bar-container">
                   <div
-                    className="progress-bar-fill"
+                    className="mpa-progress-bar-fill"
                     style={{ width: `${completionStats.completion_percentage}%` }}
                   />
                 </div>
@@ -1002,69 +994,65 @@ const ManageProgramAssignments = () => {
             )}
 
             {/* Assignment Details */}
-            <div className="assignment-details">
-              <h3 className="section-title">Program Details</h3>
-              <div className="details-grid">
-                <div className="detail-item">
-                  <span className="detail-label">Program:</span>
-                  <span className="detail-value">
+            <div className="mpa-assignment-details">
+              <h3 className="mpa-section-title">Program Details</h3>
+              <div className="mpa-details-grid">
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">Program:</span>
+                  <span className="mpa-detail-value">
                     {selectedAssignment?.program?.goal || selectedAssignment?.program_name || 'N/A'}
                   </span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Status:</span>
-                  <span className={`status-badge ${getStatusColor(selectedAssignment.completion_status)}`}>
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">Status:</span>
+                  <span className={`mpa-status-badge ${getStatusColor(selectedAssignment.completion_status)}`}>
                     {getStatusLabel(selectedAssignment.completion_status)}
                   </span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Start Date:</span>
-                  <span className="detail-value">{new Date(selectedAssignment.start_date).toLocaleDateString()}</span>
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">Start Date:</span>
+                  <span className="mpa-detail-value">{new Date(selectedAssignment.start_date).toLocaleDateString()}</span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">End Date:</span>
-                  <span className="detail-value">{new Date(selectedAssignment.end_date).toLocaleDateString()}</span>
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">End Date:</span>
+                  <span className="mpa-detail-value">{new Date(selectedAssignment.end_date).toLocaleDateString()}</span>
                 </div>
-                <div className="detail-item">
-                  <span className="detail-label">Duration:</span>
-                  <span className="detail-value">{selectedAssignment.duration_days} days</span>
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">Duration:</span>
+                  <span className="mpa-detail-value">{selectedAssignment.duration_days} days</span>
                 </div>
                 {selectedAssignment.completed_at && (
-                  <div className="detail-item">
-                    <span className="detail-label">Completed On:</span>
-                    <span className="detail-value">{new Date(selectedAssignment.completed_at).toLocaleDateString()}</span>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">Completed On:</span>
+                    <span className="mpa-detail-value">{new Date(selectedAssignment.completed_at).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
 
               {/* Learning Contents - Both Auto and Manual */}
               {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 && (
-                <div className="contents-section">
-                  <h4 className="subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
-                  <div className="contents-list">
+                <div className="mpa-contents-section">
+                  <h4 className="mpa-subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
+                  <div className="mpa-contents-list">
                     {selectedAssignment.content_assignments.map((assignment, index) => (
-                      <div key={assignment.id} className="content-item">
-                        <span className="content-order">{index + 1}</span>
+                      <div key={assignment.id} className="mpa-content-item">
+                        <span className="mpa-content-order">{index + 1}</span>
                         {assignment.learning_content?.thumbnail_url && (
-                          <img src={assignment.learning_content.thumbnail_url} alt="" className="content-thumbnail" />
+                          <img src={assignment.learning_content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
                         )}
-                        <div className="content-info">
-                          <div className="content-title">
+                        <div className="mpa-content-info">
+                          <div className="mpa-content-title">
                             {assignment.learning_content?.title || 'Untitled Content'}
                           </div>
-                          <div className="content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
-                          <div className="content-meta" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                            <span className={`status-badge ${assignment.is_from_program ? 'status-info' : 'status-warning'}`} style={{ fontSize: '0.75rem' }}>
-                              {assignment.is_from_program ? '🔄 Auto-assigned' : '➕ Manual'}
-                            </span>
-                            <span className={`status-badge ${getStatusColor(assignment.completion_status)}`} style={{ fontSize: '0.75rem' }}>
+                          <div className="mpa-content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
+                          <div className="mpa-content-meta">
+                            <span className={`mpa-status-badge mpa-status-badge-sm ${getStatusColor(assignment.completion_status)}`}>
                               {getStatusLabel(assignment.completion_status)}
                             </span>
                             {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
                               <button
                                 onClick={() => handleReviewContent(assignment.id)}
-                                className="btn-primary btn-sm"
-                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                                className="mpa-btn-primary mpa-btn-sm mpa-btn-review-content"
                               >
                                 ✓ Mark Reviewed
                               </button>
@@ -1080,18 +1068,18 @@ const ManageProgramAssignments = () => {
               {/* Fallback: Show program contents if content_assignments not available */}
               {(!selectedAssignment?.content_assignments || selectedAssignment.content_assignments.length === 0) &&
                 selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
-                  <div className="contents-section">
-                    <h4 className="subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
-                    <div className="contents-list">
+                  <div className="mpa-contents-section">
+                    <h4 className="mpa-subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
+                    <div className="mpa-contents-list">
                       {selectedAssignment.program.contents.map((content, index) => (
-                        <div key={content.id} className="content-item">
-                          <span className="content-order">{index + 1}</span>
+                        <div key={content.id} className="mpa-content-item">
+                          <span className="mpa-content-order">{index + 1}</span>
                           {content.thumbnail_url && (
-                            <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                            <img src={content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
                           )}
-                          <div className="content-info">
-                            <div className="content-title">{content.title}</div>
-                            <div className="content-type">{content.content_type}</div>
+                          <div className="mpa-content-info">
+                            <div className="mpa-content-title">{content.title}</div>
+                            <div className="mpa-content-type">{content.content_type}</div>
                           </div>
                         </div>
                       ))}
@@ -1101,74 +1089,74 @@ const ManageProgramAssignments = () => {
 
               {/* Head Notes */}
               {selectedAssignment.head_notes && (
-                <div className="notes-section">
-                  <h4 className="subsection-title">Your Notes</h4>
-                  <div className="notes-content">{selectedAssignment.head_notes}</div>
+                <div className="mpa-notes-section">
+                  <h4 className="mpa-subsection-title">Your Notes</h4>
+                  <div className="mpa-notes-content">{selectedAssignment.head_notes}</div>
                 </div>
               )}
 
               {/* Learner Notes (Read-only for Head) */}
               {selectedAssignment.learner_notes && (
-                <div className="notes-section">
-                  <h4 className="subsection-title">Learner's Notes</h4>
-                  <div className="notes-content">{selectedAssignment.learner_notes}</div>
+                <div className="mpa-notes-section">
+                  <h4 className="mpa-subsection-title">Learner's Notes</h4>
+                  <div className="mpa-notes-content">{selectedAssignment.learner_notes}</div>
                 </div>
               )}
 
               {/* Attachments */}
-              <div className="attachments-section">
-                <h4 className="subsection-title">Attachments</h4>
+              <div className="mpa-attachments-section">
+                <h4 className="mpa-subsection-title">Attachments</h4>
 
-                <div className="upload-section">
-                  <label className="upload-button">
+                <div className="mpa-upload-section">
+                  <label className="mpa-upload-button">
                     <input
                       type="file"
                       accept="image/*,video/*,.pdf"
                       onChange={handleUploadAttachment}
                       disabled={uploading}
-                      style={{ display: 'none' }}
+                      className="mpa-hidden-file-input"
                     />
-                    <svg className="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mpa-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     {uploading ? 'Uploading...' : 'Upload Reference Material'}
                   </label>
-                  <span className="upload-hint">Images, Videos, PDFs (Max: 500MB for videos, 50MB for others)</span>
+                  <span className="mpa-upload-hint">Images, Videos, PDFs (Max: 500MB for videos, 50MB for others)</span>
                 </div>
 
                 {attachments.length === 0 ? (
-                  <div className="empty-state-sm">
+                  <div className="mpa-empty-state-sm">
                     <p>No attachments yet</p>
                   </div>
                 ) : (
-                  <div className="attachments-grid">
+                  <div className="mpa-attachments-grid">
                     {attachments.map((attachment) => (
-                      <div key={attachment.id} className="attachment-card">
+                      <div key={attachment.id} className="mpa-attachment-card">
                         {attachment.thumbnail_url && (
-                          <img src={attachment.thumbnail_url} alt="" className="attachment-thumbnail" />
+                          <img src={attachment.thumbnail_url} alt="" className="mpa-attachment-thumbnail" />
                         )}
-                        <div className="attachment-info">
-                          <div className="attachment-name">{attachment.file_name}</div>
-                          <div className="attachment-meta">
-                            <span className="attachment-type">{attachment.file_type}</span>
-                            <span className="attachment-uploader">by {attachment.uploader_name || 'Unknown'}</span>
-                            <span className="attachment-date">
+                        <div className="mpa-attachment-info">
+                          <div className="mpa-attachment-name">{attachment.file_name}</div>
+                          <div className="mpa-attachment-meta">
+                            <span className="mpa-attachment-type">{attachment.file_type}</span>
+                            <span className="mpa-attachment-uploader">by {attachment.uploader_name || 'Unknown'}</span>
+                            <span className="mpa-attachment-date">
                               {new Date(attachment.uploaded_at).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
-                        <div className="attachment-actions">
+                        <div className="mpa-attachment-actions">
                           <a
                             href={attachment.file_path}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn-primary btn-sm"
+                            className="mpa-btn-primary mpa-btn-sm"
                           >
                             View
                           </a>
                           <button
                             onClick={() => handleDeleteAttachment(attachment.id)}
-                            className="btn-danger btn-sm"
+                            className="mpa-btn-danger mpa-btn-sm"
                           >
                             Delete
                           </button>
@@ -1180,7 +1168,7 @@ const ManageProgramAssignments = () => {
               </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="mpa-modal-actions">
               <button
                 onClick={() => {
                   setShowTrackingModal(false);
@@ -1188,7 +1176,7 @@ const ManageProgramAssignments = () => {
                   setAttachments([]);
                   setCompletionStats(null);
                 }}
-                className="btn-secondary"
+                className="mpa-btn-secondary"
               >
                 Close
               </button>

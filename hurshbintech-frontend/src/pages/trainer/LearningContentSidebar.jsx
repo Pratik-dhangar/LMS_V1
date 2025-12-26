@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import learningContentService from '../../api/services/learningContentService';
 import '../../styles/Pages.css';
 
@@ -14,6 +14,9 @@ const LearningContentSidebar = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [_isProcessing, setIsProcessing] = useState(false);
   const [_statusMessage, setStatusMessage] = useState(null);
+  const [touchDragActive, setTouchDragActive] = useState(false);
+  const ghostElementRef = useRef(null);
+  const touchStartTimeRef = useRef(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -128,7 +131,7 @@ const LearningContentSidebar = ({
                   content.content_type === 'image' ? content.file_url : content.thumbnail_url
                 );
                 return (
-                  <div className="relative w-full h-16 sm:h-20 bg-gray-100 rounded-md overflow-hidden mb-1.5 sm:mb-2">
+                  <div className="relative w-full h-12 bg-gray-100 rounded-md overflow-hidden mb-1">
                     <img
                       src={imageUrl}
                       alt={content.title}
@@ -144,14 +147,14 @@ const LearningContentSidebar = ({
                     //   console.log('[TrainerSession] Image loaded successfully:', imageUrl);
                     // }}
                     />
-                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-2xl sm:text-3xl">
+                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-xl">
                       {getContentIcon(content.content_type)}
                     </div>
                   </div>
                 );
               }
               return (
-                <div className="w-full h-16 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md flex items-center justify-center mb-1.5 sm:mb-2 text-2xl sm:text-3xl">
+                <div className="w-full h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md flex items-center justify-center mb-1 text-xl">
                   {getContentIcon(content.content_type)}
                 </div>
               );
@@ -160,7 +163,7 @@ const LearningContentSidebar = ({
             return (
               <div
                 key={content.id}
-                className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1.5 sm:p-2 my-1.5 sm:my-2 cursor-grab shadow-sm hover:shadow-md transition-shadow"
+                className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1 my-1 cursor-grab shadow-sm hover:shadow-md transition-shadow"
                 draggable
                 onDragStart={(e) => {
                   onDragStartContent(e, content);
@@ -175,39 +178,99 @@ const LearningContentSidebar = ({
                   // Store content data for touch drag
                   const touch = e.touches[0];
                   const target = e.currentTarget;
+                  touchStartTimeRef.current = Date.now();
                   target.dataset.touchContent = JSON.stringify(content);
                   target.dataset.touchStartX = touch.clientX;
                   target.dataset.touchStartY = touch.clientY;
-                  target.style.opacity = '0.7';
+                  target.dataset.isDragging = 'false';
+
+                  // Long-press indication (lighter opacity)
+                  target.style.transition = 'opacity 0.2s';
+                  target.style.opacity = '0.85';
                 }}
                 onTouchMove={(e) => {
-                  // Visual feedback during drag
                   const target = e.currentTarget;
-                  if (target.dataset.touchContent) {
-                    const touch = e.touches[0];
-                    const deltaX = Math.abs(touch.clientX - parseFloat(target.dataset.touchStartX));
-                    const deltaY = Math.abs(touch.clientY - parseFloat(target.dataset.touchStartY));
+                  if (!target.dataset.touchContent) return;
 
-                    // If moved more than 10px, consider it a drag
-                    if (deltaX > 10 || deltaY > 10) {
-                      target.style.opacity = '0.5';
+                  const touch = e.touches[0];
+                  const deltaX = Math.abs(touch.clientX - parseFloat(target.dataset.touchStartX));
+                  const deltaY = Math.abs(touch.clientY - parseFloat(target.dataset.touchStartY));
+
+                  // If moved more than 15px, activate drag mode
+                  if ((deltaX > 15 || deltaY > 15) && target.dataset.isDragging === 'false') {
+                    target.dataset.isDragging = 'true';
+                    target.style.opacity = '0.3';
+                    setTouchDragActive(true);
+
+                    // Create ghost element
+                    if (!ghostElementRef.current) {
+                      const ghost = target.cloneNode(true);
+                      ghost.id = 'touch-drag-ghost';
+                      ghost.style.position = 'fixed';
+                      ghost.style.pointerEvents = 'none';
+                      ghost.style.zIndex = '10000';
+                      ghost.style.opacity = '0.7';
+                      ghost.style.transform = 'scale(0.9)';
+                      ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+                      ghost.style.width = target.offsetWidth + 'px';
+                      ghost.style.left = touch.clientX - (target.offsetWidth / 2) + 'px';
+                      ghost.style.top = touch.clientY - 40 + 'px';
+                      document.body.appendChild(ghost);
+                      ghostElementRef.current = ghost;
+                    }
+                  }
+
+                  // Move ghost element
+                  if (target.dataset.isDragging === 'true' && ghostElementRef.current) {
+                    // Note: Cannot preventDefault in React touch events (passive listeners)
+                    // The drag will work, scrolling is minimized by the drag detection threshold
+                    ghostElementRef.current.style.left = touch.clientX - (target.offsetWidth / 2) + 'px';
+                    ghostElementRef.current.style.top = touch.clientY - 40 + 'px';
+
+                    // Highlight drop zone
+                    const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const whiteboardCanvas = elementAtPoint?.closest('canvas[data-whiteboard="true"]');
+                    if (whiteboardCanvas) {
+                      whiteboardCanvas.classList.add('touch-drop-zone-active');
+                    } else {
+                      document.querySelectorAll('.touch-drop-zone-active').forEach(el => {
+                        el.classList.remove('touch-drop-zone-active');
+                      });
                     }
                   }
                 }}
                 onTouchEnd={(e) => {
                   const target = e.currentTarget;
-                  // Always restore opacity
                   target.style.opacity = '1';
+                  target.style.transition = '';
 
-                  if (!target.dataset.touchContent) return;
+                  // Clean up ghost element
+                  if (ghostElementRef.current) {
+                    ghostElementRef.current.remove();
+                    ghostElementRef.current = null;
+                  }
+
+                  // Remove drop zone highlights
+                  document.querySelectorAll('.touch-drop-zone-active').forEach(el => {
+                    el.classList.remove('touch-drop-zone-active');
+                  });
+
+                  setTouchDragActive(false);
+
+                  if (!target.dataset.touchContent || target.dataset.isDragging === 'false') {
+                    // Cleanup and return (was just a tap)
+                    delete target.dataset.touchContent;
+                    delete target.dataset.touchStartX;
+                    delete target.dataset.touchStartY;
+                    delete target.dataset.isDragging;
+                    return;
+                  }
 
                   const content = JSON.parse(target.dataset.touchContent);
                   const touch = e.changedTouches[0];
 
-                  // Find element at touch position (the whiteboard canvas)
+                  // Find element at touch position
                   const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
-
-                  // Check if dropped on whiteboard canvas
                   const whiteboardCanvas = elementAtPoint?.closest('canvas[data-whiteboard="true"]');
 
                   if (whiteboardCanvas) {
@@ -216,13 +279,8 @@ const LearningContentSidebar = ({
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
 
-                    // Dispatch custom event for whiteboard to handle
                     const dropEvent = new CustomEvent('touchDrop', {
-                      detail: {
-                        content,
-                        x,
-                        y
-                      }
+                      detail: { content, x, y }
                     });
                     whiteboardCanvas.dispatchEvent(dropEvent);
                   }
@@ -231,14 +289,15 @@ const LearningContentSidebar = ({
                   delete target.dataset.touchContent;
                   delete target.dataset.touchStartX;
                   delete target.dataset.touchStartY;
+                  delete target.dataset.isDragging;
                 }}
               >
                 {renderThumbnail()}
 
-                <div className="text-[10px] sm:text-xs font-semibold text-slate-800 mb-1">
+                <div className="text-[9px] font-semibold text-slate-800 mb-0.5 leading-tight">
                   {content.title}
                 </div>
-                <div className="text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-1">
+                <div className="text-[8px] text-gray-500 flex items-center gap-0.5 leading-tight">
                   <span>{getContentIcon(content.content_type)}</span>
                   <span className="uppercase">
                     {content.content_type || 'file'}
