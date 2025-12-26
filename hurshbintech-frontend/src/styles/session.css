@@ -11,6 +11,11 @@
 .session-header {
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
   cursor: pointer;
+  background: #2a3f5f;
+  color: white;
+  padding: clamp(0.5rem, 1.5vw, 1rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
 }
 
 /* Desktop: Always show header */
@@ -19,10 +24,11 @@
     display: block;
     transform: translateY(0);
     opacity: 1;
+    position: relative;
   }
 }
 
-/* Mobile/Tablet: Show header with animation */
+/* Mobile/Tablet: Auto-hide after 5 seconds */
 @media (max-width: 1023px) {
   .session-header {
     position: fixed;
@@ -31,19 +37,41 @@
     right: 0;
     z-index: 500;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  /* When header is visible - slide down */
-  .session-header:not(.hidden) {
     transform: translateY(0);
     opacity: 1;
+    width: 100%;
+    height: auto;
+    visibility: visible;
   }
 
-  /* When header is hidden - slide up */
-  .session-header.hidden {
+  /* When header is hidden - completely remove from view */
+  .session-header.navbar-hidden {
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+  }
+
+  /* No padding when navbar is hidden - content fills entire screen */
+  .session-main-layout {
+    padding-top: 0;
+    margin-top: 0;
+    transition: padding-top 0.3s ease-in-out;
+  }
+
+  /* Add padding only when navbar is visible */
+  .navbar-is-visible .session-main-layout {
+    padding-top: 3.5rem;
+    transition: padding-top 0.3s ease-in-out;
+  }
+
+  /* Hide video overlay labels (Trainer badge & connection status) when navbar is hidden */
+  .navbar-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 }
 
@@ -569,16 +597,16 @@
 }
 
 .sidebar-header {
-  padding: clamp(0.25rem, 1vw, 0.375rem);
+  padding: clamp(0.25rem, 0.8vw, 0.35rem);
   font-weight: bold;
-  font-size: clamp(0.5rem, 1.2vw, 1rem);
+  font-size: clamp(0.7rem, 1vw, 0.9rem);
   border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
   color: white;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  min-height: clamp(1.75rem, 4vh, 2.25rem);
+  min-height: clamp(1.5rem, 3.2vh, 1.9rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -594,16 +622,16 @@
 
 .sidebar-search-box {
   position: relative;
-  padding: clamp(0.1rem, 0.4vw, 0.15rem);
+  padding: clamp(0.06rem, 0.25vw, 0.1rem);
   flex-shrink: 0;
 }
 
 .sidebar-search-input {
   width: 100%;
-  padding: clamp(0.1rem, 0.5vw, 0.15rem);
+  padding: clamp(0.1rem, 0.35vw, 0.125rem);
   border: 1px solid #d1d5db;
   border-radius: clamp(0.12rem, 0.5vw, 0.15rem);
-  font-size: clamp(0.375rem, 0.8vw, 0.45rem);
+  font-size: clamp(0.55rem, 0.85vw, 0.7rem);
   transition: all 0.2s ease;
 }
 
@@ -633,9 +661,9 @@
 }
 
 .sidebar-section-title {
-  padding: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.25rem, 1vw, 0.375rem);
+  padding: clamp(0.15rem, 0.6vw, 0.2rem) clamp(0.2rem, 0.8vw, 0.3rem);
   font-weight: bold;
-  font-size: clamp(0.425rem, 1vw, 0.525rem);
+  font-size: clamp(0.6rem, 0.9vw, 0.75rem);
   background: #f3f4f6;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
@@ -1496,5 +1524,593 @@ body.sidebar-open {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+/* ============================================================================
+   TOUCH DRAG & DROP ENHANCEMENTS - Mobile/Tablet
+   ============================================================================ */
+
+/* Touch targets - minimum 44x44px for accessibility */
+@media (max-width: 1023px) {
+  .sidebar-container .border-2 {
+    min-height: 88px;
+    touch-action: none;
+    /* Prevent browser gestures during drag */
+  }
+
+  /* Larger touch targets for buttons */
+  .session-control-buttons button,
+  .session-header-controls button,
+  .wbBtnBase,
+  .wbSmallBtnBase {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Drop zone active state - highlight when dragging over */
+.touch-drop-zone-active {
+  position: relative;
+  animation: dropZonePulse 1s ease-in-out infinite;
+}
+
+.touch-drop-zone-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 4px dashed #3b82f6;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  z-index: 1;
+  animation: dropZoneShimmer 2s linear infinite;
+}
+
+.touch-drop-zone-active::after {
+  content: '📥 Drop Here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Sidebar drop zone styling */
+.sidebar-container.touch-drop-zone-active::after {
+  content: '↩️ Return to Content';
+  font-size: 0.75rem;
+}
+
+/* Ghost element animations */
+#touch-drag-ghost,
+#touch-drag-back-ghost {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: left, top;
+}
+
+/* Whiteboard canvas drop zone */
+canvas[data-whiteboard="true"].touch-drop-zone-active {
+  outline: 4px dashed #10b981;
+  outline-offset: -4px;
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+/* Animations */
+@keyframes dropZonePulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes dropZoneShimmer {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Touch feedback - vibration substitute visual */
+@media (max-width: 1023px) {
+  .touch-success-feedback {
+    animation: touchSuccessPulse 0.4s ease-out;
+  }
+}
+
+@keyframes touchSuccessPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Long-press hint for touch draggable items */
+@media (max-width: 1023px) {
+  .sidebar-container .border-2::after {
+    content: '👆 Drag to whiteboard';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 9px;
+    color: rgba(59, 130, 246, 0.6);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar-container .border-2:active::after {
+    opacity: 1;
+  }
+}
+
+/* Improved touch scrolling */
+@media (max-width: 1023px) {
+
+  .section-content,
+  .sidebar-container,
+  .learning-content-container,
+  .learning-program-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Prevent text selection during drag */
+.sidebar-container [draggable="true"],
+canvas[data-whiteboard="true"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch-friendly whiteboard controls */
+@media (max-width: 1023px) {
+  .whiteboard-controls {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Ensure whiteboard items are touch-friendly */
+  .absolute.group {
+    min-width: 60px;
+    min-height: 60px;
+  }
+}
+
+/* ============================================================================
+   GESTURE HINTS TUTORIAL - First Time User Experience
+   ============================================================================ */
+
+.gesture-hints-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.gesture-hints-container {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+}
+
+.gesture-hints-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f3f4f6;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.gesture-hints-close:hover {
+  background: #e5e7eb;
+  transform: rotate(90deg);
+  color: #374151;
+}
+
+.gesture-hints-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin: 0 0 1.5rem 0;
+  color: #1f2937;
+  text-align: center;
+}
+
+.gesture-hints-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.gesture-hint-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  border: 2px solid #bae6fd;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gesture-hint-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
+}
+
+.gesture-hint-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.gesture-hint-text {
+  flex: 1;
+}
+
+.gesture-hint-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #1e40af;
+  margin-bottom: 0.25rem;
+}
+
+.gesture-hint-text p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.gesture-hints-got-it {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.gesture-hints-got-it:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.gesture-hints-got-it:active {
+  transform: scale(0.98);
+}
+
+/* Mobile-specific gesture hints */
+@media (max-width: 640px) {
+  .gesture-hints-container {
+    padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .gesture-hints-title {
+    font-size: 1.5rem;
+  }
+
+  .gesture-hints-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .gesture-hint-icon {
+    font-size: 1.5rem;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ============================================================================
+   PINCH-TO-RESIZE INDICATOR
+   ============================================================================ */
+
+.pinch-resize-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 9998;
+  animation: pulseScale 0.5s ease-in-out infinite;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+@keyframes pulseScale {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+/* ============================================================================
+   MULTI-TOUCH SELECTION FEEDBACK
+   ============================================================================ */
+
+.multi-touch-selection-indicator {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 9997;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+  animation: slideUpFade 0.3s ease-out;
+}
+
+@keyframes slideUpFade {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   LEARNER SESSION - LANDSCAPE MOBILE/TABLET LAYOUT (20-80 Split)
+   ============================================================================ */
+
+/* Hide Navbar on Mobile/Tablet for Learner Session */
+@media (max-width: 1023px) {
+  .learner-session-page nav {
+    display: none !important;
+  }
+
+  .learner-session-page .session-header {
+    top: 0;
+  }
+}
+
+/* Learner Responsive Layout - 20% Left, 80% Right on Landscape */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.5rem;
+    margin: 0.5rem;
+    min-height: calc(100vh - 60px) !important;
+  }
+
+  /* Left Sidebar - 20% width */
+  .learner-responsive-sidebar-left {
+    width: 20% !important;
+    max-width: 20% !important;
+    min-width: 20% !important;
+    position: relative !important;
+    transform: none !important;
+    order: 1 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border-right: 1px solid #e5e7eb;
+    padding: 0.5rem !important;
+    overflow-y: auto;
+    height: calc(100vh - 60px);
+  }
+
+  /* Right Area - 80% width */
+  .learner-responsive-main-area {
+    width: 80% !important;
+    max-width: 80% !important;
+    min-width: 80% !important;
+    order: 2 !important;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  /* Hide sidebar overlay in landscape */
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  /* Hide sidebar toggle button in landscape */
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  /* Compact video in left sidebar */
+  .learner-responsive-sidebar-left video {
+    max-height: 150px;
+  }
+
+  /* Compact prompt section */
+  .learner-responsive-sidebar-left .bg-yellow-50 {
+    padding: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Compact meter values */
+  .learner-responsive-sidebar-left .bg-gradient-to-br {
+    padding: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Compact message section */
+  .learner-responsive-sidebar-left .bg-blue-50 {
+    padding: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Responsive buttons in left sidebar */
+  .learner-responsive-sidebar-left button {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.7rem !important;
+    min-height: 32px;
+  }
+
+  /* Compact text sizing */
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.8rem !important;
+  }
+
+  .learner-responsive-sidebar-left p {
+    font-size: 0.7rem !important;
+  }
+
+  /* Ensure whiteboard takes full width */
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Portrait mode - keep original hamburger menu behavior */
+@media (max-width: 1023px) and (orientation: portrait) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .learner-responsive-sidebar-left {
+    position: fixed !important;
+    left: 0;
+    top: 60px;
+    bottom: 0;
+    width: 85% !important;
+    max-width: 450px !important;
+    z-index: 999;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease-in-out;
+  }
+
+  /* When sidebar is open in portrait */
+  .learner-responsive-sidebar-left.translate-x-0 {
+    transform: translateX(0) !important;
+  }
+
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
   }
 }

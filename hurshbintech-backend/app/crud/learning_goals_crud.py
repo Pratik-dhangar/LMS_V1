@@ -64,8 +64,6 @@ async def update_learning_goal(
         goal.goal = goal_data.goal
     if goal_data.goal_description is not None:
         goal.goal_description = goal_data.goal_description
-    if goal_data.program_type is not None:
-        goal.program_type = goal_data.program_type
 
     goal.updated_by_id = user_id
 

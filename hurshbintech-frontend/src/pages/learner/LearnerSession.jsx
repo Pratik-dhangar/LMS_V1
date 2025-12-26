@@ -16,6 +16,7 @@ import LearnerVideoConference from '../../components/videoConference/LearnerVide
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
+import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import '../../styles/Pages.css';
 
@@ -23,6 +24,9 @@ const LearnerSession = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+
+  // Auto-hide navbar hook
+  const { navbarClassName, pageClassName } = useAutoHideNavbar();
 
   // WebRTC and Whiteboard
   const [webRTC, setWebRTC] = useState(null);
@@ -1239,9 +1243,9 @@ const LearnerSession = () => {
   // Show waiting overlay if trainer hasn't joined yet
   if (!loading && !trainerJoined && sessionInfo?.status === 'scheduled') {
     return (
-      <div className="learner-session-page">
-        {/* Navigation / Header */}
-        <div className="session-header">
+      <div className={`learner-session-page ${pageClassName}`}>
+        {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+        <div className={`session-header ${navbarClassName}`}>
           <div className="session-header-main">
             <div>
               <div className="session-header-title">HurshBin Learner</div>
@@ -1299,9 +1303,9 @@ const LearnerSession = () => {
   }
 
   return (
-    <div className="learner-session-page">
-      {/* Navigation / Header - Similar to Trainer */}
-      <div className="session-header">
+    <div className={`learner-session-page ${pageClassName}`}>
+      {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+      <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Learner</div>
@@ -1365,10 +1369,10 @@ const LearnerSession = () => {
                     muted
                     className="absolute top-0 left-0 w-full h-full object-cover"
                   />
-                  <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                  <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
                     Trainer
                   </div>
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                  <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
                     {connectionStatus}
                   </div>
                 </div>
@@ -1451,7 +1455,7 @@ const LearnerSession = () => {
           </div>
         </div>
         {/* Whiteboard Area - Scrollable Container */}
-        <div className="w-full learner-responsive-whiteboard-section mx-auto overflow-y-auto">
+        <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
           <div className="session-whiteboard-container">
             <div className="w-full h-full">
               <Whiteboard
