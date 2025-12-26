@@ -39,11 +39,7 @@ const CoachDashboard = () => {
     }
   };
 
-  const sessionStats = [
-    { label: 'Total Sessions', value: sessions.length },
-    { label: 'Completed', value: sessions.filter(s => s.status === 'completed').length },
-    { label: 'Scheduled', value: sessions.filter(s => s.status === 'scheduled').length },
-  ];
+
 
   return (
     <div className="dashboard-container">
@@ -90,17 +86,6 @@ const CoachDashboard = () => {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
-                {/* Stats Grid */}
-                <div className="stats-grid">
-                  {sessionStats.map((stat, index) => (
-                    <div key={index} className="stat-card">
-                      <div className="stat-label">{stat.label}</div>
-                      <div className={`stat-value stat-value-${index === 0 ? 'blue' : index === 1 ? 'green' : 'blue'}`}>
-                        {stat.value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
 
                 {/* Upcoming Appointments */}
                 <div className="consultant-card">

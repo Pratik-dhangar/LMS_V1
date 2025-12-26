@@ -149,7 +149,7 @@ const GuestBookingStep2 = () => {
   return (
     <>
       <Navbar />
-      <div className="page-container">
+      <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-header">
             <button className="btn-back" onClick={() => navigate(-1)}>
@@ -240,12 +240,12 @@ const GuestBookingStep2 = () => {
                           {coach.profile_picture_url && (
                             <img 
                               src={coach.profile_picture_url} 
-                              alt={coach.user_name}
+                              alt={coach.name}
                               className="coach-card-image"
                             />
                           )}
                           <div className="coach-card-info">
-                            <h4 className="coach-card-name">{coach.user_name || 'Coach'}</h4>
+                            <h4 className="coach-card-name">{coach.name}</h4>
                             {coach.specialization && (
                               <p className="coach-card-specialization">{coach.specialization}</p>
                             )}

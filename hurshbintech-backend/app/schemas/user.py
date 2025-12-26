@@ -32,6 +32,19 @@ class ReferenceDataType(enum.Enum):
     DOCX = "docx"
 
 
+class ReferenceDataSchema(BaseModel):
+    """Schema for reference data files"""
+    id: int
+    data_type: str
+    file_name: Optional[str] = None
+    file_path: str
+    description: Optional[str] = None
+    uploaded_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ============ ADMIN SCHEMAS ============
 # Schema for admin response
 class AdminResponse(BaseModel):
@@ -123,6 +136,7 @@ class HeadResponse(BaseModel):
     input_at_hurshbin: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
+    reference_data: List[ReferenceDataSchema] = []
 
     created_by: Optional[int] = None
     created_at: datetime  # From User
@@ -168,6 +182,10 @@ class HeadResponse(BaseModel):
                 ]
                 if hasattr(profile, field)
             },
+            # Reference data
+            "reference_data": [
+                ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])
+            ],
         }
         return cls(**data)
 
@@ -252,6 +270,7 @@ class TrainerResponse(BaseModel):
     input_at_hurshbin: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
+    reference_data: List[ReferenceDataSchema] = []
 
     created_by: Optional[int] = None
     created_at: datetime  # From User
@@ -297,6 +316,10 @@ class TrainerResponse(BaseModel):
                 ]
                 if hasattr(profile, field)
             },
+            # Reference data
+            "reference_data": [
+                ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])
+            ],
         }
         return cls(**data)
 
@@ -389,6 +412,7 @@ class CoachResponse(BaseModel):
     is_available: Optional[bool] = True
     unavailable_until: Optional[datetime] = None
     unavailable_reason: Optional[str] = None
+    reference_data: List[ReferenceDataSchema] = []
     
     created_at: datetime  # From User
 
@@ -439,6 +463,10 @@ class CoachResponse(BaseModel):
                 ]
                 if hasattr(profile, field)
             },
+            # Reference data
+            "reference_data": [
+                ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])
+            ],
         }
         return cls(**data)
 
@@ -681,6 +709,7 @@ class LearnerResponse(BaseModel):
     created_by: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    reference_data: List[ReferenceDataSchema] = []
 
     @classmethod
     def from_orm_with_user(cls, profile, user=None):
@@ -762,6 +791,11 @@ class LearnerResponse(BaseModel):
                 data["dlb_concerns_checklist"] = []
         else:
             data["dlb_concerns_checklist"] = []
+
+        # Reference data
+        data["reference_data"] = [
+            ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])
+        ]
 
         return cls(**data)
 

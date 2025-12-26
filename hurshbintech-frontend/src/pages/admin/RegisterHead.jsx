@@ -137,12 +137,24 @@ const RegisterHead = () => {
     setSuccessData(null);
 
     try {
-      // Prepare data for submission
-      const submitData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        number_of_sessions_done: parseInt(formData.number_of_sessions_done) || 0
-      };
+      // Prepare FormData for submission (to handle file uploads)
+      const submitData = new FormData();
+      
+      // Add all text fields
+      Object.keys(formData).forEach(key => {
+        if (key === 'number_of_sessions_done') {
+          submitData.append(key, parseInt(formData[key]) || 0);
+        } else if (key === 'age') {
+          if (formData[key]) submitData.append(key, parseInt(formData[key]));
+        } else {
+          submitData.append(key, formData[key] || '');
+        }
+      });
+
+      // Add reference files
+      referenceFiles.forEach(file => {
+        submitData.append('reference_files', file);
+      });
 
       // Create head
       const result = await adminService.createHead(submitData);

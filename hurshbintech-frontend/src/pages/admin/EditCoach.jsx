@@ -44,6 +44,8 @@ const EditCoach = () => {
     profile_picture_url: null,
   });
 
+  const [existingReferenceData, setExistingReferenceData] = useState([]);
+  const [existingProfilePicture, setExistingProfilePicture] = useState(null);
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -85,8 +87,12 @@ const EditCoach = () => {
         availability_days: coach.availability_days ? coach.availability_days.split(',').map(d => d.trim()) : [],
         time_slots: coach.time_slots ? coach.time_slots.split(',').map(t => t.trim()) : [],
         specialization: coach.specialization || '',
-        profile_picture_url: coach.profile_picture_url || null,
+        profile_picture_url: null,
       });
+      
+      // Store existing profile picture separately
+      setExistingProfilePicture(coach.profile_picture_url || null);
+      setExistingReferenceData(coach.reference_data || []);
     } catch (err) {
       console.error('Error fetching coach data:', err);
       toast.error('Failed to load coach data');
@@ -139,6 +145,38 @@ const EditCoach = () => {
     setReferenceFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleDeleteExistingFile = async (referenceId) => {
+    if (!window.confirm('Are you sure you want to delete this file?')) {
+      return;
+    }
+
+    try {
+      await adminService.deleteCoachReferenceFile(coachId, referenceId);
+      setExistingReferenceData(prev => prev.filter(file => file.id !== referenceId));
+      toast.success('File deleted successfully', {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Failed to delete file', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleViewFile = (filePath, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
+    const backendUrl = apiBaseUrl.replace('/api', '');
+    const fullUrl = `${backendUrl}${filePath}`;
+    window.open(fullUrl, '_blank');
+  };
+
   const handleProfileImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -146,6 +184,43 @@ const EditCoach = () => {
         ...prev,
         profile_picture_url: file
       }));
+    }
+  };
+
+  const handleViewProfilePicture = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (existingProfilePicture) {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
+      const backendUrl = apiBaseUrl.replace('/api', '');
+      const fullUrl = `${backendUrl}${existingProfilePicture}`;
+      window.open(fullUrl, '_blank');
+    }
+  };
+
+  const handleDeleteProfilePicture = async () => {
+    if (!existingProfilePicture) return;
+
+    try {
+      // Update coach with null profile picture
+      await adminService.updateCoach(coachId, { profile_picture_url: null });
+      
+      setExistingProfilePicture(null);
+      
+      toast.success('Profile picture removed successfully!', {
+        position: 'top-center',
+        autoClose: 2000,
+        theme: "colored",
+      });
+    } catch (error) {
+      console.error('Error deleting profile picture:', error);
+      toast.error('Failed to delete profile picture', {
+        position: 'top-center',
+        autoClose: 3000,
+        theme: "colored",
+      });
     }
   };
 
@@ -411,10 +486,43 @@ const EditCoach = () => {
                     accept="image/*"
                   />
                   <p className="form-hint">Supported formats: JPG, PNG, GIF</p>
+                  
+                  {/* Existing Profile Picture */}
+                  {existingProfilePicture && (
+                    <div className="existing-files-section">
+                      <h4 className="subsection-title">Current Profile Picture</h4>
+                      <div className="file-list">
+                        <div className="file-item">
+                          <span className="file-name">Profile Picture</span>
+                          <div className="file-actions">
+                            <button
+                              type="button"
+                              onClick={(e) => handleViewProfilePicture(e)}
+                              className="btn-view-file"
+                            >
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDeleteProfilePicture}
+                              className="file-remove-btn"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* New Profile Picture to Upload */}
                   {formData.profile_picture_url && (
-                    <p className="form-hint" style={{ color: '#4caf50' }}>
-                      ✓ {formData.profile_picture_url instanceof File ? formData.profile_picture_url.name : 'Profile picture set'}
-                    </p>
+                    <div className="new-files-section">
+                      <h4 className="subsection-title">New Profile Picture to Upload</h4>
+                      <p className="form-hint" style={{ color: '#4caf50' }}>
+                        ✓ {formData.profile_picture_url.name}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -431,21 +539,54 @@ const EditCoach = () => {
                   />
                   <p className="form-hint">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
 
-                  {/* File List */}
+                  {/* Existing Reference Files */}
+                  {existingReferenceData.length > 0 && (
+                    <div className="existing-files-section">
+                      <h4 className="subsection-title">Existing Reference Files</h4>
+                      <div className="file-list">
+                        {existingReferenceData.map((file) => (
+                          <div key={file.id} className="file-item">
+                            <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                            <div className="file-actions">
+                              <button
+                                type="button"
+                                onClick={(e) => handleViewFile(file.file_path, e)}
+                                className="btn-view-file"
+                              >
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExistingFile(file.id)}
+                                className="file-remove-btn"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New File List */}
                   {referenceFiles.length > 0 && (
-                    <div className="file-list" style={{ marginTop: '1rem' }}>
-                      {referenceFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          <span className="file-name">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="file-remove-btn"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
+                    <div className="new-files-section">
+                      <h4 className="subsection-title">New Files to Upload</h4>
+                      <div className="file-list">
+                        {referenceFiles.map((file, index) => (
+                          <div key={index} className="file-item">
+                            <span className="file-name">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="file-remove-btn"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
