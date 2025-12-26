@@ -14,7 +14,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminViewLearners.css';
 
 
 // ViewLearners Component - Admin can view all learners (no edit capability)

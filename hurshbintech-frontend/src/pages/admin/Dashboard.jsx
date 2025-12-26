@@ -4,7 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
-import '../../styles/Dashboards.css';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video } from 'lucide-react';
+import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -36,84 +37,82 @@ const AdminDashboard = () => {
   };
 
   const menuItems = [
-    { id: '1.1', title: 'Manage HurshBin Heads', onClick: () => navigate('/admin/manage-heads') },
-    { id: '1.2', title: 'View HurshBin Trainers', onClick: () => navigate('/admin/view-trainers') },
-    { id: '1.3', title: 'Manage Learning Content', onClick: () => navigate('/admin/learning-content') },
-    { id: '1.4', title: 'Manage Learning Goals', onClick: () => navigate('/admin/learning-goals') },
-    { id: '1.5', title: 'Manage HurshBin Coaches', onClick: () => navigate('/admin/manage-coaches') },
-    { id: '1.6', title: 'View HurshBin Learners', onClick: () => navigate('/admin/view-learners') },
-    { id: '1.7', title: 'Manage Training Vlogs', onClick: () => navigate('/admin/vlogs') },
+    { id: '1.1', title: 'Manage HurshBin Heads', description: 'Register and manage HurshBin Heads', icon: Users2, color: 'blue', onClick: () => navigate('/admin/manage-heads') },
+    { id: '1.2', title: 'View HurshBin Trainers', description: 'View and manage HurshBin Trainers', icon: GraduationCap, color: 'green', onClick: () => navigate('/admin/view-trainers') },
+    { id: '1.3', title: 'Manage Learning Content', description: 'View and manage learning content', icon: BookOpen, color: 'purple', onClick: () => navigate('/admin/learning-content') },
+    { id: '1.4', title: 'Manage Learning Goals', description: 'Create and manage learning goals', icon: Target, color: 'orange', onClick: () => navigate('/admin/learning-goals') },
+    { id: '1.5', title: 'Manage HurshBin Coaches', description: 'Manage HurshBin Coaches and Consultants', icon: Award, color: 'teal', onClick: () => navigate('/admin/manage-coaches') },
+    { id: '1.6', title: 'View HurshBin Learners', description: 'View and manage HurshBin Learners', icon: Users, color: 'pink', onClick: () => navigate('/admin/view-learners') },
+    { id: '1.7', title: 'Manage Training Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
   ];
 
   return (
-    <div className="dashboard-container">
+    <div className="admin-dashboard-container">
       <Navbar />
-      <main className="dashboard-main">
-        <div className="dashboard-content-wrapper">
+      <main className="admin-dashboard-main">
+        <div className="admin-dashboard-content-wrapper">
           {/* Header */}
-          <div className="dashboard-header">
-            <h1 className="dashboard-title">
-              Welcome, {user?.name}
+          <div className="admin-dashboard-header">
+            <h1 className="admin-dashboard-title">
+              Admin Dashboard
             </h1>
           </div>
 
           {/* Stats Cards */}
-          <div className="stats-grid">
+          <div className="admin-stats-grid">
             {loading ? (
-              <div className="stat-loading">
+              <div className="admin-stat-loading">
                 Loading stats...
               </div>
             ) : error ? (
-              <div className="stat-error">
+              <div className="admin-stat-error">
                 {error}
               </div>
             ) : (
               <>
-                <div className="stat-card">
-                  <div className="stat-label">Total Users</div>
-                  <div className="stat-value stat-value-blue">{stats.total_users}</div>
+                <div className="admin-stat-card">
+                  <div className="admin-stat-label">Total Users</div>
+                  <div className="admin-stat-value admin-stat-value-blue">{stats.total_users}</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-label">Active Sessions Today</div>
-                  <div className="stat-value stat-value-green">{stats.active_sessions}</div>
+                <div className="admin-stat-card">
+                  <div className="admin-stat-label">Active Sessions Today</div>
+                  <div className="admin-stat-value admin-stat-value-green">{stats.active_sessions}</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-label">Total Trainers</div>
-                  <div className="stat-value stat-value-red">{stats.total_trainers}</div>
+                <div className="admin-stat-card">
+                  <div className="admin-stat-label">Total Trainers</div>
+                  <div className="admin-stat-value admin-stat-value-red">{stats.total_trainers}</div>
                 </div>
               </>
             )}
           </div>
 
           {/* Admin Menu */}
-          <div className="dashboard-menu">
-            <div className="menu-title">
+          <div className="admin-dashboard-menu">
+            <div className="admin-menu-title">
               <h2>Admin Menu - Click to Open</h2>
             </div>
 
-            <div className="menu-grid">
-              {menuItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={item.onClick}
-                  className="menu-item"
-                >
-                  <span className="menu-item-text">
-                    {item.title}
-                  </span>
-                  <svg
-                    className="menu-item-arrow"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            <div className="admin-menu-grid">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={item.onClick}
+                    className={`admin-menu-card admin-menu-card-${item.color}`}
                   >
-                    <path d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </div>
-              ))}
+                    <div className="admin-menu-card-icon">
+                      <IconComponent size={48} />
+                    </div>
+                    <h3 className="admin-menu-card-title">
+                      {item.title}
+                    </h3>
+                    <p className="admin-menu-card-description">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -14,7 +14,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminViewTrainers.css';
 
 
 // ViewTrainers Component - Admin can view all trainers (no edit capability)
@@ -159,40 +159,37 @@ const ViewTrainers = () => {
                   </p>
                 </div>
               ) : (
-                <table className="data-table">
-                  <thead className="data-table-header">
+                <table className="admin-table">
+                  <thead>
                     <tr>
-                      <th className="data-table-th">
+                      <th className="admin-table-th">
                         Sr. No.
                       </th>
-                      <th className="data-table-th">
+                      <th className="admin-table-th">
                         Name
                       </th>
-                      <th className="data-table-th">
+                      <th className="admin-table-th">
                         Passcode
                       </th>
-                      <th className="data-table-th">
+                      <th className="admin-table-th">
                         Contact Number
                       </th>
-                      <th className="data-table-th">
+                      <th className="admin-table-th">
                         Date Joined
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="data-table-body">
+                  <tbody>
                     {filteredTrainers.map((trainer, index) => (
-                      <tr
-                        key={trainer.id}
-                        className="data-table-row"
-                      >
-                        <td className="data-table-td data-table-td-center">
+                      <tr key={trainer.id}>
+                        <td className="admin-table-td admin-table-td-center">
                           {index + 1}
                         </td>
-                        <td className="data-table-td">
+                        <td className="admin-table-td">
                           <div className="data-table-name">{trainer.name}</div>
                           <div className="data-table-subtext">{trainer.role}</div>
                         </td>
-                        <td className="data-table-td">
+                        <td className="admin-table-td">
                           <div className="passcode-container">
                             <span className="passcode-badge">
                               {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
@@ -210,10 +207,10 @@ const ViewTrainers = () => {
                             </button>
                           </div>
                         </td>
-                        <td className="data-table-td">
+                        <td className="admin-table-td">
                           {trainer.contact_no || 'N/A'}
                         </td>
-                        <td className="data-table-td">
+                        <td className="admin-table-td">
                           {trainer.date_of_joining
                             ? new Date(trainer.date_of_joining).toLocaleDateString()
                             : 'N/A'

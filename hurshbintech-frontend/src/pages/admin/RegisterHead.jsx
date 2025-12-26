@@ -10,7 +10,7 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminRegisterHead.css';
 
 const RegisterHead = () => {
   const navigate = useNavigate();
@@ -139,7 +139,7 @@ const RegisterHead = () => {
     try {
       // Prepare FormData for submission (to handle file uploads)
       const submitData = new FormData();
-      
+
       // Add all text fields
       Object.keys(formData).forEach(key => {
         if (key === 'number_of_sessions_done') {
@@ -245,7 +245,6 @@ const RegisterHead = () => {
               <>
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
-                  <div className="loading-spinner-inner"></div>
                 </div>
                 <p className="modal-title modal-title-success">Registering Head...</p>
                 <p className="modal-message">Please wait while we process your request</p>

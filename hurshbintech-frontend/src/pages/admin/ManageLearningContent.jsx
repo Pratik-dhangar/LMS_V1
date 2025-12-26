@@ -4,7 +4,7 @@ import learningContentService from "../../api/services/learningContentService";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminManageLearningContent.css';
 
 const ManageLearningContent = () => {
   const [contents, setContents] = useState([]);

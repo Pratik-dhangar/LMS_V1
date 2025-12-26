@@ -16,7 +16,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import SearchBar from '../../components/common/SearchBar';
 import adminService from '../../api/services/adminService';
-import '../../styles/Pages.css';
+import '../../styles/admin/index.css';
 
 
 // ManageHeads Component
@@ -222,7 +222,7 @@ const ManageHeads = () => {
                           </td>
                           <td className="data-table-td">
                             <div className="data-table-name">{head.name}</div>
-                            
+
                           </td>
                           <td className="data-table-td">
                             <div className="passcode-display-inline">
