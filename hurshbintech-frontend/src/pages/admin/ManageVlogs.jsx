@@ -188,6 +188,16 @@ const ManageVlogs = () => {
                       {vlog.title}
                     </h3>
 
+                    {/* Status Badge */}
+                    <div className="mb-2">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${vlog.status === 'published'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                        {vlog.status === 'published' ? '✓ Published' : '📝 Draft'}
+                      </span>
+                    </div>
+
                     {vlog.description && (
                       <p className="text-xs text-gray-600 mb-3 line-clamp-2">
                         {vlog.description}

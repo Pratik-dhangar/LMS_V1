@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
 
 // Pages
@@ -21,6 +22,9 @@ import ViewTrainers from './pages/admin/ViewTrainers';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
 import EditVlog from './pages/admin/EditVlog';
+import ManageBlogs from './pages/admin/ManageBlogs';
+import CreateEditBlog from './pages/admin/CreateEditBlog';
+import AdminAboutUs from './pages/admin/AdminAboutUs';
 
 
 // Head Pages
@@ -59,6 +63,11 @@ import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssig
 import BookAppointment from './pages/common/BookAppointment';
 import BookAppointmentForm from './pages/common/BookAppointmentForm';
 import MyAppointments from './pages/common/MyAppointments';
+import BlogList from './pages/common/BlogList';
+import BlogDetail from './pages/common/BlogDetail';
+import VlogList from './pages/common/VlogList';
+import VlogDetail from './pages/common/VlogDetail';
+import AboutUs from './pages/AboutUs';
 
 // Guest Booking Pages
 import GuestBookingStep1 from './pages/common/GuestBookingStep1';
@@ -75,7 +84,8 @@ import useNetworkSpeedNotifier from './hooks/useNetworkSpeedNotifier';
 
 import './App.css';
 
-function App() {
+// Separate component for the actual app routes that uses AuthContext
+function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
 
   useNetworkSpeedNotifier();
@@ -131,7 +141,9 @@ function App() {
     <MediaControlProvider>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Home />} />
+        <Route path="" element={<Home />} />
+        <Route path="/about" element={<AboutUs />} />
+
         <Route
           path="/login"
           element={isAuthenticated ? <Navigate to={getDashboardPath()} replace /> : <Login />}
@@ -239,6 +251,38 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <EditVlog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/blogs"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageBlogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/blogs/create"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CreateEditBlog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/blogs/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CreateEditBlog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/about-us"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAboutUs />
             </ProtectedRoute>
           }
         />
@@ -456,10 +500,28 @@ function App() {
         <Route path="/guest-payment/:uploadToken" element={<GuestPaymentUpload />} />
         <Route path="/guest-payment/success" element={<GuestPaymentUploadSuccess />} />
 
+        {/* Public Blog Routes */}
+        <Route path="/blogs" element={<BlogList />} />
+        <Route path="/blogs/:slug" element={<BlogDetail />} />
+
+        {/* Public Vlog Routes */}
+        <Route path="/vlogs" element={<VlogList />} />
+        <Route path="/vlogs/:id" element={<VlogDetail />} />
+
         {/* 404 - Redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </MediaControlProvider>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
