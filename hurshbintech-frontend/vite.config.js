@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // ✅ FIX: Increase precache size limit (default is 2 MB)
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
           // ✅ CRITICAL FIX for S3 Images & API
           runtimeCaching: [
             {
