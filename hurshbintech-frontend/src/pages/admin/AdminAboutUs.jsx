@@ -139,10 +139,20 @@ const AdminAboutUs = () => {
 
     const removeImage = async () => {
         try {
-            // If there's an aboutUsId, delete from server first
-            if (aboutUsId) {
-                await aboutUsService.deleteFeaturedImage(aboutUsId);
-                
+            // If there's an aboutUsId and an image preview, delete from server first
+            if (aboutUsId && featuredImagePreview) {
+                try {
+                    await aboutUsService.deleteFeaturedImage(aboutUsId);
+                    toast.success('Featured image deleted successfully');
+                } catch (err) {
+                    // If delete fails with 404, it's likely the image doesn't exist on server
+                    // Still allow clearing local state
+                    if (err.response?.status === 404) {
+                        console.warn('Featured image not found on server, clearing local state');
+                    } else {
+                        throw err;
+                    }
+                }
             }
             // Clear local state
             setFeaturedImage(null);
