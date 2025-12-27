@@ -120,7 +120,6 @@ export const AuthProvider = ({ children }) => {
       position: "top-center",
       autoClose: 3000,
     });
-    navigate('/login');
   };
 
   /**

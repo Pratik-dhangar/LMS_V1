@@ -2,7 +2,8 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+from math import ceil
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +12,7 @@ from app.core.config import settings
 from app.core.deps import get_current_admin_user, get_db
 from app.crud.vlog_crud import VlogCRUD
 from app.models.user_model import User
-from app.schemas.vlog import Vlog, VlogCreate, VlogUpdate
+from app.schemas.vlog import Vlog, VlogCreate, VlogUpdate, VlogListResponse
 from app.utils.s3_utils import S3Manager
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,7 @@ def delete_vlog_files(file_url: str, thumbnail_url: str = None) -> bool:
 async def create_vlog(
     title: str = Form(...),
     description: str = Form(None),
+    status: str = Form("draft"),  # "draft" or "published"
     video_file: UploadFile = File(...),
     thumbnail_file: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
@@ -230,6 +232,7 @@ async def create_vlog(
         file_url=file_info["file_url"],
         file_size=file_info["file_size"],
         thumbnail_url=file_info.get("thumbnail_url"),
+        status=status,
     )
 
     created_vlog = await vlog_crud.create_vlog(db, vlog_data)
@@ -245,6 +248,67 @@ async def get_vlogs(
 ):
     vlogs = await vlog_crud.get_vlogs(db, skip=skip, limit=limit)
     return [convert_vlog_response(v) for v in vlogs]
+
+
+# ============================================================================
+# PUBLIC ENDPOINTS - No authentication required
+# ============================================================================
+
+@router.get("/public", response_model=VlogListResponse)
+async def get_public_vlogs(
+    page: int = 1,
+    per_page: int = 10,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all published vlogs (Public endpoint)"""
+    try:
+        skip = (page - 1) * per_page
+        vlogs = await vlog_crud.get_vlogs(db, skip=skip, limit=per_page)
+        
+        # Filter by published status
+        vlogs = [v for v in vlogs if v.status.value == "published"]
+        
+        # Filter vlogs by search term if provided
+        if search:
+            vlogs = [
+                v for v in vlogs
+                if search.lower() in v.title.lower() or
+                   (v.description and search.lower() in v.description.lower())
+            ]
+        
+        total = len(vlogs) if search else await vlog_crud.count_vlogs(db, status_filter="published")
+        total_pages = ceil(total / per_page) if per_page > 0 else 0
+        
+        return VlogListResponse(
+            vlogs=[convert_vlog_response(v) for v in vlogs],
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages
+        )
+    except Exception as e:
+        logger.error(f"Error fetching public vlogs: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch vlogs"
+        )
+
+
+@router.get("/public/{vlog_id}", response_model=Vlog)
+async def get_public_vlog(
+    vlog_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a specific vlog by ID (Public endpoint)"""
+    vlog = await vlog_crud.get_vlog(db, vlog_id)
+    if not vlog:
+        raise HTTPException(
+            status_code=404,
+            detail="Vlog not found"
+        )
+    
+    return convert_vlog_response(vlog)
 
 
 @router.get("/{vlog_id}", response_model=Vlog)
@@ -264,6 +328,7 @@ async def update_vlog(
     vlog_id: int,
     title: str = Form(None),
     description: str = Form(None),
+    status: str = Form(None),  # "draft" or "published"
     video_file: UploadFile = File(None),
     thumbnail_file: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
@@ -282,6 +347,9 @@ async def update_vlog(
 
     if description:
         update_data["description"] = description
+
+    if status:
+        update_data["status"] = status
 
     # Handle video file update
     if video_file and video_file.filename:

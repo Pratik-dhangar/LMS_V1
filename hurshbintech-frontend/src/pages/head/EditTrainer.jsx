@@ -389,24 +389,6 @@ const EditTrainer = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="form-container">
 
-            {/* Read-only Info */}
-            <div className="info-box">
-              <div className="info-box-grid">
-                <div>
-                  <p className="info-box-label">Trainer ID</p>
-                  <p className="info-box-value">#{originalData?.id}</p>
-                </div>
-                <div>
-                  <p className="info-box-label">Passcode</p>
-                  <p className="info-box-value">{originalData?.passcode}</p>
-                </div>
-                <div>
-                  <p className="info-box-label">Role</p>
-                  <p className="info-box-value info-box-capitalize">{originalData?.role}</p>
-                </div>
-              </div>
-            </div>
-
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}

@@ -148,6 +148,18 @@
     background: rgba(236, 72, 153, 0.02);
 }
 
+.admin-menu-card-indigo {
+    border-color: #6366f1;
+}
+
+.admin-menu-card-indigo .admin-menu-card-icon {
+    color: #6366f1;
+}
+
+.admin-menu-card-indigo:hover {
+    background: rgba(99, 102, 241, 0.02);
+}
+
 .admin-menu-card-icon {
     font-size: 3rem;
     margin-bottom: 1rem;

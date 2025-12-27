@@ -215,7 +215,7 @@ class JanusRecordingService {
 
       // Try to hide Chrome's screen sharing indicator notification
       // Note: This has limited effect due to browser security, but may help in some cases
-      if (window.chrome && chrome.runtime) {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
         // Some Chrome-specific handling could go here
         console.log('[JanusRecordingService] Chrome recording mode activated');
       }

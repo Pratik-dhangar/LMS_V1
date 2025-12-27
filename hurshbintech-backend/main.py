@@ -19,8 +19,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 # Import all routers
+from app.api.endpoints.about_us import router as about_us_router
 from app.api.endpoints.admin import router as admin_router
 from app.api.endpoints.auth import router as auth_router
+from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
 from app.api.endpoints.coach import router as coach_router
 from app.api.endpoints.head import router as head_endpoint_router
@@ -129,6 +131,8 @@ app.include_router(session_notes_router, prefix="/api")
 app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
+app.include_router(blogs_router, prefix="/api", tags=["blogs"])
+app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments

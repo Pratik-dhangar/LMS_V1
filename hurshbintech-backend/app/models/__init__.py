@@ -29,6 +29,7 @@ from app.models.user_model import (
     UserRole,
 )
 from app.models.vlog_model import Vlog
+from app.models.about_us_model import AboutUs, AboutUsStatus
 
 __all__ = [
     "User",
@@ -56,4 +57,6 @@ __all__ = [
     "AttachmentType",
     "ProgramLearningContent",
     "Vlog",
+    "AboutUs",
+    "AboutUsStatus",
 ]

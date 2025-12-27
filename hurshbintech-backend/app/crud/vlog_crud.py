@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vlog_model import Vlog
@@ -15,6 +15,7 @@ class VlogCRUD:
             file_url=vlog.file_url,
             file_size=vlog.file_size,
             thumbnail_url=vlog.thumbnail_url,
+            status=vlog.status or "draft",
         )
         db.add(db_vlog)
         await db.commit()
@@ -30,6 +31,13 @@ class VlogCRUD:
         result = await db.execute(stmt)
         vlogs = result.scalars().all()
         return list(vlogs)
+
+    async def count_vlogs(self, db: AsyncSession, status_filter: Optional[str] = None) -> int:
+        stmt = select(func.count(Vlog.id))
+        if status_filter:
+            stmt = stmt.filter(Vlog.status == status_filter)
+        result = await db.execute(stmt)
+        return result.scalar() or 0
 
     async def update_vlog(self, db: AsyncSession, vlog_id: int, vlog: VlogUpdate) -> Optional[Vlog]:
         db_vlog = await self.get_vlog(db, vlog_id)
