@@ -38,6 +38,18 @@ const aboutUsService = {
         }
     },
 
+    deleteFeaturedImage: async (id) => {
+        try {
+            const response = await api.delete(`/admin/about-us/${id}/featured-image`);
+            console.log('Delete featured image response status:', response.status);
+            // 204 No Content returns empty response, which is success
+            return { success: true };
+        } catch (error) {
+            console.error('Delete featured image error:', error);
+            throw error;
+        }
+    },
+
     // Public endpoint
     getPublicAboutUs: async (language_code = 'en') => {
         const response = await api.get(`/about-us/public?language_code=${language_code}`);
