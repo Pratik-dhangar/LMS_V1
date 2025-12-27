@@ -64,6 +64,7 @@ services:
       - --log-file=stdout 
       - --min-port=49152 
       - --max-port=65535 
+      - --realm=hurshbin.lumesoftai.in
       - --user=hurshbin:SecureTurnPass2024!
       - --lt-cred-mech 
       - --fingerprint 

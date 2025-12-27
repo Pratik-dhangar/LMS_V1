@@ -29,26 +29,19 @@ const Home = () => {
         <p className="home-hero-subtitle">
           Online ABA Therapy Platform - Learn from Your Own Space
         </p>
-        <button
-          onClick={() => navigate("/login")}
-          className="home-hero-button"
-        >
-          Get Started
-        </button>
       </section>
 
       {/* Features Section */}
       <section className="home-features">
         {[
-          { title: "ABOUT US", text: "Learn more about our mission and approach" },
-          { title: "READ BLOGS", text: "Educational articles and insights" },
-          { title: "VIEW VLOGS", text: "Video content and tutorials" },
+          { title: "ABOUT US", text: "Learn more about our mission and approach", onClick: () => navigate("/about") },
+          { title: "READ BLOGS", text: "Educational articles and insights", onClick: () => navigate("/blogs") },
+          { title: "VIEW VLOGS", text: "Video content and tutorials", onClick: () => navigate("/vlogs") },
           { title: "BOOK APPOINTMENT", text: "Schedule sessions with professionals", onClick: handleBookAppointment },
-          { title: "SUBSCRIBE LEARNING CONTENT", text: "Access premium learning materials" },
           { title: "BUY LEARNING MATERIAL", text: "Purchase recommended resources" },
         ].map((item, i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className="home-feature-card"
             onClick={item.onClick}
             style={item.onClick ? { cursor: 'pointer' } : {}}
