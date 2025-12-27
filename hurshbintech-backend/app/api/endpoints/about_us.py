@@ -432,10 +432,9 @@ async def delete_featured_image_endpoint(
         
         # Check if featured image exists
         if not about_us.featured_image_url:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No featured image to delete"
-            )
+            # Image doesn't exist, but that's okay - return success
+            logger.info(f"No featured image to delete for About Us ID {about_us_id}")
+            return None
         
         # Delete the image file
         image_url = about_us.featured_image_url
