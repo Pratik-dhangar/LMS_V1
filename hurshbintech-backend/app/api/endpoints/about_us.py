@@ -145,6 +145,35 @@ async def save_featured_image(image_file: UploadFile) -> str:
         )
 
 
+def delete_featured_image(image_url: str) -> bool:
+    """Delete featured image from S3 or local storage"""
+    if not image_url:
+        return True
+    
+    try:
+        if image_url.startswith("s3://"):
+            # Delete from S3
+            s3_key = image_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            return s3_manager.delete_file(s3_key)
+        elif image_url.startswith("/uploads/about-us/"):
+            # Delete local file
+            file_path = Path(image_url.lstrip("/"))
+            if file_path.exists():
+                os.remove(file_path)
+                logger.info(f"Deleted local featured image: {file_path}")
+                return True
+            else:
+                logger.warning(f"Featured image file not found: {file_path}")
+                return True
+        else:
+            logger.warning(f"Unknown image URL format: {image_url}")
+            return True
+    except Exception as e:
+        logger.error(f"Error deleting featured image {image_url}: {str(e)}")
+        # Don't raise exception, log and continue
+        return False
+
+
 # ============================================================================
 # ADMIN ENDPOINTS - Require admin authentication
 # ============================================================================
@@ -276,11 +305,25 @@ async def update_about_us(
 ):
     """Update About Us record (Admin only)"""
     try:
+        # Get existing about_us record to access current featured image
+        existing_about_us = await about_us_crud.get_about_us_by_id(db, about_us_id)
+        if not existing_about_us:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="About Us page not found"
+            )
+
         # Validate and save featured image if provided
         featured_image_url = None
         if featured_image and featured_image.filename:
             validate_image_file(featured_image)
             featured_image_url = await save_featured_image(featured_image)
+            
+            # Delete old featured image if it exists
+            if existing_about_us.featured_image_url:
+                success = delete_featured_image(existing_about_us.featured_image_url)
+                if not success:
+                    logger.warning(f"Failed to delete old featured image: {existing_about_us.featured_image_url}")
 
         # Create update data
         update_data = {}
@@ -369,6 +412,54 @@ async def delete_about_us(
             detail="About Us page not found"
         )
     return None
+
+
+@router.delete("/admin/about-us/{about_us_id}/featured-image", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_featured_image_endpoint(
+    about_us_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Delete featured image from About Us page (Admin only)"""
+    try:
+        # Get the about_us record
+        about_us = await about_us_crud.get_about_us_by_id(db, about_us_id)
+        if not about_us:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="About Us page not found"
+            )
+        
+        # Check if featured image exists
+        if not about_us.featured_image_url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No featured image to delete"
+            )
+        
+        # Delete the image file
+        image_url = about_us.featured_image_url
+        success = delete_featured_image(image_url)
+        
+        if not success:
+            logger.warning(f"Failed to delete featured image file: {image_url}")
+            # Continue with database update even if file deletion fails
+        
+        # Update database to remove image reference
+        update_data = AboutUsUpdate(featured_image_url=None)
+        await about_us_crud.update_about_us(db, about_us_id, update_data)
+        
+        logger.info(f"Deleted featured image for About Us ID {about_us_id}: {image_url}")
+        return None
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting featured image: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete featured image"
+        )
 
 
 # ============================================================================
