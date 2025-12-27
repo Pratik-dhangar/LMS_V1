@@ -137,9 +137,20 @@ const AdminAboutUs = () => {
         }
     };
 
-    const removeImage = () => {
-        setFeaturedImage(null);
-        setFeaturedImagePreview(null);
+    const removeImage = async () => {
+        try {
+            // If there's an aboutUsId, delete from server first
+            if (aboutUsId) {
+                await aboutUsService.deleteFeaturedImage(aboutUsId);
+                
+            }
+            // Clear local state
+            setFeaturedImage(null);
+            setFeaturedImagePreview(null);
+        } catch (err) {
+            console.error('Error deleting featured image:', err);
+            toast.error(err.response?.data?.detail || 'Failed to delete featured image');
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -197,7 +208,7 @@ const AdminAboutUs = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div>
                 <Loader />
             </div>
         );
