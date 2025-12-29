@@ -7,6 +7,7 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    status: 'draft',
     video: null,
     thumbnail: null,
   });
@@ -38,6 +39,7 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
+      formDataToSend.append('status', formData.status);
       // backend expects field names 'video_file' and 'thumbnail_file'
       if (formData.video) {
         formDataToSend.append('video_file', formData.video);
@@ -82,6 +84,22 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
             onChange={handleChange}
             required
           />
+
+          <div className="form-field">
+            <label className="form-label">
+              Status <span className="form-required">*</span>
+            </label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="form-input"
+              required
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
 
           <div className="form-field">
             <label className="form-label">

@@ -245,7 +245,6 @@ const RegisterTrainer = () => {
               <>
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
-                  <div className="loading-spinner-inner"></div>
                 </div>
                 <p className="modal-title modal-title-success">Registering Trainer...</p>
                 <p className="modal-message">Please wait while we process your request</p>

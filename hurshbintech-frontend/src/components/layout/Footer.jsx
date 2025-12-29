@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Mail, Phone } from 'lucide-react';
 import '../../styles/components/layout/Footer.css';
 
@@ -36,6 +37,17 @@ const Footer = () => {
                 +91-XXXXXXXXXX
               </a>
             </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="footer-links" style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <Link to="/about" style={{ color: 'white', textDecoration: 'none', marginRight: '1rem' }}>
+              About Us
+            </Link>
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>|</span>
+            <Link to="/blogs" style={{ color: 'white', textDecoration: 'none', marginLeft: '1rem' }}>
+              Blogs
+            </Link>
           </div>
         </div>
       </div>

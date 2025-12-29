@@ -1,4 +1,4 @@
-// Navbar.jsx - Updated to always render all navigation buttons
+// Navbar.jsx - Updated to show tabs based on user role
 
 import React, { useState } from "react";
 import { LogOut, LogIn, Menu, X } from "lucide-react";
@@ -18,7 +18,7 @@ const Navbar = () => {
   const isAdminPage = location.pathname.includes("/admin/dashboard");
   const isHeadPage = location.pathname.includes("/head/dashboard");
   const isTrainerPage = location.pathname.includes("/trainer/dashboard");
-  const isConsultantPage = location.pathname.includes("/coach/dashboard");
+  const isCoachPage = location.pathname.includes("/coach/dashboard");
   const isLearnerPage = location.pathname.includes("/learner/dashboard");
 
   // Helper function to close menu on navigation
@@ -27,10 +27,48 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setIsMenuOpen(false);
+    navigate('/');
   };
+
+  // Define role-specific navigation
+  const getRoleNavigation = () => {
+    if (!user) return null;
+
+    const navConfig = {
+      admin: {
+        label: 'Admin',
+        path: '/admin/dashboard',
+        isActive: isAdminPage
+      },
+      head: {
+        label: 'Head',
+        path: '/head/dashboard',
+        isActive: isHeadPage
+      },
+      trainer: {
+        label: 'Trainer',
+        path: '/trainer/dashboard',
+        isActive: isTrainerPage
+      },
+      coach: {
+        label: 'Coach',
+        path: '/coach/dashboard',
+        isActive: isCoachPage
+      },
+      learner: {
+        label: 'Learner',
+        path: '/learner/dashboard',
+        isActive: isLearnerPage
+      }
+    };
+
+    return navConfig[user.role];
+  };
+
+  const roleNav = getRoleNavigation();
 
   return (
     <nav className="navbar" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
@@ -41,91 +79,62 @@ const Navbar = () => {
           </h1>
 
           <div className="navbar-nav navbar-nav-desktop">
-            <button
-              className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/");
-              }}
-            >
-              Dashboard
-            </button>
+            {/* Dashboard - Always show for authenticated users */}
+            {user && (
+              <button
+                className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
+                onClick={() => handleNavigate("/")}
+              >
+                Landing
+              </button>
+            )}
 
-            <button
-              className={`navbar-btn ${isAdminPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/admin/dashboard");
-              }}
-              disabled={!user || user.role !== "admin"}
+            {/* About Us - Public page */}
+            {/* <button
+              className={`navbar-btn ${location.pathname === "/about" ? "active" : ""}`}
+              onClick={() => handleNavigate("/about")}
             >
-              Admin
-            </button>
+              About Us
+            </button> */}
 
-            <button
-              className={`navbar-btn ${isHeadPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/head/dashboard");
-              }}
-              disabled={!user || user.role !== "head"}
-            >
-              Head
-            </button>
+            {/* Role-specific dashboard link - Only show if user is logged in */}
+            {user && roleNav && (
+              <button
+                className={`navbar-btn ${roleNav.isActive ? "active" : ""}`}
+                onClick={() => handleNavigate(roleNav.path)}
+              >
+                {roleNav.label}
+              </button>
+            )}
 
-            <button
-              className={`navbar-btn ${isTrainerPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/trainer/dashboard");
-              }}
-              disabled={!user || user.role !== "trainer"}
-            >
-              Trainer
-            </button>
 
-            <button
-              className={`navbar-btn ${isConsultantPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/coach/dashboard");
-              }}
-              disabled={!user || user.role !== "coach"}
-            >
-              Coach
-            </button>
-
-            <button
-              className={`navbar-btn ${isLearnerPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/learner/dashboard");
-              }}
-              disabled={!user || user.role !== "learner"}
-            >
-              Learner
-            </button>
           </div>
         </div>
 
         <div className="navbar-actions">
           <div className="navbar-actions-desktop">
-            <button
-              className="navbar-btn login-btn"
-              onClick={() => navigate("/login")}
-              disabled={!!user}
-            >
-              <LogIn className="w-4 h-4" />
-              Login
-            </button>
-
-            <button
-              className="navbar-btn logout-btn"
-              onClick={(e) => {
-                e.preventDefault();
-                logout();
-              }}
-              onDragStart={(e) => e.preventDefault()}
-              onDragOver={(e) => e.preventDefault()}
-              disabled={!user}
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
+            {!user ? (
+              <button
+                className="navbar-btn login-btn"
+                onClick={() => navigate("/login")}
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </button>
+            ) : (
+              <button
+                className="navbar-btn logout-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleLogout();
+                }}
+                onDragStart={(e) => e.preventDefault()}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            )}
           </div>
 
           <button
@@ -140,64 +149,81 @@ const Navbar = () => {
           </button>
         </div>
 
+        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="navbar-mobile-menu">
-            <button
-              className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
-              onClick={() => {
-                navigate("/");
-              }}
+            {/* Dashboard - Always show for authenticated users */}
+            {user && (
+              <button
+                className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
+                onClick={() => handleNavigate("/")}
+              >
+                Landing
+              </button>
+            )}
+
+            {/* Role-specific landing link - Only show if user is logged in */}
+            {user && roleNav && (
+              <button
+                className={`navbar-btn ${roleNav.isActive ? "active" : ""}`}
+                onClick={() => handleNavigate(roleNav.path)}
+              >
+                {roleNav.label}
+              </button>
+            )}
+
+            {/* About Us - Public page */}
+            {/* <button
+              className={`navbar-btn ${location.pathname === "/about" ? "active" : ""}`}
+              onClick={() => handleNavigate("/about")}
             >
-              Dashboard
+              About Us
+            </button> */}
+
+            {/* Blogs link - Always visible */}
+            <button
+              className={`navbar-btn ${location.pathname.includes("/blogs") ? "active" : ""}`}
+              onClick={() => handleNavigate("/blogs")}
+            >
+              Blogs
             </button>
 
-            {/* Menu Admin */}
-            <button
-              className={`navbar-btn ${isAdminPage ? "active" : ""}`}
-              onClick={() => handleNavigate("/admin/dashboard")}
-              disabled={
-                !user || user.role !== "admin"
-              }
-            >
-              Admin
-            </button>
+            {/* Admin Blog Management - Only for admins */}
+            {user && user.role === 'admin' && (
+              <button
+                className={`navbar-btn ${location.pathname.includes("/admin/blogs") ? "active" : ""}`}
+                onClick={() => handleNavigate("/admin/blogs")}
+              >
+                Manage Blogs
+              </button>
+            )}
 
-            {/* Menu Head */}
-            <button
-              className={`navbar-btn ${isHeadPage ? "active" : ""}`}
-              onClick={() => handleNavigate("/trainer/dashboard")}
-              disabled={
-                !user || user.role !== "head"
-              }
-            >
-              Head
-            </button>
+            {/* Login Button */}
+            {!user && (
+              <button
+                className="navbar-btn"
+                onClick={() => handleNavigate("/login")}
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </button>
+            )}
 
-            {/* Menu Login Button */}
-            <button
-              className="navbar-btn"
-              onClick={() => handleNavigate("/login")}
-              disabled={!!user}
-            >
-              <LogIn className="w-4 h-4" />
-              Login
-            </button>
-
-            {/* Menu Logout Button */}
-
-            <button
-              className="navbar-btn"
-              onClick={(e) => {
-                e.preventDefault();
-                handleLogout();
-              }}
-              onDragStart={(e) => e.preventDefault()}
-              onDragOver={(e) => e.preventDefault()}
-              disabled={!user}
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
+            {/* Logout Button */}
+            {user && (
+              <button
+                className="navbar-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleLogout();
+                }}
+                onDragStart={(e) => e.preventDefault()}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            )}
           </div>
         )}
       </div>

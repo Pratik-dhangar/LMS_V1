@@ -17,7 +17,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminManageCoaches.css';
 
 
 // ViewConsultants Component - Admin can view, add and edit coaches

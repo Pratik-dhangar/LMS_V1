@@ -1,0 +1,78 @@
+/* Admin Register Coach Styles */
+.admin-register-coach-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f6fa;
+}
+
+.admin-register-coach-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-register-coach-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.admin-register-coach-header {
+    margin-bottom: 2rem;
+}
+
+.admin-register-coach-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 700;
+}
+
+.admin-register-coach-description {
+    color: #6b7280;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.admin-register-coach-form {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.admin-register-coach-section {
+    margin-bottom: 2rem;
+}
+
+.admin-register-coach-section:last-child {
+    margin-bottom: 0;
+}
+
+.admin-register-coach-section-title {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.admin-register-coach-section-divider {
+    margin: 2rem 0;
+    border: none;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+    .admin-register-coach-main {
+        padding: 1rem;
+    }
+
+    .admin-register-coach-form {
+        padding: 1.5rem;
+    }
+
+    .admin-register-coach-title {
+        font-size: 1.5rem;
+    }
+}

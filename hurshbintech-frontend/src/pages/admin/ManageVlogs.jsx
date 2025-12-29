@@ -7,7 +7,7 @@ import ErrorState from "../../components/common/ErrorState";
 import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminManageVlogs.css';
 
 const ManageVlogs = () => {
   const [vlogs, setVlogs] = useState([]);
@@ -187,6 +187,16 @@ const ManageVlogs = () => {
                     <h3 className="font-bold text-base text-gray-800 mb-2 line-clamp-1">
                       {vlog.title}
                     </h3>
+
+                    {/* Status Badge */}
+                    <div className="mb-2">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${vlog.status === 'published'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                        {vlog.status === 'published' ? '✓ Published' : '📝 Draft'}
+                      </span>
+                    </div>
 
                     {vlog.description && (
                       <p className="text-xs text-gray-600 mb-3 line-clamp-2">

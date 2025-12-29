@@ -7,7 +7,7 @@ import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminEditVlog.css';
 
 const EditVlog = () => {
   const { id } = useParams();
@@ -15,6 +15,7 @@ const EditVlog = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    status: 'draft',
     video: null,
     thumbnail: null,
   });
@@ -29,6 +30,7 @@ const EditVlog = () => {
         setFormData({
           title: vlog.title,
           description: vlog.description,
+          status: vlog.status || 'draft',
           video: null,
           thumbnail: null,
         });
@@ -67,6 +69,7 @@ const EditVlog = () => {
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
+      formDataToSend.append('status', formData.status);
       if (formData.video) {
         formDataToSend.append('video_file', formData.video);
       }
@@ -134,6 +137,26 @@ const EditVlog = () => {
                   className="form-textarea"
                   placeholder="Enter vlog description"
                 />
+              </div>
+
+              {/* Status Field */}
+              <div className="form-field">
+                <label className="form-label">
+                  Status <span className="form-required">*</span>
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="form-input"
+                  required
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+                <p className="form-help-text">
+                  💡 Draft vlogs are only visible to admins. Published vlogs are visible to everyone.
+                </p>
               </div>
 
               {/* File Upload Section */}

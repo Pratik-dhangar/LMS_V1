@@ -4,7 +4,7 @@ import learningGoalsService from '../../api/services/learningGoalsService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/Pages.css';
+import '../../styles/admin/AdminManageLearningGoals.css';
 
 const ManageLearningGoals = () => {
   const [goals, setGoals] = useState([]);
