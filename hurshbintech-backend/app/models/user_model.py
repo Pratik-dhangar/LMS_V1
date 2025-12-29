@@ -217,7 +217,7 @@ class TrainerProfile(Base):
 
     # Foreign Keys & Timestamps
     created_by_head_id = Column(
-        Integer, ForeignKey("head_profiles.id")
+        Integer, ForeignKey("head_profiles.id", ondelete='SET NULL')
     )  # Head who created this trainer
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -361,7 +361,7 @@ class LearnerProfile(Base):
     skill_development_assessment = Column(Text)
 
     # --- Timestamps ---
-    created_by_head_id = Column(Integer, ForeignKey("head_profiles.id"))
+    created_by_head_id = Column(Integer, ForeignKey("head_profiles.id", ondelete='SET NULL'))
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # --- Relationship ---
