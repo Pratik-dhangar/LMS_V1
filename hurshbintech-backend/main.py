@@ -25,6 +25,7 @@ from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
 from app.api.endpoints.coach import router as coach_router
+from app.api.endpoints.coach_appointment_sessions import router as coach_sessions_router
 from app.api.endpoints.head import router as head_endpoint_router
 from app.api.endpoints.head_session_notes import router as head_session_notes_router
 from app.api.endpoints.health import router as health_router
@@ -129,6 +130,7 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(head_endpoint_router, prefix="/api")
 app.include_router(head_session_notes_router, prefix="/api")
 app.include_router(coach_router, prefix="/api")
+app.include_router(coach_sessions_router, prefix="/api")
 app.include_router(profile_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(session_notes_router, prefix="/api")

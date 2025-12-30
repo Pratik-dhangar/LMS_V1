@@ -262,10 +262,10 @@ class CoachProfile(Base):
 
     # NEW COACH SPECIFIC FIELDS
     # Availability: JSON string of available days (Monday-Friday)
-    availability_days = Column(String(50))  # e.g., "Monday,Wednesday,Friday"
+    availability_days = Column(String(200))  # e.g., "Monday,Wednesday,Friday"
     
     # Time Slots: JSON string of available slots (10am, 1pm, 3pm, 5pm)
-    time_slots = Column(String(100))  # e.g., "10am,1pm,3pm,5pm"
+    time_slots = Column(String(200))  # e.g., "10am,1pm,3pm,5pm"
     
     # Specialization
     specialization = Column(Text)
@@ -505,6 +505,7 @@ class Appointment(Base):
     # Relationships
     coach = relationship("CoachProfile")
     user = relationship("User")  # Will be None for guest bookings
+    appointment_session = relationship("CoachAppointmentSession", back_populates="appointment", uselist=False)
 
 
 # ===== COACH SESSION MODEL =====

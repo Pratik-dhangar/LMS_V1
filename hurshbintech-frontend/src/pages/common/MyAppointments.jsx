@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download, Video } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import bookingService from "../../api/services/bookingService";
+import coachSessionService from "../../api/services/coachSessionService";
 import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/Pages.css";
 import "../../styles/BookAppointment.css";
 
 const MyAppointments = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterDate, setFilterDate] = useState('');
   const [filterTime, setFilterTime] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [joiningSession, setJoiningSession] = useState(false);
 
   useEffect(() => {
     fetchMyAppointments();
@@ -84,6 +88,36 @@ const MyAppointments = () => {
       return `${hour}:00 ${period}`;
     }
     return timeString;
+  };
+
+  const handleJoinSession = async (appointment) => {
+    try {
+      setJoiningSession(true);
+      
+      // Get client sessions to check if session already exists
+      const sessions = await coachSessionService.getClientSessions();
+      const existingSession = sessions.find(s => s.appointment_id === appointment.id);
+      
+      if (existingSession) {
+        // Session exists, join it
+        await coachSessionService.joinSession(existingSession.session_id);
+        navigate(`/client/session/${existingSession.session_id}`);
+      } else {
+        toast.error('Session not started by coach yet');
+      }
+    } catch (err) {
+      console.error('Error joining session:', err);
+      toast.error(err.response?.data?.detail || 'Failed to join session');
+    } finally {
+      setJoiningSession(false);
+    }
+  };
+
+  const isSessionJoinable = (appointment) => {
+    // Session can be joined if:
+    // 1. Appointment is CONFIRMED
+    // 2. Coach has started the session (we'll check this when clicking join)
+    return appointment.status?.toUpperCase() === 'CONFIRMED';
   };
 
   // Filter appointments based on selected filters
@@ -336,6 +370,28 @@ const MyAppointments = () => {
                       })}
                     </p>
                   </div>
+
+                  {/* Join Session Button - Only for CONFIRMED appointments */}
+                  {apt.status?.toUpperCase() === 'CONFIRMED' && (
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => handleJoinSession(apt)}
+                        disabled={!isSessionJoinable(apt) || joiningSession}
+                        className={`w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                          isSessionJoinable(apt) && !joiningSession
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={!isSessionJoinable(apt) ? 'Wait for coach to start the session' : 'Join video session'}
+                      >
+                        <Video className="w-5 h-5" />
+                        {joiningSession ? 'Joining...' : 'Join Session'}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        Session will be available when coach starts it
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))
             )}
