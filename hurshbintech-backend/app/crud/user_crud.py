@@ -245,6 +245,16 @@ async def delete_head(db: AsyncSession, head_id: int) -> str | bool:
     if not head:
         return False
 
+    # First, delete all reference data associated with this head
+    from app.models.user_model import HeadReferenceData
+    from sqlalchemy import delete
+    
+    # Use delete statement for better performance and to avoid FK issues
+    await db.execute(
+        delete(HeadReferenceData).where(HeadReferenceData.head_id == head_id)
+    )
+    await db.flush()  # Ensure reference data is deleted before proceeding
+    
     # Delete user (will cascade to profile due to relationship)
     user = head.user
     await db.delete(user)

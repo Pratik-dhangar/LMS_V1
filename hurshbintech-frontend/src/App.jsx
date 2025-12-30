@@ -53,6 +53,7 @@ import TrainerSession from './pages/trainer/TrainerSession';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
+import CoachSession from './pages/coach/CoachSession';
 
 // Learner Pages
 import LearnerDashboard from './pages/learner/Dashboard';
@@ -60,6 +61,9 @@ import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
+
+// Client Pages
+import ClientSession from './pages/client/ClientSession';
 
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
@@ -454,6 +458,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/coach/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['coach']}>
+              <CoachSession />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Learner Routes */}
         <Route
@@ -493,6 +505,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearnerSession />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/client/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+              <ClientSession />
             </ProtectedRoute>
           }
         />
