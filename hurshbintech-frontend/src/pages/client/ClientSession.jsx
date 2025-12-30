@@ -28,6 +28,7 @@ const ClientSession = () => {
   const [webRTC, setWebRTC] = useState(null);
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
+  const isInitializingRef = useRef(false);
 
   // Media streams
   const [localStream, setLocalStream] = useState(null);
@@ -43,6 +44,7 @@ const ClientSession = () => {
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [coachJoined, setCoachJoined] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
 
   // Messages
   const {
@@ -133,13 +135,16 @@ const ClientSession = () => {
     const user = JSON.parse(userData);
     console.log('[ClientSession] User data:', { id: user.id, role: user.role, name: user.name });
 
-    initializeSession(user.id);
+    // Only initialize if not already initialized
+    if (!webRTC && !whiteboardService && !isInitializingRef.current) {
+      initializeSession(user.id);
+    }
 
     return () => {
       console.log('[ClientSession] Component unmounting, cleaning up');
       cleanup();
     };
-  }, [sessionId]);
+  }, [sessionId, navigate]); // Only re-run if sessionId changes
 
   // Connect remote stream to video element
   useEffect(() => {
@@ -148,6 +153,31 @@ const ClientSession = () => {
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) return;
+
+    const startTime = new Date(sessionInfo.started_at).getTime();
+    const durationMs = sessionInfo.duration * 60 * 1000;
+    const endTime = startTime + durationMs;
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const remaining = endTime - now;
+
+      if (remaining <= 0) {
+        setTimeLeft('00:00');
+        clearInterval(intervalId);
+      } else {
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        setTimeLeft(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [sessionInfo]);
 
   // Auto-hide header after 5 seconds on mobile/tablet
   useEffect(() => {
@@ -190,6 +220,13 @@ const ClientSession = () => {
   };
 
   const initializeWebRTC = async (numericSessionId) => {
+    // Prevent duplicate initialization
+    if (isInitializingRef.current) {
+      console.log('[ClientSession] Already initializing, skipping duplicate call');
+      return;
+    }
+    isInitializingRef.current = true;
+
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, numericSessionId, 'client');
     try {
@@ -208,8 +245,26 @@ const ClientSession = () => {
         toast.info('Keyboard tool activated by coach');
       };
 
-      wbService.onBucketAdded = (bucket) => {
-        setBuckets(prev => [...prev, bucket]);
+      wbService.onBucketAdded = (data) => {
+        console.log('[ClientSession] Bucket added:', data);
+        setBuckets(prev => {
+          const exists = prev.find(bucket => bucket.id === data.id);
+          if (!exists) {
+            return [...prev, data];
+          }
+          return prev;
+        });
+      };
+
+      wbService.onBucketUpdate = (data) => {
+        console.log('[ClientSession] Bucket updated:', data);
+        if (data.removed) {
+          setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
+        } else {
+          setBuckets(prev => prev.map(bucket =>
+            bucket.id === data.id ? { ...bucket, ...data } : bucket
+          ));
+        }
       };
 
       wbService.onStopwatchSync = (data) => {
@@ -260,6 +315,7 @@ const ClientSession = () => {
       };
 
       videoService.onConnectionStateChange = (state) => {
+        console.log('[ClientSession] Connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -268,7 +324,13 @@ const ClientSession = () => {
           'failed': 'failed',
           'closed': 'disconnected'
         };
-        setConnectionStatus(statusMap[state] || state);
+        const mappedStatus = statusMap[state] || state;
+        setConnectionStatus(mappedStatus);
+
+        // If disconnected or failed, coach might have left
+        if (state === 'disconnected' || state === 'closed') {
+          setCoachJoined(false);
+        }
       };
 
       videoService.onError = (error) => {
@@ -311,9 +373,22 @@ const ClientSession = () => {
     if (toolsService) {
       toolsService.cleanup();
     }
+    isInitializingRef.current = false;
   };
 
   const handleLeaveSession = () => {
+    // Notify coach before leaving
+    if (webRTC && webRTC.isConnected) {
+      try {
+        webRTC.sendMessage({
+          type: 'client_leaving',
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('[ClientSession] Error sending leave notification:', error);
+      }
+    }
+    
     cleanup();
     navigate('/my-appointments');
   };
@@ -416,15 +491,75 @@ const ClientSession = () => {
     );
   }
 
+  // Show waiting overlay if coach hasn't joined yet and session is not yet started
+  // Only show waiting screen if session status is 'scheduled', not 'in_progress'
+  if (!loading && !coachJoined && sessionInfo?.status === 'scheduled') {
+    return (
+      <div className={`learner-session-page ${pageClassName}`}>
+        {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+        <div className={`session-header ${navbarClassName}`}>
+          <div className="session-header-main">
+            <div>
+              <div className="session-header-title">HurshBin Client</div>
+              <div className="session-header-subtitle">
+                {sessionInfo?.title ?? 'Coach Session'} — Coach: {sessionInfo?.coach_name ?? 'Coach'}
+              </div>
+            </div>
+            <div className="session-header-controls">
+              <button
+                className="btn-session btn-session-end"
+                onClick={() => navigate('/my-appointments')}
+              >
+                🏠 Back to Appointments
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Waiting Overlay */}
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
+          <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+            <div className="text-6xl mb-4 animate-bounce">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Waiting for Coach
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your session is ready and you're connected!
+            </p>
+            <p className="text-gray-600 mb-6">
+              Please wait while <strong>{sessionInfo?.coach_name ?? 'your coach'}</strong> joins the session.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Connecting...</span>
+            </div>
+            {sessionInfo && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  <strong>Session Details:</strong>
+                </p>
+                {sessionInfo?.duration && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    ⏱️ Duration: {sessionInfo.duration} minutes
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`learner-session-layout ${pageClassName}`}>
-      {/* Header */}
-      <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
+    <div className={`learner-session-page ${pageClassName}`}>
+      {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+      <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Client</div>
             <div className="session-header-subtitle">
-              {sessionInfo?.title ?? 'Coach Session'}
+              {sessionInfo?.title ?? 'Coach Session'} — Coach : {sessionInfo?.coach_name ?? 'Coach'}
             </div>
           </div>
 
@@ -432,145 +567,144 @@ const ClientSession = () => {
             <div className="session-header-info">
               Status: <strong>{connectionStatus}</strong>
             </div>
-            <button
-              onClick={() => window.open('/my-appointments', '_blank', 'noopener,noreferrer')}
-              className="btn-session btn-session-primary"
-            >
-              🏠 Appointments
-            </button>
+            <div className="session-header-info">
+              Time Left: <strong>{timeLeft ?? '--:--'}</strong>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Waiting overlay */}
-      {!coachJoined && (
-        <div className="waiting-overlay">
-          <div className="waiting-content">
-            <div className="session-loader mb-4"></div>
-            <h2 className="text-2xl font-bold text-white">Waiting for Coach...</h2>
-            <p className="text-white mt-2">Please wait while your coach joins the session</p>
-          </div>
-        </div>
+      {/* Sidebar Toggles (Mobile Only) */}
+      <div className="session-sidebar-toggles">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="sidebar-toggle-button"
+          aria-label="Toggle Sidebar"
+        >
+          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+        </button>
+      </div>
+
+      {/* Overlay backdrop for mobile sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
-      <div className="learner-session-content">
-        {/* Left Sidebar - Coach Video + Messages */}
-        <div className={`learner-session-left-sidebar ${isSidebarOpen ? 'learner-session-left-sidebar-open' : ''}`}>
-          <div className="learner-session-sidebar-content">
-            {/* Coach Video */}
-            <div className="learner-session-video-container">
-              {remoteStream ? (
-                <>
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className="learner-session-video"
-                  />
-                  <div className="learner-session-video-label">Coach</div>
-                </>
-              ) : (
-                <div className="learner-session-video-placeholder">
-                  <div className="text-center">
-                    <div className="session-loader mb-2"></div>
-                    <span className="text-sm text-gray-400">Waiting for coach...</span>
+      {/* Main Container - Responsive 3-column layout */}
+      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
+        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+          {/* Coach Video Feed */}
+          <div className="mb-4 md:mb-5">
+            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+              <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                {remoteStream ? (
+                  <>
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="absolute top-0 left-0 w-full h-full object-cover"
+                    />
+                    <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
+                      Coach
+                    </div>
+                    <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
+                      {connectionStatus}
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800">
+                    <div className="text-center">
+                      <div className="session-loader mb-2"></div>
+                      <span className="text-sm text-gray-400">Connecting to coach...</span>
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 md:p-5">
+            <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700 mb-2">Messages</h3>
+            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto mb-2">
+              {messages.length > 0 ? (
+                messages.map((msg, idx) => (
+                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs md:text-sm">
+                    <strong className="text-gray-800">{msg.sender === 'You' ? 'Coach' : msg.sender}:</strong>
+                    <span className="text-gray-700"> {msg.text}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.coach_name ?? 'Coach'}:</p>
+                  <p className="text-xs sm:text-xs md:text-sm text-gray-500">Welcome to the session!</p>
                 </div>
               )}
             </div>
-
-            {/* Message Box */}
-            <div className="learner-session-message-box">
-              <div className="learner-session-message-header">💬 Messages</div>
-              <div className="learner-session-message-list">
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`learner-session-message ${
-                      msg.sender === 'You' ? 'learner-session-message-sent' : 'learner-session-message-received'
-                    }`}
-                  >
-                    <strong>{msg.sender}:</strong> {msg.text}
-                  </div>
-                ))}
-              </div>
-              <div className="learner-session-message-input-container">
-                <input
-                  type="text"
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type message..."
-                  className="learner-session-message-input"
-                />
-                <button onClick={sendMessage} className="learner-session-message-send-btn">
-                  Send
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="[Type message...]"
+                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+              />
+              <button
+                onClick={sendMessage}
+                className="px-4 py-2 md:px-5 md:py-3 bg-blue-500 text-white text-xs md:text-sm rounded hover:bg-blue-600 transition-colors"
+              >
+                Send
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Center Area - Whiteboard */}
-        <div className="learner-session-center-area">
-          {/* Hamburger toggle for mobile */}
-          <button
-            className="learner-session-hamburger"
-            onClick={toggleSidebar}
-          >
-            {isSidebarOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
-          </button>
-
-          {/* Stopwatch */}
-          {stopwatchIsRunning && (
-            <div className="learner-session-stopwatch">
-              ⏱️ {formatTime(stopwatchElapsedTime)}
+        {/* Whiteboard Area - Scrollable Container */}
+        <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
+          <div className="session-whiteboard-container">
+            <div className="w-full h-full">
+              <Whiteboard
+                whiteboardService={whiteboardService}
+                isTrainer={false}
+                canvasItems={canvasItems}
+                setCanvasItems={setCanvasItems}
+                isFrozen={false}
+                isPaused={false}
+                toolAccess={toolAccess}
+                textMessages={textMessages}
+                setTextMessages={setTextMessages}
+                feedbackMessage={feedbackMessage}
+                waitingMessage={waitingMessage}
+                floatingAnimations={floatingAnimations}
+                onAnimationPop={handleAnimationPop}
+                clearCanvasTrigger={clearCanvasTrigger}
+                erasePenTrigger={erasePenTrigger}
+                redrawCanvasTrigger={redrawCanvasTrigger}
+                buckets={buckets}
+                setBuckets={setBuckets}
+                tool={tool}
+                setTool={setTool}
+                color={color}
+                setColor={setColor}
+                lineWidth={lineWidth}
+                setLineWidth={setLineWidth}
+                keyboardMode={keyboardMode}
+                keyboardText={keyboardText}
+                setKeyboardText={setKeyboardText}
+                keyboardPosition={keyboardPosition}
+                setKeyboardPosition={setKeyboardPosition}
+                stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime) : null}
+                stopwatchIsRunning={stopwatchIsRunning}
+              />
             </div>
-          )}
-
-          {/* Whiteboard */}
-          <div className="learner-session-whiteboard-container">
-            {isFrozen && (
-              <div className="freeze-overlay">
-                <div className="freeze-message">❄️ Session Paused by Coach</div>
-              </div>
-            )}
-
-            <Whiteboard
-              whiteboardService={whiteboardService}
-              isTrainer={false}
-              canvasItems={canvasItems}
-              setCanvasItems={setCanvasItems}
-              keyboardMode={keyboardMode}
-              keyboardText={keyboardText}
-              setKeyboardText={setKeyboardText}
-              keyboardPosition={keyboardPosition}
-              setKeyboardPosition={setKeyboardPosition}
-              learnerSelectedItemIds={selectedItemIds}
-              onItemSelection={handleItemSelection}
-              textMessages={textMessages}
-              setTextMessages={setTextMessages}
-              feedbackMessage={feedbackMessage}
-              waitingMessage={waitingMessage}
-              floatingAnimations={floatingAnimations}
-              onAnimationPop={handleAnimationPop}
-              tool={tool}
-              setTool={setTool}
-              color={color}
-              setColor={setColor}
-              lineWidth={lineWidth}
-              setLineWidth={setLineWidth}
-              buckets={buckets}
-              setBuckets={setBuckets}
-              clearCanvasTrigger={clearCanvasTrigger}
-              erasePenTrigger={erasePenTrigger}
-              redrawCanvasTrigger={redrawCanvasTrigger}
-              toolAccess={toolAccess}
-            />
           </div>
-
           {/* Video Controls */}
-          <div className="learner-session-video-controls">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 mt-4 mb-4 flex-wrap" style={{ paddingBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <button
               onClick={handleToggleMic}
               className={`${
@@ -581,8 +715,9 @@ const ClientSession = () => {
                 fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
                 gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
               }}
+              title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
             >
-              <span>{micEnabled ? '🎤' : '🔇'}</span>
+              <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
             </button>
             <button
               onClick={handleToggleCamera}
@@ -594,8 +729,9 @@ const ClientSession = () => {
                 fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
                 gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
               }}
+              title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
             >
-              <span>{cameraEnabled ? '📹' : '📷'}</span>
+              <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
             </button>
             <button
               onClick={handleLeaveSession}
@@ -606,7 +742,7 @@ const ClientSession = () => {
                 gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
               }}
             >
-              🚪 Leave
+              🚪 Leave Session
             </button>
           </div>
         </div>

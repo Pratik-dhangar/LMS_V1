@@ -55,11 +55,12 @@ const CoachSession = () => {
   const [webRTC, setWebRTC] = useState(null);
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
+  const isInitializingRef = useRef(false);
+  const clientConnectedRef = useRef(false);
 
   // Media streams
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const remoteVideoRef = useRef(null);
   const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
   const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
 
@@ -204,21 +205,16 @@ const CoachSession = () => {
       return;
     }
 
-    initializeSession(user.id);
+    // Only initialize if not already initialized
+    if (!webRTC && !whiteboardService && !isInitializingRef.current) {
+      initializeSession(user.id);
+    }
 
     return () => {
       console.log('[CoachSession] Component unmounting, cleaning up');
       cleanup();
     };
-  }, [sessionId]);
-
-  // Connect remote stream to video element
-  useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      console.log('[CoachSession] Connecting remote stream to video element');
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
+  }, [sessionId, navigate]); // Only re-run if sessionId changes
 
   // Countdown timer
   useEffect(() => {
@@ -311,11 +307,61 @@ const CoachSession = () => {
   };
 
   const initializeWebRTC = async (numericSessionId) => {
+    // Prevent duplicate initialization
+    if (isInitializingRef.current) {
+      console.log('[CoachSession] Already initializing, skipping duplicate call');
+      return;
+    }
+    isInitializingRef.current = true;
+
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, numericSessionId, 'coach');
     try {
       wbService.initialize();
       setWhiteboardService(wbService);
+
+      // Set up callback for bucket added/updated
+      wbService.onBucketAdded = (data) => {
+        console.log('[CoachSession] Bucket added:', data);
+        setBuckets(prev => {
+          const exists = prev.find(bucket => bucket.id === data.id);
+          if (!exists) {
+            return [...prev, data];
+          }
+          return prev;
+        });
+      };
+
+      wbService.onBucketUpdate = (data) => {
+        console.log('[CoachSession] Bucket updated:', data);
+        if (data.removed) {
+          setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
+        } else {
+          setBuckets(prev => prev.map(bucket =>
+            bucket.id === data.id ? { ...bucket, ...data } : bucket
+          ));
+        }
+      };
+
+      // Set up callback for floating animations (reactions)
+      wbService.onFloatingAnimations = (data) => {
+        console.log('[CoachSession] Floating animations received:', data);
+        setFloatingAnimations(prev => [...prev, ...data.animations]);
+
+        // Auto-remove after 13 seconds (same as trainer)
+        setTimeout(() => {
+          setFloatingAnimations(prev =>
+            prev.filter(a => !data.animations.find(na => na.id === a.id))
+          );
+        }, 13000);
+      };
+
+      // Set up callback for erase pen event
+      wbService.onErasePen = () => {
+        console.log('[CoachSession] Received erase pen event');
+        setErasePenTrigger(prev => prev + 1);
+        setRedrawCanvasTrigger(prev => prev + 1);
+      };
 
       const tbService = new WhiteboardToolsService(wbService);
       setToolsService(tbService);
@@ -338,9 +384,12 @@ const CoachSession = () => {
         console.log('[CoachSession] Received remote stream from client');
         setRemoteStream(stream);
         setConnectionStatus('Connected');
+        clientConnectedRef.current = true;
+        toast.success(`${sessionInfo?.client_name || 'Client'} has joined the session`);
       };
 
       videoService.onConnectionStateChange = (state) => {
+        console.log('[CoachSession] Connection state changed to:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -350,6 +399,14 @@ const CoachSession = () => {
           'closed': 'disconnected'
         };
         setConnectionStatus(statusMap[state] || state);
+
+        // Handle client disconnect
+        if ((state === 'disconnected' || state === 'closed') && clientConnectedRef.current) {
+          console.log('[CoachSession] Client disconnected');
+          toast.info(`${sessionInfo?.client_name || 'Client'} has left the session`);
+          setRemoteStream(null);
+          clientConnectedRef.current = false;
+        }
       };
 
       videoService.onError = (error) => {
@@ -420,6 +477,7 @@ const CoachSession = () => {
     if (toolsService) {
       toolsService.cleanup();
     }
+    isInitializingRef.current = false;
   };
 
   const toggleClientToolAccess = (toolName) => {
@@ -461,6 +519,7 @@ const CoachSession = () => {
     setErasePenTrigger(prev => prev + 1);
     setEraseAllActive(true);
     
+    // Clear both coach and client whiteboards
     if (whiteboardService) {
       whiteboardService.erasePen();
     }
@@ -582,25 +641,29 @@ const CoachSession = () => {
     );
   };
 
-  const handleToolClick = (tool) => {
-    if (toolsService) {
-      switch (tool) {
-        case 'smiley':
-          spawnFloatingAnimation('smiley', REACTION_SVG_ASSETS.smiley);
-          break;
-        case 'bubble':
-          spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
-          break;
-        case 'balloon':
-          spawnFloatingAnimation('balloon', REACTION_SVG_ASSETS.balloon);
-          break;
-        case 'star':
-          spawnFloatingAnimation('star', REACTION_SVG_ASSETS.star);
-          break;
-        default:
-          toolsService.handleToolClick(tool, tool, setTool);
-      }
+  const handleToolClick = (toolName) => {
+    if (!toolsService) return;
+
+    // Handle reaction animations
+    if (toolName === 'smiley') {
+      spawnFloatingAnimation('smiley', REACTION_SVG_ASSETS.smiley);
+      return;
     }
+    if (toolName === 'bubble') {
+      spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
+      return;
+    }
+    if (toolName === 'balloon') {
+      spawnFloatingAnimation('balloon', REACTION_SVG_ASSETS.balloon);
+      return;
+    }
+    if (toolName === 'star') {
+      spawnFloatingAnimation('star', REACTION_SVG_ASSETS.star);
+      return;
+    }
+
+    // Handle drawing tools
+    toolsService.handleToolClick(toolName, tool, setTool);
   };
 
   if (loading) {
@@ -670,6 +733,39 @@ const CoachSession = () => {
               onChange={(e) => setLearningContentSearch(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-400"
             />
+          </div>
+
+          {/* Message Box - Below Learning Content */}
+          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+            <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
+            <div className="overflow-y-auto mb-2" style={{ maxHeight: 'clamp(80px, 20vw, 120px)' }}>
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`message-bubble ${msg.sender === 'You' ? 'message-bubble-sent' : 'message-bubble-received'}`}>
+                  <strong>{msg.sender}:</strong> {msg.text}
+                  <div className="text-gray-500 mt-1" style={{ fontSize: 'clamp(0.5rem, 1vw, 0.625rem)' }}>
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
+              <input
+                type="text"
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type message..."
+                className="flex-1 border border-gray-300 rounded"
+                style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
+              />
+              <button
+                onClick={sendMessage}
+                className="bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
+              >
+                Send
+              </button>
+            </div>
           </div>
         </div>
 
@@ -757,33 +853,6 @@ const CoachSession = () => {
               </button>
             </div>
           </div>
-
-          {/* Message Box */}
-          <div className="w-full">
-            <div className="session-message-box">
-              <div className="session-message-header">💬 Message Box</div>
-              <div className="session-message-list">
-                {messages.map((msg, idx) => (
-                  <div key={idx} className={`session-message ${msg.sender === 'You' ? 'session-message-sent' : 'session-message-received'}`}>
-                    <strong>{msg.sender}:</strong> {msg.text}
-                  </div>
-                ))}
-              </div>
-              <div className="session-message-input-container">
-                <input
-                  type="text"
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type message..."
-                  className="session-message-input"
-                />
-                <button onClick={sendMessage} className="session-message-send-btn">
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Sidebar - Tool Controls */}
@@ -791,36 +860,42 @@ const CoachSession = () => {
           <div className="bg-white rounded-lg shadow p-4 mb-4">
             <h3 className="text-sm font-bold mb-2">Whiteboard Tools</h3>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => handleToolClick('pen')} className={wbSmallBtnBase}>
+              <button 
+                onClick={() => {
+                  setTool('pen');
+                  setToolActive(true);
+                  setEraserActive(false);
+                }}
+                className={tool === 'pen' ? wbSmallBtnActive : wbSmallBtnBase}
+              >
                 🖊️ Pen
               </button>
-              <button onClick={() => handleToolClick('eraser')} className={wbSmallBtnBase}>
+              <button 
+                onClick={() => {
+                  setTool('eraser');
+                  setEraserActive(true);
+                  setToolActive(true);
+                }}
+                className={tool === 'eraser' ? wbSmallBtnActive : wbSmallBtnBase}
+              >
                 🧹 Eraser
               </button>
               <button onClick={eraseAllPen} className={wbSmallBtnBase}>
                 ❌ Clear
               </button>
-              <button onClick={addBucket} className={wbSmallBtnBase}>
-                🗑️ Bucket
-              </button>
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <h3 className="text-sm font-bold mb-2">Reactions</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => handleToolClick('smiley')} className={wbSmallBtnBase}>
-                😊 Smiley
-              </button>
-              <button onClick={() => handleToolClick('bubble')} className={wbSmallBtnBase}>
-                🫧 Bubble
-              </button>
-              <button onClick={() => handleToolClick('balloon')} className={wbSmallBtnBase}>
-                🎈 Balloon
-              </button>
-              <button onClick={() => handleToolClick('star')} className={wbSmallBtnBase}>
-                ⭐ Star
-              </button>
+            
+            {/* Pen Color Picker */}
+            <div className="mt-3">
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Pen Color:</label>
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                disabled={tool === 'eraser'}
+                className="w-full h-10 rounded cursor-pointer border border-gray-300"
+                title="Choose Pen Color"
+              />
             </div>
           </div>
 

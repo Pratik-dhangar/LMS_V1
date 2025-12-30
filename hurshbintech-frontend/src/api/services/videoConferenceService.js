@@ -461,8 +461,10 @@ class VideoConferenceService {
                     break;
 
                 case 'peer_ready':
-                    // Trainer creates offer when learner is ready
-                    if (this.role === 'trainer' && !this.hasCreatedOffer) {
+                    // Trainer/Coach creates offer when learner/client is ready
+                    console.log(`[VideoConference][${this.role}] Peer ready signal received, role check: ${this.role === 'trainer' || this.role === 'coach'}, hasCreatedOffer: ${this.hasCreatedOffer}`);
+                    if ((this.role === 'trainer' || this.role === 'coach') && !this.hasCreatedOffer) {
+                        console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
                         await this.createOffer();
                     }
                     break;
