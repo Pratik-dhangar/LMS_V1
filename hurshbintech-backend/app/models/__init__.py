@@ -30,6 +30,21 @@ from app.models.user_model import (
 )
 from app.models.vlog_model import Vlog
 from app.models.about_us_model import AboutUs, AboutUsStatus
+from app.models.ecommerce_model import (
+    Product,
+    ProductCategory,
+    AgeGroup,
+    SkillFocus,
+    ProductVisibility,
+    Cart,
+    CartItem,
+    Order,
+    OrderItem,
+    OrderStatus,
+    PaymentMethod,
+    PaymentReceipt,
+    OrderAuditLog,
+)
 
 __all__ = [
     "User",
@@ -59,4 +74,17 @@ __all__ = [
     "Vlog",
     "AboutUs",
     "AboutUsStatus",
+    "Product",
+    "ProductCategory",
+    "AgeGroup",
+    "SkillFocus",
+    "ProductVisibility",
+    "Cart",
+    "CartItem",
+    "Order",
+    "OrderItem",
+    "OrderStatus",
+    "PaymentMethod",
+    "PaymentReceipt",
+    "OrderAuditLog",
 ]

@@ -40,6 +40,10 @@ from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.vlogs import router as vlogs_router
 from app.api.endpoints.websocket import router as websocket_router
+from app.api.endpoints.products import router as products_router
+from app.api.endpoints.store import router as store_router
+from app.api.endpoints.cart import router as cart_router
+from app.api.endpoints.ecommerce import router as ecommerce_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.request_logging import RequestLoggingMiddleware
@@ -141,6 +145,12 @@ app.include_router(session_reports_router, prefix="/api/session-reports", tags=[
 
 # ✅ Program Assignments router (new - replaces old learning_program_assignments)
 app.include_router(program_assignments_router, prefix="/api")
+
+# ✅ E-Commerce routers
+app.include_router(products_router, prefix="/api")  # Admin product management
+app.include_router(store_router, prefix="/api")  # Public catalog browsing
+app.include_router(cart_router, prefix="/api")  # Cart management
+app.include_router(ecommerce_router, prefix="/api")  # Orders & payments
 
 # ✅ WebSocket should NOT have /api prefix
 app.include_router(websocket_router)

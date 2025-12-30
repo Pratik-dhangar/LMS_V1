@@ -14,7 +14,7 @@ router = APIRouter()
 s3_manager = None
 if settings.USE_S3:
     try:
-        s3_manager = S3Manager()
+        s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed to initialize S3Manager: {str(e)}")
