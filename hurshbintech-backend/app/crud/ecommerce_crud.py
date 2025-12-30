@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.ecommerce_model import (
-    Cart, CartItem, Order, OrderItem, OrderStatus, PaymentReceipt, OrderAuditLog, Product
+    Cart, CartItem, Order, OrderItem, OrderStatus, PaymentReceipt, OrderAuditLog, Product, Invoice
 )
 from app.schemas.ecommerce import CartItemCreate, CartItemUpdate, OrderCreate
 
@@ -393,3 +393,56 @@ async def get_order_audit_logs(db: AsyncSession, order_id: UUID) -> List[OrderAu
         .order_by(OrderAuditLog.created_at.asc())
     )
     return result.scalars().all()
+
+
+# Invoice CRUD
+async def create_invoice(
+    db: AsyncSession,
+    order_id: UUID,
+    invoice_number: str,
+    invoice_pdf_url: str,
+    total_amount: float,
+    expires_at: datetime
+) -> Invoice:
+    """Create invoice record for an order"""
+    invoice = Invoice(
+        order_id=order_id,
+        invoice_number=invoice_number,
+        invoice_pdf_url=invoice_pdf_url,
+        total_amount=total_amount,
+        expires_at=expires_at
+    )
+    db.add(invoice)
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
+
+
+async def get_invoice_by_order(db: AsyncSession, order_id: UUID) -> Optional[Invoice]:
+    """Get invoice for an order"""
+    result = await db.execute(
+        select(Invoice).where(Invoice.order_id == order_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_invoice_by_number(db: AsyncSession, invoice_number: str) -> Optional[Invoice]:
+    """Get invoice by invoice number"""
+    result = await db.execute(
+        select(Invoice).where(Invoice.invoice_number == invoice_number)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_max_invoice_sequence(db: AsyncSession, year: int) -> int:
+    """Get max sequence number for invoices in a given year"""
+    from sqlalchemy import func, text
+    
+    # Query to extract year from created_at and count invoices
+    result = await db.execute(
+        select(func.count(Invoice.id)).where(
+            func.extract('year', Invoice.created_at) == year
+        )
+    )
+    count = result.scalar() or 0
+    return count

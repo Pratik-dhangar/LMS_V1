@@ -632,6 +632,7 @@ class EmailService:
         subject: str,
         html_body: str,
         email_type: str = "general",
+        attachments: Optional[list] = None,
     ) -> bool:
         """
         Internal method to send email via Brevo API
@@ -642,6 +643,7 @@ class EmailService:
             subject: Email subject
             html_body: HTML body of email
             email_type: Type of email (for logging/tracking)
+            attachments: Optional list of attachments with keys: name, content (base64), type
             
         Returns:
             bool: True if email sent successfully, False otherwise
@@ -671,6 +673,10 @@ class EmailService:
                 }
             }
             
+            # Add attachments if provided
+            if attachments:
+                payload["attachment"] = attachments
+            
             # Send via Brevo API
             headers = {
                 "api-key": settings.BREVO_API_KEY,
@@ -688,9 +694,10 @@ class EmailService:
                     if response.status == 201:
                         response_data = await response.json()
                         message_id = response_data.get("messageId", "unknown")
+                        attachment_str = f" | Attachments: {len(attachments)}" if attachments else ""
                         logger.info(
                             f"✓ Email sent to {recipient_email} via Brevo | "
-                            f"Type: {email_type} | Subject: {subject} | MessageID: {message_id}"
+                            f"Type: {email_type} | Subject: {subject} | MessageID: {message_id}{attachment_str}"
                         )
                         return True
                     else:
@@ -1309,6 +1316,8 @@ class EmailService:
         discount: float,
         total: float,
         delivery_address: str,
+        invoice_number: Optional[str] = None,
+        invoice_pdf_url: Optional[str] = None,
     ) -> bool:
         """Send order confirmation email after payment approval"""
         
@@ -1328,6 +1337,15 @@ class EmailService:
                     <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">₹{item['unit_price']:.2f}</td>
                     <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">₹{item['line_total']:.2f}</td>
                 </tr>
+            """
+        
+        # Build invoice note if available
+        invoice_note = ""
+        if invoice_number:
+            invoice_note = f"""
+                        <h3 style="color: #2c3e50; margin-top: 25px;">Invoice</h3>
+                        <p><strong>Invoice Number:</strong> {invoice_number}</p>
+                        <p style="color: #666; font-size: 14px;">Your invoice PDF is attached to this email for your records.</p>
             """
         
         html_body = f"""
@@ -1452,6 +1470,8 @@ class EmailService:
                             {delivery_address}
                         </p>
                         
+                        {invoice_note}
+                        
                         <h3 style="color: #2c3e50; margin-top: 25px;">What's Next?</h3>
                         <ul style="color: #555;">
                             <li>Your order is ready to ship</li>
@@ -1476,12 +1496,55 @@ class EmailService:
         </html>
         """
         
+        # Prepare attachment if invoice PDF URL exists
+        attachments = None
+        if invoice_pdf_url:
+            try:
+                import boto3
+                from botocore.exceptions import ClientError
+                import os
+                
+                # Download PDF from S3
+                s3_client = boto3.client(
+                    "s3",
+                    region_name=os.getenv("AWS_REGION", "ap-south-1"),
+                    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                )
+                
+                # Parse S3 path and download
+                # invoice_pdf_url is like "uploads/invoices/2025/order-id/INV-2025-000001.pdf"
+                pdf_response = s3_client.get_object(
+                    Bucket=settings.S3_BUCKET_NAME,
+                    Key=invoice_pdf_url
+                )
+                pdf_bytes = pdf_response['Body'].read()
+                
+                # Encode PDF to base64 for email attachment
+                import base64
+                pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                
+                attachments = [
+                    {
+                        "name": f"{invoice_number}.pdf",
+                        "content": pdf_base64,
+                        "type": "application/pdf"
+                    }
+                ]
+                
+                logger.info(f"Invoice PDF prepared for attachment to {recipient_email}")
+            except Exception as e:
+                logger.error(f"Error preparing invoice PDF attachment: {str(e)}")
+                # Continue without attachment if download fails
+                attachments = None
+        
         return await EmailService._send_email(
             recipient_email=recipient_email,
             recipient_name=recipient_name,
             subject=subject,
             html_body=html_body,
             email_type="order_confirmation",
+            attachments=attachments
         )
 
     @staticmethod

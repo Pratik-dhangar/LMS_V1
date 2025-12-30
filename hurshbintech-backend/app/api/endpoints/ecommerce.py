@@ -1,6 +1,7 @@
 """API endpoints for E-Commerce Orders and Payments
 """
 import logging
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -24,6 +25,40 @@ from app.services.email_service import EmailService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
+
+
+def _build_order_response(order) -> dict:
+    """Helper function to build order response dict"""
+    return {
+        "order_id": order.id,
+        "order_number": order.order_number,
+        "status": order.status.value if isinstance(order.status, OrderStatus) else order.status,
+        "user_id": order.user_id,
+        "user_name": order.user.name if order.user else "Unknown",
+        "user_email": order.user.email if order.user else None,
+        "payment_method": order.payment_method.value if hasattr(order.payment_method, 'value') else order.payment_method,
+        "subtotal": order.subtotal,
+        "discount_total": order.discount_total,
+        "total_amount": order.total_amount,
+        "delivery_address": order.delivery_address,
+        "delivery_city": order.delivery_city,
+        "delivery_pincode": order.delivery_pincode,
+        "rejection_reason": order.rejection_reason,
+        "items": [
+            {
+                "id": item.id,
+                "product_id": item.product_id,
+                "product_name": item.product_name,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "discount_percentage": item.discount_percentage,
+                "line_total": item.line_total
+            }
+            for item in order.items
+        ],
+        "created_at": order.created_at,
+        "updated_at": order.updated_at
+    }
 
 
 @router.post("/checkout", response_model=OrderCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -387,21 +422,93 @@ async def approve_payment(
             detail=f"Cannot approve order in {order.status.value} status"
         )
     
+    # CRITICAL: Validate receipt exists before approval
+    if not order.payment_receipt or not order.payment_receipt.s3_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment receipt not uploaded. Cannot verify payment without receipt review."
+        )
+    
+    # Check if invoice already exists (idempotency)
+    existing_invoice = await ecommerce_crud.get_invoice_by_order(db, order_id)
+    if existing_invoice:
+        logger.info(f"Invoice already exists for order {order_id}. Returning existing invoice.")
+        # Return success without re-sending email (idempotent)
+        await db.refresh(order, ['user', 'items', 'invoice'])
+        
+        return {
+            "message": "Payment already approved",
+            "order": _build_order_response(order),
+            "invoice": {
+                "invoice_number": existing_invoice.invoice_number,
+                "invoice_pdf_url": existing_invoice.invoice_pdf_url,
+                "created_at": existing_invoice.created_at
+            }
+        }
+    
     try:
+        # Generate invoice
+        from app.services.invoice_service import InvoiceGenerator
+        from datetime import timedelta
+        
+        generator = InvoiceGenerator()
+        
+        # Generate invoice number: INV-{YEAR}-{SEQUENCE}
+        year = datetime.utcnow().year
+        sequence = await ecommerce_crud.get_max_invoice_sequence(db, year)
+        invoice_number = f"INV-{year}-{sequence + 1:06d}"
+        
+        # Generate PDF and upload to S3
+        pdf_bytes, s3_path = generator.generate_invoice_pdf(
+            order_id=str(order.id),
+            order_number=order.order_number,
+            invoice_number=invoice_number,
+            customer_name=order.user.name if order.user else "Customer",
+            customer_email=order.customer_email or (order.user.email if order.user else ""),
+            delivery_address=order.delivery_address,
+            delivery_city=order.delivery_city or "",
+            delivery_pincode=order.delivery_pincode or "",
+            order_items=[
+                {
+                    "product_name": item.product_name,
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price,
+                    "line_total": item.line_total
+                }
+                for item in order.items
+            ],
+            subtotal=order.subtotal,
+            discount_total=order.discount_total,
+            total_amount=order.total_amount,
+            created_at=order.created_at
+        )
+        
+        # Create invoice record
+        expires_at = datetime.utcnow() + timedelta(days=365*7)  # 7 year retention
+        invoice = await ecommerce_crud.create_invoice(
+            db=db,
+            order_id=order_id,
+            invoice_number=invoice_number,
+            invoice_pdf_url=s3_path,
+            total_amount=float(order.total_amount),
+            expires_at=expires_at
+        )
+        
+        # Update order status to PAYMENT_APPROVED
         updated_order = await ecommerce_crud.update_order_status(
             db, order_id, OrderStatus.PAYMENT_APPROVED, current_admin.id
         )
         
         # Refresh to get updated relationships
-        await db.refresh(updated_order, ['user', 'items'])
+        await db.refresh(updated_order, ['user', 'items', 'invoice'])
         
         # Get recipient email - prioritize stored customer_email from checkout
         recipient_email = updated_order.customer_email or (updated_order.user.email if updated_order.user else None)
         recipient_name = updated_order.user.name if updated_order.user else "Customer"
         
-        logger.info(f"Order {order_id} approved. Sending approval email to {recipient_email}")
+        logger.info(f"Order {order_id} approved with invoice {invoice_number}. Sending approval email to {recipient_email}")
         
-        # Send confirmation email only if email is available
+        # Send confirmation email with invoice PDF attached
         if recipient_email and recipient_name:
             try:
                 await EmailService.send_order_confirmation(
@@ -418,6 +525,33 @@ async def approve_payment(
                         for item in updated_order.items
                     ],
                     subtotal=float(updated_order.subtotal),
+                    discount=float(updated_order.discount_total),
+                    total=float(updated_order.total_amount),
+                    delivery_address=updated_order.delivery_address,
+                    invoice_number=invoice_number,
+                    invoice_pdf_url=s3_path
+                )
+                logger.info(f"✓ Approval confirmation email with invoice sent to {recipient_email}")
+            except Exception as email_error:
+                logger.error(f"✗ Failed to send approval email: {str(email_error)}")
+        else:
+            logger.error(f"Order {order_id}: Cannot send email - no recipient email found. customer_email: {updated_order.customer_email}, user.email: {updated_order.user.email if updated_order.user else 'NO USER'}")
+        
+        return {
+            "message": "Payment approved",
+            "order": _build_order_response(updated_order),
+            "invoice": {
+                "invoice_number": invoice.invoice_number,
+                "invoice_pdf_url": invoice.invoice_pdf_url,
+                "created_at": invoice.created_at
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error approving payment for order {order_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to approve payment: {str(e)}"
+        )
                     discount=float(updated_order.discount_total),
                     total=float(updated_order.total_amount),
                     delivery_address=updated_order.delivery_address
@@ -580,3 +714,132 @@ async def get_order_audit_log(
     ]
     
     return {"logs": logs_response}
+
+
+# Invoice Download Endpoints
+
+@router.get("/invoice/{order_id}")
+async def download_invoice(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Download invoice PDF for an order (User must own the order)"""
+    order = await ecommerce_crud.get_order_by_id(db, order_id)
+    
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    
+    # Verify user owns this order
+    if order.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    
+    # Get invoice
+    invoice = await ecommerce_crud.get_invoice_by_order(db, order_id)
+    
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not available yet. Order may not be approved."
+        )
+    
+    try:
+        # Generate S3 signed URL for direct download
+        import boto3
+        import os
+        from botocore.exceptions import ClientError
+        
+        s3_client = boto3.client(
+            "s3",
+            region_name=os.getenv("AWS_REGION", "ap-south-1"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        )
+        
+        # Generate presigned URL valid for 1 hour
+        signed_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.S3_BUCKET_NAME,
+                'Key': invoice.invoice_pdf_url
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        logger.info(f"Invoice download link generated for order {order_id} by user {current_user.id}")
+        
+        return {
+            "invoice_number": invoice.invoice_number,
+            "download_url": signed_url,
+            "expires_in_seconds": 3600,
+            "created_at": invoice.created_at
+        }
+    
+    except Exception as e:
+        logger.error(f"Error generating invoice download link: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate download link"
+        )
+
+
+@router.get("/admin/invoice/{order_id}")
+async def download_invoice_admin(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Download invoice PDF for an order (Admin only)"""
+    order = await ecommerce_crud.get_order_by_id(db, order_id)
+    
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    
+    # Get invoice
+    invoice = await ecommerce_crud.get_invoice_by_order(db, order_id)
+    
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not available for this order"
+        )
+    
+    try:
+        # Generate S3 signed URL for direct download
+        import boto3
+        import os
+        from botocore.exceptions import ClientError
+        
+        s3_client = boto3.client(
+            "s3",
+            region_name=os.getenv("AWS_REGION", "ap-south-1"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        )
+        
+        # Generate presigned URL valid for 1 hour
+        signed_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.S3_BUCKET_NAME,
+                'Key': invoice.invoice_pdf_url
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        logger.info(f"Invoice download link generated for order {order_id} by admin {current_admin.id}")
+        
+        return {
+            "invoice_number": invoice.invoice_number,
+            "download_url": signed_url,
+            "expires_in_seconds": 3600,
+            "created_at": invoice.created_at
+        }
+    
+    except Exception as e:
+        logger.error(f"Error generating invoice download link: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate download link"
+        )
+

@@ -216,6 +216,7 @@ class Order(Base):
     rejected_by = relationship("User", foreign_keys=[rejected_by_id])
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     payment_receipt = relationship("PaymentReceipt", back_populates="order", uselist=False, cascade="all, delete-orphan")
+    invoice = relationship("Invoice", back_populates="order", uselist=False, cascade="all, delete-orphan")
     audit_logs = relationship("OrderAuditLog", back_populates="order", cascade="all, delete-orphan")
     
     # Constraints
@@ -282,3 +283,24 @@ class OrderAuditLog(Base):
     # Relationships
     order = relationship("Order", back_populates="audit_logs")
     performed_by = relationship("User", foreign_keys=[performed_by_id])
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid())
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    invoice_number = Column(String(20), nullable=False, unique=True, index=True)  # INV-2025-000001
+    invoice_pdf_url = Column(String(1024), nullable=False)  # S3 path to PDF
+    total_amount = Column(Numeric(10, 2), nullable=False)
+    expires_at = Column(DateTime, nullable=False)  # 7 years from creation for retention policy
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now())
+    
+    # Relationships
+    order = relationship("Order", back_populates="invoice")
+    
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('total_amount > 0', name='invoices_total_check'),
+    )
