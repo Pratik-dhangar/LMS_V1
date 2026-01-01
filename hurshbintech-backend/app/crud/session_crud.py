@@ -248,7 +248,6 @@ async def end_session(
     await session_notes_crud.finalize_session_notes(
         db=db,
         session_id=session.id,
-        trainer_id=session.trainer_id,
         notes=notes
     )
     
