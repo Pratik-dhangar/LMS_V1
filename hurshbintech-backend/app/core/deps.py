@@ -162,6 +162,13 @@ async def get_current_user(
                 .where(User.id == user_id, User.role == UserRole.LEARNER)
             )
             user = result.scalar_one_or_none()
+        elif role == "coach":
+            result = await db.execute(
+                select(User)
+                .options(joinedload(User.coach_profile))
+                .where(User.id == user_id, User.role == UserRole.COACH)
+            )
+            user = result.scalar_one_or_none()
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid role")
 

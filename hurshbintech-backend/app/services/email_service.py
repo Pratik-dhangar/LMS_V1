@@ -445,6 +445,187 @@ class EmailService:
         )
 
     @staticmethod
+    async def send_payment_instructions(
+        recipient_email: str,
+        recipient_name: str,
+        order_number: str,
+        payment_method: str,
+        total_amount: float,
+        upi_details: Optional[dict] = None,
+        bank_details: Optional[dict] = None,
+    ) -> bool:
+        """Send payment instructions email after order creation"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"Payment Instructions for Order {order_number}"
+        
+        # Build payment details HTML based on method
+        payment_html = ""
+        if payment_method == "UPI_QR" and upi_details:
+            payment_html = f"""
+                <h3 style="color: #2c3e50; margin-top: 25px;">📱 UPI Payment Instructions</h3>
+                <div style="background: #e8f5e9; border-left: 4px solid #27ae60; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                    <p style="margin: 10px 0; font-weight: 600;">Step 1: Scan the QR Code</p>
+                    <div style="text-align: center; background: white; padding: 20px; border-radius: 6px; margin: 10px 0;">
+                        <p style="color: #999; font-size: 14px; margin: 0 0 15px 0;">📷 QR Code Image</p>
+                        <div style="background: #f0f0f0; height: 200px; width: 200px; margin: 0 auto; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #999;">
+                            [QR Code Here]
+                        </div>
+                    </div>
+                    
+                    <p style="margin: 10px 0 5px 0;"><strong>OR manually enter UPI ID:</strong></p>
+                    <div style="background: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #e74c3c;">
+                        {upi_details.get('merchant_upi', 'N/A')}
+                    </div>
+                    
+                    <p style="margin: 15px 0 10px 0; font-weight: 600;">Step 2: Enter Amount & Reference</p>
+                    <ul style="margin: 5px 0; padding-left: 20px; color: #555;">
+                        <li><strong>Amount:</strong> ₹{total_amount:.2f}</li>
+                        <li><strong>Reference/Note:</strong> {order_number} (Please include order ID)</li>
+                    </ul>
+                    
+                    <p style="margin: 15px 0 0 0; font-weight: 600;">Step 3: Complete Payment</p>
+                    <p style="margin: 5px 0; color: #555;">Confirm and submit payment from your UPI app</p>
+                </div>
+            """
+        elif payment_method == "BANK_TRANSFER" and bank_details:
+            payment_html = f"""
+                <h3 style="color: #2c3e50; margin-top: 25px;">🏦 Bank Transfer Instructions</h3>
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                    <p style="margin: 10px 0; font-weight: 600;">Bank Account Details:</p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin: 10px 0; background: white;">
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 12px; font-weight: 600; color: #2c3e50; width: 40%;">Bank Name</td>
+                            <td style="padding: 12px; color: #555; font-family: monospace;">{bank_details.get('bank_name', 'N/A')}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd; background: #f9f9f9;">
+                            <td style="padding: 12px; font-weight: 600; color: #2c3e50;">Account Holder</td>
+                            <td style="padding: 12px; color: #555; font-family: monospace;">{bank_details.get('account_holder', 'N/A')}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 12px; font-weight: 600; color: #2c3e50;">Account Number</td>
+                            <td style="padding: 12px; color: #555; font-family: monospace; background: #f0f0f0;">{bank_details.get('account_number', 'N/A')}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd; background: #f9f9f9;">
+                            <td style="padding: 12px; font-weight: 600; color: #2c3e50;">IFSC Code</td>
+                            <td style="padding: 12px; color: #555; font-family: monospace; background: #f0f0f0;">{bank_details.get('ifsc_code', 'N/A')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; font-weight: 600; color: #27ae60; font-size: 16px;">Amount to Pay</td>
+                            <td style="padding: 12px; color: #27ae60; font-weight: 600; font-size: 16px;">₹{total_amount:.2f}</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="background: #fff3cd; border-left: 4px solid #f39c12; padding: 12px; margin-top: 15px; border-radius: 4px;">
+                        <strong style="color: #856404;">⚠️ Important:</strong> <span style="color: #856404;">Use <strong>{order_number}</strong> as the payment reference/narration for quick verification</span>
+                    </div>
+                </div>
+            """
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #2196f3;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">💳 Payment Instructions</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Please complete your payment to proceed</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        
+                        <p>Thank you for your order! Your items are ready to be prepared once payment is received.</p>
+                        
+                        <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                            <p style="margin: 0; color: #666;">
+                                <strong style="color: #2c3e50;">Order Number:</strong> <span style="font-family: monospace; color: #e74c3c; font-weight: 600;">{order_number}</span>
+                            </p>
+                            <p style="margin: 8px 0 0 0; color: #666;">
+                                <strong style="color: #2c3e50;">Amount Due:</strong> <span style="color: #27ae60; font-weight: 600; font-size: 18px;">₹{total_amount:.2f}</span>
+                            </p>
+                        </div>
+                        
+                        {payment_html}
+                        
+                        <h3 style="color: #2c3e50; margin-top: 30px;">⏱️ What Happens Next</h3>
+                        <ol style="color: #555; line-height: 1.8;">
+                            <li>Complete the payment using the instructions above</li>
+                            <li>Upload your payment receipt on the order page</li>
+                            <li>Our team will verify your payment within 24 hours</li>
+                            <li>Once approved, your order will be prepared and shipped</li>
+                            <li>You'll receive tracking details via email</li>
+                        </ol>
+                        
+                        <h3 style="color: #2c3e50; margin-top: 25px;">❓ Questions?</h3>
+                        <p style="color: #666; margin: 10px 0;">
+                            If you have any issues making the payment, please contact our support team at:
+                        </p>
+                        <p style="margin: 5px 0; color: #2196f3; font-weight: 600;">
+                            📧 Email: support@hurshbintech.com<br>
+                            📱 WhatsApp: +91-XXXXXXXXXX
+                        </p>
+                        
+                        <div style="background: #fff3cd; border-left: 4px solid #f39c12; padding: 15px; margin-top: 20px; border-radius: 6px;">
+                            <p style="margin: 0; color: #856404;"><strong>⏰ Time Sensitive:</strong> Please complete the payment within 24 hours to secure your order slot.</p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="payment_instructions",
+        )
+
+    @staticmethod
     async def _send_email(
         recipient_email: str,
         recipient_name: str,
@@ -1115,4 +1296,324 @@ class EmailService:
         except Exception as e:
             logger.error(f"✗ Failed to send payment uploaded notification: {str(e)}")
             return False
+
+    # ========== E-COMMERCE ORDER EMAILS ==========
+
+    @staticmethod
+    async def send_order_confirmation(
+        recipient_email: str,
+        recipient_name: str,
+        order_number: str,
+        order_items: list,
+        subtotal: float,
+        discount: float,
+        total: float,
+        delivery_address: str,
+    ) -> bool:
+        """Send order confirmation email after payment approval"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"Order Confirmed - {order_number}"
+        
+        # Build items HTML
+        items_html = ""
+        for item in order_items:
+            items_html += f"""
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{item['product_name']}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">{item['quantity']}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">₹{item['unit_price']:.2f}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">₹{item['line_total']:.2f}</td>
+                </tr>
+            """
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #10b981;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .success-badge {{
+                        background-color: #d1fae5;
+                        color: #065f46;
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        display: inline-block;
+                        font-weight: 600;
+                        margin: 10px 0;
+                    }}
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 20px 0;
+                    }}
+                    th {{
+                        background-color: #f9fafb;
+                        padding: 12px;
+                        text-align: left;
+                        border: 1px solid #ddd;
+                        font-weight: 600;
+                    }}
+                    td {{
+                        padding: 12px;
+                        border: 1px solid #ddd;
+                    }}
+                    .totals {{
+                        margin-top: 20px;
+                        padding: 15px;
+                        background-color: #f9fafb;
+                        border-radius: 6px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">✓ Order Confirmed!</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Your payment has been verified</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        
+                        <div class="success-badge">Payment Verified ✓</div>
+                        
+                        <p>Great news! Your order has been confirmed and is ready to ship.</p>
+                        
+                        <h3 style="color: #2c3e50; margin-top: 25px;">Order Details</h3>
+                        <p><strong>Order ID:</strong> {order_number}</p>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th style="text-align: center;">Qty</th>
+                                    <th style="text-align: right;">Price</th>
+                                    <th style="text-align: right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items_html}
+                            </tbody>
+                        </table>
+                        
+                        <div class="totals">
+                            <table style="border: none; margin: 0;">
+                                <tr style="border: none;">
+                                    <td style="border: none; padding: 5px; font-weight: 600;">Subtotal:</td>
+                                    <td style="border: none; padding: 5px; text-align: right;">₹{subtotal:.2f}</td>
+                                </tr>
+                                <tr style="border: none;">
+                                    <td style="border: none; padding: 5px; font-weight: 600;">Discount:</td>
+                                    <td style="border: none; padding: 5px; text-align: right; color: #10b981;">-₹{discount:.2f}</td>
+                                </tr>
+                                <tr style="border: none;">
+                                    <td style="border: none; padding: 5px; font-weight: bold; font-size: 18px; color: #2c3e50;">Total:</td>
+                                    <td style="border: none; padding: 5px; text-align: right; font-weight: bold; font-size: 18px; color: #2c3e50;">₹{total:.2f}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <h3 style="color: #2c3e50; margin-top: 25px;">Delivery Address</h3>
+                        <p style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #10b981;">
+                            {delivery_address}
+                        </p>
+                        
+                        <h3 style="color: #2c3e50; margin-top: 25px;">What's Next?</h3>
+                        <ul style="color: #555;">
+                            <li>Your order is ready to ship</li>
+                            <li>You'll receive a shipping confirmation within 24 hours</li>
+                            <li>Track your order on our website</li>
+                        </ul>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 25px;">
+                            Questions? Contact us at support@hurshbintech.com
+                        </p>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <p style="font-weight: 600; color: #2c3e50;">Thank you for shopping with us!</p>
+                            <p style="color: #10b981; font-size: 18px;">❤️ HurshBintech Team</p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="order_confirmation",
+        )
+
+    @staticmethod
+    async def send_order_rejection(
+        recipient_email: str,
+        recipient_name: str,
+        order_number: str,
+        rejection_reason: str,
+    ) -> bool:
+        """Send order rejection email when payment is rejected"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"Payment Verification Needed - {order_number}"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #dc2626;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .reason-box {{
+                        background-color: #fef2f2;
+                        border-left: 4px solid #dc2626;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .next-steps {{
+                        background-color: #eff6ff;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 20px 0;
+                        border-left: 4px solid #3b82f6;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #3b82f6;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">Payment Verification Needed</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Action Required</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        
+                        <p>We couldn't verify your payment receipt for order <strong>{order_number}</strong>.</p>
+                        
+                        <div class="reason-box">
+                            <h4 style="margin-top: 0; color: #991b1b;">Reason</h4>
+                            <p style="margin-bottom: 0; color: #555;">{rejection_reason}</p>
+                        </div>
+                        
+                        <div class="next-steps">
+                            <h4 style="margin-top: 0; color: #1e40af;">What You Can Do</h4>
+                            <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
+                                <li>Upload a clearer receipt with visible transaction details</li>
+                                <li>Ensure the amount and payment method are clearly shown</li>
+                                <li>Contact support if you need help</li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>Order ID:</strong> {order_number}</p>
+                        
+                        <div style="text-align: center;">
+                            <a href="{settings.FRONTEND_URL}/orders/{order_number}" class="btn">Upload New Receipt</a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 25px;">
+                            Questions? Contact us at support@hurshbintech.com or call +91-XXXXXXXXXX
+                        </p>
+                        
+                        <p style="color: #999; font-size: 13px; margin-top: 25px;">
+                            We're here to help! Our team will review your new receipt within 24 hours.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="order_rejection",
+        )
 

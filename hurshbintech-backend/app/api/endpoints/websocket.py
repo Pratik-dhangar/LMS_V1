@@ -14,7 +14,7 @@ router = APIRouter()
 s3_manager = None
 if settings.USE_S3:
     try:
-        s3_manager = S3Manager()
+        s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed to initialize S3Manager: {str(e)}")
@@ -150,6 +150,12 @@ async def cleanup_connection(connections: Dict, session_id: str, role: Optional[
 
 @router.websocket("/ws/rtc/{session_id}")
 async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
+    """
+    WebRTC signaling endpoint for both training sessions and coach sessions
+    Supports session_id formats:
+    - session_XXXX (training sessions - trainer/learner)
+    - coach_session_XXXX (coach appointment sessions - coach/client)
+    """
     logger.info(f"[WebSocket] RTC connection attempt for session: {session_id}")
     logger.info(f"[WebSocket] RTC connection from: {websocket.client}")
     await websocket.accept()
@@ -168,7 +174,10 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             return
 
         role = join_msg.get("role")
-        if role not in ["trainer", "learner"]:
+        
+        # Support both training session roles (trainer/learner) and coach session roles (coach/client)
+        valid_roles = ["trainer", "learner", "coach", "client"]
+        if role not in valid_roles:
             logger.error(f"Invalid role: {role}")
             await websocket.close()
             return
@@ -196,18 +205,21 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             }
         )
 
-        # Notify trainer to initiate offer when both participants are connected
+        # Notify initiator to create offer when both participants are connected
         if len(rtc_connections[session_id]) == 2:
-            # Both trainer and learner are now connected - signal trainer to start WebRTC handshake
+            # Determine who initiates based on session type
+            initiator_role = "trainer" if "trainer" in rtc_connections[session_id] else "coach"
+            
             logger.info(
-                f"Both participants connected to session {session_id} - signaling trainer to initiate offer"
+                f"Both participants connected to session {session_id} - signaling {initiator_role} to initiate offer"
             )
             try:
-                await rtc_connections[session_id]["trainer"].websocket.send_json(
-                    {"type": "peer_ready", "role": "both_connected"}
-                )
+                if initiator_role in rtc_connections[session_id]:
+                    await rtc_connections[session_id][initiator_role].websocket.send_json(
+                        {"type": "peer_ready", "role": "both_connected"}
+                    )
             except Exception as e:
-                logger.error(f"Failed to send peer_ready to trainer: {e}")
+                logger.error(f"Failed to send peer_ready to {initiator_role}: {e}")
 
         try:
             while conn_info.is_alive:
@@ -222,18 +234,20 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                 logger.info(f"Received WebRTC message from {role}: {message.get('type')}")
 
                 # Forward messages to the other participant
-                if role == "trainer" and "learner" in rtc_connections[session_id]:
-                    other_conn = rtc_connections[session_id]["learner"]
+                # Map roles to their counterparts
+                role_mapping = {
+                    "trainer": "learner",
+                    "learner": "trainer",
+                    "coach": "client",
+                    "client": "coach"
+                }
+                
+                other_role = role_mapping.get(role)
+                if other_role and other_role in rtc_connections[session_id]:
+                    other_conn = rtc_connections[session_id][other_role]
                     if other_conn.is_alive:
                         logger.info(
-                            f"Forwarding message from trainer to learner: {message.get('type')}"
-                        )
-                        await other_conn.websocket.send_json(message)
-                elif role == "learner" and "trainer" in rtc_connections[session_id]:
-                    other_conn = rtc_connections[session_id]["trainer"]
-                    if other_conn.is_alive:
-                        logger.info(
-                            f"Forwarding message from learner to trainer: {message.get('type')}"
+                            f"Forwarding message from {role} to {other_role}: {message.get('type')}"
                         )
                         await other_conn.websocket.send_json(message)
                 else:
@@ -258,8 +272,15 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
         # Notify other participant about disconnection
         if session_id in rtc_connections:
             try:
-                other_role = "learner" if role == "trainer" else "trainer"
-                if other_role in rtc_connections[session_id]:
+                # Map roles to their counterparts
+                role_mapping = {
+                    "trainer": "learner",
+                    "learner": "trainer",
+                    "coach": "client",
+                    "client": "coach"
+                }
+                other_role = role_mapping.get(role)
+                if other_role and other_role in rtc_connections[session_id]:
                     await rtc_connections[session_id][other_role].websocket.send_json(
                         {"type": "peer_disconnected", "role": role}
                     )
@@ -269,6 +290,12 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
 
 @router.websocket("/ws/whiteboard/{session_id}")
 async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
+    """
+    Whiteboard and media sharing endpoint for both training sessions and coach sessions
+    Supports session_id formats:
+    - session_XXXX (training sessions - trainer/learner)
+    - coach_session_XXXX (coach appointment sessions - coach/client)
+    """
     print(f"[WHITEBOARD] New connection attempt for session: {session_id}")
     await websocket.accept()
     print(f"[WHITEBOARD] WebSocket accepted for session: {session_id}")
@@ -289,7 +316,9 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         role = join_msg.get("role")
         print(f"[WHITEBOARD] Role: {role} for session: {session_id}")
 
-        if role not in ["trainer", "learner"]:
+        # Support both training session roles (trainer/learner) and coach session roles (coach/client)
+        valid_roles = ["trainer", "learner", "coach", "client"]
+        if role not in valid_roles:
             print(f"[WHITEBOARD] Invalid role: {role}, closing connection")
             await websocket.close()
             return
@@ -318,17 +347,20 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
             }
         )
 
-        # If new learner joins and media is currently playing, send current state
-        if role == "learner" and session_id in media_states and media_states[session_id]:
+        # Determine participant role (learner for training sessions, client for coach sessions)
+        participant_roles = ["learner", "client"]
+        
+        # If new participant joins and media is currently playing, send current state
+        if role in participant_roles and session_id in media_states and media_states[session_id]:
             print(
-                f"[WHITEBOARD] Sending current media state to new learner: {media_states[session_id]}"
+                f"[WHITEBOARD] Sending current media state to new {role}: {media_states[session_id]}"
             )
             try:
                 await websocket.send_json(
                     {"type": "media_control", "data": media_states[session_id]}
                 )
             except Exception as e:
-                print(f"[WHITEBOARD] Error sending media state to learner: {e}")
+                print(f"[WHITEBOARD] Error sending media state to {role}: {e}")
 
         try:
             while conn_info.is_alive:
@@ -349,20 +381,20 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                     await handle_media_control(message, session_id, role, websocket)
                 else:
                     # Forward draw/clear/item_update messages to the other participant
-                    if role == "trainer" and "learner" in whiteboard_connections[session_id]:
-                        other_conn = whiteboard_connections[session_id]["learner"]
+                    # Map roles to their counterparts
+                    role_mapping = {
+                        "trainer": "learner",
+                        "learner": "trainer",
+                        "coach": "client",
+                        "client": "coach"
+                    }
+                    
+                    other_role = role_mapping.get(role)
+                    if other_role and other_role in whiteboard_connections[session_id]:
+                        other_conn = whiteboard_connections[session_id][other_role]
                         if other_conn.is_alive:
-                            # Add special logging for exercise (item_update) messages
-                            # Forward draw/clear/item_update messages to learner (no special-case logging)
                             logger.debug(
-                                f"[WHITEBOARD] Forwarding {message.get('type')} from trainer to learner"
-                            )
-                            await other_conn.websocket.send_json(message)
-                    elif role == "learner" and "trainer" in whiteboard_connections[session_id]:
-                        other_conn = whiteboard_connections[session_id]["trainer"]
-                        if other_conn.is_alive:
-                            print(
-                                f"[WHITEBOARD] Forwarding {message.get('type')} from learner to trainer"
+                                f"[WHITEBOARD] Forwarding {message.get('type')} from {role} to {other_role}"
                             )
                             await other_conn.websocket.send_json(message)
                     else:
@@ -385,15 +417,22 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         # Cleanup connection
         await cleanup_connection(whiteboard_connections, session_id, role)
 
-        # Clear media control lock if trainer disconnects
-        if role == "trainer" and session_id in media_control_locks:
+        # Clear media control lock if controller disconnects (trainer or coach)
+        controller_roles = ["trainer", "coach"]
+        if role in controller_roles and session_id in media_control_locks:
             media_control_locks[session_id] = None
 
         # Notify other participant about disconnection
         if session_id in whiteboard_connections:
             try:
-                other_role = "learner" if role == "trainer" else "trainer"
-                if other_role in whiteboard_connections[session_id]:
+                role_mapping = {
+                    "trainer": "learner",
+                    "learner": "trainer",
+                    "coach": "client",
+                    "client": "coach"
+                }
+                other_role = role_mapping.get(role)
+                if other_role and other_role in whiteboard_connections[session_id]:
                     await whiteboard_connections[session_id][other_role].websocket.send_json(
                         {"type": "peer_disconnected", "role": role}
                     )
@@ -410,14 +449,17 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
 
     print(f"[WHITEBOARD] Media control action: {action} from {role} in session {session_id}")
 
-    # Only trainer can control media
-    if action != "request_snapshot" and role != "trainer":
-        print(f"[WHITEBOARD] Non-trainer attempting media control: {role}")
+    # Only trainer/coach can control media (not learner/client)
+    controller_roles = ["trainer", "coach"]
+    participant_roles = ["learner", "client"]
+    
+    if action != "request_snapshot" and role not in controller_roles:
+        print(f"[WHITEBOARD] Non-controller attempting media control: {role}")
         return
 
     if action == "request_snapshot":
-        # Learner requesting current media snapshot
-        print(f"[WHITEBOARD] Learner requesting media snapshot for session: {session_id}")
+        # Participant (learner/client) requesting current media snapshot
+        print(f"[WHITEBOARD] {role} requesting media snapshot for session: {session_id}")
         if session_id in media_states and media_states[session_id]:
             try:
                 await websocket.send_json(
@@ -428,9 +470,9 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
         return
 
     if action == "open":
-        # Trainer opening media - acquire lock
+        # Controller (trainer/coach) opening media - acquire lock
         media_control_locks[session_id] = (
-            role  # Store trainer identifier (could be user_id or socket id)
+            role  # Store controller identifier
         )
 
         # Store media state with public URL (permanent access, no expiration)
@@ -450,7 +492,7 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
         print(f"[WHITEBOARD] Media opened in session {session_id}: {media_state}")
 
     elif action == "close":
-        # Trainer closing media - release lock
+        # Controller (trainer/coach) closing media - release lock
         media_control_locks[session_id] = None
         media_states[session_id] = None
         print(f"[WHITEBOARD] Media closed in session {session_id}")
@@ -489,28 +531,31 @@ async def handle_media_control(message: Dict, session_id: str, role: str, websoc
                 f"[WHITEBOARD] PDF page changed to {data.get('currentPage')} in session {session_id}"
             )
 
-    # Broadcast media control event to learners
+    # Broadcast media control event to participants (learner/client)
     if session_id in whiteboard_connections:
-        learner_conn = whiteboard_connections[session_id].get("learner")
-        if learner_conn and learner_conn.is_alive:
+        # Determine participant role based on what's connected
+        participant_role = "learner" if "learner" in whiteboard_connections[session_id] else "client"
+        participant_conn = whiteboard_connections[session_id].get(participant_role)
+        
+        if participant_conn and participant_conn.is_alive:
             try:
                 # Include server timestamp in the broadcast
                 broadcast_data = {
                     **data,
                     "timestamp": datetime.utcnow().isoformat(),
                     "serverTs": int(datetime.utcnow().timestamp() * 1000),
-                    "activeTrainerId": role,
+                    "activeControllerId": role,
                 }
 
                 # If closing or snapshot, send the current media state
                 if action in ["close", "request_snapshot"]:
                     broadcast_data = media_states.get(session_id) or broadcast_data
 
-                await learner_conn.websocket.send_json(
+                await participant_conn.websocket.send_json(
                     {"type": "media_control", "data": broadcast_data}
                 )
                 print(
-                    f"[WHITEBOARD] Broadcasted media control '{action}' to learner in session {session_id}"
+                    f"[WHITEBOARD] Broadcasted media control '{action}' to {participant_role} in session {session_id}"
                 )
             except Exception as e:
-                print(f"[WHITEBOARD] Error broadcasting media control to learner: {e}")
+                print(f"[WHITEBOARD] Error broadcasting media control to {participant_role}: {e}")

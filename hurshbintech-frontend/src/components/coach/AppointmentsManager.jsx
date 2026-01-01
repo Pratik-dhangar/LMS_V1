@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import coachService from '../../api/services/coachService';
-import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle, Mail, Phone } from 'lucide-react';
+import coachSessionService from '../../api/services/coachSessionService';
+import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle, Mail, Phone, Video } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/Dashboards.css';
 import '../../styles/Coach.css';
 
 const AppointmentsManager = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -164,6 +167,84 @@ const AppointmentsManager = () => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleStartSession = async (appointment) => {
+    try {
+      setUpdating(true);
+      
+      // First check if session already exists for this appointment
+      console.log('Checking for existing session for appointment:', appointment.id);
+      const coachSessions = await coachSessionService.getCoachSessions();
+      const existingSession = coachSessions.find(s => s.appointment_id === appointment.id);
+      
+      let session;
+      if (existingSession) {
+        console.log('Found existing session:', existingSession);
+        session = existingSession;
+        
+        // If session is scheduled, start it
+        if (session.status === 'scheduled') {
+          console.log('Starting existing session:', session.session_id);
+          const startedSession = await coachSessionService.startSession(session.session_id);
+          console.log('Session started:', startedSession);
+          session = startedSession;
+        } else {
+          console.log('Session already in progress, status:', session.status);
+        }
+      } else {
+        // Create new session from appointment
+        console.log('Creating new session for appointment:', appointment.id);
+        session = await coachSessionService.createSessionFromAppointment(appointment.id);
+        console.log('Session created:', session);
+        
+        // Start the newly created session
+        console.log('Starting session:', session.session_id);
+        const startedSession = await coachSessionService.startSession(session.session_id);
+        console.log('Session started:', startedSession);
+        session = startedSession;
+      }
+      
+      // Navigate to coach session page
+      toast.success('Joining session...');
+      navigate(`/coach/session/${session.session_id}`);
+    } catch (err) {
+      console.error('Error starting session:', err);
+      console.error('Error response:', err.response);
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to start session';
+      toast.error(errorMsg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const isSessionStartable = (appointment) => {
+    // Session can be started if:
+    // 1. Appointment is CONFIRMED
+    // 2. Current time is within appointment time range (e.g., ±30 minutes)
+    if (appointment.status?.toUpperCase() !== 'CONFIRMED') return false;
+    
+    const now = new Date();
+    const appointmentDate = new Date(appointment.scheduled_date);
+    
+    // Extract hour from time string (e.g., "10am" -> 10)
+    const timeMatch = appointment.scheduled_time?.match(/(\d+)(am|pm)/i);
+    if (!timeMatch) return false;
+    
+    let hour = parseInt(timeMatch[1]);
+    const period = timeMatch[2].toLowerCase();
+    
+    // Convert to 24-hour format
+    if (period === 'pm' && hour !== 12) hour += 12;
+    if (period === 'am' && hour === 12) hour = 0;
+    
+    appointmentDate.setHours(hour, 0, 0, 0);
+    
+    // Allow starting 30 minutes before and up to 2 hours after scheduled time
+    const startWindow = new Date(appointmentDate.getTime() - 30 * 60 * 1000); // 30 min before
+    const endWindow = new Date(appointmentDate.getTime() + 120 * 60 * 1000); // 2 hours after
+    
+    return now >= startWindow && now <= endWindow;
   };
 
   const formatSessionType = (type) => {
@@ -357,13 +438,33 @@ const AppointmentsManager = () => {
                   </div>
                 </div>
                 
-                {/* View Details Button */}
-                <button
-                  onClick={() => handleViewDetails(apt)}
-                  className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
-                >
-                  View Details
-                </button>
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  {/* Start Session Button - Only for CONFIRMED appointments */}
+                  {apt.status?.toUpperCase() === 'CONFIRMED' && (
+                    <button
+                      onClick={() => handleStartSession(apt)}
+                      disabled={!isSessionStartable(apt) || updating}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
+                        isSessionStartable(apt) && !updating
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={!isSessionStartable(apt) ? 'Session can be started 30 minutes before scheduled time' : 'Start video session now'}
+                    >
+                      <Video className="w-4 h-4" />
+                      {updating ? 'Starting...' : 'Start Session'}
+                    </button>
+                  )}
+                  
+                  {/* View Details Button */}
+                  <button
+                    onClick={() => handleViewDetails(apt)}
+                    className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
+                  >
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
           ))
