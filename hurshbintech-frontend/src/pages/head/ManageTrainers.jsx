@@ -228,7 +228,7 @@ const ManageTrainers = () => {
                           </td>
                           <td className="data-table-td data-table-center">
                             <div className="data-table-primary">{trainer.name}</div>
-                            <div className="data-table-secondary">{trainer.role}</div>
+                            
                           </td>
                           <td className="data-table-td data-table-center">
                             <div className="passcode-toggle">
