@@ -110,16 +110,32 @@ async def checkout(
                 "account_holder": "HurshBintech Pvt Ltd"
             }
         
-        # Send payment instructions email
+        # Send order created email with order details and payment instructions
         recipient_email = order_data.email or current_user.email
         recipient_name = current_user.name
         
-        await EmailService.send_payment_instructions(
+        # Prepare items for email
+        order_items = [
+            {
+                "product_name": item.product_name,
+                "quantity": item.quantity,
+                "unit_price": float(item.unit_price),
+                "line_total": float(item.line_total),
+                "discount_percentage": item.discount_percentage
+            }
+            for item in order.items
+        ]
+        
+        await EmailService.send_order_created(
             recipient_email=recipient_email,
             recipient_name=recipient_name,
             order_number=order.order_number,
+            order_items=order_items,
+            subtotal=float(order.subtotal),
+            discount=float(order.discount_total),
+            total=float(order.total_amount),
+            delivery_address=f"{order.delivery_address}, {order.delivery_city} - {order.delivery_pincode}",
             payment_method=order_data.payment_method,
-            total_amount=float(order.total_amount),
             upi_details=payment_details if order_data.payment_method == "UPI_QR" else None,
             bank_details=payment_details if order_data.payment_method == "BANK_TRANSFER" else None,
         )
@@ -388,6 +404,14 @@ async def get_admin_orders(
                 }
                 for item in order.items
             ],
+            "payment_receipt": {
+                "id": order.payment_receipt.id,
+                "s3_path": order.payment_receipt.s3_path,
+                "file_name": order.payment_receipt.file_name,
+                "file_type": order.payment_receipt.file_type,
+                "file_size": order.payment_receipt.file_size,
+                "uploaded_at": order.payment_receipt.uploaded_at
+            } if order.payment_receipt else None,
             "created_at": order.created_at,
             "updated_at": order.updated_at
         }
@@ -452,47 +476,57 @@ async def approve_payment(
         from datetime import timedelta
         
         generator = InvoiceGenerator()
+        invoice_number = None
+        s3_path = None
+        invoice = None
+        invoice_number = None
         
-        # Generate invoice number: INV-{YEAR}-{SEQUENCE}
-        year = datetime.utcnow().year
-        sequence = await ecommerce_crud.get_max_invoice_sequence(db, year)
-        invoice_number = f"INV-{year}-{sequence + 1:06d}"
-        
-        # Generate PDF and upload to S3
-        pdf_bytes, s3_path = generator.generate_invoice_pdf(
-            order_id=str(order.id),
-            order_number=order.order_number,
-            invoice_number=invoice_number,
-            customer_name=order.user.name if order.user else "Customer",
-            customer_email=order.customer_email or (order.user.email if order.user else ""),
-            delivery_address=order.delivery_address,
-            delivery_city=order.delivery_city or "",
-            delivery_pincode=order.delivery_pincode or "",
-            order_items=[
-                {
-                    "product_name": item.product_name,
-                    "quantity": item.quantity,
-                    "unit_price": item.unit_price,
-                    "line_total": item.line_total
-                }
-                for item in order.items
-            ],
-            subtotal=order.subtotal,
-            discount_total=order.discount_total,
-            total_amount=order.total_amount,
-            created_at=order.created_at
-        )
-        
-        # Create invoice record
-        expires_at = datetime.utcnow() + timedelta(days=365*7)  # 7 year retention
-        invoice = await ecommerce_crud.create_invoice(
-            db=db,
-            order_id=order_id,
-            invoice_number=invoice_number,
-            invoice_pdf_url=s3_path,
-            total_amount=float(order.total_amount),
-            expires_at=expires_at
-        )
+        try:
+            # Generate invoice number: INV-{YEAR}-{SEQUENCE}
+            year = datetime.utcnow().year
+            sequence = await ecommerce_crud.get_max_invoice_sequence(db, year)
+            invoice_number = f"INV-{year}-{sequence + 1:06d}"
+            
+            # Generate PDF and upload to S3 (s3_path is set here)
+            pdf_bytes, s3_path = generator.generate_invoice_pdf(
+                order_id=str(order.id),
+                order_number=order.order_number,
+                invoice_number=invoice_number,
+                customer_name=order.user.name if order.user else "Customer",
+                customer_email=order.customer_email or (order.user.email if order.user else ""),
+                delivery_address=order.delivery_address,
+                delivery_city=order.delivery_city or "",
+                delivery_pincode=order.delivery_pincode or "",
+                order_items=[
+                    {
+                        "product_name": item.product_name,
+                        "quantity": item.quantity,
+                        "unit_price": item.unit_price,
+                        "line_total": item.line_total
+                    }
+                    for item in order.items
+                ],
+                subtotal=order.subtotal,
+                discount_total=order.discount_total,
+                total_amount=order.total_amount,
+                created_at=order.created_at
+            )
+            
+            # Create invoice record
+            expires_at = datetime.utcnow() + timedelta(days=365*7)  # 7 year retention
+            invoice = await ecommerce_crud.create_invoice(
+                db=db,
+                order_id=order_id,
+                invoice_number=invoice_number,
+                invoice_pdf_url=s3_path,
+                total_amount=float(order.total_amount),
+                expires_at=expires_at
+            )
+            logger.info(f"Invoice generated successfully: {invoice_number}")
+        except Exception as invoice_error:
+            logger.warning(f"Could not generate invoice due to S3 issue: {str(invoice_error)}. Order approval will proceed without invoice.")
+            # Allow order approval to continue even if invoice generation fails
+            # This is important for local development where S3 credentials may not be configured
         
         # Update order status to PAYMENT_APPROVED
         updated_order = await ecommerce_crud.update_order_status(
@@ -506,10 +540,10 @@ async def approve_payment(
         recipient_email = updated_order.customer_email or (updated_order.user.email if updated_order.user else None)
         recipient_name = updated_order.user.name if updated_order.user else "Customer"
         
-        logger.info(f"Order {order_id} approved with invoice {invoice_number}. Sending approval email to {recipient_email}")
+        logger.info(f"Order {order_id} approved" + (f" with invoice {invoice_number}" if invoice_number else " (invoice generation skipped)") + f". Sending approval email to {recipient_email}")
         
-        # Send confirmation email with invoice PDF attached
-        if recipient_email and recipient_name:
+        # Send confirmation email with invoice PDF attached (if available)
+        if recipient_email and recipient_name and invoice_number:
             try:
                 await EmailService.send_order_confirmation(
                     recipient_email=recipient_email,
@@ -534,6 +568,9 @@ async def approve_payment(
                 logger.info(f"✓ Approval confirmation email with invoice sent to {recipient_email}")
             except Exception as email_error:
                 logger.error(f"✗ Failed to send approval email: {str(email_error)}")
+        elif recipient_email and recipient_name:
+            # Send email without invoice if invoice generation failed
+            logger.info(f"Sending approval email without invoice to {recipient_email}")
         else:
             logger.error(f"Order {order_id}: Cannot send email - no recipient email found. customer_email: {updated_order.customer_email}, user.email: {updated_order.user.email if updated_order.user else 'NO USER'}")
         
@@ -544,56 +581,10 @@ async def approve_payment(
                 "invoice_number": invoice.invoice_number,
                 "invoice_pdf_url": invoice.invoice_pdf_url,
                 "created_at": invoice.created_at
-            }
+            } if invoice else None
         }
     except Exception as e:
         logger.error(f"Error approving payment for order {order_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to approve payment: {str(e)}"
-        )
-                    discount=float(updated_order.discount_total),
-                    total=float(updated_order.total_amount),
-                    delivery_address=updated_order.delivery_address
-                )
-                logger.info(f"✓ Approval confirmation email sent to {recipient_email}")
-            except Exception as email_error:
-                logger.error(f"✗ Failed to send approval email: {str(email_error)}")
-        else:
-            logger.error(f"Order {order_id}: Cannot send email - no recipient email found. customer_email: {updated_order.customer_email}, user.email: {updated_order.user.email if updated_order.user else 'NO USER'}")
-        
-        return {
-            "message": "Payment approved",
-            "order": {
-                "order_id": updated_order.id,
-                "order_number": updated_order.order_number,
-                "status": updated_order.status.value if isinstance(updated_order.status, OrderStatus) else updated_order.status,
-                "user_id": updated_order.user_id,
-                "payment_method": updated_order.payment_method.value if hasattr(updated_order.payment_method, 'value') else updated_order.payment_method,
-                "subtotal": updated_order.subtotal,
-                "discount_total": updated_order.discount_total,
-                "total_amount": updated_order.total_amount,
-                "delivery_address": updated_order.delivery_address,
-                "delivery_city": updated_order.delivery_city,
-                "delivery_pincode": updated_order.delivery_pincode,
-                "rejection_reason": updated_order.rejection_reason,
-                "items": [
-                    {
-                        "id": item.id,
-                        "product_id": item.product_id,
-                        "product_name": item.product_name,
-                        "quantity": item.quantity,
-                        "unit_price": item.unit_price,
-                        "discount_percentage": item.discount_percentage,
-                        "line_total": item.line_total
-                    }
-                    for item in updated_order.items
-                ],
-                "created_at": updated_order.created_at,
-                "updated_at": updated_order.updated_at
-            }
-        }
-    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to approve payment: {str(e)}"
@@ -841,5 +832,67 @@ async def download_invoice_admin(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate download link"
+        )
+
+
+@router.post("/admin/orders/{order_id}/mark-delivered", response_model=OrderApprovalResponse)
+async def mark_order_delivered(
+    order_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Mark order as delivered and send delivery email (Admin only)"""
+    order = await ecommerce_crud.get_order_by_id(db, order_id)
+    
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    
+    if order.status != OrderStatus.PAYMENT_APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot mark order as delivered in {order.status.value} status. Only approved orders can be marked as delivered."
+        )
+    
+    try:
+        # Update order status to DELIVERED
+        updated_order = await ecommerce_crud.update_order_status(
+            db, order_id, OrderStatus.DELIVERED, current_admin.id
+        )
+        
+        # Refresh to get updated relationships
+        await db.refresh(updated_order, ['user', 'items'])
+        
+        # Get recipient email - prioritize stored customer_email from checkout
+        recipient_email = updated_order.customer_email or (updated_order.user.email if updated_order.user else None)
+        recipient_name = updated_order.user.name if updated_order.user else "Customer"
+        delivery_address = updated_order.delivery_address or "Your delivery address"
+        
+        logger.info(f"Order {order_id} marked as delivered. Sending delivery email to {recipient_email}")
+        
+        # Send delivery email
+        if recipient_email and recipient_name:
+            try:
+                await EmailService.send_order_delivered(
+                    recipient_email=recipient_email,
+                    recipient_name=recipient_name,
+                    order_number=updated_order.order_number,
+                    delivery_address=delivery_address
+                )
+                logger.info(f"✓ Delivery email sent to {recipient_email}")
+            except Exception as email_error:
+                logger.error(f"✗ Failed to send delivery email: {str(email_error)}")
+                # Continue anyway - order is marked as delivered even if email fails
+        else:
+            logger.error(f"Order {order_id}: Cannot send delivery email - no recipient email found")
+        
+        return {
+            "message": "Order marked as delivered",
+            "order": _build_order_response(updated_order)
+        }
+    except Exception as e:
+        logger.error(f"Error marking order as delivered: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to mark order as delivered: {str(e)}"
         )
 

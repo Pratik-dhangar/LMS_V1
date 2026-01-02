@@ -108,6 +108,7 @@ class Product(Base):
     discount_percentage = Column(Numeric(5, 2), nullable=False, default=0, server_default="0")
     stock_quantity = Column(Integer, nullable=False, default=0, server_default="0")
     image_url = Column(String(1024), nullable=True)
+    thumbnail_url = Column(String(1024), nullable=True)
     visibility = Column(SAEnum(ProductVisibility, name="productvisibility"), nullable=False, default=ProductVisibility.DRAFT, server_default="DRAFT", index=True)
     tags = Column(JSONB, nullable=True)  # ["Recommended", "Bestseller", "New"]
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)

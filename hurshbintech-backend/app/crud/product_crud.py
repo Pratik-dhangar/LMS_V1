@@ -133,7 +133,7 @@ async def get_skill_by_id(db: AsyncSession, skill_id: UUID) -> Optional[SkillFoc
 
 # Product CRUD
 async def create_product(
-    db: AsyncSession, product_data: ProductCreate, admin_id: int, image_url: Optional[str] = None
+    db: AsyncSession, product_data: ProductCreate, admin_id: int, image_url: Optional[str] = None, thumbnail_url: Optional[str] = None
 ) -> Product:
     """Create a new product"""
     # Extract many-to-many relationship data
@@ -145,6 +145,8 @@ async def create_product(
     product_dict["created_by_id"] = admin_id
     if image_url:
         product_dict["image_url"] = image_url
+    if thumbnail_url:
+        product_dict["thumbnail_url"] = thumbnail_url
     
     new_product = Product(**product_dict)
     db.add(new_product)
@@ -315,7 +317,7 @@ async def get_catalog_products(
 
 
 async def update_product(
-    db: AsyncSession, product_id: UUID, product_data: ProductUpdate, image_url: Optional[str] = None
+    db: AsyncSession, product_id: UUID, product_data: ProductUpdate, image_url: Optional[str] = None, thumbnail_url: Optional[str] = None
 ) -> Optional[Product]:
     """Update a product"""
     product = await get_product_by_id(db, product_id)
@@ -331,6 +333,8 @@ async def update_product(
     
     if image_url:
         product.image_url = image_url
+    if thumbnail_url:
+        product.thumbnail_url = thumbnail_url
     
     # Update age groups if provided
     if product_data.age_group_ids is not None:

@@ -148,6 +148,7 @@ async def create_product(
     skill_ids: List[str] = Form([]),  # Accept as strings, convert to UUID
     tags: List[str] = Form([]),
     image: UploadFile = File(None),
+    thumbnail: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
@@ -208,27 +209,74 @@ async def create_product(
         logger.info(f"ProductCreate model created: {product_data}")
         
         image_url = None
+        thumbnail_url = None
         
-        # Upload image if provided
+        # Upload thumbnail if provided (images only, small size)
+        if thumbnail:
+            allowed_thumb_types = ["image/jpeg", "image/png", "image/jpg", "image/webp"]
+            if thumbnail.content_type not in allowed_thumb_types:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid thumbnail type. Allowed: JPG, PNG, WEBP."
+                )
+            thumb_contents = await thumbnail.read()
+            if len(thumb_contents) > 1 * 1024 * 1024:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Thumbnail size exceeds 1MB limit."
+                )
+            try:
+                thumbnail_url = await upload_file(
+                    file_content=thumb_contents,
+                    folder="products/thumbnails",
+                    filename=thumbnail.filename,
+                    content_type=thumbnail.content_type
+                )
+            except Exception as e:
+                logger.error(f"Failed to upload thumbnail: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to upload thumbnail: {str(e)}"
+                )
+
+        # Upload file if provided (images, PDFs, videos)
         if image:
             # Validate file type
-            allowed_types = ["image/jpeg", "image/png", "image/jpg"]
+            allowed_types = [
+                "image/jpeg", "image/png", "image/jpg",
+                "application/pdf",
+                "video/mp4", "video/quicktime"
+            ]
             if image.content_type not in allowed_types:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid image type. Only JPG and PNG are allowed."
+                    detail="Invalid file type. Allowed types: JPG, PNG, PDF, MP4."
                 )
-            
-            # Validate file size (max 5MB)
+
+            # Read contents and validate size per type
             contents = await image.read()
-            if len(contents) > 5 * 1024 * 1024:
+            # Determine max size (bytes) per content type
+            if image.content_type.startswith("image/"):
+                max_size = 5 * 1024 * 1024
+                max_mb = 5
+            elif image.content_type == "application/pdf":
+                max_size = 10 * 1024 * 1024
+                max_mb = 10
+            elif image.content_type.startswith("video/"):
+                max_size = 50 * 1024 * 1024
+                max_mb = 50
+            else:
+                max_size = 5 * 1024 * 1024
+                max_mb = 5
+
+            if len(contents) > max_size:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Image size exceeds 5MB limit."
+                    detail=f"File size exceeds {max_mb}MB limit."
                 )
-            
-            logger.info(f"Uploading image: {image.filename}, size: {len(contents)} bytes")
-            
+
+            logger.info(f"Uploading file: {image.filename}, type: {image.content_type}, size: {len(contents)} bytes")
+
             # Upload to S3 (production) or local storage (development)
             try:
                 image_url = await upload_file(
@@ -237,20 +285,22 @@ async def create_product(
                     filename=image.filename,
                     content_type=image.content_type
                 )
-                logger.info(f"Image uploaded successfully: {image_url}")
+                logger.info(f"File uploaded successfully: {image_url}")
             except Exception as e:
-                logger.error(f"Failed to upload image: {str(e)}", exc_info=True)
+                logger.error(f"Failed to upload file: {str(e)}", exc_info=True)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Failed to upload image: {str(e)}"
+                    detail=f"Failed to upload file: {str(e)}"
                 )
         
         logger.info(f"Creating product in database with admin_id: {current_admin.id}")
         
         product = await product_crud.create_product(
-            db, product_data, current_admin.id, image_url
+            db, product_data, current_admin.id, image_url, thumbnail_url
         )
         logger.info(f"Product created successfully: {product.id}")
+        # Log stored description for debugging whitespace/empty-description issues
+        logger.info(f"Product description stored: {product.description!r}")
         return product
         
     except HTTPException:
@@ -300,6 +350,7 @@ async def update_product(
     skill_ids: List[str] = Form(default=[]),  # Accept as strings, convert to UUID
     tags: List[str] = Form(default=[]),
     image: UploadFile = File(None),
+    thumbnail: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
@@ -339,23 +390,68 @@ async def update_product(
     
     product_data = ProductUpdate(**update_data)
     image_url = None
+    thumbnail_url = None
     
-    # Upload new image if provided
+    # Upload new thumbnail if provided
+    if thumbnail:
+        allowed_thumb_types = ["image/jpeg", "image/png", "image/jpg", "image/webp"]
+        if thumbnail.content_type not in allowed_thumb_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid thumbnail type. Allowed: JPG, PNG, WEBP."
+            )
+        thumb_contents = await thumbnail.read()
+        if len(thumb_contents) > 1 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thumbnail size exceeds 1MB limit."
+            )
+        try:
+            thumbnail_url = await upload_file(
+                file_content=thumb_contents,
+                folder="products/thumbnails",
+                filename=thumbnail.filename,
+                content_type=thumbnail.content_type
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to upload thumbnail: {str(e)}"
+            )
+
+    # Upload new file if provided (images, PDFs, videos)
     if image:
-        allowed_types = ["image/jpeg", "image/png", "image/jpg"]
+        allowed_types = [
+            "image/jpeg", "image/png", "image/jpg",
+            "application/pdf",
+            "video/mp4", "video/quicktime"
+        ]
         if image.content_type not in allowed_types:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid image type. Only JPG and PNG are allowed."
+                detail="Invalid file type. Allowed types: JPG, PNG, PDF, MP4."
             )
-        
+
         contents = await image.read()
-        if len(contents) > 5 * 1024 * 1024:
+        if image.content_type.startswith("image/"):
+            max_size = 5 * 1024 * 1024
+            max_mb = 5
+        elif image.content_type == "application/pdf":
+            max_size = 10 * 1024 * 1024
+            max_mb = 10
+        elif image.content_type.startswith("video/"):
+            max_size = 50 * 1024 * 1024
+            max_mb = 50
+        else:
+            max_size = 5 * 1024 * 1024
+            max_mb = 5
+
+        if len(contents) > max_size:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Image size exceeds 5MB limit."
+                detail=f"File size exceeds {max_mb}MB limit."
             )
-        
+
         # Upload to S3 (production) or local storage (development)
         try:
             image_url = await upload_file(
@@ -367,10 +463,10 @@ async def update_product(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to upload image: {str(e)}"
+                detail=f"Failed to upload file: {str(e)}"
             )
     
-    product = await product_crud.update_product(db, product_id, product_data, image_url)
+    product = await product_crud.update_product(db, product_id, product_data, image_url, thumbnail_url)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return product

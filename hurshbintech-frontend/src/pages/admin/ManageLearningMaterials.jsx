@@ -5,6 +5,7 @@ import Footer from '../../components/layout/Footer';
 import axios from '../../api/axios';
 import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, X, Upload } from 'lucide-react';
+import { getFileUrl } from '../../utils/fileUrlBuilder';
 import '../../styles/admin/index.css';
 
 const ManageLearningMaterials = () => {
@@ -18,6 +19,9 @@ const ManageLearningMaterials = () => {
     const [editingId, setEditingId] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [imagePreviewType, setImagePreviewType] = useState(null); // 'image' | 'video' | 'pdf' | null
+    const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -75,11 +79,69 @@ const ManageLearningMaterials = () => {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Allow images, PDFs and common videos (mp4, webm, ogg)
+            const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg'];
+            const allowedDocTypes = ['application/pdf'];
+
+            // Size limits
+            const maxImageSize = 5 * 1024 * 1024; // 5MB
+            const maxVideoSize = 50 * 1024 * 1024; // 50MB
+            const maxDocSize = 10 * 1024 * 1024; // 10MB
+
+            const type = file.type;
+            if (
+                !allowedImageTypes.includes(type) &&
+                !allowedVideoTypes.includes(type) &&
+                !allowedDocTypes.includes(type)
+            ) {
+                toast.error('Invalid file type. Allowed: JPG/PNG/PDF/MP4/WebM/OGG');
+                return;
+            }
+
+            if (allowedImageTypes.includes(type) && file.size > maxImageSize) {
+                toast.error('Image is too large. Max size is 5MB.');
+                return;
+            }
+            if (allowedVideoTypes.includes(type) && file.size > maxVideoSize) {
+                toast.error('Video is too large. Max size is 50MB.');
+                return;
+            }
+            if (allowedDocTypes.includes(type) && file.size > maxDocSize) {
+                toast.error('Document is too large. Max size is 10MB.');
+                return;
+            }
+
             setImageFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
+                // For images, videos and PDFs, reader.result is a data URL
                 setImagePreview(reader.result);
+                // determine preview type
+                if (allowedImageTypes.includes(type)) setImagePreviewType('image');
+                else if (allowedVideoTypes.includes(type)) setImagePreviewType('video');
+                else if (allowedDocTypes.includes(type)) setImagePreviewType('pdf');
             };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleThumbnailChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedThumbTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+            const maxThumbSize = 1 * 1024 * 1024; // 1MB
+            if (!allowedThumbTypes.includes(file.type)) {
+                toast.error('Invalid thumbnail type. Allowed: JPG/PNG/WEBP');
+                return;
+            }
+            if (file.size > maxThumbSize) {
+                toast.error('Thumbnail is too large. Max size is 1MB.');
+                return;
+            }
+            setThumbnailFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setThumbnailPreview(reader.result);
             reader.readAsDataURL(file);
         }
     };
@@ -108,6 +170,9 @@ const ManageLearningMaterials = () => {
 
             if (imageFile) {
                 submitData.append('image', imageFile);
+            }
+            if (thumbnailFile) {
+                submitData.append('thumbnail', thumbnailFile);
             }
 
             if (editingId) {
@@ -144,7 +209,30 @@ const ManageLearningMaterials = () => {
             tags: product.tags || [],
             visibility: product.visibility || 'DRAFT'
         });
-        setImagePreview(product.image_url || null);
+        // Normalize existing image URL so preview can load (handles local uploads and S3)
+        if (product.image_url) {
+            const raw = product.image_url || '';
+            const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
+            const previewUrl = getFileUrl(normalized) || product.image_url;
+            setImagePreview(previewUrl);
+            // derive preview type from extension
+            const ext = normalized.split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) setImagePreviewType('image');
+            else if (['mp4', 'webm', 'ogg'].includes(ext)) setImagePreviewType('video');
+            else if (ext === 'pdf') setImagePreviewType('pdf');
+            else setImagePreviewType(null);
+        } else {
+            setImagePreview(null);
+        }
+        // thumbnail
+        if (product.thumbnail_url) {
+            const rawThumb = product.thumbnail_url || '';
+            const normalizedThumb = rawThumb.startsWith('/') ? rawThumb.slice(1) : rawThumb;
+            const thumbPreviewUrl = getFileUrl(normalizedThumb) || product.thumbnail_url;
+            setThumbnailPreview(thumbPreviewUrl);
+        } else {
+            setThumbnailPreview(null);
+        }
         setShowForm(true);
     };
 
@@ -176,6 +264,8 @@ const ManageLearningMaterials = () => {
         });
         setImageFile(null);
         setImagePreview(null);
+        setThumbnailFile(null);
+        setThumbnailPreview(null);
         setEditingId(null);
         setShowForm(false);
     };
@@ -483,13 +573,54 @@ const ManageLearningMaterials = () => {
                                         </label>
                                         {imagePreview && (
                                             <div style={{ marginBottom: '10px' }}>
-                                                <img
-                                                    src={imagePreview}
-                                                    alt="Preview"
-                                                    style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '6px' }}
-                                                />
+                                                {imagePreviewType === 'video' ? (
+                                                    <video src={imagePreview} controls style={{ maxWidth: '320px', maxHeight: '240px', borderRadius: '6px' }} />
+                                                ) : imagePreviewType === 'pdf' ? (
+                                                    <iframe src={imagePreview} title="PDF Preview" style={{ width: '320px', height: '240px', borderRadius: '6px', border: '1px solid #eee' }} />
+                                                ) : (
+                                                    <img
+                                                        src={imagePreview}
+                                                        alt="Preview"
+                                                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '6px' }}
+                                                    />
+                                                )}
                                             </div>
                                         )}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                                Thumbnail (optional)
+                                            </label>
+                                            <div style={{ marginBottom: '8px' }}>
+                                                {thumbnailPreview ? (
+                                                    <img src={thumbnailPreview} alt="Thumbnail preview" style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px' }} />
+                                                ) : (
+                                                    <div style={{ color: '#7f8c8d', fontSize: '13px' }}>No thumbnail</div>
+                                                )}
+                                            </div>
+                                            <label style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                padding: '10px',
+                                                border: '1px dashed #95a5a6',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                background: '#fafafa',
+                                                marginBottom: '8px'
+                                            }}>
+                                                <Upload size={16} color="#666" />
+                                                <span style={{ fontSize: '13px', color: '#666' }}>
+                                                    {thumbnailFile ? thumbnailFile.name : 'Click to upload thumbnail (JPG/PNG, Max 1MB)'}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/webp"
+                                                    onChange={handleThumbnailChange}
+                                                    style={{ display: 'none' }}
+                                                />
+                                            </label>
+                                        </div>
                                         <label style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -503,11 +634,11 @@ const ManageLearningMaterials = () => {
                                         }}>
                                             <Upload size={20} color="#3498db" />
                                             <span style={{ fontSize: '14px', color: '#3498db' }}>
-                                                {imageFile ? imageFile.name : 'Click to upload image (JPG/PNG, Max 5MB)'}
+                                                {imageFile ? imageFile.name : 'Click to upload image (JPG/PNG, MP4, PDF, Max 50MB)'}
                                             </span>
                                             <input
                                                 type="file"
-                                                accept="image/jpeg,image/png"
+                                                accept="image/jpeg,image/png,video/mp4,application/pdf"
                                                 onChange={handleImageChange}
                                                 style={{ display: 'none' }}
                                             />

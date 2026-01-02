@@ -141,14 +141,23 @@ async def clear_cart(db: AsyncSession, cart_id: UUID) -> bool:
 
 
 # Order CRUD
-def generate_order_number() -> str:
-    """Generate unique order number: ORD-2025-XXXXXX"""
+async def generate_order_number(db: AsyncSession) -> str:
+    """Generate unique order number: ORD-YYYY-XXXXXX using sequential counter"""
     from datetime import datetime
-    import random
     
     year = datetime.now().year
-    random_num = random.randint(100000, 999999)
-    return f"ORD-{year}-{random_num}"
+    
+    # Get count of orders created this year to ensure sequential numbering
+    result = await db.execute(
+        select(Order).where(Order.created_at >= datetime(year, 1, 1))
+    )
+    orders_this_year = result.scalars().all()
+    order_count = len(orders_this_year) + 1
+    
+    # Format with leading zeros: ORD-2025-000001
+    order_number = f"ORD-{year}-{order_count:06d}"
+    
+    return order_number
 
 
 async def create_order(
@@ -163,8 +172,8 @@ async def create_order(
     )
     total_amount = subtotal
     
-    # Generate unique order number
-    order_number = generate_order_number()
+    # Generate unique order number using sequential counter
+    order_number = await generate_order_number(db)
     
     # Create order
     new_order = Order(
@@ -275,27 +284,31 @@ async def get_orders_for_admin(
     db: AsyncSession, status: Optional[str] = None, page: int = 1, limit: int = 20
 ) -> tuple[List[Order], int]:
     """Get all orders for admin with optional status filter"""
+    from sqlalchemy import func
+    
+    # Count total first without eager loading
+    count_query = select(func.count()).select_from(Order)
+    if status:
+        count_query = count_query.where(Order.status == status)
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+    
+    # Query for orders with eager loading using selectinload for all relationships
     query = select(Order).options(
         selectinload(Order.items),
-        joinedload(Order.user),
-        joinedload(Order.payment_receipt)
+        selectinload(Order.user),
+        selectinload(Order.payment_receipt)
     )
     
     if status:
         query = query.where(Order.status == status)
-    
-    # Count total
-    from sqlalchemy import func
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar()
     
     # Pagination
     offset = (page - 1) * limit
     query = query.order_by(Order.created_at.desc()).offset(offset).limit(limit)
     
     result = await db.execute(query)
-    orders = result.scalars().all()
+    orders = result.scalars().unique().all()
     
     return orders, total
 

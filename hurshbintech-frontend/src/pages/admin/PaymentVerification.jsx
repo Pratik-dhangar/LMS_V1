@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axios';
 import { toast } from 'react-toastify';
-import { CheckCircle, XCircle, Clock, Eye, AlertCircle, FileUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, AlertCircle, FileUp, TrendingUp } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import { getFileUrl } from '../../utils/fileUrlBuilder';
 
 const PaymentVerification = () => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const PaymentVerification = () => {
     const [showDetails, setShowDetails] = useState(false);
     const [approving, setApproving] = useState(false);
     const [rejecting, setRejecting] = useState(false);
+    const [delivering, setDelivering] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
 
     useEffect(() => {
@@ -25,7 +27,10 @@ const PaymentVerification = () => {
         try {
             setLoading(true);
             const response = await axiosInstance.get(`/orders/admin/orders`, {
-                params: { status: filter }
+                params: {
+                    status: filter,
+                    _t: Date.now() // Cache buster
+                }
             });
             setOrders(response.data.orders || []);
         } catch (error) {
@@ -40,14 +45,37 @@ const PaymentVerification = () => {
     const handleApprovePayment = async (orderId) => {
         try {
             setApproving(true);
-            await axiosInstance.post(`/orders/admin/orders/${orderId}/approve`, {});
+            // Use a longer timeout for approve since backend may generate invoice / upload to S3
+            await axiosInstance.post(`/orders/admin/orders/${orderId}/approve`, {}, { timeout: 30000 });
             toast.success('Payment approved successfully!');
-            loadPendingOrders();
+            await loadPendingOrders();
             setSelectedOrder(null);
             setShowDetails(false);
         } catch (error) {
             console.error('Error approving payment:', error);
-            toast.error(error.response?.data?.detail || 'Failed to approve payment');
+            // If request timed out, re-check order status - server may have processed it
+            const isTimeout = error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'));
+            if (isTimeout) {
+                try {
+                    // Re-fetch orders directly and check this order's status
+                    const checkResp = await axiosInstance.get(`/orders/admin/orders`, { params: { status: filter, _t: Date.now() } });
+                    const latest = checkResp.data.orders || [];
+                    const updatedOrder = latest.find(o => o.order_id === orderId);
+                    if (updatedOrder && updatedOrder.status === 'PAYMENT_APPROVED') {
+                        toast.success('Payment approved (confirmed after timeout)');
+                        await loadPendingOrders();
+                        setSelectedOrder(null);
+                        setShowDetails(false);
+                    } else {
+                        toast.error('Approve request timed out. Please try again.');
+                    }
+                } catch (e) {
+                    console.error('Error checking order status after timeout:', e);
+                    toast.error('Approve request timed out. Please try again.');
+                }
+            } else {
+                toast.error(error.response?.data?.detail || 'Failed to approve payment');
+            }
         } finally {
             setApproving(false);
         }
@@ -77,11 +105,28 @@ const PaymentVerification = () => {
         }
     };
 
+    const handleMarkDelivered = async (orderId) => {
+        try {
+            setDelivering(true);
+            await axiosInstance.post(`/orders/admin/orders/${orderId}/mark-delivered`, {}, { timeout: 30000 });
+            toast.success('Order marked as delivered and email sent successfully!');
+            await loadPendingOrders();
+            setSelectedOrder(null);
+            setShowDetails(false);
+        } catch (error) {
+            console.error('Error marking order as delivered:', error);
+            toast.error(error.response?.data?.detail || 'Failed to mark order as delivered');
+        } finally {
+            setDelivering(false);
+        }
+    };
+
     const getStatusBadge = (status) => {
         const statusMap = {
             'PAYMENT_UPLOADED': { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
             'PAYMENT_APPROVED': { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Approved' },
-            'PAYMENT_REJECTED': { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' }
+            'PAYMENT_REJECTED': { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' },
+            'DELIVERED': { color: 'bg-blue-100 text-blue-800', icon: TrendingUp, label: 'Delivered' }
         };
         const config = statusMap[status] || statusMap['PAYMENT_UPLOADED'];
         const Icon = config.icon;
@@ -121,7 +166,7 @@ const PaymentVerification = () => {
 
                 {/* Filters */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-                    {['PAYMENT_UPLOADED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED'].map(status => (
+                    {['PAYMENT_UPLOADED', 'PAYMENT_APPROVED', 'DELIVERED', 'PAYMENT_REJECTED'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -138,6 +183,7 @@ const PaymentVerification = () => {
                         >
                             {status === 'PAYMENT_UPLOADED' && 'Pending'}
                             {status === 'PAYMENT_APPROVED' && 'Approved'}
+                            {status === 'DELIVERED' && 'Delivered'}
                             {status === 'PAYMENT_REJECTED' && 'Rejected'}
                         </button>
                     ))}
@@ -261,6 +307,33 @@ const PaymentVerification = () => {
                                         <Eye size={18} />
                                         View Details
                                     </button>
+                                    {order.status === 'PAYMENT_APPROVED' && (
+                                        <button
+                                            onClick={() => handleMarkDelivered(order.order_id)}
+                                            disabled={delivering}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.75rem',
+                                                backgroundColor: '#0ea5e9',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '0.375rem',
+                                                cursor: delivering ? 'not-allowed' : 'pointer',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.5rem',
+                                                opacity: delivering ? 0.7 : 1,
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onMouseEnter={(e) => !delivering && (e.target.style.backgroundColor = '#0284c7')}
+                                            onMouseLeave={(e) => !delivering && (e.target.style.backgroundColor = '#0ea5e9')}
+                                        >
+                                            <TrendingUp size={18} />
+                                            {delivering ? 'Delivering...' : 'Delivered'}
+                                        </button>
+                                    )}
                                     {order.status === 'PAYMENT_UPLOADED' && (
                                         <>
                                             <button
@@ -422,7 +495,7 @@ const PaymentVerification = () => {
                                                 {selectedOrder.payment_receipt.file_name}
                                             </p>
                                             <a
-                                                href={`https://${process.env.REACT_APP_S3_BUCKET_NAME}.s3.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${selectedOrder.payment_receipt.s3_path}`}
+                                                href={getFileUrl(selectedOrder.payment_receipt.s3_path)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 style={{
@@ -440,7 +513,7 @@ const PaymentVerification = () => {
                                         </div>
                                     ) : (
                                         <img
-                                            src={`https://${process.env.REACT_APP_S3_BUCKET_NAME}.s3.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${selectedOrder.payment_receipt.s3_path}`}
+                                            src={getFileUrl(selectedOrder.payment_receipt.s3_path)}
                                             alt="Payment Receipt"
                                             style={{
                                                 width: '100%',
@@ -484,7 +557,7 @@ const PaymentVerification = () => {
                         {selectedOrder.status === 'PAYMENT_UPLOADED' && (
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#374151' }}>
-                                    Rejection Reason (if rejecting)
+                                    Rejection Reason (if rejecting) <span style={{ color: '#ef4444' }}>*</span>
                                 </label>
                                 <textarea
                                     value={rejectionReason}

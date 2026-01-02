@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
@@ -22,7 +22,9 @@ const TrainerDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [_loadingExtras, setLoadingExtras] = useState(true);
+  const scheduleRef = useRef(null);
   const [learnerQuery, setLearnerQuery] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedSession, setSelectedSession] = useState(null);
@@ -98,7 +100,6 @@ const TrainerDashboard = () => {
       }
     } catch (error) {
       console.error("fetchSessions error:", error);
-      toast.error("Failed to load sessions");
       setSessions([]);
     }
   };
@@ -325,226 +326,272 @@ const TrainerDashboard = () => {
             </div>
           </div>
 
-          {/* Today's Schedule */}
-          <div className="bg-white rounded-xl p-6 shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold">
-                📅 Today's Schedule - {todaysDateString}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-500">
-                  {sessions.length} total items
+          {/* Quick Access Cards (IIP / Communication / Book Appointment) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {[
+              {
+                icon: "🎓",
+                title: "IIP Programs",
+                onClick: () => {
+                  // toggle the schedule section
+                  setShowSchedule((s) => {
+                    const next = !s;
+                    // if opening, scroll into view after state change
+                    if (next) setTimeout(() => scheduleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                    return next;
+                  });
+                },
+              },
+              {
+                icon: "💬",
+                title: "Communication",
+                onClick: () => navigate("/trainer/communication"),
+              },
+              {
+                icon: "📅",
+                title: "Book Appointment",
+                onClick: () => navigate("/book-appointment"),
+              },
+              {
+                icon: "🛒",
+                title: "Bug Learning Material",
+                onClick: () => navigate("/store"),
+              },
+            ].map((card, index) => (
+              <div
+                key={index}
+                onClick={card.onClick}
+                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-green-400 hover:border"
+              >
+                <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
+                  {card.icon}
                 </div>
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="pagination"
-                    className="text-sm text-gray-600 font-medium"
-                  >
-                    Show:
-                  </label>
-                  <select
-                    id="pagination"
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer hover:border-gray-400"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={15}>15</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
+                <div className="text-lg font-semibold text-gray-800 mb-1">{card.title}</div>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="space-y-3">
-              {loading ? (
-                <div className="py-8 flex justify-center">
-                  <div className="loader h-8 w-8 border-4 border-t-4 rounded-full animate-spin border-gray-300"></div>
+          {/* Today's Schedule */}
+          {showSchedule && (
+            <div ref={scheduleRef} className="bg-white rounded-xl p-6 shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-lg font-semibold">
+                  📅 Today's Schedule - {todaysDateString}
                 </div>
-              ) : // Filter sessions to those scheduled for today first, then show others
-                sessions.length === 0 ? (
-                  <div className="text-center text-gray-500 py-6">
-                    No sessions scheduled yet.
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-500">
+                    {sessions.length} total items
                   </div>
-                ) : (
-                  <>
-                    {sessions
-                      .sort(
-                        (a, b) =>
-                          new Date(b.scheduled_date || 0) -
-                          new Date(a.scheduled_date || 0)
-                      )
-                      .slice(0, itemsPerPage)
-                      .map((session) => {
-                        const scheduledDate = session.scheduled_date
-                          ? new Date(session.scheduled_date)
-                          : null;
-                        const timeLabel = scheduledDate
-                          ? scheduledDate.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                          : "—";
-                        const ampm = scheduledDate
-                          ? scheduledDate
-                            .toLocaleTimeString([], {
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="pagination"
+                      className="text-sm text-gray-600 font-medium"
+                    >
+                      Show:
+                    </label>
+                    <select
+                      id="pagination"
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer hover:border-gray-400"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="py-8 flex justify-center">
+                    <div className="loader h-8 w-8 border-4 border-t-4 rounded-full animate-spin border-gray-300"></div>
+                  </div>
+                ) : // Filter sessions to those scheduled for today first, then show others
+                  sessions.length === 0 ? (
+                    <div className="text-center text-gray-500 py-6">
+                      No sessions scheduled yet.
+                    </div>
+                  ) : (
+                    <>
+                      {sessions
+                        .sort(
+                          (a, b) =>
+                            new Date(b.scheduled_date || 0) -
+                            new Date(a.scheduled_date || 0)
+                        )
+                        .slice(0, itemsPerPage)
+                        .map((session) => {
+                          const scheduledDate = session.scheduled_date
+                            ? new Date(session.scheduled_date)
+                            : null;
+                          const timeLabel = scheduledDate
+                            ? scheduledDate.toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
-                              hour12: true,
                             })
-                            .split(" ")[1]
-                          : "";
-                        const borderColor =
-                          session.status === "active"
-                            ? "border-l-4 border-green-500"
-                            : session.status === "scheduled"
-                              ? "border-l-4 border-blue-500"
-                              : "border-l-4 border-yellow-400";
-                        return (
-                          <div
-                            key={session.id || session.session_id}
-                            className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 flex items-center gap-4">
-                                <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
-                                  <div className="text-xl font-bold text-[#2c3e50]">
-                                    {timeLabel}
-                                  </div>
-                                  {/* show AM/PM if available */}
-                                  <div className="text-xs text-gray-500">
-                                    {ampm}
-                                  </div>
-                                </div>
-
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3">
-                                    <div className="text-lg font-semibold text-gray-800">
-                                      {session.title ||
-                                        `Session with ${session.learner?.name ||
-                                        session.learner_name ||
-                                        "Learner"
-                                        }`}
+                            : "—";
+                          const ampm = scheduledDate
+                            ? scheduledDate
+                              .toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })
+                              .split(" ")[1]
+                            : "";
+                          const borderColor =
+                            session.status === "active"
+                              ? "border-l-4 border-green-500"
+                              : session.status === "scheduled"
+                                ? "border-l-4 border-blue-500"
+                                : "border-l-4 border-yellow-400";
+                          return (
+                            <div
+                              key={session.id || session.session_id}
+                              className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 flex items-center gap-4">
+                                  <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
+                                    <div className="text-xl font-bold text-[#2c3e50]">
+                                      {timeLabel}
                                     </div>
-                                    <span
-                                      className={getStatusBadge(session.status)}
-                                    >
-                                      {(session.status || "scheduled")
-                                        .charAt(0)
-                                        .toUpperCase() +
-                                        (session.status || "scheduled").slice(1)}
-                                    </span>
+                                    {/* show AM/PM if available */}
+                                    <div className="text-xs text-gray-500">
+                                      {ampm}
+                                    </div>
                                   </div>
 
-                                  <div className="text-sm text-gray-500 mt-1">
-                                    Duration: {session.duration ?? "—"} minutes{" "}
-                                    {session.program
-                                      ? ` | IIP: ${session.program}`
-                                      : ""}
-                                  </div>
-
-                                  {session.description && (
-                                    <div className="text-xs text-gray-600 mt-2">
-                                      {session.description}
-                                    </div>
-                                  )}
-                                  {session.scheduled_date && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      Scheduled:{" "}
-                                      {new Date(
-                                        session.scheduled_date
-                                      ).toLocaleString()}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                                {session.status === "scheduled" && (
-                                  <button
-                                    onClick={() =>
-                                      handleStartSession(session.session_id)
-                                    }
-                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-                                  >
-                                    Start Session
-                                  </button>
-                                )}
-                                {session.status === "active" && (
-                                  <button
-                                    onClick={() =>
-                                      handleResumeSession(session.session_id)
-                                    }
-                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-                                  >
-                                    Resume Session
-                                  </button>
-                                )}
-                                {session.status === "ended" && (
-                                  <span className="text-gray-500 text-sm">
-                                    Completed
-                                  </span>
-                                )}
-
-                                <div className="flex gap-2 mt-2">
-                                  {session.recording_url &&
-                                    session.recording_status === "completed" && (
-                                      <button
-                                        onClick={() =>
-                                          handleViewRecording(session)
-                                        }
-                                        className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
-                                        title="Watch recording"
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-lg font-semibold text-gray-800">
+                                        {session.title ||
+                                          `Session with ${session.learner?.name ||
+                                          session.learner_name ||
+                                          "Learner"
+                                          }`}
+                                      </div>
+                                      <span
+                                        className={getStatusBadge(session.status)}
                                       >
-                                        ▶️ Watch
-                                      </button>
+                                        {(session.status || "scheduled")
+                                          .charAt(0)
+                                          .toUpperCase() +
+                                          (session.status || "scheduled").slice(1)}
+                                      </span>
+                                    </div>
+
+                                    <div className="text-sm text-gray-500 mt-1">
+                                      Duration: {session.duration ?? "—"} minutes{" "}
+                                      {session.program
+                                        ? ` | IIP: ${session.program}`
+                                        : ""}
+                                    </div>
+
+                                    {session.description && (
+                                      <div className="text-xs text-gray-600 mt-2">
+                                        {session.description}
+                                      </div>
                                     )}
-                                  {session.recording_status === "processing" && (
-                                    <span
-                                      className="text-sm px-3 py-1 text-yellow-600"
-                                      title="Recording is being processed"
+                                    {session.scheduled_date && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        Scheduled:{" "}
+                                        {new Date(
+                                          session.scheduled_date
+                                        ).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                                  {session.status === "scheduled" && (
+                                    <button
+                                      onClick={() =>
+                                        handleStartSession(session.session_id)
+                                      }
+                                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
                                     >
-                                      ⏳ Processing...
+                                      Start Session
+                                    </button>
+                                  )}
+                                  {session.status === "active" && (
+                                    <button
+                                      onClick={() =>
+                                        handleResumeSession(session.session_id)
+                                      }
+                                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                    >
+                                      Resume Session
+                                    </button>
+                                  )}
+                                  {session.status === "ended" && (
+                                    <span className="text-gray-500 text-sm">
+                                      Completed
                                     </span>
                                   )}
-                                  {session.recording_status === "failed" && (
-                                    <span
-                                      className="text-sm px-3 py-1 text-red-600"
-                                      title="Recording failed"
+
+                                  <div className="flex gap-2 mt-2">
+                                    {session.recording_url &&
+                                      session.recording_status === "completed" && (
+                                        <button
+                                          onClick={() =>
+                                            handleViewRecording(session)
+                                          }
+                                          className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
+                                          title="Watch recording"
+                                        >
+                                          ▶️ Watch
+                                        </button>
+                                      )}
+                                    {session.recording_status === "processing" && (
+                                      <span
+                                        className="text-sm px-3 py-1 text-yellow-600"
+                                        title="Recording is being processed"
+                                      >
+                                        ⏳ Processing...
+                                      </span>
+                                    )}
+                                    {session.recording_status === "failed" && (
+                                      <span
+                                        className="text-sm px-3 py-1 text-red-600"
+                                        title="Recording failed"
+                                      >
+                                        ❌ Failed
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        setSelectedSession(session);
+                                        setShowSessionDetailsModal(true);
+                                      }}
+                                      className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
                                     >
-                                      ❌ Failed
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      setSelectedSession(session);
-                                      setShowSessionDetailsModal(true);
-                                    }}
-                                    className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
-                                  >
-                                    View Details
-                                  </button>
+                                      View Details
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
 
-                    {/* Pagination Info */}
-                    {sessions.length > itemsPerPage && (
-                      <div className="text-sm text-gray-500 pt-4 border-t text-center">
-                        Showing {itemsPerPage} of {sessions.length} sessions
-                      </div>
-                    )}
-                  </>
-                )}
+                      {/* Pagination Info */}
+                      {sessions.length > itemsPerPage && (
+                        <div className="text-sm text-gray-500 pt-4 border-t text-center">
+                          Showing {itemsPerPage} of {sessions.length} sessions
+                        </div>
+                      )}
+                    </>
+                  )}
+              </div>
             </div>
-          </div>
 
-         
+          )}
         </div>
       </main>
 
@@ -638,7 +685,7 @@ const TrainerDashboard = () => {
               )}
 
               {/* Recording Status */}
-              {selectedSession.recording_url || selectedSession.recording_status && (
+              {(selectedSession.recording_url || selectedSession.recording_status) && (
                 <div>
                   <label className="text-sm font-semibold text-gray-600 block mb-2">Recording Status</label>
                   {selectedSession.recording_status === "completed" && (

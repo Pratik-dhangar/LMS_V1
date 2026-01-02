@@ -64,7 +64,14 @@ async def get_cart(
             "unit_price": item.unit_price,
             "discount_percentage": item.discount_percentage,
             "line_total": item.line_total,
-            "image_url": product.image_url if product else None
+            "image_url": product.image_url if product else None,
+            "thumbnail_url": product.thumbnail_url if product else None,
+            "product": {
+                "id": str(product.id),
+                "name": product.name,
+                "image_url": product.image_url,
+                "thumbnail_url": product.thumbnail_url
+            } if product else None
         })
     
     subtotal, discount_total, total = calculate_cart_totals(cart.items)
