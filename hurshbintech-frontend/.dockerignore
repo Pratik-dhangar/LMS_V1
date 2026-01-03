@@ -1,4 +1,6 @@
 node_modules
+npm-debug.log
+yarn-error.log 
 .git
 .gitignore
 Dockerfile
@@ -9,3 +11,7 @@ README.md
 .env
 .env.*
 dist
+docs/
+tests/
+build/
+
