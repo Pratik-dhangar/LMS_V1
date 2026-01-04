@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cartService from '../../api/services/ecommerce/cartService';
+import { getFileUrl } from '../../utils/fileUrlBuilder';
 import { toast } from 'react-toastify';
 
 const Cart = () => {
@@ -139,19 +140,23 @@ const Cart = () => {
                                                     overflow: 'hidden'
                                                 }}
                                             >
-                                                {item.product?.image_url ? (
-                                                    <img
-                                                        src={item.product.image_url}
-                                                        alt={item.product.name}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{ fontSize: '48px' }}>📦</div>
-                                                )}
+                                                {(() => {
+                                                    const raw = item.product?.thumbnail_url || item.product?.image_url || '';
+                                                    if (!raw) return <div style={{ fontSize: '48px' }}>📦</div>;
+                                                    const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
+                                                    const src = getFileUrl(normalized) || raw;
+                                                    return (
+                                                        <img
+                                                            src={src}
+                                                            alt={item.product?.name}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                            }}
+                                                        />
+                                                    );
+                                                })()}
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <h3 style={{
@@ -162,14 +167,6 @@ const Cart = () => {
                                                 }}>
                                                     {item.product?.name || 'Product'}
                                                 </h3>
-                                                <div style={{ fontSize: '14px', color: '#7f8c8d', marginBottom: '12px' }}>
-                                                    Price: ₹{item.price_at_addition}
-                                                    {item.discount_at_addition > 0 && (
-                                                        <span style={{ color: '#27ae60', marginLeft: '8px' }}>
-                                                            ({item.discount_at_addition}% off)
-                                                        </span>
-                                                    )}
-                                                </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         <button

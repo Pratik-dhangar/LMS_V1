@@ -145,6 +145,7 @@ class ProductUpdate(BaseModel):
 class ProductResponse(ProductBase):
     id: UUID
     image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     category: Optional[ProductCategoryResponse] = None
     age_groups: List[AgeGroupResponse] = []
     skills: List[SkillFocusResponse] = []
@@ -162,10 +163,12 @@ class ProductListItem(BaseModel):
     """Simplified product schema for catalog listing"""
     id: UUID
     name: str
+    description: Optional[str] = None
     price: Decimal
     discount_percentage: Decimal
     final_price: float
     image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     tags: Optional[List[str]] = None
     category: Optional[ProductCategoryResponse] = None
     age_groups: List[AgeGroupResponse] = []

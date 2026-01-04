@@ -83,7 +83,6 @@ const StoreCatalog = () => {
     const handleAddToCart = async (productId) => {
         try {
             await cartService.addToCart({ product_id: productId, quantity: 1 });
-            toast.success('Added to cart!');
             loadCartCount();
         } catch (error) {
             if (error.response?.status === 401) {
@@ -410,9 +409,9 @@ const StoreCatalog = () => {
                                                 marginBottom: '12px',
                                                 overflow: 'hidden'
                                             }}>
-                                                {product.image_url ? (
+                                                {product.thumbnail_url || product.image_url ? (
                                                     <img
-                                                        src={product.image_url}
+                                                        src={product.thumbnail_url || product.image_url}
                                                         alt={product.name}
                                                         style={{
                                                             width: '100%',
@@ -466,7 +465,7 @@ const StoreCatalog = () => {
                                                 WebkitLineClamp: 2,
                                                 WebkitBoxOrient: 'vertical'
                                             }}>
-                                                {product.description || 'No description available'}
+                                                {(product.description && product.description.toString().trim()) ? product.description : 'No description available'}
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c3e50' }}>
