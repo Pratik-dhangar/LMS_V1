@@ -495,7 +495,7 @@ const PaymentVerification = () => {
                                                 {selectedOrder.payment_receipt.file_name}
                                             </p>
                                             <a
-                                                href={getFileUrl(selectedOrder.payment_receipt.s3_path)}
+                                                href={selectedOrder.payment_receipt.s3_path.startsWith('http') ? selectedOrder.payment_receipt.s3_path : getFileUrl(selectedOrder.payment_receipt.s3_path)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 style={{
@@ -512,16 +512,34 @@ const PaymentVerification = () => {
                                             </a>
                                         </div>
                                     ) : (
-                                        <img
-                                            src={getFileUrl(selectedOrder.payment_receipt.s3_path)}
-                                            alt="Payment Receipt"
-                                            style={{
-                                                width: '100%',
-                                                maxHeight: '400px',
-                                                objectFit: 'contain',
-                                                backgroundColor: '#f9fafb'
-                                            }}
-                                        />
+                                        (() => {
+                                            const receiptUrl = selectedOrder.payment_receipt?.s3_path;
+                                            // Backend now returns full URLs, but handle both cases
+                                            let imageUrl;
+                                            if (receiptUrl.startsWith('https://') || receiptUrl.startsWith('http://')) {
+                                                imageUrl = receiptUrl;
+                                                console.log('Payment Receipt: Using direct URL:', imageUrl);
+                                            } else {
+                                                imageUrl = getFileUrl(receiptUrl);
+                                                console.log('Payment Receipt: Converted path to URL:', imageUrl);
+                                            }
+                                            return (
+                                                <img
+                                                    src={imageUrl}
+                                                    alt="Payment Receipt"
+                                                    style={{
+                                                        width: '100%',
+                                                        maxHeight: '400px',
+                                                        objectFit: 'contain',
+                                                        backgroundColor: '#f9fafb'
+                                                    }}
+                                                    onError={(e) => {
+                                                        console.error('Failed to load payment receipt image:', imageUrl);
+                                                        e.target.parentElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #6b7280;">Failed to load receipt image</div>';
+                                                    }}
+                                                />
+                                            );
+                                        })()
                                     )}
                                     <div style={{ padding: '0.75rem', backgroundColor: '#f9fafb', fontSize: '0.75rem', color: '#6b7280', borderTop: '1px solid #e5e7eb' }}>
                                         <p style={{ margin: '0.25rem 0' }}>

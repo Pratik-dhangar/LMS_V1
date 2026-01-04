@@ -27,6 +27,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
+def get_public_url(file_path: Optional[str]) -> Optional[str]:
+    """Convert S3 key or local path to public URL"""
+    if not file_path:
+        return None
+    
+    # If it's already a full HTTP URL, return as-is
+    if file_path.startswith("http"):
+        return file_path
+    
+    # If using S3, convert the S3 key to a public URL
+    if settings.USE_S3:
+        try:
+            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
+            public_url = s3_manager.get_public_url(file_path)
+            logger.info(f"Orders: Converted S3 path {file_path} to public URL")
+            return public_url
+        except Exception as e:
+            logger.warning(f"Orders: Error converting S3 URL for {file_path}: {str(e)}", exc_info=True)
+            # Fallback to direct URL construction
+            fallback_url = f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
+            return fallback_url
+    
+    # For local storage, return the path as-is (will be served by static handler)
+    return file_path
+
+
 def _build_order_response(order) -> dict:
     """Helper function to build order response dict"""
     return {
@@ -344,10 +370,13 @@ async def upload_payment_receipt(
             db, order_id, s3_path, receipt.filename, len(contents), file_type, current_user.id
         )
         
+        # Convert S3 path to public URL
+        public_url = get_public_url(payment_receipt.s3_path)
+        
         return {
             "receipt_id": payment_receipt.id,
             "order_id": payment_receipt.order_id,
-            "s3_path": payment_receipt.s3_path,
+            "s3_path": public_url,
             "file_name": payment_receipt.file_name,
             "file_size": payment_receipt.file_size,
             "file_type": payment_receipt.file_type,
@@ -377,6 +406,19 @@ async def get_admin_orders(
     # Build response with user details
     orders_response = []
     for order in orders:
+        # Convert S3 URL to public URL if present
+        payment_receipt_dict = None
+        if order.payment_receipt:
+            payment_receipt_dict = {
+                "id": order.payment_receipt.id,
+                "s3_path": get_public_url(order.payment_receipt.s3_path),
+                "file_name": order.payment_receipt.file_name,
+                "file_type": order.payment_receipt.file_type,
+                "file_size": order.payment_receipt.file_size,
+                "uploaded_at": order.payment_receipt.uploaded_at
+            }
+            logger.info(f"Payment receipt for order {order.order_number}: {payment_receipt_dict['s3_path']}")
+        
         order_dict = {
             "order_id": order.id,
             "order_number": order.order_number,
@@ -404,14 +446,7 @@ async def get_admin_orders(
                 }
                 for item in order.items
             ],
-            "payment_receipt": {
-                "id": order.payment_receipt.id,
-                "s3_path": order.payment_receipt.s3_path,
-                "file_name": order.payment_receipt.file_name,
-                "file_type": order.payment_receipt.file_type,
-                "file_size": order.payment_receipt.file_size,
-                "uploaded_at": order.payment_receipt.uploaded_at
-            } if order.payment_receipt else None,
+            "payment_receipt": payment_receipt_dict,
             "created_at": order.created_at,
             "updated_at": order.updated_at
         }
