@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'guest_session_001'
-down_revision = None  # Update this to your latest migration
+down_revision = 's8t9u0v1a2x3'
 branch_labels = None
 depends_on = None
 
