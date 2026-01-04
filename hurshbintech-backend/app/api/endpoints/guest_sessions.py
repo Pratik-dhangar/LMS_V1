@@ -11,7 +11,7 @@ import logging
 import uuid
 
 from app.db.session import get_db
-from app.models.user_model import Appointment, AppointmentStatus
+from app.models.user_model import Appointment, AppointmentStatus, CoachProfile, User
 from app.models.coach_session_model import CoachAppointmentSession
 from app.schemas.guest_session import (
     GuestSessionAuthRequest,
@@ -40,7 +40,7 @@ async def authenticate_guest_session(
     stmt = (
         select(Appointment)
         .options(
-            joinedload(Appointment.coach).joinedload("user"),
+            joinedload(Appointment.coach).joinedload(CoachProfile.user),
             joinedload(Appointment.appointment_session)
         )
         .where(Appointment.guest_session_token == request.token)

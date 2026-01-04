@@ -44,3 +44,7 @@
 
     -- start
        docker compose -f docker-compose-pwa.yml up -d coturn
+
+12. to clear unused docker images
+    docker builder prune -a -f
+    docker system prune -a -f
