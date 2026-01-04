@@ -89,11 +89,26 @@ const ProductDetail = () => {
                             <div style={{ width: '120px', height: '80px', background: '#f8f9fa', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {product.thumbnail_url || product.image_url ? (
                                     (() => {
-                                        const raw = product.thumbnail_url || product.image_url || '';
-                                        const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
-                                        const src = getFileUrl(normalized) || raw;
+                                        const thumbnail = product.thumbnail_url || product.image_url;
+                                        let src;
+                                        if (thumbnail.startsWith('https://') || thumbnail.startsWith('http://')) {
+                                            // Already a full URL from backend
+                                            src = thumbnail;
+                                        } else {
+                                            // Local path or S3 key, use getFileUrl helper
+                                            const normalized = thumbnail.startsWith('/') ? thumbnail.slice(1) : thumbnail;
+                                            src = getFileUrl(normalized);
+                                        }
                                         return (
-                                            <img src={src} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <img
+                                                src={src}
+                                                alt={product.name}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.innerHTML = '<div style="font-size: 36px">📦</div>';
+                                                }}
+                                            />
                                         );
                                     })()
                                 ) : (

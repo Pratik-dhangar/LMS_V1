@@ -201,7 +201,7 @@ async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSe
 
 
 async def end_session(db: AsyncSession, session_id: str, notes: Optional[str] = None) -> CoachAppointmentSession:
-    """End an active coach session"""
+    """End an active coach session and mark appointment as COMPLETED"""
     session = await get_session_by_id(db, session_id)
     
     if not session:
@@ -215,6 +215,16 @@ async def end_session(db: AsyncSession, session_id: str, notes: Optional[str] = 
     
     if notes:
         session.notes = notes
+    
+    # Update the associated appointment status to COMPLETED
+    if session.appointment_id:
+        from app.models.user_model import AppointmentStatus
+        appointment_result = await db.execute(
+            select(Appointment).where(Appointment.id == session.appointment_id)
+        )
+        appointment = appointment_result.scalar_one_or_none()
+        if appointment:
+            appointment.status = AppointmentStatus.COMPLETED
     
     await db.commit()
     await db.refresh(session)

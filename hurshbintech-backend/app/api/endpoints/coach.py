@@ -533,9 +533,19 @@ async def update_appointment(
     if updated.guest_name and previous_status == "VERIFICATION_PENDING" and new_status == "CONFIRMED":
         logger.info(f"Confirming payment for guest booking {appointment_id}")
         
-        # Send confirmation email to guest
+        # Generate guest session token (valid for 7 days or until session ends)
+        guest_session_token = str(uuid.uuid4())
+        updated.guest_session_token = guest_session_token
+        updated.guest_session_token_expires_at = datetime.utcnow() + timedelta(days=7)
+        await db.commit()
+        await db.refresh(updated)
+        
+        # Build guest session link
+        guest_session_link = f"{settings.FRONTEND_URL}/guest-session/{guest_session_token}"
+        
+        # Send confirmation email to guest WITH session link
         try:
-            await EmailService.send_appointment_confirmed(
+            await EmailService.send_guest_appointment_confirmed_with_session_link(
                 recipient_email=updated.guest_email,
                 recipient_name=updated.guest_name,
                 coach_name=current_coach.user.name if current_coach.user else "Coach",
@@ -543,8 +553,9 @@ async def update_appointment(
                 scheduled_time=updated.scheduled_time,
                 session_type=updated.session_type,
                 appointment_id=updated.id,
+                session_link=guest_session_link,
             )
-            logger.info(f"Confirmation email sent to guest {updated.guest_email}")
+            logger.info(f"Confirmation email with session link sent to guest {updated.guest_email}")
         except Exception as e:
             logger.error(f"Failed to send confirmation email to guest: {str(e)}", exc_info=True)
     

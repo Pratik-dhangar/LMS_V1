@@ -64,6 +64,7 @@ import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssig
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
+import GuestSession from './pages/guest/GuestSession';
 
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
@@ -551,6 +552,9 @@ function AppRoutes() {
         <Route path="/guest-booking/pending" element={<GuestBookingStep3Pending />} />
         <Route path="/guest-payment/:uploadToken" element={<GuestPaymentUpload />} />
         <Route path="/guest-payment/success" element={<GuestPaymentUploadSuccess />} />
+        
+        {/* Guest Session Route - Public, token-based authentication */}
+        <Route path="/guest-session/:token" element={<GuestSession />} />
 
         {/* Public Blog Routes */}
         <Route path="/blogs" element={<BlogList />} />
