@@ -252,6 +252,32 @@ const AppointmentsManager = () => {
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  // Helper to determine if appointment is completed
+  const isAppointmentCompleted = (appointment) => {
+    // Check if status is COMPLETED
+    if (appointment.status?.toUpperCase() === 'COMPLETED') return true;
+    
+    // Don't mark REJECTED or CANCELLED appointments as completed
+    const status = appointment.status?.toUpperCase();
+    if (status === 'REJECTED' || status === 'CANCELLED' || status === 'NO_SHOW') {
+      return false;
+    }
+    
+    // Check if scheduled date has passed
+    const appointmentDateTime = new Date(appointment.scheduled_date);
+    const now = new Date();
+    
+    // Set appointment date to end of day for comparison
+    appointmentDateTime.setHours(23, 59, 59, 999);
+    
+    return now > appointmentDateTime;
+  };
+
+  // Helper to get displayed status
+  const getDisplayedStatus = (appointment) => {
+    return isAppointmentCompleted(appointment) ? 'COMPLETED' : appointment.status?.toUpperCase();
+  };
+
   // Filter appointments based on selected filters
   const filteredAppointments = appointments.filter(apt => {
     // Filter by date
@@ -267,12 +293,21 @@ const AppointmentsManager = () => {
       if (!appointmentTime?.includes(filterTimeNorm)) return false;
     }
 
-    // Filter by status
+    // Filter by status - use displayed status (real-time status)
     if (filterStatus) {
-      if (apt.status?.toUpperCase() !== filterStatus) return false;
+      const displayedStatus = getDisplayedStatus(apt);
+      if (displayedStatus !== filterStatus) return false;
     }
 
     return true;
+  });
+
+  // Sort appointments to show newest first
+  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
+    // Primary sort: by created_at (newest first)
+    const dateA = new Date(a.created_at || a.scheduled_date);
+    const dateB = new Date(b.created_at || b.scheduled_date);
+    return dateB - dateA;
   });
 
   const clearFilters = () => {
@@ -343,7 +378,8 @@ const AppointmentsManager = () => {
             >
               <option value="">All Status</option>
               <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>          
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="COMPLETED">Completed</option>
               <option value="REJECTED">Rejected</option>
               <option value="GUEST_INTENT">Guest Intent</option>
               <option value="VERIFICATION_PENDING">Payment Review</option>
@@ -391,7 +427,7 @@ const AppointmentsManager = () => {
             )}
           </div>
         ) : (
-          filteredAppointments.map(apt => (
+          sortedAppointments.map(apt => (
             <div key={apt.id} className="session-card">
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
@@ -432,16 +468,16 @@ const AppointmentsManager = () => {
                   
                   {/* Status Badge */}
                   <div className="mt-2">
-                    <span className={`status-badge status-${apt.status || 'scheduled'} text-xs bg-gray-300`}>
-                      {apt.status || 'scheduled'}
+                    <span className={`status-badge status-${isAppointmentCompleted(apt) ? 'completed' : (apt.status || 'scheduled')} text-xs bg-gray-300`}>
+                      {isAppointmentCompleted(apt) ? 'COMPLETED' : (apt.status || 'scheduled')}
                     </span>
                   </div>
                 </div>
                 
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-2">
-                  {/* Start Session Button - Only for CONFIRMED appointments */}
-                  {apt.status?.toUpperCase() === 'CONFIRMED' && (
+                  {/* Start Session Button - Only for CONFIRMED appointments that are not completed */}
+                  {apt.status?.toUpperCase() === 'CONFIRMED' && !isAppointmentCompleted(apt) && (
                     <button
                       onClick={() => handleStartSession(apt)}
                       disabled={!isSessionStartable(apt) || updating}
@@ -620,15 +656,15 @@ const AppointmentsManager = () => {
               {/* Status */}
               <div className="detail-row">
                 <label className="detail-label">Status</label>
-                <span className={`status-badge status-${selectedAppointment.status || 'scheduled'}`}>
-                  {selectedAppointment.status || 'scheduled'}
+                <span className={`status-badge status-${isAppointmentCompleted(selectedAppointment) ? 'completed' : (selectedAppointment.status || 'scheduled')}`}>
+                  {isAppointmentCompleted(selectedAppointment) ? 'COMPLETED' : (selectedAppointment.status || 'scheduled')}
                 </span>
               </div>
             </div>
 
             {/* Modal Footer */}
             <div className="modal-footer">
-              {(selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
+              {!isAppointmentCompleted(selectedAppointment) && (selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
                 <>
                   <button 
                     onClick={handleOpenRejectModal}
@@ -648,7 +684,7 @@ const AppointmentsManager = () => {
                   </button>
                 </>
               )}
-              {selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && selectedAppointment.status !== 'GUEST_INTENT' && selectedAppointment.status !== 'VERIFICATION_PENDING' && (
+              {(isAppointmentCompleted(selectedAppointment) || (selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && selectedAppointment.status !== 'GUEST_INTENT' && selectedAppointment.status !== 'VERIFICATION_PENDING')) && (
                 <button onClick={closeModal} className="btn-secondary">
                   Close
                 </button>

@@ -478,6 +478,10 @@ class Appointment(Base):
     upload_token = Column(String(100), nullable=True, unique=True, index=True)  # Secure upload link token
     upload_token_expires_at = Column(DateTime, nullable=True)  # Token expiry time
     
+    # Security token for guest session access (UUID, valid until session ends)
+    guest_session_token = Column(String(100), nullable=True, unique=True, index=True)  # Secure session join link token for guests
+    guest_session_token_expires_at = Column(DateTime, nullable=True)  # Token expiry time
+    
     # Appointment Details
     scheduled_date = Column(Date, nullable=False)
     scheduled_time = Column(String(20), nullable=False)  # e.g., "10am", "1pm", "3pm", "5pm"

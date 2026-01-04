@@ -39,6 +39,32 @@ const MyAppointments = () => {
     }
   };
 
+  // Helper to determine if appointment is completed
+  const isAppointmentCompleted = (appointment) => {
+    // Check if status is COMPLETED
+    if (appointment.status?.toUpperCase() === 'COMPLETED') return true;
+    
+    // Don't mark REJECTED, CANCELLED, or NO_SHOW appointments as completed
+    const status = appointment.status?.toUpperCase();
+    if (status === 'REJECTED' || status === 'CANCELLED' || status === 'NO_SHOW') {
+      return false;
+    }
+    
+    // Check if scheduled date has passed
+    const appointmentDateTime = new Date(appointment.scheduled_date);
+    const now = new Date();
+    
+    // Set appointment date to end of day for comparison
+    appointmentDateTime.setHours(23, 59, 59, 999);
+    
+    return now > appointmentDateTime;
+  };
+
+  // Helper to get displayed status
+  const getDisplayedStatus = (appointment) => {
+    return isAppointmentCompleted(appointment) ? 'COMPLETED' : appointment.status?.toUpperCase();
+  };
+
   const getStatusColor = (status) => {
     const normalizedStatus = status?.toUpperCase();
     const statusColors = {
@@ -135,12 +161,21 @@ const MyAppointments = () => {
       if (!appointmentTime?.includes(filterTimeNorm)) return false;
     }
 
-    // Filter by status
+    // Filter by status - use displayed status (real-time status)
     if (filterStatus) {
-      if (apt.status?.toUpperCase() !== filterStatus) return false;
+      const displayedStatus = getDisplayedStatus(apt);
+      if (displayedStatus !== filterStatus) return false;
     }
 
     return true;
+  });
+
+  // Sort appointments to show newest first
+  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
+    // Primary sort: by created_at (newest first)
+    const dateA = new Date(a.created_at || a.scheduled_date);
+    const dateB = new Date(b.created_at || b.scheduled_date);
+    return dateB - dateA;
   });
 
   const clearFilters = () => {
@@ -239,14 +274,14 @@ const MyAppointments = () => {
 
             {hasActiveFilters && (
               <div className="filter-results-info">
-                Showing {filteredAppointments.length} of {appointments.length} appointments
+                Showing {sortedAppointments.length} of {appointments.length} appointments
               </div>
             )}
           </div>
 
           {/* Appointments Grid - 2 Columns */}
           <div className="appointments-grid">
-            {filteredAppointments.length === 0 ? (
+            {sortedAppointments.length === 0 ? (
               <div className="empty-state text-center py-12 col-span-2">
                 <Calendar className="empty-state-icon mx-auto mb-4" style={{ width: '64px', height: '64px', color: '#9ca3af' }} />
                 <p className="empty-state-title text-lg font-semibold mb-2">
@@ -273,12 +308,12 @@ const MyAppointments = () => {
                 )}
               </div>
             ) : (
-              filteredAppointments.map(apt => (
+              sortedAppointments.map(apt => (
                 <div key={apt.id} className="appointment-card">
                   {/* Card Header with Status */}
                   <div className="appointment-card-header">
-                    <span className={`appointment-status-badge ${getStatusColor(apt.status)}`}>
-                      {formatStatus(apt.status)}
+                    <span className={`appointment-status-badge ${getStatusColor(isAppointmentCompleted(apt) ? 'COMPLETED' : apt.status)}`}>
+                      {formatStatus(isAppointmentCompleted(apt) ? 'COMPLETED' : apt.status)}
                     </span>
                     <span className="appointment-id">
                       #{apt.id}
@@ -371,8 +406,8 @@ const MyAppointments = () => {
                     </p>
                   </div>
 
-                  {/* Join Session Button - Only for CONFIRMED appointments */}
-                  {apt.status?.toUpperCase() === 'CONFIRMED' && (
+                  {/* Join Session Button - Only for CONFIRMED appointments that are not completed */}
+                  {apt.status?.toUpperCase() === 'CONFIRMED' && !isAppointmentCompleted(apt) && (
                     <div className="mt-4 pt-3 border-t border-gray-200">
                       <button
                         onClick={() => handleJoinSession(apt)}
