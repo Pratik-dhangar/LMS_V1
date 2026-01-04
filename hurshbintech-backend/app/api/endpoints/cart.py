@@ -1,5 +1,7 @@
 """API endpoints for E-Commerce Cart
 """
+import logging
+from typing import Optional
 from uuid import UUID
 from decimal import Decimal
 
@@ -7,13 +9,44 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db
+from app.core.config import settings
 from app.crud import ecommerce_crud, product_crud
 from app.models.user_model import User
 from app.schemas.ecommerce import (
     CartItemCreate, CartItemUpdate, CartItemResponse, CartResponse
 )
+from app.utils.s3_utils import S3Manager
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cart", tags=["Cart"])
+
+
+def get_public_url(file_path: Optional[str]) -> Optional[str]:
+    """Convert S3 key or local path to public URL"""
+    if not file_path:
+        return None
+    
+    # If it's already a full HTTP URL, return as-is
+    if file_path.startswith("http"):
+        return file_path
+    
+    # If using S3, convert the S3 key to a public URL
+    if settings.USE_S3:
+        try:
+            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
+            public_url = s3_manager.get_public_url(file_path)
+            logger.info(f"Converted S3 path {file_path} to public URL: {public_url}")
+            return public_url
+        except Exception as e:
+            logger.warning(f"Error converting S3 URL for {file_path}: {str(e)}", exc_info=True)
+            # Fallback to direct URL construction
+            fallback_url = f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
+            logger.info(f"Using fallback URL: {fallback_url}")
+            return fallback_url
+    
+    # For local storage, return the path as-is (will be served by static handler)
+    logger.info(f"Using local storage path: {file_path}")
+    return file_path
 
 
 def calculate_cart_totals(items):
@@ -56,6 +89,12 @@ async def get_cart(
     items_response = []
     for item in cart.items:
         product = item.product
+        # Convert S3 URLs to public URLs
+        image_url = get_public_url(product.image_url) if product and product.image_url else None
+        thumbnail_url = get_public_url(product.thumbnail_url) if product and product.thumbnail_url else None
+        
+        logger.info(f"Cart item {item.id}: product={product.name if product else 'None'}, thumbnail={thumbnail_url}, image={image_url}")
+        
         items_response.append({
             "id": item.id,
             "product_id": item.product_id,
@@ -64,13 +103,13 @@ async def get_cart(
             "unit_price": item.unit_price,
             "discount_percentage": item.discount_percentage,
             "line_total": item.line_total,
-            "image_url": product.image_url if product else None,
-            "thumbnail_url": product.thumbnail_url if product else None,
+            "image_url": image_url,
+            "thumbnail_url": thumbnail_url,
             "product": {
                 "id": str(product.id),
                 "name": product.name,
-                "image_url": product.image_url,
-                "thumbnail_url": product.thumbnail_url
+                "image_url": image_url,
+                "thumbnail_url": thumbnail_url
             } if product else None
         })
     
