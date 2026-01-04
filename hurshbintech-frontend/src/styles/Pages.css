@@ -713,7 +713,7 @@ body.modal-open {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #26395f;
 }
 
 .modal-title {
@@ -722,7 +722,7 @@ body.modal-open {
     color: #1f2937;
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 2px solid #e5e7eb;
+   
 }
 
 .modal-close {
@@ -745,9 +745,7 @@ body.modal-open {
     color: #1f2937;
 }
 
-.modal-body {
-    margin-bottom: 1.5rem;
-}
+
 
 .modal-footer {
     display: flex;
@@ -1559,7 +1557,7 @@ body.modal-open {
     border-bottom: 1px solid #e5e7eb;
     background: white;
     border-radius: 0.5rem 0.5rem 0 0;
-    position: sticky;
+    /* position: sticky; */
     top: 0;
     z-index: 10;
     display: flex;
@@ -1634,7 +1632,7 @@ body.modal-open {
     padding: 1.5rem;
     background: white;
     overflow-y: auto;
-    max-height: calc(100vh - 16rem);
+    margin-bottom: 1.5rem;
 }
 
 .modal-footer {

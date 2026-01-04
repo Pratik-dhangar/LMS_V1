@@ -27,3 +27,10 @@ README.md
 uploads/*
 !uploads/.gitkeep
 alembic/versions/__pycache__
+*.log
+storage/uploads/
+storage/temp/
+storage/cache/
+docs/
+tests/
+scripts/

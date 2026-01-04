@@ -17,6 +17,8 @@ import RegisterCoach from './pages/admin/RegisterCoach';
 import EditCoach from './pages/admin/EditCoach';
 import ManageLearningGoals from './pages/admin/ManageLearningGoals';
 import ManageLearningContent from './pages/admin/ManageLearningContent';
+import ManageLearningMaterials from './pages/admin/ManageLearningMaterials';
+import PaymentVerification from './pages/admin/PaymentVerification';
 import ViewLearners from './pages/admin/ViewLearners';
 import ViewTrainers from './pages/admin/ViewTrainers';
 import ManageCoaches from './pages/admin/ManageCoaches';
@@ -51,6 +53,7 @@ import TrainerSession from './pages/trainer/TrainerSession';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
+import CoachSession from './pages/coach/CoachSession';
 
 // Learner Pages
 import LearnerDashboard from './pages/learner/Dashboard';
@@ -58,6 +61,9 @@ import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
+
+// Client Pages
+import ClientSession from './pages/client/ClientSession';
 
 // Common Pages
 import BookAppointment from './pages/common/BookAppointment';
@@ -76,6 +82,12 @@ import GuestBookingStep3Pending from './pages/common/GuestBookingStep3Pending';
 import GuestPaymentUpload from './pages/common/GuestPaymentUpload';
 import GuestPaymentUploadSuccess from './pages/common/GuestPaymentUploadSuccess';
 
+// Store Pages (E-commerce)
+import StoreCatalog from './pages/store/StoreCatalog';
+import ProductDetail from './pages/store/ProductDetail';
+import Cart from './pages/store/Cart';
+import Checkout from './pages/store/Checkout';
+import OrderHistory from './pages/store/OrderHistory';
 
 
 // Components
@@ -286,6 +298,22 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/manage-learning-materials"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageLearningMaterials />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payment-verification"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <PaymentVerification />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Head Routes */}
         <Route
@@ -430,6 +458,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/coach/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['coach']}>
+              <CoachSession />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Learner Routes */}
         <Route
@@ -473,6 +509,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/client/session/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+              <ClientSession />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/learner/learning-programs"
           element={
             <ProtectedRoute roles={['learner']}>
@@ -507,6 +551,25 @@ function AppRoutes() {
         {/* Public Vlog Routes */}
         <Route path="/vlogs" element={<VlogList />} />
         <Route path="/vlogs/:id" element={<VlogDetail />} />
+
+        {/* Store/E-commerce Routes */}
+        <Route path="/store" element={<StoreCatalog />} />
+        <Route path="/store/product/:productId" element={<ProductDetail />} />
+        <Route path="/store/cart" element={
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+            <Cart />
+          </ProtectedRoute>
+        } />
+        <Route path="/store/checkout" element={
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+            <Checkout />
+          </ProtectedRoute>
+        } />
+        <Route path="/store/orders" element={
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+            <OrderHistory />
+          </ProtectedRoute>
+        } />
 
         {/* 404 - Redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
