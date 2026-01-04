@@ -1,5 +1,6 @@
 """API endpoints for E-Commerce Store (Public Catalog Browsing)
 """
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from app.schemas.product import (
 )
 from app.utils.s3_utils import S3Manager
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/store", tags=["Store - Public"])
 
 
@@ -30,10 +32,14 @@ def get_public_url(file_path: Optional[str]) -> Optional[str]:
     if settings.USE_S3:
         try:
             s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
-            return s3_manager.get_public_url(file_path)
+            public_url = s3_manager.get_public_url(file_path)
+            logger.info(f"Store: Converted S3 path {file_path} to public URL")
+            return public_url
         except Exception as e:
+            logger.warning(f"Store: Error converting S3 URL for {file_path}: {str(e)}", exc_info=True)
             # Fallback to direct URL construction
-            return f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
+            fallback_url = f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
+            return fallback_url
     
     # For local storage, return the path as-is (will be served by static handler)
     return file_path

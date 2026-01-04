@@ -142,7 +142,10 @@ const Cart = () => {
                                             >
                                                 {(() => {
                                                     const thumbnail = item.product?.thumbnail_url || item.product?.image_url;
-                                                    if (!thumbnail) return <div style={{ fontSize: '48px' }}>📦</div>;
+                                                    if (!thumbnail) {
+                                                        console.log(`Cart item ${item.product?.name}: No thumbnail/image URL`);
+                                                        return <div style={{ fontSize: '48px' }}>📦</div>;
+                                                    }
 
                                                     // Handle various URL formats:
                                                     // 1. Already a full URL from backend (https://...)
@@ -152,10 +155,12 @@ const Cart = () => {
                                                     if (thumbnail.startsWith('https://') || thumbnail.startsWith('http://')) {
                                                         // Already a full URL from backend
                                                         src = thumbnail;
+                                                        console.log(`Cart item ${item.product?.name}: Using direct URL: ${src}`);
                                                     } else {
                                                         // Local path or S3 key, use getFileUrl helper
                                                         const normalized = thumbnail.startsWith('/') ? thumbnail.slice(1) : thumbnail;
                                                         src = getFileUrl(normalized);
+                                                        console.log(`Cart item ${item.product?.name}: Converted path "${thumbnail}" to URL: ${src}`);
                                                     }
 
                                                     return (
@@ -168,6 +173,7 @@ const Cart = () => {
                                                                 objectFit: 'cover'
                                                             }}
                                                             onError={(e) => {
+                                                                console.error(`Failed to load image for ${item.product?.name}: ${src}`);
                                                                 e.target.src = null;
                                                                 e.target.parentElement.innerHTML = '<div style="font-size: 48px">📦</div>';
                                                             }}
