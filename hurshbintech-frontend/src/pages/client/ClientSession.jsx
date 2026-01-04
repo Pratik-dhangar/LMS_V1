@@ -91,7 +91,6 @@ const ClientSession = () => {
   const [isFrozen, setIsFrozen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const headerTimeoutRef = useRef(null);
-  const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
   const [erasePenTrigger, setErasePenTrigger] = useState(0);
   const [redrawCanvasTrigger, setRedrawCanvasTrigger] = useState(0);
 
@@ -112,7 +111,6 @@ const ClientSession = () => {
   const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
   const [stopwatchIsRunning, setStopwatchIsRunning] = useState(false);
   const mediaControl = useMediaControl();
-  const mediaWasVisibleRef = useRef(false);
 
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -286,6 +284,15 @@ const ClientSession = () => {
         setErasePenTrigger(prev => prev + 1);
       };
 
+      // Listen for clear canvas command from coach
+      wbService.onClearCanvas = () => {
+        console.log('[ClientSession] Received clear canvas command from coach');
+        setCanvasItems([]);
+        setBuckets([]);
+        setErasePenTrigger(prev => prev + 1);
+        setRedrawCanvasTrigger(prev => prev + 1);
+      };
+
       wbService.onFreeze = (frozen) => {
         setIsFrozen(frozen);
       };
@@ -391,86 +398,6 @@ const ClientSession = () => {
     
     cleanup();
     navigate('/my-appointments');
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
-  };
-
-  const handleToolClick = (toolName) => {
-    if (toolsService) {
-      toolsService.handleToolClick(toolName, tool, setTool);
-    }
-  };
-
-  const handleItemSelection = (itemIds) => {
-    setSelectedItemIds(itemIds);
-    if (whiteboardService) {
-      whiteboardService.sendItemSelected(itemIds);
-    }
-  };
-
-  const audioContextRef = useRef(null);
-  const getAudioContext = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    return audioContextRef.current;
-  };
-
-  const playPopSound = (animationType) => {
-    try {
-      const ctx = getAudioContext();
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      switch (animationType) {
-        case 'bubble':
-          osc.frequency.setValueAtTime(800, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
-          gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.1);
-          break;
-        case 'balloon':
-          osc.frequency.setValueAtTime(600, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
-          gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.15);
-          break;
-        case 'smiley':
-          osc.frequency.setValueAtTime(700, ctx.currentTime);
-          osc.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.05);
-          gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.08);
-          break;
-        case 'star':
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(1200, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.12);
-          gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.12);
-          break;
-        default:
-          osc.frequency.setValueAtTime(500, ctx.currentTime);
-          gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.1);
-      }
-    } catch (error) {
-      console.error('[ClientSession] Error playing pop sound:', error);
-    }
   };
 
   const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
@@ -682,7 +609,6 @@ const ClientSession = () => {
                 waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
                 onAnimationPop={handleAnimationPop}
-                clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 buckets={buckets}

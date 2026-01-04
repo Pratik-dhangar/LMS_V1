@@ -26,6 +26,7 @@ from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
 from app.api.endpoints.coach import router as coach_router
 from app.api.endpoints.coach_appointment_sessions import router as coach_sessions_router
+from app.api.endpoints.guest_sessions import router as guest_sessions_router
 from app.api.endpoints.head import router as head_endpoint_router
 from app.api.endpoints.head_session_notes import router as head_session_notes_router
 from app.api.endpoints.health import router as health_router
@@ -126,6 +127,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.include_router(health_router, prefix="/api")  # Health check endpoint
 app.include_router(auth_router, prefix="/api")
 app.include_router(booking_router, prefix="/api/booking")
+app.include_router(guest_sessions_router, prefix="/api")  # Public guest session endpoints
 app.include_router(admin_router, prefix="/api")
 app.include_router(head_endpoint_router, prefix="/api")
 app.include_router(head_session_notes_router, prefix="/api")

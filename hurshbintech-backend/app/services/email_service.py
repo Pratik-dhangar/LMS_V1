@@ -292,6 +292,169 @@ class EmailService:
             email_type="appointment_confirmed",
         )
 
+    # Guest Appointment Confirmation with Session Link
+    @staticmethod
+    async def send_guest_appointment_confirmed_with_session_link(
+        recipient_email: str,
+        recipient_name: str,
+        coach_name: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        session_type: Optional[str] = None,
+        appointment_id: int = None,
+        session_link: str = None,
+    ) -> bool:
+        """Send appointment confirmation email to guest with session join link"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+
+        subject = "Appointment Confirmed - Join Your Session"
+        
+        session_type_display = session_type.replace('_', ' ').title() if session_type else "General Session"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .session-link-box {{
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin: 25px 0;
+                        text-align: center;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 14px 32px;
+                        background-color: #10b981;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        font-size: 16px;
+                        margin-top: 10px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    h2 {{
+                        color: #2c3e50;
+                        margin: 0;
+                    }}
+                    p {{
+                        margin: 10px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">✓ Appointment Confirmed!</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Your session is ready</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        <p>Great news! Your appointment has been confirmed and you're all set for your session with <strong>{coach_name}</strong>.</p>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #ddd;">
+                            <thead>
+                                <tr style="background-color: white; color: black;">
+                                    <th style="padding: 12px; text-align: left; border: 1px solid #ddd;" colspan="2">Appointment Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Coach:</td>
+                                    <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{coach_name}</td>
+                                </tr>
+                                <tr style="background-color: #f9f9f9;">
+                                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Date:</td>
+                                    <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{scheduled_date}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Time:</td>
+                                    <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{scheduled_time}</td>
+                                </tr>
+                                <tr style="background-color: #f9f9f9;">
+                                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Session Type:</td>
+                                    <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{session_type_display}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Reference ID:</td>
+                                    <td style="padding: 12px; border: 1px solid #ddd; color: #555;"><span style="font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">#{appointment_id}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="session-link-box">
+                            <h3 style="color: white; margin: 0 0 10px 0; font-size: 18px;">🎥 Join Your Video Session</h3>
+                            <p style="color: rgba(255,255,255,0.9); margin: 0 0 15px 0; font-size: 14px;">Click the button below on your scheduled date and time to join your session</p>
+                            <a href="{session_link}" class="btn">Join Session</a>
+                        </div>
+                        
+                        <p><strong>⚠️ Important:</strong></p>
+                        <ul style="color: #555;">
+                            <li><strong>Save this email!</strong> You'll need the link above to join your session</li>
+                            <li>Join the session a few minutes before your scheduled time</li>
+                            <li>Make sure you have a stable internet connection</li>
+                            <li>Test your camera and microphone before joining</li>
+                        </ul>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            <strong>Note:</strong> This session link is unique and secure. Do not share it with others.
+                            If you need to reschedule or have questions, please contact <strong>{coach_name}</strong>.
+                        </p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="guest_appointment_confirmed_with_link",
+        )
+
 
     # Appointment Rejection email (to user/client)
     @staticmethod

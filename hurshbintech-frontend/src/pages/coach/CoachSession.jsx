@@ -516,12 +516,20 @@ const CoachSession = () => {
   };
 
   const eraseAllPen = () => {
+    // Clear local state
+    setCanvasItems([]);
+    setBuckets([]);
+    
+    // Trigger local clear and redraw
     setErasePenTrigger(prev => prev + 1);
+    setClearCanvasTrigger(prev => prev + 1);
     setEraseAllActive(true);
     
-    // Clear both coach and client whiteboards
+    // Send clear command to client
     if (whiteboardService) {
-      whiteboardService.erasePen();
+      whiteboardService.send('clear_canvas', {
+        timestamp: Date.now()
+      });
     }
 
     setTimeout(() => setEraseAllActive(false), 300);
@@ -722,7 +730,7 @@ const CoachSession = () => {
       {/* Main layout */}
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Content */}
-        <div className="session-left-sidebar">
+        <div className="">
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-lg font-bold mb-3">Learning Content</h3>
             <p className="text-sm text-gray-600 mb-3">Search and add learning materials</p>
@@ -736,9 +744,9 @@ const CoachSession = () => {
           </div>
 
           {/* Message Box - Below Learning Content */}
-          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
             <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
-            <div className="overflow-y-auto mb-2" style={{ maxHeight: 'clamp(80px, 20vw, 120px)' }}>
+            <div className="overflow-y-auto mb-2 flex-1" style={{ maxHeight: '150px', minHeight: '80px' }}>
               {messages.map((msg, idx) => (
                 <div key={idx} className={`message-bubble ${msg.sender === 'You' ? 'message-bubble-sent' : 'message-bubble-received'}`}>
                   <strong>{msg.sender}:</strong> {msg.text}
@@ -888,18 +896,34 @@ const CoachSession = () => {
             {/* Pen Color Picker */}
             <div className="mt-3">
               <label className="text-xs font-semibold text-slate-700 block mb-1">Pen Color:</label>
+              {/* Color Palette */}
+              <div className="grid grid-cols-5 gap-1 mb-2">
+                {['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB'].map((paletteColor) => (
+                  <button
+                    key={paletteColor}
+                    onClick={() => setColor(paletteColor)}
+                    disabled={tool === 'eraser'}
+                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${
+                      color === paletteColor ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: paletteColor }}
+                    title={paletteColor}
+                  />
+                ))}
+              </div>
+              {/* Custom Color Picker */}
               <input
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 disabled={tool === 'eraser'}
-                className="w-full h-10 rounded cursor-pointer border border-gray-300"
-                title="Choose Pen Color"
+                className="w-full h-8 rounded cursor-pointer border border-gray-300"
+                title="Choose Custom Color"
               />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
+          {/* <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-sm font-bold mb-2">Client Tools</h3>
             <div className="space-y-2">
               <label className="flex items-center">
@@ -936,7 +960,7 @@ const CoachSession = () => {
                 {isFrozen ? 'Unfreeze' : 'Freeze'} Client
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
