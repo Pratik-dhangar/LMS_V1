@@ -537,6 +537,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/learner/learning-material"
+          element={
+            <ProtectedRoute allowedRoles={["learner"]}>
+              <StoreCatalog />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Guest Booking Routes - Public, no authentication required */}
         <Route path="/guest-booking" element={<GuestBookingStep1 />} />
