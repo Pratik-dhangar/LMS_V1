@@ -47,6 +47,8 @@ class CartItemResponse(BaseModel):
     discount_percentage: Decimal
     line_total: float
     image_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    product: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -106,6 +108,7 @@ class OrderResponse(BaseModel):
     delivery_pincode: Optional[str] = None
     rejection_reason: Optional[str] = None
     items: List[OrderItemResponse]
+    payment_receipt: Optional[dict] = None  # Payment receipt details
     created_at: datetime
     updated_at: datetime
 
@@ -171,12 +174,13 @@ class OrderApprove(BaseModel):
 
 
 class OrderReject(BaseModel):
-    reason: str = Field(..., min_length=10, max_length=500)
+    reason: str = Field(..., max_length=500)
 
 
 class OrderApprovalResponse(BaseModel):
     message: str
     order: OrderResponse
+    invoice: Optional[dict] = None  # Invoice details (optional, may be None if S3 unavailable)
 
 
 # Audit Log Schemas

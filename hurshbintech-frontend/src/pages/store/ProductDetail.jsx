@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import storeService from '../../api/services/ecommerce/storeService';
 import cartService from '../../api/services/ecommerce/cartService';
 import { toast } from 'react-toastify';
+import { getFileUrl } from '../../utils/fileUrlBuilder';
 
 const ProductDetail = () => {
     const { productId } = useParams();
@@ -71,34 +72,37 @@ const ProductDetail = () => {
                     {' > '}
                     <span>{product.name}</span>
                 </div>
-
                 <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
                     {/* Product Images & Description */}
                     <div style={{ flex: 2 }}>
+                        {/* Header with thumbnail and title */}
                         <div style={{
                             background: 'white',
                             borderRadius: '8px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            padding: '40px',
-                            textAlign: 'center'
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                            padding: '12px 16px',
+                            marginBottom: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
                         }}>
-                            {product.image_url ? (
-                                <img
-                                    src={product.image_url}
-                                    alt={product.name}
-                                    style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '400px',
-                                        objectFit: 'contain',
-                                        marginBottom: '15px'
-                                    }}
-                                />
-                            ) : (
-                                <>
-                                    <div style={{ fontSize: '96px', marginBottom: '15px' }}>📦</div>
-                                    <div style={{ fontSize: '13px', color: '#7f8c8d' }}>{product.name}</div>
-                                </>
-                            )}
+                            <div style={{ width: '120px', height: '80px', background: '#f8f9fa', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {product.thumbnail_url || product.image_url ? (
+                                    (() => {
+                                        const raw = product.thumbnail_url || product.image_url || '';
+                                        const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
+                                        const src = getFileUrl(normalized) || raw;
+                                        return (
+                                            <img src={src} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        );
+                                    })()
+                                ) : (
+                                    <div style={{ fontSize: '36px' }}>📦</div>
+                                )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>{product.name}</h2>
+                            </div>
                         </div>
 
                         {/* Product Description */}
@@ -113,7 +117,7 @@ const ProductDetail = () => {
                                 Product Description
                             </h3>
                             <p style={{ lineHeight: '1.8', color: '#555', margin: '10px 0', fontSize: '14px' }}>
-                                {product.description || 'No description available.'}
+                                {(product.description && product.description.toString().trim()) ? product.description : 'No description available.'}
                             </p>
                             {product.features && product.features.length > 0 && (
                                 <ul style={{ lineHeight: '1.8', color: '#555', marginLeft: '20px', fontSize: '14px', marginTop: '15px' }}>

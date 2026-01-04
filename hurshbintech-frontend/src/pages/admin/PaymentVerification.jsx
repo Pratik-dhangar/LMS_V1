@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axios';
 import { toast } from 'react-toastify';
-import { CheckCircle, XCircle, Clock, Eye, AlertCircle, FileUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, AlertCircle, FileUp, TrendingUp } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import { getFileUrl } from '../../utils/fileUrlBuilder';
 
 const PaymentVerification = () => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const PaymentVerification = () => {
     const [showDetails, setShowDetails] = useState(false);
     const [approving, setApproving] = useState(false);
     const [rejecting, setRejecting] = useState(false);
+    const [delivering, setDelivering] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
 
     useEffect(() => {
@@ -25,7 +27,10 @@ const PaymentVerification = () => {
         try {
             setLoading(true);
             const response = await axiosInstance.get(`/orders/admin/orders`, {
-                params: { status: filter }
+                params: {
+                    status: filter,
+                    _t: Date.now() // Cache buster
+                }
             });
             setOrders(response.data.orders || []);
         } catch (error) {
@@ -40,14 +45,37 @@ const PaymentVerification = () => {
     const handleApprovePayment = async (orderId) => {
         try {
             setApproving(true);
-            await axiosInstance.post(`/orders/admin/orders/${orderId}/approve`, {});
+            // Use a longer timeout for approve since backend may generate invoice / upload to S3
+            await axiosInstance.post(`/orders/admin/orders/${orderId}/approve`, {}, { timeout: 30000 });
             toast.success('Payment approved successfully!');
-            loadPendingOrders();
+            await loadPendingOrders();
             setSelectedOrder(null);
             setShowDetails(false);
         } catch (error) {
             console.error('Error approving payment:', error);
-            toast.error(error.response?.data?.detail || 'Failed to approve payment');
+            // If request timed out, re-check order status - server may have processed it
+            const isTimeout = error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'));
+            if (isTimeout) {
+                try {
+                    // Re-fetch orders directly and check this order's status
+                    const checkResp = await axiosInstance.get(`/orders/admin/orders`, { params: { status: filter, _t: Date.now() } });
+                    const latest = checkResp.data.orders || [];
+                    const updatedOrder = latest.find(o => o.order_id === orderId);
+                    if (updatedOrder && updatedOrder.status === 'PAYMENT_APPROVED') {
+                        toast.success('Payment approved (confirmed after timeout)');
+                        await loadPendingOrders();
+                        setSelectedOrder(null);
+                        setShowDetails(false);
+                    } else {
+                        toast.error('Approve request timed out. Please try again.');
+                    }
+                } catch (e) {
+                    console.error('Error checking order status after timeout:', e);
+                    toast.error('Approve request timed out. Please try again.');
+                }
+            } else {
+                toast.error(error.response?.data?.detail || 'Failed to approve payment');
+            }
         } finally {
             setApproving(false);
         }
@@ -77,11 +105,28 @@ const PaymentVerification = () => {
         }
     };
 
+    const handleMarkDelivered = async (orderId) => {
+        try {
+            setDelivering(true);
+            await axiosInstance.post(`/orders/admin/orders/${orderId}/mark-delivered`, {}, { timeout: 30000 });
+            toast.success('Order marked as delivered and email sent successfully!');
+            await loadPendingOrders();
+            setSelectedOrder(null);
+            setShowDetails(false);
+        } catch (error) {
+            console.error('Error marking order as delivered:', error);
+            toast.error(error.response?.data?.detail || 'Failed to mark order as delivered');
+        } finally {
+            setDelivering(false);
+        }
+    };
+
     const getStatusBadge = (status) => {
         const statusMap = {
             'PAYMENT_UPLOADED': { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
             'PAYMENT_APPROVED': { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Approved' },
-            'PAYMENT_REJECTED': { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' }
+            'PAYMENT_REJECTED': { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' },
+            'DELIVERED': { color: 'bg-blue-100 text-blue-800', icon: TrendingUp, label: 'Delivered' }
         };
         const config = statusMap[status] || statusMap['PAYMENT_UPLOADED'];
         const Icon = config.icon;
@@ -121,7 +166,7 @@ const PaymentVerification = () => {
 
                 {/* Filters */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-                    {['PAYMENT_UPLOADED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED'].map(status => (
+                    {['PAYMENT_UPLOADED', 'PAYMENT_APPROVED', 'DELIVERED', 'PAYMENT_REJECTED'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -138,6 +183,7 @@ const PaymentVerification = () => {
                         >
                             {status === 'PAYMENT_UPLOADED' && 'Pending'}
                             {status === 'PAYMENT_APPROVED' && 'Approved'}
+                            {status === 'DELIVERED' && 'Delivered'}
                             {status === 'PAYMENT_REJECTED' && 'Rejected'}
                         </button>
                     ))}
@@ -261,6 +307,33 @@ const PaymentVerification = () => {
                                         <Eye size={18} />
                                         View Details
                                     </button>
+                                    {order.status === 'PAYMENT_APPROVED' && (
+                                        <button
+                                            onClick={() => handleMarkDelivered(order.order_id)}
+                                            disabled={delivering}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.75rem',
+                                                backgroundColor: '#0ea5e9',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '0.375rem',
+                                                cursor: delivering ? 'not-allowed' : 'pointer',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.5rem',
+                                                opacity: delivering ? 0.7 : 1,
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                            onMouseEnter={(e) => !delivering && (e.target.style.backgroundColor = '#0284c7')}
+                                            onMouseLeave={(e) => !delivering && (e.target.style.backgroundColor = '#0ea5e9')}
+                                        >
+                                            <TrendingUp size={18} />
+                                            {delivering ? 'Delivering...' : 'Delivered'}
+                                        </button>
+                                    )}
                                     {order.status === 'PAYMENT_UPLOADED' && (
                                         <>
                                             <button
@@ -407,11 +480,84 @@ const PaymentVerification = () => {
                             </div>
                         </div>
 
+                        {/* Payment Receipt Preview */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontWeight: 'bold', marginBottom: '0.75rem', color: '#374151' }}>Payment Receipt</h3>
+                            {selectedOrder.payment_receipt ? (
+                                <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.375rem', overflow: 'hidden' }}>
+                                    {selectedOrder.payment_receipt.file_type?.toLowerCase() === 'pdf' ? (
+                                        <div style={{ backgroundColor: '#f9fafb', padding: '1rem', textAlign: 'center' }}>
+                                            <FileUp size={32} style={{ marginBottom: '0.5rem', color: '#6b7280' }} />
+                                            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                                                PDF Document
+                                            </p>
+                                            <p style={{ color: '#374151', fontWeight: 'bold', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
+                                                {selectedOrder.payment_receipt.file_name}
+                                            </p>
+                                            <a
+                                                href={getFileUrl(selectedOrder.payment_receipt.s3_path)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'inline-block',
+                                                    padding: '0.5rem 1rem',
+                                                    backgroundColor: '#3b82f6',
+                                                    color: 'white',
+                                                    textDecoration: 'none',
+                                                    borderRadius: '0.375rem',
+                                                    fontSize: '0.875rem'
+                                                }}
+                                            >
+                                                Download PDF
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={getFileUrl(selectedOrder.payment_receipt.s3_path)}
+                                            alt="Payment Receipt"
+                                            style={{
+                                                width: '100%',
+                                                maxHeight: '400px',
+                                                objectFit: 'contain',
+                                                backgroundColor: '#f9fafb'
+                                            }}
+                                        />
+                                    )}
+                                    <div style={{ padding: '0.75rem', backgroundColor: '#f9fafb', fontSize: '0.75rem', color: '#6b7280', borderTop: '1px solid #e5e7eb' }}>
+                                        <p style={{ margin: '0.25rem 0' }}>
+                                            <strong>Uploaded:</strong> {new Date(selectedOrder.payment_receipt.uploaded_at).toLocaleString()}
+                                        </p>
+                                        <p style={{ margin: '0.25rem 0' }}>
+                                            <strong>File:</strong> {selectedOrder.payment_receipt.file_name}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    backgroundColor: '#fee2e2',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: '0.375rem',
+                                    padding: '1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem'
+                                }}>
+                                    <AlertCircle size={20} style={{ color: '#dc2626', flexShrink: 0 }} />
+                                    <div>
+                                        <p style={{ fontWeight: 'bold', color: '#991b1b', margin: '0 0 0.25rem 0' }}>No Receipt Uploaded</p>
+                                        <p style={{ color: '#7f1d1d', fontSize: '0.875rem', margin: 0 }}>
+                                            Admin cannot verify or approve payment without a receipt.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Rejection Reason Input (for pending orders) */}
                         {selectedOrder.status === 'PAYMENT_UPLOADED' && (
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', color: '#374151' }}>
-                                    Rejection Reason (if rejecting)
+                                    Rejection Reason (if rejecting) <span style={{ color: '#ef4444' }}>*</span>
                                 </label>
                                 <textarea
                                     value={rejectionReason}
@@ -458,41 +604,43 @@ const PaymentVerification = () => {
                                 <>
                                     <button
                                         onClick={() => handleApprovePayment(selectedOrder.order_id)}
-                                        disabled={approving}
+                                        disabled={approving || !selectedOrder.payment_receipt}
+                                        title={!selectedOrder.payment_receipt ? 'Receipt must be uploaded before approval' : ''}
                                         style={{
                                             flex: 1,
                                             padding: '0.75rem',
-                                            backgroundColor: '#10b981',
+                                            backgroundColor: !selectedOrder.payment_receipt ? '#9ca3af' : '#10b981',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '0.375rem',
-                                            cursor: approving ? 'not-allowed' : 'pointer',
+                                            cursor: (approving || !selectedOrder.payment_receipt) ? 'not-allowed' : 'pointer',
                                             fontWeight: 'bold',
-                                            opacity: approving ? 0.7 : 1,
+                                            opacity: (approving || !selectedOrder.payment_receipt) ? 0.7 : 1,
                                             transition: 'all 0.3s ease'
                                         }}
-                                        onMouseEnter={(e) => !approving && (e.target.style.backgroundColor = '#059669')}
-                                        onMouseLeave={(e) => !approving && (e.target.style.backgroundColor = '#10b981')}
+                                        onMouseEnter={(e) => !(approving || !selectedOrder.payment_receipt) && (e.target.style.backgroundColor = '#059669')}
+                                        onMouseLeave={(e) => !(approving || !selectedOrder.payment_receipt) && (e.target.style.backgroundColor = '#10b981')}
                                     >
                                         {approving ? 'Approving...' : 'Approve Payment & Proceed to Shipping'}
                                     </button>
                                     <button
                                         onClick={() => handleRejectPayment(selectedOrder.order_id)}
-                                        disabled={rejecting || !rejectionReason.trim()}
+                                        disabled={rejecting || !rejectionReason.trim() || !selectedOrder.payment_receipt}
+                                        title={!selectedOrder.payment_receipt ? 'Receipt must be present for rejection' : ''}
                                         style={{
                                             flex: 1,
                                             padding: '0.75rem',
-                                            backgroundColor: '#ef4444',
+                                            backgroundColor: !selectedOrder.payment_receipt ? '#9ca3af' : '#ef4444',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '0.375rem',
-                                            cursor: (rejecting || !rejectionReason.trim()) ? 'not-allowed' : 'pointer',
+                                            cursor: (rejecting || !rejectionReason.trim() || !selectedOrder.payment_receipt) ? 'not-allowed' : 'pointer',
                                             fontWeight: 'bold',
-                                            opacity: (rejecting || !rejectionReason.trim()) ? 0.7 : 1,
+                                            opacity: (rejecting || !rejectionReason.trim() || !selectedOrder.payment_receipt) ? 0.7 : 1,
                                             transition: 'all 0.3s ease'
                                         }}
-                                        onMouseEnter={(e) => !(rejecting || !rejectionReason.trim()) && (e.target.style.backgroundColor = '#dc2626')}
-                                        onMouseLeave={(e) => !(rejecting || !rejectionReason.trim()) && (e.target.style.backgroundColor = '#ef4444')}
+                                        onMouseEnter={(e) => !(rejecting || !rejectionReason.trim() || !selectedOrder.payment_receipt) && (e.target.style.backgroundColor = '#dc2626')}
+                                        onMouseLeave={(e) => !(rejecting || !rejectionReason.trim() || !selectedOrder.payment_receipt) && (e.target.style.backgroundColor = '#ef4444')}
                                     >
                                         {rejecting ? 'Rejecting...' : 'Reject Payment'}
                                     </button>

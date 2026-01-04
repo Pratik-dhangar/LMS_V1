@@ -66,13 +66,26 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              // 2. Handle API Calls
-              urlPattern: ({ url }) => url.pathname.startsWith('/api'),
+              // 2. Handle API Calls - EXCLUDE admin endpoints from caching
+              urlPattern: ({ url }) => {
+                const isApi = url.pathname.startsWith('/api');
+                const isAdminApi = url.pathname.includes('/admin/');
+                // Don't cache admin APIs to ensure fresh data
+                return isApi && !isAdminApi;
+              },
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'api-cache',
                 expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
                 cacheableResponse: { statuses: [0, 200] }
+              }
+            },
+            {
+              // 2b. Admin API calls - Always fetch fresh, no cache
+              urlPattern: ({ url }) => url.pathname.includes('/admin/'),
+              handler: 'NetworkOnly',
+              options: {
+                cacheName: 'admin-api-no-cache'
               }
             },
             {
