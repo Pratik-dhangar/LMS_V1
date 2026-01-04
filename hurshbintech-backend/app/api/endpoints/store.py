@@ -7,12 +7,36 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
+from app.core.config import settings
 from app.crud import product_crud
 from app.schemas.product import (
     ProductResponse, ProductCatalogResponse, ProductFilters
 )
+from app.utils.s3_utils import S3Manager
 
 router = APIRouter(prefix="/store", tags=["Store - Public"])
+
+
+def get_public_url(file_path: Optional[str]) -> Optional[str]:
+    """Convert S3 key or local path to public URL"""
+    if not file_path:
+        return None
+    
+    # If it's already a full HTTP URL, return as-is
+    if file_path.startswith("http"):
+        return file_path
+    
+    # If using S3, convert the S3 key to a public URL
+    if settings.USE_S3:
+        try:
+            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
+            return s3_manager.get_public_url(file_path)
+        except Exception as e:
+            # Fallback to direct URL construction
+            return f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
+    
+    # For local storage, return the path as-is (will be served by static handler)
+    return file_path
 
 
 @router.get("/products", response_model=ProductCatalogResponse)
@@ -79,6 +103,13 @@ async def browse_products(
     try:
         products, total = await product_crud.get_catalog_products(db, filters)
         
+        # Convert S3 URLs to public URLs for all products
+        for product in products:
+            if hasattr(product, 'image_url') and product.image_url:
+                product.image_url = get_public_url(product.image_url)
+            if hasattr(product, 'thumbnail_url') and product.thumbnail_url:
+                product.thumbnail_url = get_public_url(product.thumbnail_url)
+        
         # Calculate pagination info
         total_pages = (total + filters.limit - 1) // filters.limit
         
@@ -107,4 +138,11 @@ async def get_product_detail(
     product = await product_crud.get_product_by_id(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    
+    # Convert S3 URLs to public URLs
+    if product.image_url:
+        product.image_url = get_public_url(product.image_url)
+    if product.thumbnail_url:
+        product.thumbnail_url = get_public_url(product.thumbnail_url)
+    
     return product
