@@ -418,6 +418,10 @@ const StoreCatalog = () => {
                                                             height: '100%',
                                                             objectFit: 'cover'
                                                         }}
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                            e.target.parentElement.innerHTML = '<div style="font-size: 64px">📦</div>';
+                                                        }}
                                                     />
                                                 ) : (
                                                     <div style={{ fontSize: '64px' }}>📦</div>
