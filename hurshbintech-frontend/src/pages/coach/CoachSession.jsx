@@ -1111,6 +1111,14 @@ const CoachSession = () => {
               <button onClick={eraseAllPen} className={wbSmallBtnBase}>
                 ❌ Clear
               </button>
+              <button 
+                onClick={() => {
+                  addBucket();
+                }}
+                className={wbSmallBtnBase}
+              >
+                🪣 Bucket
+              </button>
             </div>
             
             {/* Pen Color Picker */}

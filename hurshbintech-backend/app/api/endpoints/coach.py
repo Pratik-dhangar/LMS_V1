@@ -464,13 +464,15 @@ async def update_appointment(
     previous_status = appointment.status.value  # Already UPPERCASE
     
     # Special handling for guest booking approval (GUEST_INTENT)
-    # Coach tries to change to CONFIRMED, but we intercept and just send payment link
+    # Coach tries to change to CONFIRMED, but we intercept and change to VERIFICATION_PENDING
     if appointment.guest_name and previous_status == "GUEST_INTENT" and appointment_update.status and appointment_update.status.upper() == "CONFIRMED":
         logger.info(f"Coach approving guest booking {appointment_id} for {appointment.guest_name}")
         
-        # Don't change status - keep GUEST_INTENT until guest uploads payment
-        # Just generate token and send email
+        # Change status to VERIFICATION_PENDING (waiting for guest to upload payment)
+        from app.models.user_model import AppointmentStatus
+        appointment.status = AppointmentStatus.VERIFICATION_PENDING
         
+        # Generate token and send email
         upload_token = str(uuid.uuid4())
         upload_token_expires_at = datetime.utcnow() + timedelta(hours=24)
         
@@ -496,7 +498,7 @@ async def update_appointment(
         except Exception as e:
             logger.error(f"Failed to send payment upload link: {str(e)}", exc_info=True)
         
-        # Return response with GUEST_INTENT status (not changed)
+        # Return response with VERIFICATION_PENDING status (payment link sent, waiting for upload)
         return AppointmentResponse(
             id=appointment.id,
             coach_id=appointment.coach_id,

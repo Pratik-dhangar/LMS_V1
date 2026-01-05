@@ -202,16 +202,29 @@ async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSe
             )
             appointment = appointment_result.scalar_one_or_none()
             
-            if appointment and appointment.appointment_time:
-                scheduled_time = appointment.appointment_time
-                current_time = datetime.now()
-                
-                # Calculate 2 hours after scheduled time
-                expiry_time = scheduled_time + timedelta(hours=2)
-                
-                # Check if current time is before expiry (session window is still open)
-                if current_time > expiry_time:
-                    raise ValueError(f"Session window has expired. Sessions must be started within 2 hours of scheduled time.")
+            if appointment and appointment.scheduled_date and appointment.scheduled_time:
+                # Parse scheduled date and time to create a datetime object
+                try:
+                    from datetime import datetime, timedelta
+                    scheduled_date = appointment.scheduled_date
+                    # Parse time string like "10am", "1pm", "3pm", "5pm"
+                    time_str = appointment.scheduled_time.lower().replace(' ', '')
+                    # Convert time string to datetime
+                    time_obj = datetime.strptime(time_str, '%I%p').time()
+                    scheduled_datetime = datetime.combine(scheduled_date, time_obj)
+                    
+                    current_time = datetime.now()
+                    
+                    # Calculate 2 hours after scheduled time
+                    expiry_time = scheduled_datetime + timedelta(hours=2)
+                    
+                    # Check if current time is before expiry (session window is still open)
+                    if current_time > expiry_time:
+                        raise ValueError(f"Session window has expired. Sessions must be started within 2 hours of scheduled time.")
+                except (ValueError, AttributeError) as e:
+                    # If parsing fails, log but continue (don't block session start)
+                    import logging
+                    logging.warning(f"Failed to parse appointment time: {e}")
         
         # Start the session
         session.status = "active"
