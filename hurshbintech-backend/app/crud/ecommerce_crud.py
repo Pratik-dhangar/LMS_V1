@@ -3,15 +3,20 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
+import logging
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.ecommerce_model import (
     Cart, CartItem, Order, OrderItem, OrderStatus, PaymentReceipt, OrderAuditLog, Product, Invoice
 )
+from app.models.user_model import User, UserRole
 from app.schemas.ecommerce import CartItemCreate, CartItemUpdate, OrderCreate
+from app.services.email_service import EmailService
+
+logger = logging.getLogger(__name__)
 
 
 # Cart CRUD
@@ -211,10 +216,18 @@ async def create_order(
         db.add(order_item)
         
         # STOCK MANAGEMENT: Decrement product stock by order quantity
+        previous_stock = product.stock_quantity
         product.stock_quantity -= cart_item.quantity
         if product.stock_quantity < 0:
             product.stock_quantity = 0
         db.add(product)
+        
+        # Check if product just went out of stock (transitioned from > 0 to 0)
+        if previous_stock > 0 and product.stock_quantity == 0:
+            logger.info(f"Product '{product.name}' (ID: {product.id}) has gone out of stock")
+            # Trigger out-of-stock notification
+            await _send_out_of_stock_alert(db, product, previous_stock)
+
     
     # Create audit log entry
     audit_log = OrderAuditLog(
@@ -447,15 +460,91 @@ async def get_invoice_by_number(db: AsyncSession, invoice_number: str) -> Option
     return result.scalar_one_or_none()
 
 
-async def get_max_invoice_sequence(db: AsyncSession, year: int) -> int:
-    """Get max sequence number for invoices in a given year"""
-    from sqlalchemy import func, text
+# Helper function to send out-of-stock notifications to admin
+async def _send_out_of_stock_alert(
+    db: AsyncSession, product: Product, previous_stock: int
+) -> None:
+    """
+    Send out-of-stock notification email to all admin users
     
-    # Query to extract year from created_at and count invoices
-    result = await db.execute(
-        select(func.count(Invoice.id)).where(
-            func.extract('year', Invoice.created_at) == year
+    Args:
+        db: Database session
+        product: Product that has gone out of stock
+        previous_stock: Stock quantity before the last order
+    """
+    try:
+        # Fetch all admin users
+        result = await db.execute(
+            select(User).where(User.role == UserRole.ADMIN, User.is_active == True)
         )
+        admins = result.scalars().all()
+        
+        if not admins:
+            logger.warning("No admin users found to send out-of-stock notification")
+            return
+        
+        # Send email to each admin
+        for admin in admins:
+            if admin.email:
+                try:
+                    success = await EmailService.send_out_of_stock_notification(
+                        admin_email=admin.email,
+                        admin_name=admin.name,
+                        product_name=product.name,
+                        product_id=str(product.id),
+                        previous_stock=previous_stock,
+                        current_stock=product.stock_quantity,
+                    )
+                    
+                    if success:
+                        logger.info(
+                            f"✓ Out-of-stock notification sent to admin {admin.name} ({admin.email}) "
+                            f"for product '{product.name}'"
+                        )
+                    else:
+                        logger.warning(
+                            f"✗ Failed to send out-of-stock notification to admin {admin.name} ({admin.email})"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"✗ Error sending out-of-stock notification to admin {admin.name}: {str(e)}"
+                    )
+            else:
+                logger.warning(f"Admin {admin.name} has no email address configured")
+                
+    except Exception as e:
+        logger.error(f"✗ Error fetching admins for out-of-stock notification: {str(e)}")
+
+
+async def get_max_invoice_sequence(db: AsyncSession, year: int) -> int:
+    """
+    Get max sequence number for invoices in a given year.
+    
+    Invoice format: INV-YYYY-XXXXXX where XXXXXX is the 6-digit sequence
+    Returns the highest sequence number, defaulting to 0 if none exist
+    """
+    # Query all invoices for the current year
+    result = await db.execute(
+        select(Invoice.invoice_number).where(
+            extract('year', Invoice.created_at) == year
+        ).order_by(Invoice.created_at.desc())
     )
-    count = result.scalar() or 0
-    return count
+    
+    invoice_numbers = result.scalars().all()
+    
+    max_sequence = 0
+    
+    # Parse invoice numbers to extract sequence (format: INV-YYYY-XXXXXX)
+    for inv_num in invoice_numbers:
+        try:
+            # Invoice number format: INV-2025-000001
+            parts = inv_num.split('-')
+            if len(parts) == 3:
+                sequence = int(parts[2])
+                if sequence > max_sequence:
+                    max_sequence = sequence
+        except (ValueError, IndexError):
+            # If parsing fails, continue to next
+            continue
+    
+    return max_sequence

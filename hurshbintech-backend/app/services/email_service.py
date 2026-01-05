@@ -1,6 +1,7 @@
 """Email Service for sending appointment notifications using Brevo API"""
 import logging
 from typing import Optional
+from datetime import datetime
 import aiohttp
 import asyncio
 
@@ -143,7 +144,7 @@ class EmailService:
                         
                         <div class="footer">
                             <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
-                            <p>© 2025 Hurshbintech. All rights reserved.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -276,7 +277,7 @@ class EmailService:
                         
                         <div class="footer">
                             <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
-                            <p>© 2025 Hurshbintech. All rights reserved.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -439,7 +440,7 @@ class EmailService:
                         
                         <div class="footer">
                             <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
-                            <p>© 2025 Hurshbintech. All rights reserved.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -591,7 +592,7 @@ class EmailService:
                         
                         <div class="footer">
                             <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
-                            <p>© 2025 Hurshbintech. All rights reserved.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -807,7 +808,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -955,7 +956,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -1108,7 +1109,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
                         <p><strong>Note:</strong> This is a secure link. Do not share it with others.</p>
                     </div>
                 </div>
@@ -1246,7 +1247,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 Hurshbintech. All rights reserved.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -1454,7 +1455,7 @@ class EmailService:
                         </div>
                     </div>
                     <div class="footer">
-                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBintech. All rights reserved.</p>
                         <p>This email contains your order details and payment instructions. Please keep it for your records.</p>
                     </div>
                 </div>
@@ -1653,7 +1654,7 @@ class EmailService:
                         </div>
                     </div>
                     <div class="footer">
-                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -1684,7 +1685,7 @@ class EmailService:
                     )
                     
                     # Parse S3 path and download
-                    # invoice_pdf_url is like "uploads/invoices/2025/order-id/INV-2025-000001.pdf"
+                    # invoice_pdf_url is like "uploads/invoices/2026/order-id/INV-2026-000001.pdf"
                     pdf_response = s3_client.get_object(
                         Bucket=settings.S3_BUCKET_NAME,
                         Key=invoice_pdf_url
@@ -1693,7 +1694,7 @@ class EmailService:
                     logger.info(f"Invoice PDF downloaded from S3: {invoice_pdf_url}")
                 else:
                     # Local mode - read from local file system
-                    # invoice_pdf_url might be something like "invoices/2025/order-id/INV-2025-000001.pdf"
+                    # invoice_pdf_url might be something like "invoices/2026/order-id/INV-2026-000001.pdf"
                     # Normalize the path to use OS-specific separators
                     normalized_url = invoice_pdf_url.replace("/", os.sep).replace("\\", os.sep)
                     
@@ -1868,7 +1869,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -2008,7 +2009,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2025 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBintech. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -2021,5 +2022,195 @@ class EmailService:
             subject=subject,
             html_body=html_body,
             email_type="order_delivered",
+        )
+
+    # Out of Stock Notification - Sent to ADMIN when a learning material runs out of stock
+    @staticmethod
+    async def send_out_of_stock_notification(
+        admin_email: str,
+        admin_name: str,
+        product_name: str,
+        product_id: str,
+        previous_stock: int,
+        current_stock: int,
+    ) -> bool:
+        """Send out-of-stock notification email to admin when a product runs out of stock"""
+        
+        if not settings.ENABLE_EMAIL or not admin_email:
+            logger.warning(f"Email sending disabled or no admin email for out-of-stock notification")
+            return False
+
+        subject = f"⚠️ Alert: '{product_name}' is Out of Stock"
+        
+        # Format timestamp
+        notification_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #fff3e0;
+                    }}
+                    .header {{
+                        background: linear-gradient(135deg, #d32f2f 0%, #f57c00 100%);
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    h2 {{
+                        color: #d32f2f;
+                        margin: 0;
+                    }}
+                    p {{
+                        margin: 10px 0;
+                    }}
+                    .alert-box {{
+                        background-color: #ffebee;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 15px 0;
+                        border-left: 4px solid #d32f2f;
+                    }}
+                    .info-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 15px 0;
+                    }}
+                    .action-box {{
+                        background-color: #e8f5e9;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 15px 0;
+                        border-left: 4px solid #4caf50;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #d32f2f;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .stats-table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 15px 0;
+                        background-color: #f9f9f9;
+                    }}
+                    .stats-table td {{
+                        padding: 12px;
+                        border: 1px solid #ddd;
+                    }}
+                    .stats-label {{
+                        font-weight: 600;
+                        color: #2c3e50;
+                        width: 40%;
+                        background-color: #f5f5f5;
+                    }}
+                    .stats-value {{
+                        color: #555;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">⚠️ STOCK ALERT</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">A learning material has gone out of stock</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{admin_name}</strong>,</p>
+                        <p>This is an important notification: A learning material in your inventory has just gone out of stock.</p>
+                        
+                        <div class="alert-box">
+                            <h3 style="margin-top: 0; color: #d32f2f;">🛑 Product: {product_name}</h3>
+                            <p style="margin-bottom: 0; color: #c62828;"><strong>Status:</strong> Out of Stock</p>
+                        </div>
+                        
+                        <div class="info-box">
+                            <h4 style="margin-top: 0; color: #1a237e;">Stock Information</h4>
+                            <table class="stats-table">
+                                <tr>
+                                    <td class="stats-label">Previous Stock:</td>
+                                    <td class="stats-value"><strong>{previous_stock} units</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="stats-label">Current Stock:</td>
+                                    <td class="stats-value"><strong style="color: #d32f2f;">{current_stock} units</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="stats-label">Product ID:</td>
+                                    <td class="stats-value"><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{product_id}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="stats-label">Notification Time:</td>
+                                    <td class="stats-value">{notification_time} UTC</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="action-box">
+                            <h4 style="margin-top: 0; color: #1b5e20;">Recommended Actions</h4>
+                            <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
+                                <li><strong>Restock Immediately:</strong> Place an order to replenish inventory</li>
+                                <li><strong>Update Product Status:</strong> Mark as unavailable if restock is delayed</li>
+                                <li><strong>Notify Customers:</strong> Inform waiting customers when stock will be available</li>
+                                <li><strong>Review Demand:</strong> Analyze sales patterns to prevent future stockouts</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            <strong>Note:</strong> This is an automated alert from the Hurshbintech inventory management system. 
+                            Please take immediate action to restock this item and resume sales.
+                        </p>
+                        
+                        <div style="text-align: center; margin: 25px 0;">
+                            <a href="{settings.FRONTEND_URL}/admin/products" class="btn">Go to Products Dashboard</a>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=admin_email,
+            recipient_name=admin_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="out_of_stock_alert",
         )
 

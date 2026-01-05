@@ -354,7 +354,7 @@ const TrainerDashboard = () => {
               },
               {
                 icon: "🛒",
-                title: "Bug Learning Material",
+                title: "Buy Learning Material",
                 onClick: () => navigate("/store"),
               },
             ].map((card, index) => (

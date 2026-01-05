@@ -520,7 +520,7 @@ async def validate_payment_token(
     # Find appointment by upload_token and check if it's valid
     stmt = select(Appointment).where(
         Appointment.upload_token == upload_token,
-        Appointment.status == AppointmentStatus.GUEST_INTENT,  # Token only valid for GUEST_INTENT status
+        Appointment.status == AppointmentStatus.VERIFICATION_PENDING,  # Token valid for VERIFICATION_PENDING status
         Appointment.upload_token_expires_at > datetime.utcnow()
     )
     result = await db.execute(stmt)
@@ -582,7 +582,7 @@ async def guest_upload_payment(
         joinedload(Appointment.coach).joinedload(CoachProfile.user)
     ).where(
         Appointment.upload_token == upload_token,
-        Appointment.status == AppointmentStatus.GUEST_INTENT,
+        Appointment.status == AppointmentStatus.VERIFICATION_PENDING,
         Appointment.upload_token_expires_at > datetime.utcnow()
     )
     result = await db.execute(stmt)
