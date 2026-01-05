@@ -245,17 +245,44 @@ async def delete_head(db: AsyncSession, head_id: int) -> str | bool:
     if not head:
         return False
 
-    # First, delete all reference data associated with this head
-    from app.models.user_model import HeadReferenceData
-    from sqlalchemy import delete
+    # Import necessary models
+    from app.models.user_model import HeadReferenceData, LearnerProfile, TrainerProfile, Appointment
+    from sqlalchemy import delete, update
     
-    # Use delete statement for better performance and to avoid FK issues
+    # Get the user_id before deleting
+    user_id = head.user_id
+    
+    # 1. Delete all reference data associated with this head
     await db.execute(
         delete(HeadReferenceData).where(HeadReferenceData.head_id == head_id)
     )
-    await db.flush()  # Ensure reference data is deleted before proceeding
     
-    # Delete user (will cascade to profile due to relationship)
+    # 2. Set created_by_head_id to NULL for all learners created by this head
+    # (This is safe because ondelete='SET NULL' in the model)
+    await db.execute(
+        update(LearnerProfile)
+        .where(LearnerProfile.created_by_head_id == head_id)
+        .values(created_by_head_id=None)
+    )
+    
+    # 3. Set created_by_head_id to NULL for all trainers created by this head
+    # (This is safe because ondelete='SET NULL' in the model)
+    await db.execute(
+        update(TrainerProfile)
+        .where(TrainerProfile.created_by_head_id == head_id)
+        .values(created_by_head_id=None)
+    )
+    
+    # 4. Set user_id to NULL for all appointments associated with this head user
+    await db.execute(
+        update(Appointment)
+        .where(Appointment.user_id == user_id)
+        .values(user_id=None, user_role=None)
+    )
+    
+    await db.flush()  # Ensure all updates are done before deleting
+    
+    # 5. Delete user (will cascade to head profile due to relationship)
     user = head.user
     await db.delete(user)
     await db.commit()
@@ -306,6 +333,13 @@ async def get_trainers_by_head(db: AsyncSession, head_id: int):
 
 async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_by_head_id: int):
     """Create a new trainer with User and TrainerProfile records"""
+    # Check if email already exists
+    existing_user = await db.execute(
+        select(User).where(User.email == trainer_data.email)
+    )
+    if existing_user.scalar_one_or_none():
+        raise ValueError(f"Email {trainer_data.email} is already registered")
+    
     # Generate passcode if not provided
     passcode = trainer_data.passcode or generate_passcode("TRAINER", trainer_data.name)
 
@@ -388,6 +422,24 @@ async def delete_trainer(db: AsyncSession, trainer_id: int) -> str | bool:
     if not trainer:
         return False
 
+    # Import necessary models
+    from app.models.user_model import Appointment
+    from sqlalchemy import update
+    
+    # Get the user_id before deleting
+    user_id = trainer.user_id
+    
+    # Set user_id to NULL for all appointments associated with this trainer
+    # (Appointments can exist without user_id for guest bookings)
+    await db.execute(
+        update(Appointment)
+        .where(Appointment.user_id == user_id)
+        .values(user_id=None, user_role=None)
+    )
+    
+    await db.flush()  # Ensure all updates are done before deleting
+    
+    # Delete user (will cascade to trainer profile due to relationship)
     user = trainer.user
     await db.delete(user)
     await db.commit()
@@ -683,6 +735,13 @@ async def get_learners_by_head(db: AsyncSession, head_id: int):
 
 async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_by_head_id: int):
     """Create a new learner with User and LearnerProfile records"""
+    # Check if email already exists
+    existing_user = await db.execute(
+        select(User).where(User.email == learner_data.email)
+    )
+    if existing_user.scalar_one_or_none():
+        raise ValueError(f"Email {learner_data.email} is already registered")
+    
     # Generate passcode if not provided
     passcode = learner_data.passcode or generate_passcode("LEARNER", learner_data.name)
 
@@ -818,6 +877,23 @@ async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
     if not learner:
         return False
 
+    # Import necessary models
+    from app.models.user_model import Appointment
+    from sqlalchemy import update
+    
+    # Get the user_id before deleting
+    user_id = learner.user_id
+    
+    # Set user_id to NULL for all appointments associated with this learner
+    await db.execute(
+        update(Appointment)
+        .where(Appointment.user_id == user_id)
+        .values(user_id=None, user_role=None)
+    )
+    
+    await db.flush()  # Ensure all updates are done before deleting
+    
+    # Delete user (will cascade to learner profile due to relationship)
     user = learner.user
     await db.delete(user)
     await db.commit()

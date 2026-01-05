@@ -77,6 +77,29 @@ const learningContentService = {
     }
   },
 
+  // Coach APIs - for coach users (similar to trainer)
+  coach: {
+    create: async (contentData) => {
+      const response = await api.post('/content/learning-content/coach', contentData);
+      return response.data;
+    },
+
+    getAll: async () => {
+      const response = await api.get('/content/learning-content/coach');
+      return response.data;
+    },
+
+    getById: async (contentId) => {
+      const response = await api.get(`/content/learning-content/coach/${contentId}`);
+      return response.data;
+    },
+
+    update: async (contentId, contentData) => {
+      const response = await api.patch(`/content/learning-content/coach/${contentId}`, contentData);
+      return response.data;
+    }
+  },
+
   // Head APIs
   head: {
     getAll: async () => {

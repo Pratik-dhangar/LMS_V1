@@ -207,8 +207,8 @@ async def start_coach_session(
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
-    """Start a scheduled session"""
-    logger.info(f"Coach {current_coach.id} starting session {session_id}")
+    """Start a scheduled session or resume an active session"""
+    logger.info(f"Coach {current_coach.id} starting/resuming session {session_id}")
 
     session = await coach_appointment_session_crud.get_session_by_id(db, session_id)
 
@@ -218,8 +218,9 @@ async def start_coach_session(
     if session.coach_id != current_coach.id:
         raise HTTPException(status_code=403, detail="Not authorized to start this session")
 
-    if session.status != "scheduled":
-        raise HTTPException(status_code=400, detail="Session is not in scheduled state")
+    # Allow starting scheduled sessions or resuming active sessions
+    if session.status not in ["scheduled", "active"]:
+        raise HTTPException(status_code=400, detail=f"Cannot start session in {session.status} state")
 
     try:
         started_session = await coach_appointment_session_crud.start_session(db, session_id)
