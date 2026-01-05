@@ -99,6 +99,8 @@ const ClientSession = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
   const [buckets, setBuckets] = useState([]);
+  const [textBoxes, setTextBoxes] = useState([]);
+  const [activeTextBoxId, setActiveTextBoxId] = useState(null);
 
   // Tool access control from coach
   const [toolAccess, setToolAccess] = useState({
@@ -284,11 +286,30 @@ const ClientSession = () => {
         setErasePenTrigger(prev => prev + 1);
       };
 
+      // Text box handlers
+      wbService.onTextBoxAdded = (textBox) => {
+        console.log('[ClientSession] Text box added:', textBox);
+        setTextBoxes(prev => [...prev, textBox]);
+      };
+
+      wbService.onTextBoxUpdate = (update) => {
+        console.log('[ClientSession] Text box updated:', update);
+        setTextBoxes(prev => prev.map(box => 
+          box.id === update.id ? { ...box, ...update } : box
+        ));
+      };
+
+      wbService.onTextBoxRemoved = (data) => {
+        console.log('[ClientSession] Text box removed:', data);
+        setTextBoxes(prev => prev.filter(box => box.id !== data.id));
+      };
+
       // Listen for clear canvas command from coach
       wbService.onClearCanvas = () => {
         console.log('[ClientSession] Received clear canvas command from coach');
         setCanvasItems([]);
         setBuckets([]);
+        setTextBoxes([]);
         setErasePenTrigger(prev => prev + 1);
         setRedrawCanvasTrigger(prev => prev + 1);
       };
@@ -613,6 +634,9 @@ const ClientSession = () => {
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 buckets={buckets}
                 setBuckets={setBuckets}
+                textBoxes={textBoxes}
+                activeTextBoxId={activeTextBoxId}
+                setActiveTextBoxId={setActiveTextBoxId}
                 tool={tool}
                 setTool={setTool}
                 color={color}

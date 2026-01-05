@@ -25,6 +25,9 @@ class WhiteboardService {
         this.onWaitingMessage = null; // New callback for waiting messages
         this.onFloatingAnimations = null; // New callback for floating animations (bubbles, smileys, balloons, stars)
         this.onAnimationPopped = null; // New callback for animation pop events
+        this.onTextBoxAdded = null; // New callback for text box added
+        this.onTextBoxUpdate = null; // New callback for text box updates
+        this.onTextBoxRemoved = null; // New callback for text box removed
     }
 
     initialize() {
@@ -181,6 +184,24 @@ class WhiteboardService {
                 case 'animation_popped':
                     if (this.onAnimationPopped) {
                         this.onAnimationPopped(message.data);
+                    }
+                    break;
+
+                case 'text_box_added':
+                    if (this.onTextBoxAdded) {
+                        this.onTextBoxAdded(message.data);
+                    }
+                    break;
+
+                case 'text_box_update':
+                    if (this.onTextBoxUpdate) {
+                        this.onTextBoxUpdate(message.data);
+                    }
+                    break;
+
+                case 'text_box_removed':
+                    if (this.onTextBoxRemoved) {
+                        this.onTextBoxRemoved(message.data);
                     }
                     break;
 

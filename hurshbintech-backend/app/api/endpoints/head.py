@@ -116,7 +116,10 @@ async def create_new_trainer(
     )
 
     # Create trainer
-    new_trainer = await user_crud.create_trainer(db, trainer_data, current_head.id)
+    try:
+        new_trainer = await user_crud.create_trainer(db, trainer_data, current_head.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     # Handle reference files upload
     if reference_files:
@@ -508,7 +511,10 @@ async def create_new_learner(
         )
 
     # Create learner
-    new_learner = await user_crud.create_learner(db, learner_create, current_head.id)
+    try:
+        new_learner = await user_crud.create_learner(db, learner_create, current_head.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     # Handle reference files upload
     if reference_files:

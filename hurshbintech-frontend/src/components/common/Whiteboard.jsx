@@ -368,7 +368,14 @@ const Whiteboard = ({
     redrawCanvasTrigger = 0,
     stopwatchFormattedTime = null,
     stopwatchIsRunning = false,
-    toolActive = false
+    toolActive = false,
+    textBoxes = [],
+    onTextBoxChange = () => { },
+    onTextBoxResize = () => { },
+    onTextBoxMove = () => { },
+    onRemoveTextBox = () => { },
+    activeTextBoxId = null,
+    setActiveTextBoxId = () => { }
 }) => {
     // Media control state management
     const mediaControl = useMediaControl();
@@ -3070,6 +3077,141 @@ const Whiteboard = ({
                                 </div>
                             );
                         })}
+
+                    {/* TEXT BOXES - Invisible container, only text and cursor visible */}
+                    {textBoxes.map((textBox) => (
+                        <div
+                            key={textBox.id}
+                            className="text-box-container"
+                            style={{
+                                position: 'absolute',
+                                left: textBox.x,
+                                top: textBox.y,
+                                width: 'auto',
+                                height: 'auto',
+                                minWidth: '100px',
+                                maxWidth: '800px',
+                                border: activeTextBoxId === textBox.id ? '2px dashed #3b82f6' : 'none',
+                                backgroundColor: 'transparent',
+                                padding: activeTextBoxId === textBox.id ? '4px' : '0',
+                                cursor: activeTextBoxId === textBox.id ? 'move' : 'text',
+                                zIndex: activeTextBoxId === textBox.id ? 1000 : 50,
+                                transition: 'border 0.1s, padding 0.1s',
+                                display: 'inline-block'
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (isTrainer) {
+                                    setActiveTextBoxId(textBox.id);
+                                }
+                            }}
+                            onMouseDown={(e) => {
+                                if (isTrainer && activeTextBoxId === textBox.id && e.target.tagName !== 'TEXTAREA') {
+                                    e.preventDefault();
+                                    const startX = e.clientX - textBox.x;
+                                    const startY = e.clientY - textBox.y;
+                                    
+                                    const handleMouseMove = (moveEvent) => {
+                                        onTextBoxMove(
+                                            textBox.id,
+                                            moveEvent.clientX - startX,
+                                            moveEvent.clientY - startY
+                                        );
+                                    };
+                                    
+                                    const handleMouseUp = () => {
+                                        document.removeEventListener('mousemove', handleMouseMove);
+                                        document.removeEventListener('mouseup', handleMouseUp);
+                                    };
+                                    
+                                    document.addEventListener('mousemove', handleMouseMove);
+                                    document.addEventListener('mouseup', handleMouseUp);
+                                }
+                            }}
+                        >
+                            {isTrainer && (
+                                <button
+                                    className="text-box-remove-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRemoveTextBox(textBox.id);
+                                    }}
+                                    style={{
+                                    position: 'absolute',
+                                    top: '-8px',
+                                    right: '-8px',
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                    opacity: activeTextBoxId === textBox.id ? 1 : 0,
+                                    transition: 'opacity 0.2s',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}
+                                title="Remove text box"
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                                >
+                                    ×
+                                </button>
+                            )}
+                            <textarea
+                                ref={(el) => {
+                                    if (el && textBox.text) {
+                                        // Auto-resize textarea for all users when content changes
+                                        el.style.height = 'auto';
+                                        el.style.height = el.scrollHeight + 'px';
+                                    }
+                                }}
+                                value={textBox.text}
+                                onChange={(e) => {
+                                    if (isTrainer) {
+                                        onTextBoxChange(textBox.id, e.target.value);
+                                        // Auto-resize textarea
+                                        e.target.style.height = 'auto';
+                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                    }
+                                }}
+                                onInput={(e) => {
+                                    if (isTrainer) {
+                                        // Auto-resize on input
+                                        e.target.style.height = 'auto';
+                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                    }
+                                }}
+                                readOnly={!isTrainer}
+                                placeholder={isTrainer ? "Type here..." : ""}
+                                style={{
+                                    width: 'auto',
+                                    minWidth: '100px',
+                                    maxWidth: '800px',
+                                    height: 'auto',
+                                    minHeight: '24px',
+                                    border: 'none',
+                                    outline: 'none',
+                                    fontSize: `${textBox.fontSize}px`,
+                                    color: textBox.fontColor,
+                                    backgroundColor: 'transparent',
+                                    resize: 'none',
+                                    fontFamily: 'Arial, sans-serif',
+                                    lineHeight: '1.5',
+                                    caretColor: textBox.fontColor || '#000000',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'pre-wrap',
+                                    wordWrap: 'break-word',
+                                    pointerEvents: isTrainer ? 'auto' : 'none'
+                                }}
+                            />
+                        </div>
+                    ))}
 
                     {/* Media Popup for Video/PDF */}
                     {mediaControl.currentMedia.isVisible && (
