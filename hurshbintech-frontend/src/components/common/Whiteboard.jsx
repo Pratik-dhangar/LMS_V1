@@ -3207,11 +3207,7 @@ const Whiteboard = ({
                                     overflow: 'hidden',
                                     whiteSpace: 'pre-wrap',
                                     wordWrap: 'break-word',
-                                    pointerEvents: isTrainer ? 'auto' : 'none',
-                                
-                            
-                                    whiteSpace: 'pre-wrap',
-                                    wordWrap: 'break-word'
+                                    pointerEvents: isTrainer ? 'auto' : 'none'
                                 }}
                             />
                         </div>
