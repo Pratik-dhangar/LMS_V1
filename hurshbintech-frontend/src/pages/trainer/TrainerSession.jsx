@@ -1857,7 +1857,7 @@ const TrainerSession = () => {
                 <span>{cameraEnabled ? '📹' : '📷'}</span>
                 {/* <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span> */}
               </button>
-              {recordingService && sessionInfo && (
+              {/* {recordingService && sessionInfo && (
                 <div className="flex items-center ml-3">
                   <RecordingControls
                     recordingService={recordingService}
@@ -1865,7 +1865,7 @@ const TrainerSession = () => {
                     sessionId={sessionInfo.id}
                   />
                 </div>
-              )}
+              )} */}
             </div>
 
           </div>
