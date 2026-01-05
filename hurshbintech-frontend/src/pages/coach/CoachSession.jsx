@@ -19,6 +19,7 @@ import { useMediaControl } from '../../context/MediaControlContext';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import Emoji from '../../components/common/Emoji';
+import LearningContentSidebar from '../trainer/LearningContentSidebar';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import '../../styles/Pages.css';
 
@@ -111,6 +112,7 @@ const CoachSession = () => {
   const [learningContentSearch, setLearningContentSearch] = useState('');
   const [databaseSearchResults, setDatabaseSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [defaultContent, setDefaultContent] = useState([]); // Latest 5 content from admin
 
   // Whiteboard state
   const [canvasItems, setCanvasItems] = useState([]);
@@ -139,6 +141,12 @@ const CoachSession = () => {
   const [toolActive, setToolActive] = useState(false);
   const [eraserActive, setEraserActive] = useState(false);
   const [eraseAllActive, setEraseAllActive] = useState(false);
+
+  // Text tool state
+  const [textBoxes, setTextBoxes] = useState([]);
+  const [activeTextBoxId, setActiveTextBoxId] = useState(null);
+  const [textSize, setTextSize] = useState(16);
+  const [showTextSizeSlider, setShowTextSizeSlider] = useState(false);
 
   // Tool access control for client
   const [clientToolAccess, setClientToolAccess] = useState({
@@ -215,6 +223,25 @@ const CoachSession = () => {
       cleanup();
     };
   }, [sessionId, navigate]); // Only re-run if sessionId changes
+
+  // Load initial content (latest 5 from admin) on mount
+  useEffect(() => {
+    const loadDefaultContent = async () => {
+      try {
+        const allContent = await learningContentService.coach.getAll();
+        // Sort by created_at descending and take first 5
+        const latest = allContent
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 5);
+        setDefaultContent(latest);
+      } catch (error) {
+        console.error('[CoachSession] Error loading default content:', error);
+        setDefaultContent([]);
+      }
+    };
+    
+    loadDefaultContent();
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -519,6 +546,7 @@ const CoachSession = () => {
     // Clear local state
     setCanvasItems([]);
     setBuckets([]);
+    setTextBoxes([]);
     
     // Trigger local clear and redraw
     setErasePenTrigger(prev => prev + 1);
@@ -649,6 +677,165 @@ const CoachSession = () => {
     );
   };
 
+  // Learning content search handler with lazy loading
+  const handleLearningContentSearch = async (e) => {
+    const searchValue = e.target.value;
+    setLearningContentSearch(searchValue);
+
+    // Clear database results if search is empty
+    if (!searchValue.trim()) {
+      setDatabaseSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Debounce the API call
+    setIsSearching(true);
+  };
+
+  // Debounced search effect for database query
+  React.useEffect(() => {
+    const searchDatabase = async () => {
+      if (!learningContentSearch.trim()) {
+        setDatabaseSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      try {
+        setIsSearching(true);
+        console.log('[CoachSession] Searching database for:', learningContentSearch);
+
+        // Fetch all learning content from database based on user role
+        const userData = localStorage.getItem('user_data');
+        const user = userData ? JSON.parse(userData) : null;
+
+        let allContent = [];
+        if (user?.role === 'admin') {
+          allContent = await learningContentService.admin.getAll();
+        } else if (user?.role === 'coach') {
+          allContent = await learningContentService.coach?.getAll() || [];
+        } else if (user?.role === 'head') {
+          allContent = await learningContentService.head.getAll();
+        }
+
+        // Filter results based on search term
+        const searchLower = learningContentSearch.toLowerCase();
+        const filtered = allContent.filter(content => {
+          return (
+            content.title?.toLowerCase().includes(searchLower) ||
+            content.content_type?.toLowerCase().includes(searchLower) ||
+            content.category?.toLowerCase().includes(searchLower) ||
+            content.description?.toLowerCase().includes(searchLower)
+          );
+        });
+
+        console.log('[CoachSession] Database search results:', filtered);
+        setDatabaseSearchResults(filtered);
+      } catch (error) {
+        console.error('[CoachSession] Error searching database:', error);
+        setDatabaseSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchDatabase, 300);
+    return () => clearTimeout(timeoutId);
+  }, [learningContentSearch]);
+
+  // Filtered learning content logic
+  const filteredLearningContent = (() => {
+    // If there's a search term, show database results
+    if (learningContentSearch.trim()) {
+      return databaseSearchResults;
+    }
+
+    // Otherwise, show latest 5 content from admin as default
+    return defaultContent;
+  })();
+
+  // Drag start handler for content cards
+  const onDragStartContent = (e, content) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      id: content.id,
+      title: content.title,
+      type: content.content_type,
+      url: content.file_url,
+      thumbnail: content.thumbnail_url,
+      mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
+      originalFilename: content.title
+    }));
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  // Text tool handlers
+  const handleAddTextBox = () => {
+    const newTextBox = {
+      id: `text_${Date.now()}`,
+      text: '',
+      x: window.innerWidth / 2 - 200,
+      y: window.innerHeight / 2 - 75,
+      width: 400,
+      height: 150,
+      fontSize: textSize,
+      fontColor: '#000000'
+    };
+    
+    setTextBoxes(prev => [...prev, newTextBox]);
+    setActiveTextBoxId(newTextBox.id);
+    
+    // Broadcast to clients
+    if (whiteboardService) {
+      whiteboardService.send('text_box_added', newTextBox);
+    }
+  };
+
+  const handleTextBoxChange = (id, text) => {
+    setTextBoxes(prev => prev.map(box => 
+      box.id === id ? { ...box, text } : box
+    ));
+    
+    // Broadcast text change in real-time
+    if (whiteboardService) {
+      whiteboardService.send('text_box_update', { id, text });
+    }
+  };
+
+  const handleTextBoxResize = (id, width, height) => {
+    setTextBoxes(prev => prev.map(box => 
+      box.id === id ? { ...box, width, height } : box
+    ));
+    
+    // Broadcast resize
+    if (whiteboardService) {
+      whiteboardService.send('text_box_update', { id, width, height });
+    }
+  };
+
+  const handleTextBoxMove = (id, x, y) => {
+    setTextBoxes(prev => prev.map(box => 
+      box.id === id ? { ...box, x, y } : box
+    ));
+    
+    // Broadcast move
+    if (whiteboardService) {
+      whiteboardService.send('text_box_update', { id, x, y });
+    }
+  };
+
+  const handleRemoveTextBox = (id) => {
+    setTextBoxes(prev => prev.filter(box => box.id !== id));
+    if (activeTextBoxId === id) {
+      setActiveTextBoxId(null);
+    }
+    
+    // Broadcast removal
+    if (whiteboardService) {
+      whiteboardService.send('text_box_removed', { id });
+    }
+  };
+
   const handleToolClick = (toolName) => {
     if (!toolsService) return;
 
@@ -732,14 +919,16 @@ const CoachSession = () => {
         {/* Desktop Only: Left Sidebar - Learning Content */}
         <div className="">
           <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-bold mb-3">Learning Content</h3>
-            <p className="text-sm text-gray-600 mb-3">Search and add learning materials</p>
-            <input
-              type="text"
-              placeholder="Search content..."
-              value={learningContentSearch}
-              onChange={(e) => setLearningContentSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+            <h3 className="text-lg font-bold mb-3">📚 Learning Content</h3>
+            <LearningContentSidebar
+              learningContentSearch={learningContentSearch}
+              handleLearningContentSearch={handleLearningContentSearch}
+              filteredLearningContent={filteredLearningContent}
+              isSearching={isSearching}
+              onDragStartContent={onDragStartContent}
+              onRemoveFromWhiteboard={(itemId) => {
+                setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+              }}
             />
           </div>
 
@@ -829,6 +1018,13 @@ const CoachSession = () => {
                 stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
+                textBoxes={textBoxes}
+                onTextBoxChange={handleTextBoxChange}
+                onTextBoxResize={handleTextBoxResize}
+                onTextBoxMove={handleTextBoxMove}
+                onRemoveTextBox={handleRemoveTextBox}
+                activeTextBoxId={activeTextBoxId}
+                setActiveTextBoxId={setActiveTextBoxId}
               />
             </div>
           </div>
@@ -888,6 +1084,30 @@ const CoachSession = () => {
               >
                 🧹 Eraser
               </button>
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    handleAddTextBox();
+                    setShowTextSizeSlider(!showTextSizeSlider);
+                  }} 
+                  className={wbSmallBtnBase}
+                >
+                  📝 Text
+                </button>
+                {showTextSizeSlider && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded p-2 shadow-lg z-50" style={{ minWidth: '120px' }}>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">Size: {textSize}px</label>
+                    <input
+                      type="range"
+                      min="10"
+                      max="48"
+                      value={textSize}
+                      onChange={(e) => setTextSize(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
               <button onClick={eraseAllPen} className={wbSmallBtnBase}>
                 ❌ Clear
               </button>

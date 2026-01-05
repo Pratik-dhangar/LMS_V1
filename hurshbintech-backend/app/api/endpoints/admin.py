@@ -402,6 +402,8 @@ async def delete_head_account(
 
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Head not found")
+    
+    return {"message": success}
 
 
 # Get all trainers (read-only for admin)
