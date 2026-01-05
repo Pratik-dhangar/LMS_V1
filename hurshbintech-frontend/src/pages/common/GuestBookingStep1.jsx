@@ -132,6 +132,39 @@ const GuestBookingStep1 = () => {
     }
   };
 
+  // Handle paste functionality
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    
+    // Get pasted text from clipboard
+    const pastedText = e.clipboardData.getData('text');
+    
+    // Extract only digits from pasted text
+    const digits = pastedText.replace(/\D/g, '').slice(0, 6);
+    
+    // If we have digits, fill the OTP fields
+    if (digits.length > 0) {
+      const newOtpDigits = ['', '', '', '', '', ''];
+      
+      // Fill the digits array with pasted digits
+      for (let i = 0; i < digits.length; i++) {
+        newOtpDigits[i] = digits[i];
+      }
+      
+      setOtpDigits(newOtpDigits);
+      
+      // Auto-focus the next empty field or last field if complete
+      const nextIndex = Math.min(digits.length, 5);
+      if (digits.length === 6) {
+        // All digits filled, focus on last field
+        otpInputs.current[5]?.focus();
+      } else {
+        // Focus on the next empty field
+        otpInputs.current[nextIndex]?.focus();
+      }
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -239,6 +272,7 @@ const GuestBookingStep1 = () => {
                               value={digit}
                               onChange={(e) => handleOtpDigitChange(index, e.target.value)}
                               onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                              onPaste={handleOtpPaste}
                               className="otp-input-box"
                               placeholder="0"
                               disabled={loading}
