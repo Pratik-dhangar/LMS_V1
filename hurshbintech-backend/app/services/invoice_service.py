@@ -27,7 +27,7 @@ class InvoiceGenerator:
             region=settings.AWS_REGION
         )
         self.page_size = A4
-        self.company_name = "HurshBintech"
+        self.company_name = "HurshBinTech"
         self.company_address = "India"
     
     def generate_invoice_pdf(
@@ -86,54 +86,68 @@ class InvoiceGenerator:
             styles = getSampleStyleSheet()
             
             # Define custom styles
-            company_title_style = ParagraphStyle(
-                'CompanyTitle',
-                parent=styles['Heading1'],
-                fontSize=28,
-                textColor=colors.HexColor('#41A67E'),
+            company_logo_style = ParagraphStyle(
+                'CompanyLogo',
+                parent=styles['Normal'],
+                fontSize=14,
+                textColor=colors.HexColor('#333333'),
                 spaceAfter=2,
-                alignment=TA_CENTER,
+                alignment=TA_RIGHT,
                 fontName='Helvetica-Bold'
             )
             
-            company_subtitle_style = ParagraphStyle(
-                'CompanySubtitle',
+            company_address_style = ParagraphStyle(
+                'CompanyAddress',
                 parent=styles['Normal'],
-                fontSize=10,
-                textColor=colors.HexColor('#7f8c8d'),
-                spaceAfter=12,
-                alignment=TA_CENTER,
+                fontSize=8,
+                textColor=colors.HexColor('#666666'),
+                spaceAfter=15,
+                alignment=TA_RIGHT,
                 fontName='Helvetica'
             )
             
-            section_heading_style = ParagraphStyle(
-                'SectionHeading',
-                parent=styles['Heading2'],
-                fontSize=11,
-                textColor=colors.HexColor('#41A67E'),
-                spaceAfter=10,
-                spaceBefore=10,
-                fontName='Helvetica-Bold',
-                borderColor=colors.HexColor('#41A67E'),
-                borderWidth=1,
-                borderPadding=5,
-                borderRadius=2
+            invoice_title_style = ParagraphStyle(
+                'InvoiceTitle',
+                parent=styles['Heading1'],
+                fontSize=40,
+                textColor=colors.HexColor('#000000'),
+                spaceAfter=20,
+                alignment=TA_LEFT,
+                fontName='Helvetica-Bold'
             )
             
             label_style = ParagraphStyle(
                 'Label',
                 parent=styles['Normal'],
-                fontSize=9,
-                textColor=colors.HexColor('#7f8c8d'),
+                fontSize=8,
+                textColor=colors.HexColor('#333333'),
                 spaceAfter=2,
+                fontName='Helvetica-Bold'
+            )
+            
+            value_style = ParagraphStyle(
+                'Value',
+                parent=styles['Normal'],
+                fontSize=10,
+                textColor=colors.HexColor('#000000'),
+                spaceAfter=8,
+                fontName='Helvetica'
+            )
+            
+            section_style = ParagraphStyle(
+                'SectionHeader',
+                parent=styles['Normal'],
+                fontSize=9,
+                textColor=colors.HexColor('#333333'),
+                spaceAfter=8,
                 fontName='Helvetica-Bold'
             )
             
             normal_style = ParagraphStyle(
                 'Normal',
                 parent=styles['Normal'],
-                fontSize=10,
-                textColor=colors.HexColor('#2c3e50'),
+                fontSize=9,
+                textColor=colors.HexColor('#333333'),
                 spaceAfter=4,
                 fontName='Helvetica'
             )
@@ -141,178 +155,178 @@ class InvoiceGenerator:
             footer_style = ParagraphStyle(
                 'Footer',
                 parent=styles['Normal'],
-                fontSize=9,
-                textColor=colors.HexColor('#95a5a6'),
+                fontSize=8,
+                textColor=colors.HexColor('#666666'),
                 alignment=TA_CENTER,
                 fontName='Helvetica'
             )
             
             # ===== HEADER SECTION =====
-            # Company name and subtitle
-            elements.append(Paragraph(self.company_name, company_title_style))
-            elements.append(Paragraph("Professional Learning Materials", company_subtitle_style))
-            
-            # Decorative line
-            from reportlab.platypus import HRFlowable
-            elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#41A67E'), spaceAfter=15))
-            
-            # Invoice header info (3 columns)
-            invoice_header_data = [
-                [
-                    Paragraph(f"<b>Invoice Number</b><br/>{invoice_number}", label_style),
-                    Paragraph(f"<b>Order Number</b><br/>{order_number}", label_style),
-                    Paragraph(f"<b>Invoice Date</b><br/>{created_at.strftime('%d-%m-%Y')}", label_style),
-                ]
-            ]
-            invoice_header_table = Table(invoice_header_data, colWidths=[2.1*inch, 2.1*inch, 2.1*inch])
-            invoice_header_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0f8f5')),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-                ('BORDER', (0, 0), (-1, -1), 1, colors.HexColor('#d5e8e4')),
-                ('BORDERRADIUS', (0, 0), (-1, -1), 5),
+            # Left: INVOICE title | Right: Company info
+            header_data = [[
+                Paragraph("INVOICE", invoice_title_style),
+                Paragraph(
+                    "<b>HurshBinTech</b><br/>Professional Learning Materials<br/>India",
+                    ParagraphStyle(
+                        'CompanyInfo',
+                        parent=styles['Normal'],
+                        fontSize=10,
+                        textColor=colors.HexColor('#333333'),
+                        alignment=TA_RIGHT,
+                        leading=14
+                    )
+                )
+            ]]
+            header_table = Table(header_data, colWidths=[3.2*inch, 3.4*inch])
+            header_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ]))
-            elements.append(invoice_header_table)
+            elements.append(header_table)
             elements.append(Spacer(1, 0.25*inch))
             
-            # ===== BILLING & SHIPPING INFO =====
-            # Two column layout for Bill To and Ship To
-            bill_ship_data = [
-                [
-                    Paragraph("<b>BILL TO</b>", section_heading_style),
-                    Paragraph("<b>SHIP TO</b>", section_heading_style),
-                ],
-                [
-                    Paragraph(f"<b>{customer_name}</b><br/>{customer_email}", normal_style),
-                    Paragraph(f"<b>{customer_name}</b><br/>{delivery_address}, {delivery_city}<br/>Postal Code: {delivery_pincode}", normal_style),
-                ]
-            ]
-            bill_ship_table = Table(bill_ship_data, colWidths=[3.3*inch, 3.3*inch])
-            bill_ship_table.setStyle(TableStyle([
+            # ===== META SECTION (Invoice # & Bill To) =====
+            meta_data = [[
+                Paragraph(
+                    f"<b>Invoice No:</b> {invoice_number}<br/><br/><b>Bill to:</b><br/>{customer_name}<br/><font size='8'>{customer_email}</font>",
+                    ParagraphStyle(
+                        'MetaLeft',
+                        parent=styles['Normal'],
+                        fontSize=10,
+                        textColor=colors.HexColor('#333333'),
+                        leading=14
+                    )
+                ),
+                Paragraph(
+                    f"<b>Date:</b> {created_at.strftime('%d %B, %Y')}",
+                    ParagraphStyle(
+                        'MetaRight',
+                        parent=styles['Normal'],
+                        fontSize=10,
+                        textColor=colors.HexColor('#333333'),
+                        leading=14,
+                        alignment=TA_RIGHT
+                    )
+                )
+            ]]
+            meta_table = Table(meta_data, colWidths=[3.3*inch, 3.3*inch])
+            meta_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('TOPPADDING', (0, 1), (-1, -1), 10),
-                ('LEFTPADDING', (0, 1), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 1), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ]))
-            elements.append(bill_ship_table)
+            elements.append(meta_table)
             elements.append(Spacer(1, 0.2*inch))
             
+            # ===== DASHED DIVIDER =====
+            from reportlab.platypus import HRFlowable
+            elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#cccccc'), spaceAfter=20, lineCap='round'))
+            elements.append(Spacer(1, 0.05*inch))
             # ===== LINE ITEMS TABLE =====
-            items_data = [['Product', 'Qty', 'Unit Price', 'Amount']]
+            items_data = [['Item', 'Description', 'Price', 'Amount']]
+            
+            item_number = 1
             for item in order_items:
                 items_data.append([
-                    item['product_name'][:30],  # Limit product name length
-                    str(item['quantity']),
-                    f"₹{float(item['unit_price']):.2f}",
-                    f"₹{float(item['line_total']):.2f}"
+                    str(item_number),
+                    item['product_name'][:50],
+                    f"Rs. {float(item['unit_price']):.2f}",
+                    f"Rs. {float(item['line_total']):.2f}"
                 ])
+                item_number += 1
             
             items_table = Table(
                 items_data,
-                colWidths=[3.2*inch, 0.8*inch, 1.2*inch, 1.2*inch]
+                colWidths=[0.7*inch, 2.8*inch, 1.25*inch, 1.5*inch]
             )
             items_table.setStyle(TableStyle([
-                # Header styling
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#41A67E')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+                # Header styling - Simple and clean
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#111111')),
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+                ('ALIGN', (2, 0), (-1, 0), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('LEFTPADDING', (0, 0), (-1, 0), 4),
+                ('RIGHTPADDING', (0, 0), (-1, 0), 4),
+                ('LINEBELOW', (0, 0), (-1, 0), 1, colors.HexColor('#cccccc')),
                 
                 # Body styling
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ffffff')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#2c3e50')),
-                ('ALIGN', (0, 1), (0, -1), 'LEFT'),
-                ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-                ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
+                
+                # Alignment
+                ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+                ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+                ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+                ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+                
+                # Padding
                 ('TOPPADDING', (0, 1), (-1, -1), 10),
                 ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
-                ('LEFTPADDING', (0, 1), (-1, -1), 8),
-                ('RIGHTPADDING', (0, 1), (-1, -1), 8),
+                ('LEFTPADDING', (0, 1), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 1), (-1, -1), 4),
                 
-                # Grid styling
-                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e0e0e0')),
-                ('LINEABOVE', (0, 0), (-1, 0), 2, colors.HexColor('#41A67E')),
-                ('LINEBELOW', (0, -1), (-1, -1), 2, colors.HexColor('#41A67E')),
+                # Borders - light gray lines only
+                ('LINEBELOW', (0, 1), (-1, -1), 1, colors.HexColor('#f2f2f2')),
             ]))
             elements.append(items_table)
             elements.append(Spacer(1, 0.15*inch))
             
             # ===== TOTALS SECTION =====
-            # Right-aligned totals
-            totals_data = [
-                ['Subtotal', f"₹{float(subtotal):.2f}"],
-                ['Discount', f"-₹{float(discount_total):.2f}"],
-                ['', ''],  # Spacer row
-                ['TOTAL AMOUNT DUE', f"₹{float(total_amount):.2f}"]
-            ]
-            
-            totals_table = Table(
-                totals_data,
-                colWidths=[4.5*inch, 1.4*inch]
+            # Simple total display (no subtotal/discount breakdown in this design)
+            total_para = Paragraph(
+                f"<b style='font-size: 24px'>Total&nbsp;&nbsp;&nbsp;&nbsp;Rs. {float(total_amount):.2f}</b>",
+                ParagraphStyle(
+                    'Total',
+                    parent=styles['Normal'],
+                    alignment=TA_RIGHT,
+                    textColor=colors.HexColor('#111111'),
+                    spaceAfter=20
+                )
             )
-            totals_table.setStyle(TableStyle([
-                # Subtotal and Discount rows
-                ('ALIGN', (0, 0), (0, 1), 'RIGHT'),
-                ('ALIGN', (1, 0), (1, 1), 'RIGHT'),
-                ('FONTNAME', (0, 0), (0, 1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (0, 1), 10),
-                ('TEXTCOLOR', (0, 0), (0, 1), colors.HexColor('#2c3e50')),
-                ('TOPPADDING', (0, 0), (1, 1), 8),
-                ('BOTTOMPADDING', (0, 0), (1, 1), 8),
-                ('RIGHTPADDING', (0, 0), (-1, 1), 12),
-                ('BACKGROUND', (0, 0), (-1, 1), colors.HexColor('#ffffff')),
-                
-                # Spacer row
-                ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#ffffff')),
-                ('TOPPADDING', (0, 2), (-1, 2), 4),
-                ('BOTTOMPADDING', (0, 2), (-1, 2), 4),
-                
-                # Total row
-                ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#41A67E')),
-                ('TEXTCOLOR', (0, 3), (-1, 3), colors.whitesmoke),
-                ('ALIGN', (0, 3), (0, 3), 'RIGHT'),
-                ('ALIGN', (1, 3), (1, 3), 'RIGHT'),
-                ('FONTNAME', (0, 3), (-1, 3), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 3), (-1, 3), 13),
-                ('TOPPADDING', (0, 3), (-1, 3), 12),
-                ('BOTTOMPADDING', (0, 3), (-1, 3), 12),
-                ('RIGHTPADDING', (0, 3), (-1, 3), 12),
-                ('LEFTPADDING', (0, 3), (-1, 3), 12),
-                
-                # Borders
-                ('LINEABOVE', (0, 3), (-1, 3), 2, colors.HexColor('#41A67E')),
-                ('LINEBELOW', (0, 3), (-1, 3), 2, colors.HexColor('#41A67E')),
-            ]))
+            elements.append(total_para)
+            elements.append(Spacer(1, 0.2*inch))
             
-            # Right-align the totals table
-            totals_wrapper_data = [['', totals_table]]
-            totals_wrapper = Table(totals_wrapper_data, colWidths=[3.3*inch, 2.4*inch])
-            totals_wrapper.setStyle(TableStyle([('ALIGN', (1, 0), (1, 0), 'RIGHT')]))
-            elements.append(totals_wrapper)
+            # ===== BANK DETAILS SECTION =====
+            elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#ddd'), spaceAfter=15))
+            
+            bank_text = f"<b>Bank Name:</b> HurshBinTech Payment Gateway<br/><b>Contact:</b> support@hurshbintech.com"
+            bank_para = Paragraph(bank_text, ParagraphStyle(
+                'Bank',
+                fontName='Helvetica',
+                fontSize=10,
+                textColor=colors.HexColor('#333333'),
+                leading=14
+            ))
+            elements.append(bank_para)
             elements.append(Spacer(1, 0.25*inch))
             
             # ===== FOOTER SECTION =====
-            elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e0e0e0'), spaceAfter=10))
+            elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#ddd'), spaceAfter=12))
             
-            footer_text = f"Thank you for your business! | Invoice: {invoice_number} | Generated: {datetime.utcnow().strftime('%d-%m-%Y %H:%M:%S')} | HurshBintech © 2025"
-            elements.append(Paragraph(footer_text, footer_style))
+            footer_text = "If you have any questions please contact : support@hurshbintech.com"
+            footer_para = Paragraph(footer_text, ParagraphStyle(
+                'Footer',
+                fontName='Helvetica',
+                fontSize=10,
+                textColor=colors.HexColor('#666666'),
+                alignment=TA_CENTER
+            ))
+            elements.append(footer_para)
             
             # Build PDF
             doc.build(elements)
@@ -334,6 +348,7 @@ class InvoiceGenerator:
             logger.error(f"Error generating invoice PDF: {str(e)}")
             raise
     
+
     def _save_invoice(
         self,
         pdf_bytes: bytes,

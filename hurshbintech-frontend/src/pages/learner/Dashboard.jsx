@@ -89,7 +89,7 @@ const LearnerDashboard = () => {
       console.error("Error fetching sessions:", error);
       // Show error toast only once on initial login
       if (!sessionErrorToastShownRef.current) {
-        toast.info("No active sessions created yet");
+        // toast.info("No active sessions created yet");
         sessionErrorToastShownRef.current = true;
       }
     } finally {
@@ -107,7 +107,7 @@ const LearnerDashboard = () => {
       console.error("Error fetching assigned programs:", error);
       // Show error toast only once on initial login
       if (!programErrorToastShownRef.current) {
-        toast.info("No programs assigned yet");
+        // toast.info("No programs assigned yet");
         programErrorToastShownRef.current = true;
       }
       setLearningPrograms([]); // Set to empty array on error

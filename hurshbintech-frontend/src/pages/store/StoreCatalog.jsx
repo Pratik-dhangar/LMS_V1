@@ -64,7 +64,7 @@ const StoreCatalog = () => {
             setPagination(data.pagination || { total: 0, pages: 0 });
         } catch (error) {
             console.error('Failed to load products:', error);
-            toast.error('Failed to load products');
+            // toast.error('Failed to load products');
         } finally {
             setLoading(false);
         }
