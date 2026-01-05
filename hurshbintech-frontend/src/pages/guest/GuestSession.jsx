@@ -10,9 +10,10 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
-import StopwatchDisplay from '../../components/common/StopwatchDisplay';
+import MessageList from '../../components/common/MessageList';
 import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
+import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import '../../styles/Pages.css';
 
@@ -86,6 +87,7 @@ const GuestSession = () => {
   const [floatingAnimations, setFloatingAnimations] = useState([]);
 
   // UI state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const headerTimeoutRef = useRef(null);
@@ -97,6 +99,8 @@ const GuestSession = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
   const [buckets, setBuckets] = useState([]);
+  const [textBoxes, setTextBoxes] = useState([]);
+  const [activeTextBoxId, setActiveTextBoxId] = useState(null);
 
   // Tool access control from coach
   const [toolAccess, setToolAccess] = useState({
@@ -268,29 +272,49 @@ const GuestSession = () => {
         }
       };
 
-      wbService.onFloatingAnimations = (data) => {
-        console.log('[GuestSession] Floating animations received:', data);
-        setFloatingAnimations(prev => [...prev, ...data.animations]);
+      wbService.onFloatingAnimations = (animations) => {
+        setFloatingAnimations(prev => [...prev, ...animations]);
 
         setTimeout(() => {
-          setFloatingAnimations(prev =>
-            prev.filter(a => !data.animations.find(na => na.id === a.id))
+          setFloatingAnimations(prevAnims =>
+            prevAnims.filter(anim => !animations.find(newAnim => newAnim.id === anim.id))
           );
-        }, 13000);
+        }, 15000);
       };
 
       wbService.onErasePen = () => {
-        console.log('[GuestSession] Received erase pen event');
+        setErasePenTrigger(prev => prev + 1);
+      };
+
+      // Text box handlers - receive updates from coach
+      wbService.onTextBoxAdded = (textBox) => {
+        console.log('[GuestSession] Text box added:', textBox);
+        setTextBoxes(prev => [...prev, textBox]);
+      };
+
+      wbService.onTextBoxUpdate = (update) => {
+        console.log('[GuestSession] Text box updated:', update);
+        setTextBoxes(prev => prev.map(box => 
+          box.id === update.id ? { ...box, ...update } : box
+        ));
+      };
+
+      wbService.onTextBoxRemoved = (data) => {
+        console.log('[GuestSession] Text box removed:', data);
+        setTextBoxes(prev => prev.filter(box => box.id !== data.id));
+      };
+
+      wbService.onClearCanvas = () => {
+        console.log('[GuestSession] Received clear canvas command from coach');
+        setCanvasItems([]);
+        setBuckets([]);
+        setTextBoxes([]);
         setErasePenTrigger(prev => prev + 1);
         setRedrawCanvasTrigger(prev => prev + 1);
       };
 
-      wbService.onClearCanvas = () => {
-        console.log('[GuestSession] Received clear canvas event');
-        setCanvasItems([]);
-        setBuckets([]);
-        setErasePenTrigger(prev => prev + 1);
-        setRedrawCanvasTrigger(prev => prev + 1);
+      wbService.onFreeze = (frozen) => {
+        setIsFrozen(frozen);
       };
 
       wbService.onStopwatchSync = (data) => {
@@ -323,7 +347,7 @@ const GuestSession = () => {
       };
 
       videoService.onConnectionStateChange = (state) => {
-        console.log('[GuestSession] Connection state changed to:', state);
+        console.log('[GuestSession] Connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -332,22 +356,16 @@ const GuestSession = () => {
           'failed': 'failed',
           'closed': 'disconnected'
         };
-        setConnectionStatus(statusMap[state] || state);
+        const mappedStatus = statusMap[state] || state;
+        setConnectionStatus(mappedStatus);
 
-        if (state === 'connected') {
-          setCoachJoined(true);
-        } else if (state === 'disconnected' || state === 'closed') {
+        // If disconnected or failed, coach might have left
+        if (state === 'disconnected' || state === 'closed') {
           setCoachJoined(false);
-          toast.info('Coach has left the session');
         }
       };
 
-      videoService.onMessage = (message) => {
-        if (message.type === 'freeze') {
-          setIsFrozen(message.frozen);
-          toast.info(message.frozen ? 'Screen frozen by coach' : 'Screen unfrozen');
-        }
-      };
+
 
       videoService.onError = (error) => {
         console.error('[GuestSession] Video conference error:', error);
@@ -377,12 +395,21 @@ const GuestSession = () => {
   };
 
   const handleLeaveSession = () => {
-    if (window.confirm('Are you sure you want to leave this session?')) {
-      cleanup();
-      toast.success('You have left the session');
-      // Redirect to a thank you page or home
-      window.location.href = '/';
+    // Notify coach before leaving
+    if (webRTC && webRTC.isConnected) {
+      try {
+        webRTC.sendMessage({
+          type: 'client_leaving',
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('[GuestSession] Error sending leave notification:', error);
+      }
     }
+    
+    cleanup();
+    // Redirect to a thank you page or home
+    window.location.href = '/';
   };
 
   const cleanup = () => {
@@ -446,10 +473,12 @@ const GuestSession = () => {
     );
   }
 
-  // Show waiting overlay if coach hasn't joined yet
+  // Show waiting overlay if coach hasn't joined yet and session is not yet started
+  // Only show waiting screen if session status is 'scheduled', not 'in_progress'
   if (!loading && !coachJoined && sessionInfo?.status === 'scheduled') {
     return (
       <div className={`learner-session-page ${pageClassName}`}>
+        {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
         <div className={`session-header ${navbarClassName}`}>
           <div className="session-header-main">
             <div>
@@ -458,69 +487,44 @@ const GuestSession = () => {
                 Welcome, {guestInfo?.name || 'Guest'}
               </div>
             </div>
+            <div className="session-header-controls">
+              <button
+                className="btn-session btn-session-end"
+                onClick={() => window.location.href = '/'}
+              >
+                🏠 Back to Home
+              </button>
+            </div>
           </div>
         </div>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 'calc(100vh - 6.25rem)',
-          padding: '2rem'
-        }}>
-          <div style={{
-            maxWidth: '500px',
-            width: '100%',
-            backgroundColor: 'white',
-            borderRadius: '1rem',
-            padding: '2.5rem',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              margin: '0 auto 1.5rem',
-              borderRadius: '50%',
-              backgroundColor: '#dbeafe',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2.5rem'
-            }}>
-              ⏳
-            </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.75rem' }}>
+        {/* Waiting Overlay */}
+        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
+          <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+            <div className="text-6xl mb-4 animate-bounce">⏳</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
               Waiting for Coach
             </h2>
-            <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+            <p className="text-gray-600 mb-4">
               Your session is ready and you're connected!
             </p>
-            <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+            <p className="text-gray-600 mb-6">
               Please wait while <strong>{sessionInfo?.coach_name ?? 'your coach'}</strong> joins the session.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
-              <div style={{ width: '0.5rem', height: '0.5rem', backgroundColor: '#3b82f6', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span>Connecting...</span>
             </div>
             {sessionInfo && (
-              <div style={{
-                marginTop: '1.5rem',
-                padding: '1rem',
-                backgroundColor: '#eff6ff',
-                borderRadius: '0.5rem'
-              }}>
-                <p style={{ fontSize: '0.875rem', color: '#1e40af', fontWeight: '600' }}>
-                  Session Details:
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  <strong>Session Details:</strong>
                 </p>
                 {sessionInfo?.duration && (
-                  <p style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.25rem' }}>
+                  <p className="text-xs text-gray-600 mt-1">
                     ⏱️ Duration: {sessionInfo.duration} minutes
                   </p>
                 )}
-                <p style={{ fontSize: '0.75rem', color: '#3b82f6', marginTop: '0.25rem' }}>
-                  📅 Scheduled: {sessionInfo.scheduled_time}
-                </p>
               </div>
             )}
           </div>
@@ -531,8 +535,8 @@ const GuestSession = () => {
 
   return (
     <div className={`learner-session-page ${pageClassName}`}>
-      {/* Navigation / Header */}
-      <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
+      {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+      <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Guest Session</div>
@@ -552,123 +556,178 @@ const GuestSession = () => {
         </div>
       </div>
 
-      {/* Main layout */}
-      <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
-        {/* Center Area */}
-        <div className="session-center-area-fullwidth">
-          {/* Whiteboard */}
-          <div className="session-whiteboard-container">
-            {/* Remote Video (Coach) - Large display */}
-            {remoteStream && (
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                width: '320px',
-                height: '240px',
-                zIndex: 100,
-                borderRadius: '8px',
-                overflow: 'hidden',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                backgroundColor: '#000'
-              }}>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '8px',
-                  left: '8px',
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}>
-                  {sessionInfo?.coach_name || 'Coach'}
-                </div>
-              </div>
-            )}
+      {/* Sidebar Toggles (Mobile Only) */}
+      <div className="session-sidebar-toggles">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="sidebar-toggle-button"
+          aria-label="Toggle Sidebar"
+        >
+          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+        </button>
+      </div>
 
+      {/* Overlay backdrop for mobile sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Container - Responsive 3-column layout */}
+      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
+        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+          {/* Coach Video Feed */}
+          <div className="mb-4 md:mb-5">
+            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+              <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                {remoteStream ? (
+                  <>
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="absolute top-0 left-0 w-full h-full object-cover"
+                    />
+                    <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
+                      Coach
+                    </div>
+                    <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
+                      {connectionStatus}
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800">
+                    <div className="text-center">
+                      <div className="session-loader mb-2"></div>
+                      <span className="text-sm text-gray-400">Connecting to coach...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 md:p-5">
+            <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700 mb-2">Messages</h3>
+            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto mb-2">
+              {messages.length > 0 ? (
+                messages.map((msg, idx) => (
+                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs md:text-sm">
+                    <strong className="text-gray-800">{msg.sender === 'You' ? 'Coach' : msg.sender}:</strong>
+                    <span className="text-gray-700"> {msg.text}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.coach_name ?? 'Coach'}:</p>
+                  <p className="text-xs sm:text-xs md:text-sm text-gray-500">Welcome to the session!</p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="[Type message...]"
+                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+              />
+              <button
+                onClick={sendMessage}
+                className="px-4 py-2 md:px-5 md:py-3 bg-blue-500 text-white text-xs md:text-sm rounded hover:bg-blue-600 transition-colors"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Whiteboard Area - Scrollable Container */}
+        <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
+          <div className="session-whiteboard-container">
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
                 isTrainer={false}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemIds={selectedItemIds}
+                isFrozen={false}
+                isPaused={false}
+                toolAccess={toolAccess}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
                 waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
                 onAnimationPop={handleAnimationPop}
+                erasePenTrigger={erasePenTrigger}
+                redrawCanvasTrigger={redrawCanvasTrigger}
+                buckets={buckets}
+                setBuckets={setBuckets}
+                textBoxes={textBoxes}
+                activeTextBoxId={activeTextBoxId}
+                setActiveTextBoxId={setActiveTextBoxId}
                 tool={tool}
                 setTool={setTool}
                 color={color}
                 setColor={setColor}
                 lineWidth={lineWidth}
                 setLineWidth={setLineWidth}
-                buckets={buckets}
-                setBuckets={setBuckets}
-                erasePenTrigger={erasePenTrigger}
-                redrawCanvasTrigger={redrawCanvasTrigger}
-                stopwatchFormattedTime={stopwatchIsRunning ? formatTime(stopwatchElapsedTime) : null}
+                keyboardMode={keyboardMode}
+                keyboardText={keyboardText}
+                setKeyboardText={setKeyboardText}
+                keyboardPosition={keyboardPosition}
+                setKeyboardPosition={setKeyboardPosition}
+                stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime) : null}
                 stopwatchIsRunning={stopwatchIsRunning}
-                toolAccess={toolAccess}
-                isFrozen={isFrozen}
               />
             </div>
           </div>
-
           {/* Video Controls */}
-          <div className="w-full mt-4 mb-3">
-            <div className="flex items-center justify-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-              <button
-                onClick={handleToggleMic}
-                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-                style={{
-                  padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                  fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                  gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-                }}
-                title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
-              >
-                <span>{micEnabled ? '🎤' : '🔇'}</span>
-              </button>
-              <button
-                onClick={handleToggleCamera}
-                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-                style={{
-                  padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                  fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                  gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-                }}
-                title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
-              >
-                <span>{cameraEnabled ? '📹' : '📷'}</span>
-              </button>
-              <button
-                onClick={handleLeaveSession}
-                className="bg-red-600 hover:bg-red-700 media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
-                style={{
-                  padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                  fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                  gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-                }}
-              >
-                🚪 Leave Session
-              </button>
-            </div>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 mt-4 mb-4 flex-wrap" style={{ paddingBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+            <button
+              onClick={handleToggleMic}
+              className={`${
+                micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+              } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+              style={{
+                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
+                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
+                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
+              }}
+              title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
+            >
+              <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
+            </button>
+            <button
+              onClick={handleToggleCamera}
+              className={`${
+                cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+              } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+              style={{
+                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
+                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
+                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
+              }}
+              title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+            >
+              <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
+            </button>
+            <button
+              onClick={handleLeaveSession}
+              className="bg-gray-600 hover:bg-gray-700 media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
+              style={{
+                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
+                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
+                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
+              }}
+            >
+              🚪 Leave Session
+            </button>
           </div>
         </div>
       </div>

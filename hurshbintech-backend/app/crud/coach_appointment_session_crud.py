@@ -4,7 +4,7 @@ Handles one-on-one sessions created from appointments
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -182,22 +182,49 @@ async def get_client_sessions(db: AsyncSession, user_id: int) -> List[CoachAppoi
 
 
 async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSession:
-    """Start a scheduled coach session"""
+    """Start a scheduled coach session or resume an active one"""
     session = await get_session_by_id(db, session_id)
     
     if not session:
         raise ValueError(f"Session {session_id} not found")
     
-    if session.status != "scheduled":
-        raise ValueError(f"Cannot start session in {session.status} state")
+    # Allow resuming active sessions (coach rejoining)
+    if session.status == "active":
+        # Session is already active, just return it (resume)
+        return session
     
-    session.status = "active"
-    session.started_at = datetime.now()
+    # For scheduled sessions, check if it's within 2 hours of scheduled time
+    if session.status == "scheduled":
+        # Get appointment to check scheduled time
+        if session.appointment_id:
+            appointment_result = await db.execute(
+                select(Appointment).where(Appointment.id == session.appointment_id)
+            )
+            appointment = appointment_result.scalar_one_or_none()
+            
+            if appointment and appointment.appointment_time:
+                scheduled_time = appointment.appointment_time
+                current_time = datetime.now()
+                
+                # Calculate 2 hours after scheduled time
+                expiry_time = scheduled_time + timedelta(hours=2)
+                
+                # Check if current time is before expiry (session window is still open)
+                if current_time > expiry_time:
+                    raise ValueError(f"Session window has expired. Sessions must be started within 2 hours of scheduled time.")
+        
+        # Start the session
+        session.status = "active"
+        if not session.started_at:  # Only set if not already set
+            session.started_at = datetime.now()
+        
+        await db.commit()
+        await db.refresh(session)
+        
+        return session
     
-    await db.commit()
-    await db.refresh(session)
-    
-    return session
+    # If status is ended or any other status, don't allow restart
+    raise ValueError(f"Cannot start session in {session.status} state")
 
 
 async def end_session(db: AsyncSession, session_id: str, notes: Optional[str] = None) -> CoachAppointmentSession:

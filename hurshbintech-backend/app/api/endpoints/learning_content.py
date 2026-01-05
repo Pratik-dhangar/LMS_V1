@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_admin, get_current_head, get_current_trainer
+from app.core.deps import get_current_admin, get_current_head, get_current_trainer, get_current_coach
 from app.crud import learning_content_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile, User
@@ -464,3 +464,67 @@ async def update_content_trainer(
         raise HTTPException(status_code=404, detail="Content not found")
 
     return LearningContentResponse.from_orm_with_users(updated_content)
+
+
+# ============ COACH ENDPOINTS ============#
+
+
+@router.post(
+    "/coach", response_model=LearningContentResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_learning_content_coach(
+    content_data: LearningContentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_coach: User = Depends(get_current_coach),
+):
+    """Coach creates new learning content"""
+    new_content = await learning_content_crud.create_learning_content(
+        db, content_data, current_coach.id
+    )
+    response = LearningContentResponse.from_orm_with_users(new_content)
+    return convert_response_urls(response)
+
+
+@router.get("/coach", response_model=List[LearningContentResponse])
+async def get_all_contents_coach(
+    db: AsyncSession = Depends(get_db), current_coach: User = Depends(get_current_coach)
+):
+    """Coach gets all learning contents"""
+    contents = await learning_content_crud.get_all_learning_contents(db)
+    responses = [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    return [convert_response_urls(r) for r in responses]
+
+
+@router.get("/coach/{content_id}", response_model=LearningContentResponse)
+async def get_content_by_id_coach(
+    content_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_coach: User = Depends(get_current_coach),
+):
+    """Coach gets specific learning content"""
+    content = await learning_content_crud.get_learning_content_by_id(db, content_id)
+
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    response = LearningContentResponse.from_orm_with_users(content)
+    return convert_response_urls(response)
+
+
+@router.patch("/coach/{content_id}", response_model=LearningContentResponse)
+async def update_content_coach(
+    content_id: int,
+    content_data: LearningContentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_coach: User = Depends(get_current_coach),
+):
+    """Coach updates learning content"""
+    updated_content = await learning_content_crud.update_learning_content(
+        db, content_id, content_data, current_coach.id
+    )
+
+    if not updated_content:
+        raise HTTPException(status_code=404, detail="Content not found")
+
+    response = LearningContentResponse.from_orm_with_users(updated_content)
+    return convert_response_urls(response)
