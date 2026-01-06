@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from sqlalchemy import select, func, and_, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.program_assignment_model import ProgramAssignment, CompletionStatus
 from app.models.program_learning_content_model import ProgramLearningContent
@@ -78,8 +78,9 @@ async def get_assignments(
     
     query = select(ProgramAssignment).options(
         joinedload(ProgramAssignment.learner),
-        joinedload(ProgramAssignment.program).joinedload(LearningGoals.program_contents).joinedload(ProgramLearningContent.content),
-        joinedload(ProgramAssignment.assigned_by)
+        joinedload(ProgramAssignment.program),
+        joinedload(ProgramAssignment.assigned_by),
+        selectinload(ProgramAssignment.content_assignments).selectinload(LearnerContentAssignment.content)
     )
     
     filters = []

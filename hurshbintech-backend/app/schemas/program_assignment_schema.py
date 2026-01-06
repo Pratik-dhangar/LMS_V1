@@ -175,6 +175,11 @@ class ProgramAssignmentListResponse(BaseModel):
     assigned_at: datetime
     is_overdue: bool = False
     is_late_submission: bool = False
+    completion_percentage: float = 0.0
+    final_feedback_rating: Optional[int] = None
+    final_feedback_remarks: Optional[str] = None
+    final_feedback_given_at: Optional[datetime] = None
+    content_assignments: Optional[List[ContentAssignmentInProgram]] = []
 
     class Config:
         from_attributes = True

@@ -24,7 +24,7 @@ from app.core.deps import get_current_head, get_current_user
 from app.crud import program_assignment_crud, program_assignment_attachment_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile, User, UserRole
-from app.models.program_assignment_model import CompletionStatus
+from app.models.program_assignment_model import CompletionStatus, ProgramAssignment
 from app.models.program_assignment_attachment_model import AttachmentType
 from app.models.learner_content_assignment_model import LearnerContentAssignment, ContentCompletionStatus
 from app.schemas.program_assignment_schema import (
@@ -1223,6 +1223,42 @@ async def get_my_assignments(
             completion_date = a.completed_at.date() if isinstance(a.completed_at, datetime) else a.completed_at
             is_late_submission = completion_date > a.end_date
         
+        # Calculate completion percentage based on content assignments
+        total_contents = len(a.content_assignments) if a.content_assignments else 0
+        completed_contents = 0
+        
+        if total_contents > 0:
+            for ca in a.content_assignments:
+                if ca.completion_status in [ContentCompletionStatus.SUBMITTED, ContentCompletionStatus.REVIEWED]:
+                    completed_contents += 1
+        
+        completion_percentage = (completed_contents / total_contents * 100) if total_contents > 0 else 0.0
+        
+        # Build content assignments list
+        content_assignments_list = []
+        if a.content_assignments:
+            for ca in a.content_assignments:
+                content_assignments_list.append(
+                    ContentAssignmentInProgram(
+                        id=ca.id,
+                        content_id=ca.content_id,
+                        learning_content=LearningContentBasic(
+                            id=ca.content.id,
+                            title=ca.content.title,
+                            description=ca.content.description,
+                            content_type=ca.content.content_type,
+                            file_url=ca.content.file_url,
+                            thumbnail_url=ca.content.thumbnail_url,
+                        ),
+                        completion_status=ca.completion_status,
+                        assigned_at=ca.assigned_at,
+                        started_at=ca.started_at,
+                        submitted_at=ca.submitted_at,
+                        reviewed_at=ca.reviewed_at,
+                        reviewed_by_head=ca.reviewed_by_head,
+                    )
+                )
+        
         result.append(
             ProgramAssignmentListResponse(
                 id=a.id,
@@ -1237,7 +1273,12 @@ async def get_my_assignments(
                 completed_at=a.completed_at,
                 assigned_at=a.assigned_at,
                 is_overdue=is_overdue,
-                is_late_submission=is_late_submission
+                is_late_submission=is_late_submission,
+                completion_percentage=round(completion_percentage, 1),
+                final_feedback_rating=a.final_feedback_rating,
+                final_feedback_remarks=a.final_feedback_remarks,
+                final_feedback_given_at=a.final_feedback_given_at,
+                content_assignments=content_assignments_list,
             )
         )
     
