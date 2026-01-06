@@ -313,7 +313,7 @@ const TrainerSession = () => {
     }
   }, [whiteboardService, stopwatch.elapsedTime, stopwatch.isRunning]);
 
-  const [selectedItemIds, setSelectedItemIds] = useState([]); // Track which items are selected by learner (multiple)
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
 
   // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
@@ -532,15 +532,9 @@ const TrainerSession = () => {
 
     // Set up callback for item selection by learner
     whiteboardService.onItemSelected = (data) => {
-      // console.log('[TrainerSession] Learner selected items:', data);
-      if (data.selectedBy === 'learner') {
-        // Handle both old format (itemId) and new format (itemIds array)
-        if (data.itemIds) {
-          setSelectedItemIds(data.itemIds);
-        } else if (data.itemId) {
-          setSelectedItemIds([data.itemId]);
-        }
-        // Visual highlight will show on canvas - no need for toast
+      console.log('[TrainerSession] Remote user selected items:', data);
+      if (data.itemIds && Array.isArray(data.itemIds)) {
+        setRemoteSelectedItemIds(data.itemIds);
       }
     };
 
@@ -1806,12 +1800,13 @@ const TrainerSession = () => {
                 isTrainer={true}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
+                toolAccess={learnerToolAccess}
                 keyboardMode={keyboardMode}
                 keyboardText={keyboardText}
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemIds={selectedItemIds}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
