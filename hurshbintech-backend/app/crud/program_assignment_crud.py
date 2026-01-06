@@ -239,6 +239,9 @@ async def update_program_status_from_content(
     - If all content is REVIEWED -> Program is COMPLETED
     - Otherwise -> Program is NOT_STARTED
     """
+    # Flush pending changes to ensure we see the latest content assignment statuses
+    await db.flush()
+    
     # Get all content assignments for this program
     result = await db.execute(
         select(LearnerContentAssignment.completion_status)

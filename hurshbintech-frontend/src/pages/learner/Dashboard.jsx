@@ -321,7 +321,7 @@ const LearnerDashboard = () => {
               {
                 icon: "📅",
                 title: "Book Appointment",
-                
+
                 onClick: () => navigate("/book-appointment"), // New booking page
               },
             ].map((card, index) => (
@@ -439,11 +439,34 @@ const LearnerDashboard = () => {
                     // Calculate completion percentage
                     const completionPercentage = prog.completion_percentage || 0;
 
+                    // Check if any content has feedback (REVIEWED status)
+                    const hasFeedback = prog.content_assignments && prog.content_assignments.some(
+                      ca => ca.completion_status === 'REVIEWED'
+                    );
+
+                    // Check if program has final feedback
+                    const hasFinalFeedback = prog.final_feedback_rating && prog.final_feedback_rating > 0;
+
                     return (
                       <div
                         key={prog.id}
-                        className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
+                        className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition relative"
                       >
+                        {/* Feedback Badge */}
+                        {hasFeedback && !hasFinalFeedback && (
+                          <div className="absolute top-3 right-3 bg-green-100 border-2 border-green-400 rounded-full w-8 h-8 flex items-center justify-center">
+                            <span className="text-green-600 font-bold text-sm">💬</span>
+                          </div>
+                        )}
+
+                        {/* Final Feedback Badge */}
+                        {hasFinalFeedback && (
+                          <div className="absolute top-3 right-3 bg-yellow-100 border-2 border-yellow-400 rounded-full px-3 py-1 flex items-center gap-1">
+                            <span className="text-yellow-600 font-bold text-sm">⭐</span>
+                            <span className="text-yellow-700 font-bold text-xs">{prog.final_feedback_rating}/5</span>
+                          </div>
+                        )}
+
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-800 mb-1">
@@ -452,13 +475,33 @@ const LearnerDashboard = () => {
                             <p className="text-sm text-gray-600">
                               Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
                             </p>
+                            {hasFinalFeedback && prog.final_feedback_remarks && (
+                              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                <p className="text-xs font-semibold text-yellow-800 mb-1">Head's Final Feedback:</p>
+                                <p className="text-sm text-gray-700 italic">"{prog.final_feedback_remarks}"</p>
+                                {prog.final_feedback_given_at && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {new Date(prog.final_feedback_given_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <button
-                            className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                            onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
-                          >
-                            Start
-                          </button>
+                          {hasFinalFeedback ? (
+                            <button
+                              className="bg-yellow-500 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-yellow-600 transition-colors flex items-center gap-2"
+                              onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
+                            >
+                              <span>⭐</span> View Feedback
+                            </button>
+                          ) : (
+                            <button
+                              className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                              onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
+                            >
+                              Start
+                            </button>
+                          )}
                         </div>
 
                         {/* Progress Bar */}
