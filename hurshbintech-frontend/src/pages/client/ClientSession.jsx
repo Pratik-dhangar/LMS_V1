@@ -234,8 +234,15 @@ const ClientSession = () => {
       setWhiteboardService(wbService);
 
       // Listen for coach messages
-      wbService.onToolAccess = (access) => {
-        setToolAccess(access);
+      wbService.onToolAccess = (data) => {
+        console.log('[ClientSession] Tool access received from coach:', data);
+        // Handle the allPermissions object sent by coach
+        if (data.allPermissions) {
+          setToolAccess(data.allPermissions);
+        } else {
+          // Fallback for old format
+          setToolAccess(data);
+        }
       };
 
       wbService.onTriggerKeyboard = () => {
