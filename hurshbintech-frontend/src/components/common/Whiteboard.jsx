@@ -1464,8 +1464,12 @@ const Whiteboard = ({
             y = e.clientY - rect.top;
         }
 
-        // Check if clicking on a bucket (trainer only can drag buckets)
-        if (isTrainer) {
+        // Check for items FIRST (higher priority than buckets)
+        // This allows dragging items that are inside or overlapping buckets
+        const item = getItemAtPosition(x, y);
+        
+        // If no item found, check if clicking on a bucket (trainer only can drag buckets)
+        if (!item && isTrainer) {
             const bucket = getBucketAtPosition(x, y);
             if (bucket) {
                 // Check if clicking on resize handle
@@ -1486,7 +1490,7 @@ const Whiteboard = ({
             }
         }
 
-        const item = getItemAtPosition(x, y);
+        // Continue with item interaction if item was found
         if (item) {
             // Store original size when selecting item for potential bucket interaction
             const itemWithOriginalSize = {
@@ -1520,17 +1524,13 @@ const Whiteboard = ({
                         }
                     }
 
-                    // Start dragging or resizing the clicked item (even if multiple selected)
-                    if (isResizeHandle(x, y, item)) {
-                        setIsResizingItem(true);
-                    } else {
-                        // Store offset from cursor to item's top-left corner for smooth dragging
-                        dragOffsetRef.current = {
-                            x: x - item.x,
-                            y: y - item.y
-                        };
-                        setIsDraggingItem(true);
-                    }
+                    // Start dragging only (no resize for learners)
+                    // Store offset from cursor to item's top-left corner for smooth dragging
+                    dragOffsetRef.current = {
+                        x: x - item.x,
+                        y: y - item.y
+                    };
+                    setIsDraggingItem(true);
                     prevPosRef.current = { x, y };
                 } else {
                     // Select-only mode: single-click adds to selection (multi-select)
@@ -1551,28 +1551,26 @@ const Whiteboard = ({
                 return;
             }
 
-            // Trainer logic: enable multi-select only when clientToolAccess.select is active
-            // This allows coach to highlight selections visible to client/guest
-            if (toolAccess.select) {
-                const isAlreadySelected = selectedItems.some(si => si.id === item.id);
-                if (!isAlreadySelected) {
-                    // Add to selection for multi-select
-                    setSelectedItems(prev => [...prev, itemWithOriginalSize]);
-                    
-                    // Broadcast selection to all participants (same format for everyone)
-                    if (whiteboardService) {
-                        whiteboardService.send('item_selected', {
-                            itemIds: [...selectedItems.map(si => si.id), item.id],
-                            timestamp: Date.now()
-                        });
-                    }
+            // Trainer logic: trainer can ALWAYS drag/resize items regardless of toolAccess
+            // toolAccess controls LEARNER permissions, not trainer permissions
+            // Select item for highlighting
+            const isAlreadySelected = selectedItems.some(si => si.id === item.id);
+            
+            if (!isAlreadySelected) {
+                // Add to selection (trainer always uses single-select for simplicity)
+                setSelectedItems([itemWithOriginalSize]);
+                
+                // Broadcast selection to learner when select feature is enabled
+                // This allows learner to see trainer's selections highlighted on their whiteboard
+                if (toolAccess.select && whiteboardService) {
+                    whiteboardService.send('item_selected', {
+                        itemIds: [item.id],
+                        timestamp: Date.now()
+                    });
                 }
-                // Don't start dragging in multi-select mode
-                return;
             }
 
-            // Default behavior: single-select and enable immediate dragging/resizing
-            setSelectedItems([itemWithOriginalSize]);
+            // Trainer can ALWAYS start dragging/resizing
             if (isResizeHandle(x, y, item)) {
                 setIsResizingItem(true);
             } else {
@@ -2474,8 +2472,8 @@ const Whiteboard = ({
                                         }}
                                     />
 
-                                    {/* Resize Handle for Own Selection */}
-                                    {isSelectedByMe && (
+                                    {/* Resize Handle for Trainer Only */}
+                                    {isSelectedByMe && isTrainer && (
                                         <div
                                             className="resize-handle"
                                             style={{
@@ -2629,8 +2627,8 @@ const Whiteboard = ({
                                         }}
                                     />
 
-                                    {/* Resize Handle for Own Selection */}
-                                    {isSelectedByMe && (
+                                    {/* Resize Handle for Trainer Only */}
+                                    {isSelectedByMe && isTrainer && (
                                         <div
                                             className="resize-handle"
                                             style={{

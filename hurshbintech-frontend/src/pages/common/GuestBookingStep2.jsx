@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
+import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import '../../styles/GuestBooking.css';
 
 const GuestBookingStep2 = () => {
@@ -25,6 +26,7 @@ const GuestBookingStep2 = () => {
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
 
   const [formData, setFormData] = useState({
     guest_name: '',
@@ -48,6 +50,11 @@ const GuestBookingStep2 = () => {
       try {
         const data = await bookingService.getAvailableCoaches();
         setCoaches(data || []);
+        
+        // Fetch availability for each coach
+        if (data && data.length > 0) {
+          await fetchAllCoachAvailability(data);
+        }
       } catch (err) {
         console.error('Error fetching coaches:', err);
         toast.error('Failed to load coaches');
@@ -55,6 +62,69 @@ const GuestBookingStep2 = () => {
     };
     fetchCoaches();
   }, []);
+
+  const fetchAllCoachAvailability = async (coachesList) => {
+    try {
+      const availabilityMap = {};
+      
+      // Fetch availability for each coach in parallel
+      const promises = coachesList.map(coach =>
+        getCoachAvailabilityPublic(coach.id)
+          .then(data => {
+            availabilityMap[coach.id] = data;
+          })
+          .catch(error => {
+            console.error(`Failed to fetch availability for coach ${coach.id}:`, error);
+            // Set default available if fetch fails
+            availabilityMap[coach.id] = { is_available: true };
+          })
+      );
+      
+      await Promise.all(promises);
+      setCoachAvailability(availabilityMap);
+    } catch (error) {
+      console.error('Error fetching coach availability:', error);
+    }
+  };
+
+  // Check if a date falls within coach's unavailable period
+  const isDateUnavailable = (date, coachId) => {
+    if (!date || !coachId) return false;
+    
+    const availability = coachAvailability[coachId];
+    if (!availability || availability.is_available) return false;
+    
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (availability.unavailable_from && availability.unavailable_until) {
+      const unavailableFrom = new Date(availability.unavailable_from);
+      unavailableFrom.setHours(0, 0, 0, 0);
+      const unavailableUntil = new Date(availability.unavailable_until);
+      unavailableUntil.setHours(0, 0, 0, 0);
+      
+      return selectedDate >= unavailableFrom && selectedDate <= unavailableUntil;
+    }
+    
+    return false;
+  };
+
+  // Get next available date after unavailable period
+  const getNextAvailableDate = (coachId) => {
+    if (!coachId) return null;
+    
+    const availability = coachAvailability[coachId];
+    if (!availability || availability.is_available || !availability.unavailable_until) return null;
+    
+    const unavailableUntil = new Date(availability.unavailable_until);
+    unavailableUntil.setHours(0, 0, 0, 0);
+    
+    // Add 1 day to get next available date
+    const nextAvailable = new Date(unavailableUntil);
+    nextAvailable.setDate(nextAvailable.getDate() + 1);
+    
+    return nextAvailable.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   // Fetch available slots when date changes
   useEffect(() => {
@@ -124,6 +194,12 @@ const GuestBookingStep2 = () => {
       return;
     }
 
+    // Check if selected date is in coach's unavailable period
+    if (isDateUnavailable(formData.scheduled_date, formData.coach_id)) {
+      toast.error('Selected date is unavailable. Please choose another date.');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -180,7 +256,7 @@ const GuestBookingStep2 = () => {
     <>
       <Navbar />
       <div className="guest-booking-flow page-container">
-        <div className="page-main">
+        <div className="page-main-guest">
           <div className="page-header">
             <button className="btn-back" onClick={() => navigate(-1)}>
               <ArrowLeft size={20} /> Back
@@ -298,9 +374,14 @@ const GuestBookingStep2 = () => {
                         value={formData.scheduled_date}
                         onChange={handleInputChange}
                         min={new Date().toISOString().split('T')[0]}
-                        disabled={loading}
+                        disabled={loading || !formData.coach_id}
                         required
                       />
+                      {formData.scheduled_date && formData.coach_id && isDateUnavailable(formData.scheduled_date, formData.coach_id) && (
+                        <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
+                          ⚠️ Coach is unavailable on this date. Slots available from {getNextAvailableDate(formData.coach_id)}
+                        </small>
+                      )}
                     </div>
 
                     <div className="form-group">
@@ -310,7 +391,7 @@ const GuestBookingStep2 = () => {
                         name="scheduled_time"
                         value={formData.scheduled_time}
                         onChange={handleInputChange}
-                        disabled={loading || availableSlots.length === 0}
+                        disabled={loading || availableSlots.length === 0 || (formData.scheduled_date && formData.coach_id && isDateUnavailable(formData.scheduled_date, formData.coach_id))}
                         required
                       >
                         <option value="">Select time...</option>
