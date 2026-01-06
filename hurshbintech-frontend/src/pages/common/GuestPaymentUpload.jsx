@@ -18,6 +18,7 @@ const GuestPaymentUpload = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [expiryTime, setExpiryTime] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState('');
 
   // Validate token on mount
   useEffect(() => {
@@ -26,8 +27,13 @@ const GuestPaymentUpload = () => {
         setValidating(true);
         // Attempt to fetch appointment details with token
         const data = await bookingService.validatePaymentToken(uploadToken);
+        console.log('[GuestPaymentUpload] Token validation response:', data);
+        console.log('[GuestPaymentUpload] upload_token_expires_at:', data.upload_token_expires_at);
         setAppointment(data);
-        setExpiryTime(new Date(data.upload_token_expires_at));
+        const expiryDate = new Date(data.upload_token_expires_at);
+        console.log('[GuestPaymentUpload] Parsed expiry date:', expiryDate);
+        console.log('[GuestPaymentUpload] Is valid date?', !isNaN(expiryDate.getTime()));
+        setExpiryTime(expiryDate);
         setTokenValid(true);
       } catch (err) {
         console.error('Token validation error:', err);
@@ -43,37 +49,44 @@ const GuestPaymentUpload = () => {
     }
   }, [uploadToken]);
 
-  // Token expiry countdown
+  // Token expiry countdown - updates every second
   useEffect(() => {
     if (!expiryTime) return;
 
-    const timer = setInterval(() => {
+    const updateCountdown = () => {
       const now = new Date();
       const diff = expiryTime - now;
 
       if (diff <= 0) {
+        setTimeRemaining('Expired');
         setTokenValid(false);
         toast.error('Payment link has expired');
+        return false; // Stop the interval
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+      return true; // Continue the interval
+    };
+
+    // Update immediately
+    const shouldContinue = updateCountdown();
+    
+    if (!shouldContinue) return;
+
+    // Then update every second
+    const timer = setInterval(() => {
+      const shouldContinue = updateCountdown();
+      if (!shouldContinue) {
         clearInterval(timer);
       }
     }, 1000);
 
     return () => clearInterval(timer);
   }, [expiryTime]);
-
-  const getTimeRemaining = () => {
-    if (!expiryTime) return '';
-    const now = new Date();
-    const diff = expiryTime - now;
-
-    if (diff <= 0) return 'Expired';
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -204,7 +217,7 @@ const GuestPaymentUpload = () => {
     <>
       <Navbar />
       <div className="guest-booking-flow page-container">
-        <div className="page-main">
+        <div className="page-main-guest">
           <div className="page-header">
             <h1 className="page-title">Payment Receipt Upload</h1>
             <p className="page-subtitle">Complete your booking by uploading payment proof</p>
@@ -243,7 +256,7 @@ const GuestPaymentUpload = () => {
               <div className="token-expiry-box">
                 <Clock size={20} />
                 <div>
-                  <p><strong>Link expires in:</strong> {getTimeRemaining()}</p>
+                  <p><strong>Link expires in:</strong> {timeRemaining || 'Calculating...'}</p>
                   <p style={{ fontSize: '0.875rem' }}>Upload your payment receipt before this link expires</p>
                 </div>
               </div>

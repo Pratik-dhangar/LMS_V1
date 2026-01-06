@@ -367,6 +367,8 @@ const LearnerDashboard = () => {
                       const isActive = session.status === 'active';
                       const isScheduled = session.status === 'scheduled';
                       const isEnded = session.status === 'ended';
+                      // Check if learner has actually joined before (not just if trainer started)
+                      const learnerHasJoined = session.learner_joined_at || session.joined_at;
                       const statusColor = isActive ? 'border-green-500 bg-green-50' :
                         isScheduled ? 'border-blue-500 bg-blue-50' :
                           'border-gray-300 bg-gray-50';
@@ -407,7 +409,7 @@ const LearnerDashboard = () => {
                                 onClick={() => handleJoinSession(session.session_id)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
                               >
-                                {isActive ? 'Resume' : 'Join'} Session
+                                {learnerHasJoined ? 'Resume' : 'Join'} Session
                               </button>
                             )}
                             {isEnded && (
