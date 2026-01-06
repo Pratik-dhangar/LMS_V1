@@ -549,7 +549,7 @@ async def validate_payment_token(
         guest_name=appointment.guest_name,
         guest_email=appointment.guest_email,
         guest_phone=appointment.guest_phone,
-        upload_token_expires_at=appointment.upload_token_expires_at.isoformat() if hasattr(appointment.upload_token_expires_at, 'isoformat') else str(appointment.upload_token_expires_at),
+        upload_token_expires_at=(appointment.upload_token_expires_at.isoformat().replace('+00:00', 'Z')) if hasattr(appointment.upload_token_expires_at, 'isoformat') else str(appointment.upload_token_expires_at),
     )
 
 

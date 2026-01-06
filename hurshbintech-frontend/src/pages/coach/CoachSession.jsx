@@ -119,7 +119,7 @@ const CoachSession = () => {
   const [keyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
 
   // UI state
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -274,16 +274,10 @@ const CoachSession = () => {
 
     // Set up callback for item selection by client/guest
     whiteboardService.onItemSelected = (data) => {
-      console.log('[CoachSession] Client/Guest selected items:', data);
-      if (data.selectedBy === 'learner' || data.selectedBy === 'client') {
-        // Handle both old format (itemId) and new format (itemIds array)
-        if (data.itemIds) {
-          setSelectedItemIds(data.itemIds);
-        } else if (data.itemId) {
-          setSelectedItemIds([data.itemId]);
-        } else if (data.selectedItemIds && Array.isArray(data.selectedItemIds)) {
-          setSelectedItemIds(data.selectedItemIds);
-        }
+      console.log('[CoachSession] Remote user selected items:', data);
+      // Store remote selections regardless of who sent them
+      if (data.itemIds && Array.isArray(data.itemIds)) {
+        setRemoteSelectedItemIds(data.itemIds);
       }
     };
 
@@ -955,23 +949,25 @@ const CoachSession = () => {
       {/* Main layout */}
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Content */}
-        <div className="">
-          <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)', maxHeight: 'calc(100vh - 8rem)' }}>
+          <div className="bg-white rounded-lg shadow p-4 flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
             <h3 className="text-lg font-bold mb-3">📚 Learning Content</h3>
-            <LearningContentSidebar
-              learningContentSearch={learningContentSearch}
-              handleLearningContentSearch={handleLearningContentSearch}
-              filteredLearningContent={filteredLearningContent}
-              isSearching={isSearching}
-              onDragStartContent={onDragStartContent}
-              onRemoveFromWhiteboard={(itemId) => {
-                setCanvasItems(prev => prev.filter(item => item.id !== itemId));
-              }}
-            />
+            <div className="overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+              <LearningContentSidebar
+                learningContentSearch={learningContentSearch}
+                handleLearningContentSearch={handleLearningContentSearch}
+                filteredLearningContent={filteredLearningContent}
+                isSearching={isSearching}
+                onDragStartContent={onDragStartContent}
+                onRemoveFromWhiteboard={(itemId) => {
+                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                }}
+              />
+            </div>
           </div>
 
           {/* Message Box - Below Learning Content */}
-          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full flex-shrink-0" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
             <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
             <div className="overflow-y-auto mb-2 flex-1" style={{ maxHeight: '150px', minHeight: '80px' }}>
               {messages.map((msg, idx) => (
@@ -1030,12 +1026,13 @@ const CoachSession = () => {
                 isTrainer={true}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
+                toolAccess={clientToolAccess}
                 keyboardMode={keyboardMode}
                 keyboardText={keyboardText}
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemIds={selectedItemIds}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
