@@ -528,15 +528,23 @@ const CoachSession = () => {
   };
 
   const addBucket = () => {
+    // Calculate position for new bucket (place next to previous one)
+    const lastBucket = buckets[buckets.length - 1];
+    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
+    const newY = lastBucket ? lastBucket.y : 100;
+
     const newBucket = {
-      id: `bucket_${Date.now()}`,
-      x: 50 + buckets.length * 120,
-      y: 50,
-      items: []
+      id: Date.now(),
+      x: newX,
+      y: newY,
+      width: 150,
+      height: 150,
+      label: 'Bucket',
+      items: [] // Items inside bucket
     };
-    const updatedBuckets = [...buckets, newBucket];
-    setBuckets(updatedBuckets);
+    setBuckets(prev => [...prev, newBucket]);
     
+    // Send to other participants
     if (whiteboardService) {
       whiteboardService.sendBucketAdded(newBucket);
     }
