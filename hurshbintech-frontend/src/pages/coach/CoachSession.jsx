@@ -268,15 +268,24 @@ const CoachSession = () => {
     return () => clearInterval(intervalId);
   }, [sessionInfo]);
 
-  // Listen for item selection messages from client
+  // Listen for item selection messages from client/guest
   useEffect(() => {
-    if (whiteboardService) {
-      whiteboardService.onItemSelected = (data) => {
-        if (data.selectedItemIds && Array.isArray(data.selectedItemIds)) {
+    if (!whiteboardService) return;
+
+    // Set up callback for item selection by client/guest
+    whiteboardService.onItemSelected = (data) => {
+      console.log('[CoachSession] Client/Guest selected items:', data);
+      if (data.selectedBy === 'learner' || data.selectedBy === 'client') {
+        // Handle both old format (itemId) and new format (itemIds array)
+        if (data.itemIds) {
+          setSelectedItemIds(data.itemIds);
+        } else if (data.itemId) {
+          setSelectedItemIds([data.itemId]);
+        } else if (data.selectedItemIds && Array.isArray(data.selectedItemIds)) {
           setSelectedItemIds(data.selectedItemIds);
         }
-      };
-    }
+      }
+    };
 
     return () => {
       if (whiteboardService) {
@@ -511,9 +520,30 @@ const CoachSession = () => {
     const updated = { ...clientToolAccess, [toolName]: !clientToolAccess[toolName] };
     setClientToolAccess(updated);
 
-    if (whiteboardService) {
-      whiteboardService.sendToolAccess(updated);
+    // Auto-enable select permission when drag is activated
+    if (toolName === 'drag' && updated.drag) {
+      updated.select = true;
+      setClientToolAccess(updated);
     }
+
+    // Send permission update to client/guest via whiteboard service
+    if (whiteboardService) {
+      whiteboardService.send('tool_access', {
+        toolName,
+        enabled: updated[toolName],
+        allPermissions: updated
+      });
+
+      // If drag is being enabled, also send select permission update
+      if (toolName === 'drag' && updated.drag) {
+        whiteboardService.send('tool_access', {
+          toolName: 'select',
+          enabled: true,
+          allPermissions: updated
+        });
+      }
+    }
+    console.log('[CoachSession] Client/Guest tool access updated:', updated);
 
     if (toolName === 'drag' && updated.drag) {
       setTool('select');
@@ -528,15 +558,23 @@ const CoachSession = () => {
   };
 
   const addBucket = () => {
+    // Calculate position for new bucket (place next to previous one)
+    const lastBucket = buckets[buckets.length - 1];
+    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
+    const newY = lastBucket ? lastBucket.y : 100;
+
     const newBucket = {
-      id: `bucket_${Date.now()}`,
-      x: 50 + buckets.length * 120,
-      y: 50,
-      items: []
+      id: Date.now(),
+      x: newX,
+      y: newY,
+      width: 150,
+      height: 150,
+      label: 'Bucket',
+      items: [] // Items inside bucket
     };
-    const updatedBuckets = [...buckets, newBucket];
-    setBuckets(updatedBuckets);
+    setBuckets(prev => [...prev, newBucket]);
     
+    // Send to other participants
     if (whiteboardService) {
       whiteboardService.sendBucketAdded(newBucket);
     }
@@ -1151,44 +1189,31 @@ const CoachSession = () => {
             </div>
           </div>
 
-          {/* <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-sm font-bold mb-2">Client Tools</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.select}
-                  onChange={() => toggleClientToolAccess('select')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Select</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.drag}
-                  onChange={() => toggleClientToolAccess('drag')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Drag</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.keyboard}
-                  onChange={() => toggleClientToolAccess('keyboard')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Keyboard</span>
-              </label>
+          {/* Client/Guest Tool Access Controls */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-sm font-bold mb-2">Client/Guest Tools</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Select Tool Toggle */}
               <button
-                onClick={handleFreeze}
-                className={`w-full px-2 py-1 rounded text-xs ${isFrozen ? 'bg-red-500 text-white' : 'bg-gray-300'}`}
+                onClick={() => toggleClientToolAccess('select')}
+                className={`${clientToolAccess.select ? wbSmallBtnActive : wbSmallBtnBase}`}
+                title={clientToolAccess.select ? 'Disable Select for client/guest' : 'Enable Select for client/guest'}
               >
-                {isFrozen ? 'Unfreeze' : 'Freeze'} Client
+                <span>✋</span>
+                <span>Select</span>
+              </button>
+
+              {/* Drag Tool Toggle */}
+              <button
+                onClick={() => toggleClientToolAccess('drag')}
+                className={`${clientToolAccess.drag ? wbSmallBtnActive : wbSmallBtnBase}`}
+                title={clientToolAccess.drag ? 'Disable Drag for client/guest' : 'Enable Drag for client/guest'}
+              >
+                <span>↔️</span>
+                <span>Drag</span>
               </button>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
     </div>
