@@ -789,7 +789,7 @@ async def coach_approve_guest_intent(
     Coach approves guest booking intent.
     
     Generates a 24-hour upload token and emails guest the payment upload link.
-    Status: GUEST_INTENT (unchanged - guest must upload payment first)
+    Status: GUEST_INTENT → VERIFICATION_PENDING (waiting for guest payment upload)
     
     Security:
     - Verifies current user is the coach assigned to appointment
@@ -826,7 +826,8 @@ async def coach_approve_guest_intent(
     upload_token = str(uuid.uuid4())
     appointment.upload_token = upload_token
     appointment.upload_token_expires_at = datetime.utcnow() + timedelta(hours=24)
-    # Keep status as GUEST_INTENT - don't change it
+    # Change status to VERIFICATION_PENDING (waiting for guest to upload payment)
+    appointment.status = AppointmentStatus.VERIFICATION_PENDING
     
     await db.commit()
     

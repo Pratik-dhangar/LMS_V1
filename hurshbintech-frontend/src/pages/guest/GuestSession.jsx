@@ -80,7 +80,7 @@ const GuestSession = () => {
   const [keyboardMode, setKeyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
   const [textMessages, setTextMessages] = useState([]);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
@@ -241,8 +241,23 @@ const GuestSession = () => {
       setWhiteboardService(wbService);
 
       // Listen for coach messages
-      wbService.onToolAccess = (access) => {
-        setToolAccess(access);
+      wbService.onToolAccess = (data) => {
+        console.log('[GuestSession] Tool access received from coach:', data);
+        // Handle the allPermissions object sent by coach
+        if (data.allPermissions) {
+          setToolAccess(data.allPermissions);
+        } else {
+          // Fallback for old format
+          setToolAccess(data);
+        }
+      };
+
+      // Listen for item selections from any remote user (coach or other participants)
+      wbService.onItemSelected = (data) => {
+        console.log('[GuestSession] Remote user selected items:', data);
+        if (data.itemIds && Array.isArray(data.itemIds)) {
+          setRemoteSelectedItemIds(data.itemIds);
+        }
       };
 
       wbService.onTriggerKeyboard = () => {
@@ -588,7 +603,6 @@ const GuestSession = () => {
                       ref={remoteVideoRef}
                       autoPlay
                       playsInline
-                      muted
                       className="absolute top-0 left-0 w-full h-full object-cover"
                     />
                     <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
@@ -658,6 +672,7 @@ const GuestSession = () => {
                 isFrozen={false}
                 isPaused={false}
                 toolAccess={toolAccess}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}

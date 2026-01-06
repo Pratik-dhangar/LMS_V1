@@ -119,7 +119,7 @@ const CoachSession = () => {
   const [keyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
 
   // UI state
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -268,15 +268,18 @@ const CoachSession = () => {
     return () => clearInterval(intervalId);
   }, [sessionInfo]);
 
-  // Listen for item selection messages from client
+  // Listen for item selection messages from client/guest
   useEffect(() => {
-    if (whiteboardService) {
-      whiteboardService.onItemSelected = (data) => {
-        if (data.selectedItemIds && Array.isArray(data.selectedItemIds)) {
-          setSelectedItemIds(data.selectedItemIds);
-        }
-      };
-    }
+    if (!whiteboardService) return;
+
+    // Set up callback for item selection by client/guest
+    whiteboardService.onItemSelected = (data) => {
+      console.log('[CoachSession] Remote user selected items:', data);
+      // Store remote selections regardless of who sent them
+      if (data.itemIds && Array.isArray(data.itemIds)) {
+        setRemoteSelectedItemIds(data.itemIds);
+      }
+    };
 
     return () => {
       if (whiteboardService) {
@@ -511,9 +514,30 @@ const CoachSession = () => {
     const updated = { ...clientToolAccess, [toolName]: !clientToolAccess[toolName] };
     setClientToolAccess(updated);
 
-    if (whiteboardService) {
-      whiteboardService.sendToolAccess(updated);
+    // Auto-enable select permission when drag is activated
+    if (toolName === 'drag' && updated.drag) {
+      updated.select = true;
+      setClientToolAccess(updated);
     }
+
+    // Send permission update to client/guest via whiteboard service
+    if (whiteboardService) {
+      whiteboardService.send('tool_access', {
+        toolName,
+        enabled: updated[toolName],
+        allPermissions: updated
+      });
+
+      // If drag is being enabled, also send select permission update
+      if (toolName === 'drag' && updated.drag) {
+        whiteboardService.send('tool_access', {
+          toolName: 'select',
+          enabled: true,
+          allPermissions: updated
+        });
+      }
+    }
+    console.log('[CoachSession] Client/Guest tool access updated:', updated);
 
     if (toolName === 'drag' && updated.drag) {
       setTool('select');
@@ -528,15 +552,23 @@ const CoachSession = () => {
   };
 
   const addBucket = () => {
+    // Calculate position for new bucket (place next to previous one)
+    const lastBucket = buckets[buckets.length - 1];
+    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
+    const newY = lastBucket ? lastBucket.y : 100;
+
     const newBucket = {
-      id: `bucket_${Date.now()}`,
-      x: 50 + buckets.length * 120,
-      y: 50,
-      items: []
+      id: Date.now(),
+      x: newX,
+      y: newY,
+      width: 150,
+      height: 150,
+      label: 'Bucket',
+      items: [] // Items inside bucket
     };
-    const updatedBuckets = [...buckets, newBucket];
-    setBuckets(updatedBuckets);
+    setBuckets(prev => [...prev, newBucket]);
     
+    // Send to other participants
     if (whiteboardService) {
       whiteboardService.sendBucketAdded(newBucket);
     }
@@ -917,23 +949,25 @@ const CoachSession = () => {
       {/* Main layout */}
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Content */}
-        <div className="">
-          <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)', maxHeight: 'calc(100vh - 8rem)' }}>
+          <div className="bg-white rounded-lg shadow p-4 flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
             <h3 className="text-lg font-bold mb-3">📚 Learning Content</h3>
-            <LearningContentSidebar
-              learningContentSearch={learningContentSearch}
-              handleLearningContentSearch={handleLearningContentSearch}
-              filteredLearningContent={filteredLearningContent}
-              isSearching={isSearching}
-              onDragStartContent={onDragStartContent}
-              onRemoveFromWhiteboard={(itemId) => {
-                setCanvasItems(prev => prev.filter(item => item.id !== itemId));
-              }}
-            />
+            <div className="overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+              <LearningContentSidebar
+                learningContentSearch={learningContentSearch}
+                handleLearningContentSearch={handleLearningContentSearch}
+                filteredLearningContent={filteredLearningContent}
+                isSearching={isSearching}
+                onDragStartContent={onDragStartContent}
+                onRemoveFromWhiteboard={(itemId) => {
+                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                }}
+              />
+            </div>
           </div>
 
           {/* Message Box - Below Learning Content */}
-          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full flex-shrink-0" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
             <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
             <div className="overflow-y-auto mb-2 flex-1" style={{ maxHeight: '150px', minHeight: '80px' }}>
               {messages.map((msg, idx) => (
@@ -992,12 +1026,13 @@ const CoachSession = () => {
                 isTrainer={true}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
+                toolAccess={clientToolAccess}
                 keyboardMode={keyboardMode}
                 keyboardText={keyboardText}
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemIds={selectedItemIds}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
@@ -1151,44 +1186,31 @@ const CoachSession = () => {
             </div>
           </div>
 
-          {/* <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-sm font-bold mb-2">Client Tools</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.select}
-                  onChange={() => toggleClientToolAccess('select')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Select</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.drag}
-                  onChange={() => toggleClientToolAccess('drag')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Drag</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={clientToolAccess.keyboard}
-                  onChange={() => toggleClientToolAccess('keyboard')}
-                  className="mr-2"
-                />
-                <span className="text-xs">Keyboard</span>
-              </label>
+          {/* Client/Guest Tool Access Controls */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-sm font-bold mb-2">Client/Guest Tools</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Select Tool Toggle */}
               <button
-                onClick={handleFreeze}
-                className={`w-full px-2 py-1 rounded text-xs ${isFrozen ? 'bg-red-500 text-white' : 'bg-gray-300'}`}
+                onClick={() => toggleClientToolAccess('select')}
+                className={`${clientToolAccess.select ? wbSmallBtnActive : wbSmallBtnBase}`}
+                title={clientToolAccess.select ? 'Disable Select for client/guest' : 'Enable Select for client/guest'}
               >
-                {isFrozen ? 'Unfreeze' : 'Freeze'} Client
+                <span>✋</span>
+                <span>Select</span>
+              </button>
+
+              {/* Drag Tool Toggle */}
+              <button
+                onClick={() => toggleClientToolAccess('drag')}
+                className={`${clientToolAccess.drag ? wbSmallBtnActive : wbSmallBtnBase}`}
+                title={clientToolAccess.drag ? 'Disable Drag for client/guest' : 'Enable Drag for client/guest'}
+              >
+                <span>↔️</span>
+                <span>Drag</span>
               </button>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
     </div>

@@ -77,6 +77,36 @@ const BookAppointmentForm = () => {
     }));
   };
 
+  // Sort time slots in chronological order (AM to PM)
+  const sortTimeSlots = (slots) => {
+    return [...slots].sort((a, b) => {
+      // Parse time strings like "10am", "1pm", "3:30pm", etc.
+      const parseTime = (timeStr) => {
+        const str = timeStr.toLowerCase().trim();
+        const isPM = str.includes('pm');
+        const isAM = str.includes('am');
+        
+        // Extract numeric part (handle both "10am" and "10:30am" formats)
+        const numericPart = str.replace(/[apm\s]/g, '');
+        const [hours, minutes = '0'] = numericPart.split(':');
+        
+        let hour = parseInt(hours);
+        const minute = parseInt(minutes);
+        
+        // Convert to 24-hour format
+        if (isPM && hour !== 12) {
+          hour += 12;
+        } else if (isAM && hour === 12) {
+          hour = 0;
+        }
+        
+        return hour * 60 + minute; // Return total minutes for comparison
+      };
+      
+      return parseTime(a) - parseTime(b);
+    });
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -289,7 +319,7 @@ const BookAppointmentForm = () => {
                                 : "Select a time slot"
                             }
                           </option>
-                          {availableSlots.map(slot => (
+                          {sortTimeSlots(availableSlots).map(slot => (
                             <option key={slot} value={slot}>{formatTimeSlot(slot)}</option>
                           ))}
                         </select>

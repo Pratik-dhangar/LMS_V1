@@ -290,6 +290,19 @@ class WhiteboardService {
         }
     }
 
+    // Send bucket added event
+    sendBucketAdded(data) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            console.log('[WhiteboardService] Sending bucket_added:', data);
+            this.ws.send(JSON.stringify({
+                type: 'bucket_added',
+                data: data
+            }));
+        } else {
+            console.warn('[WhiteboardService] Cannot send bucket_added - WebSocket not ready');
+        }
+    }
+
     // Generic send method for custom message types
     send(type, data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
