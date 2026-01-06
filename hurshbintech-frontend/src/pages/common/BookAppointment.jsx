@@ -173,28 +173,35 @@ const BookAppointment = () => {
             <div className="coaches-grid">
               {filteredCoaches.map((coach) => {
                 const availability = coachAvailability[coach.id];
-                const isUnavailable = availability && !availability.is_available;
+                const hasUnavailablePeriod = availability && !availability.is_available && availability.unavailable_from && availability.unavailable_until;
+                
+                // Format unavailable dates for display
+                const formatDate = (dateStr) => {
+                  if (!dateStr) return '';
+                  const date = new Date(dateStr);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                };
                 
                 return (
-                  <div key={coach.id} className={`coach-card ${isUnavailable ? 'coach-card-unavailable' : ''}`}>
-                    {/* Availability Badge - Always show */}
-                    <div className={`availability-badge ${isUnavailable ? 'badge-unavailable' : 'badge-available'}`}>
-                      {isUnavailable ? (
-                        <>
-                          <AlertCircle className="badge-icon" />
-                          <span className="badge-text">Unavailable</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="badge-icon" />
-                          <span className="badge-text">Available</span>
-                        </>
-                      )}
-                    </div>
+                  <div key={coach.id} className="coach-card">
+                    {/* Availability Badge - Show unavailable period if exists */}
+                    {hasUnavailablePeriod ? (
+                      <div className="availability-badge badge-warning" style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+                        <AlertCircle className="badge-icon" />
+                        <span className="badge-text">
+                          Unavailable {formatDate(availability.unavailable_from)} - {formatDate(availability.unavailable_until)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="availability-badge badge-available">
+                        <CheckCircle className="badge-icon" />
+                        <span className="badge-text">Available</span>
+                      </div>
+                    )}
                     
                     <div className="coach-card-content">
                       {/* Profile Picture */}
-                      <div className={`coach-avatar-wrapper ${isUnavailable ? 'greyscale' : ''}`}>
+                      <div className="coach-avatar-wrapper">
                         {coach.profile_picture_url ? (
                           <img
                             src={getFileUrl(coach.profile_picture_url)}
@@ -251,24 +258,18 @@ const BookAppointment = () => {
                         )}
                       </div>
 
-                      {/* Book Button or Unavailable Message */}
-                      {isUnavailable ? (
-                        <button
-                          disabled
-                          className="btn-book-appointment"
-                          style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                        >
-                          <Calendar className="w-5 h-5" />
-                          Unavailable
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleBookAppointment(coach)}
-                          className="btn-book-appointment"
-                        >
-                          <Calendar className="w-5 h-5" />
-                          Book Appointment
-                        </button>
+                      {/* Book Button - Always enabled, date validation happens in the form */}
+                      <button
+                        onClick={() => handleBookAppointment(coach)}
+                        className="btn-book-appointment"
+                      >
+                        <Calendar className="w-5 h-5" />
+                        Book Appointment
+                      </button>
+                      {hasUnavailablePeriod && (
+                        <small style={{ color: '#92400e', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', textAlign: 'center' }}>
+                          {availability.unavailable_reason || 'Limited availability - check dates'}
+                        </small>
                       )}
                     </div>
                   </div>
