@@ -119,7 +119,7 @@ const CoachSession = () => {
   const [keyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
 
   // UI state
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -274,16 +274,10 @@ const CoachSession = () => {
 
     // Set up callback for item selection by client/guest
     whiteboardService.onItemSelected = (data) => {
-      console.log('[CoachSession] Client/Guest selected items:', data);
-      if (data.selectedBy === 'learner' || data.selectedBy === 'client') {
-        // Handle both old format (itemId) and new format (itemIds array)
-        if (data.itemIds) {
-          setSelectedItemIds(data.itemIds);
-        } else if (data.itemId) {
-          setSelectedItemIds([data.itemId]);
-        } else if (data.selectedItemIds && Array.isArray(data.selectedItemIds)) {
-          setSelectedItemIds(data.selectedItemIds);
-        }
+      console.log('[CoachSession] Remote user selected items:', data);
+      // Store remote selections regardless of who sent them
+      if (data.itemIds && Array.isArray(data.itemIds)) {
+        setRemoteSelectedItemIds(data.itemIds);
       }
     };
 
@@ -1032,12 +1026,13 @@ const CoachSession = () => {
                 isTrainer={true}
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
+                toolAccess={clientToolAccess}
                 keyboardMode={keyboardMode}
                 keyboardText={keyboardText}
                 setKeyboardText={setKeyboardText}
                 keyboardPosition={keyboardPosition}
                 setKeyboardPosition={setKeyboardPosition}
-                learnerSelectedItemIds={selectedItemIds}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}

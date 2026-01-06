@@ -84,7 +84,7 @@ const ClientSession = () => {
   const [keyboardMode, setKeyboardMode] = useState(false);
   const [keyboardText, setKeyboardText] = useState('');
   const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
 
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -242,6 +242,14 @@ const ClientSession = () => {
         } else {
           // Fallback for old format
           setToolAccess(data);
+        }
+      };
+
+      // Listen for item selections from any remote user (coach or other participants)
+      wbService.onItemSelected = (data) => {
+        console.log('[ClientSession] Remote user selected items:', data);
+        if (data.itemIds && Array.isArray(data.itemIds)) {
+          setRemoteSelectedItemIds(data.itemIds);
         }
       };
 
@@ -630,6 +638,7 @@ const ClientSession = () => {
                 isFrozen={false}
                 isPaused={false}
                 toolAccess={toolAccess}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}

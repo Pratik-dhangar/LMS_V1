@@ -32,6 +32,12 @@ const LearnerDashboard = () => {
   const [selectedContent, setSelectedContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(null);
+  
+  // Track which sessions have been joined - persist to localStorage
+  const [joinedSessions, setJoinedSessions] = useState(() => {
+    const saved = localStorage.getItem('joinedSessions');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   // Toggle states for sections
   const [showSessions, setShowSessions] = useState(false);
@@ -53,6 +59,11 @@ const LearnerDashboard = () => {
     return () => clearInterval(refreshInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist joinedSessions to localStorage
+  useEffect(() => {
+    localStorage.setItem('joinedSessions', JSON.stringify([...joinedSessions]));
+  }, [joinedSessions]);
 
   // Auto-scroll to My Sessions when visible
   useEffect(() => {
@@ -140,6 +151,8 @@ const LearnerDashboard = () => {
   };
 
   const handleJoinSession = (sessionId) => {
+    // Mark this session as joined
+    setJoinedSessions(prev => new Set([...prev, sessionId]));
     navigate(`/learner/session/${sessionId}`);
   };
 
@@ -409,7 +422,7 @@ const LearnerDashboard = () => {
                                 onClick={() => handleJoinSession(session.session_id)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
                               >
-                                {learnerHasJoined ? 'Resume' : 'Join'} Session
+                                {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
                               </button>
                             )}
                             {isEnded && (

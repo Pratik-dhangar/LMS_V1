@@ -145,6 +145,7 @@ const LearnerSession = () => {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
   const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
+  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -669,6 +670,14 @@ const LearnerSession = () => {
     try {
       wbService.initialize();
       setWhiteboardService(wbService);
+
+      // Listen for item selections from remote user (trainer)
+      wbService.onItemSelected = (data) => {
+        console.log('[LearnerSession] Remote user selected items:', data);
+        if (data.itemIds && Array.isArray(data.itemIds)) {
+          setRemoteSelectedItemIds(data.itemIds);
+        }
+      };
     } catch {
       // toast.error('Failed to initialize whiteboard');
     }
@@ -1366,7 +1375,6 @@ const LearnerSession = () => {
                     ref={remoteVideoRef}
                     autoPlay
                     playsInline
-                    muted
                     className="absolute top-0 left-0 w-full h-full object-cover"
                   />
                   <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
@@ -1466,6 +1474,7 @@ const LearnerSession = () => {
                 isFrozen={false}
                 isPaused={false}
                 toolAccess={toolAccess}
+                remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}

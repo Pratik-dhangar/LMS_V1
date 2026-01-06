@@ -225,6 +225,7 @@ const ImageOverlay = React.memo(({
     onMouseDown,
     onMouseMove,
     onMouseUp,
+    onClick,
     onDoubleClick,
     onDragStart,
     onTouchStart,
@@ -261,6 +262,7 @@ const ImageOverlay = React.memo(({
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
+        onClick={onClick}
         onDoubleClick={onDoubleClick}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -309,6 +311,7 @@ ImageOverlay.propTypes = {
     onMouseDown: PropTypes.func,
     onMouseMove: PropTypes.func,
     onMouseUp: PropTypes.func,
+    onClick: PropTypes.func,
     onDoubleClick: PropTypes.func,
     onDragStart: PropTypes.func,
     onTouchStart: PropTypes.func,
@@ -339,7 +342,7 @@ const Whiteboard = ({
     canvasItems = [],
     setCanvasItems,
     toolAccess = { select: false, drag: false },
-    learnerSelectedItemIds = [],
+    remoteSelectedItemIds = [],
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
@@ -468,16 +471,25 @@ const Whiteboard = ({
     }, [isTrainer]);
 
     const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner) => {
-        if (!isSelectedByLearner && !isSelectedByRemoteLearner) {
+        if (!isSelectedByTrainer && !isSelectedByLearner && !isSelectedByRemoteLearner) {
             return {};
         }
 
         let selectionColor = null;
         let gradientAccent = null;
-        if (isSelectedByRemoteLearner) {
+        
+        // Trainer/Coach selections (blue)
+        if (isSelectedByTrainer) {
+            selectionColor = '#007bff';
+            gradientAccent = 'rgba(0, 123, 255, 0.65)';
+        }
+        // Remote learner selections (pink/rose)
+        else if (isSelectedByRemoteLearner) {
             selectionColor = 'var(--color-baby-rose, #ff86c1)';
             gradientAccent = 'rgba(255, 164, 199, 0.65)';
-        } else if (isSelectedByLearner) {
+        }
+        // Learner's own selections (blue)
+        else if (isSelectedByLearner) {
             selectionColor = 'var(--color-baby-blue, #7ae7ff)';
             gradientAccent = 'rgba(122, 231, 255, 0.65)';
         }
@@ -1185,7 +1197,7 @@ const Whiteboard = ({
         }, 16);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [learnerSelectedItemIds, selectedItems]);
+    }, [remoteSelectedItemIds, selectedItems]);
 
     const redrawCanvas = useCallback((items = canvasItems) => {
         const canvas = canvasRef.current;
@@ -1211,19 +1223,15 @@ const Whiteboard = ({
                 // Use cached image if available (for videos/PDFs only now)
                 const cachedImg = imageCacheRef.current.get(item.src);
                 if (cachedImg && (isVideoItem(item) || isPdfItem(item))) {
-                    // Determine if item is selected by trainer or learner
-                    const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
-                    const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
-                    const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
+                    // Determine if item is selected locally or remotely
+                    const isSelectedByMe = selectedItems.some(si => si.id === item.id);
+                    const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
 
                     // Set border color and width based on who selected it
-                    if (isSelectedByRemoteLearner) {
-                        ctx.strokeStyle = '#4caf50';
+                    if (isSelectedByRemote) {
+                        ctx.strokeStyle = '#ff86c1';
                         ctx.lineWidth = 4;
-                    } else if (isSelectedByLearner) {
-                        ctx.strokeStyle = '#4caf50';
-                        ctx.lineWidth = 4;
-                    } else if (isSelectedByTrainer) {
+                    } else if (isSelectedByMe) {
                         ctx.strokeStyle = '#007bff';
                         ctx.lineWidth = 3;
                     } else {
@@ -1234,8 +1242,8 @@ const Whiteboard = ({
                     ctx.strokeRect(item.x, item.y, item.width, item.height);
                     ctx.drawImage(cachedImg, item.x, item.y, item.width, item.height);
 
-                    // Draw resize handle only for trainer's own selection
-                    if (isSelectedByTrainer) {
+                    // Draw resize handle only for own selection
+                    if (isSelectedByMe) {
                         ctx.fillStyle = '#007bff';
                         ctx.fillRect(item.x + item.width - 8, item.y + item.height - 8, 8, 8);
                     }
@@ -1272,7 +1280,7 @@ const Whiteboard = ({
                 }
             }
         });
-    }, [canvasItems, isTrainer, selectedItems, learnerSelectedItemIds, color, isVideoItem, isPdfItem, preloadImages]);
+    }, [canvasItems, isTrainer, selectedItems, remoteSelectedItemIds, color, isVideoItem, isPdfItem, preloadImages]);
 
     const drawOnCanvas = (data) => {
         const canvas = canvasRef.current;
@@ -1496,22 +1504,23 @@ const Whiteboard = ({
 
                 const isAlreadySelected = selectedItems.some(si => si.id === item.id);
 
-                // When drag permission is active, only allow single-item selection for dragging
-                // Disable multiselect to prevent confusion during drag operations
+                // When drag permission is active
                 if (toolAccess.drag) {
-                    // Single selection mode when drag is enabled
-                    setSelectedItems([itemWithOriginalSize]);
+                    // For drag operations, if item not already selected, add to selection
+                    if (!isAlreadySelected) {
+                        setSelectedItems(prev => [...prev, itemWithOriginalSize]);
 
-                    // Send selection to trainer via websocket
-                    if (whiteboardService) {
-                        whiteboardService.send('item_selected', {
-                            itemIds: [item.id],
-                            selectedBy: 'learner',
-                            timestamp: Date.now()
-                        });
+                        // Send selection to trainer via websocket
+                        if (whiteboardService) {
+                            whiteboardService.send('item_selected', {
+                                itemIds: [...selectedItems.map(si => si.id), item.id],
+                                selectedBy: 'learner',
+                                timestamp: Date.now()
+                            });
+                        }
                     }
 
-                    // Start dragging or resizing
+                    // Start dragging or resizing the clicked item (even if multiple selected)
                     if (isResizeHandle(x, y, item)) {
                         setIsResizingItem(true);
                     } else {
@@ -1524,33 +1533,45 @@ const Whiteboard = ({
                     }
                     prevPosRef.current = { x, y };
                 } else {
-                    // Multiselect mode when drag is disabled (select-only permission)
-                    // Handle multiple selection - toggle items on/off
-                    if (isAlreadySelected) {
-                        // Unselect this item
-                        setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-                    } else {
+                    // Select-only mode: single-click adds to selection (multi-select)
+                    // Double-click will deselect (handled in onDoubleClick)
+                    if (!isAlreadySelected) {
                         // Add to selection
                         setSelectedItems(prev => [...prev, itemWithOriginalSize]);
-                    }
 
-                    // Send selection to trainer via websocket
-                    if (whiteboardService) {
-                        const newSelectedIds = isAlreadySelected
-                            ? selectedItems.filter(si => si.id !== item.id).map(si => si.id)
-                            : [...selectedItems.map(si => si.id), item.id];
-
-                        whiteboardService.send('item_selected', {
-                            itemIds: newSelectedIds,
-                            selectedBy: 'learner',
-                            timestamp: Date.now()
-                        });
+                        // Broadcast selection to all participants
+                        if (whiteboardService) {
+                            whiteboardService.send('item_selected', {
+                                itemIds: [...selectedItems.map(si => si.id), item.id],
+                                timestamp: Date.now()
+                            });
+                        }
                     }
                 }
                 return;
             }
 
-            // Trainer has full access
+            // Trainer logic: enable multi-select only when clientToolAccess.select is active
+            // This allows coach to highlight selections visible to client/guest
+            if (toolAccess.select) {
+                const isAlreadySelected = selectedItems.some(si => si.id === item.id);
+                if (!isAlreadySelected) {
+                    // Add to selection for multi-select
+                    setSelectedItems(prev => [...prev, itemWithOriginalSize]);
+                    
+                    // Broadcast selection to all participants (same format for everyone)
+                    if (whiteboardService) {
+                        whiteboardService.send('item_selected', {
+                            itemIds: [...selectedItems.map(si => si.id), item.id],
+                            timestamp: Date.now()
+                        });
+                    }
+                }
+                // Don't start dragging in multi-select mode
+                return;
+            }
+
+            // Default behavior: single-select and enable immediate dragging/resizing
             setSelectedItems([itemWithOriginalSize]);
             if (isResizeHandle(x, y, item)) {
                 setIsResizingItem(true);
@@ -2371,18 +2392,17 @@ const Whiteboard = ({
 
                         {/* Render PDF Items as Overlays */}
                         {canvasItems.filter(item => isPdfItem(item)).map(item => {
-                            const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
-                            const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
-                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
-                            const selectionStyle = getSelectionStyles(isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner);
+                            const isSelectedByMe = selectedItems.some(si => si.id === item.id);
+                            const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
+                            const selectionStyle = getSelectionStyles(isSelectedByMe, false, isSelectedByRemote);
 
                             return (
                                 <div key={`pdf-wrapper-${item.id}`}>
                                     <PDFOverlay
                                         item={item}
-                                        isSelectedByTrainer={isSelectedByTrainer}
-                                        isSelectedByLearner={isSelectedByLearner}
-                                        isSelectedByRemoteLearner={isSelectedByRemoteLearner}
+                                        isSelectedByTrainer={isSelectedByMe}
+                                        isSelectedByLearner={false}
+                                        isSelectedByRemoteLearner={isSelectedByRemote}
                                         selectionStyle={selectionStyle}
                                         isDragging={isDraggingItem && selectedItems.some(si => si.id === item.id)}
                                         onMouseDown={(e) => {
@@ -2432,12 +2452,30 @@ const Whiteboard = ({
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
-                                            handleMediaOpen(item);
+                                            
+                                            // Check if item is selected
+                                            const isSelected = selectedItems.some(si => si.id === item.id);
+                                            
+                                            if (isSelected) {
+                                                // Deselect on double-click
+                                                setSelectedItems(prev => prev.filter(si => si.id !== item.id));
+                                                
+                                                // Broadcast deselection to all participants
+                                                if (whiteboardService) {
+                                                    whiteboardService.send('item_selected', {
+                                                        itemIds: selectedItems.filter(si => si.id !== item.id).map(si => si.id),
+                                                        timestamp: Date.now()
+                                                    });
+                                                }
+                                            } else {
+                                                // If not selected, open the PDF
+                                                handleMediaOpen(item);
+                                            }
                                         }}
                                     />
 
-                                    {/* Resize Handle for Trainer */}
-                                    {isSelectedByTrainer && (
+                                    {/* Resize Handle for Own Selection */}
+                                    {isSelectedByMe && (
                                         <div
                                             className="resize-handle"
                                             style={{
@@ -2455,8 +2493,8 @@ const Whiteboard = ({
                                         />
                                     )}
 
-                                    {/* Delete/Remove Button for PDF items in bucket - Trainer only */}
-                                    {isSelectedByTrainer && item.inBucket && (
+                                    {/* Delete/Remove Button for PDF items in bucket */}
+                                    {isSelectedByMe && item.inBucket && (
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -2480,22 +2518,44 @@ const Whiteboard = ({
 
                         {/* Render Image Items as Overlays */}
                         {canvasItems.filter(item => item.src && !isVideoItem(item) && !isPdfItem(item)).map(item => {
-                            const isSelectedByTrainer = isTrainer && selectedItems.some(si => si.id === item.id);
-                            const isSelectedByLearner = !isTrainer && selectedItems.some(si => si.id === item.id);
-                            const isSelectedByRemoteLearner = isTrainer && learnerSelectedItemIds.includes(item.id);
-                            const selectionStyle = getSelectionStyles(isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner);
+                            const isSelectedByMe = selectedItems.some(si => si.id === item.id);
+                            const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
+                            const selectionStyle = getSelectionStyles(isSelectedByMe, false, isSelectedByRemote);
                             // console.log('[Whiteboard] Rendering image item:', { id: item.id, src: item.src, isVideo: isVideoItem(item), isPdf: isPdfItem(item) });
 
                             return (
                                 <div key={`image-wrapper-${item.id}`}>
                                     <ImageOverlay
                                         item={item}
-                                        isSelectedByTrainer={isSelectedByTrainer}
-                                        isSelectedByLearner={isSelectedByLearner}
-                                        isSelectedByRemoteLearner={isSelectedByRemoteLearner}
+                                        isSelectedByTrainer={isSelectedByMe}
+                                        isSelectedByLearner={false}
+                                        isSelectedByRemoteLearner={isSelectedByRemote}
                                         selectionStyle={selectionStyle}
                                         isAnimating={animatingItemId === item.id}
                                         isDragging={isDraggingItem && selectedItems.some(si => si.id === item.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Single-click is handled by startDrawing (onMouseDown)
+                                        }}
+                                        onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            
+                                            // Check if item is selected
+                                            const isSelected = selectedItems.some(si => si.id === item.id);
+                                            
+                                            if (isSelected) {
+                                                // Deselect on double-click
+                                                setSelectedItems(prev => prev.filter(si => si.id !== item.id));
+                                                
+                                                // Broadcast deselection to all participants
+                                                if (whiteboardService) {
+                                                    whiteboardService.send('item_selected', {
+                                                        itemIds: selectedItems.filter(si => si.id !== item.id).map(si => si.id),
+                                                        timestamp: Date.now()
+                                                    });
+                                                }
+                                            }
+                                        }}
                                         onMouseDown={(e) => {
                                             if (e.button === 0) {
                                                 e.stopPropagation();
@@ -2569,8 +2629,8 @@ const Whiteboard = ({
                                         }}
                                     />
 
-                                    {/* Resize Handle for Trainer */}
-                                    {isSelectedByTrainer && (
+                                    {/* Resize Handle for Own Selection */}
+                                    {isSelectedByMe && (
                                         <div
                                             className="resize-handle"
                                             style={{
@@ -2588,8 +2648,8 @@ const Whiteboard = ({
                                         />
                                     )}
 
-                                    {/* Delete/Remove Button for items in bucket - Trainer only */}
-                                    {isSelectedByTrainer && item.inBucket && (
+                                    {/* Delete/Remove Button for items in bucket */}
+                                    {isSelectedByMe && item.inBucket && (
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
