@@ -35,6 +35,7 @@ import Emoji from '../../components/common/Emoji';
 import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
+import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import '../../styles/Pages.css';
 
 const REACTION_SVG_ASSETS = {
@@ -497,12 +498,16 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   // 🔹 Purpose: Periodic check for session status change on server
   // 🔸 How it works: polls sessionService.getSessionDetails every 30s; if status = 'ended', cleanup
+  // Also updates session activity to track ongoing sessions
   // -----------------------------------------------------------
   useEffect(() => {
     if (!sessionInfo || sessionInfo.status !== 'active') return;
 
     const checkInterval = setInterval(async () => {
       try {
+        // Update session activity to mark session as still active
+        updateSessionActivity(sessionId, 'trainer');
+
         const updatedSession = await sessionService.getSessionDetails(sessionId);
         if (updatedSession.status === 'ended') {
           toast.info('Session has ended');
@@ -640,6 +645,20 @@ const TrainerSession = () => {
         });
         toast.error('Unauthorized access');
         navigate('/dashboard');
+        return;
+      }
+
+      // 🔹 Purpose: Check if session is already active on another device/tab
+      // 🔸 How it works: uses sessionActivityTracker to prevent multiple access
+      const sessionCheck = markSessionActive(sessionId, 'trainer');
+      if (!sessionCheck.success) {
+        // Only show alert once (prevent duplicate toasts in StrictMode)
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          console.warn('[TrainerSession] Session already active:', sessionCheck.message);
+          toast.error(sessionCheck.message);
+          navigate('/trainer/dashboard');
+        }
         return;
       }
 
@@ -918,6 +937,9 @@ const TrainerSession = () => {
     timersRef.current.clear();
     stopwatchesRef.current.forEach(({ intervalId }) => clearInterval(intervalId));
     stopwatchesRef.current.clear();
+
+    // Clear session activity tracking
+    clearSessionActivity(sessionId, 'trainer');
   };
 
   // -----------------------------------------------------------
@@ -1015,6 +1037,7 @@ const TrainerSession = () => {
   // 🔸 How it works: updates local state and auto-saves to backend with debouncing
   // -----------------------------------------------------------
   const autoSaveTimerRef = useRef(null);
+  const restrictionAlertShownRef = useRef(false); // Prevent duplicate toast alerts
 
   const handleNotesChange = (e) => {
     const newNotes = e.target.value;
@@ -2204,19 +2227,6 @@ const TrainerSession = () => {
                   Send
                 </button>
               </div>
-            </div>
-
-
-
-            <div className="text-right w-full" style={{ marginTop: 'clamp(0.75rem, 2vw, 1rem)' }}>
-              <button
-                className="session-save-button bg-green-600 text-white rounded inline-flex items-center cursor-pointer hover:bg-green-700"
-                style={{ padding: 'clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
-                onClick={handleSaveSession}
-              >
-                💾 <span className="hidden xs:inline">Save Session</span>
-                <span className="font-normal opacity-90 hidden sm:inline" style={{ fontSize: 'clamp(0.5rem, 1vw, 0.625rem)' }}>(Saves: Name, Date, Time, Video, Notes, Prompts)</span>
-              </button>
             </div>
           </div>
         </div>
