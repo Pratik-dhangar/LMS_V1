@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { FaPlay, FaPause, FaStepBackward, FaStepForward, FaVolumeUp, FaVolumeMute, FaExpand } from 'react-icons/fa';
 import Emoji from './Emoji';
 import '../../styles/components/common/Whiteboard.css';
 import appleImage from '../../assets/Red_Apple.jpg';
@@ -477,7 +478,7 @@ const Whiteboard = ({
 
         let selectionColor = null;
         let gradientAccent = null;
-
+        
         // Trainer/Coach selections (blue)
         if (isSelectedByTrainer) {
             selectionColor = '#007bff';
@@ -508,6 +509,15 @@ const Whiteboard = ({
     // Inline video state for 50-50 split mode
     const [inlineVideo, setInlineVideo] = useState(null); // { id, src, title }
     const inlineVideoRef = useRef(null);
+    
+    // Video control states
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+    const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [videoVolume, setVideoVolume] = useState(1);
+    const [isVideoMuted, setIsVideoMuted] = useState(false);
+    const [videoPlaybackRate, setVideoPlaybackRate] = useState(1);
+    const [showVideoControls, setShowVideoControls] = useState(true);
 
     // Image caching system for performance
     const imageCacheRef = useRef(new Map());
@@ -1467,7 +1477,7 @@ const Whiteboard = ({
         // Check for items FIRST (higher priority than buckets)
         // This allows dragging items that are inside or overlapping buckets
         const item = getItemAtPosition(x, y);
-
+        
         // If no item found, check if clicking on a bucket (trainer only can drag buckets)
         if (!item && isTrainer) {
             const bucket = getBucketAtPosition(x, y);
@@ -1555,11 +1565,11 @@ const Whiteboard = ({
             // toolAccess controls LEARNER permissions, not trainer permissions
             // Select item for highlighting
             const isAlreadySelected = selectedItems.some(si => si.id === item.id);
-
+            
             if (!isAlreadySelected) {
                 // Add to selection (trainer always uses single-select for simplicity)
                 setSelectedItems([itemWithOriginalSize]);
-
+                
                 // Broadcast selection to learner when select feature is enabled
                 // This allows learner to see trainer's selections highlighted on their whiteboard
                 if (toolAccess.select && whiteboardService) {
@@ -2180,7 +2190,98 @@ const Whiteboard = ({
         if (inlineVideoRef.current) {
             inlineVideoRef.current.pause();
         }
+        // Reset video control states
+        setIsVideoPlaying(false);
+        setVideoCurrentTime(0);
+        setVideoDuration(0);
+        setVideoPlaybackRate(1);
     }, [isTrainer, inlineVideo, whiteboardService]);
+
+    // Video control functions
+    const handleVideoMetadataLoaded = useCallback(() => {
+        if (inlineVideoRef.current) {
+            setVideoDuration(inlineVideoRef.current.duration);
+        }
+    }, []);
+
+    const handleVideoTimeUpdate = useCallback(() => {
+        if (inlineVideoRef.current) {
+            setVideoCurrentTime(inlineVideoRef.current.currentTime);
+        }
+    }, []);
+
+    const handleVideoPlayPause = useCallback(() => {
+        if (!inlineVideoRef.current) return;
+        
+        if (isVideoPlaying) {
+            inlineVideoRef.current.pause();
+            setIsVideoPlaying(false);
+            if (isTrainer) handleVideoPause();
+        } else {
+            inlineVideoRef.current.play();
+            setIsVideoPlaying(true);
+            if (isTrainer) handleVideoPlay();
+        }
+    }, [isVideoPlaying, isTrainer, handleVideoPlay, handleVideoPause]);
+
+    const handleVideoSkip = useCallback((seconds) => {
+        if (!inlineVideoRef.current) return;
+        const newTime = Math.max(0, Math.min(videoDuration, videoCurrentTime + seconds));
+        inlineVideoRef.current.currentTime = newTime;
+        setVideoCurrentTime(newTime);
+        if (isTrainer) handleVideoSeeked();
+    }, [videoCurrentTime, videoDuration, isTrainer, handleVideoSeeked]);
+
+    const handleVideoSeek = useCallback((time) => {
+        if (!inlineVideoRef.current) return;
+        inlineVideoRef.current.currentTime = time;
+        setVideoCurrentTime(time);
+        if (isTrainer) handleVideoSeeked();
+    }, [isTrainer, handleVideoSeeked]);
+
+    const handleVideoVolumeChange = useCallback((newVolume) => {
+        if (!inlineVideoRef.current) return;
+        inlineVideoRef.current.volume = newVolume;
+        setVideoVolume(newVolume);
+        if (newVolume === 0) {
+            setIsVideoMuted(true);
+        } else if (isVideoMuted) {
+            setIsVideoMuted(false);
+        }
+    }, [isVideoMuted]);
+
+    const handleVideoMuteToggle = useCallback(() => {
+        if (!inlineVideoRef.current) return;
+        if (isVideoMuted) {
+            inlineVideoRef.current.volume = videoVolume || 0.5;
+            setIsVideoMuted(false);
+        } else {
+            inlineVideoRef.current.volume = 0;
+            setIsVideoMuted(true);
+        }
+    }, [isVideoMuted, videoVolume]);
+
+    const handleVideoSpeedChange = useCallback((rate) => {
+        if (!inlineVideoRef.current) return;
+        inlineVideoRef.current.playbackRate = rate;
+        setVideoPlaybackRate(rate);
+    }, []);
+
+    const handleVideoFullscreen = useCallback(() => {
+        if (!inlineVideoRef.current) return;
+        if (inlineVideoRef.current.requestFullscreen) {
+            inlineVideoRef.current.requestFullscreen();
+        } else if (inlineVideoRef.current.webkitRequestFullscreen) {
+            inlineVideoRef.current.webkitRequestFullscreen();
+        }
+    }, []);
+
+    const formatVideoTime = useCallback((seconds) => {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }, []);
 
     const getItemAtPosition = (x, y) => {
         // Search in reverse order to find topmost item (last item has highest z-index)
@@ -2302,32 +2403,109 @@ const Whiteboard = ({
             <div className="whiteboard-main-wrapper">
                 {/* Inline Video Section - Shows when video is dropped (50% width) */}
                 {inlineVideo && (
-                    <div className="whiteboard-split-video">
+                    <div className="whiteboard-split-video"
+                        onMouseEnter={() => setShowVideoControls(true)}
+                        onMouseLeave={() => setShowVideoControls(isVideoPlaying ? false : true)}
+                    >
                         <video
                             ref={inlineVideoRef}
                             src={inlineVideo.src}
-                            controls
-                            controlsList="nodownload"
                             playsInline
                             webkit-playsinline="true"
-                            onPlay={handleVideoPlay}
-                            onPause={handleVideoPause}
+                            onPlay={() => {
+                                setIsVideoPlaying(true);
+                                handleVideoPlay();
+                            }}
+                            onPause={() => {
+                                setIsVideoPlaying(false);
+                                handleVideoPause();
+                            }}
                             onSeeked={handleVideoSeeked}
+                            onLoadedMetadata={handleVideoMetadataLoaded}
+                            onTimeUpdate={handleVideoTimeUpdate}
+                            onClick={handleVideoPlayPause}
                             style={{
                                 width: '100%',
                                 height: '100%',
-                                objectFit: 'cover',
-                                backgroundColor: '#000'
+                                objectFit: 'contain',
+                                backgroundColor: '#000',
+                                cursor: 'pointer'
                             }}
                         />
-                        {isTrainer && (
-                            <button
-                                onClick={handleVideoClose}
-                                className="video-close-button"
-                                title="Close video"
-                            >
-                                ×
-                            </button>
+                        
+                        {/* Custom Video Controls Overlay - Trainer Only */}
+                        {isTrainer && showVideoControls && (
+                            <div className="video-controls-container">
+                                {/* Progress Bar */}
+                                <div className="video-progress-bar">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={videoDuration || 0}
+                                        value={videoCurrentTime}
+                                        onChange={(e) => handleVideoSeek(parseFloat(e.target.value))}
+                                        className="video-progress-input"
+                                        style={{
+                                            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(videoCurrentTime / videoDuration) * 100 || 0}%, #4b5563 ${(videoCurrentTime / videoDuration) * 100 || 0}%, #4b5563 100%)`
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Single Line Controls */}
+                                <div className="video-controls-single-line">
+                                    {/* Play/Pause */}
+                                    <button
+                                        onClick={handleVideoPlayPause}
+                                        className="video-control-btn"
+                                        title={isVideoPlaying ? 'Pause' : 'Play'}
+                                    >
+                                        {isVideoPlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
+                                    </button>
+
+                                    {/* Time Display */}
+                                    <span className="video-time-text">
+                                        {formatVideoTime(videoCurrentTime)} / {formatVideoTime(videoDuration)}
+                                    </span>
+
+                                    {/* Volume Control */}
+                                    <button
+                                        onClick={handleVideoMuteToggle}
+                                        className="video-control-btn"
+                                        title={isVideoMuted ? 'Unmute' : 'Mute'}
+                                    >
+                                        {isVideoMuted ? <FaVolumeMute size={16} /> : <FaVolumeUp size={16} />}
+                                    </button>
+
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.1"
+                                        value={isVideoMuted ? 0 : videoVolume}
+                                        onChange={(e) => handleVideoVolumeChange(parseFloat(e.target.value))}
+                                        className="video-volume-input"
+                                        title="Volume"
+                                    />
+
+                                    {/* Fullscreen */}
+                                    <button
+                                        onClick={handleVideoFullscreen}
+                                        className="video-control-btn"
+                                        title="Fullscreen"
+                                    >
+                                        <FaExpand size={14} />
+                                    </button>
+
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={handleVideoClose}
+                                        className="video-control-btn video-close-btn"
+                                        title="Close video"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 )}
@@ -2450,14 +2628,14 @@ const Whiteboard = ({
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
-
+                                            
                                             // Check if item is selected
                                             const isSelected = selectedItems.some(si => si.id === item.id);
-
+                                            
                                             if (isSelected) {
                                                 // Deselect on double-click
                                                 setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-
+                                                
                                                 // Broadcast deselection to all participants
                                                 if (whiteboardService) {
                                                     whiteboardService.send('item_selected', {
@@ -2537,14 +2715,14 @@ const Whiteboard = ({
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
-
+                                            
                                             // Check if item is selected
                                             const isSelected = selectedItems.some(si => si.id === item.id);
-
+                                            
                                             if (isSelected) {
                                                 // Deselect on double-click
                                                 setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-
+                                                
                                                 // Broadcast deselection to all participants
                                                 if (whiteboardService) {
                                                     whiteboardService.send('item_selected', {
@@ -3168,7 +3346,7 @@ const Whiteboard = ({
                                     e.preventDefault();
                                     const startX = e.clientX - textBox.x;
                                     const startY = e.clientY - textBox.y;
-
+                                    
                                     const handleMouseMove = (moveEvent) => {
                                         onTextBoxMove(
                                             textBox.id,
@@ -3176,12 +3354,12 @@ const Whiteboard = ({
                                             moveEvent.clientY - startY
                                         );
                                     };
-
+                                    
                                     const handleMouseUp = () => {
                                         document.removeEventListener('mousemove', handleMouseMove);
                                         document.removeEventListener('mouseup', handleMouseUp);
                                     };
-
+                                    
                                     document.addEventListener('mousemove', handleMouseMove);
                                     document.addEventListener('mouseup', handleMouseUp);
                                 }
@@ -3195,27 +3373,27 @@ const Whiteboard = ({
                                         onRemoveTextBox(textBox.id);
                                     }}
                                     style={{
-                                        position: 'absolute',
-                                        top: '-8px',
-                                        right: '-8px',
-                                        width: '20px',
-                                        height: '20px',
-                                        borderRadius: '50%',
-                                        border: 'none',
-                                        backgroundColor: '#ef4444',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        fontWeight: 'bold',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        zIndex: 10,
-                                        opacity: activeTextBoxId === textBox.id ? 1 : 0,
-                                        transition: 'opacity 0.2s',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                    }}
-                                    title="Remove text box"
+                                    position: 'absolute',
+                                    top: '-8px',
+                                    right: '-8px',
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                    opacity: activeTextBoxId === textBox.id ? 1 : 0,
+                                    transition: 'opacity 0.2s',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}
+                                title="Remove text box"
                                     onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
                                 >
                                     ×
