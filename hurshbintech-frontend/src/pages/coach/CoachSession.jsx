@@ -34,11 +34,43 @@ const REACTION_SVG_ASSETS = {
     src: '/reactions/realistic-bubble.svg',
     alt: 'Realistic Soap Bubble'
   },
-  balloon: {
-    type: 'svg',
-    src: '/reactions/realistic-balloon.svg',
-    alt: 'Realistic Balloon'
-  },
+  balloon: [
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon.svg',
+      alt: 'Realistic Pink Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-red.svg',
+      alt: 'Realistic Red Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-blue.svg',
+      alt: 'Realistic Blue Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-green.svg',
+      alt: 'Realistic Green Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-yellow.svg',
+      alt: 'Realistic Yellow Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-purple.svg',
+      alt: 'Realistic Purple Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-orange.svg',
+      alt: 'Realistic Orange Balloon'
+    }
+  ],
   star: {
     type: 'svg',
     src: '/reactions/realistic-oil-pastel-star.svg',
@@ -206,7 +238,7 @@ const CoachSession = () => {
 
     const user = JSON.parse(userData);
     console.log('[CoachSession] User data:', { id: user.id, role: user.role, name: user.name });
-    
+
     if (user.role !== 'coach') {
       toast.error('Unauthorized access - coaches only');
       navigate('/');
@@ -239,7 +271,7 @@ const CoachSession = () => {
         setDefaultContent([]);
       }
     };
-    
+
     loadDefaultContent();
   }, []);
 
@@ -571,7 +603,7 @@ const CoachSession = () => {
       items: [] // Items inside bucket
     };
     setBuckets(prev => [...prev, newBucket]);
-    
+
     // Send to other participants
     if (whiteboardService) {
       whiteboardService.sendBucketAdded(newBucket);
@@ -583,12 +615,12 @@ const CoachSession = () => {
     setCanvasItems([]);
     setBuckets([]);
     setTextBoxes([]);
-    
+
     // Trigger local clear and redraw
     setErasePenTrigger(prev => prev + 1);
     setClearCanvasTrigger(prev => prev + 1);
     setEraseAllActive(true);
-    
+
     // Send clear command to client
     if (whiteboardService) {
       whiteboardService.send('clear_canvas', {
@@ -618,15 +650,22 @@ const CoachSession = () => {
 
     const count = 10;
     const leftPositions = generateSpacedPositions(count);
-    
-    const newAnimations = leftPositions.map((leftPercent, index) => ({
-      id: `${type}_${Date.now()}_${index}`,
-      type,
-      ...asset,
-      left: `${leftPercent}%`,
-      bottom: '-50px',
-      popped: false
-    }));
+
+    const newAnimations = leftPositions.map((leftPercent, index) => {
+      // For balloons, randomly select from the color array
+      const selectedAsset = Array.isArray(asset)
+        ? asset[Math.floor(Math.random() * asset.length)]
+        : asset;
+
+      return {
+        id: `${type}_${Date.now()}_${index}`,
+        type,
+        ...selectedAsset,
+        left: `${leftPercent}%`,
+        bottom: '-50px',
+        popped: false
+      };
+    });
 
     setFloatingAnimations(prev => [...prev, ...newAnimations]);
 
@@ -653,10 +692,10 @@ const CoachSession = () => {
       const ctx = getAudioContext();
       const osc = ctx.createOscillator();
       const gainNode = ctx.createGain();
-      
+
       osc.connect(gainNode);
       gainNode.connect(ctx.destination);
-      
+
       switch (animationType) {
         case 'bubble':
           osc.frequency.setValueAtTime(800, ctx.currentTime);
@@ -704,8 +743,8 @@ const CoachSession = () => {
   };
 
   const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
-    setFloatingAnimations(prev => 
-      prev.map(anim => 
+    setFloatingAnimations(prev =>
+      prev.map(anim =>
         anim.id === animationId
           ? { ...anim, popped: true, poppedLeft, poppedTop }
           : anim
@@ -817,10 +856,10 @@ const CoachSession = () => {
       fontSize: textSize,
       fontColor: '#000000'
     };
-    
+
     setTextBoxes(prev => [...prev, newTextBox]);
     setActiveTextBoxId(newTextBox.id);
-    
+
     // Broadcast to clients
     if (whiteboardService) {
       whiteboardService.send('text_box_added', newTextBox);
@@ -828,10 +867,10 @@ const CoachSession = () => {
   };
 
   const handleTextBoxChange = (id, text) => {
-    setTextBoxes(prev => prev.map(box => 
+    setTextBoxes(prev => prev.map(box =>
       box.id === id ? { ...box, text } : box
     ));
-    
+
     // Broadcast text change in real-time
     if (whiteboardService) {
       whiteboardService.send('text_box_update', { id, text });
@@ -839,10 +878,10 @@ const CoachSession = () => {
   };
 
   const handleTextBoxResize = (id, width, height) => {
-    setTextBoxes(prev => prev.map(box => 
+    setTextBoxes(prev => prev.map(box =>
       box.id === id ? { ...box, width, height } : box
     ));
-    
+
     // Broadcast resize
     if (whiteboardService) {
       whiteboardService.send('text_box_update', { id, width, height });
@@ -850,10 +889,10 @@ const CoachSession = () => {
   };
 
   const handleTextBoxMove = (id, x, y) => {
-    setTextBoxes(prev => prev.map(box => 
+    setTextBoxes(prev => prev.map(box =>
       box.id === id ? { ...box, x, y } : box
     ));
-    
+
     // Broadcast move
     if (whiteboardService) {
       whiteboardService.send('text_box_update', { id, x, y });
@@ -865,7 +904,7 @@ const CoachSession = () => {
     if (activeTextBoxId === id) {
       setActiveTextBoxId(null);
     }
-    
+
     // Broadcast removal
     if (whiteboardService) {
       whiteboardService.send('text_box_removed', { id });
@@ -1103,7 +1142,7 @@ const CoachSession = () => {
           <div className="bg-white rounded-lg shadow p-4 mb-4">
             <h3 className="text-sm font-bold mb-2">Whiteboard Tools</h3>
             <div className="grid grid-cols-2 gap-2">
-              <button 
+              <button
                 onClick={() => {
                   setTool('pen');
                   setToolActive(true);
@@ -1113,7 +1152,7 @@ const CoachSession = () => {
               >
                 🖊️ Pen
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setTool('eraser');
                   setEraserActive(true);
@@ -1124,11 +1163,11 @@ const CoachSession = () => {
                 🧹 Eraser
               </button>
               <div className="relative">
-                <button 
+                <button
                   onClick={() => {
                     handleAddTextBox();
                     setShowTextSizeSlider(!showTextSizeSlider);
-                  }} 
+                  }}
                   className={wbSmallBtnBase}
                 >
                   📝 Text
@@ -1150,7 +1189,7 @@ const CoachSession = () => {
               <button onClick={eraseAllPen} className={wbSmallBtnBase}>
                 ❌ Clear
               </button>
-              <button 
+              <button
                 onClick={() => {
                   addBucket();
                 }}
@@ -1159,7 +1198,7 @@ const CoachSession = () => {
                 🪣 Bucket
               </button>
             </div>
-            
+
             {/* Pen Color Picker */}
             <div className="mt-3">
               <label className="text-xs font-semibold text-slate-700 block mb-1">Pen Color:</label>
@@ -1170,9 +1209,8 @@ const CoachSession = () => {
                     key={paletteColor}
                     onClick={() => setColor(paletteColor)}
                     disabled={tool === 'eraser'}
-                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${
-                      color === paletteColor ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${color === paletteColor ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300'
+                      }`}
                     style={{ backgroundColor: paletteColor }}
                     title={paletteColor}
                   />

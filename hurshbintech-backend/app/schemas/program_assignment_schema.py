@@ -104,6 +104,12 @@ class LearnerAssignmentUpdate(BaseModel):
     completion_status: Optional[CompletionStatus] = None
 
 
+class FinalFeedbackSubmit(BaseModel):
+    """Schema for Head to submit final feedback on program assignment"""
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5 stars")
+    remarks: Optional[str] = Field(None, description="Optional feedback remarks")
+
+
 class UserBasic(BaseModel):
     """Basic user info"""
     id: int
@@ -140,6 +146,9 @@ class ProgramAssignmentResponse(BaseModel):
     learner_notes: Optional[str]
     completion_status: CompletionStatus
     completed_at: Optional[datetime]
+    final_feedback_rating: Optional[int] = None
+    final_feedback_remarks: Optional[str] = None
+    final_feedback_given_at: Optional[datetime] = None
     notification_sent: bool
     assigned_at: datetime
     updated_at: datetime
@@ -166,6 +175,11 @@ class ProgramAssignmentListResponse(BaseModel):
     assigned_at: datetime
     is_overdue: bool = False
     is_late_submission: bool = False
+    completion_percentage: float = 0.0
+    final_feedback_rating: Optional[int] = None
+    final_feedback_remarks: Optional[str] = None
+    final_feedback_given_at: Optional[datetime] = None
+    content_assignments: Optional[List[ContentAssignmentInProgram]] = []
 
     class Config:
         from_attributes = True
@@ -193,6 +207,41 @@ class BulkAssignmentResult(BaseModel):
 class ContentStatusUpdate(BaseModel):
     """Schema for updating content assignment status"""
     status: ContentCompletionStatus
+
+
+class HeadFeedbackSubmit(BaseModel):
+    """Schema for head to submit feedback on content assignment"""
+    feedback_text: Optional[str] = None
+    rating: int = Field(..., ge=1, le=5, description="Star rating from 1 to 5")
+
+
+class FeedbackHistoryItem(BaseModel):
+    """Schema for a single feedback history entry"""
+    feedback_text: Optional[str] = None
+    rating: int
+    feedback_given_at: datetime
+    updated_at: datetime
+
+
+class ContentAssignmentWithFeedback(BaseModel):
+    """Schema for content assignment with feedback details"""
+    id: int
+    content_id: int
+    learning_content: Optional[LearningContentBasic]
+    completion_status: ContentCompletionStatus
+    assigned_at: datetime
+    started_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by_head: Optional[int] = None
+    head_feedback_text: Optional[str] = None
+    head_rating: Optional[int] = None
+    feedback_given_at: Optional[datetime] = None
+    feedback_history: Optional[List[FeedbackHistoryItem]] = []
+    resubmit_allowed: bool = True
+
+    class Config:
+        from_attributes = True
 
 
 # ============= Attachment Schemas =============

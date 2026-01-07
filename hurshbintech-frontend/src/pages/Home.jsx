@@ -51,29 +51,6 @@ const Home = () => {
           </div>
         ))}
       </section>
-
-      {/* Quick Features */}
-      <section className="home-quick-features">
-        <h2 className="home-quick-features-title">
-          Quick Features
-        </h2>
-
-        <div className="home-quick-features-grid">
-          {[
-            "Real-time video therapy sessions",
-            "Personalized learning programs",
-            "Interactive whiteboard tools",
-            "Progress tracking & reports",
-          ].map((feature, index) => (
-            <div key={index} className="home-quick-feature-item">
-              <div className="home-quick-feature-icon">
-                <span>✓</span>
-              </div>
-              <p className="home-quick-feature-text">{feature}</p>
-            </div>
-          ))}
-        </div>
-      </section>
       <Footer />
     </div>
   );

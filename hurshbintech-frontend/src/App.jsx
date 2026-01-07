@@ -61,6 +61,7 @@ import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
+import FeedbackPage from "./pages/learner/FeedbackPage";
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -538,6 +539,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/learner/feedback/:contentAssignmentId"
+          element={
+            <ProtectedRoute allowedRoles={["learner"]}>
+              <FeedbackPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/learner/learning-material"
           element={
             <ProtectedRoute allowedRoles={["learner"]}>
@@ -552,7 +561,7 @@ function AppRoutes() {
         <Route path="/guest-booking/pending" element={<GuestBookingStep3Pending />} />
         <Route path="/guest-payment/:uploadToken" element={<GuestPaymentUpload />} />
         <Route path="/guest-payment/success" element={<GuestPaymentUploadSuccess />} />
-        
+
         {/* Guest Session Route - Public, token-based authentication */}
         <Route path="/guest-session/:token" element={<GuestSession />} />
 

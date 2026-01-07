@@ -172,36 +172,15 @@ const AboutUs = () => {
         <div className="min-h-screen w-full bg-white flex flex-col overflow-x-hidden">
             <Navbar />
 
-            {/* Floating Home Button */}
-            <button
-                onClick={() => navigate('/')}
-                className="fixed top-24 left-4 md:left-6 z-40 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white p-3 md:p-4 rounded-full shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 hover:scale-110 group"
-                aria-label="Go to home page"
-            >
-                <svg
-                    className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                    />
-                </svg>
-            </button>
-
             {/* Hero Section with Background Image */}
-            <section className="relative w-full h-64 md:h-96 overflow-hidden mt-16" aria-label="Hero banner">
+            <section className="relative w-full h-64 md:h-96 overflow-hidden mt-2" aria-label="Hero banner">
                 {aboutUs.featured_image_url ? (
                     <>
                         <img
                             src={aboutUs.featured_image_url}
                             alt="About Us Hero"
                             loading="eager"
-                            className="absolute inset-0 w-full h-full object-cover transform scale-105 transition-transform duration-700"
+                            className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-700"
                         />
                         <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-amber-900/50 to-amber-800/60" aria-hidden="true"></div>
                     </>
@@ -210,7 +189,7 @@ const AboutUs = () => {
                 )}
 
                 <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col items-center justify-center text-center">
-                    <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white tracking-tight uppercase mb-4 drop-shadow-2xl animate-fade-in">
+                    <h1 className="text-2xl sm:text-3xl md:text-6xl lg:text-7xl font-black text-white tracking-tight uppercase mb-4 drop-shadow-2xl animate-fade-in">
                         {aboutUs.hero_title || 'About Us'}
                     </h1>
                     {aboutUs.hero_subtitle && (

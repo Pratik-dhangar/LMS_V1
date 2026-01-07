@@ -196,6 +196,36 @@ const programAssignmentService = {
     const response = await api.patch(`/program-assignments/head/content-assignments/${contentAssignmentId}/review`);
     return response.data;
   },
+
+  // Head: Submit feedback on content
+  submitFeedback: async (contentAssignmentId, feedbackData) => {
+    const response = await api.patch(
+      `/program-assignments/head/content-assignments/${contentAssignmentId}/review`,
+      feedbackData
+    );
+    return response.data;
+  },
+
+  // Head: Submit final feedback on program assignment
+  submitFinalFeedback: async (assignmentId, feedbackData) => {
+    const response = await api.post(
+      `/program-assignments/head/assignments/${assignmentId}/final-feedback`,
+      feedbackData
+    );
+    return response.data;
+  },
+
+  // Learner: Get content assignment with feedback
+  getContentAssignmentFeedback: async (contentAssignmentId) => {
+    const response = await api.get(`/program-assignments/learner/content-assignments/${contentAssignmentId}/feedback`);
+    return response.data;
+  },
+
+  // Learner: Resubmit content
+  resubmitContent: async (contentAssignmentId) => {
+    const response = await api.patch(`/program-assignments/learner/content-assignments/${contentAssignmentId}/resubmit`);
+    return response.data;
+  },
 };
 
 export default programAssignmentService;
