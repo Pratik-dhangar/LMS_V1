@@ -311,6 +311,11 @@ const LearnerDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {[
               {
+                icon: "🎓",
+                title: "Individualised Intervention Program(IIP)",
+                onClick: () => setShowSessions(!showSessions),
+              },
+              {
                 icon: "📚",
                 title: "Home Program (HP)",
                 onClick: () => setShowHomePrograms(!showHomePrograms),
@@ -322,13 +327,8 @@ const LearnerDashboard = () => {
               },
               {
                 icon: "🛒",
-                title: "Learning Material",
+                title: "Buy Learning Material",
                 onClick: () => navigate("/learner/learning-material"), // Add path if available
-              },
-              {
-                icon: "🎓",
-                title: "IIP Programs",
-                onClick: () => setShowSessions(!showSessions),
               },
               {
                 icon: "💬",
