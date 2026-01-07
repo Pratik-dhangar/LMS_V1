@@ -17,13 +17,26 @@ const ManageProgramAssignments = () => {
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showContentsPreviewModal, setShowContentsPreviewModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [selectedContentAssignment, setSelectedContentAssignment] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [completionStats, setCompletionStats] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'assignments'
+  const [feedbackData, setFeedbackData] = useState({
+    feedback_text: '',
+    rating: 0
+  });
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [showFinalFeedbackModal, setShowFinalFeedbackModal] = useState(false);
+  const [finalFeedbackData, setFinalFeedbackData] = useState({
+    rating: 0,
+    remarks: ''
+  });
+  const [finalFeedbackSubmitting, setFinalFeedbackSubmitting] = useState(false);
 
   const [filterLearner, setFilterLearner] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -289,6 +302,29 @@ const ManageProgramAssignments = () => {
     }
   };
 
+  const handleRefreshTracking = async () => {
+    if (!selectedAssignment) return;
+
+    try {
+      const [assignmentDetails, attachmentsData, stats] = await Promise.all([
+        programAssignmentService.getAssignmentById(selectedAssignment.id),
+        programAssignmentService.getAttachments(selectedAssignment.id),
+        programAssignmentService.getCompletionStats(selectedAssignment.learner_id),
+      ]);
+
+      setSelectedAssignment(assignmentDetails);
+      setAttachments(attachmentsData);
+      setCompletionStats(stats);
+
+      // Also refresh the main assignments list
+      await fetchAssignments();
+
+      toast.success('Refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh');
+    }
+  };
+
   const handleUploadAttachment = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -380,6 +416,118 @@ const ManageProgramAssignments = () => {
       setSelectedAssignment(assignmentDetails);
     } catch (error) {
       toast.error('Failed to review content');
+    }
+  };
+
+  const handleOpenFeedbackModal = (contentAssignment) => {
+    setSelectedContentAssignment(contentAssignment);
+    // Pre-fill feedback data if it exists
+    if (contentAssignment.head_feedback_text || contentAssignment.head_rating) {
+      setFeedbackData({
+        feedback_text: contentAssignment.head_feedback_text || '',
+        rating: contentAssignment.head_rating || 0
+      });
+    } else {
+      setFeedbackData({
+        feedback_text: '',
+        rating: 0
+      });
+    }
+    setShowFeedbackModal(true);
+  };
+
+  const handleCloseFeedbackModal = () => {
+    setShowFeedbackModal(false);
+    setSelectedContentAssignment(null);
+    setFeedbackData({
+      feedback_text: '',
+      rating: 0
+    });
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!selectedContentAssignment) {
+      toast.error('No content selected');
+      return;
+    }
+
+    if (feedbackData.rating < 1 || feedbackData.rating > 5) {
+      toast.error('Please select a rating between 1 and 5');
+      return;
+    }
+
+    try {
+      setFeedbackSubmitting(true);
+      await programAssignmentService.submitFeedback(selectedContentAssignment.id, {
+        feedback_text: feedbackData.feedback_text,
+        rating: feedbackData.rating
+      });
+      toast.success('Feedback submitted successfully');
+
+      // Refresh assignment details
+      const assignmentDetails = await programAssignmentService.getAssignmentById(selectedAssignment.id);
+      setSelectedAssignment(assignmentDetails);
+
+      handleCloseFeedbackModal();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to submit feedback');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  const handleOpenFinalFeedbackModal = () => {
+    // Pre-fill if feedback already exists
+    if (selectedAssignment?.final_feedback_rating || selectedAssignment?.final_feedback_remarks) {
+      setFinalFeedbackData({
+        rating: selectedAssignment.final_feedback_rating || 0,
+        remarks: selectedAssignment.final_feedback_remarks || ''
+      });
+    } else {
+      setFinalFeedbackData({
+        rating: 0,
+        remarks: ''
+      });
+    }
+    setShowFinalFeedbackModal(true);
+  };
+
+  const handleCloseFinalFeedbackModal = () => {
+    setShowFinalFeedbackModal(false);
+    setFinalFeedbackData({
+      rating: 0,
+      remarks: ''
+    });
+  };
+
+  const handleSubmitFinalFeedback = async () => {
+    if (!selectedAssignment) {
+      toast.error('No assignment selected');
+      return;
+    }
+
+    if (finalFeedbackData.rating < 1 || finalFeedbackData.rating > 5) {
+      toast.error('Please select a rating between 1 and 5 stars');
+      return;
+    }
+
+    try {
+      setFinalFeedbackSubmitting(true);
+      await programAssignmentService.submitFinalFeedback(selectedAssignment.id, {
+        rating: finalFeedbackData.rating,
+        remarks: finalFeedbackData.remarks
+      });
+      toast.success('Final feedback submitted successfully!');
+
+      // Refresh assignment details
+      const assignmentDetails = await programAssignmentService.getAssignmentById(selectedAssignment.id);
+      setSelectedAssignment(assignmentDetails);
+
+      handleCloseFinalFeedbackModal();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to submit final feedback');
+    } finally {
+      setFinalFeedbackSubmitting(false);
     }
   };
 
@@ -960,7 +1108,17 @@ const ManageProgramAssignments = () => {
       {showTrackingModal && selectedAssignment && (
         <div className="mpa-modal-overlay">
           <div className="mpa-modal-content mpa-modal-lg">
-            <h2 className="mpa-modal-title">Assignment Tracking</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className="mpa-modal-title" style={{ margin: 0 }}>Assignment Tracking</h2>
+              <button
+                onClick={handleRefreshTracking}
+                className="mpa-btn-secondary mpa-btn-sm"
+                style={{ padding: '6px 12px' }}
+                title="Refresh data"
+              >
+                🔄 Refresh
+              </button>
+            </div>
 
             {/* Completion Stats */}
             {completionStats && (
@@ -1051,10 +1209,10 @@ const ManageProgramAssignments = () => {
                             </span>
                             {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
                               <button
-                                onClick={() => handleReviewContent(assignment.id)}
-                                className="mpa-btn-primary mpa-btn-sm mpa-btn-review-content"
+                                onClick={() => handleOpenFeedbackModal(assignment)}
+                                className="mpa-btn-primary mpa-btn-sm mpa-btn-feedback"
                               >
-                                ✓ Mark Reviewed
+                                💬 Add Feedback
                               </button>
                             ) : null}
                           </div>
@@ -1169,16 +1327,190 @@ const ManageProgramAssignments = () => {
             </div>
 
             <div className="mpa-modal-actions">
+              {/* Final Feedback Button - Show for COMPLETED assignments */}
+              {selectedAssignment?.completion_status === 'COMPLETED' && (
+                <button
+                  onClick={handleOpenFinalFeedbackModal}
+                  className="mpa-btn-primary"
+                  style={{ marginRight: 'auto' }}
+                >
+                  ⭐ {selectedAssignment.final_feedback_rating ? 'Update' : 'Add'} Final Feedback
+                </button>
+              )}
               <button
                 onClick={() => {
                   setShowTrackingModal(false);
                   setSelectedAssignment(null);
                   setAttachments([]);
                   setCompletionStats(null);
+                  // Refresh the main list when closing to show updated statuses
+                  fetchAssignments();
                 }}
                 className="mpa-btn-secondary"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedContentAssignment && (
+        <div className="mpa-modal-overlay">
+          <div className="mpa-modal-content mpa-modal-md">
+            <h2 className="mpa-modal-title">Add Feedback</h2>
+
+            {/* Learner Submission Section */}
+            {selectedContentAssignment && (
+              <div className="mpa-feedback-learner-submission">
+                <h3 className="mpa-subsection-title">Learner Submission</h3>
+                <p className="mpa-text-muted">
+                  Submitted on: {new Date(selectedContentAssignment.submitted_at).toLocaleString()}
+                </p>
+                {selectedContentAssignment.learner_notes && (
+                  <div className="mpa-learner-notes-box">
+                    <h4>Learner Notes:</h4>
+                    <p>{selectedContentAssignment.learner_notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Star Rating Section */}
+            <div className="mpa-feedback-rating-section">
+              <label className="mpa-label">Rating (1-5 Stars)</label>
+              <div className="mpa-star-rating">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setFeedbackData({ ...feedbackData, rating: star })}
+                    className={`mpa-star-btn ${feedbackData.rating >= star ? 'mpa-star-active' : ''}`}
+                    title={`${star} stars`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              {feedbackData.rating > 0 && <p className="mpa-text-muted">{feedbackData.rating} out of 5 stars</p>}
+            </div>
+
+            {/* Remarks Section */}
+            <div className="mpa-feedback-remarks-section">
+              <label className="mpa-label" htmlFor="feedback_text">
+                Remarks (Optional)
+              </label>
+              <textarea
+                id="feedback_text"
+                value={feedbackData.feedback_text}
+                onChange={(e) => setFeedbackData({ ...feedbackData, feedback_text: e.target.value })}
+                placeholder="Enter your feedback and remarks..."
+                className="mpa-textarea"
+                rows="5"
+              />
+            </div>
+
+            {/* Feedback History (if exists) */}
+            {selectedContentAssignment.feedback_history && selectedContentAssignment.feedback_history.length > 0 && (
+              <div className="mpa-feedback-history-section">
+                <h4 className="mpa-subsection-title">Previous Feedback</h4>
+                {selectedContentAssignment.feedback_history.map((item, index) => (
+                  <div key={index} className="mpa-feedback-history-item">
+                    <div className="mpa-feedback-history-header">
+                      <span className="mpa-feedback-history-rating">⭐ {item.rating}/5</span>
+                      <span className="mpa-text-muted">{new Date(item.feedback_given_at).toLocaleString()}</span>
+                    </div>
+                    {item.feedback_text && <p className="mpa-feedback-history-text">{item.feedback_text}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="mpa-modal-actions">
+              <button
+                onClick={handleCloseFeedbackModal}
+                className="mpa-btn-secondary"
+                disabled={feedbackSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitFeedback}
+                className="mpa-btn-primary"
+                disabled={feedbackSubmitting || feedbackData.rating < 1}
+              >
+                {feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Feedback Modal */}
+      {showFinalFeedbackModal && selectedAssignment && (
+        <div className="mpa-modal-overlay">
+          <div className="mpa-modal-content mpa-modal-md">
+            <h2 className="mpa-modal-title">⭐ Final Feedback for {selectedAssignment.learner?.name}</h2>
+
+            <div className="mpa-feedback-program-info">
+              <h3 className="mpa-subsection-title">Program</h3>
+              <p className="mpa-text-lg">{selectedAssignment.program?.goal || selectedAssignment.program_name}</p>
+              {selectedAssignment.final_feedback_given_at && (
+                <p className="mpa-text-muted">
+                  Last updated: {new Date(selectedAssignment.final_feedback_given_at).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* Star Rating Section */}
+            <div className="mpa-feedback-rating-section">
+              <label className="mpa-label">Rating (1-5 Stars) *</label>
+              <div className="mpa-star-rating">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setFinalFeedbackData({ ...finalFeedbackData, rating: star })}
+                    className={`mpa-star-btn ${finalFeedbackData.rating >= star ? 'mpa-star-active' : ''}`}
+                    title={`${star} stars`}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              {finalFeedbackData.rating > 0 && <p className="mpa-text-muted">{finalFeedbackData.rating} out of 5 stars</p>}
+            </div>
+
+            {/* Remarks Section */}
+            <div className="mpa-feedback-remarks-section">
+              <label className="mpa-label" htmlFor="final_remarks">
+                Remarks (Optional)
+              </label>
+              <textarea
+                id="final_remarks"
+                value={finalFeedbackData.remarks}
+                onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, remarks: e.target.value })}
+                placeholder="Enter your final feedback and remarks about overall performance..."
+                className="mpa-textarea"
+                rows="6"
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mpa-modal-actions">
+              <button
+                onClick={handleCloseFinalFeedbackModal}
+                className="mpa-btn-secondary"
+                disabled={finalFeedbackSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitFinalFeedback}
+                className="mpa-btn-primary"
+                disabled={finalFeedbackSubmitting || finalFeedbackData.rating < 1}
+              >
+                {finalFeedbackSubmitting ? 'Submitting...' : 'Submit Final Feedback'}
               </button>
             </div>
           </div>

@@ -146,21 +146,26 @@ const AppointmentsManager = () => {
       setUpdating(true);
       // Convert status to lowercase to match backend enum values
       const statusValue = newStatus.toLowerCase();
-      await coachService.updateAppointmentStatus(appointmentId, statusValue);
+      const response = await coachService.updateAppointmentStatus(appointmentId, statusValue);
       
-      // Update local state with lowercase status
+      // Use the ACTUAL status returned by backend (e.g., for GUEST_INTENT → VERIFICATION_PENDING)
+      const actualStatus = response.status || statusValue;
+      
+      // Update local state with actual status from backend response
       setAppointments(prev => 
         prev.map(apt => 
-          apt.id === appointmentId ? { ...apt, status: statusValue } : apt
+          apt.id === appointmentId ? { ...apt, status: actualStatus } : apt
         )
       );
       
       // Update selected appointment if modal is open
       if (selectedAppointment?.id === appointmentId) {
-        setSelectedAppointment(prev => ({ ...prev, status: statusValue }));
+        setSelectedAppointment(prev => ({ ...prev, status: actualStatus }));
       }
       
-      toast.success(`Appointment ${newStatus.toLowerCase()} successfully!`);
+      // Show appropriate success message based on actual status
+      const statusMessage = actualStatus === 'VERIFICATION_PENDING' ? 'Payment link sent' : `Appointment ${actualStatus}`;
+      toast.success(`${statusMessage} successfully!`);
     } catch (err) {
       console.error('Error updating appointment status:', err);
       toast.error(err.response?.data?.detail || 'Failed to update appointment status');

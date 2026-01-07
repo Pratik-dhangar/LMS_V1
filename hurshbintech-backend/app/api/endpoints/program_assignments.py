@@ -6,6 +6,7 @@ Manages program assignments with completion tracking, notes, and attachments
 import logging
 from datetime import date, datetime
 from typing import List, Optional
+import json
 
 from fastapi import (
     APIRouter,
@@ -23,7 +24,7 @@ from app.core.deps import get_current_head, get_current_user
 from app.crud import program_assignment_crud, program_assignment_attachment_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile, User, UserRole
-from app.models.program_assignment_model import CompletionStatus
+from app.models.program_assignment_model import CompletionStatus, ProgramAssignment
 from app.models.program_assignment_attachment_model import AttachmentType
 from app.models.learner_content_assignment_model import LearnerContentAssignment, ContentCompletionStatus
 from app.schemas.program_assignment_schema import (
@@ -42,6 +43,9 @@ from app.schemas.program_assignment_schema import (
     LearningContentBasic,
     ContentAssignmentInProgram,
     ContentStatusUpdate,
+    HeadFeedbackSubmit,
+    ContentAssignmentWithFeedback,
+    FinalFeedbackSubmit,
 )
 from app.utils.s3_utils import S3Manager
 from app.core.config import settings
@@ -562,6 +566,101 @@ async def delete_assignment(
     return None
 
 
+@router.post("/head/assignments/{assignment_id}/final-feedback", response_model=ProgramAssignmentResponse)
+async def submit_final_feedback(
+    assignment_id: int,
+    feedback: FinalFeedbackSubmit,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Submit final feedback (rating and remarks) for a completed program assignment"""
+    from sqlalchemy import select
+    
+    # Get the assignment
+    result = await db.execute(
+        select(ProgramAssignment).where(ProgramAssignment.id == assignment_id)
+    )
+    assignment = result.scalar_one_or_none()
+    
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found"
+        )
+    
+    # Verify the head is authorized
+    if assignment.assigned_by_head != current_head.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to provide feedback for this assignment"
+        )
+    
+    # Update feedback fields
+    assignment.final_feedback_rating = feedback.rating
+    assignment.final_feedback_remarks = feedback.remarks
+    assignment.final_feedback_given_at = datetime.utcnow()
+    
+    await db.commit()
+    await db.refresh(assignment)
+    
+    logger.info(f"Final feedback submitted for assignment {assignment_id} by head {current_head.user_id}")
+    
+    # Reload with relationships for response
+    updated_assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
+    
+    # Build response
+    learning_contents = []
+    if hasattr(updated_assignment.program, 'program_contents'):
+        for pc in sorted(updated_assignment.program.program_contents, key=lambda x: x.sequence_order):
+            learning_contents.append(
+                LearningContentInProgram(
+                    id=pc.content.id,
+                    title=pc.content.title,
+                    description=pc.content.description,
+                    content_type=pc.content.content_type.value,
+                    file_url=pc.content.file_url,
+                    thumbnail_url=pc.content.thumbnail_url,
+                    sequence_order=pc.sequence_order
+                )
+            )
+    
+    return ProgramAssignmentResponse(
+        id=updated_assignment.id,
+        learner_id=updated_assignment.learner_id,
+        learner=UserBasic(
+            id=updated_assignment.learner.id,
+            name=updated_assignment.learner.name,
+            email=updated_assignment.learner.email
+        ),
+        program_id=updated_assignment.program_id,
+        program=ProgramWithContents(
+            id=updated_assignment.program.id,
+            goal=updated_assignment.program.goal,
+            goal_description=updated_assignment.program.goal_description,
+            contents=learning_contents
+        ),
+        assigned_by_head=updated_assignment.assigned_by_head,
+        assigned_by=UserBasic(
+            id=updated_assignment.assigned_by.id,
+            name=updated_assignment.assigned_by.name,
+            email=updated_assignment.assigned_by.email
+        ) if updated_assignment.assigned_by else None,
+        start_date=updated_assignment.start_date,
+        end_date=updated_assignment.end_date,
+        duration_days=updated_assignment.duration_days,
+        head_notes=updated_assignment.head_notes,
+        learner_notes=updated_assignment.learner_notes,
+        completion_status=updated_assignment.completion_status,
+        completed_at=updated_assignment.completed_at,
+        final_feedback_rating=updated_assignment.final_feedback_rating,
+        final_feedback_remarks=updated_assignment.final_feedback_remarks,
+        final_feedback_given_at=updated_assignment.final_feedback_given_at,
+        notification_sent=updated_assignment.notification_sent,
+        assigned_at=updated_assignment.assigned_at,
+        updated_at=updated_assignment.updated_at
+    )
+
+
 @router.post("/head/assignments/{assignment_id}/attachments", response_model=AttachmentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_attachment(
     assignment_id: int,
@@ -654,11 +753,19 @@ async def upload_attachment(
             # Public path served by static files (nginx or backend static route)
             file_path = f"/uploads/program-assignments/{unique_filename}"
 
-            # Generate thumbnail for images/videos
+            # Generate thumbnail for images/videos (Head endpoint)
             if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
                 try:
-                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
-                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    # Use PIL directly for local thumbnail generation without AWS
+                    from PIL import Image
+                    import io
+                    
+                    img = Image.open(io.BytesIO(file_content))
+                    img.thumbnail((300, 300))
+                    thumb_buffer = io.BytesIO()
+                    img.save(thumb_buffer, format='JPEG', quality=85)
+                    thumbnail_content = thumb_buffer.getvalue()
+                    
                     if thumbnail_content:
                         thumb_dir = Path("uploads/program-assignments/thumbnails")
                         thumb_dir.mkdir(parents=True, exist_ok=True)
@@ -745,13 +852,15 @@ async def start_content(
             started_at=datetime.utcnow()
         )
     )
-    await db.commit()
     
     # Update program assignment status if this content belongs to a program
     if content_assignment.program_assignment_id:
         await program_assignment_crud.update_program_status_from_content(
             db, content_assignment.program_assignment_id
         )
+    else:
+        # If no program assignment, just commit the content status change
+        await db.commit()
     
     return {"message": "Content started", "status": "IN_PROGRESS"}
 
@@ -764,71 +873,97 @@ async def submit_content(
 ):
     """Submit content assignment (checks if late)"""
     from sqlalchemy import select, update
+    from sqlalchemy.orm import joinedload
     
-    # Get the content assignment with program assignment
-    result = await db.execute(
-        select(LearnerContentAssignment)
-        .options(joinedload(LearnerContentAssignment.program_assignment))
-        .where(LearnerContentAssignment.id == content_assignment_id)
-    )
-    content_assignment = result.scalar_one_or_none()
-    
-    if not content_assignment:
+    try:
+        # Get the content assignment with program assignment
+        result = await db.execute(
+            select(LearnerContentAssignment)
+            .options(joinedload(LearnerContentAssignment.program_assignment))
+            .where(LearnerContentAssignment.id == content_assignment_id)
+        )
+        content_assignment = result.scalar_one_or_none()
+        
+        if not content_assignment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Content assignment not found"
+            )
+        
+        # Verify user is the learner
+        if content_assignment.learner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this content"
+            )
+        
+        # Check if submission is late
+        now = datetime.utcnow()
+        is_late = False
+        
+        if content_assignment.program_assignment and content_assignment.program_assignment.end_date:
+            try:
+                end_date = content_assignment.program_assignment.end_date
+                # Convert date to datetime for comparison
+                end_datetime = datetime.combine(end_date, datetime.max.time())
+                is_late = now > end_datetime
+            except Exception as date_error:
+                logger.warning(f"Could not determine if submission is late: {str(date_error)}")
+                is_late = False
+        
+        new_status = ContentCompletionStatus.LATE_SUBMITTED if is_late else ContentCompletionStatus.SUBMITTED
+        
+        # Update status
+        await db.execute(
+            update(LearnerContentAssignment)
+            .where(LearnerContentAssignment.id == content_assignment_id)
+            .values(
+                completion_status=new_status,
+                submitted_at=now
+            )
+        )
+        
+        # Update program assignment status if this content belongs to a program
+        if content_assignment.program_assignment_id:
+            await program_assignment_crud.update_program_status_from_content(
+                db, content_assignment.program_assignment_id
+            )
+        else:
+            # If no program assignment, just commit the content status change
+            await db.commit()
+        
+        return {
+            "message": "Content submitted",
+            "status": new_status.value,
+            "is_late": is_late
+        }
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        import traceback
+        logger.error(f"Error in submit_content: {str(e)}")
+        logger.error(traceback.format_exc())
+        print(f"Error in submit_content: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Content assignment not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit content: {str(e)}"
         )
-    
-    # Verify user is the learner
-    if content_assignment.learner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this content"
-        )
-    
-    # Check if submission is late
-    now = datetime.utcnow()
-    is_late = False
-    
-    if content_assignment.program_assignment:
-        end_date = content_assignment.program_assignment.end_date
-        # Convert date to datetime for comparison
-        end_datetime = datetime.combine(end_date, datetime.max.time())
-        is_late = now > end_datetime
-    
-    new_status = ContentCompletionStatus.LATE_SUBMITTED if is_late else ContentCompletionStatus.SUBMITTED
-    
-    # Update status
-    await db.execute(
-        update(LearnerContentAssignment)
-        .where(LearnerContentAssignment.id == content_assignment_id)
-        .values(
-            completion_status=new_status,
-            submitted_at=now
-        )
-    )
-    await db.commit()
-    
-    # Update program assignment status if this content belongs to a program
-    if content_assignment.program_assignment_id:
-        await program_assignment_crud.update_program_status_from_content(
-            db, content_assignment.program_assignment_id
-        )
-    
-    return {
-        "message": "Content submitted",
-        "status": new_status.value,
-        "is_late": is_late
-    }
+
+
+@router.patch("/head/content-assignments/{content_assignment_id}/review")
 
 
 @router.patch("/head/content-assignments/{content_assignment_id}/review")
 async def review_content(
     content_assignment_id: int,
+    feedback_data: HeadFeedbackSubmit,
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Mark content as reviewed by head"""
+    """Submit feedback and rating on content assignment"""
     from sqlalchemy import select, update
     
     # Get the content assignment
@@ -859,14 +994,42 @@ async def review_content(
                 detail="Not authorized to review this content"
             )
     
-    # Update status to REVIEWED
+    # Validate rating
+    if not (1 <= feedback_data.rating <= 5):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rating must be between 1 and 5"
+        )
+    
+    # Prepare feedback history entry if feedback was previously given
+    feedback_history = []
+    if content_assignment.feedback_history:
+        try:
+            feedback_history = json.loads(content_assignment.feedback_history)
+        except (json.JSONDecodeError, TypeError):
+            feedback_history = []
+    
+    # If updating existing feedback, add previous feedback to history
+    if content_assignment.head_feedback_text or content_assignment.head_rating:
+        feedback_history.append({
+            "feedback_text": content_assignment.head_feedback_text,
+            "rating": content_assignment.head_rating,
+            "feedback_given_at": content_assignment.feedback_given_at.isoformat() if content_assignment.feedback_given_at else None,
+            "updated_at": datetime.utcnow().isoformat()
+        })
+    
+    # Update status to REVIEWED with new feedback
     await db.execute(
         update(LearnerContentAssignment)
         .where(LearnerContentAssignment.id == content_assignment_id)
         .values(
             completion_status=ContentCompletionStatus.REVIEWED,
             reviewed_at=datetime.utcnow(),
-            reviewed_by_head=current_head.user_id
+            reviewed_by_head=current_head.user_id,
+            head_feedback_text=feedback_data.feedback_text,
+            head_rating=feedback_data.rating,
+            feedback_given_at=datetime.utcnow(),
+            feedback_history=json.dumps(feedback_history)
         )
     )
     await db.commit()
@@ -877,7 +1040,74 @@ async def review_content(
             db, content_assignment.program_assignment_id
         )
     
-    return {"message": "Content reviewed", "status": "REVIEWED"}
+    return {
+        "message": "Feedback submitted successfully",
+        "status": "REVIEWED",
+        "feedback_text": feedback_data.feedback_text,
+        "rating": feedback_data.rating,
+        "feedback_given_at": datetime.utcnow().isoformat()
+    }
+
+@router.patch("/learner/content-assignments/{content_assignment_id}/resubmit")
+async def resubmit_content(
+    content_assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Learner resubmits content after RESUBMISSION_REQUIRED status"""
+    from sqlalchemy import select, update
+    
+    # Get the content assignment
+    result = await db.execute(
+        select(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+    )
+    content_assignment = result.scalar_one_or_none()
+    
+    if not content_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content assignment not found"
+        )
+    
+    # Verify learner ownership
+    if content_assignment.learner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to resubmit this content"
+        )
+    
+    # Verify status is RESUBMISSION_REQUIRED and resubmit is allowed
+    if content_assignment.completion_status != ContentCompletionStatus.RESUBMISSION_REQUIRED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Content is not in RESUBMISSION_REQUIRED status (current: {content_assignment.completion_status.value})"
+        )
+    
+    if not content_assignment.resubmit_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Resubmission is not allowed for this assignment"
+        )
+    
+    # Reset status to SUBMITTED (clear feedback)
+    await db.execute(
+        update(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+        .values(
+            completion_status=ContentCompletionStatus.SUBMITTED,
+            submitted_at=datetime.utcnow(),
+            # Keep feedback history but clear current feedback
+            # Note: feedback_text and head_rating remain in history
+        )
+    )
+    await db.commit()
+    
+    return {
+        "message": "Content resubmitted successfully",
+        "status": "SUBMITTED",
+        "submitted_at": datetime.utcnow().isoformat()
+    }
 
 @router.get("/head/assignments/{assignment_id}/attachments", response_model=List[AttachmentResponse])
 async def get_attachments(
@@ -993,6 +1223,42 @@ async def get_my_assignments(
             completion_date = a.completed_at.date() if isinstance(a.completed_at, datetime) else a.completed_at
             is_late_submission = completion_date > a.end_date
         
+        # Calculate completion percentage based on content assignments
+        total_contents = len(a.content_assignments) if a.content_assignments else 0
+        completed_contents = 0
+        
+        if total_contents > 0:
+            for ca in a.content_assignments:
+                if ca.completion_status in [ContentCompletionStatus.SUBMITTED, ContentCompletionStatus.REVIEWED]:
+                    completed_contents += 1
+        
+        completion_percentage = (completed_contents / total_contents * 100) if total_contents > 0 else 0.0
+        
+        # Build content assignments list
+        content_assignments_list = []
+        if a.content_assignments:
+            for ca in a.content_assignments:
+                content_assignments_list.append(
+                    ContentAssignmentInProgram(
+                        id=ca.id,
+                        content_id=ca.content_id,
+                        learning_content=LearningContentBasic(
+                            id=ca.content.id,
+                            title=ca.content.title,
+                            description=ca.content.description,
+                            content_type=ca.content.content_type,
+                            file_url=ca.content.file_url,
+                            thumbnail_url=ca.content.thumbnail_url,
+                        ),
+                        completion_status=ca.completion_status,
+                        assigned_at=ca.assigned_at,
+                        started_at=ca.started_at,
+                        submitted_at=ca.submitted_at,
+                        reviewed_at=ca.reviewed_at,
+                        reviewed_by_head=ca.reviewed_by_head,
+                    )
+                )
+        
         result.append(
             ProgramAssignmentListResponse(
                 id=a.id,
@@ -1007,7 +1273,12 @@ async def get_my_assignments(
                 completed_at=a.completed_at,
                 assigned_at=a.assigned_at,
                 is_overdue=is_overdue,
-                is_late_submission=is_late_submission
+                is_late_submission=is_late_submission,
+                completion_percentage=round(completion_percentage, 1),
+                final_feedback_rating=a.final_feedback_rating,
+                final_feedback_remarks=a.final_feedback_remarks,
+                final_feedback_given_at=a.final_feedback_given_at,
+                content_assignments=content_assignments_list,
             )
         )
     
@@ -1054,16 +1325,32 @@ async def get_my_learning_contents(
                 
                 content_type_str = content.content_type.value if hasattr(content.content_type, 'value') else str(content.content_type)
                 
+                completion_status_str = assignment.completion_status.value if hasattr(assignment.completion_status, 'value') else str(assignment.completion_status)
+                
+                # Get program title if this content is part of a program
+                program_title = None
+                try:
+                    if assignment.program_assignment and assignment.program_assignment.program:
+                        program_title = assignment.program_assignment.program.title
+                except Exception:
+                    pass  # If we can't access the program, just leave it as None
+                
                 result.append({
                     "id": content.id,
+                    "content_assignment_id": assignment.id,  # ID of the LearnerContentAssignment
                     "title": content.title,
                     "description": content.description,
                     "content_type": content_type_str,
                     "file_url": file_url,
                     "thumbnail_url": thumbnail_url,
+                    "completion_status": completion_status_str,
+                    "started_at": assignment.started_at.isoformat() if assignment.started_at and hasattr(assignment.started_at, 'isoformat') else None,
+                    "submitted_at": assignment.submitted_at.isoformat() if assignment.submitted_at and hasattr(assignment.submitted_at, 'isoformat') else None,
                     "assigned_at": assignment.assigned_at.isoformat() if hasattr(assignment.assigned_at, 'isoformat') else str(assignment.assigned_at),
                     "assigned_by": assignment.assigned_by.name if assignment.assigned_by else None,
-                    "from_program": assignment.program_assignment_id is not None
+                    "from_program": assignment.program_assignment_id is not None,
+                    "program_assignment_id": assignment.program_assignment_id,
+                    "program_title": program_title
                 })
             except Exception as e:
                 logger.error(f"Error processing content assignment {assignment.id}: {str(e)}")
@@ -1378,11 +1665,19 @@ async def upload_my_attachment(
             # Public path served by static files (nginx or backend static route)
             file_path = f"/uploads/program-assignments/{unique_filename}"
 
-            # Generate thumbnail for images/videos
+            # Generate thumbnail for images/videos (Learner endpoint)
             if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
                 try:
-                    s3_util = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
-                    thumbnail_content = s3_util.generate_thumbnail(file_content, file_type.value.lower())
+                    # Use PIL directly for local thumbnail generation without AWS
+                    from PIL import Image
+                    import io
+                    
+                    img = Image.open(io.BytesIO(file_content))
+                    img.thumbnail((300, 300))
+                    thumb_buffer = io.BytesIO()
+                    img.save(thumb_buffer, format='JPEG', quality=85)
+                    thumbnail_content = thumb_buffer.getvalue()
+                    
                     if thumbnail_content:
                         thumb_dir = Path("uploads/program-assignments/thumbnails")
                         thumb_dir.mkdir(parents=True, exist_ok=True)
@@ -1427,3 +1722,70 @@ async def upload_my_attachment(
         description=attachment.description,
         uploaded_at=attachment.uploaded_at
     )
+
+@router.get("/learner/content-assignments/{content_assignment_id}/feedback", response_model=ContentAssignmentWithFeedback)
+async def get_content_assignment_feedback(
+    content_assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get content assignment with feedback details (for learner)"""
+    from sqlalchemy import select
+    from app.models.learning_content_model import LearningContent
+    
+    result = await db.execute(
+        select(LearnerContentAssignment)
+        .where(LearnerContentAssignment.id == content_assignment_id)
+    )
+    content_assignment = result.scalar_one_or_none()
+    
+    if not content_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Content assignment not found"
+        )
+    
+    # Verify learner owns this assignment
+    if content_assignment.learner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this feedback"
+        )
+    
+    # Parse feedback history
+    feedback_history = []
+    if content_assignment.feedback_history:
+        try:
+            feedback_history = json.loads(content_assignment.feedback_history)
+        except (json.JSONDecodeError, TypeError):
+            feedback_history = []
+    
+    # Build response with learning content details
+    learning_content = None
+    if content_assignment.content:
+        learning_content = LearningContentBasic(
+            id=content_assignment.content.id,
+            title=content_assignment.content.title,
+            description=content_assignment.content.description,
+            content_type=content_assignment.content.content_type.value if hasattr(content_assignment.content.content_type, 'value') else str(content_assignment.content.content_type),
+            file_url=content_assignment.content.file_url,
+            thumbnail_url=content_assignment.content.thumbnail_url
+        )
+    
+    return ContentAssignmentWithFeedback(
+        id=content_assignment.id,
+        content_id=content_assignment.content_id,
+        learning_content=learning_content,
+        completion_status=content_assignment.completion_status,
+        assigned_at=content_assignment.assigned_at,
+        started_at=content_assignment.started_at,
+        submitted_at=content_assignment.submitted_at,
+        reviewed_at=content_assignment.reviewed_at,
+        reviewed_by_head=content_assignment.reviewed_by_head,
+        head_feedback_text=content_assignment.head_feedback_text,
+        head_rating=content_assignment.head_rating,
+        feedback_given_at=content_assignment.feedback_given_at,
+        feedback_history=feedback_history,
+        resubmit_allowed=content_assignment.resubmit_allowed
+    )
+

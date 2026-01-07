@@ -18,6 +18,7 @@ class AttachmentType(str, enum.Enum):
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
     PDF = "PDF"
+    LEARNER_SUBMISSION = "LEARNER_SUBMISSION"  # Content uploaded by learner (notes, proof, work)
 
 
 class ProgramAssignmentAttachment(Base):

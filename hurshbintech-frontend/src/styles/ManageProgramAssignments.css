@@ -3285,3 +3285,164 @@
 .mpa-modal-content::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+
+/* ============================================
+   Feedback Modal Styles
+   ============================================ */
+
+.mpa-feedback-learner-submission {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mpa-learner-notes-box {
+    background: white;
+    border-left: 4px solid #3b82f6;
+    padding: 1rem;
+    margin-top: 0.75rem;
+    border-radius: 4px;
+}
+
+.mpa-learner-notes-box h4 {
+    margin: 0 0 0.5rem 0;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.mpa-learner-notes-box p {
+    margin: 0;
+    color: #475569;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.mpa-feedback-rating-section {
+    margin-bottom: 1.5rem;
+}
+
+.mpa-label {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.mpa-star-rating {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.mpa-star-btn {
+    font-size: 2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.4;
+    transition: all 0.2s ease;
+    filter: grayscale(100%);
+}
+
+.mpa-star-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.mpa-star-btn.mpa-star-active {
+    opacity: 1;
+    filter: grayscale(0%);
+}
+
+.mpa-text-muted {
+    color: #64748b;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.mpa-feedback-remarks-section {
+    margin-bottom: 1.5rem;
+}
+
+.mpa-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.95rem;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.mpa-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mpa-feedback-history-section {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mpa-feedback-history-section h4 {
+    margin: 0 0 1rem 0;
+    color: #92400e;
+}
+
+.mpa-feedback-history-item {
+    background: white;
+    border-left: 4px solid #fbbf24;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+}
+
+.mpa-feedback-history-item:last-child {
+    margin-bottom: 0;
+}
+
+.mpa-feedback-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.mpa-feedback-history-rating {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.mpa-feedback-history-text {
+    color: #475569;
+    margin: 0;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.mpa-modal-md {
+    max-width: 600px;
+}
+
+.mpa-btn-feedback {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+}
+
+.mpa-btn-feedback:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #64409a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}

@@ -477,7 +477,7 @@ const Whiteboard = ({
 
         let selectionColor = null;
         let gradientAccent = null;
-        
+
         // Trainer/Coach selections (blue)
         if (isSelectedByTrainer) {
             selectionColor = '#007bff';
@@ -1467,7 +1467,7 @@ const Whiteboard = ({
         // Check for items FIRST (higher priority than buckets)
         // This allows dragging items that are inside or overlapping buckets
         const item = getItemAtPosition(x, y);
-        
+
         // If no item found, check if clicking on a bucket (trainer only can drag buckets)
         if (!item && isTrainer) {
             const bucket = getBucketAtPosition(x, y);
@@ -1555,11 +1555,11 @@ const Whiteboard = ({
             // toolAccess controls LEARNER permissions, not trainer permissions
             // Select item for highlighting
             const isAlreadySelected = selectedItems.some(si => si.id === item.id);
-            
+
             if (!isAlreadySelected) {
                 // Add to selection (trainer always uses single-select for simplicity)
                 setSelectedItems([itemWithOriginalSize]);
-                
+
                 // Broadcast selection to learner when select feature is enabled
                 // This allows learner to see trainer's selections highlighted on their whiteboard
                 if (toolAccess.select && whiteboardService) {
@@ -2450,14 +2450,14 @@ const Whiteboard = ({
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
-                                            
+
                                             // Check if item is selected
                                             const isSelected = selectedItems.some(si => si.id === item.id);
-                                            
+
                                             if (isSelected) {
                                                 // Deselect on double-click
                                                 setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-                                                
+
                                                 // Broadcast deselection to all participants
                                                 if (whiteboardService) {
                                                     whiteboardService.send('item_selected', {
@@ -2537,14 +2537,14 @@ const Whiteboard = ({
                                         }}
                                         onDoubleClick={(e) => {
                                             e.stopPropagation();
-                                            
+
                                             // Check if item is selected
                                             const isSelected = selectedItems.some(si => si.id === item.id);
-                                            
+
                                             if (isSelected) {
                                                 // Deselect on double-click
                                                 setSelectedItems(prev => prev.filter(si => si.id !== item.id));
-                                                
+
                                                 // Broadcast deselection to all participants
                                                 if (whiteboardService) {
                                                     whiteboardService.send('item_selected', {
@@ -3168,7 +3168,7 @@ const Whiteboard = ({
                                     e.preventDefault();
                                     const startX = e.clientX - textBox.x;
                                     const startY = e.clientY - textBox.y;
-                                    
+
                                     const handleMouseMove = (moveEvent) => {
                                         onTextBoxMove(
                                             textBox.id,
@@ -3176,12 +3176,12 @@ const Whiteboard = ({
                                             moveEvent.clientY - startY
                                         );
                                     };
-                                    
+
                                     const handleMouseUp = () => {
                                         document.removeEventListener('mousemove', handleMouseMove);
                                         document.removeEventListener('mouseup', handleMouseUp);
                                     };
-                                    
+
                                     document.addEventListener('mousemove', handleMouseMove);
                                     document.addEventListener('mouseup', handleMouseUp);
                                 }
@@ -3195,27 +3195,27 @@ const Whiteboard = ({
                                         onRemoveTextBox(textBox.id);
                                     }}
                                     style={{
-                                    position: 'absolute',
-                                    top: '-8px',
-                                    right: '-8px',
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    border: 'none',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 10,
-                                    opacity: activeTextBoxId === textBox.id ? 1 : 0,
-                                    transition: 'opacity 0.2s',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                }}
-                                title="Remove text box"
+                                        position: 'absolute',
+                                        top: '-8px',
+                                        right: '-8px',
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        border: 'none',
+                                        backgroundColor: '#ef4444',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: 10,
+                                        opacity: activeTextBoxId === textBox.id ? 1 : 0,
+                                        transition: 'opacity 0.2s',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    }}
+                                    title="Remove text box"
                                     onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
                                 >
                                     ×

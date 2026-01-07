@@ -48,11 +48,43 @@ const REACTION_SVG_ASSETS = {
     src: '/reactions/realistic-bubble.svg',
     alt: 'Realistic Soap Bubble'
   },
-  balloon: {
-    type: 'svg',
-    src: '/reactions/realistic-balloon.svg',
-    alt: 'Realistic Balloon'
-  },
+  balloon: [
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon.svg',
+      alt: 'Realistic Pink Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-red.svg',
+      alt: 'Realistic Red Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-blue.svg',
+      alt: 'Realistic Blue Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-green.svg',
+      alt: 'Realistic Green Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-yellow.svg',
+      alt: 'Realistic Yellow Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-purple.svg',
+      alt: 'Realistic Purple Balloon'
+    },
+    {
+      type: 'svg',
+      src: '/reactions/realistic-balloon-orange.svg',
+      alt: 'Realistic Orange Balloon'
+    }
+  ],
   star: {
     type: 'svg',
     src: '/reactions/realistic-oil-pastel-star.svg',
@@ -91,6 +123,7 @@ const TrainerSession = () => {
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
   const [recordingService, setRecordingService] = useState(null);
+  const isInitializingRef = useRef(false); // Prevent duplicate initialization
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Media streams for video conferencing
@@ -99,6 +132,7 @@ const TrainerSession = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const remoteVideoRef = useRef(null); // Ref for remote video element
+  const learnerConnectedRef = useRef(false); // Track if learner has connected
 
   // Video position and size for moveable video feed
   const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
@@ -160,7 +194,6 @@ const TrainerSession = () => {
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
-  const activeFloatingAnimationTypesRef = useRef(new Set());
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Load session notes from backend on mount
@@ -627,6 +660,13 @@ const TrainerSession = () => {
   // 🔸 How it works: creates service instances, sets event handlers, obtains local media, and connects
   // -----------------------------------------------------------
   const initializeWebRTC = async (numericSessionId) => {
+    // Prevent duplicate initialization
+    if (isInitializingRef.current) {
+      console.log('[TrainerSession] Already initializing, skipping duplicate call');
+      return;
+    }
+    isInitializingRef.current = true;
+
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'trainer');
     try {
@@ -660,6 +700,12 @@ const TrainerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
+        
+        // Only show toast once when learner first connects
+        if (!learnerConnectedRef.current) {
+          learnerConnectedRef.current = true;
+          toast.success(`${sessionInfo?.learner_name || 'Learner'} has joined the session`);
+        }
       };
 
       // Set callback for connection state changes
@@ -674,6 +720,14 @@ const TrainerSession = () => {
           'closed': 'disconnected'
         };
         setConnectionStatus(statusMap[state] || state);
+        
+        // Handle learner disconnect
+        if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
+          console.log('[TrainerSession] Learner disconnected');
+          toast.info(`${sessionInfo?.learner_name || 'Learner'} has left the session`);
+          setRemoteStream(null);
+          learnerConnectedRef.current = false;
+        }
       };
 
       // Set error callback
@@ -845,6 +899,9 @@ const TrainerSession = () => {
       webRTC.close();
       console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
+    
+    // Reset initialization flag to allow re-initialization
+    isInitializingRef.current = false;
     if (whiteboardService) {
       whiteboardService.close();
     }
@@ -1294,32 +1351,25 @@ const TrainerSession = () => {
   };
 
   const spawnFloatingAnimation = (type, asset) => {
-    if (activeFloatingAnimationTypesRef.current.has(type)) {
-      console.log(`[TrainerSession] ${type} animation still running, ignoring duplicate tap`);
-      return;
-    }
-
-    activeFloatingAnimationTypesRef.current.add(type);
-
     const count = 8; // 8 items
-    const baseId = Date.now();
+    const baseId = Date.now() + Math.random(); // Unique ID to allow multiple animations of same type
     const positions = generateSpacedPositions(count);
-    const newAnimations = positions.map((position, i) => ({
-      id: `${baseId}-${type}-${i}-${Math.random()}`,
-      type,
-      asset: asset ? { ...asset } : null,
-      x: position,
-      startDelay: Math.random() * 1000, // 0-1s staggered start
-      duration: 8000 + Math.random() * 4000, // 8-12s to float up
-      popped: false
-    }));
+    const newAnimations = positions.map((position, i) => {
+      // For balloons, randomly select from the color array
+      const selectedAsset = Array.isArray(asset)
+        ? asset[Math.floor(Math.random() * asset.length)]
+        : asset;
 
-    const cleanupAnimations = () => {
-      setFloatingAnimations(prev =>
-        prev.filter(a => !newAnimations.find(na => na.id === a.id))
-      );
-      activeFloatingAnimationTypesRef.current.delete(type);
-    };
+      return {
+        id: `${baseId}-${type}-${i}-${Math.random()}`,
+        type,
+        asset: selectedAsset ? { ...selectedAsset } : null,
+        x: position,
+        startDelay: Math.random() * 1000, // 0-1s staggered start
+        duration: 8000 + Math.random() * 4000, // 8-12s to float up
+        popped: false
+      };
+    });
 
     // Add to local state
     setFloatingAnimations(prev => [...prev, ...newAnimations]);
@@ -1333,7 +1383,11 @@ const TrainerSession = () => {
     }
 
     // Auto-remove after animation completes (12s max duration + 1s buffer)
-    setTimeout(cleanupAnimations, 13000);
+    setTimeout(() => {
+      setFloatingAnimations(prev =>
+        prev.filter(a => !newAnimations.find(na => na.id === a.id))
+      );
+    }, 13000);
   };
 
   // -----------------------------------------------------------
@@ -1928,6 +1982,7 @@ const TrainerSession = () => {
                 onClick={() => {
                   setCanvasItems([]);
                   setBuckets([]);
+                  setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
                   setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
                   if (whiteboardService) {
                     whiteboardService.send('clear_canvas', {
@@ -2188,7 +2243,7 @@ const TrainerSession = () => {
 
           {/* Stopwatch */}
           {showStopwatch && (
-            <div className="ml-3" style={{ maxWidth: '280px' }}>
+            <div  >
               <StopwatchDisplay
                 formattedTime={stopwatch.formattedTime}
                 isRunning={stopwatch.isRunning}

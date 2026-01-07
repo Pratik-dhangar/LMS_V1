@@ -38,7 +38,8 @@ async def get_assignments_by_learner(
         select(LearnerContentAssignment)
         .options(
             joinedload(LearnerContentAssignment.content),
-            joinedload(LearnerContentAssignment.assigned_by)
+            joinedload(LearnerContentAssignment.assigned_by),
+            joinedload(LearnerContentAssignment.program_assignment)
         )
         .where(LearnerContentAssignment.learner_id == learner_id)
         .order_by(LearnerContentAssignment.assigned_at.desc())

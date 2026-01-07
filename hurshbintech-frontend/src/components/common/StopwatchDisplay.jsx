@@ -101,7 +101,7 @@ const StopwatchDisplay = ({
 
     // ==================== STANDARD VARIANT ====================
     return (
-        <div className={`bg-white border-2 border-gray-300 rounded-lg shadow-md ${currentSize.container}`}>
+        <div className={`w-full bg-white border-2 border-gray-300 rounded-lg shadow-md ${currentSize.container}`}>
             {/* Status Indicator */}
             <div className="flex items-center justify-between mb-3">
                 <h3 className={`font-bold text-gray-800 ${currentSize.label}`}>⏲️ Stopwatch</h3>
@@ -115,7 +115,7 @@ const StopwatchDisplay = ({
 
 
             {/* Time Breakdown */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-3 gap-2 mb-4 w-full">
                 <div className="bg-blue-50 border border-blue-200 rounded p-2 text-center">
                     <div className={`font-mono font-bold text-blue-600 ${currentSize.time}`}>
                         {formattedTime.hours}
@@ -144,7 +144,7 @@ const StopwatchDisplay = ({
 
             {/* Set Time Form */}
             {showSetTime && !isRunning && (
-                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-4">
+                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-4 w-full">
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Set Time</h4>
                     <div className="grid grid-cols-3 gap-2 mb-3">
                         <div>
@@ -155,7 +155,7 @@ const StopwatchDisplay = ({
                                 max="99"
                                 value={inputHours}
                                 onChange={(e) => setInputHours(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono"
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono text-sm"
                             />
                         </div>
                         <div>
@@ -166,7 +166,7 @@ const StopwatchDisplay = ({
                                 max="59"
                                 value={inputMinutes}
                                 onChange={(e) => setInputMinutes(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono"
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono text-sm"
                             />
                         </div>
                         <div>
@@ -177,20 +177,20 @@ const StopwatchDisplay = ({
                                 max="59"
                                 value={inputSeconds}
                                 onChange={(e) => setInputSeconds(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono"
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono text-sm"
                             />
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <button
                             onClick={handleSetTimeClick}
-                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg text-sm transition-colors"
+                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-2 rounded-lg text-sm transition-colors"
                         >
                             ✓ Set
                         </button>
                         <button
                             onClick={() => setShowSetTime(false)}
-                            className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold px-2 py-1 rounded-lg text-sm transition-colors"
+                            className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold px-2 py-2 rounded-lg text-sm transition-colors"
                         >
                             ✕ Cancel
                         </button>
@@ -200,11 +200,11 @@ const StopwatchDisplay = ({
 
             {/* Control Buttons */}
             {showControls && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap w-full">
                     {!isRunning ? (
                         <button
                             onClick={onStart}
-                            className={`flex-1 min-w-[80px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                            className={`flex-1 min-w-[70px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
                         >
                             ▶️ Start
                         </button>
@@ -212,13 +212,13 @@ const StopwatchDisplay = ({
                         <>
                             <button
                                 onClick={onPause}
-                                className={`flex-1 min-w-[80px] bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                                className={`flex-1 min-w-[70px] bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
                             >
                                 ⏸️ Pause
                             </button>
                             <button
                                 onClick={onResume}
-                                className={`flex-1 min-w-[80px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                                className={`flex-1 min-w-[70px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
                             >
                                 ▶️ Resume
                             </button>
@@ -227,7 +227,7 @@ const StopwatchDisplay = ({
 
                     <button
                         onClick={onReset}
-                        className={`flex-1 min-w-[80px] bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                        className={`flex-1 min-w-[70px] bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
                     >
                         🔄 Reset
                     </button>
@@ -235,7 +235,7 @@ const StopwatchDisplay = ({
                     {!isRunning && (
                         <button
                             onClick={() => setShowSetTime(!showSetTime)}
-                            className={`flex-1 min-w-[80px] ${showSetTime ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'} text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                            className={`flex-1 min-w-[70px] ${showSetTime ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'} text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
                         >
                             ⏱️ {showSetTime ? 'Done' : 'Set Time'}
                         </button>
