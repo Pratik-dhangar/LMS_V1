@@ -446,8 +446,12 @@ const CoachSession = () => {
         console.log('[CoachSession] Received remote stream from client');
         setRemoteStream(stream);
         setConnectionStatus('Connected');
-        clientConnectedRef.current = true;
-        toast.success(`${sessionInfo?.client_name || 'Client'} has joined the session`);
+        
+        // Only show toast once when client first connects
+        if (!clientConnectedRef.current) {
+          clientConnectedRef.current = true;
+          toast.success(`${sessionInfo?.client_name || 'Client'} has joined the session`);
+        }
       };
 
       videoService.onConnectionStateChange = (state) => {
@@ -1227,7 +1231,7 @@ const CoachSession = () => {
           {/* Client/Guest Tool Access Controls */}
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-sm font-bold mb-2">Client/Guest Tools</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {/* Select Tool Toggle */}
               <button
                 onClick={() => toggleClientToolAccess('select')}
@@ -1246,6 +1250,23 @@ const CoachSession = () => {
               >
                 <span>↔️</span>
                 <span>Drag</span>
+              </button>
+
+              {/* Keyboard Tool Toggle */}
+              <button
+                onClick={() => {
+                  // Toggle keyboard access for client/guest
+                  toggleClientToolAccess('keyboard');
+                  // If enabling, also send an immediate trigger so the keyboard appears right away
+                  if (!clientToolAccess.keyboard) {
+                    triggerClientKeyboard();
+                  }
+                }}
+                className={`${clientToolAccess.keyboard ? wbSmallBtnActive : wbSmallBtnBase}`}
+                title={clientToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
+              >
+                <span>⌨️</span>
+                <span>Keyboard</span>
               </button>
             </div>
           </div>

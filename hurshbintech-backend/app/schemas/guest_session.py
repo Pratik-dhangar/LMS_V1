@@ -36,3 +36,5 @@ class GuestSessionDetails(BaseModel):
     # Guest info for verification display
     guest_email: str
     guest_name: str
+    # Session timing
+    started_at: Optional[str] = None

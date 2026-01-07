@@ -123,6 +123,7 @@ const TrainerSession = () => {
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
   const [recordingService, setRecordingService] = useState(null);
+  const isInitializingRef = useRef(false); // Prevent duplicate initialization
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Media streams for video conferencing
@@ -131,6 +132,7 @@ const TrainerSession = () => {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const remoteVideoRef = useRef(null); // Ref for remote video element
+  const learnerConnectedRef = useRef(false); // Track if learner has connected
 
   // Video position and size for moveable video feed
   const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
@@ -658,6 +660,13 @@ const TrainerSession = () => {
   // 🔸 How it works: creates service instances, sets event handlers, obtains local media, and connects
   // -----------------------------------------------------------
   const initializeWebRTC = async (numericSessionId) => {
+    // Prevent duplicate initialization
+    if (isInitializingRef.current) {
+      console.log('[TrainerSession] Already initializing, skipping duplicate call');
+      return;
+    }
+    isInitializingRef.current = true;
+
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'trainer');
     try {
@@ -691,6 +700,12 @@ const TrainerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
+        
+        // Only show toast once when learner first connects
+        if (!learnerConnectedRef.current) {
+          learnerConnectedRef.current = true;
+          toast.success(`${sessionInfo?.learner_name || 'Learner'} has joined the session`);
+        }
       };
 
       // Set callback for connection state changes
@@ -705,6 +720,14 @@ const TrainerSession = () => {
           'closed': 'disconnected'
         };
         setConnectionStatus(statusMap[state] || state);
+        
+        // Handle learner disconnect
+        if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
+          console.log('[TrainerSession] Learner disconnected');
+          toast.info(`${sessionInfo?.learner_name || 'Learner'} has left the session`);
+          setRemoteStream(null);
+          learnerConnectedRef.current = false;
+        }
       };
 
       // Set error callback
@@ -876,6 +899,9 @@ const TrainerSession = () => {
       webRTC.close();
       console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
+    
+    // Reset initialization flag to allow re-initialization
+    isInitializingRef.current = false;
     if (whiteboardService) {
       whiteboardService.close();
     }
