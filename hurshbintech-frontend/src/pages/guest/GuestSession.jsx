@@ -180,11 +180,11 @@ const GuestSession = () => {
 
   // Countdown timer
   useEffect(() => {
-    if (!sessionInfo || !sessionInfo.scheduled_date) return;
+    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) return;
 
-    const scheduledDateTime = new Date(sessionInfo.scheduled_date).getTime();
-    const durationMs = (sessionInfo.duration || 60) * 60 * 1000;
-    const endTime = scheduledDateTime + durationMs;
+    const startTime = new Date(sessionInfo.started_at).getTime();
+    const durationMs = sessionInfo.duration * 60 * 1000;
+    const endTime = startTime + durationMs;
 
     const intervalId = setInterval(() => {
       const now = Date.now();

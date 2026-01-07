@@ -107,7 +107,8 @@ async def authenticate_guest_session(
         status=session.status,
         appointment_id=appointment.id,
         guest_email=appointment.guest_email,
-        guest_name=appointment.guest_name
+        guest_name=appointment.guest_name,
+        started_at=session.started_at.isoformat() if session.started_at else None
     )
 
 
