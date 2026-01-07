@@ -4,8 +4,9 @@ Tracks direct assignment of learning content to learners (beyond program-based c
 
 from datetime import datetime
 import enum
+import json
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, func
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, func, Text, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -18,6 +19,7 @@ class ContentCompletionStatus(enum.Enum):
     SUBMITTED = "SUBMITTED"
     LATE_SUBMITTED = "LATE_SUBMITTED"
     REVIEWED = "REVIEWED"
+    RESUBMISSION_REQUIRED = "RESUBMISSION_REQUIRED"
 
 
 class LearnerContentAssignment(Base):
@@ -59,6 +61,17 @@ class LearnerContentAssignment(Base):
     submitted_at = Column(DateTime(timezone=True), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     reviewed_by_head = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    # Head Feedback & Rating
+    head_feedback_text = Column(Text, nullable=True)  # Remarks from head
+    head_rating = Column(Integer, nullable=True)  # 1-5 star rating
+    feedback_given_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Feedback History (JSON array of {feedback_text, rating, timestamp, updated_at})
+    feedback_history = Column(Text, nullable=True, default="[]")  # Stored as JSON string
+    
+    # Resubmission Policy
+    resubmit_allowed = Column(Boolean, default=True, nullable=False)  # Configurable per assignment
     
     assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

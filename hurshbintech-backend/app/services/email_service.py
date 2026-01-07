@@ -1764,7 +1764,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email")
             return False
 
-        subject = f"Payment Verification Needed - {order_number}"
+        subject = f"Payment Rejected - Action Required for Order {order_number}"
         
         html_body = f"""
         <html lang="en">
@@ -1780,14 +1780,15 @@ class EmailService:
                         max-width: 600px;
                         margin: 0 auto;
                         padding: 10px;
-                        background-color: #f0f4ff;
+                        background-color: #fef2f2;
                     }}
                     .header {{
-                        background-color: #dc2626;
-                        padding: 20px;
+                        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+                        padding: 25px;
                         border-radius: 8px 8px 0 0;
                         color: white;
                         text-align: center;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                     }}
                     .content {{
                         background-color: white;
@@ -1795,29 +1796,102 @@ class EmailService:
                         border-radius: 0 0 8px 8px;
                         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                     }}
+                    .alert-banner {{
+                        background-color: #fee2e2;
+                        border-left: 5px solid #dc2626;
+                        padding: 16px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                        color: #7f1d1d;
+                    }}
                     .reason-box {{
-                        background-color: #fef2f2;
-                        border-left: 4px solid #dc2626;
-                        padding: 15px;
+                        background-color: #fecaca;
+                        border-left: 4px solid #b91c1c;
+                        padding: 16px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                        color: #7f1d1d;
+                    }}
+                    .reason-box h4 {{
+                        margin-top: 0;
+                        color: #991b1b;
+                        font-size: 16px;
+                    }}
+                    .reason-box p {{
+                        margin: 8px 0;
+                        font-size: 15px;
+                        line-height: 1.5;
+                    }}
+                    .action-steps {{
+                        background-color: #dbeafe;
+                        border-left: 4px solid #2563eb;
+                        padding: 16px;
                         margin: 20px 0;
                         border-radius: 4px;
                     }}
-                    .next-steps {{
-                        background-color: #eff6ff;
-                        padding: 15px;
-                        border-radius: 6px;
+                    .action-steps h4 {{
+                        margin-top: 0;
+                        color: #1e40af;
+                        font-size: 16px;
+                    }}
+                    .action-steps ol {{
+                        margin: 10px 0;
+                        padding-left: 25px;
+                        color: #1e3a8a;
+                    }}
+                    .action-steps li {{
+                        margin: 8px 0;
+                        line-height: 1.5;
+                    }}
+                    .support-box {{
+                        background-color: #f0fdf4;
+                        border-left: 4px solid #16a34a;
+                        padding: 16px;
                         margin: 20px 0;
-                        border-left: 4px solid #3b82f6;
+                        border-radius: 4px;
+                        color: #15803d;
+                    }}
+                    .support-box h4 {{
+                        margin-top: 0;
+                        color: #166534;
+                        font-size: 16px;
                     }}
                     .btn {{
                         display: inline-block;
-                        padding: 12px 30px;
-                        background-color: #3b82f6;
+                        padding: 14px 36px;
+                        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
                         color: white !important;
                         text-decoration: none;
                         border-radius: 6px;
                         margin-top: 20px;
                         font-weight: 600;
+                        font-size: 16px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                        transition: transform 0.2s;
+                    }}
+                    .order-info {{
+                        background-color: #f9fafb;
+                        padding: 16px;
+                        border-radius: 6px;
+                        margin: 20px 0;
+                        border-left: 4px solid #6b7280;
+                    }}
+                    .order-info .info-row {{
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                    }}
+                    .order-info .info-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .order-info .info-label {{
+                        font-weight: 600;
+                        color: #374151;
+                    }}
+                    .order-info .info-value {{
+                        color: #6b7280;
+                        font-family: monospace;
                     }}
                     .footer {{
                         text-align: center;
@@ -1827,49 +1901,93 @@ class EmailService:
                         font-size: 12px;
                         color: #9ca3af;
                     }}
+                    .footer p {{
+                        margin: 5px 0;
+                    }}
+                    .urgent {{
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #dc2626;
+                        margin: 0;
+                    }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 26px;">Payment Verification Needed</h1>
-                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Action Required</p>
+                        <h1 style="margin: 10px 0 0 0; font-size: 28px; font-weight: 700;">We Couldn't Process Your Payment</h1>
                     </div>
                     <div class="content">
                         <p>Hi <strong>{recipient_name}</strong>,</p>
                         
-                        <p>We couldn't verify your payment receipt for order <strong>{order_number}</strong>.</p>
-                        
-                        <div class="reason-box">
-                            <h4 style="margin-top: 0; color: #991b1b;">Reason</h4>
-                            <p style="margin-bottom: 0; color: #555;">{rejection_reason}</p>
-                        </div>
-                        
-                        <div class="next-steps">
-                            <h4 style="margin-top: 0; color: #1e40af;">What You Can Do</h4>
-                            <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
-                                <li>Upload a clearer receipt with visible transaction details</li>
-                                <li>Ensure the amount and payment method are clearly shown</li>
-                                <li>Contact support if you need help</li>
-                            </ul>
-                        </div>
-                        
-                        <p><strong>Order ID:</strong> {order_number}</p>
-                        
-                        <div style="text-align: center;">
-                            <a href="{settings.FRONTEND_URL}/orders/{order_number}" class="btn">Upload New Receipt</a>
-                        </div>
-                        
-                        <p style="color: #666; font-size: 14px; margin-top: 25px;">
-                            Questions? Contact us at support@hurshbintech.com or call +91-XXXXXXXXXX
+                        <p style="font-size: 15px; color: #555; line-height: 1.6;">
+                            Unfortunately, we were unable to verify your payment receipt for your order. We need you to resubmit your payment proof so we can process your booking.
                         </p>
                         
-                        <p style="color: #999; font-size: 13px; margin-top: 25px;">
-                            We're here to help! Our team will review your new receipt within 24 hours.
+                        <div class="alert-banner">
+                            <strong>⚠️ Your Order Status:</strong> Payment verification failed
+                        </div>
+                        
+                        <div class="reason-box">
+                            <h4>Why Was Your Payment Rejected?</h4>
+                            <p>{rejection_reason}</p>
+                        </div>
+                        
+                        <div class="action-steps">
+                            <h4>📋 How to Fix This (3 Simple Steps)</h4>
+                            <ol>
+                                <li><strong>Take a Clear Screenshot:</strong> Ensure your payment receipt is clearly visible with all important details</li>
+                                <li><strong>Check Requirements:</strong> Make sure the receipt shows:
+                                    <ul style="margin: 8px 0; padding-left: 25px;">
+                                        <li>Transaction ID or Reference Number</li>
+                                        <li>Amount paid</li>
+                                        <li>Date and Time of transaction</li>
+                                        <li>Payment method (UPI, Bank Transfer, Card, etc.)</li>
+                                        <li>Recipient account or merchant name</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Upload & Resubmit:</strong> Click the button below to upload your corrected receipt</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="order-info">
+                            <div class="info-row">
+                                <span class="info-label">Order ID:</span>
+                                <span class="info-value">{order_number}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Current Status:</span>
+                                <span class="info-value" style="color: #dc2626;">⏳ Awaiting Payment Verification</span>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <a href="{settings.FRONTEND_URL}/orders/{order_number}" class="btn">✓ Upload Correct Receipt</a>
+                        </div>
+                        
+                        <div class="support-box">
+                            <h4>💬 Need Help?</h4>
+                            <p style="margin: 8px 0;">
+                                Our support team is ready to help! Contact us if you have any questions or issues:
+                            </p>
+                            <p style="margin: 8px 0; font-weight: 600;">
+                                📧 <strong>Email:</strong> support@hurshbintech.com<br>
+                                📱 <strong>WhatsApp:</strong> +91-XXXXXXXXXX<br>
+                                ⏱️ <strong>Response Time:</strong> Within 2 hours (9 AM - 6 PM IST)
+                            </p>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px; background-color: #f9fafb; padding: 12px; border-radius: 4px; border-left: 3px solid #fbbf24;">
+                            <strong>💡 Tip:</strong> Common issues include blurry photos, cut-off details, or missing transaction info. Make sure your receipt is clear and complete before uploading.
+                        </p>
+                        
+                        <p style="color: #666; font-size: 13px; margin-top: 20px; text-align: center;">
+                            <strong>⏳ Time Sensitive:</strong> Please resubmit your payment proof within 24 hours to keep your booking slot reserved.
                         </p>
                     </div>
                     <div class="footer">
                         <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>This is an automated notification. Please do not reply to this email.</p>
                     </div>
                 </div>
             </body>

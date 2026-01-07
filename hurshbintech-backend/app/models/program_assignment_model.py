@@ -61,6 +61,11 @@ class ProgramAssignment(Base):
     )
     completed_at = Column(DateTime, nullable=True)
     
+    # Final Feedback from Head
+    final_feedback_rating = Column(Integer, nullable=True)  # 1-5 stars
+    final_feedback_remarks = Column(Text, nullable=True)
+    final_feedback_given_at = Column(DateTime, nullable=True)
+    
     # Future enhancement
     notification_sent = Column(Boolean, default=False, nullable=False)
     

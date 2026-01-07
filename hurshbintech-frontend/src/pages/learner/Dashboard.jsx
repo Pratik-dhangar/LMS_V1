@@ -32,7 +32,7 @@ const LearnerDashboard = () => {
   const [selectedContent, setSelectedContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(null);
-  
+
   // Track which sessions have been joined - persist to localStorage
   const [joinedSessions, setJoinedSessions] = useState(() => {
     const saved = localStorage.getItem('joinedSessions');
@@ -43,6 +43,10 @@ const LearnerDashboard = () => {
   const [showSessions, setShowSessions] = useState(false);
   const [showLearningContent, setShowLearningContent] = useState(false);
   const [showHomePrograms, setShowHomePrograms] = useState(false);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
 
 
   useEffect(() => {
@@ -334,7 +338,7 @@ const LearnerDashboard = () => {
               {
                 icon: "📅",
                 title: "Book Appointment",
-                
+
                 onClick: () => navigate("/book-appointment"), // New booking page
               },
             ].map((card, index) => (
@@ -451,14 +455,28 @@ const LearnerDashboard = () => {
               ) : (
                 <div className="space-y-4">
                   {learningPrograms.map((prog) => {
-                    // Calculate completion percentage
+                    // Use completion percentage from backend
                     const completionPercentage = prog.completion_percentage || 0;
+
+                    // Check if program is fully completed (100%)
+                    const isFullyCompleted = completionPercentage >= 100;
+
+                    // Check if program has final feedback
+                    const hasFinalFeedback = prog.final_feedback_rating && prog.final_feedback_rating > 0;
 
                     return (
                       <div
                         key={prog.id}
-                        className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition"
+                        className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition relative"
                       >
+                        {/* Completed Badge (no feedback yet) */}
+                        {isFullyCompleted && !hasFinalFeedback && (
+                          <div className="absolute top-3 right-3 bg-green-100 border-2 border-green-400 rounded-full px-3 py-1 flex items-center gap-1">
+                            <span className="text-green-600 font-bold text-sm">✓</span>
+                            <span className="text-green-700 font-bold text-xs">Completed</span>
+                          </div>
+                        )}
+
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-800 mb-1">
@@ -468,23 +486,50 @@ const LearnerDashboard = () => {
                               Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
                             </p>
                           </div>
-                          <button
-                            className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                            onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
-                          >
-                            Start
-                          </button>
+                          <div className="flex flex-row gap-2 items-center justify-end">
+                            {/* Show Remarks button when final feedback exists */}
+                            {hasFinalFeedback && (
+                              <button
+                                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl relative"
+                                onClick={() => {
+                                  setSelectedFeedback({
+                                    rating: prog.final_feedback_rating,
+                                    remarks: prog.final_feedback_remarks,
+                                    programName: prog.program_name || prog.name || 'Unnamed Program',
+                                    givenAt: prog.final_feedback_given_at
+                                  });
+                                  setShowFeedbackModal(true);
+                                }}
+                              >
+                                <span className="text-base">💬</span>
+                                <span>Remarks</span>
+                              </button>
+                            )}
+                            {/* Continue/Start/View button */}
+                            <button
+                              className={`${isFullyCompleted && hasFinalFeedback
+                                  ? 'bg-gray-600 hover:bg-gray-700'
+                                  : isFullyCompleted
+                                    ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                                } text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl`}
+                              onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
+                            >
+                              {isFullyCompleted ? 'View' : 'Start'}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Progress Bar */}
                         <div className="mt-3">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-gray-600">Progress</span>
-                            <span className="text-xs font-semibold text-blue-600">{completionPercentage}%</span>
+                            <span className="text-xs font-semibold text-blue-600">{completionPercentage.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div
-                              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                              className={`h-2.5 rounded-full transition-all duration-500 ${isFullyCompleted ? 'bg-green-600' : 'bg-blue-600'
+                                }`}
                               style={{ width: `${completionPercentage}%` }}
                             ></div>
                           </div>
@@ -614,6 +659,85 @@ const LearnerDashboard = () => {
               ) : (
                 renderContentViewer()
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedFeedback && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold mb-1">Head's Feedback</h3>
+                  <p className="text-yellow-100 text-sm">{selectedFeedback.programName}</p>
+                </div>
+                <button
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="text-white hover:bg-yellow-600 rounded-full p-2 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {/* Rating */}
+              <div className="mb-6">
+                <label className="text-sm font-semibold text-gray-600 mb-2 block">Rating</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`text-2xl ${star <= selectedFeedback.rating ? 'text-yellow-400' : 'text-gray-300'
+                          }`}
+                      >
+                        ⭐
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-lg font-bold text-yellow-600">
+                    {selectedFeedback.rating}/5
+                  </span>
+                </div>
+              </div>
+
+              {/* Remarks */}
+              {selectedFeedback.remarks && (
+                <div className="mb-6">
+                  <label className="text-sm font-semibold text-gray-600 mb-2 block">Remarks</label>
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+                    <p className="text-gray-800 italic leading-relaxed">
+                      "{selectedFeedback.remarks}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              {selectedFeedback.givenAt && (
+                <div className="text-xs text-gray-500 text-center pt-4 border-t">
+                  Feedback given on {new Date(selectedFeedback.givenAt).toLocaleDateString()} at{' '}
+                  {new Date(selectedFeedback.givenAt).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 pt-0">
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

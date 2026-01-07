@@ -12,6 +12,229 @@
 .page-content {
     max-width: 1200px;
     margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Assignment Details */
+.assignment-details {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    box-shadow: 0 0.375rem 1.125rem rgba(15, 23, 42, 0.06);
+}
+
+.assignment-header {
+    margin-bottom: 2rem;
+    border-bottom: 0.125rem solid #e5e7eb;
+    padding-bottom: 1.5rem;
+}
+
+.assignment-header h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.progress-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progress-summary p {
+    margin: 0;
+    font-size: 1rem;
+    color: #4b5563;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 0.5rem;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #06b6d4, #2563eb);
+    transition: width 0.3s ease;
+}
+
+/* Contents Grid */
+.contents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.content-card {
+    background: #f8fafc;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.625rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.content-card:hover {
+    box-shadow: 0 0.625rem 1.875rem rgba(15, 23, 42, 0.1);
+    border-color: #cbd5e0;
+    transform: translateY(-0.25rem);
+}
+
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.content-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+    flex: 1;
+}
+
+.status-badge {
+    flex-shrink: 0;
+}
+
+.content-type {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.03125rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+}
+
+.content-description {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.content-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn {
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.25rem 0.75rem rgba(59, 130, 246, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.25rem 0.75rem rgba(16, 185, 129, 0.3);
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+    transform: translateY(-0.125rem);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 1.125rem;
+    color: #6b7280;
+}
+
+.error-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.error-state h2 {
+    color: #111827;
+    margin-bottom: 0.5rem;
+}
+
+.error-state p {
+    color: #6b7280;
+}
+
+/* Final Submit Section */
+.final-submit-section {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #ecfdf5 0%, #dbeafe 100%);
+    border: 0.125rem solid #10b981;
+    border-radius: 0.75rem;
+    text-align: center;
+}
+
+.final-submit-section h2 {
+    font-size: 1.5rem;
+    color: #059669;
+    margin: 0 0 1rem 0;
+}
+
+.final-submit-section p {
+    color: #047857;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-complete {
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-complete:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0.5rem 1.5rem rgba(16, 185, 129, 0.4);
+}
+
+.btn-complete:active {
+    transform: scale(0.98);
 }
 
 .back-button {
@@ -544,4 +767,111 @@
         padding: 0.5rem 0.75rem;
         font-size: 0.75rem;
     }
+}
+/* Complete Assignment Modal Styles */
+.modal-content.complete-modal {
+    max-width: 35rem;
+}
+
+.modal-description {
+    color: #6b7280;
+    font-size: 0.9375rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9375rem;
+}
+
+.form-group .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 0.125rem solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: #1f2937;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group .form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.1875rem rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea.form-control {
+    resize: vertical;
+    min-height: 6.25rem;
+    font-family: inherit;
+}
+
+.form-group input[type="file"].form-control {
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.file-selected {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #059669;
+    font-weight: 500;
+}
+
+.form-hint {
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 0.0625rem solid #e5e7eb;
+}
+
+.modal-actions .btn {
+    padding: 0.625rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-actions .btn-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.modal-actions .btn-secondary:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+.modal-actions .btn-complete {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 0.25rem 0.75rem rgba(16, 185, 129, 0.3);
+}
+
+.modal-actions .btn-complete:hover:not(:disabled) {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.375rem 1rem rgba(16, 185, 129, 0.4);
+}
+
+.modal-actions .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

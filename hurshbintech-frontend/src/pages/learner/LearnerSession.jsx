@@ -545,6 +545,7 @@ const LearnerSession = () => {
       // Also clear all canvas items and buckets
       setCanvasItems([]);
       setBuckets([]);
+      setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
     };
 
     // Set up callback for bucket added/updated

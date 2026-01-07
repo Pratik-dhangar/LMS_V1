@@ -16,49 +16,60 @@ const LearnerProgramAssignmentDetails = () => {
     const [loading, setLoading] = useState(true);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [showContentModal, setShowContentModal] = useState(false);
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [selectedContent, setSelectedContent] = useState(null);
     const [learnerNotes, setLearnerNotes] = useState('');
+    const [proofOfWork, setProofOfWork] = useState(null);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchAssignment();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
+    // ============ FETCH ASSIGNMENT ============
     const fetchAssignment = async () => {
         try {
             setLoading(true);
-            console.log(`\n📖 FETCHING ASSIGNMENT ${id} DETAILS`);
+            console.log(`\n📖 FETCHING LEARNING CONTENTS FOR PROGRAM ${id}`);
 
-            const data = await programAssignmentService.getMyAssignmentById(id);
-            console.log(`✅ Got assignment details:`, data);
-            setAssignment(data);
-            setLearnerNotes(data.learner_notes || '');
-
-            // Fetch all assigned learning contents
-            console.log(`🔄 Fetching all assigned learning contents...`);
+            // Only fetch learning contents - don't try to get assignment by ID (causes 404)
             const allContents = await programAssignmentService.getMyLearningContents();
-            console.log(`✅ API returned ${allContents ? allContents.length : 0} contents`);
-            console.log(`📚 Content details:`, allContents);
+            console.log(`✅ API returned ${allContents ? allContents.length : 0} total contents`);
 
-            if (allContents && allContents.length > 0) {
-                allContents.forEach((c, idx) => {
-                    console.log(`  [${idx + 1}] ${c.title} - Type: ${c.content_type}, From Program: ${c.from_program}`);
+            // Filter contents for this specific program assignment
+            const programContents = allContents.filter(c =>
+                c.program_assignment_id === parseInt(id)
+            );
+            console.log(`✅ Filtered to ${programContents.length} contents for program ${id}`);
+
+            if (programContents && programContents.length > 0) {
+                programContents.forEach((c, idx) => {
+                    console.log(`  [${idx + 1}] ${c.title} - Status: ${c.completion_status}, Type: ${c.content_type}`);
                 });
+
+                // Get program title from first content if available
+                if (programContents[0]?.program_title) {
+                    setAssignment({
+                        id: parseInt(id),
+                        program_title: programContents[0].program_title
+                    });
+                }
             }
 
-            setAssignedContents(allContents);
-            console.log(`✅ Set state with ${(allContents || []).length} contents\n`);
+            setAssignedContents(programContents);
+            console.log(`✅ Component state updated\n`);
         } catch (e) {
-            console.error('❌ Failed to load assignment:', e);
-            console.error('Stack:', e.stack);
+            console.error('❌ Failed to load contents:', e);
             toast.error('Failed to load assignment details');
         } finally {
             setLoading(false);
         }
     };
 
+    // ============ OPEN/CLOSE MODALS ============
     const openSubmit = () => setShowSubmitModal(true);
     const closeSubmit = () => {
         setShowSubmitModal(false);
@@ -75,18 +86,192 @@ const LearnerProgramAssignmentDetails = () => {
         setSelectedContent(null);
     };
 
+    // ============ CONTENT ACTIONS ============
+    const handleStartContent = async (content) => {
+        if (!content.content_assignment_id) {
+            toast.error('Unable to start content - missing assignment ID');
+            return;
+        }
+
+        try {
+            console.log(`🔄 Starting content ${content.content_assignment_id}: ${content.title}`);
+            await programAssignmentService.startContent(content.content_assignment_id);
+            toast.success(`Started: ${content.title}`);
+            await fetchAssignment(); // Refresh to get updated status
+        } catch (error) {
+            console.error('Failed to start content:', error);
+            toast.error('Failed to start content');
+        }
+    };
+
+    const handleSubmitContent = async (content) => {
+        if (!content.content_assignment_id) {
+            toast.error('Unable to submit content - missing assignment ID');
+            return;
+        }
+
+        try {
+            console.log(`🔄 SUBMITTING: ${content.title} (ID: ${content.content_assignment_id})`);
+            const response = await programAssignmentService.submitContent(content.content_assignment_id);
+            console.log(`✅ Backend response:`, response);
+
+            if (response.is_late) {
+                toast.warning(`Content submitted (Late): ${content.title}`);
+            } else {
+                toast.success(`Content submitted: ${content.title}`);
+            }
+
+            // Give backend a moment to commit
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Fetch fresh learning contents
+            console.log(`🔄 Fetching fresh data from API...`);
+            const allContents = await programAssignmentService.getMyLearningContents();
+            console.log(`📦 Raw API response:`, allContents);
+
+            const programContents = allContents.filter(c => {
+                const matches = c.program_assignment_id === parseInt(id);
+                return matches;
+            });
+
+            console.log(`✅ Filtered contents (${programContents.length} items):`);
+            programContents.forEach(c => {
+                console.log(`   - ${c.title}: ${c.completion_status}`);
+            });
+
+            // Force React to see this as a new array
+            const newContents = [...programContents];
+
+            console.log(`📊 Setting state with new array...`);
+            setAssignedContents(newContents);
+
+            // Calculate submitted count
+            const submitted = newContents.filter(c =>
+                c.completion_status === 'SUBMITTED' ||
+                c.completion_status === 'LATE_SUBMITTED' ||
+                c.completion_status === 'REVIEWED'
+            ).length;
+
+            console.log(`🎯 Updated progress: ${submitted} / ${newContents.length}`);
+        } catch (error) {
+            console.error('❌ Submit error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                config: error.config
+            });
+
+            const errorMessage = error.response?.data?.detail ||
+                error.response?.data?.message ||
+                error.message ||
+                'Failed to submit content';
+            toast.error(errorMessage);
+        }
+    };
+
+    const handleCompleteAssignment = () => {
+        setShowCompleteModal(true);
+    };
+
+    const closeCompleteModal = () => {
+        setShowCompleteModal(false);
+        setLearnerNotes('');
+        setProofOfWork(null);
+    };
+
+    const handleProofFileChange = (e) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            if (selectedFile.size > maxSize) {
+                toast.error('File size must be less than 50MB');
+                return;
+            }
+            setProofOfWork(selectedFile);
+        }
+    };
+
+    const handleFinalSubmit = async () => {
+        if (!learnerNotes.trim() && !proofOfWork) {
+            toast.error('Please add notes or upload proof of work');
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            console.log(`🎯 Completing assignment ${id}...`);
+
+            // Upload proof of work if provided
+            if (proofOfWork) {
+                console.log('📤 Uploading proof of work...');
+                await programAssignmentService.uploadMyAttachment(
+                    parseInt(id),
+                    proofOfWork,
+                    'Proof of Work'
+                );
+            }
+
+            // Update assignment with notes and mark as complete
+            const updateData = {
+                completion_status: 'COMPLETED'
+            };
+
+            if (learnerNotes.trim()) {
+                updateData.learner_notes = learnerNotes;
+            }
+
+            await programAssignmentService.updateMyAssignment(parseInt(id), updateData);
+
+            toast.success('Assignment completed successfully!');
+            closeCompleteModal();
+
+            setTimeout(() => {
+                navigate('/learner/dashboard');
+            }, 1500);
+        } catch (error) {
+            console.error('Failed to complete assignment:', error);
+            const errorMessage = error.response?.data?.detail ||
+                error.response?.data?.message ||
+                'Failed to complete assignment';
+            toast.error(errorMessage);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // ============ HELPER FUNCTIONS ============
+    const getStatusBadge = (status) => {
+        const statusColors = {
+            'NOT_STARTED': 'gray',
+            'IN_PROGRESS': 'blue',
+            'SUBMITTED': 'green',
+            'LATE_SUBMITTED': 'orange',
+            'REVIEWED': 'purple',
+            'RESUBMISSION_REQUIRED': 'red'
+        };
+        const color = statusColors[status] || 'gray';
+        return (
+            <span style={{
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                backgroundColor: `var(--${color}-100, #e5e7eb)`,
+                color: `var(--${color}-700, #374151)`
+            }}>
+                {status.replace(/_/g, ' ')}
+            </span>
+        );
+    };
+
     const getFileUrl = (fileUrl) => {
         if (!fileUrl) return '';
-        // If it's already a full URL (S3 or production), return as is
         if (fileUrl.startsWith('http')) return fileUrl;
-        // If it's an S3 key (s3://bucket/path), convert to public URL
         if (fileUrl.startsWith('s3://')) {
-            // In production, this would be handled by the Nginx proxy
-            // Format: /s3/uploads/learning-content/filename
             const key = fileUrl.replace('s3://', '').split('/').slice(1).join('/');
             return `/s3/${key}`;
         }
-        // Local files - prepend API base URL if needed
         if (fileUrl.startsWith('/')) return fileUrl;
         return `/${fileUrl}`;
     };
@@ -106,276 +291,266 @@ const LearnerProgramAssignmentDetails = () => {
         } else if (contentType === 'video') {
             return (
                 <div className="content-viewer-video">
-                    <video controls controlsList="nodownload" style={{ width: '100%', height: 'auto', maxHeight: '60vh', outline: 'none', backgroundColor: '#000' }}>
+                    <video width="100%" height="auto" controls>
                         <source src={fileUrl} type="video/mp4" />
                         Your browser does not support the video tag.
                     </video>
                 </div>
             );
-        } else if (contentType === 'audio') {
-            return (
-                <div className="content-viewer-audio">
-                    <audio controls style={{ width: '100%' }}>
-                        <source src={fileUrl} type="audio/mpeg" />
-                        Your browser does not support the audio tag.
-                    </audio>
-                </div>
-            );
-        } else if (contentType === 'pdf' || contentType === 'document') {
+        } else if (contentType === 'pdf') {
             return (
                 <div className="content-viewer-pdf">
-                    <iframe src={fileUrl} style={{ width: '100%', height: '60vh', border: 'none' }} title={selectedContent.title} />
+                    <iframe src={fileUrl} width="100%" height="500px" title={selectedContent.title} />
                 </div>
             );
-        } else {
+        } else if (contentType === 'document') {
             return (
-                <div className="content-viewer-unsupported">
-                    <p>This content type cannot be viewed inline.</p>
-                    <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">Download File</a>
+                <div className="content-viewer-document">
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                        Download Document: {selectedContent.title}
+                    </a>
                 </div>
             );
         }
+
+        return <p>Content type not supported for preview</p>;
     };
 
     const handleFileChange = (e) => {
-        const f = e.target.files[0];
-        if (!f) return;
-        const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'video/mp4', 'video/avi', 'video/mov', 'application/pdf'];
-        if (!allowed.includes(f.type)) return toast.error('Only images, videos and PDFs allowed');
-        const maxSize = f.type.startsWith('video/') ? 500 * 1024 * 1024 : 50 * 1024 * 1024;
-        if (f.size > maxSize) return toast.error(`File exceeds ${maxSize / (1024 * 1024)}MB`);
-        setFile(f);
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            if (selectedFile.size > maxSize) {
+                toast.error('File size must be less than 50MB');
+                return;
+            }
+            setFile(selectedFile);
+        }
     };
 
     const handleSubmit = async () => {
-        if (!assignment) return;
+        if (!learnerNotes.trim() && !file) {
+            toast.error('Please add notes or upload a file');
+            return;
+        }
+
         try {
             setUploading(true);
-
-            // Update notes if changed
-            if (learnerNotes !== (assignment.learner_notes || '')) {
-                await programAssignmentService.updateMyAssignment(assignment.id, { learner_notes: learnerNotes });
-            }
-
-            // Upload file if present
-            if (file) {
-                await programAssignmentService.uploadMyAttachment(assignment.id, file);
-                toast.success('File uploaded');
-            }
-
-            toast.success('Submission saved');
-            await fetchAssignment();
+            console.log('📤 Submitting assignment submission...');
+            // TODO: Implement submission logic here
+            toast.success('Assignment submitted successfully');
             closeSubmit();
-        } catch (e) {
-            console.error('Submit failed', e);
-            console.error('Error response:', e.response?.data || e.message);
-            toast.error(e.response?.data?.detail || 'Failed to submit');
+        } catch (error) {
+            console.error('Failed to submit:', error);
+            toast.error('Failed to submit assignment');
         } finally {
             setUploading(false);
         }
     };
 
-    const calculateDaysLeft = () => {
-        if (!assignment || !assignment.end_date) return null;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(assignment.end_date);
-        endDate.setHours(0, 0, 0, 0);
-        const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-        return daysLeft;
+    const calculateDaysLeft = (dueDate) => {
+        if (!dueDate) return null;
+        const due = new Date(dueDate);
+        const now = new Date();
+        const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+        return daysLeft > 0 ? daysLeft : 0;
     };
 
-    if (loading) return (
-        <div className="page-container">
-            <div className="loading-container">Loading...</div>
-        </div>
-    );
+    // ============ RENDER ============
+    if (loading) {
+        return (
+            <div className="page-container">
+                <Navbar />
+                <div className="page-content">
+                    <div className="loading">Loading assignment...</div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
 
-    if (!assignment) return (
-        <div className="page-container">
-            <Navbar />
-            <main className="page-main"><div className="page-content">Assignment not found</div></main>
-            <Footer />
-        </div>
-    );
+    if (!assignedContents || assignedContents.length === 0) {
+        return (
+            <div className="page-container">
+                <Navbar />
+                <div className="page-content">
+                    <div className="error-state">
+                        <h2>No Contents Found</h2>
+                        <p>This program assignment has no contents assigned yet.</p>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Count submitted items
+    const submittedCount = assignedContents.filter(c =>
+        c.completion_status === 'SUBMITTED' ||
+        c.completion_status === 'LATE_SUBMITTED' ||
+        c.completion_status === 'REVIEWED'
+    ).length;
 
     return (
         <div className="page-container">
             <Navbar />
-
-            <main className="page-main">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', paddingRight: '1rem' }}>
-                    <button onClick={() => navigate(-1)} className="back-button">Back ⬅</button>
-                </div>
-
-                <div className="detail-card">
-                    <h1 className="detail-title">{assignment.program.goal}</h1>
-
-                    <div className="detail-grid">
-                        <div>
-                            <strong>Start Date:</strong>
-                            <div>{assignment.start_date ? new Date(assignment.start_date).toLocaleDateString() : 'TBD'}</div>
-                        </div>
-                        <div>
-                            <strong>End Date:</strong>
-                            <div>{assignment.end_date ? new Date(assignment.end_date).toLocaleDateString() : 'TBD'}</div>
-                        </div>
-                        <div>
-                            <strong>Duration:</strong>
-                            <div>{assignment.duration_days} days</div>
-                        </div>
-                        <div>
-                            <strong>Days Left:</strong>
-                            <div>
-                                {(() => {
-                                    const daysLeft = calculateDaysLeft();
-                                    if (daysLeft === null) return 'N/A';
-                                    if (daysLeft < 0) return <span style={{ color: '#dc3545' }}>Overdue</span>;
-                                    if (daysLeft === 0) return <span style={{ color: '#ff6b6b' }}>Today</span>;
-                                    return <span style={{ color: daysLeft <= 2 ? '#ffc107' : '#28a745' }}>{daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>;
-                                })()}
-                            </div>
+            <div className="assignment-details">
+                <div className="assignment-header">
+                    <h1>{assignment?.program_title || 'Program Assignment'}</h1>
+                    <div className="progress-summary">
+                        <p>Progress: <strong>{submittedCount} of {assignedContents.length}</strong> submitted</p>
+                        <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${(submittedCount / assignedContents.length) * 100}%` }} />
                         </div>
                     </div>
+                </div>
 
-                    {assignment.is_late_submission && (
-                        <div style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem',
-                            backgroundColor: '#fff3cd',
-                            border: '1px solid #ffc107',
-                            borderRadius: '4px',
-                            color: '#856404'
-                        }}>
-                            ⚠️ <strong>Late Submission</strong> - This assignment was submitted after the deadline
-                        </div>
-                    )}
+                <div className="contents-grid">
+                    {assignedContents.map((content) => (
+                        <div key={content.id} className="content-card">
+                            <div className="content-header">
+                                <h3>{content.title}</h3>
+                                <div className="status-badge">
+                                    {getStatusBadge(content.completion_status)}
+                                </div>
+                            </div>
 
-                    {assignment.is_overdue && !assignment.completed_at && (
-                        <div style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem',
-                            backgroundColor: '#f8d7da',
-                            border: '1px solid #f5c6cb',
-                            borderRadius: '4px',
-                            color: '#721c24'
-                        }}>
-                            🔴 <strong>Overdue</strong> - The deadline for this assignment has passed
-                        </div>
-                    )}
+                            <p className="content-type">{content.content_type || 'Unknown'}</p>
 
-                    {assignedContents && assignedContents.length > 0 && (
-                        <div className="contents-section">
-                            <h4 className="subsection-title">Learning Content ({assignedContents.length})</h4>
-                            <ul className="content-list">
-                                {assignedContents.map(c => (
-                                    <li key={`content-${c.id}`} className="content-list-item">
-                                        <span className="content-title">{c.title}</span>
+                            {content.description && (
+                                <p className="content-description">{content.description}</p>
+                            )}
+
+                            <div className="content-actions">
+                                {content.completion_status === 'NOT_STARTED' && (
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => handleStartContent(content)}
+                                    >
+                                        Start
+                                    </button>
+                                )}
+
+                                {(content.completion_status === 'IN_PROGRESS' ||
+                                    content.completion_status === 'RESUBMISSION_REQUIRED') && (
                                         <button
-                                            className="view-btn"
-                                            onClick={() => handleViewContent(c)}
+                                            className="btn btn-success"
+                                            onClick={() => handleSubmitContent(content)}
                                         >
-                                            👁️ View
+                                            Done
                                         </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                    {(!assignedContents || assignedContents.length === 0) && assignment && (
-                        <div className="contents-section">
-                            <h4 className="subsection-title">Learning Content (0)</h4>
-                            <p style={{ color: '#666' }}>No content assigned for this program</p>
-                        </div>
-                    )}
+                                    )}
 
-                    <div style={{ marginTop: '1rem' }}>
-                        <button className="btn-primary btn-full" onClick={openSubmit}>Submit Work</button>
-                    </div>
-                </div>
-            </main>
-
-            <Footer />
-
-            {showSubmitModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content modal-sm">
-                        <h3 className="modal-title">Submit Work</h3>
-
-                        {assignment.is_overdue && (
-                            <div style={{
-                                padding: '0.75rem',
-                                backgroundColor: '#fff3cd',
-                                border: '1px solid #ffc107',
-                                borderRadius: '4px',
-                                color: '#856404',
-                                marginBottom: '1rem'
-                            }}>
-                                ⚠️ <strong>Late Submission</strong> - This submission will be marked as late since it's past the deadline ({new Date(assignment.end_date).toLocaleDateString()})
+                                {(content.completion_status === 'SUBMITTED' ||
+                                    content.completion_status === 'LATE_SUBMITTED' ||
+                                    content.completion_status === 'REVIEWED') && (
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => handleViewContent(content)}
+                                        >
+                                            View
+                                        </button>
+                                    )}
                             </div>
-                        )}
-
-                        <div className="form-group">
-                            <label>Program</label>
-                            <input type="text" value={assignment.program.goal} disabled className="form-input" />
                         </div>
-
-                        <div className="form-group">
-                            <label>Start Date</label>
-                            <input type="text" value={assignment.start_date ? new Date(assignment.start_date).toLocaleDateString() : ''} disabled className="form-input" />
-                        </div>
-                        <div className="form-group">
-                            <label>End Date</label>
-                            <input type="text" value={assignment.end_date ? new Date(assignment.end_date).toLocaleDateString() : ''} disabled className="form-input" />
-                        </div>
-                        <div className="form-group">
-                            <label>Duration</label>
-                            <input type="text" value={`${assignment.duration_days} days`} disabled className="form-input" />
-                        </div>
-
-                        <div className="form-group">
-                            <label>My Notes</label>
-                            <textarea rows={4} className="form-textarea" value={learnerNotes} onChange={(e) => setLearnerNotes(e.target.value)} />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Attachment (img, video, pdf)</label>
-                            <input type="file" accept="image/*,video/*,.pdf" onChange={handleFileChange} />
-                            <div className="upload-hint">Images, Videos, PDFs (Max: 500MB for videos, 50MB for others)</div>
-                        </div>
-
-                        <div className="modal-actions">
-                            <button onClick={closeSubmit} className="btn-secondary">Cancel</button>
-                            <button onClick={handleSubmit} disabled={uploading} className="btn-primary">{uploading ? 'Submitting...' : 'Submit'}</button>
-                        </div>
-                    </div>
+                    ))}
                 </div>
-            )}
 
+                {/* Final Submit Button */}
+                {submittedCount === assignedContents.length && assignedContents.length > 0 && (
+                    <div className="final-submit-section">
+                        <h2>🎉 All Tasks Completed!</h2>
+                        <p>You have successfully submitted all tasks. Click below to complete the assignment.</p>
+                        <button
+                            className="btn btn-complete"
+                            onClick={handleCompleteAssignment}
+                        >
+                            Complete Assignment
+                        </button>
+                    </div>
+                )}
+            </div>
+
+
+            {/* Content Modal */}
             {showContentModal && selectedContent && (
-                <div className="modal-overlay">
-                    <div className="modal-content modal-lg">
+                <div className="modal-overlay" onClick={closeContentModal}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3 className="modal-title">{selectedContent.title}</h3>
-                            <div className="modal-header-actions">
-                                <a
-                                    href={getFileUrl(selectedContent.file_url)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="open-new-tab-btn"
-                                    title="Open in new tab"
-                                >
-                                    🔗 Open in New Tab
-                                </a>
-                                <button onClick={closeContentModal} className="modal-close-btn">✕</button>
-                            </div>
+                            <h2>{selectedContent.title}</h2>
+                            <button className="close-btn" onClick={closeContentModal}>×</button>
                         </div>
-                        <div className="content-viewer-container">
+                        <div className="modal-body">
                             {renderContentViewer()}
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Complete Assignment Modal */}
+            {showCompleteModal && (
+                <div className="modal-overlay" onClick={closeCompleteModal}>
+                    <div className="modal-content complete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>🎉 Complete Assignment</h2>
+                            <button className="close-btn" onClick={closeCompleteModal}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <p className="modal-description">
+                                Submit your final notes and upload proof of your completed work.
+                            </p>
+
+                            <div className="form-group">
+                                <label htmlFor="learner-notes">Learner Notes *</label>
+                                <textarea
+                                    id="learner-notes"
+                                    className="form-control"
+                                    rows="4"
+                                    placeholder="Add your notes about the assignment..."
+                                    value={learnerNotes}
+                                    onChange={(e) => setLearnerNotes(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="proof-of-work">Proof of Work (Optional)</label>
+                                <input
+                                    type="file"
+                                    id="proof-of-work"
+                                    className="form-control"
+                                    onChange={handleProofFileChange}
+                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                                />
+                                {proofOfWork && (
+                                    <p className="file-selected">
+                                        Selected: {proofOfWork.name} ({(proofOfWork.size / 1024 / 1024).toFixed(2)} MB)
+                                    </p>
+                                )}
+                                <p className="form-hint">Max file size: 50MB</p>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={closeCompleteModal}
+                                    disabled={submitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn btn-complete"
+                                    onClick={handleFinalSubmit}
+                                    disabled={submitting || (!learnerNotes.trim() && !proofOfWork)}
+                                >
+                                    {submitting ? 'Submitting...' : 'Submit & Complete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <Footer />
         </div>
     );
 };
