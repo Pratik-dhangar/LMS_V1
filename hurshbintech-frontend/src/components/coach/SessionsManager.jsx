@@ -6,11 +6,10 @@ import { Plus, X, Calendar, Clock, Users, BookOpen, Search } from 'lucide-react'
 import '../../styles/Dashboards.css';
 import '../../styles/Coach.css';
 
-const SessionsManager = () => {
+const SessionsManager = ({ showForm, setShowForm }) => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -184,18 +183,6 @@ const SessionsManager = () => {
 
   return (
     <div className="sessions-manager">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">My Sessions</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn-success btn-icon"
-        >
-          {showForm ? <X className="icon-sm" /> : <Plus className="icon-sm" />}
-          {showForm ? 'Cancel' : 'Create Session'}
-        </button>
-      </div>
-
       {/* Create Session Form */}
       {showForm && (
         <div className="form-card mb-6">
