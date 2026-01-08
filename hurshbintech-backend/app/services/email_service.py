@@ -474,7 +474,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
 
-        subject = "Appointment Status Update"
+        subject = "Appointment Request Rejected"
         
         reason_text = rejection_reason or "We were unable to accommodate this appointment at this time."
         
@@ -541,7 +541,7 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 26px;">Appointment Status Update</h1>
+                        <h1 style="margin: 0; font-size: 26px;">Appointment Rejected</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking status has changed</p>
                     </div>
                     <div class="content">
