@@ -38,66 +38,89 @@
     padding: 2rem 1.5rem;
     background: #ffffff;
     border: 3px solid;
-    border-radius: 0.5rem;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     min-height: 220px;
     flex: 1;
     width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-menu-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(92, 30, 30, 0.08) 0%, rgba(92, 30, 30, 0.02) 100%);
+    transition: left 0.5s ease;
+    z-index: -1;
 }
 
 .admin-menu-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 16px 40px rgba(92, 30, 30, 0.25);
+    border-color: #5c1e1e !important;
+}
+
+.admin-menu-card:hover::before {
+    left: 0;
 }
 
 /* Color Variants */
 .admin-menu-card-red {
-    border-color: #ef4444;
+    border-color: #f97316;
 }
 
 .admin-menu-card-red .admin-menu-card-icon {
-    color: #ef4444;
+    color: #f97316;
 }
 
 .admin-menu-card-red:hover {
-    background: rgba(239, 68, 68, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
 }
 
 .admin-menu-card-blue {
-    border-color: #2563eb;
+    border-color: #f59e0b;
 }
 
 .admin-menu-card-blue .admin-menu-card-icon {
-    color: #2563eb;
+    color: #f59e0b;
 }
 
 .admin-menu-card-blue:hover {
-    background: rgba(37, 99, 235, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
 }
 
 .admin-menu-card-purple {
-    border-color: #a855f7;
+    border-color: #ea580c;
 }
 
 .admin-menu-card-purple .admin-menu-card-icon {
-    color: #a855f7;
+    color: #ea580c;
 }
 
 .admin-menu-card-purple:hover {
-    background: rgba(168, 85, 247, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    box-shadow: 0 8px 16px rgba(234, 88, 12, 0.3);
 }
 
 .admin-menu-card-green {
-    border-color: #16a34a;
+    border-color: #d97706;
 }
 
 .admin-menu-card-green .admin-menu-card-icon {
-    color: #16a34a;
+    color: #d97706;
 }
 
 .admin-menu-card-green:hover {
-    background: rgba(22, 163, 74, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
+    box-shadow: 0 8px 16px rgba(217, 119, 6, 0.3);
 }
 
 .admin-menu-card-orange {
@@ -109,55 +132,73 @@
 }
 
 .admin-menu-card-orange:hover {
-    background: rgba(249, 115, 22, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
 }
 
 .admin-menu-card-teal {
-    border-color: #14b8a6;
+    border-color: #ea580c;
 }
 
 .admin-menu-card-teal .admin-menu-card-icon {
-    color: #14b8a6;
+    color: #ea580c;
 }
 
 .admin-menu-card-teal:hover {
-    background: rgba(20, 184, 166, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    box-shadow: 0 8px 16px rgba(234, 88, 12, 0.3);
 }
 
 .admin-menu-card-yellow {
-    border-color: #eab308;
+    border-color: #fbbf24;
 }
 
 .admin-menu-card-yellow .admin-menu-card-icon {
-    color: #eab308;
+    color: #f59e0b;
 }
 
 .admin-menu-card-yellow:hover {
-    background: rgba(234, 179, 8, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
+    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.3);
 }
 
 .admin-menu-card-pink {
-    border-color: #ec4899;
+    border-color: #f97316;
 }
 
 .admin-menu-card-pink .admin-menu-card-icon {
-    color: #ec4899;
+    color: #f97316;
 }
 
 .admin-menu-card-pink:hover {
-    background: rgba(236, 72, 153, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
+    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
 }
 
 .admin-menu-card-indigo {
-    border-color: #6366f1;
+    border-color: #f59e0b;
 }
 
 .admin-menu-card-indigo .admin-menu-card-icon {
-    color: #6366f1;
+    color: #ea580c;
 }
 
 .admin-menu-card-indigo:hover {
-    background: rgba(99, 102, 241, 0.02);
+    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
+}
+
+.admin-menu-card-cyan {
+    border-color: #fbbf24;
+}
+
+.admin-menu-card-cyan .admin-menu-card-icon {
+    color: #f59e0b;
+}
+
+.admin-menu-card-cyan:hover {
+    background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
+    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.3);
 }
 
 .admin-menu-card-icon {
@@ -166,6 +207,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.admin-menu-card:hover .admin-menu-card-icon {
+    transform: scale(1.15) rotate(-5deg);
 }
 
 .admin-menu-card-title {
@@ -174,6 +220,11 @@
     color: #1f2937;
     margin: 0.5rem 0;
     letter-spacing: 0px;
+    transition: color 0.3s ease;
+}
+
+.admin-menu-card:hover .admin-menu-card-title {
+    color: #5c1e1e;
 }
 
 .admin-menu-card-description {
@@ -206,101 +257,85 @@
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* Color Variants */
+/* Color Variants - All using Maroon theme to match Navbar/Footer */
 .admin-menu-card-red {
-    border-color: #ef4444;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-red .admin-menu-card-icon {
-    color: #ef4444;
-}
-
-.admin-menu-card-red:hover {
-    background: rgba(239, 68, 68, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-blue {
-    border-color: #2563eb;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-blue .admin-menu-card-icon {
-    color: #2563eb;
-}
-
-.admin-menu-card-blue:hover {
-    background: rgba(37, 99, 235, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-purple {
-    border-color: #a855f7;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-purple .admin-menu-card-icon {
-    color: #a855f7;
-}
-
-.admin-menu-card-purple:hover {
-    background: rgba(168, 85, 247, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-green {
-    border-color: #16a34a;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-green .admin-menu-card-icon {
-    color: #16a34a;
-}
-
-.admin-menu-card-green:hover {
-    background: rgba(22, 163, 74, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-orange {
-    border-color: #f97316;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-orange .admin-menu-card-icon {
-    color: #f97316;
-}
-
-.admin-menu-card-orange:hover {
-    background: rgba(249, 115, 22, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-teal {
-    border-color: #14b8a6;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-teal .admin-menu-card-icon {
-    color: #14b8a6;
-}
-
-.admin-menu-card-teal:hover {
-    background: rgba(20, 184, 166, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-yellow {
-    border-color: #eab308;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-yellow .admin-menu-card-icon {
-    color: #eab308;
-}
-
-.admin-menu-card-yellow:hover {
-    background: rgba(234, 179, 8, 0.02);
+    color: #5c1e1e;
 }
 
 .admin-menu-card-pink {
-    border-color: #ec4899;
+    border-color: #5c1e1e;
 }
 
 .admin-menu-card-pink .admin-menu-card-icon {
-    color: #ec4899;
+    color: #5c1e1e;
 }
 
-.admin-menu-card-pink:hover {
-    background: rgba(236, 72, 153, 0.02);
+.admin-menu-card-indigo {
+    border-color: #5c1e1e;
+}
+
+.admin-menu-card-indigo .admin-menu-card-icon {
+    color: #5c1e1e;
+}
+
+.admin-menu-card-cyan {
+    border-color: #5c1e1e;
+}
+
+.admin-menu-card-cyan .admin-menu-card-icon {
+    color: #5c1e1e;
 }
 
 .admin-menu-card-icon {
@@ -435,4 +470,94 @@
     .admin-menu-card-description {
         font-size: 0.8rem;
     }
+}
+
+/* Keyframe Animations for Cards */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.admin-menu-card {
+    animation: slideInUp 0.6s ease-out backwards;
+}
+
+.admin-menu-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.admin-menu-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.admin-menu-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.admin-menu-card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.admin-menu-card:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.admin-menu-card:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+.admin-menu-card:nth-child(7) {
+    animation-delay: 0.7s;
+}
+
+.admin-menu-card:nth-child(8) {
+    animation-delay: 0.8s;
+}
+
+.admin-menu-card:nth-child(9) {
+    animation-delay: 0.9s;
+}
+
+.admin-menu-card:nth-child(10) {
+    animation-delay: 1s;
+}
+
+.admin-menu-card:nth-child(11) {
+    animation-delay: 1.1s;
+}
+
+/* Additional hover animation - subtle shine effect */
+.admin-menu-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+    pointer-events: none;
+}
+
+.admin-menu-card:hover::after {
+    left: 100%;
 }

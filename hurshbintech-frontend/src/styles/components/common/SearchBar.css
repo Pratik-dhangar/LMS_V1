@@ -24,9 +24,9 @@
 }
 
 .search-bar-input:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #db9d32;
   outline-offset: 0;
-  border-color: #3b82f6;
+  border-color: #db9d32;
 }
 
 .search-bar-icon {
@@ -57,7 +57,7 @@
 }
 
 .search-bar-button {
-  background-color: #3498db;
+  background-color: #db9d32;
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
@@ -69,6 +69,6 @@
 }
 
 .search-bar-button:hover {
-  background-color: #2980b9;
+  background-color: #c98d1e;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }

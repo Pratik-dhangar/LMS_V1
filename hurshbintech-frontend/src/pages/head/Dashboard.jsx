@@ -44,7 +44,7 @@ const HeadDashboard = () => {
       path: '/head/communication', // Added a placeholder path
       color: 'green'
     },
-    
+
     {
       title: 'Manage Home Program ',
       description: 'Assign and manage learning programs for learners',
@@ -70,51 +70,51 @@ const HeadDashboard = () => {
 
   const colors = {
     blue: {
-      border: 'border-blue-500',
-      text: 'text-blue-500'
+      border: 'border-amber-500',
+      text: 'text-amber-600'
     },
     purple: {
-      border: 'border-purple-500',
-      text: 'text-purple-500'
+      border: 'border-orange-500',
+      text: 'text-orange-600'
     },
     green: {
-      border: 'border-green-500',
-      text: 'text-green-500'
+      border: 'border-amber-400',
+      text: 'text-amber-500'
     },
     red: {
-      border: 'border-red-500',
-      text: 'text-red-500'
+      border: 'border-orange-600',
+      text: 'text-orange-700'
     },
     orange: {
-      border: 'border-orange-500',
-      text: 'text-orange-500'
+      border: 'border-amber-500',
+      text: 'text-amber-600'
     },
     yellow: {
-      border: 'border-yellow-500',
+      border: 'border-yellow-400',
       text: 'text-yellow-500'
     },
     teal: {
-      border: 'border-teal-500',
-      text: 'text-teal-500'
+      border: 'border-amber-600',
+      text: 'text-amber-700'
     }
   };
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
           {/* Page Title Bar (from image) */}
           <div className="mb-8">
 
-            <h1 className="text-3xl font-bold text-gray-800 border-b-2 border-gray-800 pb-3 md:text-2xl">
+            <h1 className="text-3xl font-bold text-amber-800 border-b-2 border-amber-600 pb-3 md:text-2xl">
               Head Dashboard
             </h1>
           </div>
 
           {/* Header Welcome Banner (from image) */}
-          <div className="mb-8 p-8 rounded-lg text-center text-white bg-[linear-gradient(135deg,_#f093fb_0%,_#f5576c_100%)] shadow-lg">
+          <div className="mb-8 p-8 rounded-lg text-center text-white bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-lg">
             <h1 className="text-3xl font-bold">
               Welcome, {user?.name || '[Head Name]'}
             </h1>

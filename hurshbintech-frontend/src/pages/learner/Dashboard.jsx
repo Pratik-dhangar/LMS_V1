@@ -288,18 +288,18 @@ const LearnerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
-      <main className="flex-1 p-6 md:p-4 bg-gray-50">
+      <main className="flex-1 p-6 md:p-4">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-          <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-blue-600 pb-2 mb-6">
+          <h1 className="text-3xl font-bold text-amber-800 border-b-4 border-amber-600 pb-2 mb-6">
             HurshBin Learner Dashboard
           </h1>
 
           {/* Welcome Banner */}
-          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-blue-400 to-cyan-400 shadow-md">
+          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-md">
             <h2 className="text-2xl font-semibold mb-2">
               Welcome, {user?.name || "Learner"}!
             </h2>
@@ -310,6 +310,11 @@ const LearnerDashboard = () => {
           {/* Quick Access Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {[
+              {
+                icon: "🎓",
+                title: "Individualised Intervention Program(IIP)",
+                onClick: () => setShowSessions(!showSessions),
+              },
               {
                 icon: "📚",
                 title: "Home Program (HP)",
@@ -322,13 +327,8 @@ const LearnerDashboard = () => {
               },
               {
                 icon: "🛒",
-                title: "Learning Material",
+                title: "Buy Learning Material",
                 onClick: () => navigate("/learner/learning-material"), // Add path if available
-              },
-              {
-                icon: "🎓",
-                title: "IIP Programs",
-                onClick: () => setShowSessions(!showSessions),
               },
               {
                 icon: "💬",
@@ -345,7 +345,7 @@ const LearnerDashboard = () => {
               <div
                 key={index}
                 onClick={card.onClick}
-                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-green-400 hover:border"
+                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-amber-500 hover:border-2"
               >
                 <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
                   {card.icon}
@@ -387,10 +387,10 @@ const LearnerDashboard = () => {
                       // Check if learner has actually joined before (not just if trainer started)
                       const learnerHasJoined = session.learner_joined_at || session.joined_at;
                       const statusColor = isActive ? 'border-green-500 bg-green-50' :
-                        isScheduled ? 'border-blue-500 bg-blue-50' :
+                        isScheduled ? 'border-amber-500 bg-amber-50' :
                           'border-gray-300 bg-gray-50';
                       const statusBadge = isActive ? 'bg-green-100 text-green-800' :
-                        isScheduled ? 'bg-blue-100 text-blue-800' :
+                        isScheduled ? 'bg-amber-100 text-amber-800' :
                           'bg-gray-100 text-gray-800';
 
                       return (
@@ -424,7 +424,7 @@ const LearnerDashboard = () => {
                             {(isActive || isScheduled) && (
                               <button
                                 onClick={() => handleJoinSession(session.session_id)}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors whitespace-nowrap shadow-md"
                               >
                                 {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
                               </button>
@@ -490,7 +490,7 @@ const LearnerDashboard = () => {
                             {/* Show Remarks button when final feedback exists */}
                             {hasFinalFeedback && (
                               <button
-                                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl relative"
+                                className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:from-amber-600 hover:to-orange-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl relative"
                                 onClick={() => {
                                   setSelectedFeedback({
                                     rating: prog.final_feedback_rating,
@@ -508,10 +508,10 @@ const LearnerDashboard = () => {
                             {/* Continue/Start/View button */}
                             <button
                               className={`${isFullyCompleted && hasFinalFeedback
-                                  ? 'bg-gray-600 hover:bg-gray-700'
-                                  : isFullyCompleted
-                                    ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                                ? 'bg-gray-600 hover:bg-gray-700'
+                                : isFullyCompleted
+                                  ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600'
                                 } text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl`}
                               onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
                             >
@@ -524,11 +524,11 @@ const LearnerDashboard = () => {
                         <div className="mt-3">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-gray-600">Progress</span>
-                            <span className="text-xs font-semibold text-blue-600">{completionPercentage.toFixed(1)}%</span>
+                            <span className="text-xs font-semibold text-amber-600">{completionPercentage.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div
-                              className={`h-2.5 rounded-full transition-all duration-500 ${isFullyCompleted ? 'bg-green-600' : 'bg-blue-600'
+                              className={`h-2.5 rounded-full transition-all duration-500 ${isFullyCompleted ? 'bg-green-600' : 'bg-amber-600'
                                 }`}
                               style={{ width: `${completionPercentage}%` }}
                             ></div>
@@ -558,7 +558,7 @@ const LearnerDashboard = () => {
                   {learningContents.map((content, idx) => (
                     <div
                       key={`content-${content.id}-${idx}`}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-gray-100 transition"
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-800 truncate text-base">
@@ -592,7 +592,7 @@ const LearnerDashboard = () => {
                       </div>
                       <button
                         onClick={() => handleViewContent(content)}
-                        className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm"
+                        className="ml-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-md"
                       >
                         View
                       </button>
@@ -618,7 +618,7 @@ const LearnerDashboard = () => {
                 </h3>
                 <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                     {selectedContent?.content_type}
                   </span>
                 </div>
@@ -652,7 +652,7 @@ const LearnerDashboard = () => {
               {contentLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading content...</p>
                   </div>
                 </div>
@@ -669,15 +669,15 @@ const LearnerDashboard = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-xl font-bold mb-1">Head's Feedback</h3>
-                  <p className="text-yellow-100 text-sm">{selectedFeedback.programName}</p>
+                  <p className="text-amber-100 text-sm">{selectedFeedback.programName}</p>
                 </div>
                 <button
                   onClick={() => setShowFeedbackModal(false)}
-                  className="text-white hover:bg-yellow-600 rounded-full p-2 transition-colors"
+                  className="text-white hover:bg-amber-600 rounded-full p-2 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -734,7 +734,7 @@ const LearnerDashboard = () => {
             <div className="p-6 pt-0">
               <button
                 onClick={() => setShowFeedbackModal(false)}
-                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 Close
               </button>

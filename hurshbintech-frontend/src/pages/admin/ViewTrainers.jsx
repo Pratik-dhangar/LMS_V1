@@ -14,7 +14,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/admin/AdminViewTrainers.css';
+import '../../styles/admin/ViewTrainersPage.css';
 
 
 // ViewTrainers Component - Admin can view all trainers (no edit capability)
@@ -98,29 +98,28 @@ const ViewTrainers = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="view-trainers-container">
       <Navbar />
-      <main className="page-main">
-        <div className="page-content">
+      <main className="view-trainers-main">
+        <div className="view-trainers-content">
           {/* Header */}
-          <div className="page-header">
-
-            <h1 className="page-title">
+          <div className="view-trainers-header">
+            <h1 className="view-trainers-title">
               View HurshBin Trainers
             </h1>
-            <p className="page-description">View all registered trainers in the system</p>
+            <p className="view-trainers-description">View all registered trainers in the system</p>
           </div>
 
           {/* Search Bar */}
-          <div className="search-section">
+          <div className="view-trainers-search-section">
             <SearchBar
               onSearch={handleSearch}
               placeholder="Search by name, passcode, contact number..."
             />
           </div>
           {activeSearchQuery && (
-            <div className="search-results-info">
-              <p className="search-results-text">
+            <div className="view-trainers-search-results-info">
+              <p>
                 Found {filteredTrainers.length} result{filteredTrainers.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -128,9 +127,9 @@ const ViewTrainers = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="error-message">
-              <div className="error-message-content">
-                <AlertCircle className="error-icon" />
+            <div className="view-trainers-error-message">
+              <div className="view-trainers-error-content">
+                <AlertCircle className="view-trainers-error-icon" />
                 <p>{error}</p>
               </div>
             </div>
@@ -138,20 +137,20 @@ const ViewTrainers = () => {
 
           {/* Loading State */}
           {loading ? (
-            <div className="loading-container">
-              <Loader2 className="loading-spinner-icon" />
-              <p className="loading-text">Loading trainers...</p>
+            <div className="view-trainers-loading-container">
+              <Loader2 className="view-trainers-loading-spinner" />
+              <p className="view-trainers-loading-text">Loading trainers...</p>
             </div>
           ) : (
             /* Table */
-            <div className="data-table-container">
+            <div className="view-trainers-table-container">
               {filteredTrainers.length === 0 ? (
-                <div className="empty-state">
-                  <Users className="empty-state-icon" />
-                  <p className="empty-state-title">
+                <div className="view-trainers-empty-state">
+                  <Users className="view-trainers-empty-state-icon" />
+                  <p className="view-trainers-empty-state-title">
                     {activeSearchQuery ? 'No trainers found' : 'No trainers registered yet'}
                   </p>
-                  <p className="text-gray-500">
+                  <p className="view-trainers-empty-state-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'No trainers have been registered in the system'
@@ -159,74 +158,78 @@ const ViewTrainers = () => {
                   </p>
                 </div>
               ) : (
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th className="admin-table-th">
-                        Sr. No.
-                      </th>
-                      <th className="admin-table-th">
-                        Name
-                      </th>
-                      <th className="admin-table-th">
-                        Passcode
-                      </th>
-                      <th className="admin-table-th">
-                        Contact Number
-                      </th>
-                      <th className="admin-table-th">
-                        Date Joined
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTrainers.map((trainer, index) => (
-                      <tr key={trainer.id}>
-                        <td className="admin-table-td admin-table-td-center">
-                          {index + 1}
-                        </td>
-                        <td className="admin-table-td">
-                          <div className="data-table-name">{trainer.name}</div>
-                          <div className="data-table-subtext">{trainer.role}</div>
-                        </td>
-                        <td className="admin-table-td">
-                          <div className="passcode-container">
-                            <span className="passcode-badge">
-                              {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
-                            </span>
-                            <button
-                              onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
-                              className="passcode-toggle-btn"
-                              title={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
-                            >
-                              {visiblePasscodes[trainer.id] ? (
-                                <EyeOff className="icon-sm" />
-                              ) : (
-                                <Eye className="icon-sm" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                        <td className="admin-table-td">
-                          {trainer.contact_no || 'N/A'}
-                        </td>
-                        <td className="admin-table-td">
-                          {trainer.date_of_joining
-                            ? new Date(trainer.date_of_joining).toLocaleDateString()
-                            : 'N/A'
-                          }
-                        </td>
+                <div className="view-trainers-table-wrapper">
+                  <table className="view-trainers-table">
+                    <thead className="view-trainers-table-header">
+                      <tr>
+                        <th className="view-trainers-table-th view-trainers-table-th-center">
+                          Sr. No.
+                        </th>
+                        <th className="view-trainers-table-th">
+                          Name
+                        </th>
+                        <th className="view-trainers-table-th">
+                          Passcode
+                        </th>
+                        <th className="view-trainers-table-th">
+                          Contact Number
+                        </th>
+                        <th className="view-trainers-table-th">
+                          Date Joined
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="view-trainers-table-body">
+                      {filteredTrainers.map((trainer, index) => (
+                        <tr key={trainer.id} className="view-trainers-table-row">
+                          <td className="view-trainers-table-td view-trainers-table-td-center">
+                            {index + 1}
+                          </td>
+                          <td className="view-trainers-table-td">
+                            <div className="view-trainers-trainer-name">
+                              <div className="view-trainers-trainer-name-text">{trainer.name}</div>
+                              <div className="view-trainers-trainer-role">{trainer.role}</div>
+                            </div>
+                          </td>
+                          <td className="view-trainers-table-td">
+                            <div className="view-trainers-passcode-display">
+                              <span className="view-trainers-passcode-badge">
+                                {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
+                                className="view-trainers-passcode-toggle-btn"
+                                title={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {visiblePasscodes[trainer.id] ? (
+                                  <EyeOff className="view-trainers-icon-sm" />
+                                ) : (
+                                  <Eye className="view-trainers-icon-sm" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="view-trainers-table-td">
+                            {trainer.contact_no || 'N/A'}
+                          </td>
+                          <td className="view-trainers-table-td">
+                            {trainer.date_of_joining
+                              ? new Date(trainer.date_of_joining).toLocaleDateString()
+                              : 'N/A'
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
 
           {/* Summary */}
           {!loading && filteredTrainers.length > 0 && (
-            <div className="page-summary">
+            <div className="view-trainers-page-summary">
               Showing {filteredTrainers.length} of {trainers.length} trainer{trainers.length !== 1 ? 's' : ''}
             </div>
           )}

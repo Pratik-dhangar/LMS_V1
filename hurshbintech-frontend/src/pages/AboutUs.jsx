@@ -139,7 +139,7 @@ const AboutUs = () => {
                 <main className="flex-grow flex items-center justify-center px-4">
                     <div className="text-center max-w-2xl mx-auto">
                         <div className="mb-8">
-                            <div className="w-24 h-24 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <div className="w-24 h-24 bg-gradient-to-r from-[#db9d32] to-[#c98d1e] rounded-full flex items-center justify-center mx-auto mb-6">
                                 <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -150,13 +150,13 @@ const AboutUs = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <button
                                 onClick={() => navigate('/')}
-                                className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                                className="px-8 py-4 bg-gradient-to-r from-[#db9d32] to-[#c98d1e] text-white font-bold rounded-xl hover:from-[#c98d1e] hover:to-[#b67d0e] transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
                                 Go to Home
                             </button>
                             <button
                                 onClick={() => window.location.reload()}
-                                className="px-8 py-4 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-300 hover:border-amber-500 transition-all duration-300 shadow-md hover:shadow-lg"
+                                className="px-8 py-4 bg-white text-gray-700 font-bold rounded-xl border-2 border-[#db9d32] hover:border-[#c98d1e] transition-all duration-300 shadow-md hover:shadow-lg"
                             >
                                 Try Again
                             </button>
@@ -182,10 +182,10 @@ const AboutUs = () => {
                             loading="eager"
                             className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-amber-900/50 to-amber-800/60" aria-hidden="true"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-[#5c1e1e]/50 to-[#7a2c2c]/60" aria-hidden="true"></div>
                     </>
                 ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700" aria-hidden="true"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#5c1e1e] via-[#7a2c2c] to-[#8b3838]" aria-hidden="true"></div>
                 )}
 
                 <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col items-center justify-center text-center">
@@ -213,7 +213,7 @@ const AboutUs = () => {
                                             <h2 id="intro-heading" className="text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 mb-3 uppercase tracking-tight">
                                                 {aboutUs.intro_title}
                                             </h2>
-                                            <div className="h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-full"></div>
+                                            <div className="h-1.5 bg-gradient-to-r from-[#db9d32] via-[#c98d1e] to-[#db9d32] rounded-full"></div>
                                         </div>
                                     </div>
                                 )}
@@ -252,11 +252,11 @@ const AboutUs = () => {
                                         >
                                             <button
                                                 onClick={() => openModal(section)}
-                                                className="relative h-full w-full group focus:outline-none focus:ring-4 focus:ring-amber-400 rounded-2xl"
+                                                className="relative h-full w-full group focus:outline-none focus:ring-4 focus:ring-[#db9d32] rounded-2xl"
                                                 aria-label={`View details about ${section.title}`}
                                             >
-                                                <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-2xl shadow-xl p-8 text-center relative overflow-hidden group-hover:shadow-2xl group-hover:scale-110 group-hover:-rotate-1 transition-all duration-500 h-full flex flex-col justify-center cursor-pointer border-2 border-amber-400/50">
-                                                    <div className="absolute -top-3 -right-3 bg-white text-amber-700 rounded-full w-14 h-14 flex items-center justify-center font-black text-2xl shadow-2xl z-10 border-4 border-amber-500 group-hover:scale-125 transition-transform duration-300">
+                                                <div className="bg-gradient-to-br from-[#5c1e1e] via-[#7a2c2c] to-[#5c1e1e] rounded-2xl shadow-xl p-8 text-center relative overflow-hidden group-hover:shadow-2xl group-hover:scale-110 group-hover:-rotate-1 transition-all duration-500 h-full flex flex-col justify-center cursor-pointer border-2 border-[#db9d32]/50">
+                                                    <div className="absolute -top-3 -right-3 bg-white text-[#5c1e1e] rounded-full w-14 h-14 flex items-center justify-center font-black text-2xl shadow-2xl z-10 border-4 border-[#db9d32] group-hover:scale-125 transition-transform duration-300">
                                                         {index + 1}
                                                     </div>
 
@@ -282,7 +282,7 @@ const AboutUs = () => {
                 )}
 
                 {/* Why Choose Us Section - Orange Background */}
-                {aboutUs.why_us_content && (
+                {/* {aboutUs.why_us_content && (
                     <section className="relative w-full bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 py-16 md:py-24 overflow-hidden" aria-labelledby="why-us-heading">
                         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE0aDRjMCAxLjMxLS44OSAyLjM5LTIgMi43MlYxOGgtLjg5QTMuMDAzIDMuMDAzIDAgMCAxIDM2IDE2di0yem00LTJoLTR2Mmgydi0yem0wIDRoLTR2Mmgydi0yeiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
                         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -303,7 +303,7 @@ const AboutUs = () => {
                                                 className="text-center group cursor-pointer focus:outline-none focus:ring-4 focus:ring-white/50 rounded-2xl p-4 transition-all duration-300"
                                                 aria-label={`View details about ${item.title}`}
                                             >
-                                                <div className="inline-flex items-center justify-center w-28 h-28 bg-white rounded-full shadow-2xl mb-6 group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 border-4 border-amber-200" aria-hidden="true">
+                                                <div className="inline-flex items-center justify-center w-28 h-28 bg-white rounded-full shadow-2xl mb-6 group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 border-4 border-[#db9d32]" aria-hidden="true">
                                                     <span className="text-5xl group-hover:scale-110 transition-transform duration-300">{item.icon}</span>
                                                 </div>
 
@@ -321,7 +321,7 @@ const AboutUs = () => {
                             </div>
                         </div>
                     </section>
-                )}
+                )} */}
 
                 {/* Commitment Section */}
                 {aboutUs.commitment_content && (
@@ -334,13 +334,13 @@ const AboutUs = () => {
                                             <h2 id="commitment-heading" className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-gray-900 mb-3 uppercase">
                                                 {aboutUs.commitment_title}
                                             </h2>
-                                            <div className="h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-full"></div>
+                                            <div className="h-1.5 bg-gradient-to-r from-[#db9d32] via-[#c98d1e] to-[#db9d32] rounded-full"></div>
                                         </div>
                                     </div>
                                 )}
-                                <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-10 lg:p-12 border-2 border-amber-100 w-full">
+                                <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-10 lg:p-12 border-2 border-[#db9d32]/30 w-full">
                                     <div
-                                        className="prose prose-base md:prose-lg lg:prose-xl max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-amber-600 w-full"
+                                        className="prose prose-base md:prose-lg lg:prose-xl max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-[#db9d32] w-full"
                                         dangerouslySetInnerHTML={sanitizeHTML(aboutUs.commitment_content)}
                                     />
                                 </div>
@@ -362,16 +362,16 @@ const AboutUs = () => {
                 >
                     {/* Backdrop */}
                     <div
-                        className="fixed inset-0 bg-gradient-to-br from-black/70 to-amber-900/40 backdrop-blur-md transition-opacity"
+                        className="fixed inset-0 bg-gradient-to-br from-black/70 to-[#5c1e1e]/40 backdrop-blur-md transition-opacity"
                         onClick={closeModal}
                         aria-hidden="true"
                     ></div>
 
                     {/* Modal Content */}
                     <div className="flex min-h-screen items-center justify-center p-4">
-                        <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl transform transition-all animate-scale-in border-4 border-amber-200">
+                        <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl transform transition-all animate-scale-in border-4 border-[#db9d32]/50">
                             {/* Modal Header */}
-                            <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-t-3xl px-8 py-8 relative overflow-hidden">
+                            <div className="bg-gradient-to-r from-[#5c1e1e] via-[#7a2c2c] to-[#5c1e1e] rounded-t-3xl px-8 py-8 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE0aDRjMCAxLjMxLS44OSAyLjM5LTIgMi43MlYxOGgtLjg5QTMuMDAzIDMuMDAzIDAgMCAxIDM2IDE2di0yem00LTJoLTR2Mmgydi0yem0wIDRoLTR2Mmgydi0yeiIvPjwvZz48L2c+PC9zdmc+')] opacity-20\"></div>
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-5\">
@@ -410,16 +410,16 @@ const AboutUs = () => {
                             {/* Modal Body */}
                             <div className="px-8 md:px-12 py-10 max-h-[65vh] overflow-y-auto custom-scrollbar bg-gradient-to-b from-white to-gray-50">
                                 <div
-                                    className="prose prose-xl max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-headings:font-black prose-p:text-gray-600 prose-strong:text-amber-600 prose-a:text-amber-600 prose-li:text-gray-600"
+                                    className="prose prose-xl max-w-none text-gray-700 leading-relaxed prose-headings:text-gray-900 prose-headings:font-black prose-p:text-gray-600 prose-strong:text-[#db9d32] prose-a:text-[#db9d32] prose-li:text-gray-600"
                                     dangerouslySetInnerHTML={sanitizeHTML(selectedSection.content)}
                                 />
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-amber-50 rounded-b-3xl flex justify-end border-t-2 border-amber-100">
+                            <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-white rounded-b-3xl flex justify-end border-t-2 border-[#db9d32]/30">
                                 <button
                                     onClick={closeModal}
-                                    className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 uppercase tracking-wide"
+                                    className="px-8 py-4 bg-gradient-to-r from-[#db9d32] to-[#c98d1e] text-white font-black rounded-xl hover:from-[#c98d1e] hover:to-[#b67d0e] transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 uppercase tracking-wide"
                                 >
                                     Close
                                 </button>
@@ -468,12 +468,12 @@ const AboutUs = () => {
                 }
 
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: linear-gradient(to bottom, #f59e0b, #f97316);
+                    background: linear-gradient(to bottom, #db9d32, #c98d1e);
                     border-radius: 10px;
                 }
 
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: linear-gradient(to bottom, #d97706, #ea580c);
+                    background: linear-gradient(to bottom, #c98d1e, #b67d0e);
                 }
 
                 @media (prefers-reduced-motion: reduce) {

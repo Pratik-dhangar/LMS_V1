@@ -257,7 +257,7 @@ const TrainerDashboard = () => {
   const getStatusBadge = (status) => {
     const base = "px-3 py-1 rounded-full text-xs font-semibold";
     const map = {
-      scheduled: "bg-blue-100 text-blue-800",
+      scheduled: "bg-amber-100 text-amber-800",
       active: "bg-green-100 text-green-800",
       ended: "bg-gray-100 text-gray-800",
     };
@@ -282,17 +282,17 @@ const TrainerDashboard = () => {
   }, [learners, learnerQuery]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <main className="flex-1 p-6 md:p-8">
         <div className="max-w-[1400px] mx-auto space-y-6">
           {/* Page Header */}
-          <h1 className="text-3xl font-bold text-gray-800 border-b-4 border-[#3c536a] pb-2 mb-6">
+          <h1 className="text-3xl font-bold text-amber-800 border-b-4 border-amber-600 pb-2 mb-6">
             HurshBin Trainer Dashboard
           </h1>
 
           {/* Welcome Banner */}
-          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-purple-400 to-indigo-400 shadow-md">
+          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-md">
             <h2 className="text-2xl font-semibold mb-2">
               Welcome, {user?.name || "Trainer"}!
             </h2>
@@ -302,7 +302,7 @@ const TrainerDashboard = () => {
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-[#3498db]">
+              <div className="text-3xl font-bold text-amber-600">
                 {stats.totalSessions ?? 0}
               </div>
               <div className="text-gray-500 mt-2">Total Sessions</div>
@@ -311,14 +311,14 @@ const TrainerDashboard = () => {
               </div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-[#27ae60]">
+              <div className="text-3xl font-bold text-orange-600">
                 {stats.activeLearners ?? 0}
               </div>
               <div className="text-gray-500 mt-2">Active Learners</div>
               <div className="text-xs text-gray-400 mt-1">Assigned to you</div>
             </div>
             <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-[#e74c3c]">
+              <div className="text-3xl font-bold text-amber-500">
                 {stats.totalHours ?? 0}
               </div>
               <div className="text-gray-500 mt-2">Total Hours</div>
@@ -361,7 +361,7 @@ const TrainerDashboard = () => {
               <div
                 key={index}
                 onClick={card.onClick}
-                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-green-400 hover:border"
+                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-amber-500 hover:border-2"
               >
                 <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
                   {card.icon}
@@ -447,8 +447,8 @@ const TrainerDashboard = () => {
                             session.status === "active"
                               ? "border-l-4 border-green-500"
                               : session.status === "scheduled"
-                                ? "border-l-4 border-blue-500"
-                                : "border-l-4 border-yellow-400";
+                                ? "border-l-4 border-amber-500"
+                                : "border-l-4 border-orange-400";
                           return (
                             <div
                               key={session.id || session.session_id}
@@ -524,7 +524,7 @@ const TrainerDashboard = () => {
                                       onClick={() =>
                                         handleResumeSession(session.session_id)
                                       }
-                                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+                                      className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg hover:from-amber-600 hover:to-orange-600 text-sm font-medium shadow-md"
                                     >
                                       Resume Session
                                     </button>
@@ -542,7 +542,7 @@ const TrainerDashboard = () => {
                                           onClick={() =>
                                             handleViewRecording(session)
                                           }
-                                          className="text-sm px-3 py-1 border rounded text-blue-600 hover:bg-blue-50"
+                                          className="text-sm px-3 py-1 border rounded text-amber-600 hover:bg-amber-50 border-amber-300"
                                           title="Watch recording"
                                         >
                                           ▶️ Watch
@@ -712,8 +712,8 @@ const TrainerDashboard = () => {
               )}
 
               {/* Additional Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-amber-800">
                   <strong>Scheduled:</strong> {selectedSession.scheduled_date
                     ? new Date(selectedSession.scheduled_date).toLocaleString()
                     : "—"}
@@ -746,7 +746,7 @@ const TrainerDashboard = () => {
                     closeSessionDetailsModal();
                     handleResumeSession(selectedSession.session_id || selectedSession.id);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 font-medium transition-colors shadow-md"
                 >
                   Resume Session
                 </button>
@@ -774,12 +774,12 @@ function getInitials(name = "") {
 function getAvatarColorClass(name = "") {
   // deterministic color pick by name hash
   const colors = [
-    "bg-[#3498db]",
-    "bg-[#e74c3c]",
-    "bg-[#27ae60]",
-    "bg-[#9b59b6]",
-    "bg-[#f39c12]",
-    "bg-[#1abc9c]",
+    "bg-amber-500",
+    "bg-orange-600",
+    "bg-amber-600",
+    "bg-orange-500",
+    "bg-amber-400",
+    "bg-orange-400",
   ];
   const n = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return colors[n % colors.length];

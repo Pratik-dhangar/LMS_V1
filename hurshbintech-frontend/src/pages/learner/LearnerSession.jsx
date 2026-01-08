@@ -18,6 +18,7 @@ import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
+import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import '../../styles/Pages.css';
 
 const LearnerSession = () => {
@@ -156,6 +157,7 @@ const LearnerSession = () => {
   const [syncedIsRunning, setSyncedIsRunning] = useState(false);
   const lastTickSecondRef = useRef(null);
   const hasPlayedCelebrationRef = useRef(false);
+  const restrictionAlertShownRef = useRef(false); // Prevent duplicate toast alerts
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Reusable AudioContext (optimized)
@@ -630,6 +632,9 @@ const LearnerSession = () => {
 
     const checkInterval = setInterval(async () => {
       try {
+        // Update session activity to mark session as still active
+        updateSessionActivity(sessionId, 'learner');
+
         const updatedSession = await sessionService.getSessionDetails(sessionId);
         if (updatedSession.status === 'ended') {
           toast.info('Session has ended');
@@ -652,6 +657,20 @@ const LearnerSession = () => {
     try {
       const session = await sessionService.getSessionDetails(sessionId);
       setSessionInfo(session);
+
+      // 🔹 Purpose: Check if session is already active on another device/tab
+      // 🔸 How it works: uses sessionActivityTracker to prevent multiple access
+      const sessionCheck = markSessionActive(sessionId, 'learner');
+      if (!sessionCheck.success) {
+        // Only show alert once (prevent duplicate toasts in StrictMode)
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          console.warn('[LearnerSession] Session already active:', sessionCheck.message);
+          toast.error(sessionCheck.message);
+          navigate('/learner/dashboard');
+        }
+        return;
+      }
 
       await sessionService.joinSession(sessionId);
       // toast.success('Joined session successfully');
@@ -1151,6 +1170,9 @@ const LearnerSession = () => {
     } catch (error) {
       console.error('[LearnerSession] Error closing whiteboard:', error);
     }
+
+    // Clear session activity tracking
+    clearSessionActivity(sessionId, 'learner');
   };
 
   // --------------------------
