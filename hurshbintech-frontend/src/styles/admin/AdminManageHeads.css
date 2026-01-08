@@ -3,7 +3,7 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #f5f6fa;
+    background: #ffffff;
 }
 
 .admin-manage-heads-main {
@@ -22,12 +22,12 @@
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 3px solid #2c3e50;
+    border-bottom: 3px solid #5c1e1e;
 }
 
 .admin-manage-heads-title {
     font-size: 2rem;
-    color: #2c3e50;
+    color: #1f2937;
     margin: 0;
     font-weight: 700;
 }
@@ -46,7 +46,7 @@
 }
 
 .admin-manage-heads-search-title {
-    color: #2c3e50;
+    color: #1f2937;
     font-size: 1.1rem;
     margin: 0 0 1rem 0;
     font-weight: 700;
@@ -68,12 +68,12 @@
 
 .admin-manage-heads-search-input:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: #db9d32;
+    box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1);
 }
 
 .admin-manage-heads-search-btn {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%);
     color: white;
     border: none;
     padding: 0.75rem 2rem;
@@ -85,9 +85,9 @@
 }
 
 .admin-manage-heads-search-btn:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #c98d1e 0%, #b67d0e 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 4px 12px rgba(219, 157, 50, 0.3);
 }
 
 .admin-manage-heads-list {
@@ -157,14 +157,16 @@
     padding: 3rem 2rem;
     color: #6b7280;
 }
-.data-table-th{
-    background-color: #2f4153;
-    color: #1f2937;
+
+.data-table-th {
+    background-color: #5c1e1e;
+    color: #ffffff;
     font-weight: 700;
     padding: 0.75rem 1rem;
     text-align: left;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid #7a2c2c;
 }
+
 @media (max-width: 768px) {
     .admin-manage-heads-main {
         padding: 1rem;

@@ -21,7 +21,8 @@
 @import './AdminRegisterHead.css';
 @import './AdminEditHead.css';
 @import './AdminManageHeads.css';
-@import './AdminViewTrainers.css';
+@import './ManageHeadsPage.css';
+@import './ViewTrainersPage.css';
 @import './AdminViewLearners.css';
 @import './AdminManageLearningContent.css';
 @import './AdminManageLearningGoals.css';

@@ -17,6 +17,7 @@ import Footer from '../../components/layout/Footer';
 import SearchBar from '../../components/common/SearchBar';
 import adminService from '../../api/services/adminService';
 import '../../styles/admin/index.css';
+import '../../styles/admin/ManageHeadsPage.css';
 
 
 // ManageHeads Component
@@ -108,21 +109,21 @@ const ManageHeads = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="manage-heads-container">
       <Navbar />
-      <main className="page-main">
-        <div className="page-content">
+      <main className="manage-heads-main">
+        <div className="manage-heads-content">
           {/* Header */}
-          <div className="page-header">
+          <div className="manage-heads-header">
 
-            <h1 className="page-title">
+            <h1 className="manage-heads-title">
               Manage HurshBin Heads
             </h1>
-            <p className="page-description">View and manage all registered heads</p>
+            <p className="manage-heads-description">View and manage all registered heads</p>
           </div>
 
           {/* Search Bar and Add New Head Button */}
-          <div className="search-section">
+          <div className="manage-heads-search-section">
 
             <SearchBar
               onSearch={handleSearch}
@@ -130,7 +131,7 @@ const ManageHeads = () => {
             />
             <button
               onClick={() => navigate('/admin/register-head')}
-              className="btn-success btn-icon"
+              className="manage-heads-add-btn"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -139,8 +140,8 @@ const ManageHeads = () => {
             </button>
           </div>
           {activeSearchQuery && (
-            <div className="search-results-info">
-              <p className="search-results-text">
+            <div className="manage-heads-search-results-info">
+              <p>
                 Found {filteredHeads.length} result{filteredHeads.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -148,9 +149,9 @@ const ManageHeads = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="error-message">
-              <div className="error-message-content">
-                <AlertCircle className="error-icon" />
+            <div className="manage-heads-error-message">
+              <AlertCircle className="manage-heads-error-icon" />
+              <div className="manage-heads-error-content">
                 <p>{error}</p>
               </div>
             </div>
@@ -158,20 +159,20 @@ const ManageHeads = () => {
 
           {/* Loading State */}
           {loading ? (
-            <div className="loading-container">
-              <Loader2 className="loading-spinner-icon" />
-              <p className="loading-text">Loading heads...</p>
+            <div className="manage-heads-loading-container">
+              <Loader2 className="manage-heads-loading-spinner" />
+              <p className="manage-heads-loading-text">Loading heads...</p>
             </div>
           ) : (
             /* Table */
-            <div className="data-table-container">
+            <div className="manage-heads-table-container">
               {filteredHeads.length === 0 ? (
-                <div className="empty-state">
-                  <Users className="empty-state-icon" />
-                  <p className="empty-state-title">
+                <div className="manage-heads-empty-state">
+                  <Users className="manage-heads-empty-state-icon" />
+                  <p className="manage-heads-empty-state-title">
                     {activeSearchQuery ? 'No heads found' : 'No heads registered yet'}
                   </p>
-                  <p className="empty-state-description">
+                  <p className="manage-heads-empty-state-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'Register your first head to get started'
@@ -180,83 +181,83 @@ const ManageHeads = () => {
                   {!activeSearchQuery && (
                     <button
                       onClick={() => navigate('/admin/register-head')}
-                      className="btn-success"
+                      className="manage-heads-empty-state-btn"
                     >
                       Register Head
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead className="data-table-header">
+                <div className="manage-heads-table-wrapper">
+                  <table className="manage-heads-table">
+                    <thead className="manage-heads-table-header">
                       <tr>
-                        <th className="data-table-th">
+                        <th className="manage-heads-table-th">
                           Sr. No.
                         </th>
-                        <th className="data-table-th">
+                        <th className="manage-heads-table-th">
                           Name
                         </th>
-                        <th className="data-table-th">
+                        <th className="manage-heads-table-th">
                           Passcode
                         </th>
-                        <th className="data-table-th">
+                        <th className="manage-heads-table-th">
                           Contact Number
                         </th>
-                        <th className="data-table-th">
+                        <th className="manage-heads-table-th">
                           Date Joined
                         </th>
-                        <th className="data-table-th data-table-th-center">
+                        <th className="manage-heads-table-th manage-heads-table-th-center">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="data-table-body">
+                    <tbody className="manage-heads-table-body">
                       {filteredHeads.map((head, index) => (
                         <tr
                           key={head.id}
-                          className="data-table-row"
+                          className="manage-heads-table-row"
                         >
-                          <td className="data-table-td data-table-td-center">
+                          <td className="manage-heads-table-td manage-heads-table-td-center">
                             {index + 1}
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-name">{head.name}</div>
+                          <td className="manage-heads-table-td">
+                            <div className="manage-heads-table-name">{head.name}</div>
 
                           </td>
-                          <td className="data-table-td">
-                            <div className="passcode-display-inline">
-                              <span className="passcode-badge">
+                          <td className="manage-heads-table-td">
+                            <div className="manage-heads-passcode-display">
+                              <span className="manage-heads-passcode-badge">
                                 {visiblePasscodes[head.id] ? visiblePasscodes[head.id] : '••••••'}
                               </span>
                               <button
                                 onClick={() => togglePasscodeVisibility(head.id, head.user_id)}
-                                className="icon-btn"
+                                className="manage-heads-passcode-toggle-btn"
                                 title={visiblePasscodes[head.id] ? 'Hide passcode' : 'Show passcode'}
                               >
                                 {visiblePasscodes[head.id] ? (
-                                  <EyeOff className="icon-sm" />
+                                  <EyeOff className="manage-heads-icon-sm" />
                                 ) : (
-                                  <Eye className="icon-sm" />
+                                  <Eye className="manage-heads-icon-sm" />
                                 )}
                               </button>
                             </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="manage-heads-table-td">
                             {head.contact_no || 'N/A'}
                           </td>
-                          <td className="data-table-td">
+                          <td className="manage-heads-table-td">
                             {head.date_of_joining
                               ? new Date(head.date_of_joining).toLocaleDateString()
                               : 'N/A'
                             }
                           </td>
-                          <td className="data-table-td">
+                          <td className="manage-heads-table-td">
                             <button
                               onClick={() => handleEditHead(head.id)}
-                              className="btn-primary btn-sm btn-icon"
+                              className="manage-heads-edit-btn"
                             >
-                              <Edit3 className="icon-sm" />
+                              <Edit3 className="manage-heads-icon-sm" />
                               Edit Profile
                             </button>
                           </td>
@@ -271,7 +272,7 @@ const ManageHeads = () => {
 
           {/* Summary */}
           {!loading && filteredHeads.length > 0 && (
-            <div className="page-summary">
+            <div className="manage-heads-page-summary">
               Showing {filteredHeads.length} of {heads.length} head{heads.length !== 1 ? 's' : ''}
             </div>
           )}
