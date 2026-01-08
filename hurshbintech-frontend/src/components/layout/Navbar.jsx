@@ -88,7 +88,27 @@ const Navbar = () => {
               </button>
             )}
 
+            {/* Book Appointment */}
+            <button
+              className="navbar-btn"
+              onClick={() => {
+                if (!user) {
+                  handleNavigate("/guest-booking");
+                } else {
+                  handleNavigate("/book-appointment");
+                }
+              }}
+            >
+              Book Appointment
+            </button>
 
+            {/* Buy Learning Material */}
+            <button
+              className="navbar-btn"
+              onClick={() => handleNavigate("/learning-materials")}
+            >
+              Buy Learning Material
+            </button>
           </div>
         </div>
 
@@ -143,9 +163,27 @@ const Navbar = () => {
               </button>
             )}
 
-           
-            {/* Blogs link - Always visible */}
-           
+            {/* Book Appointment */}
+            <button
+              className="navbar-btn"
+              onClick={() => {
+                if (!user) {
+                  handleNavigate("/guest-booking");
+                } else {
+                  handleNavigate("/book-appointment");
+                }
+              }}
+            >
+              Book Appointment
+            </button>
+
+            {/* Buy Learning Material */}
+            <button
+              className="navbar-btn"
+              onClick={() => handleNavigate("/learning-materials")}
+            >
+              Buy Learning Material
+            </button>
 
             {/* Admin Blog Management - Only for admins */}
             {user && user.role === 'admin' && (

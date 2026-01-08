@@ -96,10 +96,7 @@
     cursor: not-allowed;
 }
 
-.navbar-btn.login-btn,
-.navbar-btn.logout-btn {
-    /* Remove top margin since items are now on same line */
-}
+
 
 .navbar-toggle {
     display: block;
