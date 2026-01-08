@@ -34,21 +34,12 @@ const Footer = () => {
             <div className="footer-contact-item">
               <Phone />
               <a href="tel:+91XXXXXXXXXX">
-                +91-XXXXXXXXXX
+                +91-8928765220
               </a>
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div className="footer-links" style={{ marginTop: '1rem', textAlign: 'center' }}>
-            <Link to="/about" style={{ color: 'white', textDecoration: 'none', marginRight: '1rem' }}>
-              About Us
-            </Link>
-            <span style={{ color: 'rgba(255,255,255,0.5)' }}>|</span>
-            <Link to="/blogs" style={{ color: 'white', textDecoration: 'none', marginLeft: '1rem' }}>
-              Blogs
-            </Link>
-          </div>
+          
         </div>
       </div>
     </footer>

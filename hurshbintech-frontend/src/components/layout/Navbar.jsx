@@ -1,5 +1,3 @@
-// Navbar.jsx - Updated to show tabs based on user role
-
 import React, { useState } from "react";
 import { LogOut, LogIn, Menu, X, Home } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -74,7 +72,7 @@ const Navbar = () => {
     <nav className="navbar" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
       <div className="navbar-container">
         <div className="navbar-brand">
-          <h1 className="navbar-title" onClick={() => handleNavigate("/")} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 className="navbar-title" onClick={() => handleNavigate("/")} >
             {location.pathname !== "/" && <Home className="w-5 h-5" />}
             HurshBinTech
           </h1>
@@ -145,21 +143,9 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* About Us - Public page */}
-            {/* <button
-              className={`navbar-btn ${location.pathname === "/about" ? "active" : ""}`}
-              onClick={() => handleNavigate("/about")}
-            >
-              About Us
-            </button> */}
-
+           
             {/* Blogs link - Always visible */}
-            <button
-              className={`navbar-btn ${location.pathname.includes("/blogs") ? "active" : ""}`}
-              onClick={() => handleNavigate("/blogs")}
-            >
-              Blogs
-            </button>
+           
 
             {/* Admin Blog Management - Only for admins */}
             {user && user.role === 'admin' && (
