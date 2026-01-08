@@ -1,7 +1,7 @@
 // Navbar.jsx - Updated to show tabs based on user role
 
 import React, { useState } from "react";
-import { LogOut, LogIn, Menu, X } from "lucide-react";
+import { LogOut, LogIn, Menu, X, Home } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
@@ -74,29 +74,12 @@ const Navbar = () => {
     <nav className="navbar" onDragStart={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
       <div className="navbar-container">
         <div className="navbar-brand">
-          <h1 className="navbar-title">
+          <h1 className="navbar-title" onClick={() => handleNavigate("/")} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {location.pathname !== "/" && <Home className="w-5 h-5" />}
             HurshBinTech
           </h1>
 
           <div className="navbar-nav navbar-nav-desktop">
-            {/* Dashboard - Always show for authenticated users */}
-            {user && (
-              <button
-                className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
-                onClick={() => handleNavigate("/")}
-              >
-                Landing
-              </button>
-            )}
-
-            {/* About Us - Public page */}
-            {/* <button
-              className={`navbar-btn ${location.pathname === "/about" ? "active" : ""}`}
-              onClick={() => handleNavigate("/about")}
-            >
-              About Us
-            </button> */}
-
             {/* Role-specific dashboard link - Only show if user is logged in */}
             {user && roleNav && (
               <button
@@ -152,16 +135,6 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="navbar-mobile-menu">
-            {/* Dashboard - Always show for authenticated users */}
-            {user && (
-              <button
-                className={`navbar-btn ${isDashboardPage ? "active" : ""}`}
-                onClick={() => handleNavigate("/")}
-              >
-                Landing
-              </button>
-            )}
-
             {/* Role-specific landing link - Only show if user is logged in */}
             {user && roleNav && (
               <button
