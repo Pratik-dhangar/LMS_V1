@@ -1,65 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import { Calendar, Clock, Settings } from 'lucide-react';
 import Footer from '../../components/layout/Footer';
-import coachService from '../../api/services/coachService';
-import { toast } from 'react-toastify';
-import '../../styles/coach/CoachDashboard.css';
+import '../../styles/admin/index.css';
 
 const CoachDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(false);
-  }, []);
 
   const menuItems = [
-    { id: '1', title: 'My Appointments', description: 'View and manage appointments scheduled by clients', icon: Calendar, color: 'blue', onClick: () => navigate('/coach/appointments') },
-    { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, color: 'green', onClick: () => navigate('/coach/sessions') },
-    { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, color: 'purple', onClick: () => navigate('/coach/availability') },
+    { id: '1', title: 'My Appointments', description: 'View and manage appointments scheduled by clients', icon: Calendar, onClick: () => navigate('/coach/appointments') },
+    { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, onClick: () => navigate('/coach/sessions') },
+    { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, onClick: () => navigate('/coach/availability') },
   ];
 
 
 
   return (
-    <div className="coach-dashboard-container">
+    <div className="admin-dashboard-container">
       <Navbar />
-      <main className="coach-dashboard-main">
-        <div className="coach-dashboard-content-wrapper">
+      <main className="admin-dashboard-main">
+        <div className="admin-dashboard-content-wrapper">
           {/* Header */}
-          <div className="coach-dashboard-header">
-            <h1 className="coach-dashboard-title">
+          <div className="admin-dashboard-header">
+            <h1 className="admin-dashboard-title">
               Coach Dashboard
             </h1>
-            <div className="coach-dashboard-welcome">
-              Welcome back, <span className="coach-dashboard-welcome-name">{user?.name}</span>!
+            <div className="admin-dashboard-welcome">
+              Welcome, <span className="admin-dashboard-welcome-name">{user?.name || 'Coach'}</span>!
             </div>
           </div>
 
           {/* Coach Menu */}
-          <div className="coach-dashboard-menu">
-            
+          <div className="admin-dashboard-menu">
+            <div className="admin-menu-title">
+              <h2>Coach Menu - Click to Open</h2>
+            </div>
 
-            <div className="coach-menu-grid">
+            <div className="admin-menu-grid">
               {menuItems.map((item) => {
                 const IconComponent = item.icon;
                 return (
                   <div
                     key={item.id}
                     onClick={item.onClick}
-                    className={`coach-menu-card coach-menu-card-${item.color}`}
+                    className="admin-menu-card"
                   >
-                    <div className="coach-menu-card-icon">
+                    <div className="admin-menu-card-icon">
                       <IconComponent size={48} />
                     </div>
-                    <h3 className="coach-menu-card-title">
+                    <h3 className="admin-menu-card-title">
                       {item.title}
                     </h3>
-                    <p className="coach-menu-card-description">
+                    <p className="admin-menu-card-description">
                       {item.description}
                     </p>
                   </div>

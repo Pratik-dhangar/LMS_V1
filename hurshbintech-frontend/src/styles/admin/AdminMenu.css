@@ -36,11 +36,11 @@
     justify-content: center;
     text-align: center;
     padding: 2rem 1.5rem;
-    background: #ffffff;
-    border: 3px solid;
-    border-radius: 12px;
+    background: linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c);
+    border: none;
+    border-radius: 1rem;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s ease;
     min-height: 220px;
     flex: 1;
     width: 100%;
@@ -55,287 +55,18 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(92, 30, 30, 0.08) 0%, rgba(92, 30, 30, 0.02) 100%);
-    transition: left 0.5s ease;
-    z-index: -1;
+    background: rgba(219, 157, 50, 0.95);
+    transition: all 0.3s ease;
+    z-index: 0;
 }
 
 .admin-menu-card:hover {
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 16px 40px rgba(92, 30, 30, 0.25);
-    border-color: #5c1e1e !important;
+    box-shadow: 0 16px 40px rgba(234, 88, 12, 0.4);
 }
 
 .admin-menu-card:hover::before {
     left: 0;
-}
-
-/* Color Variants */
-.admin-menu-card-red {
-    border-color: #f97316;
-}
-
-.admin-menu-card-red .admin-menu-card-icon {
-    color: #f97316;
-}
-
-.admin-menu-card-red:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
-    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
-}
-
-.admin-menu-card-blue {
-    border-color: #f59e0b;
-}
-
-.admin-menu-card-blue .admin-menu-card-icon {
-    color: #f59e0b;
-}
-
-.admin-menu-card-blue:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
-    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
-}
-
-.admin-menu-card-purple {
-    border-color: #ea580c;
-}
-
-.admin-menu-card-purple .admin-menu-card-icon {
-    color: #ea580c;
-}
-
-.admin-menu-card-purple:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
-    box-shadow: 0 8px 16px rgba(234, 88, 12, 0.3);
-}
-
-.admin-menu-card-green {
-    border-color: #d97706;
-}
-
-.admin-menu-card-green .admin-menu-card-icon {
-    color: #d97706;
-}
-
-.admin-menu-card-green:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
-    box-shadow: 0 8px 16px rgba(217, 119, 6, 0.3);
-}
-
-.admin-menu-card-orange {
-    border-color: #f97316;
-}
-
-.admin-menu-card-orange .admin-menu-card-icon {
-    color: #f97316;
-}
-
-.admin-menu-card-orange:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
-    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
-}
-
-.admin-menu-card-teal {
-    border-color: #ea580c;
-}
-
-.admin-menu-card-teal .admin-menu-card-icon {
-    color: #ea580c;
-}
-
-.admin-menu-card-teal:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
-    box-shadow: 0 8px 16px rgba(234, 88, 12, 0.3);
-}
-
-.admin-menu-card-yellow {
-    border-color: #fbbf24;
-}
-
-.admin-menu-card-yellow .admin-menu-card-icon {
-    color: #f59e0b;
-}
-
-.admin-menu-card-yellow:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
-    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.3);
-}
-
-.admin-menu-card-pink {
-    border-color: #f97316;
-}
-
-.admin-menu-card-pink .admin-menu-card-icon {
-    color: #f97316;
-}
-
-.admin-menu-card-pink:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fed7aa 100%);
-    box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
-}
-
-.admin-menu-card-indigo {
-    border-color: #f59e0b;
-}
-
-.admin-menu-card-indigo .admin-menu-card-icon {
-    color: #ea580c;
-}
-
-.admin-menu-card-indigo:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fde68a 100%);
-    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
-}
-
-.admin-menu-card-cyan {
-    border-color: #fbbf24;
-}
-
-.admin-menu-card-cyan .admin-menu-card-icon {
-    color: #f59e0b;
-}
-
-.admin-menu-card-cyan:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
-    box-shadow: 0 8px 16px rgba(251, 191, 36, 0.3);
-}
-
-.admin-menu-card-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.admin-menu-card:hover .admin-menu-card-icon {
-    transform: scale(1.15) rotate(-5deg);
-}
-
-.admin-menu-card-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0.5rem 0;
-    letter-spacing: 0px;
-    transition: color 0.3s ease;
-}
-
-.admin-menu-card:hover .admin-menu-card-title {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-description {
-    font-size: 0.85rem;
-    color: #6b7280;
-    margin: 0;
-    line-height: 1.4;
-}
-
-/* Card Styles */
-.admin-menu-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 2rem 1.5rem;
-    background: #ffffff;
-    border: 3px solid;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-height: 240px;
-    flex: 1;
-    width: 100%;
-}
-
-.admin-menu-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-}
-
-/* Color Variants - All using Maroon theme to match Navbar/Footer */
-.admin-menu-card-red {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-red .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-blue {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-blue .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-purple {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-purple .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-green {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-green .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-orange {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-orange .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-teal {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-teal .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-yellow {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-yellow .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-pink {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-pink .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-indigo {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-indigo .admin-menu-card-icon {
-    color: #5c1e1e;
-}
-
-.admin-menu-card-cyan {
-    border-color: #5c1e1e;
-}
-
-.admin-menu-card-cyan .admin-menu-card-icon {
-    color: #5c1e1e;
 }
 
 .admin-menu-card-icon {
@@ -345,26 +76,33 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.3s ease;
+    color: #ffffff;
+    position: relative;
+    z-index: 1;
 }
 
 .admin-menu-card:hover .admin-menu-card-icon {
-    transform: scale(1.1);
+    transform: scale(1.15) rotate(-5deg);
 }
 
 .admin-menu-card-title {
-    font-size: 1.15rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #1f2937;
+    color: #ffffff;
     margin: 0.5rem 0;
     letter-spacing: 0px;
-    line-height: 1.3;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .admin-menu-card-description {
-    font-size: 0.875rem;
-    color: #6b7280;
+    font-size: 0.85rem;
+    color: #fef3c7;
     margin: 0;
     line-height: 1.4;
+    position: relative;
+    z-index: 1;
 }
 
 /* Simple Menu Item Styles - For old layout fallback */
@@ -408,19 +146,7 @@
     transform: scaleX(1);
 }
 
-.admin-menu-item-text {
-    color: #374151;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: 0px;
-    transition: color 0.3s ease;
-    margin: 0;
-    line-height: 1.4;
-}
 
-.admin-menu-item:hover .admin-menu-item-text {
-    color: #2563eb;
-}
 
 .admin-menu-item-arrow {
     width: 0;
@@ -436,6 +162,10 @@
     .admin-menu-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 1.5rem;
+    }
+
+     .admin-menu-title h2 {
+        font-size: 2rem;
     }
 }
 
@@ -556,6 +286,7 @@
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     transition: left 0.5s ease;
     pointer-events: none;
+    z-index: 2;
 }
 
 .admin-menu-card:hover::after {
