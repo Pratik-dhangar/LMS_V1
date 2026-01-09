@@ -1,162 +1,71 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
-import { Calendar, Clock, User, AlertCircle, X, FileText, Check, XCircle } from 'lucide-react';
+import { Calendar, Clock, Settings } from 'lucide-react';
 import Footer from '../../components/layout/Footer';
-import AppointmentsManager from '../../components/coach/AppointmentsManager';
-import SessionsManager from '../../components/coach/SessionsManager';
-import AvailabilityManager from '../../components/coach/AvailabilityManager';
 import coachService from '../../api/services/coachService';
 import { toast } from 'react-toastify';
-import '../../styles/Dashboards.css';
-import '../../styles/Coach.css';
+import '../../styles/coach/CoachDashboard.css';
 
 const CoachDashboard = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [appointments, setAppointments] = useState([]);
-  const [sessions, setSessions] = useState([]);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
+    setLoading(false);
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [appointmentsData, sessionsData] = await Promise.all([
-        coachService.getMyAppointments(),
-        coachService.getMySessions()
-      ]);
-      setAppointments(appointmentsData);
-      setSessions(sessionsData);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const menuItems = [
+    { id: '1', title: 'My Appointments', description: 'View and manage appointments scheduled by clients', icon: Calendar, color: 'blue', onClick: () => navigate('/coach/appointments') },
+    { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, color: 'green', onClick: () => navigate('/coach/sessions') },
+    { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, color: 'purple', onClick: () => navigate('/coach/availability') },
+  ];
 
 
 
   return (
-    <div className="dashboard-container">
+    <div className="coach-dashboard-container">
       <Navbar />
-      <main className="flex-1 flex flex-col">
-        <div className="consultant-page">
-          <div className="consultant-content">
-            {/* Header */}
-            <div className="dashboard-header-flex">
-              <h1 className="dashboard-title">Coach Dashboard</h1>
-              <div className="dashboard-welcome">
-                Welcome back, <span className="dashboard-welcome-name">{user?.name}</span>!
-              </div>
+      <main className="coach-dashboard-main">
+        <div className="coach-dashboard-content-wrapper">
+          {/* Header */}
+          <div className="coach-dashboard-header">
+            <h1 className="coach-dashboard-title">
+              Coach Dashboard
+            </h1>
+            <div className="coach-dashboard-welcome">
+              Welcome back, <span className="coach-dashboard-welcome-name">{user?.name}</span>!
             </div>
+          </div>
 
-            {/* Tab Navigation */}
-            <div className="coach-tabs">
-              <button
-                className={`coach-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('overview')}
-              >
-                Overview
-              </button>
-              <button
-                className={`coach-tab ${activeTab === 'appointments' ? 'active' : ''}`}
-                onClick={() => setActiveTab('appointments')}
-              >
-                Appointments
-              </button>
-              <button
-                className={`coach-tab ${activeTab === 'sessions' ? 'active' : ''}`}
-                onClick={() => setActiveTab('sessions')}
-              >
-                Sessions
-              </button>
-              <button
-                className={`coach-tab ${activeTab === 'availability' ? 'active' : ''}`}
-                onClick={() => setActiveTab('availability')}
-              >
-                Availability
-              </button>
+          {/* Coach Menu */}
+          <div className="coach-dashboard-menu">
+            
+
+            <div className="coach-menu-grid">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={item.onClick}
+                    className={`coach-menu-card coach-menu-card-${item.color}`}
+                  >
+                    <div className="coach-menu-card-icon">
+                      <IconComponent size={48} />
+                    </div>
+                    <h3 className="coach-menu-card-title">
+                      {item.title}
+                    </h3>
+                    <p className="coach-menu-card-description">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <>
-
-                {/* Upcoming Appointments */}
-                <div className="consultant-card">
-                  <h3 className="consultant-card-title">Upcoming Appointments</h3>
-                  <p className="text-sm text-gray-600 mb-4">Appointments scheduled by other users (read-only)</p>
-                  <div className="consultant-list">
-                    {loading ? (
-                      <p className="text-gray-500">Loading appointments...</p>
-                    ) : appointments.length === 0 ? (
-                      <p className="text-gray-500">No upcoming appointments</p>
-                    ) : (
-                      appointments.slice(0, 5).map((appointment, index) => (
-                        <div key={index} className="consultant-list-item consultant-list-item-green">
-                           <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="icon-sm text-blue-600" />
-                    <span className="font-semibold">
-                      {new Date(appointment.scheduled_date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        year: 'numeric', 
-                        month: 'short',
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                          <div className="consultant-client">
-                            {appointment.user_name || 'User'} - Appointment
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="consultant-card">
-                  <h3 className="consultant-search-title">Quick Actions</h3>
-                  <div className="consultant-library-grid">
-                    <button
-                      onClick={() => setActiveTab('sessions')}
-                      className="consultant-library-item cursor-pointer hover:bg-gray-50"
-                    >
-                      <h4 className="consultant-library-title">Create Session</h4>
-                      <p className="consultant-library-desc">Schedule group coaching session with learners, trainers, and heads</p>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('availability')}
-                      className="consultant-library-item cursor-pointer hover:bg-gray-50"
-                    >
-                      <h4 className="consultant-library-title">My Availability</h4>
-                      <p className="consultant-library-desc">Set availability & time slots</p>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('appointments')}
-                      className="consultant-library-item cursor-pointer hover:bg-gray-50"
-                    >
-                      <h4 className="consultant-library-title">View Appointments</h4>
-                      <p className="consultant-library-desc">See all scheduled appointments</p>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Appointments Tab */}
-            {activeTab === 'appointments' && <AppointmentsManager />}
-
-            {/* Sessions Tab */}
-            {activeTab === 'sessions' && <SessionsManager />}
-
-            {/* Availability Tab */}
-            {activeTab === 'availability' && <AvailabilityManager />}
           </div>
         </div>
       </main>

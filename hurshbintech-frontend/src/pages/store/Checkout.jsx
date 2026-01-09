@@ -530,7 +530,7 @@ const Checkout = () => {
                                 lineHeight: '1.6'
                             }}>
                                 Need help? Contact us on WhatsApp<br />
-                                <span style={{ color: '#27ae60', fontWeight: '600' }}>+91-XXXXXXXXXX</span>
+                                <span style={{ color: '#27ae60', fontWeight: '600' }}>+91-8928765220</span>
                             </div>
                         </div>
                     </div>

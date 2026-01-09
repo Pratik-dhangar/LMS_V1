@@ -330,7 +330,7 @@ const AppointmentsManager = () => {
   return (
     <div className="appointments-manager">
       {/* Header */}
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">My Appointments</h2>
         <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg">
           <AlertCircle className="icon-sm" />
@@ -338,7 +338,7 @@ const AppointmentsManager = () => {
             Appointments are scheduled by other users (Heads, Trainers, Learners). You cannot create appointments yourself.
           </p>
         </div>
-      </div>
+      </div> */}
 
       {error && (
         <div className="stat-error mb-4 flex items-center gap-2">

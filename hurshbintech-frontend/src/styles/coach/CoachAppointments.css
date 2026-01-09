@@ -1,0 +1,53 @@
+/* Coach Appointments Page Styles */
+.coach-appointments-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+}
+
+.coach-appointments-main {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+}
+
+.coach-appointments-content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+/* Header Styles */
+.coach-appointments-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2563eb;
+}
+
+.coach-appointments-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+}
+
+.coach-appointments-subtitle {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Content Area */
+.coach-appointments-content {
+    padding: 0;
+    margin-top: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .coach-appointments-title {
+        font-size: 1.5rem;
+    }
+}
+

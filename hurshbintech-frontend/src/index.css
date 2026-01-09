@@ -40,7 +40,7 @@
   /* Colors - Backgrounds */
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #f8fafc;
-  --color-bg-tertiary: #f5f6fa;
+  --color-bg-tertiary: #ffffff;
 
   /* Typography */
   --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -144,6 +144,7 @@ canvas {
 svg {
   max-width: 100%;
   height: auto;
+  
 }
 
 /* Responsive container */

@@ -203,22 +203,22 @@
 }
 
 .data-table thead {
-    background: #2f4153;
+    background: #5c1e1e;
 }
 
 .data-table-header {
-    background: #f3f4f6;
+    background: #5c1e1e;
 }
 
 .data-table-th {
     padding: 1rem;
     text-align: left;
     font-weight: 600;
-    color: #374151;
+    color: #ffffff;
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid #7a2c2c;
 }
 
 .data-table-th-center {
