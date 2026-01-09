@@ -41,7 +41,7 @@ const Home = () => {
 
   const fetchBlogs = useCallback(async () => {
     try {
-      const response = await blogService.getPublicBlogs({ page: 1, per_page: 6 });
+      const response = await blogService.getPublicBlogs({ page: 1, per_page: 3 });
       setBlogs(response.blogs || []);
     } catch (err) {
       console.error('Error fetching blogs:', err);
@@ -51,7 +51,7 @@ const Home = () => {
 
   const fetchVlogs = useCallback(async () => {
     try {
-      const response = await vlogService.getPublicVlogs({ page: 1, per_page: 6 });
+      const response = await vlogService.getPublicVlogs({ page: 1, per_page: 3 });
       setVlogs(response.vlogs || []);
     } catch (err) {
       console.error('Error fetching vlogs:', err);
@@ -224,7 +224,7 @@ const Home = () => {
         <section id="blogs-section" className="home-blogs-section">
           <div className="home-blogs-container">
             <div className="home-section-header">
-              <h2 className="home-section-title">Our Latest Blogs</h2>
+              <h2 className="home-section-title">Latest Blogs</h2>
               <p className="home-section-subtitle">Educational articles and insights</p>
             </div>
             <div className="home-blogs-grid">
@@ -283,7 +283,7 @@ const Home = () => {
         <section id="vlogs-section" className="home-vlogs-section">
           <div className="home-vlogs-container">
             <div className="home-section-header">
-              <h2 className="home-section-title">Our Latest Vlogs</h2>
+              <h2 className="home-section-title">Latest Vlogs</h2>
               <p className="home-section-subtitle">Video content and tutorials</p>
             </div>
             <div className="home-vlogs-grid">
