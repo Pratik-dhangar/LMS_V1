@@ -56,7 +56,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         value={formData.contact_no}
         onChange={handleChange}
         required
-        placeholder="+91-XXXXXXXXXX"
+        placeholder="+91-8928765220"
         error={errors.contact_no}
       />
 

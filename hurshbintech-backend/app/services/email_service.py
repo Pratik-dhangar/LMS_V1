@@ -474,7 +474,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
 
-        subject = "Appointment Status Update"
+        subject = "Appointment Request Rejected"
         
         reason_text = rejection_reason or "We were unable to accommodate this appointment at this time."
         
@@ -541,7 +541,7 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 26px;">Appointment Status Update</h1>
+                        <h1 style="margin: 0; font-size: 26px;">Appointment Rejected</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Your booking status has changed</p>
                     </div>
                     <div class="content">
@@ -1447,7 +1447,7 @@ class EmailService:
                         </p>
                         <p style="margin: 5px 0; color: #2c3e50; font-weight: 600;">
                             📧 Email: support@hurshbintech.com<br>
-                            📱 WhatsApp: +91-XXXXXXXXXX
+                            📱 WhatsApp:+91-8928765220
                         </p>
                         
                         <div style="background: #fff3cd; border-left: 4px solid #f39c12; padding: 15px; margin-top: 20px; border-radius: 6px;">
@@ -1972,7 +1972,7 @@ class EmailService:
                             </p>
                             <p style="margin: 8px 0; font-weight: 600;">
                                 📧 <strong>Email:</strong> support@hurshbintech.com<br>
-                                📱 <strong>WhatsApp:</strong> +91-XXXXXXXXXX<br>
+                                📱 <strong>WhatsApp:</strong> +91-8928765220<br>
                                 ⏱️ <strong>Response Time:</strong> Within 2 hours (9 AM - 6 PM IST)
                             </p>
                         </div>

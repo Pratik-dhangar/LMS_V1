@@ -9,7 +9,7 @@
 .admin-dashboard-main {
     flex: 1;
     padding: 2rem 1.5rem;
-    background: #ffffff;
+    background: transparent;
 }
 
 .admin-dashboard-content-wrapper {

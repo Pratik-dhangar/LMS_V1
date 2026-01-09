@@ -1,0 +1,55 @@
+/* Coach Availability Page Styles */
+.coach-availability-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+}
+
+.coach-availability-main {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    background: #ffffff;
+}
+
+.coach-availability-content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+/* Header Styles */
+.coach-availability-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2563eb;
+}
+
+.coach-availability-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+}
+
+.coach-availability-subtitle {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Content Area */
+.coach-availability-content {
+    padding: 2rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .coach-availability-main {
+        padding: 1rem;
+    }
+
+    .coach-availability-title {
+        font-size: 1.5rem;
+    }
+}
