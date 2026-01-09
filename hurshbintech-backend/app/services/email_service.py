@@ -1447,7 +1447,7 @@ class EmailService:
                         </p>
                         <p style="margin: 5px 0; color: #2c3e50; font-weight: 600;">
                             📧 Email: support@hurshbintech.com<br>
-                            📱 WhatsApp: +91-XXXXXXXXXX
+                            📱 WhatsApp:+91-8928765220
                         </p>
                         
                         <div style="background: #fff3cd; border-left: 4px solid #f39c12; padding: 15px; margin-top: 20px; border-radius: 6px;">
@@ -1972,7 +1972,7 @@ class EmailService:
                             </p>
                             <p style="margin: 8px 0; font-weight: 600;">
                                 📧 <strong>Email:</strong> support@hurshbintech.com<br>
-                                📱 <strong>WhatsApp:</strong> +91-XXXXXXXXXX<br>
+                                📱 <strong>WhatsApp:</strong> +91-8928765220<br>
                                 ⏱️ <strong>Response Time:</strong> Within 2 hours (9 AM - 6 PM IST)
                             </p>
                         </div>
