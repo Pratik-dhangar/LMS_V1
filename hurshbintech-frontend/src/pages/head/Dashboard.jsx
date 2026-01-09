@@ -5,154 +5,68 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-// import headService from '../../api/services/headService';
-import { FaFileAlt } from "react-icons/fa";
-
-// Import icons 
-import { FaUsers, FaBookOpen, FaComments, FaUserTie, FaChartBar, FaCalendarAlt } from 'react-icons/fa';
+import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar } from 'lucide-react';
+import '../../styles/admin/index.css';
 
 // Head Dashboard Component
 const HeadDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
   const menuItems = [
-    {
-      title: 'Manage Trainers',
-      description: 'Register and manage HurshBin Trainers',
-      icon: <FaUserTie />,
-      path: '/head/manage-trainers',
-      color: 'red'
-    },
-    {
-      title: 'Manage Learners',
-      description: 'View and manage learner profiles, assessments, and progress',
-      icon: <FaUsers />,
-      path: '/head/manage-learners',
-      color: 'blue'
-    },
-    {
-      title: 'Manage Trainings',
-      description: 'View and manage learner profiles, programs, and assessments',
-      icon: <FaBookOpen />,
-      path: '/head/manage-sessions', // Mapped from original 'Manage Training Sessions'
-      color: 'purple'
-    },
-    {
-      title: 'Manage Communication',
-      description: 'Send messages to prompters, trainers, and admin',
-      icon: <FaComments />,
-      path: '/head/communication', // Added a placeholder path
-      color: 'green'
-    },
-
-    {
-      title: 'Manage Home Program ',
-      description: 'Assign and manage learning programs for learners',
-      icon: <FaBookOpen />,
-      path: '/head/manage-program-assignments',
-      color: 'orange'
-    },
-    {
-      title: 'Session Reports',
-      description: 'View and analyze learner session reports and progress',
-      icon: <FaChartBar />,
-      path: '/head/reports',
-      color: 'teal'
-    },
-    {
-      title: 'Book Appointment with Coach',
-      description: 'Schedule appointments with HurshBin Coaches/Consultants',
-      icon: <FaCalendarAlt />,
-      path: '/book-appointment',
-      color: 'yellow'
-    }
+    { id: '1', title: 'Manage Trainers', description: 'Register and manage HurshBin Trainers', icon: UserCog, onClick: () => navigate('/head/manage-trainers') },
+    { id: '2', title: 'Manage Learners', description: 'View and manage learner profiles, assessments, and progress', icon: Users, onClick: () => navigate('/head/manage-learners') },
+    { id: '3', title: 'Manage Trainings', description: 'View and manage learner profiles, programs, and assessments', icon: BookOpen, onClick: () => navigate('/head/manage-sessions') },
+    { id: '4', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') },
+    { id: '5', title: 'Manage Home Program', description: 'Assign and manage learning programs for learners', icon: BookOpen, onClick: () => navigate('/head/manage-program-assignments') },
+    { id: '6', title: 'Session Reports', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
+    { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') }
   ];
 
-  const colors = {
-    blue: {
-      border: 'border-amber-500',
-      text: 'text-amber-600'
-    },
-    purple: {
-      border: 'border-orange-500',
-      text: 'text-orange-600'
-    },
-    green: {
-      border: 'border-amber-400',
-      text: 'text-amber-500'
-    },
-    red: {
-      border: 'border-orange-600',
-      text: 'text-orange-700'
-    },
-    orange: {
-      border: 'border-amber-500',
-      text: 'text-amber-600'
-    },
-    yellow: {
-      border: 'border-yellow-400',
-      text: 'text-yellow-500'
-    },
-    teal: {
-      border: 'border-amber-600',
-      text: 'text-amber-700'
-    }
-  };
-
-
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="admin-dashboard-container">
       <Navbar />
-      <main className="flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-8 md:px-4 md:py-6">
-          {/* Page Title Bar (from image) */}
-          <div className="mb-8">
-
-            <h1 className="text-3xl font-bold text-amber-800 border-b-2 border-amber-600 pb-3 md:text-2xl">
+      <main className="admin-dashboard-main">
+        <div className="admin-dashboard-content-wrapper">
+          {/* Header */}
+          <div className="admin-dashboard-header">
+            <h1 className="admin-dashboard-title">
               Head Dashboard
             </h1>
+            <div className="admin-dashboard-welcome">
+              Welcome, <span className="admin-dashboard-welcome-name">{user?.name || 'Head'}</span>!
+            </div>
           </div>
 
-          {/* Header Welcome Banner (from image) */}
-          <div className="mb-8 p-8 rounded-lg text-center text-white bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-lg">
-            <h1 className="text-3xl font-bold">
-              Welcome, {user?.name || '[Head Name]'}
-            </h1>
-            <p className="text-lg opacity-90">
-              Bridge between Admin and Trainers - Program Coordination
-            </p>
+          {/* Head Menu */}
+          <div className="admin-dashboard-menu">
+            <div className="admin-menu-title">
+              <h2>Head Menu - Click to Open</h2>
+            </div>
 
+            <div className="admin-menu-grid">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={item.onClick}
+                    className="admin-menu-card"
+                  >
+                    <div className="admin-menu-card-icon">
+                      <IconComponent size={48} />
+                    </div>
+                    <h3 className="admin-menu-card-title">
+                      {item.title}
+                    </h3>
+                    <p className="admin-menu-card-description">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-
-          {/* Stats Cards (Still commented out as in original file) */}
-          {/* <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6 mb-8">
-            ...
-          </div> */}
-
-          {/* Admin Menu Grid (from image) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {menuItems.map((item) => (
-              <div
-                key={item.title}
-                onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-md cursor-pointer
-                            border-4 ${colors[item.color].border} 
-                            transition-all duration-300 hover:shadow-xl hover:scale-[1.03]`}
-                style={{ minHeight: '200px' }} // Ensure cards have a nice height
-              >
-                <div className={`text-5xl mb-4 ${colors[item.color].text}`}>
-                  {item.icon}
-                </div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">
-                  {item.title}
-                </h2>
-                <p className="text-sm text-gray-600 text-center">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
         </div>
       </main>
       <Footer />

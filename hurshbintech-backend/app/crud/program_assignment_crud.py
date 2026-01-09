@@ -19,15 +19,22 @@ async def check_duplicate_active_assignment(
     learner_id: int,
     program_id: int
 ) -> Optional[ProgramAssignment]:
-    """Check if learner already has an active assignment for this program"""
+    """Check if learner already has an active assignment containing this program"""
+    from sqlalchemy import and_, or_, func
+    
     result = await db.execute(
         select(ProgramAssignment)
         .where(
-            ProgramAssignment.learner_id == learner_id,
-            ProgramAssignment.program_id == program_id,
-            or_(
-                ProgramAssignment.completion_status == CompletionStatus.NOT_STARTED,
-                ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS
+            and_(
+                ProgramAssignment.learner_id == learner_id,
+                # Check if program_id is in the program_ids JSON array
+                func.cast(program_id, type_=str).isin(
+                    func.json_array_elements_text(ProgramAssignment.program_ids)
+                ),
+                or_(
+                    ProgramAssignment.completion_status == CompletionStatus.NOT_STARTED,
+                    ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS
+                )
             )
         )
     )
@@ -37,14 +44,15 @@ async def check_duplicate_active_assignment(
 async def create_assignment(
     db: AsyncSession,
     learner_id: int,
-    program_id: int,
+    program_ids: list,  # Changed from program_id: int
     assigned_by_head: int,
+    assignment_title: str,
     start_date: date,
     end_date: date,
     duration_days: Optional[int] = None,
     head_notes: Optional[str] = None
 ) -> ProgramAssignment:
-    """Create a new program assignment"""
+    """Create a new program assignment with multiple programs"""
     
     # Calculate duration if not provided
     if duration_days is None:
@@ -52,8 +60,9 @@ async def create_assignment(
     
     new_assignment = ProgramAssignment(
         learner_id=learner_id,
-        program_id=program_id,
+        program_ids=program_ids if isinstance(program_ids, list) else [program_ids],  # Ensure it's a list
         assigned_by_head=assigned_by_head,
+        assignment_title=assignment_title,
         start_date=start_date,
         end_date=end_date,
         duration_days=duration_days,
@@ -78,7 +87,6 @@ async def get_assignments(
     
     query = select(ProgramAssignment).options(
         joinedload(ProgramAssignment.learner),
-        joinedload(ProgramAssignment.program),
         joinedload(ProgramAssignment.assigned_by),
         selectinload(ProgramAssignment.content_assignments).selectinload(LearnerContentAssignment.content)
     )
@@ -99,7 +107,6 @@ async def get_assignments(
     result = await db.execute(query)
     return result.unique().scalars().all()
 
-
 async def get_assignment_by_id(
     db: AsyncSession,
     assignment_id: int
@@ -112,7 +119,6 @@ async def get_assignment_by_id(
         select(ProgramAssignment)
         .options(
             joinedload(ProgramAssignment.learner),
-            joinedload(ProgramAssignment.program).joinedload(LearningGoals.program_contents).joinedload(ProgramLearningContent.content),
             joinedload(ProgramAssignment.assigned_by),
             joinedload(ProgramAssignment.attachments),
             joinedload(ProgramAssignment.content_assignments).joinedload(LearnerContentAssignment.content)
