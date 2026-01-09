@@ -7,7 +7,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, Integer, Text, Date
+from sqlalchemy import ForeignKey, Integer, Text, Date, String, JSON
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -33,12 +33,11 @@ class ProgramAssignment(Base):
         nullable=False,
         index=True
     )
-    program_id = Column(
-        Integer,
-        ForeignKey("learning_goals.id", ondelete="CASCADE"),
+    program_ids = Column(
+        JSON,
         nullable=False,
-        index=True
-    )
+        default=list
+    )  # List of program IDs assigned under this title
     assigned_by_head = Column(
         Integer,
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -46,6 +45,7 @@ class ProgramAssignment(Base):
     )
     
     # Assignment details
+    assignment_title = Column(String(255), nullable=False)  # Title/Name for this assignment
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     duration_days = Column(Integer, nullable=True)  # Manual override, null = auto-calculate
@@ -75,10 +75,10 @@ class ProgramAssignment(Base):
 
     # Relationships
     learner = relationship("User", foreign_keys=[learner_id], backref="program_assignments")
-    program = relationship("LearningGoals", backref="assignments")
     assigned_by = relationship("User", foreign_keys=[assigned_by_head])
     attachments = relationship(
         "ProgramAssignmentAttachment",
         back_populates="assignment",
         cascade="all, delete-orphan"
     )
+    # content_assignments backref is created automatically by LearnerContentAssignment.program_assignment relationship

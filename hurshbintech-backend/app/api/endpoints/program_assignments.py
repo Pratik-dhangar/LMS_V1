@@ -18,7 +18,8 @@ from fastapi import (
     status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete
+from sqlalchemy import delete, select, and_
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.deps import get_current_head, get_current_user
 from app.crud import program_assignment_crud, program_assignment_attachment_crud
@@ -27,6 +28,7 @@ from app.models.user_model import HeadProfile, User, UserRole
 from app.models.program_assignment_model import CompletionStatus, ProgramAssignment
 from app.models.program_assignment_attachment_model import AttachmentType
 from app.models.learner_content_assignment_model import LearnerContentAssignment, ContentCompletionStatus
+from app.models.learning_goals_model import LearningGoals
 from app.schemas.program_assignment_schema import (
     ProgramAssignmentCreate,
     ProgramAssignmentUpdate,
@@ -89,7 +91,15 @@ async def create_program_assignments(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Create program assignments for one or more learners (bulk)"""
+    """Create program assignments for one or more learners with multiple programs in a single assignment"""
+    
+    print(f"\n{'='*60}")
+    print(f"[ASSIGNMENT_CREATE] Received assignment data:")
+    print(f"  - Learner IDs: {assignment_data.learner_ids}")
+    print(f"  - Program IDs: {assignment_data.program_ids}")
+    print(f"  - Extra Content IDs: {assignment_data.extra_content_ids}")
+    print(f"  - Assignment Title: {assignment_data.assignment_title}")
+    print(f"{'='*60}\n")
     
     success_count = 0
     failed_count = 0
@@ -120,27 +130,14 @@ async def create_program_assignments(
                 })
                 continue
             
-            # Check for duplicate active assignment
-            existing = await program_assignment_crud.check_duplicate_active_assignment(
-                db, learner_id, assignment_data.program_id
-            )
-            
-            if existing:
-                learner = user  # Already fetched above
-                failed_count += 1
-                failed_learners.append({
-                    "learner_id": learner_id,
-                    "learner_name": learner.name if learner else "Unknown",
-                    "reason": "Active assignment already exists for this program"
-                })
-                continue
-            
-            # Create assignment
+            # Create ONE assignment with ALL program_ids
+            # Create assignment with all programs at once
             new_assignment = await program_assignment_crud.create_assignment(
                 db=db,
                 learner_id=learner_id,
-                program_id=assignment_data.program_id,
+                program_ids=assignment_data.program_ids,  # Pass entire list
                 assigned_by_head=current_head.user_id,
+                assignment_title=assignment_data.assignment_title,
                 start_date=assignment_data.start_date,
                 end_date=assignment_data.end_date,
                 duration_days=assignment_data.duration_days,
@@ -153,34 +150,46 @@ async def create_program_assignments(
                 
                 # Assign extra/manual learning contents if provided
                 if assignment_data.extra_content_ids and len(assignment_data.extra_content_ids) > 0:
-                    for content_id in assignment_data.extra_content_ids:
+                    print(f"[CONTENT_ASSIGNMENT] Creating {len(assignment_data.extra_content_ids)} content assignments for assignment ID {new_assignment.id}")
+                    for i, content_id in enumerate(assignment_data.extra_content_ids, 1):
                         try:
+                            print(f"[CONTENT_ASSIGNMENT] [{i}/{len(assignment_data.extra_content_ids)}] Processing content_id: {content_id}")
+                            
                             # Check if already assigned
                             already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
                                 db, learner_id, content_id
                             )
                             
                             if not already_assigned:
-                                await learner_content_assignment_crud.create_assignment(
+                                # Create the content assignment
+                                created_ca = await learner_content_assignment_crud.create_assignment(
                                     db=db,
                                     learner_id=learner_id,
                                     content_id=content_id,
                                     assigned_by_head=current_head.user_id,
                                     program_assignment_id=new_assignment.id
                                 )
-                                logger.info(f"Manually assigned content {content_id} to learner {learner_id}")
+                                print(f"[CONTENT_ASSIGNMENT] ✓ Created CA ID {created_ca.id} for content {content_id}")
+                            else:
+                                print(f"[CONTENT_ASSIGNMENT] ⊘ Content {content_id} already assigned to learner")
                         
                         except Exception as content_error:
-                            logger.warning(f"Failed to assign content {content_id} to learner {learner_id}: {str(content_error)}")
+                            print(f"[CONTENT_ASSIGNMENT] ✗ Error on content {content_id}: {str(content_error)}")
+                            import traceback
+                            traceback.print_exc()
+                else:
+                    print(f"[CONTENT_ASSIGNMENT] No extra_content_ids in request")
                         
             except Exception as content_error:
-                logger.warning(f"Failed to assign contents for program {assignment_data.program_id} to learner {learner_id}: {str(content_error)}")
+                print(f"[CONTENT_ASSIGNMENT] Block error: {str(content_error)}")
+                import traceback
+                traceback.print_exc()
             
             success_count += 1
             created_assignments.append(new_assignment.id)
             
         except Exception as e:
-            logger.error(f"Failed to create assignment for learner {learner_id}: {str(e)}")
+            logger.error(f"Failed to create assignments for learner {learner_id}: {str(e)}")
             failed_count += 1
             failed_learners.append({
                 "learner_id": learner_id,
@@ -240,7 +249,7 @@ async def get_assignments_overview(
             
             overview[learner_id]["assignments"].append({
                 "id": a.id,
-                "program_name": a.program.goal,
+                "program_name": a.assignment_title,
                 "status": a.completion_status.value,
                 "start_date": a.start_date.isoformat() if a.start_date else None,
                 "end_date": a.end_date.isoformat() if a.end_date else None,
@@ -289,8 +298,10 @@ async def get_program_assignments(
             id=a.id,
             learner_id=a.learner_id,
             learner_name=a.learner.name,
-            program_id=a.program_id,
-            program_name=a.program.goal,
+            program_ids=a.program_ids,
+            program_id=a.program_ids[0] if a.program_ids else None,
+            program_name=a.assignment_title,
+            assignment_title=a.assignment_title,
             start_date=a.start_date,
             end_date=a.end_date,
             duration_days=a.duration_days,
@@ -308,10 +319,9 @@ async def get_assignment_details(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Get detailed assignment information with learning contents"""
-    from sqlalchemy import select
-    from sqlalchemy.orm import selectinload
+    """Get assignment with ALL programs and ALL contents independent - no nesting"""
     from app.models.learning_content_model import LearningContent
+    from app.models.learning_goals_model import LearningGoals
     
     assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
@@ -328,49 +338,84 @@ async def get_assignment_details(
             detail="Not authorized to view this assignment"
         )
     
-    # Build response with learning contents from program
-    learning_contents = []
-    if hasattr(assignment.program, 'program_contents'):
-        for pc in sorted(assignment.program.program_contents, key=lambda x: x.sequence_order):
-            learning_contents.append(
-                LearningContentInProgram(
-                    id=pc.content.id,
-                    title=pc.content.title,
-                    description=pc.content.description,
-                    content_type=pc.content.content_type.value,
-                    file_url=pc.content.file_url,
-                    thumbnail_url=pc.content.thumbnail_url,
-                    sequence_order=pc.sequence_order
-                )
+    # Get ALL assignments with same assignment_title and learner
+    all_assignments_result = await db.execute(
+        select(ProgramAssignment)
+        .options(
+            selectinload(ProgramAssignment.content_assignments).selectinload(LearnerContentAssignment.content)
+        )
+        .where(
+            and_(
+                ProgramAssignment.assignment_title == assignment.assignment_title,
+                ProgramAssignment.learner_id == assignment.learner_id,
+                ProgramAssignment.assigned_by_head == current_head.user_id
             )
+        )
+    )
+    all_assignments = all_assignments_result.unique().scalars().all()
     
-    # Fetch all content assignments for this program assignment
+    # Collect ALL CONTENTS (independent - no program grouping)
     content_assignments_list = []
-    if hasattr(assignment, 'content_assignments'):
-        for ca in assignment.content_assignments:
-            # Get actual completion status from the assignment
-            completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NOT_STARTED
-            
-            content_assignments_list.append(
-                ContentAssignmentInProgram(
-                    id=ca.id,
-                    content_id=ca.content_id,
-                    learning_content=LearningContentBasic(
-                        id=ca.content.id,
-                        title=ca.content.title,
-                        description=ca.content.description,
-                        content_type=ca.content.content_type.value,
-                        file_url=ca.content.file_url,
-                        thumbnail_url=ca.content.thumbnail_url,
-                    ),
-                    completion_status=completion_status,
-                    assigned_at=ca.assigned_at,
-                    started_at=ca.started_at if hasattr(ca, 'started_at') else None,
-                    submitted_at=ca.submitted_at if hasattr(ca, 'submitted_at') else None,
-                    reviewed_at=ca.reviewed_at if hasattr(ca, 'reviewed_at') else None,
-                    reviewed_by_head=ca.reviewed_by_head if hasattr(ca, 'reviewed_by_head') else None
+    seen_content_ids = set()
+    
+    # Get ALL content assignments for this program assignment (direct query)
+    try:
+        print(f"\n[FETCH_ASSIGNMENT] Querying content assignments for assignment_id: {assignment_id}")
+        content_query = await db.execute(
+            select(LearnerContentAssignment)
+            .options(selectinload(LearnerContentAssignment.content))
+            .where(LearnerContentAssignment.program_assignment_id == assignment_id)
+        )
+        all_content_assignments = content_query.unique().scalars().all()
+        print(f"[FETCH_ASSIGNMENT] Found {len(all_content_assignments)} content assignments in DB")
+        
+        for ca in all_content_assignments:
+            print(f"[FETCH_ASSIGNMENT] - CA ID {ca.id}: content_id={ca.content_id}, has_content={ca.content is not None}")
+            if ca.content and ca.content_id not in seen_content_ids:
+                seen_content_ids.add(ca.content_id)
+                completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NOT_STARTED
+                
+                content_assignments_list.append(
+                    ContentAssignmentInProgram(
+                        id=ca.id,
+                        content_id=ca.content_id,
+                        learning_content=LearningContentBasic(
+                            id=ca.content.id,
+                            title=ca.content.title,
+                            description=ca.content.description,
+                            content_type=ca.content.content_type.value,
+                            file_url=ca.content.file_url if hasattr(ca.content, 'file_url') else None,
+                            thumbnail_url=ca.content.thumbnail_url if hasattr(ca.content, 'thumbnail_url') else None,
+                        ),
+                        completion_status=completion_status,
+                        assigned_at=ca.assigned_at,
+                        started_at=ca.started_at if hasattr(ca, 'started_at') else None,
+                        submitted_at=ca.submitted_at if hasattr(ca, 'submitted_at') else None,
+                        reviewed_at=ca.reviewed_at if hasattr(ca, 'reviewed_at') else None,
+                        reviewed_by_head=ca.reviewed_by_head if hasattr(ca, 'reviewed_by_head') else None
+                    )
                 )
+        print(f"[FETCH_ASSIGNMENT] Total content assignments in response: {len(content_assignments_list)}\n")
+    except Exception as e:
+        print(f"[FETCH_ASSIGNMENT] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    # Fetch program names/goals for display
+    program_goals = []
+    if assignment.program_ids and len(assignment.program_ids) > 0:
+        try:
+            programs_result = await db.execute(
+                select(LearningGoals).where(LearningGoals.id.in_(assignment.program_ids))
             )
+            programs = programs_result.scalars().all()
+            program_goals = [p.goal for p in programs] if programs else []
+        except Exception as e:
+            print(f"Error fetching program goals: {e}")
+            program_goals = []
+    
+    # Return response - program_ids contains all programs, contents are independent
+    # All contents go in content_assignments (independent list)
     
     return ProgramAssignmentResponse(
         id=assignment.id,
@@ -380,13 +425,15 @@ async def get_assignment_details(
             name=assignment.learner.name,
             email=assignment.learner.email
         ),
-        program_id=assignment.program_id,
+        program_ids=assignment.program_ids,  # List of program IDs
+        program_names=program_goals,  # NEW: List of program goal names
         program=ProgramWithContents(
-            id=assignment.program.id,
-            goal=assignment.program.goal,
-            goal_description=assignment.program.goal_description,
-            contents=learning_contents
+            id=assignment.program_ids[0] if assignment.program_ids else 0,  # Use first program ID
+            goal=program_goals[0] if program_goals else "",  # First program goal
+            goal_description="",
+            contents=[]  # Empty - programs and contents are SEPARATE
         ),
+        assignment_title=assignment.assignment_title,
         assigned_by_head=assignment.assigned_by_head,
         assigned_by=UserBasic(
             id=assignment.assigned_by.id,
@@ -403,6 +450,11 @@ async def get_assignment_details(
         notification_sent=assignment.notification_sent,
         assigned_at=assignment.assigned_at,
         updated_at=assignment.updated_at,
+        final_feedback_rating=assignment.final_feedback_rating if hasattr(assignment, 'final_feedback_rating') else None,
+        final_feedback_remarks=assignment.final_feedback_remarks if hasattr(assignment, 'final_feedback_remarks') else None,
+        final_feedback_given_at=assignment.final_feedback_given_at if hasattr(assignment, 'final_feedback_given_at') else None,
+        is_overdue=False,  # Can be calculated if needed
+        is_late_submission=False,  # Can be calculated if needed
         content_assignments=content_assignments_list
     )
 
@@ -477,21 +529,8 @@ async def update_assignment(
     # Reload with relationships for response
     updated_assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
-    # Build response (same as get_assignment_details)
-    learning_contents = []
-    if hasattr(updated_assignment.program, 'program_contents'):
-        for pc in sorted(updated_assignment.program.program_contents, key=lambda x: x.sequence_order):
-            learning_contents.append(
-                LearningContentInProgram(
-                    id=pc.content.id,
-                    title=pc.content.title,
-                    description=pc.content.description,
-                    content_type=pc.content.content_type.value,
-                    file_url=pc.content.file_url,
-                    thumbnail_url=pc.content.thumbnail_url,
-                    sequence_order=pc.sequence_order
-                )
-            )
+    # Build response (programs and contents are independent)
+    learning_contents = []  # Will be empty - contents are independent
     
     return ProgramAssignmentResponse(
         id=updated_assignment.id,
@@ -501,11 +540,11 @@ async def update_assignment(
             name=updated_assignment.learner.name,
             email=updated_assignment.learner.email
         ),
-        program_id=updated_assignment.program_id,
+        program_ids=updated_assignment.program_ids,  # List of program IDs
         program=ProgramWithContents(
-            id=updated_assignment.program.id,
-            goal=updated_assignment.program.goal,
-            goal_description=updated_assignment.program.goal_description,
+            id=updated_assignment.program_ids[0] if updated_assignment.program_ids else 0,
+            goal="",
+            goal_description="",
             contents=learning_contents
         ),
         assigned_by_head=updated_assignment.assigned_by_head,
@@ -566,7 +605,7 @@ async def delete_assignment(
     return None
 
 
-@router.post("/head/assignments/{assignment_id}/final-feedback", response_model=ProgramAssignmentResponse)
+@router.post("/head/assignments/{assignment_id}/final-feedback")
 async def submit_final_feedback(
     assignment_id: int,
     feedback: FinalFeedbackSubmit,
@@ -600,65 +639,26 @@ async def submit_final_feedback(
     assignment.final_feedback_remarks = feedback.remarks
     assignment.final_feedback_given_at = datetime.utcnow()
     
+    # Update completion status if provided
+    if feedback.completion_status:
+        valid_statuses = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']
+        if feedback.completion_status not in valid_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid completion_status. Must be one of: {', '.join(valid_statuses)}"
+            )
+        assignment.completion_status = feedback.completion_status
+    
     await db.commit()
     await db.refresh(assignment)
     
     logger.info(f"Final feedback submitted for assignment {assignment_id} by head {current_head.user_id}")
     
-    # Reload with relationships for response
-    updated_assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
-    
-    # Build response
-    learning_contents = []
-    if hasattr(updated_assignment.program, 'program_contents'):
-        for pc in sorted(updated_assignment.program.program_contents, key=lambda x: x.sequence_order):
-            learning_contents.append(
-                LearningContentInProgram(
-                    id=pc.content.id,
-                    title=pc.content.title,
-                    description=pc.content.description,
-                    content_type=pc.content.content_type.value,
-                    file_url=pc.content.file_url,
-                    thumbnail_url=pc.content.thumbnail_url,
-                    sequence_order=pc.sequence_order
-                )
-            )
-    
-    return ProgramAssignmentResponse(
-        id=updated_assignment.id,
-        learner_id=updated_assignment.learner_id,
-        learner=UserBasic(
-            id=updated_assignment.learner.id,
-            name=updated_assignment.learner.name,
-            email=updated_assignment.learner.email
-        ),
-        program_id=updated_assignment.program_id,
-        program=ProgramWithContents(
-            id=updated_assignment.program.id,
-            goal=updated_assignment.program.goal,
-            goal_description=updated_assignment.program.goal_description,
-            contents=learning_contents
-        ),
-        assigned_by_head=updated_assignment.assigned_by_head,
-        assigned_by=UserBasic(
-            id=updated_assignment.assigned_by.id,
-            name=updated_assignment.assigned_by.name,
-            email=updated_assignment.assigned_by.email
-        ) if updated_assignment.assigned_by else None,
-        start_date=updated_assignment.start_date,
-        end_date=updated_assignment.end_date,
-        duration_days=updated_assignment.duration_days,
-        head_notes=updated_assignment.head_notes,
-        learner_notes=updated_assignment.learner_notes,
-        completion_status=updated_assignment.completion_status,
-        completed_at=updated_assignment.completed_at,
-        final_feedback_rating=updated_assignment.final_feedback_rating,
-        final_feedback_remarks=updated_assignment.final_feedback_remarks,
-        final_feedback_given_at=updated_assignment.final_feedback_given_at,
-        notification_sent=updated_assignment.notification_sent,
-        assigned_at=updated_assignment.assigned_at,
-        updated_at=updated_assignment.updated_at
-    )
+    # Simply return the basic data
+    return {
+        "id": assignment.id,
+        "message": "Feedback submitted successfully"
+    }
 
 
 @router.post("/head/assignments/{assignment_id}/attachments", response_model=AttachmentResponse, status_code=status.HTTP_201_CREATED)
@@ -1238,34 +1238,61 @@ async def get_my_assignments(
         content_assignments_list = []
         if a.content_assignments:
             for ca in a.content_assignments:
-                content_assignments_list.append(
-                    ContentAssignmentInProgram(
-                        id=ca.id,
-                        content_id=ca.content_id,
-                        learning_content=LearningContentBasic(
-                            id=ca.content.id,
-                            title=ca.content.title,
-                            description=ca.content.description,
-                            content_type=ca.content.content_type,
-                            file_url=ca.content.file_url,
-                            thumbnail_url=ca.content.thumbnail_url,
-                        ),
-                        completion_status=ca.completion_status,
-                        assigned_at=ca.assigned_at,
-                        started_at=ca.started_at,
-                        submitted_at=ca.submitted_at,
-                        reviewed_at=ca.reviewed_at,
-                        reviewed_by_head=ca.reviewed_by_head,
+                try:
+                    # Convert content_type enum to string value
+                    content_type_str = ca.content.content_type.value if hasattr(ca.content.content_type, 'value') else str(ca.content.content_type)
+                    
+                    content_assignments_list.append(
+                        ContentAssignmentInProgram(
+                            id=ca.id,
+                            content_id=ca.content_id,
+                            learning_content=LearningContentBasic(
+                                id=ca.content.id,
+                                title=ca.content.title,
+                                description=ca.content.description,
+                                content_type=content_type_str,
+                                file_url=ca.content.file_url,
+                                thumbnail_url=ca.content.thumbnail_url,
+                            ),
+                            completion_status=ca.completion_status,
+                            assigned_at=ca.assigned_at,
+                            started_at=ca.started_at,
+                            submitted_at=ca.submitted_at,
+                            reviewed_at=ca.reviewed_at,
+                            reviewed_by_head=ca.reviewed_by_head,
+                        )
                     )
+                except Exception as e:
+                    logger.error(f"Error building content assignment {ca.id}: {str(e)}")
+                    continue
+        
+        # Get first program name for display (from program_ids list)
+        program_name = "Unknown Program"
+        program_names = []
+        if a.program_ids and len(a.program_ids) > 0:
+            # Fetch program names from LearningGoals
+            try:
+                programs_result = await db.execute(
+                    select(LearningGoals.goal)
+                    .where(LearningGoals.id.in_(a.program_ids))
+                    .order_by(LearningGoals.id)
                 )
+                program_names = [name[0] for name in programs_result.fetchall()]
+                program_name = program_names[0] if program_names else (a.assignment_title or "Program Assignment")
+            except Exception as e:
+                logger.error(f"Error fetching program names for assignment {a.id}: {str(e)}")
+                program_name = a.assignment_title or "Program Assignment"
         
         result.append(
             ProgramAssignmentListResponse(
                 id=a.id,
                 learner_id=a.learner_id,
-                learner_name=a.learner.name,
-                program_id=a.program_id,
-                program_name=a.program.goal,
+                learner_name=a.learner.name if a.learner else "Unknown",
+                program_ids=a.program_ids,  # List of program IDs
+                program_id=a.program_ids[0] if a.program_ids else None,  # First program ID for backward compatibility
+                program_name=program_name,
+                program_names=program_names,  # NEW: List of program names
+                assignment_title=a.assignment_title,
                 start_date=a.start_date,
                 end_date=a.end_date,
                 duration_days=a.duration_days,
@@ -1390,7 +1417,7 @@ async def get_my_assignment_details(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get detailed assignment information"""
+    """Get detailed assignment information with all contents from all programs under the same assignment_title"""
     
     if current_user.role != UserRole.LEARNER:
         raise HTTPException(
@@ -1422,21 +1449,64 @@ async def get_my_assignment_details(
         completion_date = assignment.completed_at.date() if isinstance(assignment.completed_at, datetime) else assignment.completed_at
         is_late_submission = completion_date > assignment.end_date
     
-    # Build response with learning contents
+    # learning_contents not needed for this endpoint - we'll return content_assignments instead
     learning_contents = []
-    if hasattr(assignment.program, 'program_contents'):
-        for pc in sorted(assignment.program.program_contents, key=lambda x: x.sequence_order):
-            learning_contents.append(
-                LearningContentInProgram(
-                    id=pc.content.id,
-                    title=pc.content.title,
-                    description=pc.content.description,
-                    content_type=pc.content.content_type.value,
-                    file_url=pc.content.file_url,
-                    thumbnail_url=pc.content.thumbnail_url,
-                    sequence_order=pc.sequence_order
-                )
+    
+    # Get ALL assignments with the same assignment_title and learner_id
+    # This collects all content_assignments from all programs under this assignment title
+    all_assignments_result = await db.execute(
+        select(ProgramAssignment)
+        .options(
+            joinedload(ProgramAssignment.content_assignments).joinedload(LearnerContentAssignment.content)
+        )
+        .where(
+            and_(
+                ProgramAssignment.assignment_title == assignment.assignment_title,
+                ProgramAssignment.learner_id == current_user.id
             )
+        )
+    )
+    all_assignments = all_assignments_result.unique().scalars().all()
+    
+    # Collect all content_assignments from all programs under this title
+    content_assignments_list = []
+    seen_content_ids = set()  # Avoid duplicates
+    
+    for assign in all_assignments:
+        if hasattr(assign, 'content_assignments'):
+            for lca in assign.content_assignments:
+                if lca.content and lca.content_id not in seen_content_ids:
+                    seen_content_ids.add(lca.content_id)
+                    content_assignments_list.append(
+                        ContentAssignmentInProgram(
+                            id=lca.id,
+                            content_id=lca.content_id,
+                            learning_content=LearningContentBasic(
+                                id=lca.content.id,
+                                title=lca.content.title,
+                                description=lca.content.description,
+                                content_type=lca.content.content_type.value,
+                                file_url=getattr(lca.content, 'file_url', None),
+                                thumbnail_url=getattr(lca.content, 'thumbnail_url', None)
+                            ),
+                            completion_status=lca.completion_status,
+                            assigned_at=lca.assigned_at,
+                            started_at=lca.started_at,
+                            submitted_at=lca.submitted_at,
+                            reviewed_at=lca.reviewed_at,
+                            reviewed_by_head=lca.reviewed_by_head
+                        )
+                    )
+    
+    # Fetch program names from program_ids
+    program_names = []
+    if assignment.program_ids:
+        programs_result = await db.execute(
+            select(LearningGoals.goal)
+            .where(LearningGoals.id.in_(assignment.program_ids))
+            .order_by(LearningGoals.id)
+        )
+        program_names = [name[0] for name in programs_result.fetchall()]
     
     return ProgramAssignmentResponse(
         id=assignment.id,
@@ -1446,13 +1516,15 @@ async def get_my_assignment_details(
             name=assignment.learner.name,
             email=assignment.learner.email
         ),
-        program_id=assignment.program_id,
+        program_ids=assignment.program_ids,
+        program_names=program_names,
         program=ProgramWithContents(
-            id=assignment.program.id,
-            goal=assignment.program.goal,
-            goal_description=assignment.program.goal_description,
-            contents=learning_contents
+            id=assignment.program_ids[0] if assignment.program_ids else 0,
+            goal="",
+            goal_description="",
+            contents=[]  # Empty - programs and contents are SEPARATE
         ),
+        assignment_title=assignment.assignment_title,
         assigned_by_head=assignment.assigned_by_head,
         assigned_by=UserBasic(
             id=assignment.assigned_by.id,
@@ -1470,7 +1542,8 @@ async def get_my_assignment_details(
         assigned_at=assignment.assigned_at,
         updated_at=assignment.updated_at,
         is_overdue=is_overdue,
-        is_late_submission=is_late_submission
+        is_late_submission=is_late_submission,
+        content_assignments=content_assignments_list
     )
 
 
@@ -1517,21 +1590,47 @@ async def update_my_assignment(
     # Reload with relationships for response
     updated_assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
-    # Build response
-    learning_contents = []
-    if hasattr(updated_assignment.program, 'program_contents'):
-        for pc in sorted(updated_assignment.program.program_contents, key=lambda x: x.sequence_order):
-            learning_contents.append(
-                LearningContentInProgram(
-                    id=pc.content.id,
-                    title=pc.content.title,
-                    description=pc.content.description,
-                    content_type=pc.content.content_type.value,
-                    file_url=pc.content.file_url,
-                    thumbnail_url=pc.content.thumbnail_url,
-                    sequence_order=pc.sequence_order
+    # Build response - fetch program names from program_ids
+    program_names = []
+    if updated_assignment.program_ids:
+        programs_result = await db.execute(
+            select(LearningGoals.goal)
+            .where(LearningGoals.id.in_(updated_assignment.program_ids))
+            .order_by(LearningGoals.id)
+        )
+        program_names = [name[0] for name in programs_result.fetchall()]
+    
+    # Build content assignments list
+    content_assignments_list = []
+    if updated_assignment.content_assignments:
+        for ca in updated_assignment.content_assignments:
+            try:
+                # Convert content_type enum to string value
+                content_type_str = ca.content.content_type.value if hasattr(ca.content.content_type, 'value') else str(ca.content.content_type)
+                
+                content_assignments_list.append(
+                    ContentAssignmentInProgram(
+                        id=ca.id,
+                        content_id=ca.content_id,
+                        learning_content=LearningContentBasic(
+                            id=ca.content.id,
+                            title=ca.content.title,
+                            description=ca.content.description,
+                            content_type=content_type_str,
+                            file_url=ca.content.file_url,
+                            thumbnail_url=ca.content.thumbnail_url,
+                        ),
+                        completion_status=ca.completion_status,
+                        assigned_at=ca.assigned_at,
+                        started_at=ca.started_at,
+                        submitted_at=ca.submitted_at,
+                        reviewed_at=ca.reviewed_at,
+                        reviewed_by_head=ca.reviewed_by_head,
+                    )
                 )
-            )
+            except Exception as e:
+                logger.error(f"Error building content assignment {ca.id}: {str(e)}")
+                continue
     
     return ProgramAssignmentResponse(
         id=updated_assignment.id,
@@ -1541,13 +1640,15 @@ async def update_my_assignment(
             name=updated_assignment.learner.name,
             email=updated_assignment.learner.email
         ),
-        program_id=updated_assignment.program_id,
+        program_ids=updated_assignment.program_ids,
+        program_names=program_names,
         program=ProgramWithContents(
-            id=updated_assignment.program.id,
-            goal=updated_assignment.program.goal,
-            goal_description=updated_assignment.program.goal_description,
-            contents=learning_contents
+            id=updated_assignment.program_ids[0] if updated_assignment.program_ids else 0,
+            goal="",
+            goal_description="",
+            contents=[]  # Empty - programs and contents are SEPARATE
         ),
+        assignment_title=updated_assignment.assignment_title,
         assigned_by_head=updated_assignment.assigned_by_head,
         assigned_by=UserBasic(
             id=updated_assignment.assigned_by.id,
@@ -1563,7 +1664,27 @@ async def update_my_assignment(
         completed_at=updated_assignment.completed_at,
         notification_sent=updated_assignment.notification_sent,
         assigned_at=updated_assignment.assigned_at,
-        updated_at=updated_assignment.updated_at
+        updated_at=updated_assignment.updated_at,
+        content_assignments=[
+            ContentAssignmentInProgram(
+                id=lca.id,
+                content_id=lca.content_id,
+                learning_content=LearningContentBasic(
+                    id=lca.content.id,
+                    title=lca.content.title,
+                    description=lca.content.description,
+                    content_type=lca.content.content_type.value
+                ),
+                completion_status=lca.completion_status,
+                assigned_at=lca.assigned_at,
+                started_at=lca.started_at,
+                submitted_at=lca.submitted_at,
+                reviewed_at=lca.reviewed_at,
+                reviewed_by_head=lca.reviewed_by_head
+            )
+            for lca in (updated_assignment.content_assignments or [])
+            if lca.content
+        ]
     )
 
 
