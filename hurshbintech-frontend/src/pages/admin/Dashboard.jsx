@@ -103,7 +103,7 @@ const AdminDashboard = () => {
                   <div
                     key={item.id}
                     onClick={item.onClick}
-                    className={`admin-menu-card admin-menu-card-${item.color}`}
+                    className={`admin-menu-card`}
                   >
                     <div className="admin-menu-card-icon">
                       <IconComponent size={48} />

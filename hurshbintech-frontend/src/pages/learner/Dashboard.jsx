@@ -465,17 +465,13 @@ const LearnerDashboard = () => {
       <main className="flex-1 p-6 md:p-4">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-          <h1 className="text-3xl font-bold text-amber-800 border-b-4 border-amber-600 pb-2 mb-6">
-            HurshBin Learner Dashboard
-          </h1>
-
-          {/* Welcome Banner */}
-          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-md">
-            <h2 className="text-2xl font-semibold mb-2">
-              Welcome, {user?.name || "Learner"}!
-            </h2>
-            <p className="text-white/90">Your personalized learning journey starts here</p>
-
+          <div className="flex justify-between items-center mb-6 pb-3 border-b-3" style={{ borderColor: '#DB9D32' }}>
+            <h1 className="text-3xl font-bold" style={{ color: '#000000' }}>
+              HurshBin Learner Dashboard
+            </h1>
+            <div className="text-base text-gray-600">
+              Welcome, <span className="font-bold text-gray-900">{user?.name || "Learner"}</span>!
+            </div>
           </div>
 
           {/* Quick Access Cards */}
@@ -516,13 +512,19 @@ const LearnerDashboard = () => {
               <div
                 key={index}
                 onClick={card.onClick}
-                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-amber-500 hover:border-2"
+                className="relative p-8 text-center cursor-pointer transition-all duration-300 ease-out transform group shadow-md hover:-translate-y-2 hover:scale-[1.02] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)',
+                  borderRadius: '1rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#DB9D32'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)'}
               >
-                <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
+                <div className="text-5xl mb-4 transition-transform duration-300 group-hover:scale-110 relative z-10">
                   {card.icon}
                 </div>
-                <div className="text-lg font-semibold text-gray-800 mb-1">{card.title}</div>
-                <div className="text-sm text-gray-500">{card.desc}</div>
+                <div className="text-lg font-semibold text-white mb-1 relative z-10">{card.title}</div>
+                <div className="text-sm text-amber-100 relative z-10">{card.desc}</div>
               </div>
             ))}
           </div>
