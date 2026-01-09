@@ -13,16 +13,19 @@ const LearnerProgramAssignmentDetails = () => {
 
     const [assignment, setAssignment] = useState(null);
     const [assignedContents, setAssignedContents] = useState([]);
+    const [allProgramsInTitle, setAllProgramsInTitle] = useState([]); // All programs with same title
+    const [failedImageIds, setFailedImageIds] = useState(new Set()); // Track failed image loads
     const [loading, setLoading] = useState(true);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [showContentModal, setShowContentModal] = useState(false);
-    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [showProofModal, setShowProofModal] = useState(false);
     const [selectedContent, setSelectedContent] = useState(null);
     const [learnerNotes, setLearnerNotes] = useState('');
     const [proofOfWork, setProofOfWork] = useState(null);
+    const [proofNotes, setProofNotes] = useState('');
+    const [previousProofNotes, setPreviousProofNotes] = useState([]);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchAssignment();
@@ -33,37 +36,53 @@ const LearnerProgramAssignmentDetails = () => {
     const fetchAssignment = async () => {
         try {
             setLoading(true);
-            console.log(`\n📖 FETCHING LEARNING CONTENTS FOR PROGRAM ${id}`);
+            // console.log(`\n📖 FETCHING ASSIGNMENT DETAILS FOR ID ${id}`);
 
-            // Only fetch learning contents - don't try to get assignment by ID (causes 404)
-            const allContents = await programAssignmentService.getMyLearningContents();
-            console.log(`✅ API returned ${allContents ? allContents.length : 0} total contents`);
+            // Fetch the specific assignment with its contents
+            const assignmentData = await programAssignmentService.getMyAssignmentById(parseInt(id));
+            // console.log(`✅ API returned assignment:`, assignmentData);
 
-            // Filter contents for this specific program assignment
-            const programContents = allContents.filter(c =>
-                c.program_assignment_id === parseInt(id)
-            );
-            console.log(`✅ Filtered to ${programContents.length} contents for program ${id}`);
+            if (assignmentData) {
+                setAssignment(assignmentData);
 
-            if (programContents && programContents.length > 0) {
-                programContents.forEach((c, idx) => {
-                    console.log(`  [${idx + 1}] ${c.title} - Status: ${c.completion_status}, Type: ${c.content_type}`);
-                });
+                // Get contents from the assignment's content_assignments
+                const contents = assignmentData.content_assignments || [];
+                // console.log(`✅ Found ${contents.length} contents for this assignment`);
 
-                // Get program title from first content if available
-                if (programContents[0]?.program_title) {
-                    setAssignment({
-                        id: parseInt(id),
-                        program_title: programContents[0].program_title
+                if (contents && contents.length > 0) {
+                    contents.forEach((c, idx) => {
+                        // console.log(`  [${idx + 1}] ${c.learning_content?.title} - Status: ${c.completion_status}`);
                     });
                 }
+
+                setAssignedContents(contents);
+
+                // Fetch ALL assignments to get all programs with the same assignment_title
+                if (assignmentData.assignment_title) {
+                    // console.log(`🔍 Fetching all programs for assignment title: "${assignmentData.assignment_title}"`);
+                    const allAssignments = await programAssignmentService.getMyAssignments();
+                    // Filter to get all programs with the same assignment_title
+                    const programsWithSameTitle = allAssignments.filter(
+                        a => a.assignment_title === assignmentData.assignment_title
+                    );
+                    // console.log(`✅ Found ${programsWithSameTitle.length} programs with this assignment title`);
+                    programsWithSameTitle.forEach((p, idx) => {
+                        // console.log(`  [${idx + 1}] ${p.program?.goal || p.program_name}`);
+                    });
+                    setAllProgramsInTitle(programsWithSameTitle);
+                }
+            } else {
+                console.warn('⚠️ No assignment data received');
+                setAssignment(null);
+                setAssignedContents([]);
             }
 
-            setAssignedContents(programContents);
-            console.log(`✅ Component state updated\n`);
+            // console.log(`✅ Component state updated\n`);
         } catch (e) {
-            console.error('❌ Failed to load contents:', e);
+            console.error('❌ Failed to load assignment:', e);
             toast.error('Failed to load assignment details');
+            setAssignment(null);
+            setAssignedContents([]);
         } finally {
             setLoading(false);
         }
@@ -76,7 +95,9 @@ const LearnerProgramAssignmentDetails = () => {
         setFile(null);
     };
 
-    const handleViewContent = (content) => {
+    const handleViewContent = (contentAssignment) => {
+        // Extract the learning content from the content assignment
+        const content = contentAssignment.learning_content || contentAssignment;
         setSelectedContent(content);
         setShowContentModal(true);
     };
@@ -170,14 +191,97 @@ const LearnerProgramAssignmentDetails = () => {
         }
     };
 
-    const handleCompleteAssignment = () => {
-        setShowCompleteModal(true);
+    const openProofModal = () => {
+        setShowProofModal(true);
+        setProofOfWork(null);
+        setProofNotes('');
+        // Fetch previous proof notes from learner_notes
+        if (assignment?.learner_notes) {
+            // Split by separator and filter empty entries
+            const notes = assignment.learner_notes
+                .split('---')
+                .map(note => note.trim())
+                .filter(note => note.length > 0);
+            setPreviousProofNotes(notes);
+        }
     };
 
-    const closeCompleteModal = () => {
-        setShowCompleteModal(false);
-        setLearnerNotes('');
+    const closeProofModal = () => {
+        setShowProofModal(false);
         setProofOfWork(null);
+    };
+
+    const handleSubmitProofOnly = async (e) => {
+        // Prevent any form submission or event propagation
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        if (!proofOfWork) {
+            toast.error('Please upload a proof of work file');
+            return;
+        }
+
+        try {
+            setUploading(true);
+            const statusBefore = assignment?.completion_status;
+            console.log(`📤 PROOF-ONLY UPLOAD: Starting for assignment ${id}`);
+            console.log(`📌 Status BEFORE: ${statusBefore}`);
+            console.log(`📌 Proof file: ${proofOfWork.name}`);
+
+            // ONLY upload file - absolutely NO other operations
+            const uploadResponse = await programAssignmentService.uploadMyAttachment(
+                parseInt(id),
+                proofOfWork,
+                'Proof of Work'
+            );
+
+            console.log(`✅ Upload successful:`, uploadResponse);
+            console.log(`📌 Status AFTER upload (must be ${statusBefore}): ${assignment?.completion_status}`);
+
+            // If notes provided, append them to learner_notes
+            if (proofNotes.trim()) {
+                const currentNotes = assignment?.learner_notes || '';
+                const timestamp = new Date().toLocaleString();
+                const newNote = `[${timestamp}] ${proofNotes.trim()}`;
+                const updatedNotes = currentNotes ? `${currentNotes}\n---\n${newNote}` : newNote;
+
+                // Update assignment with new notes
+                const updateResponse = await programAssignmentService.updateMyAssignment(parseInt(id), {
+                    learner_notes: updatedNotes
+                });
+
+                console.log(`📝 Notes saved:`, updateResponse);
+
+                // Update local assignment state so notes display properly on next modal open
+                setAssignment(prevAssignment => ({
+                    ...prevAssignment,
+                    learner_notes: updatedNotes
+                }));
+            }
+
+            // Success - show message and close
+            toast.success('Proof of work submitted successfully!');
+
+            // Reset state ONLY for this modal
+            setProofOfWork(null);
+            // Keep notes - don't auto-clear. User can manually delete if they want new notes
+            setShowProofModal(false);
+
+            // CRITICAL: Do NOT refresh assignment data
+            // CRITICAL: Do NOT update assignment status
+            // Status must remain unchanged after proof upload
+        } catch (error) {
+            console.error('❌ Proof upload failed:', error);
+            const errorMessage = error.response?.data?.detail ||
+                error.response?.data?.message ||
+                error.message ||
+                'Failed to submit proof of work';
+            toast.error(errorMessage);
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleProofFileChange = (e) => {
@@ -189,54 +293,6 @@ const LearnerProgramAssignmentDetails = () => {
                 return;
             }
             setProofOfWork(selectedFile);
-        }
-    };
-
-    const handleFinalSubmit = async () => {
-        if (!learnerNotes.trim() && !proofOfWork) {
-            toast.error('Please add notes or upload proof of work');
-            return;
-        }
-
-        try {
-            setSubmitting(true);
-            console.log(`🎯 Completing assignment ${id}...`);
-
-            // Upload proof of work if provided
-            if (proofOfWork) {
-                console.log('📤 Uploading proof of work...');
-                await programAssignmentService.uploadMyAttachment(
-                    parseInt(id),
-                    proofOfWork,
-                    'Proof of Work'
-                );
-            }
-
-            // Update assignment with notes and mark as complete
-            const updateData = {
-                completion_status: 'COMPLETED'
-            };
-
-            if (learnerNotes.trim()) {
-                updateData.learner_notes = learnerNotes;
-            }
-
-            await programAssignmentService.updateMyAssignment(parseInt(id), updateData);
-
-            toast.success('Assignment completed successfully!');
-            closeCompleteModal();
-
-            setTimeout(() => {
-                navigate('/learner/dashboard');
-            }, 1500);
-        } catch (error) {
-            console.error('Failed to complete assignment:', error);
-            const errorMessage = error.response?.data?.detail ||
-                error.response?.data?.message ||
-                'Failed to complete assignment';
-            toast.error(errorMessage);
-        } finally {
-            setSubmitting(false);
         }
     };
 
@@ -267,13 +323,29 @@ const LearnerProgramAssignmentDetails = () => {
 
     const getFileUrl = (fileUrl) => {
         if (!fileUrl) return '';
-        if (fileUrl.startsWith('http')) return fileUrl;
+
+        // Handle malformed URLs like http://uploads/...
+        if (fileUrl.startsWith('http://uploads/') || fileUrl.startsWith('https://uploads/')) {
+            // Extract the uploads/... part
+            const match = fileUrl.match(/uploads\/.+/);
+            return match ? `/${match[0]}` : fileUrl;
+        }
+
+        if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) return fileUrl;
+
         if (fileUrl.startsWith('s3://')) {
             const key = fileUrl.replace('s3://', '').split('/').slice(1).join('/');
             return `/s3/${key}`;
         }
+
         if (fileUrl.startsWith('/')) return fileUrl;
+
+        // For relative paths like 'uploads/learning_content/...'
         return `/${fileUrl}`;
+    };
+
+    const handleImageLoadError = (contentId) => {
+        setFailedImageIds(prev => new Set([...prev, contentId]));
     };
 
     const renderContentViewer = () => {
@@ -282,13 +354,16 @@ const LearnerProgramAssignmentDetails = () => {
         const fileUrl = getFileUrl(selectedContent.file_url);
         const contentType = selectedContent.content_type?.toLowerCase() || '';
 
+        // Image content
         if (contentType === 'image') {
             return (
                 <div className="content-viewer-image">
                     <img src={fileUrl} alt={selectedContent.title} onError={(e) => e.target.src = ''} />
                 </div>
             );
-        } else if (contentType === 'video') {
+        }
+        // Video content
+        else if (contentType === 'video') {
             return (
                 <div className="content-viewer-video">
                     <video width="100%" height="auto" controls>
@@ -297,13 +372,28 @@ const LearnerProgramAssignmentDetails = () => {
                     </video>
                 </div>
             );
-        } else if (contentType === 'pdf') {
+        }
+        // Audio content
+        else if (contentType === 'audio') {
+            return (
+                <div className="content-viewer-audio">
+                    <audio controls style={{ width: '100%' }}>
+                        <source src={fileUrl} type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            );
+        }
+        // PDF content
+        else if (contentType === 'pdf') {
             return (
                 <div className="content-viewer-pdf">
                     <iframe src={fileUrl} width="100%" height="500px" title={selectedContent.title} />
                 </div>
             );
-        } else if (contentType === 'document') {
+        }
+        // Document or text content
+        else if (contentType === 'document' || contentType === 'text') {
             return (
                 <div className="content-viewer-document">
                     <a href={fileUrl} target="_blank" rel="noopener noreferrer">
@@ -312,8 +402,23 @@ const LearnerProgramAssignmentDetails = () => {
                 </div>
             );
         }
-
-        return <p>Content type not supported for preview</p>;
+        // Fallback for any unsupported type - offer download
+        else {
+            return (
+                <div className="content-viewer-unsupported">
+                    <div className="unsupported-message">
+                        <p>Preview not available for this content type ({contentType})</p>
+                        {fileUrl ? (
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="download-link">
+                                📥 Download {selectedContent.title}
+                            </a>
+                        ) : (
+                            <p className="no-file">No file available for download</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
     };
 
     const handleFileChange = (e) => {
@@ -391,87 +496,147 @@ const LearnerProgramAssignmentDetails = () => {
         c.completion_status === 'REVIEWED'
     ).length;
 
+    // Check if assignment is already completed
+    const isAssignmentCompleted = assignment?.completion_status === 'COMPLETED';
+
+    // Debug logging
+    console.log('🔍 Assignment Status:', assignment?.completion_status);
+    console.log('✅ Is Completed:', isAssignmentCompleted);
+
+    // Collect all program names from the current assignment
+    // The assignment now has program_names array from the backend
+    const allPrograms = assignment?.program_names || [];
+
+    // console.log('🔍 Assignment program_names:', assignment?.program_names);
+    // console.log('📋 allPrograms:', allPrograms);
+
     return (
         <div className="page-container">
             <Navbar />
             <div className="assignment-details">
                 <div className="assignment-header">
-                    <h1>{assignment?.program_title || 'Program Assignment'}</h1>
-                    <div className="progress-summary">
-                        <p>Progress: <strong>{submittedCount} of {assignedContents.length}</strong> submitted</p>
-                        <div className="progress-bar">
-                            <div className="progress-fill" style={{ width: `${(submittedCount / assignedContents.length) * 100}%` }} />
-                        </div>
+                    <h1>📌 Assignment: {assignment?.assignment_title || 'Program Assignment'}</h1>
+                    <p className="assignment-subtitle">
+                        This assignment includes content from all assigned programs combined.
+                    </p>
+                    <div className="programs-info">
+                        <p className="programs-label"><strong>Programs in this Assignment:</strong></p>
+                        {allPrograms && allPrograms.length > 0 ? (
+                            <ul className="programs-list">
+                                {allPrograms.map((programName, idx) => (
+                                    <li key={idx}>• {programName}</li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="no-programs">No programs assigned to this assignment title yet.</p>
+                        )}
                     </div>
                 </div>
 
-                <div className="contents-grid">
-                    {assignedContents.map((content) => (
-                        <div key={content.id} className="content-card">
-                            <div className="content-header">
-                                <h3>{content.title}</h3>
-                                <div className="status-badge">
-                                    {getStatusBadge(content.completion_status)}
-                                </div>
-                            </div>
+                <div className="contents-section">
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <h2 className="contents-title">📚 Assignment Contents</h2>
+                        <p className="contents-subtitle">All content from all programs in this assignment:</p>
+                    </div>
+                    <div className="contents-grid">
+                        {assignedContents.map((contentAssignment, idx) => {
+                            const content = contentAssignment.learning_content || contentAssignment;
+                            const contentType = content.content_type?.toLowerCase() || '';
+                            const fileUrl = getFileUrl(content.file_url);
 
-                            <p className="content-type">{content.content_type || 'Unknown'}</p>
-
-                            {content.description && (
-                                <p className="content-description">{content.description}</p>
-                            )}
-
-                            <div className="content-actions">
-                                {content.completion_status === 'NOT_STARTED' && (
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={() => handleStartContent(content)}
+                            return (
+                                <div
+                                    key={contentAssignment.id}
+                                    className="content-card"
+                                    style={{ animationDelay: `${idx * 0.1}s` }}
+                                >
+                                    {/* Preview Thumbnail */}
+                                    <div
+                                        className="content-preview"
+                                        onClick={() => handleViewContent(contentAssignment)}
                                     >
-                                        Start
-                                    </button>
-                                )}
+                                        {contentType === 'image' && fileUrl && !failedImageIds.has(contentAssignment.id) ? (
+                                            <img
+                                                src={fileUrl}
+                                                alt={content.title}
+                                                className="preview-image"
+                                                onError={() => handleImageLoadError(contentAssignment.id)}
+                                            />
+                                        ) : contentType === 'image' || failedImageIds.has(contentAssignment.id) ? (
+                                            <div className="preview-placeholder image">
+                                                <span className="image-icon">🖼️</span>
+                                                <span className="content-type-overlay">IMAGE</span>
+                                            </div>
+                                        ) : contentType === 'video' ? (
+                                            <div className="preview-placeholder video">
+                                                <span className="play-icon">▶</span>
+                                                <span className="content-type-overlay">VIDEO</span>
+                                            </div>
+                                        ) : contentType === 'audio' ? (
+                                            <div className="preview-placeholder audio">
+                                                <span className="audio-icon">🔊</span>
+                                                <span className="content-type-overlay">AUDIO</span>
+                                            </div>
+                                        ) : contentType === 'pdf' ? (
+                                            <div className="preview-placeholder pdf">
+                                                <span className="pdf-icon">📄</span>
+                                                <span className="content-type-overlay">PDF</span>
+                                            </div>
+                                        ) : (
+                                            <div className="preview-placeholder document">
+                                                <span className="doc-icon">📎</span>
+                                                <span className="content-type-overlay">{contentType?.toUpperCase()}</span>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                {(content.completion_status === 'IN_PROGRESS' ||
-                                    content.completion_status === 'RESUBMISSION_REQUIRED') && (
-                                        <button
-                                            className="btn btn-success"
-                                            onClick={() => handleSubmitContent(content)}
-                                        >
-                                            Done
-                                        </button>
+                                    <div className="content-header">
+                                        <h3>{content.title}</h3>
+                                    </div>
+
+                                    {content.description && (
+                                        <p className="content-description">{content.description}</p>
                                     )}
 
-                                {(content.completion_status === 'SUBMITTED' ||
-                                    content.completion_status === 'LATE_SUBMITTED' ||
-                                    content.completion_status === 'REVIEWED') && (
+                                    <div className="content-actions">
                                         <button
                                             className="btn btn-secondary"
-                                            onClick={() => handleViewContent(content)}
+                                            onClick={() => handleViewContent(contentAssignment)}
                                         >
-                                            View
+                                            👁️ View
                                         </button>
-                                    )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                {/* Final Submit Button */}
-                {submittedCount === assignedContents.length && assignedContents.length > 0 && (
-                    <div className="final-submit-section">
-                        <h2>🎉 All Tasks Completed!</h2>
-                        <p>You have successfully submitted all tasks. Click below to complete the assignment.</p>
+                    {/* Complete Assignment or Submit More Proof button at the end */}
+                    {/* Upload Proof Button */}
+                    <div style={{ marginTop: '2rem', textAlign: 'center' }}>
                         <button
+                            type="button"
                             className="btn btn-complete"
-                            onClick={handleCompleteAssignment}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                openProofModal();
+                            }}
+                            style={{
+                                padding: '12px 30px',
+                                backgroundColor: '#10B981',
+                                color: 'white',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '1rem'
+                            }}
                         >
-                            Complete Assignment
+                            📤 Submit Proof of Work
                         </button>
                     </div>
-                )}
+                </div>
             </div>
-
-
             {/* Content Modal */}
             {showContentModal && selectedContent && (
                 <div className="modal-overlay" onClick={closeContentModal}>
@@ -487,36 +652,35 @@ const LearnerProgramAssignmentDetails = () => {
                 </div>
             )}
 
-            {/* Complete Assignment Modal */}
-            {showCompleteModal && (
-                <div className="modal-overlay" onClick={closeCompleteModal}>
-                    <div className="modal-content complete-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Proof of Work Submission Modal - Can submit multiple times */}
+            {showProofModal && (
+                <div className="modal-overlay" onClick={closeProofModal}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>🎉 Complete Assignment</h2>
-                            <button className="close-btn" onClick={closeCompleteModal}>×</button>
+                            <h2>📤 Submit More Proof of Work</h2>
+                            <button type="button" className="close-btn" onClick={(e) => { e.preventDefault(); closeProofModal(); }}>×</button>
                         </div>
                         <div className="modal-body">
-                            <p className="modal-description">
-                                Submit your final notes and upload proof of your completed work.
-                            </p>
+                            {/* Previous Notes History */}
+                            {previousProofNotes && previousProofNotes.length > 0 && (
+                                <div className="form-group previous-notes-section">
+                                    <label>📝 Previous Notes:</label>
+                                    <div className="previous-notes-list">
+                                        {previousProofNotes.map((note, index) => (
+                                            <div key={index} className="note-item">
+                                                <p className="note-text">{note}</p>
+                                                <hr style={{ margin: '10px 0', opacity: 0.3 }} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="form-group">
-                                <label htmlFor="learner-notes">Learner Notes *</label>
-                                <textarea
-                                    id="learner-notes"
-                                    className="form-control"
-                                    rows="4"
-                                    placeholder="Add your notes about the assignment..."
-                                    value={learnerNotes}
-                                    onChange={(e) => setLearnerNotes(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label htmlFor="proof-of-work">Proof of Work (Optional)</label>
+                                <label htmlFor="proof-file">Proof of Work *</label>
                                 <input
                                     type="file"
-                                    id="proof-of-work"
+                                    id="proof-file"
                                     className="form-control"
                                     onChange={handleProofFileChange}
                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
@@ -529,20 +693,38 @@ const LearnerProgramAssignmentDetails = () => {
                                 <p className="form-hint">Max file size: 50MB</p>
                             </div>
 
+                            <div className="form-group">
+                                <label htmlFor="proof-notes">Notes (Optional)</label>
+                                <textarea
+                                    id="proof-notes"
+                                    className="form-control"
+                                    rows="4"
+                                    placeholder="Add any notes or comments about this proof of work submission..."
+                                    value={proofNotes}
+                                    onChange={(e) => setProofNotes(e.target.value)}
+                                />
+                                <p className="form-hint">{proofNotes.length}/500 characters</p>
+                            </div>
+
                             <div className="modal-actions">
                                 <button
+                                    type="button"
                                     className="btn btn-secondary"
-                                    onClick={closeCompleteModal}
-                                    disabled={submitting}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        closeProofModal();
+                                    }}
+                                    disabled={uploading}
                                 >
                                     Cancel
                                 </button>
                                 <button
+                                    type="button"
                                     className="btn btn-complete"
-                                    onClick={handleFinalSubmit}
-                                    disabled={submitting || (!learnerNotes.trim() && !proofOfWork)}
+                                    onClick={handleSubmitProofOnly}
+                                    disabled={uploading || !proofOfWork}
                                 >
-                                    {submitting ? 'Submitting...' : 'Submit & Complete'}
+                                    {uploading ? 'Uploading...' : 'Submit Proof'}
                                 </button>
                             </div>
                         </div>

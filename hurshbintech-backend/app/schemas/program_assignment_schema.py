@@ -42,8 +42,8 @@ class LearningContentBasic(BaseModel):
     title: str
     description: Optional[str]
     content_type: str
-    file_url: str
-    thumbnail_url: Optional[str]
+    file_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -81,7 +81,8 @@ class ProgramWithContents(BaseModel):
 class ProgramAssignmentCreate(BaseModel):
     """Schema for creating a program assignment"""
     learner_ids: List[int] = Field(..., min_length=1)
-    program_id: int
+    program_ids: List[int] = Field(..., min_length=1, description="List of program IDs to assign under this title")
+    assignment_title: str = Field(..., min_length=1, description="Title for this program assignment")
     start_date: date
     end_date: date
     duration_days: Optional[int] = None
@@ -108,6 +109,7 @@ class FinalFeedbackSubmit(BaseModel):
     """Schema for Head to submit final feedback on program assignment"""
     rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5 stars")
     remarks: Optional[str] = Field(None, description="Optional feedback remarks")
+    completion_status: Optional[str] = Field(None, description="Update program assignment status: NOT_STARTED, IN_PROGRESS, or COMPLETED")
 
 
 class UserBasic(BaseModel):
@@ -135,8 +137,10 @@ class ProgramAssignmentResponse(BaseModel):
     id: int
     learner_id: int
     learner: UserBasic
-    program_id: int
-    program: ProgramWithContents
+    program_ids: List[int]  # Changed from program_id to program_ids
+    program_names: List[str] = []  # NEW: List of program goal names
+    program: ProgramWithContents  # Keep for backward compatibility - contains first program
+    assignment_title: str
     assigned_by_head: Optional[int]
     assigned_by: Optional[UserBasic]
     start_date: date
@@ -165,8 +169,11 @@ class ProgramAssignmentListResponse(BaseModel):
     id: int
     learner_id: int
     learner_name: str
-    program_id: int
+    program_ids: List[int]  # Changed from program_id to program_ids
+    program_id: Optional[int] = None  # Keep for backward compatibility
     program_name: str
+    program_names: List[str] = []  # NEW: List of program goal names
+    assignment_title: str
     start_date: date
     end_date: date
     duration_days: Optional[int]

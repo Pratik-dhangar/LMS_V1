@@ -23,8 +23,10 @@ const LearnerDashboard = () => {
 
   const [sessions, setSessions] = useState([]);
   const [learningPrograms, setLearningPrograms] = useState([]);
+  const [groupedPrograms, setGroupedPrograms] = useState({}); // { title: [programs] }
   const [learningContents, setLearningContents] = useState([]); // All assigned learning contents
   const [programContents, setProgramContents] = useState({}); // { programId: [contents] }
+  const [expandedPrograms, setExpandedPrograms] = useState(new Set()); // Track which programs are expanded
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
   const [loadingContents, setLoadingContents] = useState(false);
@@ -47,6 +49,13 @@ const LearnerDashboard = () => {
   // Feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
+
+  // Final submission modal state
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedProgramForSubmit, setSelectedProgramForSubmit] = useState(null);
+  const [submittingProgram, setSubmittingProgram] = useState(false);
+  const [learnerNotesForSubmit, setLearnerNotesForSubmit] = useState('');
+  const [proofOfWorkForSubmit, setProofOfWorkForSubmit] = useState(null);
 
 
   useEffect(() => {
@@ -115,17 +124,49 @@ const LearnerDashboard = () => {
   const fetchAssignedPrograms = async () => {
     try {
       const data = await programAssignmentService.getMyAssignments();
-      console.log("Fetched assigned programs data:", data); // Debug log
+      console.log("📌 Fetched assigned programs data:", data);
+
+      // Log first item to see structure
+      if (data && data.length > 0) {
+        console.log("🔍 First program item structure:", data[0]);
+      }
+
       // Ensure data is an array to prevent runtime errors
-      setLearningPrograms(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        // Sort by assignment_title
+        const sortedData = data.sort((a, b) => {
+          const titleA = (a.assignment_title || a.program_name || a.name || '').toLowerCase();
+          const titleB = (b.assignment_title || b.program_name || b.name || '').toLowerCase();
+          return titleA.localeCompare(titleB);
+        });
+        setLearningPrograms(sortedData);
+
+        // Group by assignment_title (each group represents one "Home Program" assignment)
+        const grouped = sortedData.reduce((acc, prog) => {
+          const title = prog.assignment_title;
+          if (!acc[title]) {
+            acc[title] = [];
+          }
+          acc[title].push(prog);
+          return acc;
+        }, {});
+        setGroupedPrograms(grouped);
+
+        console.log(`✅ Grouped ${sortedData.length} programs into ${Object.keys(grouped).length} assignment titles`);
+      } else {
+        console.warn("⚠️ Fetched data is not an array:", data);
+        setLearningPrograms([]);
+        setGroupedPrograms({});
+      }
     } catch (error) {
-      console.error("Error fetching assigned programs:", error);
+      console.error("❌ Error fetching assigned programs:", error);
       // Show error toast only once on initial login
       if (!programErrorToastShownRef.current) {
         // toast.info("No programs assigned yet");
         programErrorToastShownRef.current = true;
       }
       setLearningPrograms([]); // Set to empty array on error
+      setGroupedPrograms({});
     } finally {
       setLoadingPrograms(false);
     }
@@ -135,23 +176,51 @@ const LearnerDashboard = () => {
     try {
       setLoadingContents(true);
       const contents = await programAssignmentService.getMyLearningContents();
-      console.log("🔍 API Response - Fetched all learning contents:", contents); // Debug log
-      console.log(`📊 Total items in response: ${Array.isArray(contents) ? contents.length : 'NOT AN ARRAY'}`); // Debug log
+      console.log("🔍 API Response - Fetched all learning contents:", contents);
+      console.log(`📊 Total items in response: ${Array.isArray(contents) ? contents.length : 'NOT AN ARRAY'}`);
 
       if (Array.isArray(contents)) {
         contents.forEach((item, idx) => {
-          console.log(`  ${idx + 1}. ${item.title} (ID: ${item.id}, Type: ${item.content_type}, From Program: ${item.from_program})`);
+          console.log(`  ${idx + 1}. "${item.title}" (ID: ${item.id}, Type: ${item.content_type}, Assignment: ${item.program_assignment_id}, From Program: ${item.from_program})`);
         });
+
+        // Organize contents by program_assignment_id (the assignment they belong to)
+        // This ensures contents are properly grouped under their assignments
+        const byAssignment = {};
+        contents.forEach(content => {
+          const assignmentId = content.program_assignment_id;
+          if (assignmentId) {
+            if (!byAssignment[assignmentId]) {
+              byAssignment[assignmentId] = [];
+            }
+            byAssignment[assignmentId].push(content);
+          }
+        });
+
+        setProgramContents(byAssignment);
+        console.log(`📂 Organized contents into ${Object.keys(byAssignment).length} assignments:`, Object.keys(byAssignment));
       }
 
       setLearningContents(Array.isArray(contents) ? contents : []);
-      console.log(`✅ State updated with ${Array.isArray(contents) ? contents.length : 0} contents`); // Debug log
+      console.log(`✅ State updated with ${Array.isArray(contents) ? contents.length : 0} contents`);
     } catch (error) {
       console.error("❌ Error fetching learning contents:", error);
       setLearningContents([]);
     } finally {
       setLoadingContents(false);
     }
+  };
+
+  const toggleProgramExpand = (programId) => {
+    setExpandedPrograms(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(programId)) {
+        newSet.delete(programId);
+      } else {
+        newSet.add(programId);
+      }
+      return newSet;
+    });
   };
 
   const handleJoinSession = (sessionId) => {
@@ -180,6 +249,108 @@ const LearnerDashboard = () => {
     if (loadingTimeout) {
       clearTimeout(loadingTimeout);
       setLoadingTimeout(null);
+    }
+  };
+
+  const handleOpenSubmitModal = (program) => {
+    setSelectedProgramForSubmit(program);
+    setShowSubmitModal(true);
+    setLearnerNotesForSubmit('');
+    setProofOfWorkForSubmit(null);
+  };
+
+  const handleCloseSubmitModal = () => {
+    setShowSubmitModal(false);
+    setSelectedProgramForSubmit(null);
+    setLearnerNotesForSubmit('');
+    setProofOfWorkForSubmit(null);
+  };
+
+  const handleProofFileChange = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (selectedFile.size > maxSize) {
+        toast.error('File size must be less than 50MB');
+        return;
+      }
+      setProofOfWorkForSubmit(selectedFile);
+    }
+  };
+
+  const handleStartProgram = async (programId) => {
+    try {
+      console.log(`🚀 Starting program assignment ${programId}...`);
+
+      // Update assignment status to IN_PROGRESS
+      await programAssignmentService.updateMyAssignment(programId, {
+        completion_status: 'IN_PROGRESS'
+      });
+
+      console.log(`✅ Program started successfully`);
+
+      // Refresh programs to update button state
+      await fetchAssignedPrograms();
+
+      // Navigate to program details
+      navigate(`/learner/program-assignment/${programId}`);
+    } catch (error) {
+      console.error('Failed to start program:', error);
+      // Still navigate even if update fails
+      navigate(`/learner/program-assignment/${programId}`);
+    }
+  };
+
+  const handleFinalProgramSubmit = async () => {
+    if (!selectedProgramForSubmit) return;
+
+    if (!learnerNotesForSubmit.trim() && !proofOfWorkForSubmit) {
+      toast.error('Please add notes or upload proof of work');
+      return;
+    }
+
+    try {
+      setSubmittingProgram(true);
+      console.log(`🎯 Submitting program assignment ${selectedProgramForSubmit.id}...`);
+
+      // Upload proof of work if provided
+      if (proofOfWorkForSubmit) {
+        console.log('📤 Uploading proof of work...');
+        await programAssignmentService.uploadMyAttachment(
+          selectedProgramForSubmit.id,
+          proofOfWorkForSubmit,
+          'Proof of Work'
+        );
+      }
+
+      // Update assignment with notes and mark as completed
+      const updateData = {
+        completion_status: 'COMPLETED'
+      };
+
+      if (learnerNotesForSubmit.trim()) {
+        // Preserve existing notes and append new ones
+        const currentNotes = selectedProgramForSubmit.learner_notes || '';
+        const timestamp = new Date().toLocaleString();
+        const newNote = `[${timestamp}] ${learnerNotesForSubmit.trim()}`;
+        updateData.learner_notes = currentNotes ? `${currentNotes}\n---\n${newNote}` : newNote;
+      }
+
+      await programAssignmentService.updateMyAssignment(selectedProgramForSubmit.id, updateData);
+
+      toast.success('Program submitted successfully!');
+      handleCloseSubmitModal();
+
+      // Refresh programs to show updated status
+      await fetchAssignedPrograms();
+    } catch (error) {
+      console.error('Failed to submit program:', error);
+      const errorMessage = error.response?.data?.detail ||
+        error.response?.data?.message ||
+        'Failed to submit program';
+      toast.error(errorMessage);
+    } finally {
+      setSubmittingProgram(false);
     }
   };
 
@@ -294,17 +465,13 @@ const LearnerDashboard = () => {
       <main className="flex-1 p-6 md:p-4">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-          <h1 className="text-3xl font-bold text-amber-800 border-b-4 border-amber-600 pb-2 mb-6">
-            HurshBin Learner Dashboard
-          </h1>
-
-          {/* Welcome Banner */}
-          <div className="text-center p-10 rounded-xl text-white mb-8 bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 shadow-md">
-            <h2 className="text-2xl font-semibold mb-2">
-              Welcome, {user?.name || "Learner"}!
-            </h2>
-            <p className="text-white/90">Your personalized learning journey starts here</p>
-
+          <div className="flex justify-between items-center mb-6 pb-3 border-b-3" style={{ borderColor: '#DB9D32' }}>
+            <h1 className="text-3xl font-bold" style={{ color: '#000000' }}>
+              HurshBin Learner Dashboard
+            </h1>
+            <div className="text-base text-gray-600">
+              Welcome, <span className="font-bold text-gray-900">{user?.name || "Learner"}</span>!
+            </div>
           </div>
 
           {/* Quick Access Cards */}
@@ -345,13 +512,19 @@ const LearnerDashboard = () => {
               <div
                 key={index}
                 onClick={card.onClick}
-                className="relative bg-white rounded-2xl p-8 text-center cursor-pointer transition-all duration-500 ease-out transform group shadow-md hover:-translate-y-3 hover:scale-[1.05] hover:shadow-2xl hover:border-amber-500 hover:border-2"
+                className="relative p-8 text-center cursor-pointer transition-all duration-300 ease-out transform group shadow-md hover:-translate-y-2 hover:scale-[1.02] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)',
+                  borderRadius: '1rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#DB9D32'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)'}
               >
-                <div className="text-5xl mb-4 transition-transform duration-500 group-hover:scale-110">
+                <div className="text-5xl mb-4 transition-transform duration-300 group-hover:scale-110 relative z-10">
                   {card.icon}
                 </div>
-                <div className="text-lg font-semibold text-gray-800 mb-1">{card.title}</div>
-                <div className="text-sm text-gray-500">{card.desc}</div>
+                <div className="text-lg font-semibold text-white mb-1 relative z-10">{card.title}</div>
+                <div className="text-sm text-amber-100 relative z-10">{card.desc}</div>
               </div>
             ))}
           </div>
@@ -445,7 +618,7 @@ const LearnerDashboard = () => {
           {showHomePrograms && (
             <div ref={homeProgamsRef} className="mt-10 bg-white rounded-xl shadow-md p-6 animate-fadeInUp transition-all duration-500 ease-in-out">
               <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">
-                Your Home Programs (HP)
+                📚 Assigned Programs (Grouped by Assignment Title)
               </h2>
 
               {loadingPrograms ? (
@@ -454,49 +627,76 @@ const LearnerDashboard = () => {
                 <p className="text-gray-500">No home programs assigned yet.</p>
               ) : (
                 <div className="space-y-4">
-                  {learningPrograms.map((prog) => {
-                    // Use completion percentage from backend
-                    const completionPercentage = prog.completion_percentage || 0;
-
-                    // Check if program is fully completed (100%)
-                    const isFullyCompleted = completionPercentage >= 100;
-
-                    // Check if program has final feedback
-                    const hasFinalFeedback = prog.final_feedback_rating && prog.final_feedback_rating > 0;
+                  {Object.entries(groupedPrograms).map(([titleKey, programsList]) => {
+                    // Use first program's data for the group (they share same status if from same assignment)
+                    const firstProg = programsList[0];
+                    const completionStatus = firstProg.completion_status || 'NOT_STARTED';
+                    const hasFinalFeedback = firstProg.final_feedback_rating && firstProg.final_feedback_rating > 0;
+                    const isSubmitted = completionStatus === 'COMPLETED';
+                    const needsResubmission = isSubmitted && hasFinalFeedback;
+                    const isInProgress = completionStatus === 'IN_PROGRESS';
+                    const isNotStarted = completionStatus === 'NOT_STARTED';
 
                     return (
                       <div
-                        key={prog.id}
+                        key={titleKey}
                         className="p-5 rounded-lg border bg-gray-50 hover:bg-gray-100 transition relative"
                       >
-                        {/* Completed Badge (no feedback yet) */}
-                        {isFullyCompleted && !hasFinalFeedback && (
-                          <div className="absolute top-3 right-3 bg-green-100 border-2 border-green-400 rounded-full px-3 py-1 flex items-center gap-1">
-                            <span className="text-green-600 font-bold text-sm">✓</span>
-                            <span className="text-green-700 font-bold text-xs">Completed</span>
-                          </div>
-                        )}
-
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-800 mb-1">
-                              {prog.program_name || prog.name || 'Unnamed Program'}
+                            <h3 className="font-semibold text-gray-800 mb-2">
+                              📌 {titleKey}
                             </h3>
-                            <p className="text-sm text-gray-600">
-                              Assigned: {new Date(prog.assigned_at || prog.start_date).toLocaleDateString()}
-                            </p>
+
+                            {/* Programs List */}
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-600 font-semibold mb-1 uppercase">Programs:</p>
+                              <div className="ml-3 space-y-1">
+                                {firstProg.program_names && firstProg.program_names.length > 0 ? (
+                                  firstProg.program_names.map((name, idx) => (
+                                    <p key={idx} className="text-sm text-gray-700">
+                                      • {name}
+                                    </p>
+                                  ))
+                                ) : (
+                                  <p className="text-sm text-gray-700">
+                                    • {firstProg.program_name || 'Untitled Program'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Timeline Info */}
+                            <div className="space-y-1 text-xs text-gray-600 mt-2 pt-2 border-t border-gray-200">
+                              <div className="flex items-center gap-2">
+                                <span>📅 Start:</span>
+                                <span>{new Date(firstProg.start_date || firstProg.assigned_at).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span>⏰ Deadline:</span>
+                                <span className="font-semibold">{new Date(firstProg.end_date).toLocaleDateString()}</span>
+                              </div>
+                              {firstProg.duration_days && (
+                                <div className="flex items-center gap-2">
+                                  <span>⏱️ Duration:</span>
+                                  <span>{firstProg.duration_days} days</span>
+                                </div>
+                              )}
+
+                            </div>
                           </div>
-                          <div className="flex flex-row gap-2 items-center justify-end">
+
+                          <div className="flex flex-row gap-2 items-center justify-end ml-4 flex-shrink-0">
                             {/* Show Remarks button when final feedback exists */}
                             {hasFinalFeedback && (
                               <button
                                 className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:from-amber-600 hover:to-orange-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl relative"
                                 onClick={() => {
                                   setSelectedFeedback({
-                                    rating: prog.final_feedback_rating,
-                                    remarks: prog.final_feedback_remarks,
-                                    programName: prog.program_name || prog.name || 'Unnamed Program',
-                                    givenAt: prog.final_feedback_given_at
+                                    rating: firstProg.final_feedback_rating,
+                                    remarks: firstProg.final_feedback_remarks,
+                                    programName: titleKey,
+                                    givenAt: firstProg.final_feedback_given_at
                                   });
                                   setShowFeedbackModal(true);
                                 }}
@@ -505,33 +705,44 @@ const LearnerDashboard = () => {
                                 <span>Remarks</span>
                               </button>
                             )}
-                            {/* Continue/Start/View button */}
-                            <button
-                              className={`${isFullyCompleted && hasFinalFeedback
-                                ? 'bg-gray-600 hover:bg-gray-700'
-                                : isFullyCompleted
-                                  ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600'
-                                } text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl`}
-                              onClick={() => navigate(`/learner/program-assignment/${prog.id}`)}
-                            >
-                              {isFullyCompleted ? 'View' : 'Start'}
-                            </button>
-                          </div>
-                        </div>
 
-                        {/* Progress Bar */}
-                        <div className="mt-3">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-gray-600">Progress</span>
-                            <span className="text-xs font-semibold text-amber-600">{completionPercentage.toFixed(1)}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div
-                              className={`h-2.5 rounded-full transition-all duration-500 ${isFullyCompleted ? 'bg-green-600' : 'bg-amber-600'
-                                }`}
-                              style={{ width: `${completionPercentage}%` }}
-                            ></div>
+                            {/* Show Submit button only for IN_PROGRESS or RESUBMISSION_REQUIRED */}
+                            {(isInProgress || needsResubmission) && (
+                              <button
+                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                                onClick={() => handleOpenSubmitModal(firstProg)}
+                              >
+                                Submit
+                              </button>
+                            )}
+
+                            {/* Button Logic Based on Status */}
+                            {isNotStarted && (
+                              <button
+                                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                                onClick={() => handleStartProgram(firstProg.id)}
+                              >
+                                Start
+                              </button>
+                            )}
+
+                            {isInProgress && (
+                              <button
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                                onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
+                              >
+                                Continue
+                              </button>
+                            )}
+
+                            {isSubmitted && (
+                              <button
+                                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                                onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
+                              >
+                                View
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -737,6 +948,90 @@ const LearnerDashboard = () => {
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Submission Modal */}
+      {showSubmitModal && selectedProgramForSubmit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-2xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold mb-1">Submit Program</h3>
+                </div>
+                <button
+                  onClick={handleCloseSubmitModal}
+                  className="text-white hover:bg-green-600 rounded-full p-2 transition-colors"
+                  disabled={submittingProgram}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              
+              {/* Learner Notes */}
+              <div className="form-group mb-4">
+                <label htmlFor="submit-notes" className="text-sm font-semibold text-gray-600 mb-2 block">
+                  Notes (Required)
+                </label>
+                <textarea
+                  id="submit-notes"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  rows="4"
+                  placeholder="Add your notes about this submission..."
+                  value={learnerNotesForSubmit}
+                  onChange={(e) => setLearnerNotesForSubmit(e.target.value)}
+                  disabled={submittingProgram}
+                />
+              </div>
+
+              {/* Proof of Work */}
+              <div className="form-group mb-6">
+                <label htmlFor="submit-proof" className="text-sm font-semibold text-gray-600 mb-2 block">
+                  Proof of Work (Optional)
+                </label>
+                <input
+                  type="file"
+                  id="submit-proof"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={handleProofFileChange}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                  disabled={submittingProgram}
+                />
+                {proofOfWorkForSubmit && (
+                  <p className="text-xs text-green-600 mt-2">
+                    Selected: {proofOfWorkForSubmit.name} ({(proofOfWorkForSubmit.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Max file size: 50MB</p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={handleCloseSubmitModal}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 rounded-lg transition-all duration-200"
+                disabled={submittingProgram}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFinalProgramSubmit}
+                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={submittingProgram || (!learnerNotesForSubmit.trim() && !proofOfWorkForSubmit)}
+              >
+                {submittingProgram ? 'Submitting...' : 'Submit Program'}
               </button>
             </div>
           </div>

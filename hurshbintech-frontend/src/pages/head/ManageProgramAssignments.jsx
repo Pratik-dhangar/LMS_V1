@@ -20,6 +20,7 @@ const ManageProgramAssignments = () => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showContentsPreviewModal, setShowContentsPreviewModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [selectedGroupAssignments, setSelectedGroupAssignments] = useState([]);
   const [selectedContentAssignment, setSelectedContentAssignment] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [attachments, setAttachments] = useState([]);
@@ -34,7 +35,8 @@ const ManageProgramAssignments = () => {
   const [showFinalFeedbackModal, setShowFinalFeedbackModal] = useState(false);
   const [finalFeedbackData, setFinalFeedbackData] = useState({
     rating: 0,
-    remarks: ''
+    remarks: '',
+    completion_status: 'COMPLETED'
   });
   const [finalFeedbackSubmitting, setFinalFeedbackSubmitting] = useState(false);
 
@@ -48,6 +50,7 @@ const ManageProgramAssignments = () => {
     learner_ids: [],
     program_ids: [],  // Changed from program_id to program_ids array
     extra_content_ids: [],  // Additional learning contents to assign
+    assignment_title: '',  // Title/Name for this assignment
     start_date: '',
     end_date: '',
     duration_days: '',
@@ -75,6 +78,16 @@ const ManageProgramAssignments = () => {
     program.goal.toLowerCase().includes(searchProgram.toLowerCase()) ||
     (program.goal_description && program.goal_description.toLowerCase().includes(searchProgram.toLowerCase()))
   );
+
+  // Group assignments by title
+  const groupedAssignments = assignments.reduce((acc, assignment) => {
+    const title = assignment.assignment_title;
+    if (!acc[title]) {
+      acc[title] = [];
+    }
+    acc[title].push(assignment);
+    return acc;
+  }, {});
 
   const fetchInitialData = async () => {
     try {
@@ -209,57 +222,43 @@ const ManageProgramAssignments = () => {
       return toast.error('Please select at least one program');
     }
 
+    if (!formData.assignment_title || formData.assignment_title.trim() === '') {
+      return toast.error('Please enter an assignment title');
+    }
+
     if (!formData.start_date || !formData.end_date) {
       return toast.error('Please select start and end dates');
     }
 
     try {
-      let totalSuccess = 0;
-      let totalFailed = 0;
-      const failedAssignments = [];
-
       console.log('[ManageProgramAssignments] Form data:', formData);
       console.log('[ManageProgramAssignments] Extra content IDs:', formData.extra_content_ids);
 
-      // Loop through each selected program and create assignments
-      for (const programId of formData.program_ids) {
-        const payload = {
-          learner_ids: formData.learner_ids,
-          program_id: parseInt(programId),
-          extra_content_ids: formData.extra_content_ids && formData.extra_content_ids.length > 0 ? formData.extra_content_ids : [],
-          start_date: formData.start_date,
-          end_date: formData.end_date,
-          duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
-          head_notes: formData.head_notes || null,
-        };
+      // Send ALL selected programs in one request
+      const payload = {
+        learner_ids: formData.learner_ids,
+        program_ids: formData.program_ids.map(id => parseInt(id)),  // Send as array
+        assignment_title: formData.assignment_title.trim(),
+        extra_content_ids: formData.extra_content_ids && formData.extra_content_ids.length > 0 ? formData.extra_content_ids : [],
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
+        head_notes: formData.head_notes || null,
+      };
 
-        console.log('[ManageProgramAssignments] Payload for program', programId, ':', payload);
+      console.log('[ManageProgramAssignments] Payload:', payload);
 
-        try {
-          const result = await programAssignmentService.createAssignments(payload);
-          totalSuccess += result.success_count;
-          totalFailed += result.failed_count;
-
-          if (result.failed_learners && result.failed_learners.length > 0) {
-            failedAssignments.push(...result.failed_learners);
-          }
-        } catch (error) {
-          console.error(`Failed to assign program ${programId}:`, error);
-          const programName = programs.find(p => p.id === programId)?.goal || `Program #${programId}`;
-          toast.error(`Failed to assign ${programName}`);
-          totalFailed += formData.learner_ids.length;
-        }
-      }
+      const result = await programAssignmentService.createAssignments(payload);
 
       // Show summary results
-      if (totalSuccess > 0) {
+      if (result.success_count > 0) {
         toast.success(
-          `Successfully created ${totalSuccess} assignment(s) for ${formData.program_ids.length} program(s)!`
+          `Successfully created ${result.success_count} assignment(s) for ${formData.learner_ids.length} learner(s) × ${formData.program_ids.length} program(s)!`
         );
       }
 
-      if (totalFailed > 0) {
-        toast.warning(`${totalFailed} assignment(s) failed`);
+      if (result.failed_count > 0) {
+        toast.warning(`${result.failed_count} assignment(s) failed`);
       }
 
       // Refresh data and close modal
@@ -268,6 +267,7 @@ const ManageProgramAssignments = () => {
       setFormData({
         learner_ids: [],
         program_ids: [],
+        assignment_title: '',
         extra_content_ids: [],
         start_date: '',
         end_date: '',
@@ -283,8 +283,9 @@ const ManageProgramAssignments = () => {
     }
   };
 
-  const handleViewTracking = async (assignment) => {
+  const handleViewTracking = async (assignment, groupAssignments = []) => {
     setSelectedAssignment(assignment);
+    setSelectedGroupAssignments(groupAssignments);
     setShowTrackingModal(true);
 
     try {
@@ -294,10 +295,15 @@ const ManageProgramAssignments = () => {
         programAssignmentService.getCompletionStats(assignment.learner_id),
       ]);
 
+      console.log('Assignment Details Response:', assignmentDetails);
+      console.log('Program Names:', assignmentDetails.program_names);
+      console.log('Content Assignments:', assignmentDetails.content_assignments);
+
       setSelectedAssignment(assignmentDetails);
       setAttachments(attachmentsData);
       setCompletionStats(stats);
     } catch (error) {
+      console.error('Error loading tracking data:', error);
       toast.error('Failed to load tracking data');
     }
   };
@@ -319,7 +325,7 @@ const ManageProgramAssignments = () => {
       // Also refresh the main assignments list
       await fetchAssignments();
 
-      toast.success('Refreshed');
+      // toast.success('Refreshed');
     } catch (error) {
       toast.error('Failed to refresh');
     }
@@ -380,6 +386,29 @@ const ManageProgramAssignments = () => {
       fetchAssignments();
     } catch (error) {
       toast.error('Failed to delete assignment');
+    }
+  };
+
+  const handleDeleteAssignmentTitle = async (titleAssignments) => {
+    const programCount = titleAssignments.length;
+    const confirmation = window.confirm(
+      `Delete this assignment title and all ${programCount} associated program${programCount > 1 ? 's' : ''}?\n\n⚠️ This will delete:\n- All program assignments under this title\n- All assigned content\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmation) return;
+
+    try {
+      // Delete all assignments with this title (ask only once)
+      const deletePromises = titleAssignments.map(a =>
+        programAssignmentService.deleteAssignment(a.id)
+      );
+      await Promise.all(deletePromises);
+
+      toast.success(`Deleted ${programCount} program${programCount > 1 ? 's' : ''} successfully`);
+      fetchAssignments();
+    } catch (error) {
+      console.error('Failed to delete assignments:', error);
+      toast.error('Failed to delete one or more assignments');
     }
   };
 
@@ -496,7 +525,8 @@ const ManageProgramAssignments = () => {
     setShowFinalFeedbackModal(false);
     setFinalFeedbackData({
       rating: 0,
-      remarks: ''
+      remarks: '',
+      completion_status: 'COMPLETED'
     });
   };
 
@@ -515,7 +545,8 @@ const ManageProgramAssignments = () => {
       setFinalFeedbackSubmitting(true);
       await programAssignmentService.submitFinalFeedback(selectedAssignment.id, {
         rating: finalFeedbackData.rating,
-        remarks: finalFeedbackData.remarks
+        remarks: finalFeedbackData.remarks,
+        completion_status: finalFeedbackData.completion_status
       });
       toast.success('Final feedback submitted successfully!');
 
@@ -595,45 +626,27 @@ const ManageProgramAssignments = () => {
                             <p className="mpa-overview-learner-email">{learnerData.learner_email}</p>
                           </div>
                         </div>
-                        <div className="mpa-overview-percentage">
-                          <span className="mpa-percentage-value">{learnerData.completion_percentage}%</span>
-                          <span className="mpa-percentage-label">Complete</span>
-                        </div>
-                      </div>
-
-                      <div className="mpa-overview-stats-row">
-                        <div className="mpa-overview-stat">
-                          <span className="mpa-stat-number mpa-stat-total">{learnerData.total_assignments}</span>
-                          <span className="mpa-stat-text">Total</span>
-                        </div>
-                        <div className="mpa-overview-stat">
-                          <span className="mpa-stat-number mpa-stat-completed">{learnerData.completed}</span>
-                          <span className="mpa-stat-text">Done</span>
-                        </div>
-                        <div className="mpa-overview-stat">
-                          <span className="mpa-stat-number mpa-stat-progress">{learnerData.in_progress}</span>
-                          <span className="mpa-stat-text">Active</span>
-                        </div>
-                        <div className="mpa-overview-stat">
-                          <span className="mpa-stat-number mpa-stat-pending">{learnerData.not_started}</span>
-                          <span className="mpa-stat-text">Pending</span>
-                        </div>
-                      </div>
-
-                      <div className="mpa-progress-bar-container">
-                        <div
-                          className="mpa-progress-bar-fill"
-                          style={{ width: `${learnerData.completion_percentage}%` }}
-                        ></div>
                       </div>
 
                       <div className="overview-programs">
-                        <h4 className="overview-programs-title">Assigned Programs</h4>
+                        <h4 className="overview-programs-title">📌 Assigned Titles</h4>
                         <div className="overview-programs-list">
-                          {learnerData.assignments.map((a) => (
-                            <div key={a.id} className="overview-program-item">
-                              <span className={`status-dot ${getStatusColor(a.status)}`}></span>
-                              <span className="program-name">{a.program_name}</span>
+                          {Array.from(
+                            // Group assignments by assignment_title
+                            learnerData.assignments.reduce((acc, a) => {
+                              const title = a.assignment_title || a.program_name || 'Untitled';
+                              if (!acc.has(title)) {
+                                acc.set(title, []);
+                              }
+                              acc.get(title).push(a);
+                              return acc;
+                            }, new Map()).entries()
+                          ).map(([title]) => (
+                            <div key={title} className="overview-program-item" style={{ cursor: 'default' }}>
+                              <span style={{ fontSize: '12px', color: '#999' }}>•</span>
+                              <span className="program-name">
+                                {title}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -715,7 +728,7 @@ const ManageProgramAssignments = () => {
                     <table className="mpa-data-table">
                       <thead className="mpa-data-table-header">
                         <tr>
-                          <th className="mpa-data-table-th">Program</th>
+                          <th className="mpa-data-table-th">Title</th>
                           <th className="mpa-data-table-th">Learner</th>
                           <th className="mpa-data-table-th">Start Date</th>
                           <th className="mpa-data-table-th">End Date</th>
@@ -725,41 +738,40 @@ const ManageProgramAssignments = () => {
                         </tr>
                       </thead>
                       <tbody className="mpa-data-table-body">
-                        {assignments.map((assignment) => (
-                          <tr key={assignment.id} className="mpa-data-table-row">
+                        {Object.entries(groupedAssignments).map(([title, titleAssignments]) => (
+                          <tr key={title} className="mpa-data-table-row">
                             <td className="mpa-data-table-td">
-                              <div className="mpa-data-table-name">{assignment.program_name}</div>
-                              <div className="mpa-data-table-subtext">ID: {assignment.program_id}</div>
+                              <div className="mpa-data-table-name">{title}</div>
                             </td>
                             <td className="mpa-data-table-td">
-                              <div className="mpa-data-table-name">{assignment.learner_name}</div>
+                              <div className="mpa-data-table-name">{titleAssignments[0].learner_name}</div>
                             </td>
                             <td className="mpa-data-table-td">
-                              {new Date(assignment.start_date).toLocaleDateString()}
+                              {new Date(titleAssignments[0].start_date).toLocaleDateString()}
                             </td>
                             <td className="mpa-data-table-td">
-                              {new Date(assignment.end_date).toLocaleDateString()}
+                              {new Date(titleAssignments[0].end_date).toLocaleDateString()}
                             </td>
                             <td className="mpa-data-table-td">
-                              {assignment.duration_days ||
-                                calculateDuration(assignment.start_date, assignment.end_date)} days
+                              {titleAssignments[0].duration_days ||
+                                calculateDuration(titleAssignments[0].start_date, titleAssignments[0].end_date)} days
                             </td>
                             <td className="mpa-data-table-td">
-                              <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
-                                {getStatusLabel(assignment.completion_status)}
+                              <span className={`mpa-status-badge ${getStatusColor(titleAssignments[0].completion_status)}`}>
+                                {getStatusLabel(titleAssignments[0].completion_status)}
                               </span>
                             </td>
                             <td className="mpa-data-table-td mpa-data-table-td-center">
                               <div className="mpa-action-buttons">
                                 <button
-                                  onClick={() => handleViewTracking(assignment)}
+                                  onClick={() => handleViewTracking(titleAssignments[0], titleAssignments)}
                                   className="mpa-btn-primary mpa-btn-sm"
                                   title="View Tracking"
                                 >
                                   Track
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                  onClick={() => handleDeleteAssignmentTitle(titleAssignments)}
                                   className="mpa-btn-danger mpa-btn-sm"
                                   title="Delete"
                                 >
@@ -775,43 +787,49 @@ const ManageProgramAssignments = () => {
 
                   {/* Mobile Cards */}
                   <div className="mpa-mobile-cards">
-                    {assignments.map((assignment) => (
-                      <div key={assignment.id} className="mpa-mobile-card">
+                    {Object.entries(groupedAssignments).map(([title, titleAssignments]) => (
+                      <div key={title} className="mpa-mobile-card">
                         <div className="mpa-mobile-card-header">
-                          <h3 className="mpa-mobile-card-title">{assignment.program_name}</h3>
-                          <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
-                            {getStatusLabel(assignment.completion_status)}
+                          <h3 className="mpa-mobile-card-title">{title}</h3>
+                          <span className={`mpa-status-badge ${getStatusColor(titleAssignments[0].completion_status)}`}>
+                            {getStatusLabel(titleAssignments[0].completion_status)}
                           </span>
                         </div>
 
                         <div className="mpa-mobile-card-info">
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Learner:</span>
-                            <span className="mpa-info-value">{assignment.learner_name}</span>
+                            <span className="mpa-info-value">{titleAssignments[0].learner_name}</span>
+                          </div>
+                          <div className="mpa-info-row">
+                            <span className="mpa-info-label">Programs:</span>
+                            <span className="mpa-info-value">
+                              {titleAssignments.map(a => a.program_name).join(', ')}
+                            </span>
                           </div>
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Duration:</span>
                             <span className="mpa-info-value">
-                              {new Date(assignment.start_date).toLocaleDateString()} - {new Date(assignment.end_date).toLocaleDateString()}
+                              {new Date(titleAssignments[0].start_date).toLocaleDateString()} - {new Date(titleAssignments[0].end_date).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Days:</span>
                             <span className="mpa-info-value">
-                              {assignment.duration_days || calculateDuration(assignment.start_date, assignment.end_date)} days
+                              {titleAssignments[0].duration_days || calculateDuration(titleAssignments[0].start_date, titleAssignments[0].end_date)} days
                             </span>
                           </div>
                         </div>
 
                         <div className="mpa-mobile-card-actions">
                           <button
-                            onClick={() => handleViewTracking(assignment)}
+                            onClick={() => handleViewTracking(titleAssignments[0], titleAssignments)}
                             className="mpa-btn-primary"
                           >
                             View Tracking
                           </button>
                           <button
-                            onClick={() => handleDeleteAssignment(assignment.id)}
+                            onClick={() => handleDeleteAssignmentTitle(titleAssignments)}
                             className="mpa-btn-danger"
                           >
                             Delete
@@ -835,6 +853,21 @@ const ManageProgramAssignments = () => {
             <h2 className="mpa-modal-title">Assign Program to Learners</h2>
 
             <form onSubmit={handleSubmit}>
+              {/* Assignment Title */}
+              <div className="mpa-form-field">
+                <label className="mpa-form-label">
+                  Assignment Title <span className="mpa-form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter a title for this program assignment (e.g., 'Q1 Home Program', 'Advanced Learning Path')..."
+                  className="mpa-form-input"
+                  value={formData.assignment_title}
+                  onChange={(e) => setFormData({ ...formData, assignment_title: e.target.value })}
+                  required
+                />
+              </div>
+
               {/* Learner Selection */}
               <div className="mpa-form-field">
                 <label className="mpa-form-label">
@@ -1120,45 +1153,22 @@ const ManageProgramAssignments = () => {
               </button>
             </div>
 
-            {/* Completion Stats */}
-            {completionStats && (
-              <div className="mpa-stats-card">
-                <h3 className="mpa-stats-title">Overall Progress for {selectedAssignment.learner.name}</h3>
-                <div className="mpa-stats-grid">
-                  <div className="mpa-stat-item">
-                    <div className="mpa-stat-value">{completionStats.total_assignments}</div>
-                    <div className="mpa-stat-label">Total Programs</div>
-                  </div>
-                  <div className="mpa-stat-item">
-                    <div className="mpa-stat-value">{completionStats.completed}</div>
-                    <div className="mpa-stat-label">Completed</div>
-                  </div>
-                  <div className="mpa-stat-item">
-                    <div className="mpa-stat-value">{completionStats.in_progress}</div>
-                    <div className="mpa-stat-label">In Progress</div>
-                  </div>
-                  <div className="mpa-stat-item">
-                    <div className="mpa-stat-value">{completionStats.completion_percentage}%</div>
-                    <div className="mpa-stat-label">Completion Rate</div>
-                  </div>
-                </div>
-                <div className="mpa-progress-bar-container">
-                  <div
-                    className="mpa-progress-bar-fill"
-                    style={{ width: `${completionStats.completion_percentage}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Assignment Details */}
             <div className="mpa-assignment-details">
               <h3 className="mpa-section-title">Program Details</h3>
               <div className="mpa-details-grid">
                 <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Program:</span>
+                  <span className="mpa-detail-label">Assignment Title:</span>
                   <span className="mpa-detail-value">
-                    {selectedAssignment?.program?.goal || selectedAssignment?.program_name || 'N/A'}
+                    {selectedAssignment?.assignment_title || 'N/A'}
+                  </span>
+                </div>
+                <div className="mpa-detail-item">
+                  <span className="mpa-detail-label">Programs:</span>
+                  <span className="mpa-detail-value">
+                    {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
+                      ? selectedAssignment.program_names.join(', ')
+                      : 'N/A'}
                   </span>
                 </div>
                 <div className="mpa-detail-item">
@@ -1188,7 +1198,7 @@ const ManageProgramAssignments = () => {
               </div>
 
               {/* Learning Contents - Both Auto and Manual */}
-              {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 && (
+              {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 ? (
                 <div className="mpa-contents-section">
                   <h4 className="mpa-subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
                   <div className="mpa-contents-list">
@@ -1204,9 +1214,6 @@ const ManageProgramAssignments = () => {
                           </div>
                           <div className="mpa-content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
                           <div className="mpa-content-meta">
-                            <span className={`mpa-status-badge mpa-status-badge-sm ${getStatusColor(assignment.completion_status)}`}>
-                              {getStatusLabel(assignment.completion_status)}
-                            </span>
                             {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
                               <button
                                 onClick={() => handleOpenFeedbackModal(assignment)}
@@ -1221,29 +1228,14 @@ const ManageProgramAssignments = () => {
                     ))}
                   </div>
                 </div>
-              )}
-
-              {/* Fallback: Show program contents if content_assignments not available */}
-              {(!selectedAssignment?.content_assignments || selectedAssignment.content_assignments.length === 0) &&
-                selectedAssignment?.program?.contents && selectedAssignment.program.contents.length > 0 && (
-                  <div className="mpa-contents-section">
-                    <h4 className="mpa-subsection-title">Learning Contents ({selectedAssignment.program.contents.length})</h4>
-                    <div className="mpa-contents-list">
-                      {selectedAssignment.program.contents.map((content, index) => (
-                        <div key={content.id} className="mpa-content-item">
-                          <span className="mpa-content-order">{index + 1}</span>
-                          {content.thumbnail_url && (
-                            <img src={content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
-                          )}
-                          <div className="mpa-content-info">
-                            <div className="mpa-content-title">{content.title}</div>
-                            <div className="mpa-content-type">{content.content_type}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+              ) : (
+                <div className="mpa-contents-section">
+                  <h4 className="mpa-subsection-title">Assigned Learning Contents</h4>
+                  <div className="mpa-empty-state-sm">
+                    <p>No learning contents assigned yet</p>
                   </div>
-                )}
+                </div>
+              )}
 
               {/* Head Notes */}
               {selectedAssignment.head_notes && (
@@ -1494,6 +1486,26 @@ const ManageProgramAssignments = () => {
                 className="mpa-textarea"
                 rows="6"
               />
+            </div>
+
+            {/* Status Section */}
+            <div className="mpa-feedback-status-section">
+              <label className="mpa-label" htmlFor="completion_status">
+                Program Status
+              </label>
+              <select
+                id="completion_status"
+                value={finalFeedbackData.completion_status}
+                onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, completion_status: e.target.value })}
+                className="mpa-select"
+              >
+                <option value="NOT_STARTED">Not Started</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+              <p className="mpa-text-muted" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                Select the status to change the learner's program status
+              </p>
             </div>
 
             {/* Modal Actions */}
