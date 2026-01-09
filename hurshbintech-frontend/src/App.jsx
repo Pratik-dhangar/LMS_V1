@@ -50,6 +50,7 @@ import ProgramGraphView from './pages/head/ProgramGraphView';
 // Trainer Pages
 import TrainerDashboard from './pages/trainer/Dashboard';
 import TrainerSession from './pages/trainer/TrainerSession';
+import TodaysSchedule from './pages/trainer/TodaysSchedule';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
@@ -442,6 +443,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
               <TrainerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/schedule"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TodaysSchedule />
             </ProtectedRoute>
           }
         />

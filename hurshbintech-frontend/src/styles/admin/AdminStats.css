@@ -60,6 +60,12 @@
     color: #14b8a6;
 }
 
+.admin-stat-sublabel {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
 .admin-stat-loading {
     grid-column: 1 / -1;
     text-align: center;
