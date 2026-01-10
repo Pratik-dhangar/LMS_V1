@@ -121,35 +121,40 @@ const ManageSessions = () => {
   };
 
   const getSessionStatus = (session) => {
-    // Check if scheduled session is expired (time has passed and session not started)
+    // First check if already cancelled or ended
+    if (session.status === 'cancelled') {
+      return 'cancelled';
+    }
+    if (session.status === 'active') {
+      return 'active';
+    }
+    if (session.status === 'ended') {
+      return 'ended';
+    }
+
+    // Check if scheduled session is expired (scheduled time + duration has passed and session not started)
     if (session.status === 'scheduled' && session.scheduled_date) {
       try {
         const now = new Date();
-        let scheduled = new Date(session.scheduled_date);
+        const scheduled = new Date(session.scheduled_date);
 
-        // Handle timezone offset - if the date string doesn't have timezone info, 
-        // assume it's in local time. If it has 'Z' or timezone offset, use as is.
-        const dateString = String(session.scheduled_date).trim();
+        // Calculate session end time: scheduled_date + duration (in minutes)
+        const durationMs = (session.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
 
-        // If date doesn't have timezone indicator and contains 'T', treat as local time
-        if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
-          // Parse assuming local time
-          scheduled = new Date(dateString);
-        } else {
-          // Parse ISO format or other standard formats
-          scheduled = new Date(dateString);
-        }
+        // Add 5-minute buffer to account for timezone differences
+        const bufferMs = 5 * 60 * 1000; // 5 minutes
+        const adjustedNow = new Date(now.getTime() - bufferMs);
 
-        // Add a small buffer (1 minute) to avoid edge case timing issues
-        const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
-
-        if (scheduled < bufferTime) {
+        // If current time is after (session end time + buffer), it's expired
+        if (adjustedNow >= sessionEndTime) {
           return 'expired';
         }
       } catch (e) {
         console.warn('Error parsing session date:', e);
       }
     }
+
     return session.status;
   };
 
@@ -371,8 +376,8 @@ const ManageSessions = () => {
                             <div>{session.duration} min</div>
                           </td>
                           <td className="table-primary-td">
-                            <span className={`status-badge ${getStatusBadge(session.status)}`}>
-                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                            <span className={`status-badge ${getStatusBadge(getSessionStatus(session))}`}>
+                              {getSessionStatus(session) === 'expired' ? 'Expired' : getSessionStatus(session).charAt(0).toUpperCase() + getSessionStatus(session).slice(1)}
                             </span>
                           </td>
                           <td className="table-primary-td">

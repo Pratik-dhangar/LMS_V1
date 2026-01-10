@@ -5,6 +5,8 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
+import { Calendar, MessageSquare, ShoppingCart, GraduationCap, User } from 'lucide-react';
+import '../../styles/admin/index.css';
 
 const TrainerDashboard = () => {
   const { user } = useAuth();
@@ -22,11 +24,7 @@ const TrainerDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showSchedule, setShowSchedule] = useState(false);
   const [_loadingExtras, setLoadingExtras] = useState(true);
-  const scheduleRef = useRef(null);
-  const [learnerQuery, setLearnerQuery] = useState("");
-  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
 
@@ -189,8 +187,6 @@ const TrainerDashboard = () => {
     }
   };
 
-
-
   const handleStartSession = async (sessionId) => {
     try {
       await sessionService.startSession(sessionId);
@@ -256,602 +252,120 @@ const TrainerDashboard = () => {
     setSelectedSession(null);
   };
 
-  const getStatusBadge = (status, scheduledDate) => {
-    const base = "px-3 py-1 rounded-full text-xs font-semibold";
-
-    // Check if scheduled session is expired (time has passed and session not started)
-    if (status === "scheduled" && scheduledDate) {
-      const now = new Date();
-      const scheduled = new Date(scheduledDate);
-      if (scheduled < now) {
-        return `${base} bg-gray-200 text-gray-800`;
-      }
-    }
-
-    const map = {
-      scheduled: "bg-amber-100 text-amber-800",
-      active: "bg-green-100 text-green-800",
-      ended: "bg-gray-100 text-gray-800",
-      cancelled: "bg-red-100 text-red-800",
-      expired: "bg-gray-200 text-gray-800",
-    };
-    return `${base} ${map[status] || "bg-gray-100 text-gray-800"}`;
-  };
-
-  const getSessionStatus = (session) => {
-    // Check if scheduled session is expired (time has passed and session not started)
-    if (session.status === "scheduled" && session.scheduled_date) {
-      try {
-        const now = new Date();
-        let scheduled = new Date(session.scheduled_date);
-
-        // Handle timezone offset - if the date string doesn't have timezone info, 
-        // assume it's in local time. If it has 'Z' or timezone offset, use as is.
-        const dateString = String(session.scheduled_date).trim();
-
-        // If date doesn't have timezone indicator and contains 'T', treat as local time
-        if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
-          // Parse assuming local time
-          scheduled = new Date(dateString);
-        } else {
-          // Parse ISO format or other standard formats
-          scheduled = new Date(dateString);
-        }
-
-        // Add a small buffer (1 minute) to avoid edge case timing issues
-        const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
-
-        if (scheduled < bufferTime) {
-          return "expired";
-        }
-      } catch (e) {
-        console.warn('Error parsing session date:', e);
-      }
-    }
-    return session.status;
-  };
-
-  const todaysDateString = useMemo(() => {
-    const d = new Date();
-    // e.g. October 03, 2025
-    return d.toLocaleDateString(undefined, {
-      month: "long",
-      day: "2-digit",
-      year: "numeric",
-    });
-  }, []);
-
-  const filteredLearners = useMemo(() => {
-    if (!learnerQuery) return learners;
-    return learners.filter((l) =>
-      l.name?.toLowerCase().includes(learnerQuery.toLowerCase())
-    );
-  }, [learners, learnerQuery]);
+  const menuItems = [
+    {
+      id: '1',
+      title: 'IIP Programs',
+      description: "View today's schedule and manage sessions",
+      icon: GraduationCap,
+      onClick: () => navigate('/trainer/schedule')
+    },
+    {
+      id: '2',
+      title: 'Communication',
+      description: 'Send messages and communicate with team',
+      icon: MessageSquare,
+      onClick: () => navigate('/trainer/communication')
+    },
+    {
+      id: '3',
+      title: 'Book Appointment',
+      description: 'Schedule appointments with coaches',
+      icon: Calendar,
+      onClick: () => navigate('/book-appointment')
+    },
+    {
+      id: '4',
+      title: 'Buy Learning Material',
+      description: 'Browse and purchase learning resources',
+      icon: ShoppingCart,
+      onClick: () => navigate('/store')
+    },
+    {
+      id: '5',
+      title: 'Profile & Order History',
+      description: 'View your profile and manage orders',
+      icon: User,
+      onClick: () => navigate('/trainer/profile-order-history')
+    },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="admin-dashboard-container">
       <Navbar />
-      <main className="flex-1 p-6 md:p-8">
-        <div className="max-w-[1400px] mx-auto space-y-6">
+      <main className="admin-dashboard-main">
+        <div className="admin-dashboard-content-wrapper">
           {/* Page Header */}
-          <div className="flex justify-between items-center mb-6 pb-3 border-b-3" style={{ borderColor: '#DB9D32' }}>
-            <h1 className="text-3xl font-bold" style={{ color: '#000000' }}>
-              HurshBin Trainer Dashboard
+          <div className="admin-dashboard-header">
+            <h1 className="admin-dashboard-title">
+              Trainer Dashboard
             </h1>
-            <div className="text-base text-gray-600">
-              Welcome, <span className="font-bold text-gray-900">{user?.name || "Trainer"}</span>!
+            <div className="admin-dashboard-welcome">
+              Welcome, <span className="admin-dashboard-welcome-name">{user?.name || "Trainer"}</span>!
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-amber-600">
+          <div className="admin-stats-grid">
+            <div className="admin-stat-card">
+              <div className="admin-stat-value admin-stat-value-blue">
                 {stats.totalSessions ?? 0}
               </div>
-              <div className="text-gray-500 mt-2">Total Sessions</div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="admin-stat-label">Total Sessions</div>
+              <div className="admin-stat-sublabel">
                 This Month: {stats.thisMonthSessions ?? 0}
               </div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-orange-600">
+            <div className="admin-stat-card">
+              <div className="admin-stat-value admin-stat-value-green">
                 {stats.activeLearners ?? 0}
               </div>
-              <div className="text-gray-500 mt-2">Active Learners</div>
-              <div className="text-xs text-gray-400 mt-1">Assigned to you</div>
+              <div className="admin-stat-label">Active Learners</div>
+              <div className="admin-stat-sublabel">Assigned to you</div>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow">
-              <div className="text-3xl font-bold text-amber-500">
+            <div className="admin-stat-card">
+              <div className="admin-stat-value admin-stat-value-purple">
                 {stats.totalHours ?? 0}
               </div>
-              <div className="text-gray-500 mt-2">Total Hours</div>
-              <div className="text-xs text-gray-400 mt-1">This Month</div>
+              <div className="admin-stat-label">Total Hours</div>
+              <div className="admin-stat-sublabel">This Month</div>
             </div>
           </div>
 
-          {/* Quick Access Cards (IIP / Communication / Book Appointment) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {[
-              {
-                icon: "🎓",
-                title: "IIP Programs",
-                onClick: () => {
-                  // toggle the schedule section
-                  setShowSchedule((s) => {
-                    const next = !s;
-                    // if opening, scroll into view after state change
-                    if (next) setTimeout(() => scheduleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                    return next;
-                  });
-                },
-              },
-              {
-                icon: "💬",
-                title: "Communication",
-                onClick: () => navigate("/trainer/communication"),
-              },
-              {
-                icon: "📅",
-                title: "Book Appointment",
-                onClick: () => navigate("/book-appointment"),
-              },
-              {
-                icon: "🛒",
-                title: "Buy Learning Material",
-                onClick: () => navigate("/store"),
-              },
-              {
-                icon: "👤",
-                title: "Profile & Order History",
-                onClick: () => navigate("/trainer/profile-order-history"),
-              },
-            ].map((card, index) => (
-              <div
-                key={index}
-                onClick={card.onClick}
-                className="relative p-8 text-center cursor-pointer transition-all duration-300 ease-out transform group shadow-md hover:-translate-y-2 hover:scale-[1.02] overflow-hidden"
-                style={{
-                  background: 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)',
-                  borderRadius: '1rem'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#DB9D32'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c)'}
-              >
-                <div className="text-5xl mb-4 transition-transform duration-300 group-hover:scale-110 relative z-10">
-                  {card.icon}
-                </div>
-                <div className="text-lg font-semibold text-white mb-1 relative z-10">{card.title}</div>
-              </div>
-            ))}
-          </div>
+          {/* Trainer Menu */}
+          <div className="admin-dashboard-menu">
+            <div className="admin-menu-title">
+              <h2>Trainer Menu - Click to Open</h2>
+            </div>
 
-          {/* Today's Schedule */}
-          {showSchedule && (
-            <div ref={scheduleRef} className="bg-white rounded-xl p-6 shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-lg font-semibold">
-                  📅 Today's Schedule - {todaysDateString}
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-gray-500">
-                    {sessions.length} total items
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label
-                      htmlFor="pagination"
-                      className="text-sm text-gray-600 font-medium"
-                    >
-                      Show:
-                    </label>
-                    <select
-                      id="pagination"
-                      value={itemsPerPage}
-                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer hover:border-gray-400"
-                    >
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                      <option value={15}>15</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {loading ? (
-                  <div className="py-8 flex justify-center">
-                    <div className="loader h-8 w-8 border-4 border-t-4 rounded-full animate-spin border-gray-300"></div>
-                  </div>
-                ) : // Filter sessions to those scheduled for today first, then show others
-                  sessions.length === 0 ? (
-                    <div className="text-center text-gray-500 py-6">
-                      No sessions scheduled yet.
+            <div className="admin-menu-grid">
+              {menuItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={item.onClick}
+                    className="admin-menu-card"
+                  >
+                    <div className="admin-menu-card-icon">
+                      <IconComponent size={48} />
                     </div>
-                  ) : (
-                    <>
-                      {sessions
-                        .sort((a, b) => {
-                          // Sort by date (newest first)
-                          return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
-                        })
-                        .slice(0, itemsPerPage)
-                        .map((session) => {
-                          const sessionStatus = getSessionStatus(session);
-                          const scheduledDate = session.scheduled_date
-                            ? new Date(session.scheduled_date)
-                            : null;
-                          const timeLabel = scheduledDate
-                            ? scheduledDate.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                            : "—";
-                          const ampm = scheduledDate
-                            ? scheduledDate
-                              .toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
-                              .split(" ")[1]
-                            : "";
-                          const borderColor =
-                            sessionStatus === "active"
-                              ? "border-l-4 border-green-500"
-                              : sessionStatus === "scheduled"
-                                ? "border-l-4 border-amber-500"
-                                : sessionStatus === "cancelled"
-                                  ? "border-l-4 border-red-500"
-                                  : sessionStatus === "expired"
-                                    ? "border-l-4 border-gray-400"
-                                    : "border-l-4 border-orange-400";
-                          const bgColor =
-                            sessionStatus === "active"
-                              ? "bg-green-50"
-                              : sessionStatus === "scheduled"
-                                ? "bg-amber-50"
-                                : sessionStatus === "cancelled"
-                                  ? "bg-red-50"
-                                  : sessionStatus === "expired"
-                                    ? "bg-gray-50"
-                                    : "bg-white";
-                          return (
-                            <div
-                              key={session.id || session.session_id}
-                              className={`p-4 rounded-md shadow-sm ${borderColor} ${bgColor}`}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 flex items-center gap-4">
-                                  <div className="min-w-[80px] text-center p-2 bg-gray-100 rounded">
-                                    <div className="text-xl font-bold text-[#2c3e50]">
-                                      {timeLabel}
-                                    </div>
-                                    {/* show AM/PM if available */}
-                                    <div className="text-xs text-gray-500">
-                                      {ampm}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3">
-                                      <div className="text-lg font-semibold text-gray-800">
-                                        {session.title ||
-                                          `Session with ${session.learner?.name ||
-                                          session.learner_name ||
-                                          "Learner"
-                                          }`}
-                                      </div>
-                                    </div>
-
-                                    <div className="text-sm text-gray-500 mt-1">
-                                      Duration: {session.duration ?? "—"} minutes{" "}
-                                      {session.program
-                                        ? ` | IIP: ${session.program}`
-                                        : ""}
-                                    </div>
-
-                                    {session.description && (
-                                      <div className="text-xs text-gray-600 mt-2">
-                                        {session.description}
-                                      </div>
-                                    )}
-                                    {session.scheduled_date && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        Scheduled:{" "}
-                                        {new Date(
-                                          session.scheduled_date
-                                        ).toLocaleString()}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                                  {sessionStatus === "scheduled" && (
-                                    <button
-                                      onClick={() =>
-                                        handleStartSession(session.session_id)
-                                      }
-                                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-                                    >
-                                      Start Session
-                                    </button>
-                                  )}
-                                  {sessionStatus === "active" && (
-                                    <button
-                                      onClick={() =>
-                                        handleResumeSession(session.session_id)
-                                      }
-                                      className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg hover:from-amber-600 hover:to-orange-600 text-sm font-medium shadow-md"
-                                    >
-                                      Resume Session
-                                    </button>
-                                  )}
-
-
-                                  <div className="flex flex-col gap-2 mt-2 items-center">
-                                    {session.recording_url &&
-                                      session.recording_status === "completed" && (
-                                        <button
-                                          onClick={() =>
-                                            handleViewRecording(session)
-                                          }
-                                          className="text-sm px-3 py-1 border rounded text-amber-600 hover:bg-amber-50 border-amber-300"
-                                          title="Watch recording"
-                                        >
-                                          ▶️ Watch
-                                        </button>
-                                      )}
-                                    {session.recording_status === "processing" && (
-                                      <span
-                                        className="text-sm px-3 py-1 text-yellow-600"
-                                        title="Recording is being processed"
-                                      >
-                                        ⏳ Processing...
-                                      </span>
-                                    )}
-                                    {session.recording_status === "failed" && (
-                                      <span
-                                        className="text-sm px-3 py-1 text-red-600"
-                                        title="Recording failed"
-                                      >
-                                        ❌ Failed
-                                      </span>
-                                    )}
-                                    <span
-                                      className={getStatusBadge(sessionStatus, session.scheduled_date)}
-                                    >
-                                      {sessionStatus === "expired" ? "Expired" : (
-                                        (sessionStatus || "scheduled")
-                                          .charAt(0)
-                                          .toUpperCase() +
-                                        (sessionStatus || "scheduled").slice(1)
-                                      )}
-                                    </span>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedSession(session);
-                                        setShowSessionDetailsModal(true);
-                                      }}
-                                      className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
-                                    >
-                                      View Details
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                      {/* Pagination Info */}
-                      {sessions.length > itemsPerPage && (
-                        <div className="text-sm text-gray-500 pt-4 border-t text-center">
-                          Showing {itemsPerPage} of {sessions.length} sessions
-                        </div>
-                      )}
-                    </>
-                  )}
-              </div>
+                    <h3 className="admin-menu-card-title">
+                      {item.title}
+                    </h3>
+                    <p className="admin-menu-card-description">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-
-          )}
-
+          </div>
         </div>
       </main>
-
-      {/* Session Details Modal */}
-      {showSessionDetailsModal && selectedSession && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeSessionDetailsModal}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">Session Details</h2>
-              <button
-                onClick={closeSessionDetailsModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-6">
-              {/* Title */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Session Title</label>
-                <p className="text-lg text-gray-800">{selectedSession.title || `Session with ${selectedSession.learner?.name || selectedSession.learner_name || "Learner"}`}</p>
-              </div>
-
-              {/* Learner Info */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Learner</label>
-                <p className="text-gray-800">{selectedSession.learner?.name || selectedSession.learner_name || "Unknown Learner"}</p>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Status</label>
-                <span className={getStatusBadge(selectedSession.status)}>{(selectedSession.status || "scheduled").charAt(0).toUpperCase() + (selectedSession.status || "scheduled").slice(1)}</span>
-              </div>
-
-              {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Date</label>
-                  <p className="text-gray-800">
-                    {selectedSession.scheduled_date
-                      ? new Date(selectedSession.scheduled_date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                      : "—"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Time</label>
-                  <p className="text-gray-800">
-                    {selectedSession.scheduled_date
-                      ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Duration & Program */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Duration</label>
-                  <p className="text-gray-800">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Program / IIP</label>
-                  <p className="text-gray-800">
-                    {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
-                      ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Description */}
-              {selectedSession.description && (
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Description</label>
-                  <p className="text-gray-800 whitespace-pre-wrap">{selectedSession.description}</p>
-                </div>
-              )}
-
-              {/* Recording Status */}
-              {(selectedSession.recording_url || selectedSession.recording_status) && (
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Recording Status</label>
-                  {selectedSession.recording_status === "completed" && (
-                    <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ✓ Completed
-                    </span>
-                  )}
-                  {selectedSession.recording_status === "processing" && (
-                    <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ⏳ Processing...
-                    </span>
-                  )}
-                  {selectedSession.recording_status === "failed" && (
-                    <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ❌ Failed
-                    </span>
-                  )}
-                  {!selectedSession.recording_status && (
-                    <span className="inline-block bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Not Started
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Additional Info */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800">
-                  <strong>Scheduled:</strong> {selectedSession.scheduled_date
-                    ? new Date(selectedSession.scheduled_date).toLocaleString()
-                    : "—"}
-                </p>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-50 border-t border-gray-200 p-6 flex justify-end gap-3">
-              <button
-                onClick={closeSessionDetailsModal}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-              >
-                Close
-              </button>
-              {selectedSession.status === "scheduled" && (
-                <button
-                  onClick={() => {
-                    closeSessionDetailsModal();
-                    handleStartSession(selectedSession.session_id || selectedSession.id);
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
-                >
-                  Start Session
-                </button>
-              )}
-              {selectedSession.status === "active" && (
-                <button
-                  onClick={() => {
-                    closeSessionDetailsModal();
-                    handleResumeSession(selectedSession.session_id || selectedSession.id);
-                  }}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 font-medium transition-colors shadow-md"
-                >
-                  Resume Session
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-
       <Footer />
     </div>
   );
 };
-
-/* ----------------------
-   small helpers
-   ---------------------- */
-function getInitials(name = "") {
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 0) return "U";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-function getAvatarColorClass(name = "") {
-  // deterministic color pick by name hash
-  const colors = [
-    "bg-amber-500",
-    "bg-orange-600",
-    "bg-amber-600",
-    "bg-orange-500",
-    "bg-amber-400",
-    "bg-orange-400",
-  ];
-  const n = name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return colors[n % colors.length];
-}
 
 export default TrainerDashboard;

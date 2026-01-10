@@ -1,0 +1,544 @@
+/* Trainer Schedule Page Styles */
+
+/* Schedule Section */
+.trainer-schedule-section {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.trainer-schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.trainer-schedule-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.trainer-schedule-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trainer-schedule-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.trainer-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trainer-pagination-label {
+  font-size: 0.875rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.trainer-pagination-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.trainer-pagination-select:hover {
+  border-color: #9ca3af;
+}
+
+.trainer-pagination-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Sessions List */
+.trainer-sessions-list>*+* {
+  margin-top: 0.75rem;
+}
+
+.trainer-loading-container {
+  padding: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.trainer-loader {
+  height: 2rem;
+  width: 2rem;
+  border: 4px solid #d1d5db;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.trainer-no-sessions {
+  text-align: center;
+  color: #6b7280;
+  padding: 1.5rem 0;
+}
+
+/* Session Card */
+.trainer-session-card {
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.trainer-session-card-green {
+  border-left: 4px solid #10b981;
+}
+
+.trainer-session-card-amber {
+  border-left: 4px solid #f59e0b;
+}
+
+.trainer-session-card-orange {
+  border-left: 4px solid #fb923c;
+}
+
+.trainer-session-card-red {
+  border-left: 4px solid #ef4444;
+}
+
+.trainer-session-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trainer-session-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.trainer-session-time-box {
+  min-width: 80px;
+  text-align: center;
+  padding: 0.5rem;
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+}
+
+.trainer-session-time {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.trainer-session-ampm {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.trainer-session-details {
+  flex: 1;
+}
+
+.trainer-session-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.trainer-session-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Status Badges */
+.trainer-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trainer-status-scheduled {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trainer-status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.trainer-status-ended {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.trainer-status-expired {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.trainer-status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trainer-session-meta {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.trainer-session-description {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-top: 0.5rem;
+}
+
+.trainer-session-scheduled {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Session Actions */
+.trainer-session-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.trainer-btn-start {
+  background: #16a34a;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trainer-btn-start:hover {
+  background: #15803d;
+}
+
+.trainer-btn-resume {
+  background: linear-gradient(to right, #f59e0b, #d97706);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.trainer-btn-resume:hover {
+  background: linear-gradient(to right, #d97706, #ea580c);
+}
+
+.trainer-session-completed {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.trainer-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
+  width: fit-content;
+}
+
+.trainer-session-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.trainer-btn-watch {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #fcd34d;
+  border-radius: 0.25rem;
+  color: #d97706;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trainer-btn-watch:hover {
+  background: #fef3c7;
+}
+
+.trainer-recording-processing {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  color: #ca8a04;
+}
+
+.trainer-recording-failed {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  color: #dc2626;
+}
+
+.trainer-btn-details {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  color: #374151;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trainer-btn-details:hover {
+  background: #f9fafb;
+}
+
+/* Pagination Info */
+.trainer-pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+/* Modal */
+.trainer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.trainer-modal-content {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 42rem;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.trainer-modal-header {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trainer-modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.trainer-modal-close {
+  color: #9ca3af;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.trainer-modal-close:hover {
+  color: #4b5563;
+}
+
+.trainer-modal-close svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.trainer-modal-body {
+  padding: 1.5rem;
+}
+
+.trainer-modal-body>*+* {
+  margin-top: 1.5rem;
+}
+
+.trainer-modal-field {
+  /* Base for each field */
+}
+
+.trainer-modal-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.trainer-modal-text {
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+.trainer-modal-text-normal {
+  color: #1f2937;
+}
+
+.trainer-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.trainer-modal-description {
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+
+.trainer-modal-recording-status {
+  /* Container for recording badges */
+}
+
+.trainer-badge-completed {
+  display: inline-block;
+  background: #d1fae5;
+  color: #065f46;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trainer-badge-processing {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trainer-badge-failed {
+  display: inline-block;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trainer-badge-not-started {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #1f2937;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.trainer-modal-info-box {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.trainer-modal-info-text {
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.trainer-modal-footer {
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.trainer-modal-btn-close {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  color: #374151;
+  background: transparent;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trainer-modal-btn-close:hover {
+  background: #f9fafb;
+}
+
+.trainer-modal-btn-start {
+  padding: 0.5rem 1rem;
+  background: #16a34a;
+  color: #ffffff;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trainer-modal-btn-start:hover {
+  background: #15803d;
+}
+
+.trainer-modal-btn-resume {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(to right, #f59e0b, #d97706);
+  color: #ffffff;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.trainer-modal-btn-resume:hover {
+  background: linear-gradient(to right, #d97706, #ea580c);
+}

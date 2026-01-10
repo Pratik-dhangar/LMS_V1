@@ -141,32 +141,38 @@ const MySessions = () => {
                   .map((session) => {
                     // Helper function to get actual status (considering expired sessions)
                     const getSessionStatus = (sess) => {
+                      // First check if already cancelled or ended
+                      if (sess.status === 'cancelled') {
+                        return 'cancelled';
+                      }
+                      if (sess.status === 'active') {
+                        return 'active';
+                      }
+                      if (sess.status === 'ended') {
+                        return 'ended';
+                      }
+
+                      // Check if scheduled session is expired (scheduled time + duration has passed and session not started)
                       if (sess.status === 'scheduled' && sess.scheduled_date) {
                         try {
                           const now = new Date();
-                          let scheduled = new Date(sess.scheduled_date);
+                          const scheduled = new Date(sess.scheduled_date);
 
-                          // Handle timezone offset
-                          const dateString = String(sess.scheduled_date).trim();
-                          if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
-                            scheduled = new Date(dateString);
-                          } else {
-                            scheduled = new Date(dateString);
-                          }
+                          // Calculate session end time: scheduled_date + duration (in minutes)
+                          const durationMs = (sess.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+                          const sessionEndTime = new Date(scheduled.getTime() + durationMs);
 
-                          // Add a small buffer (1 minute) to avoid edge case timing issues
-                          const bufferTime = new Date(now.getTime() + 60000);
-
-                          if (scheduled < bufferTime) {
+                          // If current time is after (session end time), it's expired
+                          if (now >= sessionEndTime) {
                             return 'expired';
                           }
                         } catch (e) {
                           console.warn('Error parsing session date:', e);
                         }
                       }
+
                       return sess.status;
                     };
-
                     const actualStatus = getSessionStatus(session);
                     const isActive = actualStatus === 'active';
                     const isScheduled = actualStatus === 'scheduled';
@@ -322,13 +328,36 @@ const MySessions = () => {
                 {(() => {
                   // Helper function to get actual status (considering expired sessions)
                   const getSessionStatus = (sess) => {
+                    // First check if already cancelled or ended
+                    if (sess.status === 'cancelled') {
+                      return 'cancelled';
+                    }
+                    if (sess.status === 'active') {
+                      return 'active';
+                    }
+                    if (sess.status === 'ended') {
+                      return 'ended';
+                    }
+
+                    // Check if scheduled session is expired (time has passed and session not started)
                     if (sess.status === 'scheduled' && sess.scheduled_date) {
-                      const now = new Date();
-                      const scheduled = new Date(sess.scheduled_date);
-                      if (scheduled < now) {
-                        return 'expired';
+                      try {
+                        const now = new Date();
+                        const scheduled = new Date(sess.scheduled_date);
+
+                        // Calculate session end time based on duration
+                        const durationMs = (sess.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+                        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+
+                        // If current time is past the session end time (scheduled + duration), it's expired
+                        if (now >= sessionEndTime) {
+                          return 'expired';
+                        }
+                      } catch (e) {
+                        console.warn('Error parsing session date:', e);
                       }
                     }
+
                     return sess.status;
                   };
                   const actualStatus = getSessionStatus(selectedSession);

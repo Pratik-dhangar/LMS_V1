@@ -11,6 +11,40 @@ const ViewSessionModal = ({ session, onClose }) => {
 
     if (!session) return null;
 
+    // Get actual session status considering expiration based on duration
+    const getSessionStatus = (sess) => {
+        // First check if already cancelled or ended or active
+        if (sess.status === 'cancelled') {
+            return 'cancelled';
+        }
+        if (sess.status === 'active') {
+            return 'active';
+        }
+        if (sess.status === 'ended') {
+            return 'ended';
+        }
+
+        // Check if session is expired (check scheduled_date + duration)
+        if (sess.scheduled_date) {
+            try {
+                const now = new Date();
+                const scheduled = new Date(sess.scheduled_date);
+
+                // Calculate session end time based on duration
+                const durationMs = (sess.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+                const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+
+                // If current time is past the session end time (scheduled + duration), it's expired
+                if (now >= sessionEndTime) {
+                    return 'expired';
+                }
+            } catch (e) {
+                console.warn('Error parsing session date:', e);
+            }
+        }
+        return sess.status || 'scheduled';
+    };
+
     const getContentIcon = (type) => {
         const icons = {
             image: '🖼️',
@@ -163,13 +197,21 @@ const ViewSessionModal = ({ session, onClose }) => {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                    session.status === 'active' ? 'bg-green-100 text-green-800' :
-                                        session.status === 'ended' ? 'bg-gray-100 text-gray-800' :
-                                            'bg-red-100 text-red-800'
-                                    }`}>
-                                    {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                                </span>
+                                {(() => {
+                                    const actualStatus = getSessionStatus(session);
+                                    const statusColors = {
+                                        scheduled: 'bg-blue-100 text-blue-800',
+                                        active: 'bg-green-100 text-green-800',
+                                        ended: 'bg-gray-100 text-gray-800',
+                                        expired: 'bg-gray-100 text-gray-800',
+                                        cancelled: 'bg-red-100 text-red-800'
+                                    };
+                                    return (
+                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${statusColors[actualStatus] || 'bg-red-100 text-red-800'}`}>
+                                            {actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1)}
+                                        </span>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

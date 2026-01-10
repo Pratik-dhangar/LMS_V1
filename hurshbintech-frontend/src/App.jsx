@@ -49,8 +49,9 @@ import ProgramGraphView from './pages/head/ProgramGraphView';
 
 // Trainer Pages
 import TrainerDashboard from './pages/trainer/Dashboard';
-import TrainerProfileAndOrderHistory from './pages/trainer/ProfileAndOrderHistory';
 import TrainerSession from './pages/trainer/TrainerSession';
+import TodaysSchedule from './pages/trainer/TodaysSchedule';
+import TrainerProfileAndOrderHistory from './pages/trainer/ProfileAndOrderHistory';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
@@ -61,7 +62,6 @@ import CoachAvailability from './pages/coach/CoachAvailability';
 
 // Learner Pages
 import LearnerDashboard from './pages/learner/Dashboard';
-import LearnerProfileAndOrderHistory from './pages/learner/ProfileAndOrderHistory';
 import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
@@ -70,6 +70,7 @@ import FeedbackPage from "./pages/learner/FeedbackPage";
 import MySessions from "./pages/learner/MySessions";
 import AssignedPrograms from "./pages/learner/AssignedPrograms";
 import LearningContent from "./pages/learner/LearningContent";
+import LearnerProfileAndOrderHistory from './pages/learner/ProfileAndOrderHistory';
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -451,10 +452,10 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/trainer/profile-order-history"
+          path="/trainer/schedule"
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
-              <TrainerProfileAndOrderHistory />
+              <TodaysSchedule />
             </ProtectedRoute>
           }
         />
@@ -463,6 +464,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
               <TrainerSession />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TrainerProfileAndOrderHistory />
             </ProtectedRoute>
           }
         />
@@ -519,14 +528,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/learner/profile-order-history"
-          element={
-            <ProtectedRoute allowedRoles={['learner']}>
-              <LearnerProfileAndOrderHistory />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/learner/my-sessions"
           element={
             <ProtectedRoute allowedRoles={['learner']}>
@@ -547,6 +548,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearningContent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <LearnerProfileAndOrderHistory />
             </ProtectedRoute>
           }
         />
