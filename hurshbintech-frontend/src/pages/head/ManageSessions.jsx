@@ -126,11 +126,11 @@ const ManageSessions = () => {
       try {
         const now = new Date();
         let scheduled = new Date(session.scheduled_date);
-        
+
         // Handle timezone offset - if the date string doesn't have timezone info, 
         // assume it's in local time. If it has 'Z' or timezone offset, use as is.
         const dateString = String(session.scheduled_date).trim();
-        
+
         // If date doesn't have timezone indicator and contains 'T', treat as local time
         if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
           // Parse assuming local time
@@ -139,10 +139,10 @@ const ManageSessions = () => {
           // Parse ISO format or other standard formats
           scheduled = new Date(dateString);
         }
-        
+
         // Add a small buffer (1 minute) to avoid edge case timing issues
         const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
-        
+
         if (scheduled < bufferTime) {
           return 'expired';
         }

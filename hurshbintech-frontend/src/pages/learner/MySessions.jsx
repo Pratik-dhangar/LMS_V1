@@ -145,7 +145,7 @@ const MySessions = () => {
                         try {
                           const now = new Date();
                           let scheduled = new Date(sess.scheduled_date);
-                          
+
                           // Handle timezone offset
                           const dateString = String(sess.scheduled_date).trim();
                           if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
@@ -153,10 +153,10 @@ const MySessions = () => {
                           } else {
                             scheduled = new Date(dateString);
                           }
-                          
+
                           // Add a small buffer (1 minute) to avoid edge case timing issues
                           const bufferTime = new Date(now.getTime() + 60000);
-                          
+
                           if (scheduled < bufferTime) {
                             return 'expired';
                           }
