@@ -117,10 +117,13 @@ const ViewTrainers = () => {
               </svg>
               Back to Dashboard
             </button>
-            <h1 className="page-title">
+
+           <div>
+             <h1 className="page-title">
               View HurshBin Trainers
             </h1>
             <p className="page-description">View all registered trainers in the system</p>
+           </div>
           </div>
 
           {/* Search Bar */}

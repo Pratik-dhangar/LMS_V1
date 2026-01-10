@@ -388,10 +388,12 @@ const EditCoach = () => {
               </svg>
               Back to Manage Coaches
             </button>
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               Edit Coach Profile
             </h1>
             <p className="page-description">Update profile information for {formData.name}</p>
+            </div>
           </div>
 
           {/* Error Message */}

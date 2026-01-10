@@ -117,10 +117,12 @@ const ViewLearners = () => {
               Back to Dashboard
             </button>
 
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               View HurshBin Learners
             </h1>
             <p className="page-description">View all registered learners in the system</p>
+            </div>
           </div>
 
           {/* Search Bar */}

@@ -120,11 +120,29 @@ const ManageLearners = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-
-            <h1 className="page-title">
+<button
+              onClick={() => navigate("/admin/dashboard")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
+            <div>
+              <h1 className="page-title">
               Manage HurshBin Learners
             </h1>
             <p className="page-description">View and manage all registered learners</p>
+            </div>
           </div>
 
           {/* Search Bar and Add New Learner Button */}

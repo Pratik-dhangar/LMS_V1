@@ -381,10 +381,12 @@ const EditTrainer = () => {
               </svg>
               Back to Manage Trainers
             </button>
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               Edit Trainer Profile
             </h1>
             <p className="page-description">Update profile information for {formData.name}</p>
+            </div>
           </div>
 
           {/* Form */}

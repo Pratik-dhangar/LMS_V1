@@ -1,68 +1,68 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
-import adminService from '../../api/services/adminService';
-import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
-import ProfessionalInfoSection from '../../components/admin/EditHead/ProfessionalInfoSection';
-import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
-import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
-import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/admin/AdminRegisterHead.css';
-import '../../styles/ManageUsersLayout.css';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useAuth } from "../../context/AuthContext";
+import Navbar from "../../components/layout/Navbar";
+import Footer from "../../components/layout/Footer";
+import adminService from "../../api/services/adminService";
+import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
+import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
+import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
+import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
+import NotesSection from "../../components/admin/EditHead/NotesSection";
+import "../../styles/admin/AdminRegisterHead.css";
+import "../../styles/ManageUsersLayout.css";
 
 const RegisterHead = () => {
   const navigate = useNavigate();
   const { user: _user } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    age: '',
-    address: '',
-    contact_no: '',
-    qualification: '',
-    experience: '',
-    date_of_joining: '',
-    experience_with_hurshbin: '',
-    interest: '',
-    self_description: '',
-    future_vision: '',
+    name: "",
+    email: "",
+    age: "",
+    address: "",
+    contact_no: "",
+    qualification: "",
+    experience: "",
+    date_of_joining: "",
+    experience_with_hurshbin: "",
+    interest: "",
+    self_description: "",
+    future_vision: "",
     number_of_sessions_done: 0,
-    head_description: '',
-    learners_guardian_description: '',
-    input_at_hurshbin: '',
-    note_box: '',
-    message_box: ''
+    head_description: "",
+    learners_guardian_description: "",
+    input_at_hurshbin: "",
+    note_box: "",
+    message_box: "",
   });
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState("");
   const [successData, setSuccessData] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setReferenceFiles(prev => [...prev, ...files]);
+    setReferenceFiles((prev) => [...prev, ...files]);
   };
 
   const removeFile = (index) => {
-    setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+    setReferenceFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validate = () => {
@@ -70,35 +70,35 @@ const RegisterHead = () => {
 
     // Required fields validation
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.contact_no.trim()) {
-      newErrors.contact_no = 'Contact number is required';
+      newErrors.contact_no = "Contact number is required";
     } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact_no)) {
-      newErrors.contact_no = 'Invalid contact number format';
+      newErrors.contact_no = "Invalid contact number format";
     }
 
     if (!formData.age) {
-      newErrors.age = 'Age is required';
+      newErrors.age = "Age is required";
     } else if (isNaN(formData.age) || formData.age < 18 || formData.age > 100) {
-      newErrors.age = 'Age must be between 18 and 100';
+      newErrors.age = "Age must be between 18 and 100";
     }
 
     if (!formData.date_of_joining) {
-      newErrors.date_of_joining = 'Date of joining is required';
+      newErrors.date_of_joining = "Date of joining is required";
     } else if (new Date(formData.date_of_joining) > new Date()) {
-      newErrors.date_of_joining = 'Date of joining cannot be in the future';
+      newErrors.date_of_joining = "Date of joining cannot be in the future";
     }
 
     if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = "Address is required";
     }
 
     return newErrors;
@@ -108,7 +108,7 @@ const RegisterHead = () => {
     e.preventDefault();
 
     // Clear previous errors
-    setSubmitError('');
+    setSubmitError("");
     setErrors({});
 
     // Validate form
@@ -120,12 +120,12 @@ const RegisterHead = () => {
       const firstErrorField = Object.keys(validationErrors)[0];
       const errorElement = document.getElementsByName(firstErrorField)[0];
       if (errorElement) {
-        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
         errorElement.focus();
       }
 
       // Show error toast
-      toast.error('Please fill in all required fields correctly', {
+      toast.error("Please fill in all required fields correctly", {
         position: "top-center",
         autoClose: 3000,
         theme: "colored",
@@ -142,19 +142,19 @@ const RegisterHead = () => {
       const submitData = new FormData();
 
       // Add all text fields
-      Object.keys(formData).forEach(key => {
-        if (key === 'number_of_sessions_done') {
+      Object.keys(formData).forEach((key) => {
+        if (key === "number_of_sessions_done") {
           submitData.append(key, parseInt(formData[key]) || 0);
-        } else if (key === 'age') {
+        } else if (key === "age") {
           if (formData[key]) submitData.append(key, parseInt(formData[key]));
         } else {
-          submitData.append(key, formData[key] || '');
+          submitData.append(key, formData[key] || "");
         }
       });
 
       // Add reference files
-      referenceFiles.forEach(file => {
-        submitData.append('reference_files', file);
+      referenceFiles.forEach((file) => {
+        submitData.append("reference_files", file);
       });
 
       // Create head
@@ -180,11 +180,10 @@ const RegisterHead = () => {
       // Redirect after showing the success state
       setTimeout(() => {
         setLoading(false);
-        navigate('/admin/manage-heads');
+        navigate("/admin/manage-heads");
       }, 3500);
-
     } catch (error) {
-      console.error('Error registering head:', error);
+      console.error("Error registering head:", error);
       setLoading(false);
 
       // Handle validation errors from backend (422)
@@ -194,23 +193,23 @@ const RegisterHead = () => {
 
         if (Array.isArray(validationDetails)) {
           // FastAPI validation error format
-          validationDetails.forEach(err => {
+          validationDetails.forEach((err) => {
             const fieldName = err.loc?.[1]; // loc is like ['body', 'field_name']
             if (fieldName) {
-              backendErrors[fieldName] = err.msg || 'Invalid value';
+              backendErrors[fieldName] = err.msg || "Invalid value";
             }
           });
           setErrors(backendErrors);
 
           // Show general error message
-          const errorMessage = 'Please check the form for validation errors';
+          const errorMessage = "Please check the form for validation errors";
           setSubmitError(errorMessage);
           toast.error(errorMessage, {
             position: "top-center",
             autoClose: 4000,
             theme: "colored",
           });
-        } else if (typeof validationDetails === 'string') {
+        } else if (typeof validationDetails === "string") {
           setSubmitError(validationDetails);
           toast.error(validationDetails, {
             position: "top-center",
@@ -220,9 +219,10 @@ const RegisterHead = () => {
         }
       } else {
         // Handle other errors
-        const errorMessage = error.response?.data?.detail ||
+        const errorMessage =
+          error.response?.data?.detail ||
           error.message ||
-          'Failed to register head. Please try again.';
+          "Failed to register head. Please try again.";
         setSubmitError(errorMessage);
         toast.error(errorMessage, {
           position: "top-center",
@@ -247,20 +247,34 @@ const RegisterHead = () => {
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title modal-title-success">Registering Head...</p>
-                <p className="modal-message">Please wait while we process your request</p>
+                <p className="modal-title modal-title-success">
+                  Registering Head...
+                </p>
+                <p className="modal-message">
+                  Please wait while we process your request
+                </p>
               </>
             ) : (
               // Success State
               <>
                 <div className="success-icon-container">
                   <div className="success-icon">
-                    <svg className="success-icon-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg
+                      className="success-icon-svg"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
                       <path d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title modal-title-success">Head Registered Successfully!</p>
+                <p className="modal-title modal-title-success">
+                  Head Registered Successfully!
+                </p>
                 <div className="passcode-display">
                   <p className="passcode-label">Generated Passcode:</p>
                   <p className="passcode-value">{successData.passcode}</p>
@@ -276,19 +290,45 @@ const RegisterHead = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-
-            <h1 className="page-title">
-              Register New Head
-            </h1>
-            <p className="page-description">Fill in the details to register a new HurshBin Head</p>
+            <button
+              onClick={() => navigate("/admin/manage-heads")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Manage Heads
+            </button>
+            <div>
+              <h1 className="page-title">Register New Head</h1>
+              <p className="page-description">
+                Fill in the details to register a new HurshBin Head
+              </p>
+            </div>
           </div>
 
           {/* Error Message */}
           {submitError && (
             <div className="error-message">
               <div className="error-message-content">
-                <svg className="error-icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="error-icon"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <p>{submitError}</p>
               </div>
@@ -297,7 +337,6 @@ const RegisterHead = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="form-container">
-
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}
@@ -325,9 +364,7 @@ const RegisterHead = () => {
 
             {/* Reference Data Upload */}
             <div className="form-section">
-              <h2 className="form-section-title">
-                Reference Data
-              </h2>
+              <h2 className="form-section-title">Reference Data</h2>
               <div>
                 <label htmlFor="reference_files" className="form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
@@ -365,26 +402,19 @@ const RegisterHead = () => {
             </div>
 
             {/* Notes & Messages */}
-            <NotesSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+            <NotesSection formData={formData} handleChange={handleChange} />
 
             {/* Submit Button */}
             <div className="form-actions">
               <button
                 type="button"
-                onClick={() => navigate('/admin/dashboard')}
+                onClick={() => navigate("/admin/manage-heads")}
                 className="btn-secondary"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary"
-              >
-                {loading ? 'Registering...' : 'Register Head'}
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? "Registering..." : "Register Head"}
               </button>
             </div>
           </form>
