@@ -14,6 +14,7 @@ import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDeta
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 const EditTrainer = () => {
   const navigate = useNavigate();
@@ -380,10 +381,12 @@ const EditTrainer = () => {
               </svg>
               Back to Manage Trainers
             </button>
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               Edit Trainer Profile
             </h1>
             <p className="page-description">Update profile information for {formData.name}</p>
+            </div>
           </div>
 
           {/* Form */}

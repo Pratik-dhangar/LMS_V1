@@ -1,194 +1,20 @@
-/* Admin Manage Vlogs Styles */
-.admin-manage-vlogs-container {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: #f5f6fa;
-}
 
-.admin-manage-vlogs-main {
-    flex: 1;
-    padding: 2rem;
-}
 
-.admin-manage-vlogs-wrapper {
-    max-width: 1400px;
-    margin: 0 auto;
-}
 
-.admin-manage-vlogs-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 3px solid #2c3e50;
-}
+/* ============================================
+   Vlog Card Grid - Reuse base styles from AdminManageLearningContent
+   Import those styles or reference: .admin-content-*
+   ============================================ */
 
-.admin-manage-vlogs-title {
-    font-size: 2rem;
-    color: #2c3e50;
-    margin: 0;
-    font-weight: 700;
-}
-
-.admin-manage-vlogs-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-.admin-manage-vlogs-search-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.admin-manage-vlogs-search-box {
-    display: flex;
-    gap: 1rem;
-}
-
-.admin-manage-vlogs-search-input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 1.5px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-}
-
-.admin-manage-vlogs-search-input:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.admin-manage-vlogs-search-btn {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 2rem;
-    border-radius: 0.375rem;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.admin-manage-vlogs-search-btn:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    transform: translateY(-2px);
-}
-
-.admin-manage-vlogs-grid {
+.admin-vlog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
+    margin-top: 2rem;
 }
 
-.admin-manage-vlogs-card {
-    background: white;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.admin-manage-vlogs-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.admin-manage-vlogs-card-thumbnail {
-    width: 100%;
-    height: 180px;
-    background: #e5e7eb;
-    object-fit: cover;
-}
-
-.admin-manage-vlogs-card-content {
-    padding: 1rem;
-}
-
-.admin-manage-vlogs-card-title {
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.admin-manage-vlogs-card-description {
-    color: #6b7280;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.admin-manage-vlogs-card-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.admin-manage-vlogs-loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
-    color: #2563eb;
-}
-
-.admin-manage-vlogs-error {
-    background: #fee2e2;
-    border: 1px solid #dc2626;
-    color: #991b1b;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.admin-manage-vlogs-empty {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: #6b7280;
-}
-
-@media (max-width: 768px) {
-    .admin-manage-vlogs-main {
-        padding: 1rem;
-    }
-
-    .admin-manage-vlogs-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .admin-manage-vlogs-title {
-        font-size: 1.5rem;
-    }
-
-    .admin-manage-vlogs-search-box {
-        flex-direction: column;
-    }
-
-    .admin-manage-vlogs-search-btn {
-        width: 100%;
-    }
-
-    .admin-manage-vlogs-grid {
+@media (max-width: 640px) {
+    .admin-vlog-grid {
         grid-template-columns: 1fr;
-    }
-
-    .admin-manage-vlogs-card-actions {
-        flex-direction: column;
     }
 }

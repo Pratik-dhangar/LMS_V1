@@ -5,19 +5,21 @@ import ConfirmModal from "../../components/common/ConfirmModal";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
 import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
+import SearchBar from "../../components/common/SearchBar";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-import '../../styles/admin/AdminManageVlogs.css';
+import "../../styles/admin/AdminManageVlogs.css";
+import "../../styles/ManageUsersLayout.css";
 
 const ManageVlogs = () => {
+  const navigate = useNavigate();
   const [vlogs, setVlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [selectedVlog, setSelectedVlog] = useState(null);
-  const navigate = useNavigate();
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
 
   const fetchVlogs = async () => {
     try {
@@ -56,10 +58,20 @@ const ManageVlogs = () => {
     }
   };
 
-  const handlePlayVideo = (vlog) => {
-    setSelectedVlog(vlog);
-    setShowVideoPlayer(true);
+  const handleSearch = (query) => {
+    setActiveSearchQuery(query);
   };
+
+  const filteredVlogs = vlogs.filter(
+    (vlog) =>
+      vlog.title.toLowerCase().includes(activeSearchQuery.toLowerCase()) ||
+      (vlog.description &&
+        vlog.description
+          .toLowerCase()
+          .includes(activeSearchQuery.toLowerCase())) ||
+      (vlog.vlog_type &&
+        vlog.vlog_type.toLowerCase().includes(activeSearchQuery.toLowerCase()))
+  );
 
   const getFullUrl = (url) => {
     if (!url) return "";
@@ -87,18 +99,39 @@ const ManageVlogs = () => {
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
-          <div className="page-header page-header-split">
+          <div className="page-header">
+            <button
+              onClick={() => navigate("/admin/dashboard")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             {/* Left Side: Title and Subtitle */}
             <div>
-              <h1 className="page-title">
-                Manage Training Vlogs
-              </h1>
+              <h1 className="page-title">Manage Training Vlogs</h1>
               <p className="page-description">
                 Upload and manage training Vlogs
               </p>
             </div>
+          </div>
 
-            {/* Right Side: Button (now outside the div) */}
+          {/* Search Bar and Add Button */}
+          <div className="search-section">
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by title, type, or description..."
+            />
             <button
               onClick={() => setShowCreateModal(true)}
               className="btn-success"
@@ -106,6 +139,13 @@ const ManageVlogs = () => {
               + Add New Vlog
             </button>
           </div>
+          {activeSearchQuery && (
+            <div className="search-results-info">
+              <p className="search-results-text">
+                Found {filteredVlogs.length} of {vlogs.length} vlogs
+              </p>
+            </div>
+          )}
 
           {/* Vlogs Grid */}
           {vlogs.length === 0 ? (
@@ -115,40 +155,43 @@ const ManageVlogs = () => {
                 started!
               </p>
             </div>
+          ) : filteredVlogs.length === 0 ? (
+            <div className="empty-state">
+              <p className="empty-state-description">
+                No vlogs match your search. Try a different search term.
+              </p>
+            </div>
           ) : (
-            <div className="card-grid">
-              {vlogs.map((vlog) => (
-                <div
-                  key={vlog.id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group"
-                >
-                  {/* Card Header with Gradient */}
-                  <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-2 relative">
-                    <div className="flex items-center justify-between text-white">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-2xl">🎥</span>
-                        <div>
-                          <p className="text-xs uppercase font-semibold opacity-90">
-                            Video
-                          </p>
-                          <p className="text-xs opacity-75">
-                            {formatFileSize(vlog.file_size)}
-                          </p>
-                        </div>
+            <div className="admin-content-grid">
+              {filteredVlogs.map((vlog) => (
+                <div key={vlog.id} className="admin-content-card">
+                  {/* Card Header */}
+                  <div className="admin-content-card-header">
+                    <div className="admin-content-card-header-left">
+                      <span className="admin-content-icon">🎥</span>
+                      <div>
+                        <p className="admin-content-type-text">Video</p>
+                        <p className="admin-content-size-text">
+                          {formatFileSize(vlog.file_size)}
+                        </p>
                       </div>
-                      <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
-                        <span className="text-xs font-medium">#{vlog.id}</span>
-                      </div>
+                    </div>
+                    <div className="admin-content-id-badge">
+                      <span>#{vlog.id}</span>
                     </div>
                   </div>
 
-                  {/* Thumbnail Section with Play Button */}
-                  <div className="relative h-32 bg-gray-100 overflow-hidden group/thumbnail">
+                  {/* Preview Section */}
+                  <div className="admin-content-preview">
                     {vlog.thumbnail_url ? (
                       <img
                         src={getFullUrl(vlog.thumbnail_url)}
                         alt={vlog.title}
-                        className="w-full h-full object-cover"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.style.display = "none";
@@ -159,88 +202,71 @@ const ManageVlogs = () => {
                       />
                     ) : null}
                     <div
-                      className={`flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200 ${vlog.thumbnail_url ? "hidden" : ""
-                        }`}
+                      className={`hidden ${vlog.thumbnail_url ? "" : "block"}`}
+                      style={{ fontSize: "2rem", color: "rgba(0, 0, 0, 0.2)" }}
                     >
-                      <span className="text-4xl">🎬</span>
-                    </div>
-
-                    {/* Play Button Overlay */}
-                    <div
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumbnail:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-                      onClick={() => handlePlayVideo(vlog)}
-                    >
-                      <div className="bg-white/90 rounded-full p-4 transform scale-100 group-hover/thumbnail:scale-110 transition-transform">
-                        <svg
-                          className="w-8 h-8 text-blue-600"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
-                      </div>
+                      🎬
                     </div>
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-3 relative z-10">
-                    <h3 className="font-bold text-base text-gray-800 mb-2 line-clamp-1">
-                      {vlog.title}
-                    </h3>
+                  <div className="admin-content-card-body">
+                    <span
+                      className={`admin-content-status-badge ${
+                        vlog.status === "published"
+                          ? "admin-content-status-published"
+                          : "admin-content-status-draft"
+                      }`}
+                    >
+                      {vlog.status === "published" ? "✓ Published" : "📝 Draft"}
+                    </span>
 
-                    {/* Status Badge */}
-                    <div className="mb-2">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${vlog.status === 'published'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {vlog.status === 'published' ? '✓ Published' : '📝 Draft'}
-                      </span>
-                    </div>
+                    <h3 className="admin-content-title">{vlog.title}</h3>
 
                     {vlog.description && (
-                      <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                      <p className="admin-content-description">
                         {vlog.description}
                       </p>
                     )}
 
                     {/* Metadata */}
-                    <div className="space-y-1 mb-3 text-xs text-gray-500">
-                      <div className="flex items-center">
-                        <span className="mr-1">📅</span>
+                    <div className="admin-content-meta">
+                      <div className="admin-content-meta-item">
+                        <span>📅</span>
                         <span>Created: {formatDate(vlog.created_at)}</span>
                       </div>
                       {vlog.updated_at &&
                         vlog.updated_at !== vlog.created_at && (
-                          <div className="flex items-center">
-                            <span className="mr-1">🔄</span>
+                          <div className="admin-content-meta-item">
+                            <span>🔄</span>
                             <span>Updated: {formatDate(vlog.updated_at)}</span>
                           </div>
                         )}
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => handlePlayVideo(vlog)}
-                        className="flex-1 bg-blue-50 text-blue-600 py-1.5 rounded-lg hover:bg-blue-100 font-medium transition-colors text-xs"
+                    <div className="admin-content-actions">
+                      <a
+                        href={getFullUrl(vlog.file_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary btn-sm"
                       >
                         Play
-                      </button>
+                      </a>
                       <button
                         onClick={() => handleEdit(vlog)}
-                        className="flex-1 bg-indigo-50 text-indigo-600 py-1.5 rounded-lg hover:bg-indigo-100 font-medium transition-colors text-xs"
+                        className="btn-primary btn-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log("Delete button clicked for vlog:", vlog);
                           setSelectedVlog(vlog);
                           setShowDeleteModal(true);
                         }}
-                        className="flex-1 bg-red-50 text-red-600 py-1.5 rounded-lg hover:bg-red-100 font-medium transition-colors text-xs"
+                        className="btn-danger btn-sm"
                       >
                         Delete
                       </button>
@@ -277,73 +303,6 @@ const ManageVlogs = () => {
           confirmText="Delete"
           confirmButtonClass="bg-red-600 hover:bg-red-700"
         />
-      )}
-
-      {/* Video Player Modal */}
-      {showVideoPlayer && selectedVlog && (
-        <div className="modal-overlay modal-overlay-dark">
-          <div className="modal-video">
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setShowVideoPlayer(false);
-                setSelectedVlog(null);
-              }}
-              className="modal-close-video"
-              aria-label="Close video"
-            >
-              <svg
-                className="icon-lg"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-
-            {/* Video Player Container */}
-            <div className="video-player-container">
-              <div className="video-player-header">
-                <h2 className="video-player-title">
-                  {selectedVlog.title}
-                </h2>
-                {selectedVlog.description && (
-                  <p className="video-player-description">
-                    {selectedVlog.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="video-wrapper">
-                <video
-                  src={getFullUrl(selectedVlog.file_url)}
-                  controls
-                  autoPlay
-                  className="video-player"
-                  controlsList="download"
-                  onError={(e) => {
-                    console.error("Video load error:", e);
-                  }}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-
-              <div className="video-player-footer">
-                <div className="video-player-meta">
-                  <span>📦 {formatFileSize(selectedVlog.file_size)}</span>
-                  <span>📅 {formatDate(selectedVlog.created_at)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </>
   );

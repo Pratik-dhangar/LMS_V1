@@ -12,6 +12,8 @@ import ViewSessionModal from './ViewSessionModal';
 import HeadSessionNotesModal from './HeadSessionNotesModal';
 import SessionTooltip from '../../components/common/SessionTooltip';
 import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ManageSessions = () => {
   const navigate = useNavigate();
@@ -46,17 +48,17 @@ const ManageSessions = () => {
     fetchSessions();
   }, []);
 
-  const handleDeleteSession = async (sessionId, sessionTitle) => {
-    if (window.confirm(`Are you sure you want to delete the session "${sessionTitle}"? This action cannot be undone.`)) {
+  const handleCancelSession = async (sessionId, sessionTitle) => {
+    if (window.confirm(`Are you sure you want to cancel the session "${sessionTitle}"? The session status will be marked as cancelled.`)) {
       try {
         setLoading(true);
-        await sessionService.deleteSession(sessionId);
-        toast.success('Session deleted successfully');
+        await sessionService.cancelSession(sessionId);
+        toast.success('Session cancelled successfully');
         // Refresh the sessions list
         await fetchSessions();
       } catch (error) {
-        console.error('Error deleting session:', error);
-        const errorMessage = error.response?.data?.detail || 'Failed to delete session';
+        console.error('Error cancelling session:', error);
+        const errorMessage = error.response?.data?.detail || 'Failed to cancel session';
         toast.error(errorMessage);
       } finally {
         setLoading(false);
@@ -118,12 +120,51 @@ const ManageSessions = () => {
     setHoveredSession(null);
   };
 
+  const getSessionStatus = (session) => {
+    // First check if already cancelled or ended
+    if (session.status === 'cancelled') {
+      return 'cancelled';
+    }
+    if (session.status === 'active') {
+      return 'active';
+    }
+    if (session.status === 'ended') {
+      return 'ended';
+    }
+
+    // Check if scheduled session is expired (scheduled time + duration has passed and session not started)
+    if (session.status === 'scheduled' && session.scheduled_date) {
+      try {
+        const now = new Date();
+        const scheduled = new Date(session.scheduled_date);
+
+        // Calculate session end time: scheduled_date + duration (in minutes)
+        const durationMs = (session.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+
+        // Add 5-minute buffer to account for timezone differences
+        const bufferMs = 5 * 60 * 1000; // 5 minutes
+        const adjustedNow = new Date(now.getTime() - bufferMs);
+
+        // If current time is after (session end time + buffer), it's expired
+        if (adjustedNow >= sessionEndTime) {
+          return 'expired';
+        }
+      } catch (e) {
+        console.warn('Error parsing session date:', e);
+      }
+    }
+
+    return session.status;
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       scheduled: 'bg-blue-100 text-blue-800',
       active: 'bg-green-100 text-green-800',
       ended: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800'
+      cancelled: 'bg-red-100 text-red-800',
+      expired: 'bg-gray-300 text-gray-900'
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
@@ -145,11 +186,29 @@ const ManageSessions = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-
-            <h1 className="page-title">
-              Manage Training Sessions
-            </h1>
-            <p className="page-description">View and manage all training sessions</p>
+            <button
+              onClick={() => navigate("/head/dashboard")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
+            <div>
+              <h1 className="page-title">
+                Manage Training Sessions
+              </h1>
+              <p className="page-description">View and manage all training sessions</p>
+            </div>
           </div>
 
           {/* Search and Add Section */}
@@ -190,6 +249,11 @@ const ManageSessions = () => {
             </button>
           </div>
 
+          {/* Stats Line */}
+          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+            All ({sessions.length})<span style={{ marginLeft: '0.5rem' }}>Scheduled ({sessions.filter(s => s.status === 'scheduled').length})</span><span style={{ marginLeft: '0.5rem' }}>Active ({sessions.filter(s => s.status === 'active').length})</span><span style={{ marginLeft: '0.5rem' }}>Completed ({sessions.filter(s => s.status === 'ended').length})</span><span style={{ marginLeft: '0.5rem' }}>Cancelled ({sessions.filter(s => s.status === 'cancelled').length})</span>
+          </div>
+
           {/* Filters */}
           <div className="filter-tabs">
             <button
@@ -216,81 +280,87 @@ const ManageSessions = () => {
             >
               Completed ({sessions.filter(s => s.status === 'ended').length})
             </button>
+            <button
+              onClick={() => setFilter('cancelled')}
+              className={`filter-tab ${filter === 'cancelled' ? 'filter-tab-active' : ''}`}
+            >
+              Cancelled ({sessions.filter(s => s.status === 'cancelled').length})
+            </button>
           </div>
 
           {/* Sessions Table */}
-          <div className="data-table-container">
+          <div className="table-primary-container">
             {loading ? (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
               </div>
             ) : filteredSessions.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-title">No {filter !== 'all' ? filter : ''} sessions found</p>
-                <p className="empty-state-description">Schedule a new session to get started</p>
+              <div className="table-primary-empty">
+                <p className="table-primary-empty-title">No {filter !== 'all' ? filter : ''} sessions found</p>
+                <p className="table-primary-empty-description">Schedule a new session to get started</p>
               </div>
             ) : (
-              <div className="data-table-wrapper">
-                <table className="data-table">
-                  <thead className="data-table-header">
+              <div className="table-primary-wrapper">
+                <table className="table-primary">
+                  <thead className="table-primary-header">
                     <tr>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Session Title
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Trainer
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Learner
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Scheduled Date
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Duration
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Status
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Materials
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="data-table-body">
+                  <tbody className="table-primary-body">
                     {filteredSessions.map((session) => {
                       const statusNorm = String(session.status || '').trim().toLowerCase();
-                      const canView = statusNorm === 'active' || statusNorm === 'ended';
+                      const canView = true; // Allow viewing all sessions
                       const canHeadNotes = statusNorm === 'ended';
                       return (
-                        <tr key={session.id} className="data-table-row">
-                          <td className="data-table-td">
+                        <tr key={session.id} className="table-primary-row">
+                          <td className="table-primary-td">
                             <div
-                              className="data-table-primary"
+                              className="table-primary-cell-name-text"
                               onClick={(e) => handleSessionTitleClick(session, e)}
                               style={{ cursor: 'pointer', position: 'relative' }}
                             >
                               {session.title}
                             </div>
                             {session.description && (
-                              <div className="data-table-secondary data-table-truncate">{session.description}</div>
+                              <div className="table-primary-cell-subtitle">{session.description}</div>
                             )}
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.trainer_name || 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.learner_name || 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.scheduled_date
                                 ? new Date(session.scheduled_date).toLocaleString('en-US', {
                                   month: 'short',
@@ -302,15 +372,15 @@ const ManageSessions = () => {
                                 : 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">{session.duration} min</div>
+                          <td className="table-primary-td">
+                            <div>{session.duration} min</div>
                           </td>
-                          <td className="data-table-td">
-                            <span className={`status-badge ${getStatusBadge(session.status)}`}>
-                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                          <td className="table-primary-td">
+                            <span className={`status-badge ${getStatusBadge(getSessionStatus(session))}`}>
+                              {getSessionStatus(session) === 'expired' ? 'Expired' : getSessionStatus(session).charAt(0).toUpperCase() + getSessionStatus(session).slice(1)}
                             </span>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <div className="materials-list">
                               {session.learning_goals && session.learning_goals.length > 0 && (
                                 <span className="material-badge material-badge-green">
@@ -328,9 +398,9 @@ const ManageSessions = () => {
                                 )}
                             </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {session.status === 'scheduled' && (
+                              {session.status === 'scheduled' && getSessionStatus(session) !== 'expired' && (
                                 <>
                                   <button
                                     onClick={() => handleEditSession(session)}
@@ -341,21 +411,21 @@ const ManageSessions = () => {
                                     ✏️ Edit
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteSession(session.session_id, session.title)}
-                                    className="btn-danger"
-                                    title="Delete this scheduled session"
+                                    onClick={() => handleCancelSession(session.session_id, session.title)}
+                                    className="btn btn-warning"
+                                    title="Cancel this scheduled session"
                                     style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                   >
-                                    🗑️ Delete
+                                    ❌ Cancel
                                   </button>
                                 </>
                               )}
                               {/* View action: always visible but only active when session is active/ended */}
                               <button
-                                onClick={() => canView && handleViewSession(session)}
-                                disabled={!canView}
+                                onClick={() => handleViewSession(session)}
+                                disabled={false}
                                 className="btn btn-secondary"
-                                title={canView ? `View this ${statusNorm === 'active' ? 'ongoing' : 'completed'} session` : 'View available when session is active or completed'}
+                                title="View session details"
                                 style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
                                 👁️ View
@@ -372,7 +442,7 @@ const ManageSessions = () => {
                                   📝 Head Notes
                                 </button>
                               )}
-                              {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
+                              {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && session.status !== 'cancelled' && (
                                 <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
                                   Can't edit/delete
                                 </span>

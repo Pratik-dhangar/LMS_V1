@@ -17,13 +17,7 @@
 /* Individual Admin Component Styles */
 @import './AdminRegisterCoach.css';
 @import './AdminEditCoach.css';
-@import './AdminManageCoaches.css';
 @import './AdminRegisterHead.css';
-@import './AdminEditHead.css';
-@import './AdminManageHeads.css';
-@import './ManageHeadsPage.css';
-@import './ViewTrainersPage.css';
-@import './AdminViewLearners.css';
 @import './AdminManageLearningContent.css';
 @import './AdminManageLearningGoals.css';
 @import './AdminEditVlog.css';

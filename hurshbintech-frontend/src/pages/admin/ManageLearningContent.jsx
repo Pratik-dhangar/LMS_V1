@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import learningContentService from "../../api/services/learningContentService";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
 import '../../styles/admin/AdminManageLearningContent.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ManageLearningContent = () => {
+  const navigate = useNavigate();
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -162,16 +165,6 @@ const ManageLearningContent = () => {
     return icons[type] || "📁";
   };
 
-  const getContentColor = (type) => {
-    const colors = {
-      image: "from-purple-500 to-pink-500",
-      pdf: "from-red-500 to-orange-500",
-      video: "from-blue-500 to-cyan-500",
-      audio: "from-green-500 to-teal-500",
-      document: "from-yellow-500 to-orange-500",
-    };
-    return colors[type] || "from-gray-500 to-gray-600";
-  };
 
   const handleSearch = (query) => {
     setActiveSearchQuery(query);
@@ -291,6 +284,15 @@ const ManageLearningContent = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             <div>
               <h1 className="page-title">
                 Manage Learning Content

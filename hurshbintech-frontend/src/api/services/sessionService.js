@@ -106,6 +106,17 @@ const sessionService = {
     }
   },
 
+  // Cancel session (Head only)
+  cancelSession: async (sessionId) => {
+    try {
+      const response = await api.post(`/sessions/${sessionId}/cancel`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error cancelling session:', error);
+      throw error;
+    }
+  },
+
   // Update session (Head only)
   updateSession: async (sessionId, sessionData) => {
     try {
