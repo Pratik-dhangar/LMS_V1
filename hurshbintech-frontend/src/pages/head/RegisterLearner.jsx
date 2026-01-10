@@ -5,8 +5,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
-// import '../../styles/Pages.css';
-// import '../../styles/components/head/RegisterLearnerSections.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 
@@ -331,10 +330,29 @@ const RegisterLearner = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-            <h1 className="page-title">
+            <button
+              onClick={() => navigate("/head/manage-learners")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Manage Learners
+            </button>
+           <div>
+             <h1 className="page-title">
               Register New Learner
             </h1>
             <p className="page-description">Fill in the details to register a new learner</p>
+           </div>
           </div>
 
           {/* Error Message */}

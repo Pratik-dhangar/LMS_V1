@@ -6,6 +6,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 const LearnerProgramsView = () => {
     const { learnerId } = useParams();

@@ -16,6 +16,7 @@ import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ProgramGraphView = () => {
     const { learnerId, programName } = useParams();

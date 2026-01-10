@@ -13,6 +13,7 @@ import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDeta
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
 import '../../styles/admin/AdminEditCoach.css';
+import '../../styles/ManageUsersLayout.css';
 
 const EditCoach = () => {
   const { coachId } = useParams();
@@ -387,10 +388,12 @@ const EditCoach = () => {
               </svg>
               Back to Manage Coaches
             </button>
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               Edit Coach Profile
             </h1>
             <p className="page-description">Update profile information for {formData.name}</p>
+            </div>
           </div>
 
           {/* Error Message */}
