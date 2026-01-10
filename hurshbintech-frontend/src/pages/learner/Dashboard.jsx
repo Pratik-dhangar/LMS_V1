@@ -4,10 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import "../../styles/admin/index.css";
-import orderService from "../../api/services/ecommerce/orderService";
 
 const LearnerDashboard = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const menuItems = [
@@ -40,6 +38,11 @@ const LearnerDashboard = () => {
       icon: "📅",
       title: "Book Appointment",
       onClick: () => navigate("/book-appointment"),
+    },
+    {
+      icon: "👤",
+      title: "Profile & Order History",
+      onClick: () => navigate("/learner/profile-order-history"),
     },
   ];
 

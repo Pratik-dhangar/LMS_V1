@@ -14,6 +14,8 @@ const MySessions = () => {
 
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
 
   // Track which sessions have been joined - persist to localStorage
   const [joinedSessions, setJoinedSessions] = useState(() => {
@@ -59,6 +61,16 @@ const MySessions = () => {
     navigate(`/learner/session/${sessionId}`);
   };
 
+  const handleViewSessionDetails = (session) => {
+    setSelectedSession(session);
+    setShowSessionDetailsModal(true);
+  };
+
+  const closeSessionDetailsModal = () => {
+    setShowSessionDetailsModal(false);
+    setSelectedSession(null);
+  };
+
   const formatShortDate = (dateStr) => {
     if (!dateStr) return 'TBD';
     const d = new Date(dateStr);
@@ -79,20 +91,20 @@ const MySessions = () => {
           </div>
 
           {/* Upcoming Sessions */}
-          <div style={{ 
-            marginTop: '2.5rem', 
-            background: '#ffffff', 
-            borderRadius: '0.75rem', 
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
-            padding: '1.5rem' 
+          <div style={{
+            marginTop: '2.5rem',
+            background: '#ffffff',
+            borderRadius: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            padding: '1.5rem'
           }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '700', 
-              color: '#1f2937', 
-              borderBottom: '1px solid #e5e7eb', 
-              paddingBottom: '0.75rem', 
-              marginBottom: '1rem' 
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: '#1f2937',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '0.75rem',
+              marginBottom: '1rem'
             }}>
               My Sessions
             </h2>
@@ -105,25 +117,73 @@ const MySessions = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {sessions
                   .sort((a, b) => {
-                    // Sort by status priority: active first, then scheduled, then others
-                    const statusPriority = { active: 0, scheduled: 1, ended: 2 };
-                    const aPriority = statusPriority[a.status] ?? 3;
-                    const bPriority = statusPriority[b.status] ?? 3;
+                    // Sort by status priority: active first, then scheduled, then cancelled/expired/ended
+                    const statusPriority = { active: 0, scheduled: 1, cancelled: 2, expired: 2, ended: 3 };
+                    // Get actual status for sorting
+                    const getSessionStatus = (sess) => {
+                      if (sess.status === 'scheduled' && sess.scheduled_date) {
+                        const now = new Date();
+                        const scheduled = new Date(sess.scheduled_date);
+                        if (scheduled < now) {
+                          return 'expired';
+                        }
+                      }
+                      return sess.status;
+                    };
+                    const aStatus = getSessionStatus(a);
+                    const bStatus = getSessionStatus(b);
+                    const aPriority = statusPriority[aStatus] ?? 4;
+                    const bPriority = statusPriority[bStatus] ?? 4;
                     if (aPriority !== bPriority) return aPriority - bPriority;
                     // Within same status, sort by date (newest first)
                     return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
                   })
                   .map((session) => {
-                    const isActive = session.status === 'active';
-                    const isScheduled = session.status === 'scheduled';
-                    const isEnded = session.status === 'ended';
-                    
+                    // Helper function to get actual status (considering expired sessions)
+                    const getSessionStatus = (sess) => {
+                      if (sess.status === 'scheduled' && sess.scheduled_date) {
+                        try {
+                          const now = new Date();
+                          let scheduled = new Date(sess.scheduled_date);
+                          
+                          // Handle timezone offset
+                          const dateString = String(sess.scheduled_date).trim();
+                          if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
+                            scheduled = new Date(dateString);
+                          } else {
+                            scheduled = new Date(dateString);
+                          }
+                          
+                          // Add a small buffer (1 minute) to avoid edge case timing issues
+                          const bufferTime = new Date(now.getTime() + 60000);
+                          
+                          if (scheduled < bufferTime) {
+                            return 'expired';
+                          }
+                        } catch (e) {
+                          console.warn('Error parsing session date:', e);
+                        }
+                      }
+                      return sess.status;
+                    };
+
+                    const actualStatus = getSessionStatus(session);
+                    const isActive = actualStatus === 'active';
+                    const isScheduled = actualStatus === 'scheduled';
+                    const isEnded = actualStatus === 'ended';
+                    const isExpired = actualStatus === 'expired';
+                    const isCancelled = actualStatus === 'cancelled';
+
                     const statusColor = isActive ? { border: '#10b981', bg: '#d1fae5' } :
                       isScheduled ? { border: '#f59e0b', bg: '#fef3c7' } :
-                        { border: '#d1d5db', bg: '#f9fafb' };
+                        isExpired ? { border: '#9ca3af', bg: '#f3f4f6' } :
+                          isCancelled ? { border: '#ef4444', bg: '#fee2e2' } :
+                            { border: '#d1d5db', bg: '#f9fafb' };
                     const statusBadge = isActive ? { bg: '#d1fae5', color: '#065f46' } :
                       isScheduled ? { bg: '#fef3c7', color: '#92400e' } :
-                        { bg: '#f3f4f6', color: '#1f2937' };
+                        isExpired ? { bg: '#e5e7eb', color: '#374151' } :
+                          isCancelled ? { bg: '#fee2e2', color: '#dc2626' } :
+                            { bg: '#f3f4f6', color: '#1f2937' };
 
                     return (
                       <div
@@ -155,7 +215,7 @@ const MySessions = () => {
                               background: statusBadge.bg,
                               color: statusBadge.color
                             }}>
-                              {(session.status || 'scheduled').charAt(0).toUpperCase() + (session.status || 'scheduled').slice(1)}
+                              {isExpired ? 'Expired' : isCancelled ? 'Cancelled' : (actualStatus || 'scheduled').charAt(0).toUpperCase() + (actualStatus || 'scheduled').slice(1)}
                             </span>
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.75rem', color: '#4b5563' }}>
@@ -171,32 +231,49 @@ const MySessions = () => {
                           )}
                         </div>
 
-                        <div style={{ marginLeft: '1rem', flexShrink: 0 }}>
-                          {(isActive || isScheduled) && (
+                        <div style={{ marginLeft: '1rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
+                          {(isEnded || isExpired || isCancelled) && (
+                            <span style={{
+                              padding: '0.125rem 0.5rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              background: isExpired ? '#e5e7eb' : isCancelled ? '#fee2e2' : '#f3f4f6',
+                              color: isExpired ? '#374151' : isCancelled ? '#dc2626' : '#1f2937'
+                            }}>
+                              {isExpired ? 'Expired' : isCancelled ? 'Cancelled' : 'Ended'}
+                            </span>
+                          )}
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {(isActive || isScheduled) && !isExpired && !isCancelled && (
+                              <button
+                                onClick={() => handleJoinSession(session.session_id)}
+                                style={{
+                                  background: 'linear-gradient(to right, #f59e0b, #d97706)',
+                                  color: '#ffffff',
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '0.375rem',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
+                              >
+                                {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleJoinSession(session.session_id)}
-                              style={{
-                                background: 'linear-gradient(to right, #f59e0b, #d97706)',
-                                color: '#ffffff',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '0.375rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                whiteSpace: 'nowrap',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
+                              onClick={() => handleViewSessionDetails(session)}
+                              className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-50"
                             >
-                              {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
+                              View Details
                             </button>
-                          )}
-                          {isEnded && (
-                            <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Completed</span>
-                          )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -207,6 +284,128 @@ const MySessions = () => {
 
         </div>
       </main>
+
+      {/* Session Details Modal */}
+      {showSessionDetailsModal && selectedSession && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeSessionDetailsModal}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Session Details</h2>
+              <button
+                onClick={closeSessionDetailsModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Title */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Session Title</label>
+                <p className="text-lg text-gray-800">{selectedSession.title || `Session with ${selectedSession.trainer?.name || selectedSession.trainer_name || "Trainer"}`}</p>
+              </div>
+
+              {/* Trainer Info */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Trainer</label>
+                <p className="text-gray-800">{selectedSession.trainer?.name || selectedSession.trainer_name || "Unknown Trainer"}</p>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-2">Status</label>
+                {(() => {
+                  // Helper function to get actual status (considering expired sessions)
+                  const getSessionStatus = (sess) => {
+                    if (sess.status === 'scheduled' && sess.scheduled_date) {
+                      const now = new Date();
+                      const scheduled = new Date(sess.scheduled_date);
+                      if (scheduled < now) {
+                        return 'expired';
+                      }
+                    }
+                    return sess.status;
+                  };
+                  const actualStatus = getSessionStatus(selectedSession);
+                  return (
+                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold" style={{
+                      background: actualStatus === 'active' ? '#d1fae5' :
+                        actualStatus === 'scheduled' ? '#fef3c7' :
+                          actualStatus === 'cancelled' ? '#fee2e2' :
+                            actualStatus === 'expired' ? '#e5e7eb' :
+                              actualStatus === 'ended' ? '#f3f4f6' : '#f9fafb',
+                      color: actualStatus === 'active' ? '#065f46' :
+                        actualStatus === 'scheduled' ? '#92400e' :
+                          actualStatus === 'cancelled' ? '#dc2626' :
+                            actualStatus === 'expired' ? '#374151' :
+                              actualStatus === 'ended' ? '#1f2937' : '#1f2937'
+                    }}>
+                      {actualStatus === 'expired' ? 'Expired' : actualStatus === 'cancelled' ? 'Cancelled' : actualStatus ? actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1) : 'Scheduled'}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Date</label>
+                  <p className="text-gray-800">
+                    {selectedSession.scheduled_date
+                      ? new Date(selectedSession.scheduled_date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Time</label>
+                  <p className="text-gray-800">
+                    {selectedSession.scheduled_date
+                      ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Duration & Program */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Duration</label>
+                  <p className="text-gray-800">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Program / IIP</label>
+                  <p className="text-gray-800">
+                    {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
+                      ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedSession.description && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Description</label>
+                  <p className="text-gray-800 whitespace-pre-wrap">{selectedSession.description}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

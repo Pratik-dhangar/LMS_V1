@@ -123,10 +123,31 @@ const ManageSessions = () => {
   const getSessionStatus = (session) => {
     // Check if scheduled session is expired (time has passed and session not started)
     if (session.status === 'scheduled' && session.scheduled_date) {
-      const now = new Date();
-      const scheduled = new Date(session.scheduled_date);
-      if (scheduled < now) {
-        return 'expired';
+      try {
+        const now = new Date();
+        let scheduled = new Date(session.scheduled_date);
+        
+        // Handle timezone offset - if the date string doesn't have timezone info, 
+        // assume it's in local time. If it has 'Z' or timezone offset, use as is.
+        const dateString = String(session.scheduled_date).trim();
+        
+        // If date doesn't have timezone indicator and contains 'T', treat as local time
+        if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10) && dateString.includes('T')) {
+          // Parse assuming local time
+          scheduled = new Date(dateString);
+        } else {
+          // Parse ISO format or other standard formats
+          scheduled = new Date(dateString);
+        }
+        
+        // Add a small buffer (1 minute) to avoid edge case timing issues
+        const bufferTime = new Date(now.getTime() + 60000); // 1 minute buffer
+        
+        if (scheduled < bufferTime) {
+          return 'expired';
+        }
+      } catch (e) {
+        console.warn('Error parsing session date:', e);
       }
     }
     return session.status;
@@ -160,7 +181,7 @@ const ManageSessions = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-<button
+            <button
               onClick={() => navigate("/head/dashboard")}
               className="back-button"
             >
@@ -177,12 +198,12 @@ const ManageSessions = () => {
               </svg>
               Back to Dashboard
             </button>
-           <div>
-             <h1 className="page-title">
-              Manage Training Sessions
-            </h1>
-            <p className="page-description">View and manage all training sessions</p>
-           </div>
+            <div>
+              <h1 className="page-title">
+                Manage Training Sessions
+              </h1>
+              <p className="page-description">View and manage all training sessions</p>
+            </div>
           </div>
 
           {/* Search and Add Section */}
@@ -221,6 +242,11 @@ const ManageSessions = () => {
               </svg>
               Schedule Session
             </button>
+          </div>
+
+          {/* Stats Line */}
+          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+            All ({sessions.length})<span style={{ marginLeft: '0.5rem' }}>Scheduled ({sessions.filter(s => s.status === 'scheduled').length})</span><span style={{ marginLeft: '0.5rem' }}>Active ({sessions.filter(s => s.status === 'active').length})</span><span style={{ marginLeft: '0.5rem' }}>Completed ({sessions.filter(s => s.status === 'ended').length})</span><span style={{ marginLeft: '0.5rem' }}>Cancelled ({sessions.filter(s => s.status === 'cancelled').length})</span>
           </div>
 
           {/* Filters */}
@@ -302,7 +328,7 @@ const ManageSessions = () => {
                   <tbody className="table-primary-body">
                     {filteredSessions.map((session) => {
                       const statusNorm = String(session.status || '').trim().toLowerCase();
-                      const canView = statusNorm === 'active' || statusNorm === 'ended';
+                      const canView = true; // Allow viewing all sessions
                       const canHeadNotes = statusNorm === 'ended';
                       return (
                         <tr key={session.id} className="table-primary-row">
@@ -391,10 +417,10 @@ const ManageSessions = () => {
                               )}
                               {/* View action: always visible but only active when session is active/ended */}
                               <button
-                                onClick={() => canView && handleViewSession(session)}
-                                disabled={!canView}
+                                onClick={() => handleViewSession(session)}
+                                disabled={false}
                                 className="btn btn-secondary"
-                                title={canView ? `View this ${statusNorm === 'active' ? 'ongoing' : 'completed'} session` : 'View available when session is active or completed'}
+                                title="View session details"
                                 style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
                                 👁️ View

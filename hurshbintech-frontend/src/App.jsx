@@ -49,6 +49,7 @@ import ProgramGraphView from './pages/head/ProgramGraphView';
 
 // Trainer Pages
 import TrainerDashboard from './pages/trainer/Dashboard';
+import TrainerProfileAndOrderHistory from './pages/trainer/ProfileAndOrderHistory';
 import TrainerSession from './pages/trainer/TrainerSession';
 
 // Coach Pages
@@ -60,6 +61,7 @@ import CoachAvailability from './pages/coach/CoachAvailability';
 
 // Learner Pages
 import LearnerDashboard from './pages/learner/Dashboard';
+import LearnerProfileAndOrderHistory from './pages/learner/ProfileAndOrderHistory';
 import LearnerSession from './pages/learner/LearnerSession';
 import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
@@ -449,6 +451,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/trainer/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['trainer']}>
+              <TrainerProfileAndOrderHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/trainer/session/:sessionId"
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
@@ -505,6 +515,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <LearnerProfileAndOrderHistory />
             </ProtectedRoute>
           }
         />
