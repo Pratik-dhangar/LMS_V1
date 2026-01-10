@@ -165,16 +165,6 @@ const ManageLearningContent = () => {
     return icons[type] || "📁";
   };
 
-  const getContentColor = (type) => {
-    const colors = {
-      image: "from-purple-500 to-pink-500",
-      pdf: "from-red-500 to-orange-500",
-      video: "from-blue-500 to-cyan-500",
-      audio: "from-green-500 to-teal-500",
-      document: "from-yellow-500 to-orange-500",
-    };
-    return colors[type] || "from-gray-500 to-gray-600";
-  };
 
   const handleSearch = (query) => {
     setActiveSearchQuery(query);

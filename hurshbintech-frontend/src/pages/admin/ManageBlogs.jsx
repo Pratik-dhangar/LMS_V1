@@ -6,6 +6,7 @@ import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import SearchBar from '../../components/common/SearchBar';
 import { FaEdit, FaTrash, FaPlus, FaEye, FaSearch } from 'react-icons/fa';
 import blogService from '../../api/services/blogService';
 
@@ -20,6 +21,7 @@ const ManageBlogs = () => {
     const [total, setTotal] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedBlog, setSelectedBlog] = useState(null);
+    const [activeSearchQuery, setActiveSearchQuery] = useState('');
     const navigate = useNavigate();
 
     const fetchBlogs = async () => {
@@ -47,8 +49,9 @@ const ManageBlogs = () => {
         fetchBlogs();
     }, [currentPage, statusFilter, searchTerm]);
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
+    const handleSearch = (query) => {
+        setActiveSearchQuery(query);
+        setSearchTerm(query);
         setCurrentPage(1); // Reset to first page on search
     };
 
@@ -137,21 +140,17 @@ const ManageBlogs = () => {
 
                     {/* Filters */}
                     <div className="bg-white rounded-lg shadow p-4 mb-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search blogs..."
-                                    value={searchTerm}
-                                    onChange={handleSearch}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <div className="flex flex-col sm:flex-row gap-4 items-center">
+                            <div className="flex-1 w-full">
+                                <SearchBar
+                                    onSearch={handleSearch}
+                                    placeholder="Search by title, author, or content..."
                                 />
                             </div>
                             <select
                                 value={statusFilter}
                                 onChange={handleStatusFilter}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                             >
                                 <option value="">All Status</option>
                                 <option value="draft">Draft</option>
@@ -160,10 +159,21 @@ const ManageBlogs = () => {
                         </div>
                     </div>
 
+                    {/* Search Results Info */}
+                    {activeSearchQuery && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <p className="text-blue-800">
+                                Found {blogs.length} blog(s) matching "{activeSearchQuery}"
+                            </p>
+                        </div>
+                    )}
+
                     {/* Blog List */}
                     {blogs.length === 0 ? (
                         <div className="bg-white rounded-lg shadow p-12 text-center">
-                            <p className="text-gray-500 text-lg">No blogs found</p>
+                            <p className="text-gray-500 text-lg">
+                                {activeSearchQuery ? 'No blogs match your search' : 'No blogs found'}
+                            </p>
                             <button
                                 onClick={handleCreate}
                                 className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

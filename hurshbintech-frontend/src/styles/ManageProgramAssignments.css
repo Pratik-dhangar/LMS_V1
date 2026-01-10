@@ -31,17 +31,18 @@
 }
 
 .btn-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #db9d32;
     color: white;
     padding: 0.625rem 1.25rem;
-    border-radius: 8px;
+    border-radius: 0.5rem;
+    font-weight: 500;
     border: none;
-    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .btn-gradient:hover {
+    background: #cb963a;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
