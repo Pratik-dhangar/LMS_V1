@@ -39,3 +39,11 @@ class LearningContent(Base):
     # Relationships
     created_by = relationship("User", foreign_keys=[created_by_admin_id], passive_deletes=True)
     updated_by = relationship("User", foreign_keys=[updated_by_id], passive_deletes=True)
+    
+    # Relationship to learner assignments - CASCADE delete when content is removed
+    learner_assignments = relationship(
+        "LearnerContentAssignment",
+        back_populates="content",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
