@@ -105,8 +105,44 @@ const TodaysSchedule = () => {
       scheduled: "trainer-status-scheduled",
       active: "trainer-status-active",
       ended: "trainer-status-ended",
+      expired: "trainer-status-expired",
+      cancelled: "trainer-status-cancelled",
     };
     return `${base} ${map[status] || "trainer-status-ended"}`;
+  };
+
+  // Get actual session status considering expiration based on duration
+  const getSessionStatus = (session) => {
+    // First check if already cancelled or ended or active
+    if (session.status === 'cancelled') {
+      return 'cancelled';
+    }
+    if (session.status === 'active') {
+      return 'active';
+    }
+    if (session.status === 'ended') {
+      return 'ended';
+    }
+
+    // Check if session is expired (regardless of status, check scheduled_date + duration)
+    if (session.scheduled_date) {
+      try {
+        const now = new Date();
+        const scheduled = new Date(session.scheduled_date);
+
+        // Calculate session end time based on duration
+        const durationMs = (session.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
+        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+
+        // If current time is past the session end time (scheduled + duration), it's expired
+        if (now >= sessionEndTime) {
+          return 'expired';
+        }
+      } catch (e) {
+        console.warn('Error parsing session date:', e);
+      }
+    }
+    return session.status || 'scheduled';
   };
 
   const todaysDateString = useMemo(() => {
@@ -204,15 +240,27 @@ const TodaysSchedule = () => {
                           .split(" ")[1]
                         : "";
                       const borderColor =
-                        session.status === "active"
-                          ? "trainer-session-card-green"
-                          : session.status === "scheduled"
-                            ? "trainer-session-card-amber"
-                            : "trainer-session-card-orange";
+                        (() => {
+                          const actualStatus = getSessionStatus(session);
+                          if (actualStatus === "active") return "trainer-session-card-green";
+                          if (actualStatus === "scheduled") return "trainer-session-card-amber";
+                          if (actualStatus === "cancelled") return "trainer-session-card-red";
+                          if (actualStatus === "expired") return "trainer-session-card-orange";
+                          return "trainer-session-card-orange";
+                        })();
+
+                      const cardBackgroundColor =
+                        (() => {
+                          const actualStatus = getSessionStatus(session);
+                          if (actualStatus === "cancelled") return "#fee2e2";
+                          return "#ffffff";
+                        })();
+
                       return (
                         <div
                           key={session.id || session.session_id}
                           className={`trainer-session-card ${borderColor}`}
+                          style={{ backgroundColor: cardBackgroundColor }}
                         >
                           <div className="trainer-session-content">
                             <div className="trainer-session-left">
@@ -234,14 +282,6 @@ const TodaysSchedule = () => {
                                       "Learner"
                                       }`}
                                   </div>
-                                  <span
-                                    className={getStatusBadge(session.status)}
-                                  >
-                                    {(session.status || "scheduled")
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      (session.status || "scheduled").slice(1)}
-                                  </span>
                                 </div>
 
                                 <div className="trainer-session-meta">
@@ -268,7 +308,7 @@ const TodaysSchedule = () => {
                             </div>
 
                             <div className="trainer-session-actions">
-                              {session.status === "scheduled" && (
+                              {getSessionStatus(session) === "scheduled" && (
                                 <button
                                   onClick={() =>
                                     handleStartSession(session.session_id)
@@ -278,7 +318,7 @@ const TodaysSchedule = () => {
                                   Start Session
                                 </button>
                               )}
-                              {session.status === "active" && (
+                              {getSessionStatus(session) === "active" && (
                                 <button
                                   onClick={() =>
                                     handleResumeSession(session.session_id)
@@ -288,12 +328,14 @@ const TodaysSchedule = () => {
                                   Resume Session
                                 </button>
                               )}
-                              {session.status === "ended" && (
-                                <span className="trainer-session-completed">
-                                  Completed
-                                </span>
-                              )}
-
+                              <span
+                                className={getStatusBadge(getSessionStatus(session))}
+                              >
+                                {getSessionStatus(session)
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                  getSessionStatus(session).slice(1)}
+                              </span>
                               <div className="trainer-session-buttons">
                                 {session.recording_url &&
                                   session.recording_status === "completed" && (
@@ -386,7 +428,7 @@ const TodaysSchedule = () => {
               {/* Status */}
               <div className="trainer-modal-field">
                 <label className="trainer-modal-label">Status</label>
-                <span className={getStatusBadge(selectedSession.status)}>{(selectedSession.status || "scheduled").charAt(0).toUpperCase() + (selectedSession.status || "scheduled").slice(1)}</span>
+                <span className={getStatusBadge(getSessionStatus(selectedSession))}>{getSessionStatus(selectedSession).charAt(0).toUpperCase() + getSessionStatus(selectedSession).slice(1)}</span>
               </div>
 
               {/* Date & Time */}
@@ -488,7 +530,7 @@ const TodaysSchedule = () => {
               >
                 Close
               </button>
-              {selectedSession.status === "scheduled" && (
+              {getSessionStatus(selectedSession) === "scheduled" && (
                 <button
                   onClick={() => {
                     closeSessionDetailsModal();
@@ -499,7 +541,7 @@ const TodaysSchedule = () => {
                   Start Session
                 </button>
               )}
-              {selectedSession.status === "active" && (
+              {getSessionStatus(selectedSession) === "active" && (
                 <button
                   onClick={() => {
                     closeSessionDetailsModal();

@@ -385,6 +385,43 @@ async def delete_training_session(
     return {"message": "Session deleted successfully"}
 
 
+@router.post("/{session_id}/cancel", response_model=SessionResponse)
+async def cancel_training_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Cancel a scheduled session (Head only, only if session is scheduled)"""
+    logger.info(f"Head {current_head.user_id} attempting to cancel session {session_id}")
+
+    session = await session_crud.get_session_by_id(db, session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Verify head created this session
+    if session.created_by_id != current_head.user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to cancel this session"
+        )
+
+    # Only allow cancellation of scheduled sessions
+    if session.status != "scheduled":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel {session.status} session. Only scheduled sessions can be cancelled.",
+        )
+
+    cancelled_session = await session_crud.cancel_session(db, session_id)
+
+    if not cancelled_session:
+        raise HTTPException(status_code=500, detail="Failed to cancel session")
+
+    response = await build_session_response(db, cancelled_session)
+    logger.info(f"Session {session_id} cancelled successfully by Head {current_head.user_id}")
+    return response
+
+
 # ============ LEARNER ENDPOINTS ============
 
 
@@ -393,7 +430,7 @@ async def get_learner_sessions_list(
     db: AsyncSession = Depends(get_db),
     current_learner: LearnerProfile = Depends(get_current_learner),
 ):
-    """Get active sessions for current learner"""
+    """Get learner sessions: scheduled, active, and ended sessions from past 30 days"""
     logger.info(f"Fetching sessions for learner {current_learner.user_id}")
 
     sessions = await session_crud.get_learner_sessions(db, current_learner.user_id)

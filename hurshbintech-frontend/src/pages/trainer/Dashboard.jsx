@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
-import { Calendar, MessageSquare, ShoppingCart, GraduationCap } from 'lucide-react';
+import { Calendar, MessageSquare, ShoppingCart, GraduationCap, User } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const TrainerDashboard = () => {
@@ -253,33 +253,40 @@ const TrainerDashboard = () => {
   };
 
   const menuItems = [
-    { 
-      id: '1', 
-      title: 'IIP Programs', 
-      description: "View today's schedule and manage sessions", 
-      icon: GraduationCap, 
-      onClick: () => navigate('/trainer/schedule') 
+    {
+      id: '1',
+      title: 'IIP Programs',
+      description: "View today's schedule and manage sessions",
+      icon: GraduationCap,
+      onClick: () => navigate('/trainer/schedule')
     },
-    { 
-      id: '2', 
-      title: 'Communication', 
-      description: 'Send messages and communicate with team', 
-      icon: MessageSquare, 
-      onClick: () => navigate('/trainer/communication') 
+    {
+      id: '2',
+      title: 'Communication',
+      description: 'Send messages and communicate with team',
+      icon: MessageSquare,
+      onClick: () => navigate('/trainer/communication')
     },
-    { 
-      id: '3', 
-      title: 'Book Appointment', 
-      description: 'Schedule appointments with coaches', 
-      icon: Calendar, 
-      onClick: () => navigate('/book-appointment') 
+    {
+      id: '3',
+      title: 'Book Appointment',
+      description: 'Schedule appointments with coaches',
+      icon: Calendar,
+      onClick: () => navigate('/book-appointment')
     },
-    { 
-      id: '4', 
-      title: 'Buy Learning Material', 
-      description: 'Browse and purchase learning resources', 
-      icon: ShoppingCart, 
-      onClick: () => navigate('/store') 
+    {
+      id: '4',
+      title: 'Buy Learning Material',
+      description: 'Browse and purchase learning resources',
+      icon: ShoppingCart,
+      onClick: () => navigate('/store')
+    },
+    {
+      id: '5',
+      title: 'Profile & Order History',
+      description: 'View your profile and manage orders',
+      icon: User,
+      onClick: () => navigate('/trainer/profile-order-history')
     },
   ];
 

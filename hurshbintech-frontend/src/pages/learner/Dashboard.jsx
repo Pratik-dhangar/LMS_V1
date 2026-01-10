@@ -6,7 +6,6 @@ import Footer from "../../components/layout/Footer";
 import "../../styles/admin/index.css";
 
 const LearnerDashboard = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const menuItems = [
@@ -39,6 +38,11 @@ const LearnerDashboard = () => {
       icon: "📅",
       title: "Book Appointment",
       onClick: () => navigate("/book-appointment"),
+    },
+    {
+      icon: "👤",
+      title: "Profile & Order History",
+      onClick: () => navigate("/learner/profile-order-history"),
     },
   ];
 
