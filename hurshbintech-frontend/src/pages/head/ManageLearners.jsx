@@ -15,7 +15,8 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import headService from '../../api/services/headService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 // Manage Learners Component
@@ -169,14 +170,14 @@ const ManageLearners = () => {
             </div>
           ) : (
             /* Table */
-            <div className="data-table-container">
+            <div className="table-primary-container">
               {filteredLearners.length === 0 ? (
-                <div className="empty-state">
-                  <Users className="empty-state-icon" />
-                  <p className="empty-state-title">
+                <div className="table-primary-empty">
+                  <Users className="table-primary-empty-icon" />
+                  <p className="table-primary-empty-title">
                     {activeSearchQuery ? 'No learners found' : 'No learners registered yet'}
                   </p>
-                  <p className="empty-state-description">
+                  <p className="table-primary-empty-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'Register your first learner to get started'
@@ -192,43 +193,43 @@ const ManageLearners = () => {
                   )}
                 </div>
               ) : (
-                <div className="data-table-wrapper">
-                  <table className="data-table">
-                    <thead className="data-table-header">
+                <div className="table-primary-wrapper">
+                  <table className="table-primary">
+                    <thead className="table-primary-header">
                       <tr>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Sr. No.
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Name
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Passcode
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Date of Assessment
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="data-table-body">
+                    <tbody className="table-primary-body">
                       {filteredLearners.map((learner, index) => (
                         <tr
                           key={learner.id}
-                          className="data-table-row"
+                          className="table-primary-row"
                         >
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             {index + 1}
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-primary">{learner.name}</div>
-                            <div className="data-table-secondary">{learner.role}</div>
+                          <td className="table-primary-td">
+                            <div className="table-primary-cell-name-text">{learner.name}</div>
+                            <div className="table-primary-cell-subtitle">{learner.role}</div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="passcode-toggle">
-                              <span className="passcode-badge">
+                          <td className="table-primary-td">
+                            <div className="manage-users-passcode-display">
+                              <span className="table-primary-badge">
                                 {visiblePasscodes[learner.id]
                                   ? revealedPasscodes[learner.id]
                                   : '••••••'
@@ -237,25 +238,25 @@ const ManageLearners = () => {
                               <button
                                 type="button"
                                 onClick={() => togglePasscodeVisibility(learner.id, learner.user_id)}
-                                className="icon-btn"
+                                className="manage-users-passcode-toggle-btn"
                                 aria-label={visiblePasscodes[learner.id] ? 'Hide passcode' : 'Show passcode'}
                               >
-                                {visiblePasscodes[learner.id] ? <EyeOff className="icon-sm" /> : <Eye className="icon-sm" />}
+                                {visiblePasscodes[learner.id] ? <EyeOff className="table-primary-icon-sm" /> : <Eye className="table-primary-icon-sm" />}
                               </button>
                             </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             {learner.date_of_assessment
                               ? new Date(learner.date_of_assessment).toLocaleDateString()
                               : 'N/A'
                             }
                           </td>
-                          <td className="data-table-td data-table-center">
+                          <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditLearner(learner.id)}
                               className="btn-primary btn-icon"
                             >
-                              <Edit3 className="icon-sm" />
+                              <Edit3 className="table-primary-icon-sm" />
                               Edit Profile
                             </button>
                           </td>

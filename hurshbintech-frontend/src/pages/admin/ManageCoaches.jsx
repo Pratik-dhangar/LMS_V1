@@ -17,7 +17,9 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/admin/AdminManageCoaches.css';
+import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 // ViewConsultants Component - Admin can view, add and edit coaches
@@ -115,7 +117,7 @@ const ViewConsultants = () => {
                     <div className="page-header">
 
                         <h1 className="page-title">
-                            Register HurshBin Coaches
+                            Manage HurshBin Coaches
                         </h1>
                         <p className="page-description">View and manage all registered coaches/consultants in the system</p>
                     </div>
@@ -128,9 +130,9 @@ const ViewConsultants = () => {
                         />
                         <button
                             onClick={() => navigate('/admin/register-coach')}
-                            className="btn-success btn-icon"
+                            className="btn-success"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
                             </svg>
                             Add New Coach
@@ -162,14 +164,14 @@ const ViewConsultants = () => {
                         </div>
                     ) : (
                         /* Table */
-                        <div className="data-table-container">
+                        <div className="table-primary-container">
                             {filteredConsultants.length === 0 ? (
-                                <div className="empty-state">
-                                    <Users className="empty-state-icon" />
-                                    <p className="empty-state-title">
+                                <div className="table-primary-empty">
+                                    <Users className="table-primary-empty-icon" />
+                                    <h3 className="table-primary-empty-title">
                                         {activeSearchQuery ? 'No coaches found' : 'No coaches registered yet'}
-                                    </p>
-                                    <p className="empty-state-description">
+                                    </h3>
+                                    <p className="table-primary-empty-description">
                                         {activeSearchQuery
                                             ? 'Try adjusting your search criteria'
                                             : 'Register your first coach to get started'
@@ -185,75 +187,75 @@ const ViewConsultants = () => {
                                     )}
                                 </div>
                             ) : (
-                                <div className="table-wrapper">
-                                    <table className="data-table">
-                                        <thead className="data-table-header">
+                                <div className="table-primary-wrapper">
+                                    <table className="table-primary">
+                                        <thead className="table-primary-header">
                                             <tr>
-                                                <th className="data-table-th">
+                                                <th className="table-primary-th table-primary-th-center">
                                                     Sr. No.
                                                 </th>
-                                                <th className="data-table-th">
+                                                <th className="table-primary-th">
                                                     Name
                                                 </th>
-                                                <th className="data-table-th">
+                                                <th className="table-primary-th">
                                                     Passcode
                                                 </th>
-                                                <th className="data-table-th">
+                                                <th className="table-primary-th">
                                                     Contact Number
                                                 </th>
-                                                <th className="data-table-th">
+                                                <th className="table-primary-th">
                                                     Date Joined
                                                 </th>
-                                                <th className="data-table-th data-table-th-center">
+                                                <th className="table-primary-th table-primary-th-center">
                                                     Actions
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody className="data-table-body">
+                                        <tbody className="table-primary-body">
                                             {filteredConsultants.map((consultant, index) => (
                                                 <tr
                                                     key={consultant.id}
-                                                    className="data-table-row"
+                                                    className="table-primary-row"
                                                 >
-                                                    <td className="data-table-td data-table-td-center">
+                                                    <td className="table-primary-td table-primary-td-center">
                                                         {index + 1}
                                                     </td>
-                                                    <td className="data-table-td">
-                                                        <div className="data-table-name">{consultant.name}</div>
+                                                    <td className="table-primary-td">
+                                                        <div className="table-primary-cell-name-text">{consultant.name}</div>
                                                     </td>
-                                                    <td className="data-table-td">
+                                                    <td className="table-primary-td">
                                                         <div className="passcode-display-inline">
-                                                            <span className="passcode-badge">
+                                                            <span className="table-primary-badge">
                                                                 {visiblePasscodes[consultant.id] ? visiblePasscodes[consultant.id] : '••••••'}
                                                             </span>
                                                             <button
                                                                 onClick={() => togglePasscodeVisibility(consultant.id, consultant.user_id)}
-                                                                className="icon-btn"
+                                                                className="table-primary-icon-btn"
                                                                 title={visiblePasscodes[consultant.id] ? 'Hide passcode' : 'Show passcode'}
                                                             >
                                                                 {visiblePasscodes[consultant.id] ? (
-                                                                    <EyeOff className="icon-sm" />
+                                                                    <EyeOff className="table-primary-icon-sm" />
                                                                 ) : (
-                                                                    <Eye className="icon-sm" />
+                                                                    <Eye className="table-primary-icon-sm" />
                                                                 )}
                                                             </button>
                                                         </div>
                                                     </td>
-                                                    <td className="data-table-td">
+                                                    <td className="table-primary-td">
                                                         {consultant.contact_no || 'N/A'}
                                                     </td>
-                                                    <td className="data-table-td">
+                                                    <td className="table-primary-td">
                                                         {consultant.date_of_joining
                                                             ? new Date(consultant.date_of_joining).toLocaleDateString()
                                                             : 'N/A'
                                                         }
                                                     </td>
-                                                    <td className="data-table-td">
+                                                    <td className="table-primary-td table-primary-td-center">
                                                         <button
                                                             onClick={() => handleEditCoach(consultant.id)}
                                                             className="btn-primary btn-sm btn-icon"
                                                         >
-                                                            <Edit3 className="icon-sm" />
+                                                            <Edit3 className="table-primary-icon-sm" />
                                                             Edit Profile
                                                         </button>
                                                     </td>

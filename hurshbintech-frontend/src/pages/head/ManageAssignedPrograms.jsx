@@ -9,6 +9,7 @@ import { Loader2, Trash2, ListChecks } from "lucide-react";
 import { toast } from "react-toastify";
 import '../../styles/Pages.css';
 import '../../styles/head/ManageAssignedPrograms.css';
+import '../../styles/Table.css';
 
 const ManageAssignedPrograms = () => {
   const [learners, setLearners] = useState([]);
@@ -190,26 +191,26 @@ const ManageAssignedPrograms = () => {
                 <h2 className="form-section-title">Assigned Programs</h2>
 
                 {assigned.length === 0 ? (
-                  <p className="empty-state-description">No programs assigned yet.</p>
+                  <p className="table-primary-empty-description">No programs assigned yet.</p>
                 ) : (
-                  <div className="data-table-container">
-                    <table className="data-table">
-                      <thead className="data-table-header">
+                  <div className="table-primary-container">
+                    <table className="table-primary">
+                      <thead className="table-primary-header">
                         <tr>
-                          <th className="data-table-th">Program</th>
-                          <th className="data-table-th">Actions</th>
+                          <th className="table-primary-th">Program</th>
+                          <th className="table-primary-th">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="data-table-body">
+                      <tbody className="table-primary-body">
                         {assigned.map((row) => (
-                          <tr key={row.id} className="data-table-row">
-                            <td className="data-table-td">{row.program_title}</td>
-                            <td className="data-table-td data-table-center">
+                          <tr key={row.id} className="table-primary-row">
+                            <td className="table-primary-td">{row.program_title}</td>
+                            <td className="table-primary-td table-primary-td-center">
                               <button
                                 className="btn-danger btn-icon"
                                 onClick={() => handleRemove(row.id)}
                               >
-                                <Trash2 className="icon-sm" />
+                                <Trash2 className="table-primary-icon-sm" />
                               </button>
                             </td>
                           </tr>

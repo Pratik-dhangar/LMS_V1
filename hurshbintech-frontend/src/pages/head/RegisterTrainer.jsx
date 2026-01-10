@@ -11,6 +11,7 @@ import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDeta
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 // register trainer 
 const RegisterTrainer = () => {

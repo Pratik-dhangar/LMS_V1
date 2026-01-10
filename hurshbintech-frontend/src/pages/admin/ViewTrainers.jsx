@@ -14,11 +14,15 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/admin/ViewTrainersPage.css';
+import { useNavigate } from 'react-router-dom';
+import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 // ViewTrainers Component - Admin can view all trainers (no edit capability)
 const ViewTrainers = () => {
+  const navigate = useNavigate();
   const { user: _user } = useAuth();
 
   // State management for trainer data and filtering
@@ -98,27 +102,36 @@ const ViewTrainers = () => {
   };
 
   return (
-    <div className="view-trainers-container">
+    <div className="page-container">
       <Navbar />
-      <main className="view-trainers-main">
-        <div className="view-trainers-content">
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
-          <div className="view-trainers-header">
-            <h1 className="view-trainers-title">
+          <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
+            <h1 className="page-title">
               View HurshBin Trainers
             </h1>
-            <p className="view-trainers-description">View all registered trainers in the system</p>
+            <p className="page-description">View all registered trainers in the system</p>
           </div>
 
           {/* Search Bar */}
-          <div className="view-trainers-search-section">
+          <div className="search-section">
             <SearchBar
               onSearch={handleSearch}
               placeholder="Search by name, passcode, contact number..."
             />
           </div>
           {activeSearchQuery && (
-            <div className="view-trainers-search-results-info">
+            <div className="search-results-info">
               <p>
                 Found {filteredTrainers.length} result{filteredTrainers.length !== 1 ? 's' : ''}
               </p>
@@ -127,9 +140,9 @@ const ViewTrainers = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="view-trainers-error-message">
-              <div className="view-trainers-error-content">
-                <AlertCircle className="view-trainers-error-icon" />
+            <div className="view-users-error-message">
+              <div className="view-users-error-content">
+                <AlertCircle className="view-users-error-icon" />
                 <p>{error}</p>
               </div>
             </div>
@@ -137,20 +150,20 @@ const ViewTrainers = () => {
 
           {/* Loading State */}
           {loading ? (
-            <div className="view-trainers-loading-container">
-              <Loader2 className="view-trainers-loading-spinner" />
-              <p className="view-trainers-loading-text">Loading trainers...</p>
+            <div className="view-users-loading-container">
+              <Loader2 className="view-users-loading-spinner" />
+              <p className="view-users-loading-text">Loading trainers...</p>
             </div>
           ) : (
             /* Table */
-            <div className="view-trainers-table-container">
+            <div className="table-primary-container">
               {filteredTrainers.length === 0 ? (
-                <div className="view-trainers-empty-state">
-                  <Users className="view-trainers-empty-state-icon" />
-                  <p className="view-trainers-empty-state-title">
+                <div className="table-primary-empty">
+                  <Users className="table-primary-empty-icon" />
+                  <h3 className="table-primary-empty-title">
                     {activeSearchQuery ? 'No trainers found' : 'No trainers registered yet'}
-                  </p>
-                  <p className="view-trainers-empty-state-description">
+                  </h3>
+                  <p className="table-primary-empty-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'No trainers have been registered in the system'
@@ -158,61 +171,61 @@ const ViewTrainers = () => {
                   </p>
                 </div>
               ) : (
-                <div className="view-trainers-table-wrapper">
-                  <table className="view-trainers-table">
-                    <thead className="view-trainers-table-header">
+                <div className="table-primary-wrapper">
+                  <table className="table-primary">
+                    <thead className="table-primary-header">
                       <tr>
-                        <th className="view-trainers-table-th view-trainers-table-th-center">
+                        <th className="table-primary-th table-primary-th-center">
                           Sr. No.
                         </th>
-                        <th className="view-trainers-table-th">
+                        <th className="table-primary-th">
                           Name
                         </th>
-                        <th className="view-trainers-table-th">
+                        <th className="table-primary-th">
                           Passcode
                         </th>
-                        <th className="view-trainers-table-th">
+                        <th className="table-primary-th">
                           Contact Number
                         </th>
-                        <th className="view-trainers-table-th">
+                        <th className="table-primary-th">
                           Date Joined
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="view-trainers-table-body">
+                    <tbody className="table-primary-body">
                       {filteredTrainers.map((trainer, index) => (
-                        <tr key={trainer.id} className="view-trainers-table-row">
-                          <td className="view-trainers-table-td view-trainers-table-td-center">
+                        <tr key={trainer.id} className="table-primary-row">
+                          <td className="table-primary-td table-primary-td-center">
                             {index + 1}
                           </td>
-                          <td className="view-trainers-table-td">
-                            <div className="view-trainers-trainer-name">
-                              <div className="view-trainers-trainer-name-text">{trainer.name}</div>
-                              <div className="view-trainers-trainer-role">{trainer.role}</div>
+                          <td className="table-primary-td">
+                            <div className="table-primary-cell-name">
+                              <div className="table-primary-cell-name-text">{trainer.name}</div>
+                              <div className="table-primary-cell-subtitle">{trainer.role}</div>
                             </div>
                           </td>
-                          <td className="view-trainers-table-td">
-                            <div className="view-trainers-passcode-display">
-                              <span className="view-trainers-passcode-badge">
+                          <td className="table-primary-td">
+                            <div className="passcode-display-inline">
+                              <span className="table-primary-badge">
                                 {visiblePasscodes[trainer.id] ? visiblePasscodes[trainer.id] : '••••••'}
                               </span>
                               <button
                                 onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
-                                className="view-trainers-passcode-toggle-btn"
+                                className="table-primary-icon-btn"
                                 title={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
                               >
                                 {visiblePasscodes[trainer.id] ? (
-                                  <EyeOff className="view-trainers-icon-sm" />
+                                  <EyeOff className="table-primary-icon-sm" />
                                 ) : (
-                                  <Eye className="view-trainers-icon-sm" />
+                                  <Eye className="table-primary-icon-sm" />
                                 )}
                               </button>
                             </div>
                           </td>
-                          <td className="view-trainers-table-td">
+                          <td className="table-primary-td">
                             {trainer.contact_no || 'N/A'}
                           </td>
-                          <td className="view-trainers-table-td">
+                          <td className="table-primary-td">
                             {trainer.date_of_joining
                               ? new Date(trainer.date_of_joining).toLocaleDateString()
                               : 'N/A'
@@ -229,7 +242,7 @@ const ViewTrainers = () => {
 
           {/* Summary */}
           {!loading && filteredTrainers.length > 0 && (
-            <div className="view-trainers-page-summary">
+            <div className="page-summary">
               Showing {filteredTrainers.length} of {trainers.length} trainer{trainers.length !== 1 ? 's' : ''}
             </div>
           )}

@@ -8,8 +8,10 @@ import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import '../../styles/admin/AdminManageVlogs.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ManageVlogs = () => {
+  const navigate = useNavigate();
   const [vlogs, setVlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,7 +19,6 @@ const ManageVlogs = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [selectedVlog, setSelectedVlog] = useState(null);
-  const navigate = useNavigate();
 
   const fetchVlogs = async () => {
     try {
@@ -87,7 +88,16 @@ const ManageVlogs = () => {
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
-          <div className="page-header page-header-split">
+          <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             {/* Left Side: Title and Subtitle */}
             <div>
               <h1 className="page-title">
@@ -98,7 +108,7 @@ const ManageVlogs = () => {
               </p>
             </div>
 
-            {/* Right Side: Button (now outside the div) */}
+            {/* Right Side: Button */}
             <button
               onClick={() => setShowCreateModal(true)}
               className="btn-success"

@@ -5,8 +5,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
-// import '../../styles/Pages.css';
-// import '../../styles/components/head/RegisterLearnerSections.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 

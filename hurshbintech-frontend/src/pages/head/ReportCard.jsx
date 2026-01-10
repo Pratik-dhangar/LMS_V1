@@ -6,6 +6,7 @@ import headService from '../../api/services/headService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ReportCard = () => {
   const navigate = useNavigate();

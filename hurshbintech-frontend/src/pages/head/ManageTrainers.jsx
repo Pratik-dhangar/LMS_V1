@@ -16,6 +16,8 @@ import Footer from '../../components/layout/Footer';
 import headService from '../../api/services/headService';
 import SearchBar from '../../components/common/SearchBar';
 import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 // ManageTrainers Component
@@ -170,14 +172,14 @@ const ManageTrainers = () => {
             </div>
           ) : (
             /* Table */
-            <div className="data-table-container">
+            <div className="table-primary-container">
               {filteredTrainers.length === 0 ? (
-                <div className="empty-state">
-                  <Users className="empty-state-icon" />
-                  <p className="empty-state-title">
+                <div className="table-primary-empty">
+                  <Users className="table-primary-empty-icon" />
+                  <p className="table-primary-empty-title">
                     {activeSearchQuery ? 'No trainers found' : 'No trainers registered yet'}
                   </p>
-                  <p className="empty-state-description">
+                  <p className="table-primary-empty-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'Register your first trainer to get started'
@@ -193,46 +195,46 @@ const ManageTrainers = () => {
                   )}
                 </div>
               ) : (
-                <div className="data-table-wrapper">
-                  <table className="data-table">
-                    <thead className="data-table-header">
+                <div className="table-primary-wrapper">
+                  <table className="table-primary">
+                    <thead className="table-primary-header">
                       <tr>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Sr. No.
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Name
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Passcode
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Contact Number
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Date Joined
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="data-table-body">
+                    <tbody className="table-primary-body">
                       {filteredTrainers.map((trainer, index) => (
                         <tr
                           key={trainer.id}
-                          className="data-table-row"
+                          className="table-primary-row"
                         >
-                          <td className="data-table-td data-table-center">
+                          <td className="table-primary-td table-primary-td-center">
                             {index + 1}
                           </td>
-                          <td className="data-table-td data-table-center">
-                            <div className="data-table-primary">{trainer.name}</div>
+                          <td className="table-primary-td table-primary-td-center">
+                            <div className="table-primary-cell-name-text">{trainer.name}</div>
                             
                           </td>
-                          <td className="data-table-td data-table-center">
-                            <div className="passcode-toggle">
-                              <span className="passcode-badge">
+                          <td className="table-primary-td table-primary-td-center">
+                            <div className="manage-users-passcode-display">
+                              <span className="table-primary-badge">
                                 {visiblePasscodes[trainer.id]
                                   ? revealedPasscodes[trainer.id]
                                   : '••••••'
@@ -241,28 +243,28 @@ const ManageTrainers = () => {
                               <button
                                 type="button"
                                 onClick={() => togglePasscodeVisibility(trainer.id, trainer.user_id)}
-                                className="icon-btn"
+                                className="manage-users-passcode-toggle-btn"
                                 aria-label={visiblePasscodes[trainer.id] ? 'Hide passcode' : 'Show passcode'}
                               >
-                                {visiblePasscodes[trainer.id] ? <EyeOff className="icon-sm" /> : <Eye className="icon-sm" />}
+                                {visiblePasscodes[trainer.id] ? <EyeOff className="table-primary-icon-sm" /> : <Eye className="table-primary-icon-sm" />}
                               </button>
                             </div>
                           </td>
-                          <td className="data-table-td data-table-center">
+                          <td className="table-primary-td table-primary-td-center">
                             {trainer.contact_no || 'N/A'}
                           </td>
-                          <td className="data-table-td data-table-center">
+                          <td className="table-primary-td table-primary-td-center">
                             {trainer.date_of_joining
                               ? new Date(trainer.date_of_joining).toLocaleDateString()
                               : 'N/A'
                             }
                           </td>
-                          <td className="data-table-td data-table-center">
+                          <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditTrainer(trainer.id)}
                               className="btn-primary btn-icon"
                             >
-                              <Edit3 className="icon-sm" />
+                              <Edit3 className="table-primary-icon-sm" />
                               Edit Profile
                             </button>
                           </td>

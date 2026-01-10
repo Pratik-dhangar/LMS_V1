@@ -12,6 +12,8 @@ import ViewSessionModal from './ViewSessionModal';
 import HeadSessionNotesModal from './HeadSessionNotesModal';
 import SessionTooltip from '../../components/common/SessionTooltip';
 import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ManageSessions = () => {
   const navigate = useNavigate();
@@ -219,78 +221,78 @@ const ManageSessions = () => {
           </div>
 
           {/* Sessions Table */}
-          <div className="data-table-container">
+          <div className="table-primary-container">
             {loading ? (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
               </div>
             ) : filteredSessions.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-title">No {filter !== 'all' ? filter : ''} sessions found</p>
-                <p className="empty-state-description">Schedule a new session to get started</p>
+              <div className="table-primary-empty">
+                <p className="table-primary-empty-title">No {filter !== 'all' ? filter : ''} sessions found</p>
+                <p className="table-primary-empty-description">Schedule a new session to get started</p>
               </div>
             ) : (
-              <div className="data-table-wrapper">
-                <table className="data-table">
-                  <thead className="data-table-header">
+              <div className="table-primary-wrapper">
+                <table className="table-primary">
+                  <thead className="table-primary-header">
                     <tr>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Session Title
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Trainer
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Learner
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Scheduled Date
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Duration
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Status
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Materials
                       </th>
-                      <th className="data-table-th">
+                      <th className="table-primary-th">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="data-table-body">
+                  <tbody className="table-primary-body">
                     {filteredSessions.map((session) => {
                       const statusNorm = String(session.status || '').trim().toLowerCase();
                       const canView = statusNorm === 'active' || statusNorm === 'ended';
                       const canHeadNotes = statusNorm === 'ended';
                       return (
-                        <tr key={session.id} className="data-table-row">
-                          <td className="data-table-td">
+                        <tr key={session.id} className="table-primary-row">
+                          <td className="table-primary-td">
                             <div
-                              className="data-table-primary"
+                              className="table-primary-cell-name-text"
                               onClick={(e) => handleSessionTitleClick(session, e)}
                               style={{ cursor: 'pointer', position: 'relative' }}
                             >
                               {session.title}
                             </div>
                             {session.description && (
-                              <div className="data-table-secondary data-table-truncate">{session.description}</div>
+                              <div className="table-primary-cell-subtitle">{session.description}</div>
                             )}
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.trainer_name || 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.learner_name || 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">
+                          <td className="table-primary-td">
+                            <div>
                               {session.scheduled_date
                                 ? new Date(session.scheduled_date).toLocaleString('en-US', {
                                   month: 'short',
@@ -302,15 +304,15 @@ const ManageSessions = () => {
                                 : 'N/A'}
                             </div>
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-text">{session.duration} min</div>
+                          <td className="table-primary-td">
+                            <div>{session.duration} min</div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <span className={`status-badge ${getStatusBadge(session.status)}`}>
                               {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                             </span>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <div className="materials-list">
                               {session.learning_goals && session.learning_goals.length > 0 && (
                                 <span className="material-badge material-badge-green">
@@ -328,7 +330,7 @@ const ManageSessions = () => {
                                 )}
                             </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                               {session.status === 'scheduled' && (
                                 <>

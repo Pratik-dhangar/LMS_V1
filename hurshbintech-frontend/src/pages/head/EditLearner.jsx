@@ -9,6 +9,7 @@ import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 // Form Section Components
 import PersonalDetailsSection from '../../components/head/RegisterLearner/PersonalDetailsSection';

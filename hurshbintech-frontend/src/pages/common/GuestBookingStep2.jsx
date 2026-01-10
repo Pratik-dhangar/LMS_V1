@@ -7,6 +7,7 @@ import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import '../../styles/GuestBooking.css';
+import '../../styles/ManageUsersLayout.css';
 
 const GuestBookingStep2 = () => {
   const location = useLocation();

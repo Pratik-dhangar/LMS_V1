@@ -8,6 +8,7 @@ import ErrorState from '../../components/common/ErrorState';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/admin/AdminEditVlog.css';
+import '../../styles/ManageUsersLayout.css';
 
 const EditVlog = () => {
   const { id } = useParams();
