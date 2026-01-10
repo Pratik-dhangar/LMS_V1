@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import Loader from '../../components/common/Loader';
-import ErrorState from '../../components/common/ErrorState';
-import ConfirmModal from '../../components/common/ConfirmModal';
-import { FaEdit, FaTrash, FaPlus, FaEye, FaSearch } from 'react-icons/fa';
+import SearchBar from '../../components/common/SearchBar';
+import '../../styles/Table.css';
+import '../../styles/admin/AdminManageLearningGoals.css';
+import '../../styles/ManageUsersLayout.css';
 import blogService from '../../api/services/blogService';
 
 const ManageBlogs = () => {
+    const navigate = useNavigate();
     const [blogs, setBlogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -18,9 +19,8 @@ const ManageBlogs = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedBlog, setSelectedBlog] = useState(null);
-    const navigate = useNavigate();
+    const [activeSearchQuery, setActiveSearchQuery] = useState('');
 
     const fetchBlogs = async () => {
         try {
@@ -47,8 +47,9 @@ const ManageBlogs = () => {
         fetchBlogs();
     }, [currentPage, statusFilter, searchTerm]);
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
+    const handleSearch = (query) => {
+        setActiveSearchQuery(query);
+        setSearchTerm(query);
         setCurrentPage(1); // Reset to first page on search
     };
 
@@ -66,27 +67,18 @@ const ManageBlogs = () => {
     };
 
     const handleDeleteClick = (blog) => {
-        console.log('Delete clicked for blog:', blog);
-        setSelectedBlog(blog);
-        setShowDeleteModal(true);
+        if (!window.confirm(`Delete "${blog.title}"?`)) return;
+        handleDelete(blog.id);
     };
 
-    const handleDelete = async () => {
-        console.log('Confirming delete for blog ID:', selectedBlog?.id);
+    const handleDelete = async (blogId) => {
         try {
-            console.log('Sending delete request for blog ID:', selectedBlog.id);
-            const response = await blogService.deleteBlog(selectedBlog.id);
-            console.log('Delete response:', response);
+            await blogService.deleteBlog(blogId);
             toast.success('Blog deleted successfully');
-            setShowDeleteModal(false);
-            setSelectedBlog(null);
-            // Refresh the blog list
             await fetchBlogs();
         } catch (err) {
             console.error('Error deleting blog:', err);
-            console.error('Error response:', err.response?.data);
             toast.error(err.response?.data?.detail || 'Failed to delete blog');
-            setShowDeleteModal(false);
         }
     };
 
@@ -108,257 +100,206 @@ const ManageBlogs = () => {
         return text.length > length ? text.substring(0, length) + '...' : text;
     };
 
-    if (loading && blogs.length === 0) return <Loader />;
-    if (error && blogs.length === 0) return <ErrorState message={error} />;
+    const filteredBlogs = blogs.filter((blog) =>
+        blog.title.toLowerCase().includes(activeSearchQuery.toLowerCase()) ||
+        (blog.excerpt && blog.excerpt.toLowerCase().includes(activeSearchQuery.toLowerCase())) ||
+        (blog.author && blog.author.name.toLowerCase().includes(activeSearchQuery.toLowerCase()))
+    );
 
     return (
-        <>
+        <div className="page-container">
             <Navbar />
-            <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
+            <div className="page-main">
+                <div className="page-content">
                     {/* Header */}
-                    <div className="mb-8">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Manage Blogs</h1>
-                                <p className="mt-2 text-sm text-gray-600">
-                                    Create and manage blog posts ({total} total)
-                                </p>
-                            </div>
-                            <button
-                                onClick={handleCreate}
-                                className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    <div className="page-header">
+                        <button
+                            onClick={() => navigate('/admin/dashboard')}
+                            className="back-button"
+                        >
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                             >
-                                <FaPlus className="mr-2" />
-                                Create Blog
-                            </button>
+                                <path d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Dashboard
+                        </button>
+                        <div>
+                            <h1 className="page-title">Manage Blogs</h1>
+                            <p className="page-description">
+                                Create and manage blog posts ({total} total)
+                            </p>
                         </div>
                     </div>
 
-                    {/* Filters */}
-                    <div className="bg-white rounded-lg shadow p-4 mb-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search blogs..."
-                                    value={searchTerm}
-                                    onChange={handleSearch}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                            <select
-                                value={statusFilter}
-                                onChange={handleStatusFilter}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">All Status</option>
-                                <option value="draft">Draft</option>
-                                <option value="published">Published</option>
-                            </select>
-                        </div>
+                    {/* Search Bar and Add Button */}
+                    <div className="search-section">
+                        <SearchBar
+                            onSearch={handleSearch}
+                            placeholder="Search by title, author, or content..."
+                        />
+                        <button
+                            onClick={handleCreate}
+                            className="btn-success"
+                        >
+                            + Create Blog
+                        </button>
                     </div>
+                    {activeSearchQuery && (
+                        <div className="search-results-info">
+                            <p className="search-results-text">
+                                Found {filteredBlogs.length} of {blogs.length} blogs
+                            </p>
+                        </div>
+                    )}
 
-                    {/* Blog List */}
-                    {blogs.length === 0 ? (
-                        <div className="bg-white rounded-lg shadow p-12 text-center">
-                            <p className="text-gray-500 text-lg">No blogs found</p>
-                            <button
-                                onClick={handleCreate}
-                                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <FaPlus className="mr-2" />
-                                Create First Blog
-                            </button>
+                    {/* Table */}
+                    {loading ? (
+                        <div className="loading-container">
+                            <div className="loading-spinner"></div>
+                        </div>
+                    ) : filteredBlogs.length === 0 ? (
+                        <div className="empty-state">
+                            <p className="empty-state-description">
+                                {activeSearchQuery
+                                    ? 'No blogs match your search'
+                                    : 'No blogs found. Create your first blog to get started!'}
+                            </p>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-lg shadow overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
+                        <div className="table-primary-container">
+                            {/* Desktop Table */}
+                            <div className="table-primary-wrapper table-desktop">
+                                <table className="table-primary">
+                                    <thead className="table-primary-header">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Title
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Author
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Created
-                                            </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Actions
-                                            </th>
+                                            <th className="table-primary-th table-primary-th-center">Sr. No.</th>
+                                            <th className="table-primary-th">Title</th>
+                                            <th className="table-primary-th">Author</th>
+                                            <th className="table-primary-th">Status</th>
+                                            <th className="table-primary-th">Created</th>
+                                            <th className="table-primary-th table-primary-th-center">View</th>
+                                            <th className="table-primary-th table-primary-th-center">Edit</th>
+                                            <th className="table-primary-th table-primary-th-center">Delete</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {blogs.map((blog) => (
-                                            <tr key={blog.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center">
-                                                        {blog.featured_image_url && (
-                                                            <img
-                                                                src={blog.featured_image_url}
-                                                                alt={blog.title}
-                                                                className="h-12 w-16 object-cover rounded mr-4"
-                                                            />
-                                                        )}
-                                                        <div>
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {truncateText(blog.title, 50)}
-                                                            </div>
-                                                            {blog.excerpt && (
-                                                                <div className="text-sm text-gray-500">
-                                                                    {truncateText(blog.excerpt, 60)}
-                                                                </div>
-                                                            )}
+                                    <tbody className="table-primary-body">
+                                        {filteredBlogs.map((blog, index) => (
+                                            <tr key={blog.id} className="table-primary-row">
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    {(currentPage - 1) * 10 + index + 1}
+                                                </td>
+                                                <td className="table-primary-td">
+                                                    <div className="table-primary-cell-name">
+                                                        <div className="table-primary-cell-name-text">
+                                                            {truncateText(blog.title, 50)}
                                                         </div>
+                                                        {blog.excerpt && (
+                                                            <div className="table-primary-cell-subtitle">
+                                                                {truncateText(blog.excerpt, 60)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">
-                                                        {blog.author.name}
-                                                    </div>
+                                                <td className="table-primary-td">
+                                                    {blog.author?.name || 'N/A'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span
-                                                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${blog.status === 'published'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-yellow-100 text-yellow-800'
-                                                            }`}
-                                                    >
+                                                <td className="table-primary-td">
+                                                    <span className={`admin-content-status-badge ${blog.status === 'published' ? 'admin-content-status-published' : 'admin-content-status-draft'}`}>
                                                         {blog.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <td className="table-primary-td">
                                                     {formatDate(blog.created_at)}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {blog.status === 'published' && (
-                                                            <button
-                                                                onClick={() => handleViewPublic(blog)}
-                                                                className="text-blue-600 hover:text-blue-900"
-                                                                title="View Public"
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    {blog.status === 'published' && (
+                                                        <button
+                                                            onClick={() => handleViewPublic(blog)}
+                                                            className="btn-primary btn-sm btn-icon"
+                                                        >
+                                                            <svg
+                                                                className="table-primary-icon-sm"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
                                                             >
-                                                                <FaEye className="text-lg" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleEdit(blog)}
-                                                            className="text-indigo-600 hover:text-indigo-900"
-                                                            title="Edit"
-                                                        >
-                                                            <FaEdit className="text-lg" />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                />
+                                                            </svg>
+                                                            View
                                                         </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                console.log('Delete button clicked for blog:', blog);
-                                                                handleDeleteClick(blog);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-900"
-                                                            title="Delete"
+                                                    )}
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <button
+                                                        onClick={() => handleEdit(blog)}
+                                                        className="btn-primary btn-sm btn-icon"
+                                                    >
+                                                        <svg
+                                                            className="table-primary-icon-sm"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
                                                         >
-                                                            <FaTrash className="text-lg" />
-                                                        </button>
-                                                    </div>
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                            />
+                                                        </svg>
+                                                        Edit
+                                                    </button>
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <button
+                                                        onClick={() => handleDeleteClick(blog)}
+                                                        className="btn-danger btn-sm btn-icon"
+                                                    >
+                                                        <svg
+                                                            className="table-primary-icon-sm"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                            />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Pagination */}
-                            {totalPages > 1 && (
-                                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                                    <div className="flex-1 flex justify-between sm:hidden">
-                                        <button
-                                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                            disabled={currentPage === 1}
-                                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Previous
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                            disabled={currentPage === totalPages}
-                                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                                        <div>
-                                            <p className="text-sm text-gray-700">
-                                                Showing <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> to{' '}
-                                                <span className="font-medium">
-                                                    {Math.min(currentPage * 10, total)}
-                                                </span>{' '}
-                                                of <span className="font-medium">{total}</span> results
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <nav
-                                                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                                                aria-label="Pagination"
-                                            >
-                                                <button
-                                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                                    disabled={currentPage === 1}
-                                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Previous
-                                                </button>
-                                                {[...Array(totalPages)].map((_, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => setCurrentPage(idx + 1)}
-                                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === idx + 1
-                                                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        {idx + 1}
-                                                    </button>
-                                                ))}
-                                                <button
-                                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                                    disabled={currentPage === totalPages}
-                                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Next
-                                                </button>
-                                            </nav>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
             </div>
             <Footer />
-
-            {/* Delete Confirmation Modal */}
-            <ConfirmModal
-                show={showDeleteModal}
-                title="Delete Blog"
-                message={`Are you sure you want to delete "${selectedBlog?.title}"?`}
-                onConfirm={handleDelete}
-                onClose={() => {
-                    setShowDeleteModal(false);
-                    setSelectedBlog(null);
-                }}
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="danger"
-            />
-        </>
+        </div>
     );
 };
 

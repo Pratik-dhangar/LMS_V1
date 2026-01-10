@@ -66,7 +66,7 @@
 }
 
 /* Sessions List */
-.trainer-sessions-list > * + * {
+.trainer-sessions-list>*+* {
   margin-top: 0.75rem;
 }
 
@@ -115,6 +115,10 @@
 
 .trainer-session-card-orange {
   border-left: 4px solid #fb923c;
+}
+
+.trainer-session-card-red {
+  border-left: 4px solid #ef4444;
 }
 
 .trainer-session-content {
@@ -190,6 +194,16 @@
   color: #1f2937;
 }
 
+.trainer-status-expired {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.trainer-status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .trainer-session-meta {
   font-size: 0.875rem;
   color: #6b7280;
@@ -253,6 +267,16 @@
 .trainer-session-completed {
   color: #6b7280;
   font-size: 0.875rem;
+}
+
+.trainer-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
+  width: fit-content;
 }
 
 .trainer-session-buttons {
@@ -372,7 +396,7 @@
   padding: 1.5rem;
 }
 
-.trainer-modal-body > * + * {
+.trainer-modal-body>*+* {
   margin-top: 1.5rem;
 }
 

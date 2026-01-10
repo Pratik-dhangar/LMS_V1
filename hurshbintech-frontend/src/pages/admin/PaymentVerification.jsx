@@ -18,6 +18,8 @@ const PaymentVerification = () => {
     const [rejecting, setRejecting] = useState(false);
     const [delivering, setDelivering] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [showReceiptPreview, setShowReceiptPreview] = useState(false);
+    const [previewReceiptUrl, setPreviewReceiptUrl] = useState('');
 
     useEffect(() => {
         loadPendingOrders();
@@ -527,11 +529,25 @@ const PaymentVerification = () => {
                                                 <img
                                                     src={imageUrl}
                                                     alt="Payment Receipt"
+                                                    onClick={() => {
+                                                        setPreviewReceiptUrl(imageUrl);
+                                                        setShowReceiptPreview(true);
+                                                    }}
                                                     style={{
                                                         width: '100%',
                                                         maxHeight: '400px',
                                                         objectFit: 'contain',
-                                                        backgroundColor: '#f9fafb'
+                                                        backgroundColor: '#f9fafb',
+                                                        cursor: 'pointer',
+                                                        transition: 'transform 0.2s, box-shadow 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.target.style.transform = 'scale(1.02)';
+                                                        e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.target.style.transform = 'scale(1)';
+                                                        e.target.style.boxShadow = 'none';
                                                     }}
                                                     onError={(e) => {
                                                         console.error('Failed to load payment receipt image:', imageUrl);
@@ -665,6 +681,78 @@ const PaymentVerification = () => {
                                 </>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Receipt Preview Modal */}
+            {showReceiptPreview && previewReceiptUrl && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999,
+                        padding: '1rem'
+                    }}
+                    onClick={() => setShowReceiptPreview(false)}
+                >
+                    <div
+                        style={{
+                            position: 'relative',
+                            maxWidth: '90vw',
+                            maxHeight: '90vh',
+                            overflow: 'auto'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Close Button - Top Right Corner */}
+                        <button
+                            onClick={() => setShowReceiptPreview(false)}
+                            style={{
+                                position: 'fixed',
+                                top: '1.5rem',
+                                right: '1.5rem',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                padding: '0.5rem',
+                                width: '3rem',
+                                height: '3rem',
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10000,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                            title="Close preview"
+                        >
+                            ✕
+                        </button>
+
+                        {/* Receipt Image */}
+                        <img
+                            src={previewReceiptUrl}
+                            alt="Receipt Preview"
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '85vh',
+                                display: 'block',
+                                margin: '0 auto',
+                                backgroundColor: 'white',
+                                borderRadius: '0.375rem'
+                            }}
+                        />
                     </div>
                 </div>
             )}

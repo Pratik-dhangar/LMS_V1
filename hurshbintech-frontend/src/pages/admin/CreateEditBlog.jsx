@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import Loader from '../../components/common/Loader';
 import RichTextEditor from '../../components/RichTextEditor';
-import { FaSave, FaTimes, FaImage } from 'react-icons/fa';
 import blogService from '../../api/services/blogService';
+import '../../styles/admin/AdminEditVlog.css';
+import '../../styles/admin/AdminEditBlog.css';
+import '../../styles/ManageUsersLayout.css';
 
 const CreateEditBlog = () => {
     const { id } = useParams();
@@ -160,89 +161,142 @@ const CreateEditBlog = () => {
         navigate('/admin/blogs');
     };
 
-    if (loading) return <Loader />;
+    if (loading) {
+        return (
+            <div className="admin-edit-vlog-container">
+                <Navbar />
+                <div className="admin-edit-vlog-main">
+                    <div className="admin-edit-vlog-loading">
+                        <div className="loading-spinner"></div>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <>
-            <Navbar />
-            <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            {isEdit ? 'Edit Blog' : 'Create New Blog'}
-                        </h1>
-                        <p className="mt-2 text-sm text-gray-600">
-                            {isEdit ? 'Update your blog post' : 'Create and publish a new blog post'}
-                        </p>
-                    </div>
+        
+           <Navbar />
+     <div className="page-main">
+        <div className="page-content">
+          <div className="page-header">
+            <button
+              onClick={() => navigate("/admin/blogs")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Manage Vlogs
+            </button>
+            {/* Left Side: Title and Subtitle */}
+            <div>
+              <h1 className="page-title">Edit Training Vlog</h1>
+            </div>
+          </div>
+
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
-                        {/* Title */}
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                                Title <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                id="title"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                className={`w-full px-4 py-2 border ${errors.title ? 'border-red-500' : 'border-gray-300'
-                                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                placeholder="Enter blog title"
-                            />
-                            {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
-                        </div>
+                    <form onSubmit={handleSubmit} className="admin-edit-vlog-form">
+                        <div className="admin-edit-vlog-section">
+                            <h2 className="admin-edit-vlog-section-title">Basic Information</h2>
+                            
+                            {/* Title */}
+                            <div className="form-group">
+                                <label htmlFor="title" className="form-label">
+                                    Title <span className="form-required">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="title"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    className={`form-input ${errors.title ? 'form-input-error' : ''}`}
+                                    placeholder="Enter blog title"
+                                />
+                                {errors.title && <p className="form-error">{errors.title}</p>}
+                            </div>
 
-                        {/* Excerpt */}
-                        <div>
-                            <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
-                                Excerpt
-                            </label>
-                            <textarea
-                                id="excerpt"
-                                name="excerpt"
-                                value={formData.excerpt}
-                                onChange={handleChange}
-                                rows={3}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Brief summary of the blog post (optional)"
-                                maxLength={500}
-                            />
-                            <p className="mt-1 text-sm text-gray-500">
-                                {formData.excerpt.length}/500 characters
-                            </p>
+                            {/* Excerpt */}
+                            <div className="form-group">
+                                <label htmlFor="excerpt" className="form-label">
+                                    Excerpt
+                                </label>
+                                <textarea
+                                    id="excerpt"
+                                    name="excerpt"
+                                    value={formData.excerpt}
+                                    onChange={handleChange}
+                                    rows={3}
+                                    className="form-textarea"
+                                    placeholder="Brief summary of the blog post (optional)"
+                                    maxLength={500}
+                                />
+                                <p className="form-hint">
+                                    {formData.excerpt.length}/500 characters
+                                </p>
+                            </div>
                         </div>
 
                         {/* Featured Image */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Featured Image
-                            </label>
+                        <div className="admin-edit-vlog-section">
+                            <h2 className="admin-edit-vlog-section-title">Featured Image</h2>
                             {featuredImagePreview ? (
-                                <div className="relative">
+                                <div className="form-file-preview">
                                     <img
                                         src={featuredImagePreview}
                                         alt="Featured"
-                                        className="w-full h-64 object-cover rounded-lg"
+                                        className="form-image-preview"
                                     />
                                     <button
                                         type="button"
                                         onClick={removeImage}
-                                        className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700"
+                                        className="form-file-remove"
                                     >
-                                        <FaTimes />
+                                        <svg
+                                            className="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
                                     </button>
                                 </div>
                             ) : (
-                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                                    <FaImage className="mx-auto text-4xl text-gray-400 mb-4" />
+                                <div className="form-file-upload">
+                                    <svg
+                                        className="form-file-icon"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
                                     <label
                                         htmlFor="featured_image"
-                                        className="cursor-pointer inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        className="form-file-label"
                                     >
                                         Choose Image
                                     </label>
@@ -251,9 +305,9 @@ const CreateEditBlog = () => {
                                         id="featured_image"
                                         accept="image/jpeg,image/jpg,image/png,image/webp"
                                         onChange={handleImageChange}
-                                        className="hidden"
+                                        className="form-file-input"
                                     />
-                                    <p className="mt-2 text-sm text-gray-500">
+                                    <p className="form-file-hint">
                                         JPEG, PNG, or WebP. Max size: 5MB. Recommended: 16:9 aspect ratio
                                     </p>
                                 </div>
@@ -261,46 +315,49 @@ const CreateEditBlog = () => {
                         </div>
 
                         {/* Content */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Content <span className="text-red-500">*</span>
-                            </label>
+                        <div className="admin-edit-vlog-section">
+                            <h2 className="admin-edit-vlog-section-title">
+                                Content <span className="form-required">*</span>
+                            </h2>
                             <RichTextEditor
                                 value={formData.content}
                                 onChange={handleContentChange}
                                 placeholder="Write your blog content here..."
                             />
-                            {errors.content && <p className="mt-1 text-sm text-red-500">{errors.content}</p>}
+                            {errors.content && <p className="form-error">{errors.content}</p>}
                         </div>
 
                         {/* Status */}
-                        <div>
-                            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                                Status
-                            </label>
-                            <select
-                                id="status"
-                                name="status"
-                                value={formData.status}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="draft">Draft</option>
-                                <option value="published">Published</option>
-                            </select>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {formData.status === 'published'
-                                    ? 'Blog will be visible to all users'
-                                    : 'Blog will be saved as draft'}
-                            </p>
+                        <div className="admin-edit-vlog-section">
+                            <h2 className="admin-edit-vlog-section-title">Publishing</h2>
+                            <div className="form-group">
+                                <label htmlFor="status" className="form-label">
+                                    Status
+                                </label>
+                                <select
+                                    id="status"
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="form-select"
+                                >
+                                    <option value="draft">Draft</option>
+                                    <option value="published">Published</option>
+                                </select>
+                                <p className="form-hint">
+                                    {formData.status === 'published'
+                                        ? 'Blog will be visible to all users'
+                                        : 'Blog will be saved as draft'}
+                                </p>
+                            </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-end gap-4 pt-4 border-t">
+                        <div className="form-actions">
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                className="btn-secondary"
                                 disabled={saving}
                             >
                                 Cancel
@@ -308,13 +365,12 @@ const CreateEditBlog = () => {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="btn-primary"
                             >
                                 {saving ? (
                                     <>
                                         <svg
-                                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="loading-spinner-sm"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                         >
@@ -336,7 +392,19 @@ const CreateEditBlog = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <FaSave className="mr-2" />
+                                        <svg
+                                            className="w-5 h-5 mr-2"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                                            />
+                                        </svg>
                                         {isEdit ? 'Update Blog' : 'Create Blog'}
                                     </>
                                 )}
