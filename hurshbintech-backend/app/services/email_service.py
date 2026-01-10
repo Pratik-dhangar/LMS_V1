@@ -1757,6 +1757,7 @@ class EmailService:
         recipient_name: str,
         order_number: str,
         rejection_reason: str,
+        order_id: str = None,
     ) -> bool:
         """Send order rejection email when payment is rejected"""
         
@@ -1962,7 +1963,7 @@ class EmailService:
                         </div>
                         
                         <div style="text-align: center;">
-                            <a href="{settings.FRONTEND_URL}/orders/{order_number}" class="btn">✓ Upload Correct Receipt</a>
+                            <a href="{settings.FRONTEND_URL}/learner/dashboard?action=view_order&order_id={order_id if order_id else ''}" class="btn">✓ Reupload Receipt & View Order</a>
                         </div>
                         
                         <div class="support-box">

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -139,7 +139,13 @@ async def get_trainer_sessions(db: AsyncSession, trainer_id: int) -> List[Traini
 async def get_learner_sessions(
     db: AsyncSession, learner_id: int, status: str = None
 ) -> List[TrainingSession]:
-    """Get sessions for a learner by status"""
+    """Get sessions for a learner by status
+    
+    Returns:
+    - Scheduled and active sessions
+    - Ended sessions from the past 30 days (session history)
+    - Cancelled sessions from the past 30 days
+    """
     query = select(TrainingSession).options(
         joinedload(TrainingSession.trainer),
         joinedload(TrainingSession.learner),
@@ -153,10 +159,25 @@ async def get_learner_sessions(
             TrainingSession.learner_id == learner_id, TrainingSession.status == status
         )
     else:
-        # Get scheduled and active sessions
+        # Get scheduled and active sessions, plus ended/cancelled sessions from the past 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
         query = query.where(
             TrainingSession.learner_id == learner_id,
-            TrainingSession.status.in_(["scheduled", "active"]),
+            or_(
+                # Scheduled and active sessions
+                TrainingSession.status.in_(["scheduled", "active"]),
+                # Ended sessions from the past 30 days
+                and_(
+                    TrainingSession.status == "ended",
+                    TrainingSession.scheduled_date >= thirty_days_ago,
+                ),
+                # Cancelled sessions from the past 30 days
+                and_(
+                    TrainingSession.status == "cancelled",
+                    TrainingSession.scheduled_date >= thirty_days_ago,
+                ),
+            ),
         )
 
     query = query.order_by(TrainingSession.scheduled_date.desc())
@@ -348,3 +369,37 @@ async def delete_session(db: AsyncSession, session_id: str) -> bool:
     await db.delete(session)
     await db.commit()
     return True
+
+
+async def cancel_session(db: AsyncSession, session_id: str) -> Optional[TrainingSession]:
+    """Cancel a session by changing its status to 'cancelled'
+    
+    Can cancel scheduled sessions (not yet started)
+    """
+    session = await get_session_by_id(db, session_id)
+
+    if not session:
+        return None
+
+    # Only allow cancellation of scheduled sessions (not started/active/ended)
+    if session.status != "scheduled":
+        return None
+
+    session.status = "cancelled"
+    session.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(session)
+
+    # Reload with relationships
+    result = await db.execute(
+        select(TrainingSession)
+        .options(
+            joinedload(TrainingSession.trainer),
+            joinedload(TrainingSession.learner),
+            joinedload(TrainingSession.created_by),
+            joinedload(TrainingSession.learning_contents),
+            joinedload(TrainingSession.learning_goals),
+        )
+        .where(TrainingSession.session_id == session_id)
+    )
+    return result.unique().scalar_one_or_none()

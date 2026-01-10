@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
+import orderService from "../../api/services/ecommerce/orderService";
 
 const TrainerDashboard = () => {
   const { user } = useAuth();
@@ -29,6 +30,19 @@ const TrainerDashboard = () => {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
+
+  // Order History state
+  const [showProfile, setShowProfile] = useState(false);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [expandedOrders, setExpandedOrders] = useState(new Set());
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all'); // 'all', 'pending', 'approved', 'delivered', 'rejected'
+  const [showReuploadModal, setShowReuploadModal] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     fetchAll();
@@ -189,6 +203,157 @@ const TrainerDashboard = () => {
     }
   };
 
+  const fetchOrderHistory = async () => {
+    try {
+      setLoadingOrders(true);
+      // Fetch all orders (including delivered and rejected)
+      const response = await orderService.getOrders();
+      console.log("🛍️ Order History Response:", response);
+
+      // Handle both direct array and paginated response
+      const orders = Array.isArray(response) ? response : (response.orders || []);
+      setOrderHistory(orders);
+      console.log(`✅ Fetched ${orders.length} orders`);
+    } catch (error) {
+      console.error("❌ Error fetching order history:", error);
+      setOrderHistory([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please upload JPG, PNG, or PDF file');
+        return;
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should not exceed 5MB');
+        return;
+      }
+      setReceiptFile(file);
+      toast.success('Receipt selected: ' + file.name);
+    }
+  };
+
+  const handleReuploadReceipt = async () => {
+    if (!receiptFile || !selectedOrderDetails) {
+      toast.error('Please select a receipt file');
+      return;
+    }
+
+    // Get the actual order UUID from various possible fields
+    const orderId = selectedOrderDetails.id || selectedOrderDetails.uuid || selectedOrderDetails.order_id;
+    if (!orderId) {
+      toast.error('Order ID not found. Please try again.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      await orderService.uploadReceipt(orderId, receiptFile);
+      toast.success('Receipt uploaded successfully! Admin will verify the payment.');
+      setShowReuploadModal(false);
+      setReceiptFile(null);
+      setShowOrderDetailsModal(false);
+      // Reload orders to show updated status
+      fetchOrderHistory();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to upload receipt');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Helper function to get order ID from various possible field names
+  const getOrderId = (order) => {
+    // Priority: code field (formatted order number) > other numeric IDs > fallback to UUID
+    if (order?.code && order.code !== "N/A") return order.code;
+    if (order?.order_number) return order.order_number;
+    if (order?.reference_number) return order.reference_number;
+    if (order?.order_id) return order.order_id;
+
+    // Fallback to ID (UUID)
+    const id = order?.id || order?.uuid || "N/A";
+    return id;
+  };
+
+  // Helper function to format order ID as display
+  const getFormattedOrderId = (order) => {
+    const orderId = getOrderId(order);
+    if (orderId === "N/A") return orderId;
+
+    // If it's already a formatted code (contains - or starts with ORD), just add #
+    if (orderId.includes('-') && !orderId.startsWith('Order')) {
+      return orderId.startsWith('#') ? orderId : `#${orderId}`;
+    }
+
+    // If it's a UUID or ID without formatting, show first 8 chars with shortened format
+    const shortId = orderId.substring(0, 8).toUpperCase();
+    return `#${shortId}`;
+  };
+
+  // Helper function to get item price from various possible field names
+  const getItemPrice = (item) => {
+    // Try multiple price field names
+    const price = item?.price || item?.unit_price || item?.amount || item?.item_price || item?.cost || 0;
+    return parseFloat(price || 0);
+  };
+
+  // Helper function to format price with Rs.
+  const formatPrice = (amount) => {
+    return `Rs. ${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  // Helper function to filter orders by status
+  const getFilteredOrders = () => {
+    if (orderStatusFilter === 'all') return orderHistory;
+
+    const statusMap = {
+      'pending': ['CREATED', 'PAYMENT_UPLOADED'],
+      'approved': ['PAYMENT_APPROVED'],
+      'delivered': ['DELIVERED'],
+      'rejected': ['PAYMENT_REJECTED']
+    };
+
+    const statuses = statusMap[orderStatusFilter] || [];
+    return orderHistory.filter(order => statuses.includes(order.status));
+  };
+
+  // Helper function to get order status badge with proper styling
+  const getOrderStatusBadge = (status) => {
+    const statusConfig = {
+      'CREATED': { bg: 'bg-yellow-200', text: 'text-yellow-800', label: '⏳ Pending', icon: '⏳' },
+      'PAYMENT_UPLOADED': { bg: 'bg-blue-200', text: 'text-blue-800', label: '📤 Payment Uploaded', icon: '📤' },
+      'PAYMENT_APPROVED': { bg: 'bg-green-200', text: 'text-green-800', label: '✅ Approved', icon: '✅' },
+      'DELIVERED': { bg: 'bg-teal-200', text: 'text-teal-800', label: '🚚 Delivered', icon: '🚚' },
+      'PAYMENT_REJECTED': { bg: 'bg-red-200', text: 'text-red-800', label: '❌ Rejected', icon: '❌' },
+      'SHIPPED': { bg: 'bg-purple-200', text: 'text-purple-800', label: '📦 Shipped', icon: '📦' },
+      'CANCELLED': { bg: 'bg-gray-200', text: 'text-gray-800', label: '❌ Cancelled', icon: '❌' }
+    };
+
+    const config = statusConfig[status] || { bg: 'bg-gray-200', text: 'text-gray-800', label: status, icon: '?' };
+    return (
+      <span className={`inline-block px-3 py-1 ${config.bg} ${config.text} text-xs font-bold rounded-full`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  // Auto-scroll to profile when visible
+  useEffect(() => {
+    if (showProfile && profileRef.current) {
+      setTimeout(() => {
+        profileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [showProfile]);
+
   const handleStartSession = async (sessionId) => {
     try {
       await sessionService.startSession(sessionId);
@@ -254,14 +419,38 @@ const TrainerDashboard = () => {
     setSelectedSession(null);
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, scheduledDate) => {
     const base = "px-3 py-1 rounded-full text-xs font-semibold";
+
+    // Check if scheduled session is expired (time has passed and session not started)
+    if (status === "scheduled" && scheduledDate) {
+      const now = new Date();
+      const scheduled = new Date(scheduledDate);
+      if (scheduled < now) {
+        return `${base} bg-gray-200 text-gray-800`;
+      }
+    }
+
     const map = {
       scheduled: "bg-amber-100 text-amber-800",
       active: "bg-green-100 text-green-800",
       ended: "bg-gray-100 text-gray-800",
+      cancelled: "bg-red-100 text-red-800",
+      expired: "bg-gray-200 text-gray-800",
     };
     return `${base} ${map[status] || "bg-gray-100 text-gray-800"}`;
+  };
+
+  const getSessionStatus = (session) => {
+    // Check if scheduled session is expired (time has passed and session not started)
+    if (session.status === "scheduled" && session.scheduled_date) {
+      const now = new Date();
+      const scheduled = new Date(session.scheduled_date);
+      if (scheduled < now) {
+        return "expired";
+      }
+    }
+    return session.status;
   };
 
   const todaysDateString = useMemo(() => {
@@ -354,6 +543,16 @@ const TrainerDashboard = () => {
                 title: "Buy Learning Material",
                 onClick: () => navigate("/store"),
               },
+              {
+                icon: "👤",
+                title: "Profile & Order History",
+                onClick: () => {
+                  setShowProfile(!showProfile);
+                  if (!showProfile) {
+                    fetchOrderHistory();
+                  }
+                },
+              },
             ].map((card, index) => (
               <div
                 key={index}
@@ -421,13 +620,13 @@ const TrainerDashboard = () => {
                   ) : (
                     <>
                       {sessions
-                        .sort(
-                          (a, b) =>
-                            new Date(b.scheduled_date || 0) -
-                            new Date(a.scheduled_date || 0)
-                        )
+                        .sort((a, b) => {
+                          // Sort by date (newest first)
+                          return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                        })
                         .slice(0, itemsPerPage)
                         .map((session) => {
+                          const sessionStatus = getSessionStatus(session);
                           const scheduledDate = session.scheduled_date
                             ? new Date(session.scheduled_date)
                             : null;
@@ -447,15 +646,29 @@ const TrainerDashboard = () => {
                               .split(" ")[1]
                             : "";
                           const borderColor =
-                            session.status === "active"
+                            sessionStatus === "active"
                               ? "border-l-4 border-green-500"
-                              : session.status === "scheduled"
+                              : sessionStatus === "scheduled"
                                 ? "border-l-4 border-amber-500"
-                                : "border-l-4 border-orange-400";
+                                : sessionStatus === "cancelled"
+                                  ? "border-l-4 border-red-500"
+                                  : sessionStatus === "expired"
+                                    ? "border-l-4 border-gray-400"
+                                    : "border-l-4 border-orange-400";
+                          const bgColor =
+                            sessionStatus === "active"
+                              ? "bg-green-50"
+                              : sessionStatus === "scheduled"
+                                ? "bg-amber-50"
+                                : sessionStatus === "cancelled"
+                                  ? "bg-red-50"
+                                  : sessionStatus === "expired"
+                                    ? "bg-gray-50"
+                                    : "bg-white";
                           return (
                             <div
                               key={session.id || session.session_id}
-                              className={`bg-white p-4 rounded-md shadow-sm ${borderColor}`}
+                              className={`p-4 rounded-md shadow-sm ${borderColor} ${bgColor}`}
                             >
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 flex items-center gap-4">
@@ -478,14 +691,6 @@ const TrainerDashboard = () => {
                                           "Learner"
                                           }`}
                                       </div>
-                                      <span
-                                        className={getStatusBadge(session.status)}
-                                      >
-                                        {(session.status || "scheduled")
-                                          .charAt(0)
-                                          .toUpperCase() +
-                                          (session.status || "scheduled").slice(1)}
-                                      </span>
                                     </div>
 
                                     <div className="text-sm text-gray-500 mt-1">
@@ -512,7 +717,7 @@ const TrainerDashboard = () => {
                                 </div>
 
                                 <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                                  {session.status === "scheduled" && (
+                                  {sessionStatus === "scheduled" && (
                                     <button
                                       onClick={() =>
                                         handleStartSession(session.session_id)
@@ -522,7 +727,7 @@ const TrainerDashboard = () => {
                                       Start Session
                                     </button>
                                   )}
-                                  {session.status === "active" && (
+                                  {sessionStatus === "active" && (
                                     <button
                                       onClick={() =>
                                         handleResumeSession(session.session_id)
@@ -532,13 +737,9 @@ const TrainerDashboard = () => {
                                       Resume Session
                                     </button>
                                   )}
-                                  {session.status === "ended" && (
-                                    <span className="text-gray-500 text-sm">
-                                      Completed
-                                    </span>
-                                  )}
 
-                                  <div className="flex gap-2 mt-2">
+
+                                  <div className="flex flex-col gap-2 mt-2 items-center">
                                     {session.recording_url &&
                                       session.recording_status === "completed" && (
                                         <button
@@ -567,6 +768,16 @@ const TrainerDashboard = () => {
                                         ❌ Failed
                                       </span>
                                     )}
+                                    <span
+                                      className={getStatusBadge(sessionStatus, session.scheduled_date)}
+                                    >
+                                      {sessionStatus === "expired" ? "Expired" : (
+                                        (sessionStatus || "scheduled")
+                                          .charAt(0)
+                                          .toUpperCase() +
+                                        (sessionStatus || "scheduled").slice(1)
+                                      )}
+                                    </span>
                                     <button
                                       onClick={() => {
                                         setSelectedSession(session);
@@ -594,6 +805,212 @@ const TrainerDashboard = () => {
               </div>
             </div>
 
+          )}
+
+          {/* Profile and Order History */}
+          {showProfile && (
+            <div ref={profileRef} className="mt-10 bg-white rounded-xl shadow-md p-6 animate-fadeInUp transition-all duration-500 ease-in-out">
+              {/* Profile Header */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-gray-800 border-b pb-4 mb-6">
+                  👤 My Profile & Order History
+                </h2>
+
+                {/* User Profile Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Name</p>
+                    <p className="text-lg font-bold text-gray-900">{user?.name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Email</p>
+                    <p className="text-lg font-bold text-gray-900">{user?.email || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Role</p>
+                    <p className="text-lg font-bold text-gray-900">{user?.role || "Trainer"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Phone</p>
+                    <p className="text-lg font-bold text-gray-900">{user?.phone || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order History Section */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 border-b pb-4 mb-6 flex items-center gap-2">
+                  <span className="text-2xl">📦</span> Order History
+                </h3>
+
+                {/* Status Filter Radio Buttons */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Filter by Status:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {[
+                      { value: 'all', label: 'All Orders', icon: '📦' },
+                      { value: 'pending', label: 'Pending', icon: '⏳' },
+                      { value: 'approved', label: 'Approved', icon: '✅' },
+                      { value: 'delivered', label: 'Delivered', icon: '🚚' },
+                      { value: 'rejected', label: 'Rejected', icon: '❌' }
+                    ].map(filter => (
+                      <label key={filter.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="orderStatus"
+                          value={filter.value}
+                          checked={orderStatusFilter === filter.value}
+                          onChange={(e) => setOrderStatusFilter(e.target.value)}
+                          className="w-4 h-4 accent-amber-500"
+                        />
+                        <span className="text-sm text-gray-700 font-medium">
+                          {filter.icon} {filter.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {loadingOrders ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600 mx-auto mb-2"></div>
+                    Loading order history...
+                  </div>
+                ) : orderHistory.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-2xl mb-2">�</p>
+                    <p className="text-gray-600 font-medium">No orders found</p>
+                    <p className="text-gray-500 text-sm mt-1">No orders with the selected status</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {getFilteredOrders().map((order, orderIdx) => {
+                      const orderId = getOrderId(order);
+                      return (
+                        <div key={orderId || orderIdx} className="border border-gray-300 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                          {/* Order Header */}
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 border-b border-gray-300">
+                            <div className="flex items-center justify-between">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Order ID</p>
+                                  <p className="font-mono text-sm font-bold text-gray-900">{getFormattedOrderId(order)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Order Date</p>
+                                  <p className="text-sm font-bold text-gray-900">
+                                    {order.created_at ? new Date(order.created_at).toLocaleDateString() : "N/A"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Total Amount</p>
+                                  <p className="text-sm font-bold text-green-700">
+                                    {formatPrice(order.total_amount)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Status</p>
+                                  {getOrderStatusBadge(order.status)}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setExpandedOrders(prev => {
+                                    const newSet = new Set(prev);
+                                    if (newSet.has(orderId)) {
+                                      newSet.delete(orderId);
+                                    } else {
+                                      newSet.add(orderId);
+                                    }
+                                    return newSet;
+                                  });
+                                }}
+                                className="ml-4 flex-shrink-0 p-2 hover:bg-green-100 rounded-lg transition-colors"
+                                title="Toggle details"
+                              >
+                                <svg
+                                  className={`w-6 h-6 text-gray-600 transition-transform duration-300 ${expandedOrders.has(orderId) ? 'rotate-180' : ''
+                                    }`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Order Items - Collapsible */}
+                          {expandedOrders.has(orderId) && (
+                            <div className="p-5 border-b border-gray-200 animate-fadeIn">
+                              <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                <span>📋</span> Ordered Items
+                              </h4>
+
+                              {order.items && order.items.length > 0 ? (
+                                <div className="space-y-3">
+                                  {order.items.map((item, itemIdx) => (
+                                    <div key={itemIdx} className="flex justify-between items-start p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition">
+                                      <div className="flex-1">
+                                        <p className="font-semibold text-gray-800 text-base">
+                                          {item.name || item.title || item.product_name || "Unknown Item"}
+                                        </p>
+                                        <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+                                          <span>Qty: <span className="font-bold text-gray-800">{item.quantity || 1}</span></span>
+                                          {item.category && (
+                                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                                              {item.category}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {item.description && (
+                                          <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                                            {item.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="ml-4 text-right flex-shrink-0">
+                                        <p className="text-lg font-bold text-gray-900">
+                                          {formatPrice(getItemPrice(item))}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">per item</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm py-4">No items in this order.</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Order Details Footer - Collapsible */}
+                          {expandedOrders.has(orderId) && (
+                            <div className="bg-gray-50 p-5 border-t border-gray-300 flex justify-between items-center animate-fadeIn">
+                              <div className="text-sm text-gray-600">
+                                {order.delivery_address && (
+                                  <p><span className="font-semibold">📍 Delivery:</span> {order.delivery_city || "City"} - {order.delivery_pincode || "PIN"}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedOrderDetails(order);
+                                  setShowOrderDetailsModal(true);
+                                }}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                              >
+                                View Details
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </main>
@@ -754,6 +1171,267 @@ const TrainerDashboard = () => {
                   Resume Session
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {showOrderDetailsModal && selectedOrderDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowOrderDetailsModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Order Details</h2>
+              <button
+                onClick={() => setShowOrderDetailsModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Order ID and Status */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Order ID</label>
+                  <p className="text-lg font-bold text-gray-900 font-mono">{getFormattedOrderId(selectedOrderDetails)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Status</label>
+                  {getOrderStatusBadge(selectedOrderDetails.status)}
+                </div>
+              </div>
+
+              {/* Order Date and Amount */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Order Date</label>
+                  <p className="text-lg font-bold text-gray-900">
+                    {selectedOrderDetails.created_at ? new Date(selectedOrderDetails.created_at).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">Total Amount</label>
+                  <p className="text-lg font-bold text-green-700">{formatPrice(selectedOrderDetails.total_amount)}</p>
+                </div>
+              </div>
+
+              {/* Rejection Reason - Show only if status is PAYMENT_REJECTED */}
+              {selectedOrderDetails.status === 'PAYMENT_REJECTED' && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚠️</span>
+                    <div className="flex-1">
+                      <label className="text-sm font-semibold text-red-800 block mb-2">Rejection Reason</label>
+                      {selectedOrderDetails.rejection_reason ? (
+                        <>
+                          <p className="text-sm text-red-700 bg-white border border-red-200 rounded p-3">
+                            {selectedOrderDetails.rejection_reason}
+                          </p>
+                          <p className="text-xs text-red-600 mt-2">
+                            💡 Please review the reason above and reupload the correct payment receipt.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-red-700 bg-white border border-red-200 rounded p-3">
+                          Your payment was rejected. Please reupload the receipt.
+                        </p>
+                      )}
+                      <button
+                        onClick={() => setShowReuploadModal(true)}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                      >
+                        🔄 Reupload Receipt
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Order Items */}
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-3">📋 Order Items</label>
+                {selectedOrderDetails.items && selectedOrderDetails.items.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedOrderDetails.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-start p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">
+                            {item.name || item.title || item.product_name || "Unknown Item"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+                            <span>Qty: <span className="font-bold">{item.quantity || 1}</span></span>
+                            {item.category && (
+                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                                {item.category}
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4 text-right flex-shrink-0">
+                          <p className="text-base font-bold text-gray-900">
+                            {formatPrice(getItemPrice(item))}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">per item</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm py-4">No items in this order.</p>
+                )}
+              </div>
+
+              {/* Delivery Address */}
+              {selectedOrderDetails.delivery_address && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">📍 Delivery Address</label>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-gray-800 font-semibold">{selectedOrderDetails.delivery_address}</p>
+                    {selectedOrderDetails.delivery_city && (
+                      <p className="text-gray-600 text-sm mt-2">
+                        {selectedOrderDetails.delivery_city}
+                        {selectedOrderDetails.delivery_state && `, ${selectedOrderDetails.delivery_state}`}
+                        {selectedOrderDetails.delivery_pincode && ` - ${selectedOrderDetails.delivery_pincode}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Order Summary */}
+              <div className="border-t pt-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Subtotal:</span>
+                    <span className="font-semibold">
+                      {formatPrice(selectedOrderDetails.subtotal || selectedOrderDetails.total_amount)}
+                    </span>
+                  </div>
+                  {selectedOrderDetails.tax_amount && (
+                    <div className="flex justify-between text-gray-700">
+                      <span>Tax:</span>
+                      <span className="font-semibold">{formatPrice(selectedOrderDetails.tax_amount)}</span>
+                    </div>
+                  )}
+                  {selectedOrderDetails.shipping_cost && (
+                    <div className="flex justify-between text-gray-700">
+                      <span>Shipping:</span>
+                      <span className="font-semibold">{formatPrice(selectedOrderDetails.shipping_cost)}</span>
+                    </div>
+                  )}
+                  {selectedOrderDetails.discount_amount && (
+                    <div className="flex justify-between text-gray-700">
+                      <span>Discount:</span>
+                      <span className="font-semibold text-red-600">
+                        -{formatPrice(selectedOrderDetails.discount_amount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
+                    <span>Total:</span>
+                    <span className="text-green-700">{formatPrice(selectedOrderDetails.total_amount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Info */}
+              {selectedOrderDetails.notes && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 block mb-2">📝 Order Notes</label>
+                  <p className="p-4 bg-gray-50 rounded-lg border border-gray-200 text-gray-700">
+                    {selectedOrderDetails.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowOrderDetailsModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reupload Receipt Modal */}
+      {showReuploadModal && selectedOrderDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full animate-fadeIn">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>🔄</span> Reupload Receipt
+              </h2>
+              <button
+                onClick={() => {
+                  setShowReuploadModal(false);
+                  setReceiptFile(null);
+                }}
+                className="text-white hover:bg-red-700 rounded-full w-8 h-8 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Order ID:</strong> {getFormattedOrderId(selectedOrderDetails)}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select Receipt File (JPG, PNG, or PDF)
+                </label>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                />
+                {receiptFile && (
+                  <p className="text-sm text-green-600 mt-2">✓ {receiptFile.name}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">Max file size: 5MB</p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 p-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowReuploadModal(false);
+                  setReceiptFile(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReuploadReceipt}
+                disabled={!receiptFile || uploading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 font-medium transition-colors"
+              >
+                {uploading ? '⏳ Uploading...' : '🔄 Reupload'}
+              </button>
             </div>
           </div>
         </div>

@@ -46,17 +46,17 @@ const ManageSessions = () => {
     fetchSessions();
   }, []);
 
-  const handleDeleteSession = async (sessionId, sessionTitle) => {
-    if (window.confirm(`Are you sure you want to delete the session "${sessionTitle}"? This action cannot be undone.`)) {
+  const handleCancelSession = async (sessionId, sessionTitle) => {
+    if (window.confirm(`Are you sure you want to cancel the session "${sessionTitle}"? The session status will be marked as cancelled.`)) {
       try {
         setLoading(true);
-        await sessionService.deleteSession(sessionId);
-        toast.success('Session deleted successfully');
+        await sessionService.cancelSession(sessionId);
+        toast.success('Session cancelled successfully');
         // Refresh the sessions list
         await fetchSessions();
       } catch (error) {
-        console.error('Error deleting session:', error);
-        const errorMessage = error.response?.data?.detail || 'Failed to delete session';
+        console.error('Error cancelling session:', error);
+        const errorMessage = error.response?.data?.detail || 'Failed to cancel session';
         toast.error(errorMessage);
       } finally {
         setLoading(false);
@@ -118,12 +118,25 @@ const ManageSessions = () => {
     setHoveredSession(null);
   };
 
+  const getSessionStatus = (session) => {
+    // Check if scheduled session is expired (time has passed and session not started)
+    if (session.status === 'scheduled' && session.scheduled_date) {
+      const now = new Date();
+      const scheduled = new Date(session.scheduled_date);
+      if (scheduled < now) {
+        return 'expired';
+      }
+    }
+    return session.status;
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       scheduled: 'bg-blue-100 text-blue-800',
       active: 'bg-green-100 text-green-800',
       ended: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800'
+      cancelled: 'bg-red-100 text-red-800',
+      expired: 'bg-gray-300 text-gray-900'
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
@@ -216,6 +229,12 @@ const ManageSessions = () => {
             >
               Completed ({sessions.filter(s => s.status === 'ended').length})
             </button>
+            <button
+              onClick={() => setFilter('cancelled')}
+              className={`filter-tab ${filter === 'cancelled' ? 'filter-tab-active' : ''}`}
+            >
+              Cancelled ({sessions.filter(s => s.status === 'cancelled').length})
+            </button>
           </div>
 
           {/* Sessions Table */}
@@ -306,8 +325,8 @@ const ManageSessions = () => {
                             <div className="data-table-text">{session.duration} min</div>
                           </td>
                           <td className="data-table-td">
-                            <span className={`status-badge ${getStatusBadge(session.status)}`}>
-                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                            <span className={`status-badge ${getStatusBadge(getSessionStatus(session))}`}>
+                              {getSessionStatus(session) === 'expired' ? 'Expired' : (session.status.charAt(0).toUpperCase() + session.status.slice(1))}
                             </span>
                           </td>
                           <td className="data-table-td">
@@ -330,7 +349,7 @@ const ManageSessions = () => {
                           </td>
                           <td className="data-table-td">
                             <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {session.status === 'scheduled' && (
+                              {session.status === 'scheduled' && getSessionStatus(session) !== 'expired' && (
                                 <>
                                   <button
                                     onClick={() => handleEditSession(session)}
@@ -341,12 +360,12 @@ const ManageSessions = () => {
                                     ✏️ Edit
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteSession(session.session_id, session.title)}
-                                    className="btn-danger"
-                                    title="Delete this scheduled session"
+                                    onClick={() => handleCancelSession(session.session_id, session.title)}
+                                    className="btn btn-warning"
+                                    title="Cancel this scheduled session"
                                     style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                   >
-                                    🗑️ Delete
+                                    ❌ Cancel
                                   </button>
                                 </>
                               )}
@@ -372,7 +391,7 @@ const ManageSessions = () => {
                                   📝 Head Notes
                                 </button>
                               )}
-                              {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && (
+                              {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && session.status !== 'cancelled' && (
                                 <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
                                   Can't edit/delete
                                 </span>

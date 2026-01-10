@@ -316,20 +316,25 @@ async def upload_payment_receipt(
     if order.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     
-    # Verify order status is CREATED
-    if order.status != OrderStatus.CREATED:
+    # Verify order status is CREATED or PAYMENT_REJECTED (for reupload)
+    if order.status not in [OrderStatus.CREATED, OrderStatus.PAYMENT_REJECTED]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot upload receipt for order in {order.status.value} status"
         )
     
-    # Check if receipt already exists
+    # Check if receipt already exists (only for initial upload)
     existing_receipt = await ecommerce_crud.get_receipt_by_order(db, order_id)
-    if existing_receipt:
+    if existing_receipt and order.status == OrderStatus.CREATED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Payment receipt already uploaded for this order"
         )
+    
+    # For rejected orders, delete old receipt to allow reupload
+    if existing_receipt and order.status == OrderStatus.PAYMENT_REJECTED:
+        await db.delete(existing_receipt)
+        await db.commit()
     
     # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/jpg", "application/pdf"]
@@ -369,6 +374,13 @@ async def upload_payment_receipt(
         payment_receipt = await ecommerce_crud.create_payment_receipt(
             db, order_id, s3_path, receipt.filename, len(contents), file_type, current_user.id
         )
+        
+        # Update order status to PAYMENT_UPLOADED and clear rejection reason if it was rejected
+        if order.status == OrderStatus.PAYMENT_REJECTED:
+            order.status = OrderStatus.PAYMENT_UPLOADED
+            order.rejection_reason = None  # Clear the rejection reason
+            await db.commit()
+            print(f"✅ Order {order_id} status updated from PAYMENT_REJECTED to PAYMENT_UPLOADED")
         
         # Convert S3 path to public URL
         public_url = get_public_url(payment_receipt.s3_path)
@@ -666,7 +678,8 @@ async def reject_payment(
                     recipient_email=recipient_email,
                     recipient_name=recipient_name,
                     order_number=updated_order.order_number,
-                    rejection_reason=reject_data.reason
+                    rejection_reason=reject_data.reason,
+                    order_id=str(order_id)
                 )
                 logger.info(f"✓ Rejection email sent to {recipient_email}")
             except Exception as email_error:
