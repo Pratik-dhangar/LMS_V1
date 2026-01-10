@@ -7,6 +7,7 @@ import learningContentService from '../../api/services/learningContentService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import '../../styles/ManageProgramAssignments.css';
+import '../../styles/Table.css';
 
 const ManageProgramAssignments = () => {
   const [learners, setLearners] = useState([]);
@@ -723,45 +724,45 @@ const ManageProgramAssignments = () => {
                   </p>
                 </div>
               ) : (
-                <div className="mpa-data-table-container">
-                  <div className="mpa-table-wrapper mpa-table-desktop">
-                    <table className="mpa-data-table">
-                      <thead className="mpa-data-table-header">
+                <div className="table-primary-container">
+                  <div className="table-primary-wrapper mpa-table-desktop">
+                    <table className="table-primary">
+                      <thead className="table-primary-header">
                         <tr>
-                          <th className="mpa-data-table-th">Title</th>
-                          <th className="mpa-data-table-th">Learner</th>
-                          <th className="mpa-data-table-th">Start Date</th>
-                          <th className="mpa-data-table-th">End Date</th>
-                          <th className="mpa-data-table-th">Duration</th>
-                          <th className="mpa-data-table-th">Status</th>
-                          <th className="mpa-data-table-th mpa-data-table-th-center">Actions</th>
+                          <th className="table-primary-th">Title</th>
+                          <th className="table-primary-th">Learner</th>
+                          <th className="table-primary-th">Start Date</th>
+                          <th className="table-primary-th">End Date</th>
+                          <th className="table-primary-th">Duration</th>
+                          <th className="table-primary-th">Status</th>
+                          <th className="table-primary-th table-primary-th-center">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="mpa-data-table-body">
+                      <tbody className="table-primary-body">
                         {Object.entries(groupedAssignments).map(([title, titleAssignments]) => (
-                          <tr key={title} className="mpa-data-table-row">
-                            <td className="mpa-data-table-td">
-                              <div className="mpa-data-table-name">{title}</div>
+                          <tr key={title} className="table-primary-row">
+                            <td className="table-primary-td">
+                              <div className="table-primary-cell-name">{title}</div>
                             </td>
-                            <td className="mpa-data-table-td">
-                              <div className="mpa-data-table-name">{titleAssignments[0].learner_name}</div>
+                            <td className="table-primary-td">
+                              <div className="table-primary-cell-name">{titleAssignments[0].learner_name}</div>
                             </td>
-                            <td className="mpa-data-table-td">
+                            <td className="table-primary-td">
                               {new Date(titleAssignments[0].start_date).toLocaleDateString()}
                             </td>
-                            <td className="mpa-data-table-td">
+                            <td className="table-primary-td">
                               {new Date(titleAssignments[0].end_date).toLocaleDateString()}
                             </td>
-                            <td className="mpa-data-table-td">
+                            <td className="table-primary-td">
                               {titleAssignments[0].duration_days ||
                                 calculateDuration(titleAssignments[0].start_date, titleAssignments[0].end_date)} days
                             </td>
-                            <td className="mpa-data-table-td">
+                            <td className="table-primary-td">
                               <span className={`mpa-status-badge ${getStatusColor(titleAssignments[0].completion_status)}`}>
                                 {getStatusLabel(titleAssignments[0].completion_status)}
                               </span>
                             </td>
-                            <td className="mpa-data-table-td mpa-data-table-td-center">
+                            <td className="table-primary-td table-primary-td-center">
                               <div className="mpa-action-buttons">
                                 <button
                                   onClick={() => handleViewTracking(titleAssignments[0], titleAssignments)}

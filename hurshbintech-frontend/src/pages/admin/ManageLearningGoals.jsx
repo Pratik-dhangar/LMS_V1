@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import learningGoalsService from '../../api/services/learningGoalsService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import SearchBar from '../../components/common/SearchBar';
+import '../../styles/Table.css';
 import '../../styles/admin/AdminManageLearningGoals.css';
+import '../../styles/ManageUsersLayout.css';
 
 const ManageLearningGoals = () => {
+  const navigate = useNavigate();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -99,6 +103,15 @@ const ManageLearningGoals = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             <div>
               <h1 className="page-title">Manage Learning Goals</h1>
               <p className="page-description">Create and manage learning goals for sessions</p>
@@ -138,51 +151,53 @@ const ManageLearningGoals = () => {
               </p>
             </div>
           ) : (
-            <div className="data-table-container">
+            <div className="table-primary-container">
               {/* Desktop Table */}
-              <div className="table-wrapper table-desktop">
-                <table className="data-table">
-                  <thead className="data-table-header">
+              <div className="table-primary-wrapper table-desktop">
+                <table className="table-primary">
+                  <thead className="table-primary-header">
                     <tr>
-                      <th className="data-table-th">Sr. No.</th>
-                      <th className="data-table-th">Title (Goal)</th>
-                      <th className="data-table-th">Goal Description</th>
-                      <th className="data-table-th data-table-th-center">Edit</th>
-                      <th className="data-table-th data-table-th-center">Delete</th>
+                      <th className="table-primary-th table-primary-th-center">Sr. No.</th>
+                      <th className="table-primary-th">Title (Goal)</th>
+                      <th className="table-primary-th">Goal Description</th>
+                      <th className="table-primary-th table-primary-th-center">Edit</th>
+                      <th className="table-primary-th table-primary-th-center">Delete</th>
                     </tr>
                   </thead>
-                  <tbody className="data-table-body">
+                  <tbody className="table-primary-body">
                     {filteredGoals.map((goal, index) => (
-                      <tr key={goal.id} className="data-table-row">
-                        <td className="data-table-td data-table-td-center">{index + 1}</td>
-                        <td className="data-table-td">
-                          <div className="data-table-name">{goal.goal}</div>
-                          <div className="data-table-subtext">
-                            Created: {new Date(goal.created_at).toLocaleDateString()}
+                      <tr key={goal.id} className="table-primary-row">
+                        <td className="table-primary-td table-primary-td-center">{index + 1}</td>
+                        <td className="table-primary-td">
+                          <div className="table-primary-cell-name">
+                            <div className="table-primary-cell-name-text">{goal.goal}</div>
+                            <div className="table-primary-cell-subtitle">
+                              Created: {new Date(goal.created_at).toLocaleDateString()}
+                            </div>
                           </div>
                         </td>
-                        <td className="data-table-td">
+                        <td className="table-primary-td">
                           <div className="data-table-description">
                             {goal.goal_description || <span className="data-table-empty">No description</span>}
                           </div>
                         </td>
-                        <td className="data-table-td data-table-td-center">
+                        <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleEdit(goal)}
                             className="btn-primary btn-sm btn-icon"
                           >
-                            <svg className="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="table-primary-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Edit
                           </button>
                         </td>
-                        <td className="data-table-td data-table-td-center">
+                        <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleDelete(goal.id)}
                             className="btn-danger btn-sm btn-icon"
                           >
-                            <svg className="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="table-primary-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                             Delete

@@ -9,6 +9,7 @@ import coachSessionService from "../../api/services/coachSessionService";
 import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/Pages.css";
 import "../../styles/BookAppointment.css";
+import '../../styles/ManageUsersLayout.css';
 
 const MyAppointments = () => {
   const navigate = useNavigate();

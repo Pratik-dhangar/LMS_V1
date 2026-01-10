@@ -9,6 +9,7 @@ import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import '../../styles/Pages.css';
+import '../../styles/ManageUsersLayout.css';
 
 // Form Section Components
 import PersonalDetailsSection from '../../components/head/RegisterLearner/PersonalDetailsSection';
@@ -542,10 +543,12 @@ const EditLearner = () => {
               </svg>
               Back to Manage Learners
             </button>
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               Edit Learner Profile
             </h1>
             <p className="page-description">Update profile information for {formData.name}</p>
+            </div>
           </div>
 
           {/* Form */}

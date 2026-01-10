@@ -6,6 +6,7 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import '../../styles/GuestBooking.css';
+import '../../styles/ManageUsersLayout.css';
 
 const GuestBookingStep1 = () => {
   const navigate = useNavigate();

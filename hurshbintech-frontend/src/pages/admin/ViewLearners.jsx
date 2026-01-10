@@ -14,11 +14,15 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
-import '../../styles/admin/AdminViewLearners.css';
+import { useNavigate } from 'react-router-dom';
+import '../../styles/Pages.css';
+import '../../styles/Table.css';
+import '../../styles/ManageUsersLayout.css';
 
 
 // ViewLearners Component - Admin can view all learners (no edit capability)
 const ViewLearners = () => {
+  const navigate = useNavigate();
   const { user: _user } = useAuth();
 
   // State management for learner data and filtering
@@ -103,11 +107,22 @@ const ViewLearners = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
 
-            <h1 className="page-title">
+            <div>
+              <h1 className="page-title">
               View HurshBin Learners
             </h1>
             <p className="page-description">View all registered learners in the system</p>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -118,8 +133,8 @@ const ViewLearners = () => {
             />
           </div>
           {activeSearchQuery && (
-            <div className="search-results-info">
-              <p className="search-results-text">
+            <div className="view-users-search-results-info">
+              <p>
                 Found {filteredLearners.length} result{filteredLearners.length !== 1 ? 's' : ''}
               </p>
             </div>
@@ -143,14 +158,14 @@ const ViewLearners = () => {
             </div>
           ) : (
             /* Table */
-            <div className="data-table-container">
+            <div className="table-primary-container">
               {filteredLearners.length === 0 ? (
-                <div className="empty-state">
-                  <Users className="empty-state-icon" />
-                  <p className="empty-state-title">
+                <div className="table-primary-empty">
+                  <Users className="table-primary-empty-icon" />
+                  <h3 className="table-primary-empty-title">
                     {activeSearchQuery ? 'No learners found' : 'No learners registered yet'}
-                  </p>
-                  <p className="empty-state-description">
+                  </h3>
+                  <p className="table-primary-empty-description">
                     {activeSearchQuery
                       ? 'Try adjusting your search criteria'
                       : 'No learners have been registered in the system'
@@ -158,56 +173,58 @@ const ViewLearners = () => {
                   </p>
                 </div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead className="data-table-header">
+                <div className="table-primary-wrapper">
+                  <table className="table-primary">
+                    <thead className="table-primary-header">
                       <tr>
-                        <th className="data-table-th">
+                        <th className="table-primary-th table-primary-th-center">
                           Sr. No.
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Name
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Passcode
                         </th>
-                        <th className="data-table-th">
+                        <th className="table-primary-th">
                           Date of Assessment
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="data-table-body">
+                    <tbody className="table-primary-body">
                       {filteredLearners.map((learner, index) => (
                         <tr
                           key={learner.id}
-                          className="data-table-row"
+                          className="table-primary-row"
                         >
-                          <td className="data-table-td data-table-td-center">
+                          <td className="table-primary-td table-primary-td-center">
                             {index + 1}
                           </td>
-                          <td className="data-table-td">
-                            <div className="data-table-name">{learner.name}</div>
-                            <div className="data-table-subtext">{learner.role}</div>
+                          <td className="table-primary-td">
+                            <div className="table-primary-cell-name">
+                              <div className="table-primary-cell-name-text">{learner.name}</div>
+                              <div className="table-primary-cell-subtitle">{learner.role}</div>
+                            </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             <div className="passcode-display-inline">
-                              <span className="passcode-badge">
+                              <span className="table-primary-badge">
                                 {visiblePasscodes[learner.id] ? visiblePasscodes[learner.id] : '••••••'}
                               </span>
                               <button
                                 onClick={() => togglePasscodeVisibility(learner.id, learner.user_id)}
-                                className="icon-btn"
+                                className="table-primary-icon-btn"
                                 title={visiblePasscodes[learner.id] ? 'Hide passcode' : 'Show passcode'}
                               >
                                 {visiblePasscodes[learner.id] ? (
-                                  <EyeOff className="icon-sm" />
+                                  <EyeOff className="table-primary-icon-sm" />
                                 ) : (
-                                  <Eye className="icon-sm" />
+                                  <Eye className="table-primary-icon-sm" />
                                 )}
                               </button>
                             </div>
                           </td>
-                          <td className="data-table-td">
+                          <td className="table-primary-td">
                             {learner.date_of_assessment
                               ? new Date(learner.date_of_assessment).toLocaleDateString()
                               : 'N/A'

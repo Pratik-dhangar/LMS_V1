@@ -65,6 +65,9 @@ import ViewAssignedPrograms from "./pages/learner/ViewAssignedPrograms";
 import LearningProgramDetails from "./pages/learner/LearningProgramDetails";
 import LearnerProgramAssignmentDetails from "./pages/learner/LearnerProgramAssignmentDetails";
 import FeedbackPage from "./pages/learner/FeedbackPage";
+import MySessions from "./pages/learner/MySessions";
+import AssignedPrograms from "./pages/learner/AssignedPrograms";
+import LearningContent from "./pages/learner/LearningContent";
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -502,6 +505,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['learner']}>
               <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/my-sessions"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <MySessions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/assigned-programs"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <AssignedPrograms />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learner/learning-content"
+          element={
+            <ProtectedRoute allowedRoles={['learner']}>
+              <LearningContent />
             </ProtectedRoute>
           }
         />

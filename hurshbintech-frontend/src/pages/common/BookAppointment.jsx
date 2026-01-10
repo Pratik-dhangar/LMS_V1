@@ -8,6 +8,7 @@ import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/BookAppointment.css';
+import '../../styles/ManageUsersLayout.css';
 
 const BookAppointment = () => {
   const navigate = useNavigate();
