@@ -444,7 +444,7 @@ const ManageLearningContent = () => {
                 <input
                   type="file"
                   onChange={handleFileUpload}
-                  className="form-file-input"
+                  className="form-input"
                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.ppt,.pptx"
                   required
                   disabled={uploading}
