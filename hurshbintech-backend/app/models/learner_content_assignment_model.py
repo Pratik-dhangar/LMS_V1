@@ -77,7 +77,7 @@ class LearnerContentAssignment(Base):
 
     # Relationships
     learner = relationship("User", foreign_keys=[learner_id], backref="content_assignments")
-    content = relationship("LearningContent", backref="learner_assignments")
+    content = relationship("LearningContent", back_populates="learner_assignments")
     assigned_by = relationship("User", foreign_keys=[assigned_by_head])
     reviewer = relationship("User", foreign_keys=[reviewed_by_head])
     program_assignment = relationship("ProgramAssignment", backref="content_assignments")

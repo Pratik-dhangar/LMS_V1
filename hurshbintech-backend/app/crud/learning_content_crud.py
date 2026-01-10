@@ -89,12 +89,14 @@ async def update_learning_content(
 
 
 async def delete_learning_content(db: AsyncSession, content_id: int) -> bool:
-    """Delete learning content (admin only)"""
+    """Delete learning content (admin only) - CASCADE deletes related assignments"""
     content = await get_learning_content_by_id(db, content_id)
 
     if not content:
         return False
 
+    # Delete the content - CASCADE will handle learner_content_assignments
     await db.delete(content)
+    await db.flush()  # Flush before commit to ensure cascade executes
     await db.commit()
     return True

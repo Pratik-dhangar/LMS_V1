@@ -24,6 +24,10 @@ from app.utils.s3_utils import S3Manager
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/learning-content", tags=["Learning Content"])
 
+# Define UPLOAD_DIR globally for local storage
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads" / "learning_content"
+
 # Initialize S3 manager if S3 is enabled
 s3_manager = None
 if settings.USE_S3:
@@ -34,9 +38,7 @@ if settings.USE_S3:
     except Exception as e:
         logger.error(f"Failed to initialize S3 manager: {str(e)}")
 else:
-    # Fallback to local storage
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
-    UPLOAD_DIR = BASE_DIR / "uploads" / "learning_content"
+    # Ensure local upload directory exists
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     logger.info(f"Learning content will be stored locally in: {UPLOAD_DIR}")
 
