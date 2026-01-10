@@ -42,25 +42,6 @@
     margin: 0;
 }
 
-.btn-success {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    background: #10b981;
-    color: #ffffff;
-    border: none;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    white-space: nowrap;
-}
-
-.btn-success:hover {
-    background: #059669;
-}
-
 .btn-icon {
     display: inline-flex;
     align-items: center;

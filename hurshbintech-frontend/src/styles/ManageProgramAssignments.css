@@ -61,28 +61,6 @@
    Buttons (from Pages.css)
    ============================================ */
 
-.btn-primary {
-    background: #3b82f6;
-    color: white;
-    padding: 0.625rem 1.25rem;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary:hover {
-    background: #2563eb;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 .btn-secondary {
     background: #6b7280;
     color: white;
@@ -133,21 +111,6 @@
 
 .btn-danger:hover {
     background: #dc2626;
-}
-
-.btn-success {
-    background: #10b981;
-    color: white;
-    padding: 0.625rem 1.25rem;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-success:hover {
-    background: #059669;
 }
 
 .btn-outline {
