@@ -1,34 +1,6 @@
 /* PaymentVerification.css - Payment Verification Page Styles */
 
-/* Page Container */
-.payment-verification-container {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
 
-.payment-verification-main {
-    flex: 1;
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-/* Header Section (using from ManageUsersLayout) */
-.payment-verification-header {
-    margin-bottom: 2rem;
-}
-
-.payment-verification-title {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-}
-
-.payment-verification-description {
-    color: #666;
-}
 
 /* Filter Buttons */
 .payment-verification-filters {
