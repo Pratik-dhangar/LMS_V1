@@ -173,7 +173,6 @@ const GuestBookingStep1 = () => {
         <div className="page-main-guest">
           <div className="page-header">
             <h1 className="page-title">Guest Booking - Email Verification</h1>
-            <p className="page-subtitle">Book a session with our coaches without an account</p>
           </div>
 
           <div className="page-content">
@@ -198,19 +197,7 @@ const GuestBookingStep1 = () => {
               <div className="guest-booking-form centered">
                 {step === 'email' ? (
                   <>
-                    <div className="instruction-box">
-                      <h3>📧 Verify Your Email</h3>
-                      <p>
-                        We'll send you a one-time password (OTP) to verify your email. 
-                        This keeps your booking secure.
-                      </p>
-                      <ul>
-                        <li>OTP valid for 10 minutes</li>
-                        <li>One OTP per email</li>
-                        <li>No account creation needed</li>
-                      </ul>
-                    </div>
-
+                   
                     <form onSubmit={handleSendOTP}>
                       <div className="form-group">
                         <label htmlFor="email">Email Address *</label>
@@ -228,7 +215,7 @@ const GuestBookingStep1 = () => {
 
                       <button 
                         type="submit" 
-                        className="btn btn-primary btn-full"
+                        className="btn-primary btn-full"
                         disabled={loading}
                       >
                         {loading ? (
@@ -241,20 +228,23 @@ const GuestBookingStep1 = () => {
                         )}
                       </button>
                     </form>
+                     <div className="instruction-box">
+                      <h3>📧 Verify Your Email</h3>
+                      <p>
+                        We'll send you a one-time password (OTP) to verify your email. 
+                        This keeps your booking secure.
+                      </p>
+                      <ul>
+                        <li>OTP valid for 10 minutes</li>
+                        <li>One OTP per email</li>
+                        <li>No account creation needed</li>
+                      </ul>
+                    </div>
+
                   </>
                 ) : (
                   <>
-                    <div className="instruction-box">
-                      <h3>🔐 Enter OTP</h3>
-                      <p>
-                        A 6-digit OTP has been sent to <strong>{email}</strong>
-                      </p>
-                      <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-                        Didn't receive it? Check your spam folder or try again.
-                      </p>
-                    </div>
-
-                    <form onSubmit={handleVerifyOTP}>
+                   <form onSubmit={handleVerifyOTP}>
                       <div className="form-group">
                         <label>Enter OTP *</label>
                         <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
@@ -326,6 +316,17 @@ const GuestBookingStep1 = () => {
                         ← Back to email entry
                       </button>
                     </form>
+                    <div className="instruction-box">
+                      <h3>🔐 Enter OTP</h3>
+                      <p>
+                        A 6-digit OTP has been sent to <strong>{email}</strong>
+                      </p>
+                      <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                        Didn't receive it? Check your spam folder or try again.
+                      </p>
+                    </div>
+
+                    
                   </>
                 )}
               </div>
