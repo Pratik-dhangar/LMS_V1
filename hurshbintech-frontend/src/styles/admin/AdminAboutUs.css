@@ -1,0 +1,614 @@
+/* AdminAboutUs.css - About Us Page Editor Styles */
+
+
+/* Form Container */
+.admin-aboutus-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Settings Card */
+.admin-aboutus-settings-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px);
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
+    padding: 2rem;
+}
+
+.admin-aboutus-settings-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.admin-aboutus-title-accent {
+    width: 0.5rem;
+    height: 2rem;
+    background: linear-gradient(to bottom, #2563eb, #4f46e5);
+    border-radius: 9999px;
+    margin-right: 0.75rem;
+}
+
+.admin-aboutus-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+/* Form Group */
+.admin-aboutus-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-aboutus-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+}
+
+.admin-aboutus-label-icon {
+    display: inline;
+    margin-right: 0.5rem;
+    color: #2563eb;
+}
+
+/* Input Fields */
+.admin-aboutus-select,
+.admin-aboutus-input,
+.admin-aboutus-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.75rem;
+    background: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.admin-aboutus-select:hover,
+.admin-aboutus-input:hover,
+.admin-aboutus-textarea:hover {
+    border-color: #60a5fa;
+}
+
+.admin-aboutus-select:focus,
+.admin-aboutus-input:focus,
+.admin-aboutus-textarea:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+}
+
+.admin-aboutus-input-lg {
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+.admin-aboutus-textarea {
+    resize: none;
+}
+
+/* Toggle Switch */
+.admin-aboutus-toggle-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    background: #f9fafb;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    transition: background-color 0.2s ease;
+}
+
+.admin-aboutus-toggle-container:hover {
+    background: #f3f4f6;
+}
+
+.admin-aboutus-toggle-wrapper {
+    position: relative;
+}
+
+.admin-aboutus-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.admin-aboutus-toggle-bg {
+    width: 3.5rem;
+    height: 2rem;
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+}
+
+.admin-aboutus-toggle-bg-active {
+    background: #10b981;
+}
+
+.admin-aboutus-toggle-bg-inactive {
+    background: #d1d5db;
+}
+
+.admin-aboutus-toggle-thumb {
+    position: absolute;
+    left: 0.25rem;
+    top: 0.25rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: white;
+    border-radius: 9999px;
+    transition: transform 0.2s ease;
+}
+
+.admin-aboutus-toggle-thumb-active {
+    transform: translateX(1.5rem);
+}
+
+.admin-aboutus-toggle-label {
+    margin-left: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.admin-aboutus-toggle-label-active {
+    color: #059669;
+}
+
+.admin-aboutus-toggle-label-inactive {
+    color: #6b7280;
+}
+
+/* Featured Image Section */
+.admin-aboutus-image-section {
+    margin-top: 2rem;
+}
+
+.admin-aboutus-image-preview-container {
+    position: relative;
+}
+
+.admin-aboutus-image-preview-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-aboutus-image-preview-wrapper:hover .admin-aboutus-image-preview-overlay {
+    opacity: 1;
+}
+
+.admin-aboutus-image-preview {
+    width: 100%;
+    height: 16rem;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.admin-aboutus-image-preview-wrapper:hover .admin-aboutus-image-preview {
+    transform: scale(1.05);
+}
+
+.admin-aboutus-image-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.admin-aboutus-image-remove-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #ef4444;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.admin-aboutus-image-remove-btn:hover {
+    background: #dc2626;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+/* Image Upload Area */
+.admin-aboutus-upload-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.admin-aboutus-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 12rem;
+    border: 3px dashed #93c5fd;
+    border-radius: 1rem;
+    cursor: pointer;
+    background: linear-gradient(to bottom right, #eff6ff, #e0e7ff);
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.admin-aboutus-upload-label:hover {
+    background: linear-gradient(to bottom right, #dbeafe, #c7d2fe);
+}
+
+.admin-aboutus-upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem 1.5rem;
+}
+
+.admin-aboutus-upload-icon-wrapper {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    background: #dbeafe;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-aboutus-upload-icon {
+    width: 2rem;
+    height: 2rem;
+    color: #2563eb;
+}
+
+.admin-aboutus-upload-text {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #374151;
+}
+
+.admin-aboutus-upload-text-bold {
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.admin-aboutus-upload-hint {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.admin-aboutus-upload-input {
+    display: none;
+}
+
+/* Tabbed Content Editor */
+.admin-aboutus-tabs-container {
+    margin-top: 2rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+/* Tab Navigation */
+.admin-aboutus-tabs-nav {
+    border-bottom: 2px solid #e5e7eb;
+    background: linear-gradient(to right, #f9fafb, #dbeafe, #e0e7ff);
+    overflow-x: auto;
+}
+
+.admin-aboutus-tabs-list {
+    display: flex;
+    padding: 0.5rem;
+    gap: 0.5rem;
+}
+
+/* Custom scrollbar for tabs */
+.admin-aboutus-tabs-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.admin-aboutus-tabs-nav::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.admin-aboutus-tabs-nav::-webkit-scrollbar-thumb {
+    background: #60a5fa;
+    border-radius: 3px;
+}
+
+.admin-aboutus-tab-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    border: none;
+    cursor: pointer;
+    background: transparent;
+}
+
+.admin-aboutus-tab-button-active {
+    background: linear-gradient(to right, #2563eb, #4f46e5);
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+.admin-aboutus-tab-button-inactive {
+    color: #4b5563;
+}
+
+.admin-aboutus-tab-button-inactive:hover {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.admin-aboutus-tab-icon {
+    font-size: 1.25rem;
+}
+
+/* Tab Content */
+.admin-aboutus-tab-content {
+    padding: 2rem;
+    background: linear-gradient(to bottom right, white, #f9fafb);
+}
+
+.admin-aboutus-tab-content-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Content Sections */
+.admin-aboutus-content-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f3f4f6;
+}
+
+.admin-aboutus-section-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-aboutus-section-icon {
+    display: inline;
+}
+
+/* Action Buttons */
+.admin-aboutus-actions {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.admin-aboutus-btn-cancel {
+    padding: 1rem 2rem;
+    background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+    color: #374151;
+    border-radius: 0.75rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.admin-aboutus-btn-cancel:hover {
+    background: linear-gradient(to right, #e5e7eb, #d1d5db);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+.admin-aboutus-btn-save {
+    padding: 1rem 2rem;
+    background: linear-gradient(to right, #eb9f25, #fc8e10);
+    color: white;
+    border-radius: 0.75rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-aboutus-btn-save:hover:not(:disabled) {
+    background: linear-gradient(to right, #cc8a21, #c46e0c);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+.admin-aboutus-btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.admin-aboutus-btn-icon {
+    margin-right: 0.5rem;
+    font-size: 1.25rem;
+}
+
+/* Loading Spinner */
+.admin-aboutus-spinner {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: admin-aboutus-spin 1s linear infinite;
+    margin-right: 0.75rem;
+}
+
+@keyframes admin-aboutus-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design - Tablet */
+@media (min-width: 768px) {
+    .admin-aboutus-settings-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .admin-aboutus-actions {
+        flex-direction: row;
+    }
+}
+
+/* Responsive Design - Desktop */
+@media (min-width: 1024px) {
+    .admin-aboutus-main {
+        padding: 2rem;
+    }
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 768px) {
+    .admin-aboutus-main {
+        padding: 1rem 0.5rem;
+        margin-top: 4rem;
+    }
+
+    .admin-aboutus-page-title {
+        font-size: 2rem;
+    }
+
+    .admin-aboutus-settings-card {
+        padding: 1.5rem;
+    }
+
+    .admin-aboutus-settings-title {
+        font-size: 1.25rem;
+    }
+
+    .admin-aboutus-tab-content {
+        padding: 1.5rem;
+    }
+
+    .admin-aboutus-content-section {
+        padding: 1rem;
+    }
+
+    .admin-aboutus-btn-cancel,
+    .admin-aboutus-btn-save {
+        padding: 0.875rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-aboutus-main {
+        padding: 0.75rem 0.25rem;
+        margin-top: 3.5rem;
+    }
+
+    .admin-aboutus-page-title {
+        font-size: 1.75rem;
+    }
+
+    .admin-aboutus-page-description {
+        font-size: 1rem;
+    }
+
+    .admin-aboutus-settings-card {
+        padding: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    .admin-aboutus-settings-title {
+        font-size: 1.125rem;
+        margin-bottom: 1rem;
+    }
+
+    .admin-aboutus-tab-button {
+        padding: 0.625rem 1rem;
+        font-size: 0.8125rem;
+    }
+
+    .admin-aboutus-tab-icon {
+        font-size: 1.125rem;
+    }
+
+    .admin-aboutus-tab-content {
+        padding: 1rem;
+    }
+
+    .admin-aboutus-content-section {
+        padding: 0.875rem;
+    }
+
+    .admin-aboutus-upload-icon-wrapper {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .admin-aboutus-upload-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .admin-aboutus-upload-text {
+        font-size: 0.875rem;
+    }
+
+    .admin-aboutus-upload-hint {
+        font-size: 0.8125rem;
+    }
+
+    .admin-aboutus-btn-cancel,
+    .admin-aboutus-btn-save {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.875rem;
+    }
+}
