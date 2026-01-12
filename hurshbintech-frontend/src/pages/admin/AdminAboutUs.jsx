@@ -263,7 +263,7 @@ const AdminAboutUs = () => {
             </button>
             {/* Left Side: Title and Subtitle */}
             <div>
-              <h1 className="page-title">Edit Training Vlog</h1>
+              <h1 className="page-title">Edit About US</h1>
             </div>
           </div>
 

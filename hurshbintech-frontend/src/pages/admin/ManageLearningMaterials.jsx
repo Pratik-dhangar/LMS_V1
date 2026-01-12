@@ -4,9 +4,13 @@ import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import axios from '../../api/axios';
 import { toast } from 'react-toastify';
-import { Plus, Edit, Trash2, X, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Upload, ArrowLeft } from 'lucide-react';
+import SearchBar from '../../components/common/SearchBar';
 import { getFileUrl } from '../../utils/fileUrlBuilder';
 import '../../styles/admin/index.css';
+import '../../styles/ManageUsersLayout.css';
+import '../../styles/Table.css';
+import '../../styles/admin/ManageLearningMaterials.css';
 
 const ManageLearningMaterials = () => {
     const navigate = useNavigate();
@@ -22,6 +26,8 @@ const ManageLearningMaterials = () => {
     const [imagePreviewType, setImagePreviewType] = useState(null); // 'image' | 'video' | 'pdf' | null
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
+    const [filteredProducts, setFilteredProducts] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -39,6 +45,28 @@ const ManageLearningMaterials = () => {
     useEffect(() => {
         loadData();
     }, []);
+
+    useEffect(() => {
+        setFilteredProducts(products);
+    }, [products]);
+
+    const handleSearch = (query) => {
+        setSearchTerm(query);
+        if (query.trim() === '') {
+            setFilteredProducts(products);
+        } else {
+            const filtered = products.filter(product => {
+                const searchLower = query.toLowerCase();
+                return (
+                    product.name.toLowerCase().includes(searchLower) ||
+                    product.description?.toLowerCase().includes(searchLower) ||
+                    product.category?.name.toLowerCase().includes(searchLower) ||
+                    product.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+                );
+            });
+            setFilteredProducts(filtered);
+        }
+    };
 
     const loadData = async () => {
         try {
@@ -272,8 +300,12 @@ const ManageLearningMaterials = () => {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <p>Loading...</p>
+            <div className="page-container">
+                <Navbar />
+                <div className="loading-container">
+                    <div className="loading-spinner-icon"></div>
+                    <p className="loading-text">Loading...</p>
+                </div>
             </div>
         );
     }
@@ -281,73 +313,64 @@ const ManageLearningMaterials = () => {
     return (
         <>
             <Navbar />
-            <div style={{ minHeight: 'calc(100vh - 200px)', background: '#f5f6fa', padding: '30px 20px' }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#2c3e50' }}>
-                            Manage Learning Materials
-                        </h1>
-                        <button
-                            onClick={() => {
-                                resetForm();
-                                setShowForm(true);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '12px 24px',
-                                background: '#27ae60',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '15px',
-                                fontWeight: '600',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            <Plus size={20} /> Add New Product
-                        </button>
-                    </div>
+            <div className="page-container">
+                <main className="page-main">
+                    <div className="page-content">
+                        {/* Page Header */}
+                        <div className="page-header">
+                            <button
+                                onClick={() => navigate('/admin/dashboard')}
+                                className="back-button"
+                            >
+                                <ArrowLeft size={20} />
+                                Back to Dashboard
+                            </button>
+                            <div>
+                                <h1 className="page-title">
+                                    Manage Learning Materials
+                                </h1>
+                                <p className="page-description">
+                                    Create, edit, and manage learning products and materials
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Search and Add Button Section */}
+                        <div className="manage-users-search-section">
+                            <SearchBar
+                                onSearch={handleSearch}
+                                placeholder="Search by name, description, category, or tags..."
+                            />
+                            <button
+                                onClick={() => {
+                                    resetForm();
+                                    setShowForm(true);
+                                }}
+                                className="btn-success"
+                            >
+                                <Plus size={20} /> Add New Product
+                            </button>
+                        </div>
 
                     {/* Form Modal */}
                     {showForm && (
-                        <div style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: 'rgba(0,0,0,0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 1000
-                        }}>
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '12px',
-                                padding: '30px',
-                                maxWidth: '800px',
-                                width: '90%',
-                                maxHeight: '90vh',
-                                overflow: 'auto'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                    <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#2c3e50' }}>
+                        <div className="learning-materials-modal-overlay">
+                            <div className="learning-materials-modal">
+                                <div className="learning-materials-modal-header">
+                                    <h2 className="learning-materials-modal-title">
                                         {editingId ? 'Edit Product' : 'Add New Product'}
                                     </h2>
                                     <button
                                         onClick={resetForm}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}
+                                        className="learning-materials-close-btn"
                                     >
                                         <X size={24} color="#666" />
                                     </button>
                                 </div>
 
-                                <form onSubmit={handleSubmit}>
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                <form onSubmit={handleSubmit} className="learning-materials-form">
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Product Name *
                                         </label>
                                         <input
@@ -356,20 +379,13 @@ const ManageLearningMaterials = () => {
                                             value={formData.name}
                                             onChange={handleInputChange}
                                             placeholder="e.g., Sensory Texture Balls Set"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '6px',
-                                                fontSize: '14px',
-                                                boxSizing: 'border-box'
-                                            }}
+                                            className="learning-materials-input"
                                             required
                                         />
                                     </div>
 
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Description
                                         </label>
                                         <textarea
@@ -378,34 +394,20 @@ const ManageLearningMaterials = () => {
                                             onChange={handleInputChange}
                                             placeholder="Product description..."
                                             rows="4"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '6px',
-                                                fontSize: '14px',
-                                                boxSizing: 'border-box'
-                                            }}
+                                            className="learning-materials-textarea"
                                         />
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-grid-2">
+                                        <div className="learning-materials-form-group">
+                                            <label className="learning-materials-label">
                                                 Category *
                                             </label>
                                             <select
                                                 name="category_id"
                                                 value={formData.category_id}
                                                 onChange={handleInputChange}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    background: 'white'
-                                                }}
+                                                className="learning-materials-select"
                                                 required
                                             >
                                                 <option value="">Select Category</option>
@@ -415,22 +417,15 @@ const ManageLearningMaterials = () => {
                                             </select>
                                         </div>
 
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                        <div className="learning-materials-form-group">
+                                            <label className="learning-materials-label">
                                                 Visibility
                                             </label>
                                             <select
                                                 name="visibility"
                                                 value={formData.visibility}
                                                 onChange={handleInputChange}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    background: 'white'
-                                                }}
+                                                className="learning-materials-select"
                                             >
                                                 <option value="DRAFT">Draft</option>
                                                 <option value="PUBLISHED">Published</option>
@@ -438,9 +433,9 @@ const ManageLearningMaterials = () => {
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-grid-3">
+                                        <div className="learning-materials-form-group">
+                                            <label className="learning-materials-label">
                                                 Price (₹) *
                                             </label>
                                             <input
@@ -451,20 +446,13 @@ const ManageLearningMaterials = () => {
                                                 placeholder="0"
                                                 min="1"
                                                 step="0.01"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    boxSizing: 'border-box'
-                                                }}
+                                                className="learning-materials-input"
                                                 required
                                             />
                                         </div>
 
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                        <div className="learning-materials-form-group">
+                                            <label className="learning-materials-label">
                                                 Discount (%)
                                             </label>
                                             <input
@@ -475,19 +463,12 @@ const ManageLearningMaterials = () => {
                                                 placeholder="0"
                                                 min="0"
                                                 max="100"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    boxSizing: 'border-box'
-                                                }}
+                                                className="learning-materials-input"
                                             />
                                         </div>
 
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                        <div className="learning-materials-form-group">
+                                            <label className="learning-materials-label">
                                                 Stock Quantity *
                                             </label>
                                             <input
@@ -497,183 +478,137 @@ const ManageLearningMaterials = () => {
                                                 onChange={handleInputChange}
                                                 placeholder="0"
                                                 min="0"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    boxSizing: 'border-box'
-                                                }}
+                                                className="learning-materials-input"
                                                 required
                                             />
                                         </div>
                                     </div>
 
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Age Groups
                                         </label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                        <div className="learning-materials-checkbox-grid">
                                             {ageGroups.map(age => (
-                                                <label key={age.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <label key={age.id} className="learning-materials-checkbox-label">
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.age_group_ids.includes(age.id)}
                                                         onChange={() => handleCheckboxChange('age_group_ids', age.id)}
-                                                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                                                        className="learning-materials-checkbox"
                                                     />
-                                                    <span style={{ fontSize: '14px' }}>{age.min_age}-{age.max_age} years</span>
+                                                    <span className="learning-materials-checkbox-text">{age.min_age}-{age.max_age} years</span>
                                                 </label>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Skill Focus
                                         </label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                        <div className="learning-materials-checkbox-grid">
                                             {skills.map(skill => (
-                                                <label key={skill.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <label key={skill.id} className="learning-materials-checkbox-label">
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.skill_ids.includes(skill.id)}
                                                         onChange={() => handleCheckboxChange('skill_ids', skill.id)}
-                                                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                                                        className="learning-materials-checkbox"
                                                     />
-                                                    <span style={{ fontSize: '14px' }}>{skill.name}</span>
+                                                    <span className="learning-materials-checkbox-text">{skill.name}</span>
                                                 </label>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Product Tags
                                         </label>
-                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                        <div className="learning-materials-tags-wrapper">
                                             {['Recommended', 'Bestseller', 'New'].map(tag => (
-                                                <label key={tag} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                <label key={tag} className="learning-materials-checkbox-label">
                                                     <input
                                                         type="checkbox"
                                                         checked={formData.tags.includes(tag)}
                                                         onChange={() => handleCheckboxChange('tags', tag)}
-                                                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                                                        className="learning-materials-checkbox"
                                                     />
-                                                    <span style={{ fontSize: '14px' }}>{tag}</span>
+                                                    <span className="learning-materials-checkbox-text">{tag}</span>
                                                 </label>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#2c3e50' }}>
+                                    <div className="learning-materials-form-group">
+                                        <label className="learning-materials-label">
                                             Product Image
                                         </label>
                                         {imagePreview && (
-                                            <div style={{ marginBottom: '10px' }}>
+                                            <div className="learning-materials-preview-container">
                                                 {imagePreviewType === 'video' ? (
-                                                    <video src={imagePreview} controls style={{ maxWidth: '320px', maxHeight: '240px', borderRadius: '6px' }} />
+                                                    <video src={imagePreview} controls className="learning-materials-preview-video" />
                                                 ) : imagePreviewType === 'pdf' ? (
-                                                    <iframe src={imagePreview} title="PDF Preview" style={{ width: '320px', height: '240px', borderRadius: '6px', border: '1px solid #eee' }} />
+                                                    <iframe src={imagePreview} title="PDF Preview" className="learning-materials-preview-pdf" />
                                                 ) : (
                                                     <img
                                                         src={imagePreview}
                                                         alt="Preview"
-                                                        style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '6px' }}
+                                                        className="learning-materials-preview-image"
                                                     />
                                                 )}
                                             </div>
                                         )}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                        <div className="learning-materials-thumbnail-section">
+                                            <label className="learning-materials-label">
                                                 Thumbnail (optional)
                                             </label>
                                             <div style={{ marginBottom: '8px' }}>
                                                 {thumbnailPreview ? (
-                                                    <img src={thumbnailPreview} alt="Thumbnail preview" style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '4px' }} />
+                                                    <img src={thumbnailPreview} alt="Thumbnail preview" className="learning-materials-thumbnail-preview" />
                                                 ) : (
-                                                    <div style={{ color: '#7f8c8d', fontSize: '13px' }}>No thumbnail</div>
+                                                    <div className="learning-materials-no-thumbnail">No thumbnail</div>
                                                 )}
                                             </div>
-                                            <label style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '8px',
-                                                padding: '10px',
-                                                border: '1px dashed #95a5a6',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                background: '#fafafa',
-                                                marginBottom: '8px'
-                                            }}>
+                                            <label className="learning-materials-thumbnail-upload">
                                                 <Upload size={16} color="#666" />
-                                                <span style={{ fontSize: '13px', color: '#666' }}>
+                                                <span className="learning-materials-thumbnail-text">
                                                     {thumbnailFile ? thumbnailFile.name : 'Click to upload thumbnail (JPG/PNG, Max 1MB)'}
                                                 </span>
                                                 <input
                                                     type="file"
                                                     accept="image/jpeg,image/png,image/webp"
                                                     onChange={handleThumbnailChange}
-                                                    style={{ display: 'none' }}
+                                                    className="learning-materials-upload-input"
                                                 />
                                             </label>
                                         </div>
-                                        <label style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '8px',
-                                            padding: '20px',
-                                            border: '2px dashed #3498db',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            background: '#f8f9fa'
-                                        }}>
+                                        <label className="learning-materials-upload-area">
                                             <Upload size={20} color="#3498db" />
-                                            <span style={{ fontSize: '14px', color: '#3498db' }}>
+                                            <span className="learning-materials-upload-text">
                                                 {imageFile ? imageFile.name : 'Click to upload image (JPG/PNG, MP4, PDF, Max 50MB)'}
                                             </span>
                                             <input
                                                 type="file"
                                                 accept="image/jpeg,image/png,video/mp4,application/pdf"
                                                 onChange={handleImageChange}
-                                                style={{ display: 'none' }}
+                                                className="learning-materials-upload-input"
                                             />
                                         </label>
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                    <div className="learning-materials-form-actions">
                                         <button
                                             type="button"
                                             onClick={resetForm}
-                                            style={{
-                                                padding: '10px 24px',
-                                                background: '#ecf0f1',
-                                                color: '#2c3e50',
-                                                border: '1px solid #bdc3c7',
-                                                borderRadius: '6px',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer'
-                                            }}
+                                            className="learning-materials-btn-cancel"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             type="submit"
-                                            style={{
-                                                padding: '10px 24px',
-                                                background: '#27ae60',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer'
-                                            }}
+                                            className="learning-materials-btn-submit"
                                         >
                                             {editingId ? 'Update Product' : 'Create Product'}
                                         </button>
@@ -684,111 +619,103 @@ const ManageLearningMaterials = () => {
                     )}
 
                     {/* Products Table */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '12px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        overflow: 'hidden'
-                    }}>
-                        {products.length === 0 ? (
-                            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#7f8c8d' }}>
-                                <p style={{ fontSize: '16px' }}>No products yet. Click "Add New Product" to get started.</p>
+                    <div className="table-primary-container">
+                        {filteredProducts.length === 0 ? (
+                            <div className="table-primary-empty">
+                                <div className="table-primary-empty-icon">
+                                    {searchTerm ? '🔍' : '📦'}
+                                </div>
+                                <h3 className="table-primary-empty-title">
+                                    {searchTerm ? 'No Products Found' : 'No Products Yet'}
+                                </h3>
+                                <p className="table-primary-empty-description">
+                                    {searchTerm 
+                                        ? `No products match your search "${searchTerm}". Try a different search term.`
+                                        : 'Click "Add New Product" to get started with your first learning material.'
+                                    }
+                                </p>
                             </div>
                         ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #e0e0e0' }}>
-                                        <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#2c3e50' }}>Product Name</th>
-                                        <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#2c3e50' }}>Category</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#2c3e50' }}>Price</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#2c3e50' }}>Stock</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#2c3e50' }}>Status</th>
-                                        <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#2c3e50' }}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {products.map((product, index) => (
-                                        <tr
-                                            key={product.id}
-                                            style={{
-                                                borderBottom: '1px solid #e0e0e0',
-                                                background: index % 2 === 0 ? 'white' : '#f8f9fa'
-                                            }}
-                                        >
-                                            <td style={{ padding: '15px', color: '#2c3e50', fontSize: '14px', fontWeight: '500' }}>
-                                                {product.name}
-                                            </td>
-                                            <td style={{ padding: '15px', color: '#555', fontSize: '14px' }}>
-                                                {product.category?.name || 'N/A'}
-                                            </td>
-                                            <td style={{ padding: '15px', textAlign: 'center', color: '#27ae60', fontWeight: '600' }}>
-                                                ₹{product.price}
-                                            </td>
-                                            <td style={{ padding: '15px', textAlign: 'center', color: '#555' }}>
-                                                <span style={{
-                                                    background: product.stock_quantity > 0 ? '#e8f5e9' : '#ffebee',
-                                                    color: product.stock_quantity > 0 ? '#27ae60' : '#e74c3c',
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600'
-                                                }}>
-                                                    {product.stock_quantity}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '15px', textAlign: 'center' }}>
-                                                <span style={{
-                                                    background: product.visibility === 'PUBLISHED' ? '#e3f2fd' : '#fff3e0',
-                                                    color: product.visibility === 'PUBLISHED' ? '#2196F3' : '#f39c12',
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600'
-                                                }}>
-                                                    {product.visibility}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '15px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleEdit(product)}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: '#3498db',
-                                                        cursor: 'pointer',
-                                                        marginRight: '15px',
-                                                        fontSize: '16px',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center'
-                                                    }}
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(product.id)}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: '#e74c3c',
-                                                        cursor: 'pointer',
-                                                        fontSize: '16px',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center'
-                                                    }}
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </td>
+                            <div className="table-primary-wrapper">
+                                <table className="table-primary">
+                                    <thead className="table-primary-header">
+                                        <tr>
+                                            <th className="table-primary-th">Product Name</th>
+                                            <th className="table-primary-th">Category</th>
+                                            <th className="table-primary-th table-primary-th-center">Price</th>
+                                            <th className="table-primary-th table-primary-th-center">Stock</th>
+                                            <th className="table-primary-th table-primary-th-center">Status</th>
+                                            <th className="table-primary-th table-primary-th-center">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="table-primary-body">
+                                        {filteredProducts.map((product) => (
+                                            <tr key={product.id} className="table-primary-row">
+                                                <td className="table-primary-td">
+                                                    <div className="table-primary-cell-name">
+                                                        <span className="table-primary-cell-name-text">{product.name}</span>
+                                                        {product.description && (
+                                                            <span className="table-primary-cell-subtitle">
+                                                                {product.description.substring(0, 50)}{product.description.length > 50 ? '...' : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="table-primary-td">
+                                                    {product.category?.name || 'N/A'}
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <span className="table-primary-badge table-primary-badge-success">
+                                                        ₹{product.price}
+                                                    </span>
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <span className={`table-primary-badge ${product.stock_quantity > 0 ? 'table-primary-badge-success' : 'table-primary-badge-danger'}`}>
+                                                        {product.stock_quantity}
+                                                    </span>
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <span className={`table-primary-badge ${product.visibility === 'PUBLISHED' ? 'table-primary-badge-info' : 'table-primary-badge-warning'}`}>
+                                                        {product.visibility}
+                                                    </span>
+                                                </td>
+                                                <td className="table-primary-td table-primary-td-center">
+                                                    <div className="table-primary-actions">
+                                                        <button
+                                                            onClick={() => handleEdit(product)}
+                                                            className="table-primary-icon-btn"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="table-primary-icon-sm" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(product.id)}
+                                                            className="table-primary-icon-btn"
+                                                            title="Delete"
+                                                            style={{ borderColor: '#e74c3c', color: '#e74c3c' }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.background = '#e74c3c';
+                                                                e.currentTarget.style.color = '#ffffff';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = '#fffbf0';
+                                                                e.currentTarget.style.color = '#e74c3c';
+                                                            }}
+                                                        >
+                                                            <Trash2 className="table-primary-icon-sm" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                 </div>
-            </div>
+            </main>
+        </div>
             <Footer />
         </>
     );
