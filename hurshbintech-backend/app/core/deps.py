@@ -133,40 +133,49 @@ async def get_current_user(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        # Normalize role to uppercase for enum comparison
+        role_upper = role.upper() if isinstance(role, str) else role
+
         # Query based on role - load User with appropriate profile
-        if role == "head":
+        if role_upper == "HEAD":
             result = await db.execute(
                 select(User)
                 .options(joinedload(User.head_profile))
                 .where(User.id == user_id, User.role == UserRole.HEAD)
             )
             user = result.scalar_one_or_none()
-        elif role == "trainer":
+        elif role_upper == "TRAINER":
             result = await db.execute(
                 select(User)
                 .options(joinedload(User.trainer_profile))
                 .where(User.id == user_id, User.role == UserRole.TRAINER)
             )
             user = result.scalar_one_or_none()
-        elif role == "consultant":
+        elif role_upper == "CONSULTANT":
             result = await db.execute(
                 select(User)
                 .options(joinedload(User.consultant_profile))
                 .where(User.id == user_id, User.role == UserRole.CONSULTANT)
             )
             user = result.scalar_one_or_none()
-        elif role == "learner":
+        elif role_upper == "LEARNER":
             result = await db.execute(
                 select(User)
                 .options(joinedload(User.learner_profile))
                 .where(User.id == user_id, User.role == UserRole.LEARNER)
             )
             user = result.scalar_one_or_none()
-        elif role == "coach":
+        elif role_upper == "COACH":
             result = await db.execute(
                 select(User)
                 .options(joinedload(User.coach_profile))
                 .where(User.id == user_id, User.role == UserRole.COACH)
+            )
+            user = result.scalar_one_or_none()
+        elif role_upper == "ADMIN":
+            result = await db.execute(
+                select(User)
+                .where(User.id == user_id, User.role == UserRole.ADMIN)
             )
             user = result.scalar_one_or_none()
         else:

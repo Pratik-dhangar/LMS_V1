@@ -283,7 +283,7 @@ const TrainerDashboard = () => {
     },
     {
       id: '5',
-      title: 'Profile & Order History',
+      title: 'Learning Material Purchase History',
       description: 'View your profile and manage orders',
       icon: User,
       onClick: () => navigate('/trainer/profile-order-history')

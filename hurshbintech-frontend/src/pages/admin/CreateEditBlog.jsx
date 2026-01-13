@@ -203,11 +203,11 @@ const CreateEditBlog = () => {
               >
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
-              Back to Manage Vlogs
+              Back to Manage Blogs
             </button>
             {/* Left Side: Title and Subtitle */}
             <div>
-              <h1 className="page-title">Edit Training Vlog</h1>
+              <h1 className="page-title">Edit Training Blog</h1>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ CRUD operations for all user types
 import enum
 import logging
 import random
+import time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,36 +70,58 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
     Supports: admin, head, trainer, coach, learner
     Uses bcrypt verification for password matching
     """
-    logger.debug(f"Querying User table for role={role}")
+    start_time = time.time()
+    logger.info(f"[CRUD_AUTH_START] Querying User table for role={role}, passcode={passcode[:3]}***")
 
-    # Convert string role to UserRole enum
-    role_enum_map = {
-        "admin": UserRole.ADMIN,
-        "head": UserRole.HEAD,
-        "trainer": UserRole.TRAINER,
-        "coach": UserRole.COACH,
-        "learner": UserRole.LEARNER,
-    }
+    try:
+        # Convert string role to UserRole enum
+        role_enum_map = {
+            "admin": UserRole.ADMIN,
+            "head": UserRole.HEAD,
+            "trainer": UserRole.TRAINER,
+            "coach": UserRole.COACH,
+            "learner": UserRole.LEARNER,
+        }
 
-    role_enum = role_enum_map.get(role.lower())
-    if not role_enum:
-        logger.warning(f"Invalid role: {role}")
+        role_enum = role_enum_map.get(role.lower())
+        if not role_enum:
+            logger.warning(f"Invalid role: {role}")
+            return None
+
+        # Get all users with this role (including inactive ones)
+        logger.info(f"[DB_SELECT_START] Executing SELECT query for role {role_enum.value}")
+        query_start = time.time()
+        
+        result = await db.execute(select(User).where(User.role == role_enum))
+        
+        query_duration = time.time() - query_start
+        logger.info(f"[DB_SELECT_END] SELECT query completed in {query_duration:.3f}s")
+        
+        users = result.scalars().all()
+        logger.info(f"[USER_COUNT] Found {len(users)} users with role {role_enum.value}")
+
+        # Find user with matching password (active status checked at endpoint)
+        logger.info(f"[PASSWORD_VERIFY_START] Starting password verification for {len(users)} users")
+        verify_start = time.time()
+        
+        for idx, user in enumerate(users):
+            logger.debug(f"[PASSWORD_CHECK] Checking user {idx+1}/{len(users)}: ID={user.id}, name={user.name}")
+            if verify_password(passcode, user.passcode_hash):
+                verify_duration = time.time() - verify_start
+                total_duration = time.time() - start_time
+                logger.info(
+                    f"[PASSWORD_MATCH] Password matched for user: ID={user.id}, name={user.name}, role={user.role.value}, active={user.is_active}, Verify time: {verify_duration:.3f}s, Total time: {total_duration:.3f}s"
+                )
+                return user
+
+        verify_duration = time.time() - verify_start
+        total_duration = time.time() - start_time
+        logger.info(f"[PASSWORD_NO_MATCH] No user found with role={role} and matching passcode. Verify time: {verify_duration:.3f}s, Total time: {total_duration:.3f}s")
         return None
-
-    # Get all users with this role (including inactive ones)
-    result = await db.execute(select(User).where(User.role == role_enum))
-    users = result.scalars().all()
-
-    # Find user with matching password (active status checked at endpoint)
-    for user in users:
-        if verify_password(passcode, user.passcode_hash):
-            logger.debug(
-                f"Found user: ID={user.id}, name={user.name}, role={user.role.value}, active={user.is_active}"
-            )
-            return user
-
-    logger.debug(f"No user found with role={role} and matching passcode")
-    return None
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"[CRUD_AUTH_ERROR] Error during authentication: {str(e)}, Duration: {duration:.3f}s", exc_info=True)
+        raise
 
 
 # ============ ADMIN CRUD ============

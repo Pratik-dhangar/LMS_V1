@@ -162,7 +162,7 @@ const ViewAssignedPrograms = () => {
         return 'status-success';
       case 'IN_PROGRESS':
         return 'status-warning';
-      case 'NOT_STARTED':
+      case 'NEW':
         return 'status-info';
       default:
         return 'status-default';
@@ -179,7 +179,7 @@ const ViewAssignedPrograms = () => {
         return 100;
       case 'IN_PROGRESS':
         return 50;
-      case 'NOT_STARTED':
+      case 'NEW':
         return 0;
       default:
         return 0;
@@ -225,10 +225,10 @@ const ViewAssignedPrograms = () => {
                 All ({stats?.total_assignments || 0})
               </button>
               <button
-                onClick={() => setFilterStatus('NOT_STARTED')}
-                className={`filter-btn ${filterStatus === 'NOT_STARTED' ? 'filter-btn-active' : ''}`}
+                onClick={() => setFilterStatus('NEW')}
+                className={`filter-btn ${filterStatus === 'NEW' ? 'filter-btn-active' : ''}`}
               >
-                Not Started ({stats?.not_started || 0})
+                New ({stats?.not_started || 0})
               </button>
               <button
                 onClick={() => setFilterStatus('IN_PROGRESS')}

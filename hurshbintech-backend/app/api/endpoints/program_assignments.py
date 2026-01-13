@@ -240,9 +240,9 @@ async def get_assignments_overview(
                 }
             
             overview[learner_id]["total_assignments"] += 1
-            if a.completion_status.value == "COMPLETED":
+            if a.completion_status == "COMPLETED":
                 overview[learner_id]["completed"] += 1
-            elif a.completion_status.value == "IN_PROGRESS":
+            elif a.completion_status == "IN_PROGRESS":
                 overview[learner_id]["in_progress"] += 1
             else:
                 overview[learner_id]["not_started"] += 1
@@ -250,7 +250,7 @@ async def get_assignments_overview(
             overview[learner_id]["assignments"].append({
                 "id": a.id,
                 "program_name": a.assignment_title,
-                "status": a.completion_status.value,
+                "status": a.completion_status,
                 "start_date": a.start_date.isoformat() if a.start_date else None,
                 "end_date": a.end_date.isoformat() if a.end_date else None,
             })
@@ -373,7 +373,7 @@ async def get_assignment_details(
             print(f"[FETCH_ASSIGNMENT] - CA ID {ca.id}: content_id={ca.content_id}, has_content={ca.content is not None}")
             if ca.content and ca.content_id not in seen_content_ids:
                 seen_content_ids.add(ca.content_id)
-                completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NOT_STARTED
+                completion_status = ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NEW.value
                 
                 content_assignments_list.append(
                     ContentAssignmentInProgram(
@@ -641,7 +641,7 @@ async def submit_final_feedback(
     
     # Update completion status if provided
     if feedback.completion_status:
-        valid_statuses = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']
+        valid_statuses = ['NEW', 'IN_PROGRESS', 'COMPLETED']
         if feedback.completion_status not in valid_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -848,7 +848,7 @@ async def start_content(
         update(LearnerContentAssignment)
         .where(LearnerContentAssignment.id == content_assignment_id)
         .values(
-            completion_status=ContentCompletionStatus.IN_PROGRESS,
+            completion_status=ContentCompletionStatus.IN_PROGRESS.value,
             started_at=datetime.utcnow()
         )
     )
@@ -911,7 +911,7 @@ async def submit_content(
                 logger.warning(f"Could not determine if submission is late: {str(date_error)}")
                 is_late = False
         
-        new_status = ContentCompletionStatus.LATE_SUBMITTED if is_late else ContentCompletionStatus.SUBMITTED
+        new_status = ContentCompletionStatus.LATE_SUBMITTED.value if is_late else ContentCompletionStatus.SUBMITTED.value
         
         # Update status
         await db.execute(
@@ -1023,7 +1023,7 @@ async def review_content(
         update(LearnerContentAssignment)
         .where(LearnerContentAssignment.id == content_assignment_id)
         .values(
-            completion_status=ContentCompletionStatus.REVIEWED,
+            completion_status=ContentCompletionStatus.REVIEWED.value,
             reviewed_at=datetime.utcnow(),
             reviewed_by_head=current_head.user_id,
             head_feedback_text=feedback_data.feedback_text,
@@ -1078,10 +1078,10 @@ async def resubmit_content(
         )
     
     # Verify status is RESUBMISSION_REQUIRED and resubmit is allowed
-    if content_assignment.completion_status != ContentCompletionStatus.RESUBMISSION_REQUIRED:
+    if content_assignment.completion_status != ContentCompletionStatus.RESUBMISSION_REQUIRED.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Content is not in RESUBMISSION_REQUIRED status (current: {content_assignment.completion_status.value})"
+            detail=f"Content is not in RESUBMISSION_REQUIRED status (current: {content_assignment.completion_status})"
         )
     
     if not content_assignment.resubmit_allowed:
@@ -1095,7 +1095,7 @@ async def resubmit_content(
         update(LearnerContentAssignment)
         .where(LearnerContentAssignment.id == content_assignment_id)
         .values(
-            completion_status=ContentCompletionStatus.SUBMITTED,
+            completion_status=ContentCompletionStatus.SUBMITTED.value,
             submitted_at=datetime.utcnow(),
             # Keep feedback history but clear current feedback
             # Note: feedback_text and head_rating remain in history
@@ -1229,7 +1229,7 @@ async def get_my_assignments(
         
         if total_contents > 0:
             for ca in a.content_assignments:
-                if ca.completion_status in [ContentCompletionStatus.SUBMITTED, ContentCompletionStatus.REVIEWED]:
+                if ca.completion_status in [ContentCompletionStatus.SUBMITTED.value, ContentCompletionStatus.REVIEWED.value]:
                     completed_contents += 1
         
         completion_percentage = (completed_contents / total_contents * 100) if total_contents > 0 else 0.0
@@ -1352,7 +1352,7 @@ async def get_my_learning_contents(
                 
                 content_type_str = content.content_type.value if hasattr(content.content_type, 'value') else str(content.content_type)
                 
-                completion_status_str = assignment.completion_status.value if hasattr(assignment.completion_status, 'value') else str(assignment.completion_status)
+                completion_status_str = assignment.completion_status if isinstance(assignment.completion_status, str) else str(assignment.completion_status)
                 
                 # Get program title if this content is part of a program
                 program_title = None
@@ -1580,7 +1580,7 @@ async def update_my_assignment(
     update_dict = update_data.model_dump(exclude_unset=True)
     
     # If marking as completed, set completed_at
-    if update_dict.get('completion_status') == CompletionStatus.COMPLETED:
+    if update_dict.get('completion_status') == CompletionStatus.COMPLETED.value:
         update_dict['completed_at'] = datetime.utcnow()
     
     updated_assignment = await program_assignment_crud.update_assignment(

@@ -423,7 +423,7 @@ const ManageProgramAssignments = () => {
         return 'status-warning';
       case 'LATE_SUBMITTED':
         return 'status-danger';
-      case 'NOT_STARTED':
+      case 'NEW':
         return 'status-info';
       default:
         return 'status-default';
@@ -692,7 +692,7 @@ const ManageProgramAssignments = () => {
                     onChange={(e) => setFilterStatus(e.target.value)}
                   >
                     <option value="">All Status</option>
-                    <option value="NOT_STARTED">Not Started</option>
+                    <option value="NEW">New</option>
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="COMPLETED">Completed</option>
                   </select>
@@ -1500,7 +1500,7 @@ const ManageProgramAssignments = () => {
                 onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, completion_status: e.target.value })}
                 className="mpa-select"
               >
-                <option value="NOT_STARTED">Not Started</option>
+                <option value="NEW">New</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="COMPLETED">Completed</option>
               </select>

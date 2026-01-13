@@ -27,6 +27,8 @@ import EditVlog from './pages/admin/EditVlog';
 import ManageBlogs from './pages/admin/ManageBlogs';
 import CreateEditBlog from './pages/admin/CreateEditBlog';
 import AdminAboutUs from './pages/admin/AdminAboutUs';
+import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
+import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 
 
 // Head Pages
@@ -85,6 +87,7 @@ import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
 import AboutUs from './pages/AboutUs';
+import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 
 // Guest Booking Pages
 import GuestBookingStep1 from './pages/common/GuestBookingStep1';
@@ -322,6 +325,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <PaymentVerification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assigned-trainings"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAssignedTrainings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assigned-trainings/create"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CreateAssignedTraining />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assigned-trainings/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <CreateAssignedTraining />
             </ProtectedRoute>
           }
         />
@@ -653,6 +680,24 @@ function AppRoutes() {
         {/* Public Vlog Routes */}
         <Route path="/vlogs" element={<VlogList />} />
         <Route path="/vlogs/:id" element={<VlogDetail />} />
+
+        {/* Assigned Trainings Routes */}
+        <Route
+          path="/assigned-trainings"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+              <AssignedTrainingsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assigned-trainings/:id"
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+              <AssignedTrainingsList />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Store/E-commerce Routes */}
         <Route path="/store" element={<StoreCatalog />} />
