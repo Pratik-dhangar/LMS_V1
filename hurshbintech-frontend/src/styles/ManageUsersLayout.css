@@ -525,3 +525,52 @@
         height: 2.5rem;
     }
 }
+
+/* Filter Tabs */
+.filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+    
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin-bottom: -2px;
+}
+
+.filter-tab:hover {
+    color: #5c1e1e;
+    background: #fef2f2;
+}
+
+.filter-tab-active {
+    color: #5c1e1e;
+    border-bottom-color: #5c1e1e;
+    font-weight: 600;
+}
+
+/* Mobile responsive for filter tabs */
+@media (max-width: 768px) {
+    .filter-tabs {
+        gap: 0.25rem;
+        padding-bottom: 0;
+    }
+
+    .filter-tab {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
