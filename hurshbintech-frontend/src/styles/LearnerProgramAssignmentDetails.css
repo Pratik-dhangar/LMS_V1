@@ -479,7 +479,7 @@
     transform: scale(0.98);
 }
 
-.back-button {
+/* .back-button {
     display: inline-block;
     margin: 1rem 0;
     padding: 0.625rem 1rem;
@@ -496,7 +496,7 @@
     background: #f0f4f8;
     border-color: #cbd5e0;
     transform: translateX(-2px);
-}
+} */
 
 .detail-card {
     max-width: 75rem;
@@ -645,7 +645,7 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.65);
+    background: rgba(38, 42, 58, 0.65);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -653,6 +653,7 @@
     padding: 1rem;
     backdrop-filter: blur(4px);
     animation: fadeIn 0.3s ease-out;
+
 }
 
 @keyframes fadeIn {
@@ -668,7 +669,7 @@
 }
 
 .modal-content {
-    background: #fff;
+    background: #fdf9f9;
     border-radius: 0.75rem;
     padding: 1.5rem;
     width: 100%;

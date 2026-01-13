@@ -58,6 +58,7 @@ import CoachDashboard from './pages/coach/Dashboard';
 import CoachSession from './pages/coach/CoachSession';
 import CoachAppointments from './pages/coach/CoachAppointments';
 import CoachSessions from './pages/coach/CoachSessions';
+import CreateSession from './pages/coach/CreateSession';
 import CoachAvailability from './pages/coach/CoachAvailability';
 
 // Learner Pages
@@ -498,6 +499,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['coach']}>
               <CoachSessions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/coach/sessions/create"
+          element={
+            <ProtectedRoute allowedRoles={['coach']}>
+              <CreateSession />
             </ProtectedRoute>
           }
         />

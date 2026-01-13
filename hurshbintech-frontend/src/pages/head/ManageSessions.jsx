@@ -212,7 +212,7 @@ const ManageSessions = () => {
           </div>
 
           {/* Search and Add Section */}
-          <div className="search-section search-section-extended">
+          <div className="search-section ">
 
             <SearchBar
               onSearch={setSearchTerm}
@@ -249,10 +249,7 @@ const ManageSessions = () => {
             </button>
           </div>
 
-          {/* Stats Line */}
-          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
-            All ({sessions.length})<span style={{ marginLeft: '0.5rem' }}>Scheduled ({sessions.filter(s => s.status === 'scheduled').length})</span><span style={{ marginLeft: '0.5rem' }}>Active ({sessions.filter(s => s.status === 'active').length})</span><span style={{ marginLeft: '0.5rem' }}>Completed ({sessions.filter(s => s.status === 'ended').length})</span><span style={{ marginLeft: '0.5rem' }}>Cancelled ({sessions.filter(s => s.status === 'cancelled').length})</span>
-          </div>
+       
 
           {/* Filters */}
           <div className="filter-tabs">
