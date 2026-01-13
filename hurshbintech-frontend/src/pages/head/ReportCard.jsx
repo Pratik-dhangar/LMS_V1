@@ -67,7 +67,7 @@ const ReportCard = () => {
           {/* Header */}
           <div className="page-header">
             <button
-              onClick={() => navigate("/head/manage-sessions")}
+              onClick={() => navigate("/head/dashboard")}
               className="back-button"
             >
               <svg
@@ -81,7 +81,7 @@ const ReportCard = () => {
               >
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
-              Back to Manage Sessions
+              Back to Dashboard
             </button>
             <div>
               <h1 className="page-title">Session Reports</h1>

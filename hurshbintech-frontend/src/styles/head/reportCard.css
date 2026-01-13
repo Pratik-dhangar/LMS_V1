@@ -185,12 +185,12 @@
 }
 
 .report-view-button-active {
-    background: #5c1e1e;
+    background: #db9d32;
     color: #ffffff;
 }
 
 .report-view-button-active:hover {
-    background: #8b2c2c;
+    background: #f8b643;
     transform: translateX(2px);
 }
 
@@ -235,6 +235,7 @@
 /* Search Input */
 .search-input {
     width: 100%;
+    max-width: 300px;
     padding: 0.75rem 1rem;
     border: 2px solid #e5e7eb;
     border-radius: 0.5rem;
@@ -339,5 +340,9 @@
         width: 100%;
         padding: 0.625rem 0.75rem;
         font-size: 0.8rem;
+    }
+
+    .search-input {
+        max-width: 100%;
     }
 }
