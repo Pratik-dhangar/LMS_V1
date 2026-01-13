@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Eye, Trash2, Edit3, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Eye, Trash2, Edit3 } from "lucide-react";
 import "../styles/admin/AssignedTrainingCard.css";
 
 /**
  * AssignedTrainingCard - Reusable card component for displaying assigned trainings
- * Similar to blog cards, shows training title, description, dates, status, and CTAs
+ * Similar to blog cards, shows training title, description, dates, and CTAs
  * 
  * @param {Object} training - Training object
  * @param {number} training.id - Training ID
@@ -14,17 +15,12 @@ import "../styles/admin/AssignedTrainingCard.css";
  * @param {string} training.custom_content - Full HTML content (optional)
  * @param {Date} training.start_date - Start date
  * @param {Date} training.end_date - End date
- * @param {string} training.user_status - User status: 'NEW', 'IN_PROGRESS', 'COMPLETED'
- * @param {Date} training.user_completed_at - When user completed (optional)
- * @param {Object} training.user_progress - User progress data (optional)
  * @param {boolean} training.active - Is active
  * @param {Object} props
  * @param {boolean} props.isAdmin - Show admin actions (edit, delete)
- * @param {function} props.onView - Callback when View/Open clicked
+ * @param {function} props.onView - Callback when View/Open clicked (optional, used by AssignedTrainingsList for modal)
  * @param {function} props.onEdit - Callback when Edit clicked (admin only)
  * @param {function} props.onDelete - Callback when Delete clicked (admin only)
- * @param {function} props.onMarkInProgress - Callback when Start clicked
- * @param {function} props.onMarkComplete - Callback when Mark Complete clicked
  */
 const AssignedTrainingCard = ({
     training,
@@ -32,10 +28,24 @@ const AssignedTrainingCard = ({
     onView,
     onEdit,
     onDelete,
-    onMarkInProgress,
-    onMarkComplete,
 }) => {
+    const navigate = useNavigate();
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Navigate to detail page for non-admin users
+    const handleViewTraining = () => {
+        if (isAdmin) {
+            // Admin: Use provided callback or navigate to admin detail page
+            if (onView) {
+                onView(training.id);
+            } else {
+                navigate(`/admin/assigned-trainings/${training.id}`);
+            }
+        } else {
+            // Non-admin users: Navigate to dedicated detail page
+            navigate(`/assigned-trainings/${training.id}`);
+        }
+    };
 
     const formatDate = (dateString) => {
         if (!dateString) return "N/A";
@@ -44,35 +54,6 @@ const AssignedTrainingCard = ({
             day: "numeric",
             year: "numeric",
         });
-    };
-
-    const getStatusBadge = () => {
-        const status = training.user_status || "NEW";
-
-        switch (status) {
-            case "COMPLETED":
-                return (
-                    <div className="training-card-status completed">
-                        <CheckCircle className="status-icon" />
-                        <span>Completed</span>
-                    </div>
-                );
-            case "IN_PROGRESS":
-                return (
-                    <div className="training-card-status in-progress">
-                        <Clock className="status-icon" />
-                        <span>In Progress</span>
-                    </div>
-                );
-            case "NEW":
-            default:
-                return (
-                    <div className="training-card-status not-started">
-                        <AlertCircle className="status-icon" />
-                        <span>New</span>
-                    </div>
-                );
-        }
     };
 
     const getTrainingTypeLabel = () => {
@@ -153,58 +134,24 @@ const AssignedTrainingCard = ({
                 )}
             </div>
 
-            {/* Status Badge */}
-            <div className="training-card-status-section">
-                {getStatusBadge()}
-            </div>
-
             {/* Card Footer with CTAs */}
             <div className="training-card-footer">
                 {/* User Actions */}
                 {!isAdmin && (
-                    <>
-                        <button
-                            onClick={() => onView?.(training.id)}
-                            className="training-card-btn primary"
-                            title="View training details"
-                        >
-                            <Eye size={16} />
-                            Open
-                        </button>
-
-                        {training.user_status === "NEW" && (
-                            <button
-                                onClick={() => onMarkInProgress?.(training.id)}
-                                className="training-card-btn secondary"
-                                title="Start training"
-                            >
-                                Start
-                            </button>
-                        )}
-
-                        {training.user_status === "IN_PROGRESS" && (
-                            <button
-                                onClick={() => onMarkComplete?.(training.id)}
-                                className="training-card-btn success"
-                                title="Mark as complete"
-                            >
-                                <CheckCircle size={16} />
-                                Complete
-                            </button>
-                        )}
-
-                        {training.user_status === "COMPLETED" && (
-                            <span className="training-card-completed-date">
-                                Completed {formatDate(training.user_completed_at)}
-                            </span>
-                        )}
-                    </>
+                    <button
+                        onClick={handleViewTraining}
+                        className="training-card-btn primary"
+                        title="View training details"
+                    >
+                        <Eye size={16} />
+                        Open
+                    </button>
                 )}
 
                 {/* Admin Actions */}
                 {isAdmin && (
                     <button
-                        onClick={() => onView?.(training.id)}
+                        onClick={handleViewTraining}
                         className="training-card-btn primary"
                         title="View training details"
                     >

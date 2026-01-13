@@ -1,4 +1,4 @@
-/* AssignedTrainingsList.css - Styling for user trainings list page */
+﻿/* AssignedTrainingsList.css - Styling for user trainings list page */
 
 .trainings-grid {
     display: grid;
@@ -452,5 +452,164 @@
     .pagination-section {
         flex-direction: column;
         gap: 0.75rem;
+    }
+}
+/* Featured Image in Detail Modal */
+.detail-featured-image {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.detail-featured-image img {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+    display: block;
+}
+
+/* HTML Content Rendering */
+.detail-html-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.detail-html-content h1,
+.detail-html-content h2,
+.detail-html-content h3,
+.detail-html-content h4,
+.detail-html-content h5,
+.detail-html-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #111827;
+    font-weight: 700;
+}
+
+.detail-html-content h1:first-child,
+.detail-html-content h2:first-child,
+.detail-html-content h3:first-child {
+    margin-top: 0;
+}
+
+.detail-html-content p {
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+.detail-html-content ul,
+.detail-html-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.detail-html-content li {
+    margin-bottom: 0.5rem;
+}
+
+.detail-html-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+.detail-html-content a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.detail-html-content a:hover {
+    color: #2563eb;
+}
+
+.detail-html-content pre {
+    background: #f3f4f6;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.detail-html-content code {
+    background: #f3f4f6;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.875rem;
+    font-family: 'Courier New', monospace;
+}
+
+/* Training Files List */
+.detail-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.detail-file-item:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.detail-file-item .file-icon {
+    color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.detail-file-item .file-name {
+    flex: 1;
+    color: #374151;
+    font-size: 0.95rem;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.detail-file-item .file-download-btn {
+    padding: 0.5rem 1rem;
+    background: #3b82f6;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.detail-file-item .file-download-btn:hover {
+    background: #2563eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .detail-featured-image img {
+        max-height: 250px;
+    }
+
+    .detail-file-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-file-item .file-download-btn {
+        width: 100%;
+        text-align: center;
     }
 }

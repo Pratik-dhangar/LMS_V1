@@ -109,27 +109,19 @@ const assignedTrainingService = {
     },
 
     /**
-     * Mark an assigned training as in-progress
-     * @param {number} trainingId - Training ID
-     * @returns {Promise<Object>} Updated training with status
-     */
-    markInProgress: async (trainingId) => {
-        const response = await api.post(`/assigned-trainings/${trainingId}/mark-in-progress`);
-        return response.data;
-    },
-
-    /**
-     * Mark an assigned training as completed
+     * Get all users assigned to a specific training (Admin only)
      * @param {number} trainingId - Training ID
      * @param {Object} options
-     * @param {string} options.evidence - Optional evidence/notes
-     * @returns {Promise<Object>} Updated training with status
+     * @param {number} options.skip - Pagination skip
+     * @param {number} options.limit - Pagination limit
+     * @returns {Promise<Object>} List of assigned users with their progress
      */
-    markComplete: async (trainingId, { evidence = null } = {}) => {
-        const payload = {};
-        if (evidence) payload.evidence = evidence;
+    adminGetAssignedUsers: async (trainingId, { skip = 0, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        params.append('skip', skip);
+        params.append('limit', limit);
 
-        const response = await api.post(`/assigned-trainings/${trainingId}/mark-complete`, payload);
+        const response = await api.get(`/admin/assigned-trainings/${trainingId}/users?${params.toString()}`);
         return response.data;
     },
 };

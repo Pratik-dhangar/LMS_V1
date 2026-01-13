@@ -507,6 +507,17 @@
     color: #6b7280;
 }
 
+.file-status {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #059669;
+}
+
+.file-status.uploaded {
+    color: #059669;
+}
+
 .remove-file-btn,
 .remove-image-btn {
     display: flex;

@@ -7,6 +7,7 @@ import { ArrowLeft, Upload, Loader2, X, File } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
+import api from "../../api/axios";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/admin/CreateAssignedTraining.css";
 
@@ -67,7 +68,7 @@ const CreateAssignedTraining = () => {
             setFormData({
                 title: training.title || "",
                 description: training.description || "",
-                training_files: [],  // Files are not loaded from server
+                training_files: [],  // Files are handled separately now
                 training_ref_ids: training.training_ref_ids || [],
                 target_roles: training.target_roles || ["all"],
                 active: training.active !== false,
@@ -77,6 +78,21 @@ const CreateAssignedTraining = () => {
             // Load featured image from metadata if exists
             if (training.custom_metadata?.featured_image_url) {
                 setFeaturedImagePreview(training.custom_metadata.featured_image_url);
+            }
+
+            // Load training files from metadata if they exist
+            if (training.custom_metadata?.training_files && Array.isArray(training.custom_metadata.training_files)) {
+                const filesList = training.custom_metadata.training_files.map((file) => {
+                    // Create a minimal file object with the stored data
+                    return {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        url: file.url, // Preserve the URL so we don't re-upload
+                        isUploaded: true, // Mark as already uploaded
+                    };
+                });
+                setTrainingFiles(filesList);
             }
         } catch (error) {
             toast.error("Failed to load training");
@@ -221,6 +237,48 @@ const CreateAssignedTraining = () => {
                 };
             }
 
+            // Upload training files and get URLs
+            const trainingFilesData = [];
+            if (trainingFiles.length > 0) {
+                for (const file of trainingFiles) {
+                    try {
+                        // Check if file is already uploaded (from draft)
+                        if (file.isUploaded && file.url) {
+                            // Use existing URL without re-uploading
+                            trainingFilesData.push({
+                                name: file.name,
+                                size: file.size,
+                                type: file.type,
+                                url: file.url,
+                            });
+                        } else {
+                            // Upload new file
+                            const fileUrl = await uploadTrainingFile(file);
+                            trainingFilesData.push({
+                                name: file.name,
+                                size: file.size,
+                                type: file.type,
+                                url: fileUrl,
+                            });
+                        }
+                    } catch (fileError) {
+                        console.error(`Failed to upload ${file.name}:`, fileError);
+                        toast.error(`Failed to upload ${file.name}`);
+                    }
+                }
+            }
+
+            // Store uploaded files in metadata
+            if (trainingFilesData.length > 0) {
+                submitData.custom_metadata = {
+                    ...submitData.custom_metadata,
+                    training_files: trainingFilesData,
+                };
+            }
+
+            // Remove the simple file names list since we now have URLs
+            submitData.training_files = [];
+
             if (isEditMode && id) {
                 await assignedTrainingService.adminUpdate(id, submitData);
                 toast.success("Training updated successfully");
@@ -236,6 +294,20 @@ const CreateAssignedTraining = () => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const uploadTrainingFile = async (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", `trainings`);
+
+        const response = await api.post("/upload/training-file", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+
+        return response.data.file_url;
     };
 
     const handleCancel = () => {
@@ -422,6 +494,9 @@ const CreateAssignedTraining = () => {
                                                     <p className="file-size">
                                                         {(file.size / 1024 / 1024).toFixed(2)} MB
                                                     </p>
+                                                    {file.isUploaded && (
+                                                        <p className="file-status uploaded">✓ Already uploaded</p>
+                                                    )}
                                                 </div>
                                                 <button
                                                     type="button"

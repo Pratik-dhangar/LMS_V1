@@ -1,0 +1,594 @@
+/* AdminTrainingDetail.css - Styling for admin training detail page */
+
+/* Header Section */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1.5rem;
+    background-color: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+/* Detail Header */
+.detail-header {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 8px;
+    border-bottom: 3px solid #db9d32;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detail-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.detail-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.3;
+}
+
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #6b7280;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge.active {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.badge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.meta-divider {
+    color: #d1d5db;
+}
+
+.meta-text {
+    color: #6b7280;
+}
+
+/* Detail Sections */
+.detail-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.detail-section {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.section-content {
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+/* Content Toggle */
+.content-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.content-toggle-btn:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+/* HTML Content */
+.html-content {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 6px;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.html-content h1,
+.html-content h2,
+.html-content h3,
+.html-content h4,
+.html-content h5,
+.html-content h6 {
+    color: #111827;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.html-content p {
+    margin-bottom: 1rem;
+}
+
+.html-content ul,
+.html-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.html-content li {
+    margin-bottom: 0.5rem;
+}
+
+.html-content a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.html-content a:hover {
+    text-decoration: underline;
+}
+
+/* Files List */
+.files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 6px;
+    gap: 1rem;
+}
+
+.file-name {
+    font-size: 0.95rem;
+    color: #374151;
+    font-weight: 500;
+    flex: 1;
+    word-break: break-word;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.file-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    background-color: #db9d32;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.file-link:hover {
+    background-color: #c99024;
+}
+
+.file-link.view {
+    background-color: #3b82f6;
+}
+
+.file-link.view:hover {
+    background-color: #2563eb;
+}
+
+.file-link.download {
+    background-color: #db9d32;
+}
+
+.file-link.download:hover {
+    background-color: #c99024;
+}
+
+.file-link.view:hover {
+    background-color: #2563eb;
+}
+
+.file-link.download {
+    background-color: #db9d32;
+}
+
+.file-link.download:hover {
+    background-color: #c99024;
+}
+
+/* Users Section */
+.users-section {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-header {
+    margin-bottom: 1.5rem;
+}
+
+.users-subtitle {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.95rem;
+    color: #6b7280;
+}
+
+.users-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 1rem;
+}
+
+.loading-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #db9d32;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.users-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.95rem;
+    background-color: #f9fafb;
+    border-radius: 6px;
+}
+
+/* Users Table */
+/* Users List */
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.user-item {
+    padding: 0.75rem 1rem;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.user-item:hover {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.user-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+/* Pagination */
+.pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.pagination-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+    background-color: #f9fafb;
+    color: #d1d5db;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .detail-title {
+        font-size: 1.5rem;
+    }
+
+    .detail-header-content {
+        flex-direction: column;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination-section {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-title {
+        font-size: 1.25rem;
+    }
+}
+
+/* ============================================
+   PAGE ANIMATIONS & TRANSITIONS
+   ============================================ */
+
+/* Page fade-in animation */
+@keyframes pageSlideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header slide-in animation */
+@keyframes headerSlideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Content section fade-in with stagger */
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth loading spinner animation */
+@keyframes spinnerRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Loading pulse animation */
+@keyframes loadingPulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Apply page animation to page-content */
+.page-content {
+    animation: pageSlideInUp 0.5s ease-out;
+}
+
+/* Apply animation to detail header */
+.detail-header {
+    animation: headerSlideInDown 0.6s ease-out;
+}
+
+/* Apply staggered animation to detail sections */
+.detail-section {
+    animation: contentFadeIn 0.5s ease-out;
+    animation-fill-mode: both;
+}
+
+/* Stagger animation for each section */
+.detail-section:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.detail-section:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.detail-section:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.detail-section:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.detail-section:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+/* Enhanced loading spinner */
+.loading-spinner {
+    animation: spinnerRotate 1.2s linear infinite;
+    width: 48px;
+    height: 48px;
+    color: #db9d32;
+}
+
+/* Loading text pulse */
+.loading-text {
+    animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+/* Back button hover with smooth transition */
+.back-button {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.back-button:hover {
+    transform: translateX(-4px);
+}
+
+/* File item hover animation */
+.file-item {
+    transition: all 0.3s ease;
+}
+
+.file-item:hover {
+    transform: translateX(4px);
+    background-color: #f9fafb;
+}
+
+/* Section title animation */
+.section-title {
+    transition: all 0.3s ease;
+}
+
+/* Info grid item animation */
+.info-item {
+    animation: contentFadeIn 0.5s ease-out;
+    animation-fill-mode: both;
+}
+
+/* Stagger info items */
+.info-item:nth-child(1) {
+    animation-delay: 0.25s;
+}
+
+.info-item:nth-child(2) {
+    animation-delay: 0.35s;
+}
+
+.info-item:nth-child(3) {
+    animation-delay: 0.45s;
+}
+
+.info-item:nth-child(4) {
+    animation-delay: 0.55s;
+}

@@ -29,6 +29,7 @@ import CreateEditBlog from './pages/admin/CreateEditBlog';
 import AdminAboutUs from './pages/admin/AdminAboutUs';
 import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
 import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
+import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
 
 
 // Head Pages
@@ -88,6 +89,7 @@ import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
 import AboutUs from './pages/AboutUs';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
+import TrainingDetailView from './pages/common/TrainingDetailView';
 
 // Guest Booking Pages
 import GuestBookingStep1 from './pages/common/GuestBookingStep1';
@@ -329,14 +331,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/admin/assigned-trainings"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminAssignedTrainings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/admin/assigned-trainings/create"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
@@ -349,6 +343,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <CreateAssignedTraining />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assigned-trainings/:id"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminTrainingDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/assigned-trainings"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAssignedTrainings />
             </ProtectedRoute>
           }
         />
@@ -694,7 +704,7 @@ function AppRoutes() {
           path="/assigned-trainings/:id"
           element={
             <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
-              <AssignedTrainingsList />
+              <TrainingDetailView />
             </ProtectedRoute>
           }
         />
