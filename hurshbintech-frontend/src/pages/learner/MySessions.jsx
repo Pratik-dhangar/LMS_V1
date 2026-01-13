@@ -16,6 +16,7 @@ const MySessions = () => {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Track which sessions have been joined - persist to localStorage
   const [joinedSessions, setJoinedSessions] = useState(() => {
@@ -98,16 +99,76 @@ const MySessions = () => {
             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
             padding: '1.5rem'
           }}>
-            <h2 style={{
-              fontSize: '1.25rem',
-              fontWeight: '700',
-              color: '#1f2937',
-              borderBottom: '1px solid #e5e7eb',
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1rem',
               paddingBottom: '0.75rem',
-              marginBottom: '1rem'
+              borderBottom: '1px solid #e5e7eb'
             }}>
-              My Sessions
-            </h2>
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                color: '#1f2937',
+                margin: 0
+              }}>
+                My Sessions
+              </h2>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#4b5563'
+                }}>
+                  {sessions.length} total items
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <label
+                    htmlFor="pagination"
+                    style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#4b5563'
+                    }}
+                  >
+                    Show:
+                  </label>
+                  <select
+                    id="pagination"
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      border: '1px solid #d1d5db',
+                      backgroundColor: '#ffffff',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#1f2937',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#9ca3af'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
             {loadingSessions ? (
               <div style={{ textAlign: 'center', padding: '1.5rem', color: '#6b7280' }}>Loading sessions...</div>
@@ -138,6 +199,7 @@ const MySessions = () => {
                     // Within same status, sort by date (newest first)
                     return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
                   })
+                  .slice(0, itemsPerPage)
                   .map((session) => {
                     // Helper function to get actual status (considering expired sessions)
                     const getSessionStatus = (sess) => {
@@ -284,6 +346,20 @@ const MySessions = () => {
                       </div>
                     );
                   })}
+
+                {/* Pagination Info */}
+                {sessions.length > itemsPerPage && (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '1rem',
+                    marginTop: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    borderTop: '1px solid #e5e7eb'
+                  }}>
+                    Showing {itemsPerPage} of {sessions.length} sessions
+                  </div>
+                )}
               </div>
             )}
           </div>
