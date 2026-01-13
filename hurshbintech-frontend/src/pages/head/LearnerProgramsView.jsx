@@ -118,7 +118,6 @@ const LearnerProgramsView = () => {
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
-          {/* Header */}
           <div className="page-header">
             <button
               onClick={() => navigate("/head/reports")}
@@ -217,17 +216,19 @@ const LearnerProgramsView = () => {
                   {/* Stats */}
                   <div className="report-stats">
                     <div className="report-stat-box">
-                      <div className="report-stat-value report-stat-sessions">
-                        {program.total_sessions}
+                      {/* CHANGED: learner -> program */}
+                      <div className="report-stat-value">
+                        {program.total_sessions || 0}
                       </div>
                       <div className="report-stat-label">Sessions</div>
                     </div>
-                    <div className="report-stat-box">
+                    {/* <div className="report-stat-box">
+                     
                       <div className="report-stat-value report-stat-reports">
                         {program.total_reports || 0}
                       </div>
                       <div className="report-stat-label">Reports</div>
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Last Session */}

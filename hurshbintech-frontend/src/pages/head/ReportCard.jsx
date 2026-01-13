@@ -54,8 +54,8 @@ const ReportCard = () => {
   const filteredLearners = learners.filter(learner => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      learner.learner_name?.toLowerCase().includes(searchLower) ||
-      learner.iip_id?.toLowerCase().includes(searchLower)
+      (learner.learner_name?.toLowerCase() || '').includes(searchLower) ||
+      (learner.iip_id?.toLowerCase() || '').includes(searchLower)
     );
   });
 
