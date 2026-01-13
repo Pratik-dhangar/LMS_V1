@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import learningGoalsService from '../../api/services/learningGoalsService';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
-import '../../styles/Pages.css';
+
 
 const EditSessionModal = ({ session, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);

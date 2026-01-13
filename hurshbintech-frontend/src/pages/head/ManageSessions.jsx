@@ -11,7 +11,6 @@ import EditSessionModal from './EditSessionModal';
 import ViewSessionModal from './ViewSessionModal';
 import HeadSessionNotesModal from './HeadSessionNotesModal';
 import SessionTooltip from '../../components/common/SessionTooltip';
-import '../../styles/Pages.css';
 import '../../styles/Table.css';
 import '../../styles/ManageUsersLayout.css';
 

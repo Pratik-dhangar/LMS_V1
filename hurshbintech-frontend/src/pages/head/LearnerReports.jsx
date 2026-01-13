@@ -6,7 +6,7 @@ import sessionReportService from '../../api/services/sessionReportService';
 import ReportChartModal from './ReportChartModal';
 import ProgramReportModal from './ProgramReportModal';
 import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
-import '../../styles/Pages.css';
+
 import '../../styles/ManageUsersLayout.css';
 
 const LearnerReports = () => {

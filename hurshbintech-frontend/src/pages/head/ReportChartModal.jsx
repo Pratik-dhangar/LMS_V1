@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
 import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
-import '../../styles/Pages.css';
+
 
 const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
   const [chartData, setChartData] = useState([]);

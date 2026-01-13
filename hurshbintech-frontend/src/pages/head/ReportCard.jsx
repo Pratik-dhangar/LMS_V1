@@ -5,8 +5,8 @@ import sessionReportService from '../../api/services/sessionReportService';
 import headService from '../../api/services/headService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
-import '../../styles/Pages.css';
 import '../../styles/ManageUsersLayout.css';
+import '../../styles/head/ReportCard.css';
 
 const ReportCard = () => {
   const navigate = useNavigate();
@@ -60,33 +60,47 @@ const ReportCard = () => {
   });
 
   return (
-    <div className="page-container">
+   <div className="page-container">
       <Navbar />
       <div className="page-main">
-        {/* Header */}
-        <div className="page-header">
-          <div>
-            <h1 className="page-title">📊 Session Reports</h1>
-            <p className="page-description">View learner session reports and progress</p>
+        <div className="page-content">
+          {/* Header */}
+          <div className="page-header">
+            <button
+              onClick={() => navigate("/head/manage-sessions")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Manage Sessions
+            </button>
+            <div>
+              <h1 className="page-title">Session Reports</h1>
+              <p className="page-description">
+                View learner session reports and progress
+              </p>
+            </div>
           </div>
-          <button
-            onClick={() => navigate('/head/dashboard')}
-            className="btn-secondary"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
 
-        {/* Search Bar */}
-        <div className="search-section">
-          <input
-            type="text"
-            placeholder="🔍 Search by learner name or IIP ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
+          {/* Search Bar */}
+          <div className="search-section">
+            <input
+              type="text"
+              placeholder="🔍 Search by learner name or IIP ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
 
         {/* Loading State */}
         {loading && (
@@ -183,6 +197,7 @@ const ReportCard = () => {
             ))}
           </div>
         )}
+        </div>
       </div>
       <Footer />
     </div>

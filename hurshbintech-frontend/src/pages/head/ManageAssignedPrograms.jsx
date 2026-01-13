@@ -7,7 +7,7 @@ import headService from "../../api/services/headService";
 import learningProgramsService from "../../api/services/learningProgramsService";
 import { Loader2, Trash2, ListChecks } from "lucide-react";
 import { toast } from "react-toastify";
-import '../../styles/Pages.css';
+
 import '../../styles/head/ManageAssignedPrograms.css';
 import '../../styles/Table.css';
 

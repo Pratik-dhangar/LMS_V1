@@ -8,7 +8,6 @@ import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
-import "../../styles/Pages.css";
 import "../../styles/ManageUsersLayout.css";
 
 const ScheduleSession = () => {

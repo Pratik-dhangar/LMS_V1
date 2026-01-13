@@ -36,7 +36,7 @@ import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
-import '../../styles/Pages.css';
+
 
 const REACTION_SVG_ASSETS = {
   smiley: {

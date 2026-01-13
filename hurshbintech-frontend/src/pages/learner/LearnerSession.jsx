@@ -19,7 +19,7 @@ import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
-import '../../styles/Pages.css';
+
 
 const LearnerSession = () => {
   const { sessionId } = useParams();

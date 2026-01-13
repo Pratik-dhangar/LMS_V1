@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
-import '../../styles/Pages.css';
+
 import '../../styles/ManageUsersLayout.css';
 
 const ViewAssignedPrograms = () => {

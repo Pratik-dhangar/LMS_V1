@@ -2,7 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { toast } from 'react-toastify';
 import { downloadProgressReportPDF } from '../../utils/pdfGenerator';
-import '../../styles/Pages.css';
+
 
 const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
     // Prepare data for Prompt Meter pie chart

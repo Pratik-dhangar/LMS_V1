@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import vlogService from '../../api/services/vlogService';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
-import '../../styles/Pages.css';
+
 
 const ViewVlogs = () => {
   const [vlogs, setVlogs] = useState([]);

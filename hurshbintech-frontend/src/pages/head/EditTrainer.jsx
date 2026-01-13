@@ -13,7 +13,6 @@ import ProfessionalInfoSection from '../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
 import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/Pages.css';
 import '../../styles/ManageUsersLayout.css';
 
 const EditTrainer = () => {

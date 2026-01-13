@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import learningProgramsService from "../../api/services/learningProgramsService";
-import '../../styles/Pages.css';
+
 
 const LearningProgramDetails = () => {
   const { id } = useParams();

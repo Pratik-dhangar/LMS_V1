@@ -7,7 +7,6 @@ import Footer from "../../components/layout/Footer";
 import bookingService from "../../api/services/bookingService";
 import coachSessionService from "../../api/services/coachSessionService";
 import { getFileUrl } from "../../utils/urlHelper";
-import "../../styles/Pages.css";
 import "../../styles/BookAppointment.css";
 import '../../styles/ManageUsersLayout.css';
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import '../../styles/Pages.css';
+
 import learningContentService from '../../api/services/learningContentService';
 
 /**

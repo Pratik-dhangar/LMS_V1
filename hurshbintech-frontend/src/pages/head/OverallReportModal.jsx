@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import '../../styles/Pages.css';
+
 
 const OverallReportModal = ({ statistics, onClose }) => {
     // Prepare data for Program breakdown bar chart

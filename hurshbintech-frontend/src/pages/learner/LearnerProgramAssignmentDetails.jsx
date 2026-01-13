@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import programAssignmentService from '../../api/services/programAssignmentService';
-import '../../styles/Pages.css';
+
 import '../../styles/LearnerProgramAssignmentDetails.css';
 import { toast } from 'react-toastify';
 

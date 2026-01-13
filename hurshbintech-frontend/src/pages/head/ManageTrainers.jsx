@@ -9,7 +9,6 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
-import "../../styles/Pages.css";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 

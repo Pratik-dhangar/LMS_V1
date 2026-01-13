@@ -16,7 +16,7 @@ import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-import '../../styles/Pages.css';
+
 
 const ClientSession = () => {
   const { sessionId } = useParams();

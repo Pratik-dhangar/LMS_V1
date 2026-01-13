@@ -15,7 +15,6 @@ import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/Pages.css';
 import '../../styles/Table.css';
 import '../../styles/ManageUsersLayout.css';
 

@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import SearchBar from '../common/SearchBar';
 import '../../styles/coach/SessionsManager.css';
 import '../../styles/Table.css';
-import '../../styles/Pages.css';
+
 
 const SessionsManager = () => {
   const navigate = useNavigate();

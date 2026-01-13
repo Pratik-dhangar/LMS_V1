@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import headSessionNotesService from '../../api/services/headSessionNotesService';
-import '../../styles/Pages.css';
+
 
 /**
  * HeadSessionNotesModal - Modal for adding/editing head notes on completed sessions
