@@ -153,9 +153,9 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
         <div className="modal-overlay">
             <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh', overflowY: 'auto' }}>
                 {/* Header */}
-                <div className="modal-header modal-header-purple">
+                <div className="modal-header">
                     <div>
-                        <h2 className="modal-title">✏️ Edit Session</h2>
+                        <h2 className="modal-title">Edit Session</h2>
                         <p className="modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
                     </div>
                     <button
@@ -249,28 +249,30 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                         </div>
 
                         {/* Select Learning Goals */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">
+                        <div className="form-field">
+                            <label className="form-label">
                                 Select Learning Goals (Optional)
                             </label>
-                            <p className="text-sm text-gray-500 mb-3">Choose learning goals for this session</p>
+                            <p className="form-helper-text">Choose learning goals for this session</p>
 
                             {/* Search Bar for Goals */}
-                            <div className="mb-4">
-                                <div className="relative max-w-lg">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={18} />
                                     <input
                                         type="text"
                                         placeholder="Search goals by name or description..."
                                         value={searchTerm.goal}
                                         onChange={(e) => setSearchTerm({ ...searchTerm, goal: e.target.value })}
-                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
+                                        className="form-input"
+                                        style={{ paddingLeft: '40px', paddingRight: '40px' }}
                                     />
                                     {searchTerm.goal && (
                                         <button
                                             type="button"
                                             onClick={() => setSearchTerm({ ...searchTerm, goal: '' })}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            className="btn-icon-secondary"
+                                            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
                                         >
                                             ✕
                                         </button>
@@ -338,28 +340,30 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                         </div>
 
                         {/* Select Learning Content */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">
+                        <div className="form-field">
+                            <label className="form-label">
                                 Select Learning Content (Optional)
                             </label>
-                            <p className="text-sm text-gray-500 mb-3">Choose content that will be available during the session</p>
+                            <p className="form-helper-text">Choose content that will be available during the session</p>
 
                             {/* Search Bar for Content */}
-                            <div className="mb-4">
-                                <div className="relative max-w-2xl">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={18} />
                                     <input
                                         type="text"
                                         placeholder="Search content by title or type..."
                                         value={searchTerm.content}
                                         onChange={(e) => setSearchTerm({ ...searchTerm, content: e.target.value })}
-                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
+                                        className="form-input"
+                                        style={{ paddingLeft: '40px', paddingRight: '40px' }}
                                     />
                                     {searchTerm.content && (
                                         <button
                                             type="button"
                                             onClick={() => setSearchTerm({ ...searchTerm, content: '' })}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            className="btn-icon-secondary"
+                                            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
                                         >
                                             ✕
                                         </button>
@@ -455,7 +459,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                 className="btn-success"
                                 disabled={loading}
                             >
-                                {loading ? 'Updating...' : '💾 Save Changes'}
+                                {loading ? 'Updating...' : 'Save Changes'}
                             </button>
                             <button
                                 type="button"

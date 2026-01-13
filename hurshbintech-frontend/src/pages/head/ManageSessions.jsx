@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { Edit2, X, Eye, FileText } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
@@ -400,19 +401,18 @@ const ManageSessions = () => {
                                 <>
                                   <button
                                     onClick={() => handleEditSession(session)}
-                                    className="btn-primary"
+                                    className="btn-icon btn-primary"
                                     title="Edit this scheduled session"
-                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                   >
-                                    ✏️ Edit
+                                    <Edit2 size={14} />
                                   </button>
                                   <button
                                     onClick={() => handleCancelSession(session.session_id, session.title)}
-                                    className="btn btn-warning"
+                                    className="btn-icon btn-secondary"
                                     title="Cancel this scheduled session"
-                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                    
                                   >
-                                    ❌ Cancel
+                                    <X size={14} />
                                   </button>
                                 </>
                               )}
@@ -420,26 +420,24 @@ const ManageSessions = () => {
                               <button
                                 onClick={() => handleViewSession(session)}
                                 disabled={false}
-                                className="btn btn-secondary"
+                                className="btn-icon btn-secondary"
                                 title="View session details"
-                                style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
-                                👁️ View
+                                <Eye size={14} />
                               </button>
                               {/* Head Notes action should display for all accessible rows but only be active once session ended */}
                               {(user?.role === 'head' || user?.role === 'manager' || user?.role === 'trainer') && (
                                 <button
                                   onClick={() => canHeadNotes && setEditingHeadNotes(session)}
                                   disabled={!canHeadNotes}
-                                  className="btn btn-primary"
+                                  className="btn-icon btn-primary"
                                   title={canHeadNotes ? 'Add head notes for this completed session' : 'Head notes available after session completion'}
-                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                 >
-                                  📝 Head Notes
+                                  <FileText size={14} />
                                 </button>
                               )}
                               {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && session.status !== 'cancelled' && (
-                                <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                                <span className="material-badge material-badge-gray">
                                   Can't edit/delete
                                 </span>
                               )}
