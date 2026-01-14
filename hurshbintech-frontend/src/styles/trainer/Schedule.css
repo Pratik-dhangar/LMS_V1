@@ -1,4 +1,5 @@
 /* Trainer Schedule Page Styles */
+@import '../components/common/Modal.css';
 
 /* Schedule Section */
 .trainer-schedule-section {
@@ -336,106 +337,7 @@
   text-align: center;
 }
 
-/* Modal */
-.trainer-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 1rem;
-}
-
-.trainer-modal-content {
-  background: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-width: 42rem;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.trainer-modal-header {
-  position: sticky;
-  top: 0;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.trainer-modal-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.trainer-modal-close {
-  color: #9ca3af;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.trainer-modal-close:hover {
-  color: #4b5563;
-}
-
-.trainer-modal-close svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.trainer-modal-body {
-  padding: 1.5rem;
-}
-
-.trainer-modal-body>*+* {
-  margin-top: 1.5rem;
-}
-
-.trainer-modal-field {
-  /* Base for each field */
-}
-
-.trainer-modal-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #4b5563;
-  margin-bottom: 0.5rem;
-}
-
-.trainer-modal-text {
-  font-size: 1.125rem;
-  color: #1f2937;
-}
-
-.trainer-modal-text-normal {
-  color: #1f2937;
-}
-
-.trainer-modal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.trainer-modal-description {
-  color: #1f2937;
-  white-space: pre-wrap;
-}
-
-.trainer-modal-recording-status {
-  /* Container for recording badges */
-}
-
+/* Trainer-specific badge styles */
 .trainer-badge-completed {
   display: inline-block;
   background: #d1fae5;
@@ -474,71 +376,4 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
-}
-
-.trainer-modal-info-box {
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 0.5rem;
-  padding: 1rem;
-}
-
-.trainer-modal-info-text {
-  font-size: 0.875rem;
-  color: #92400e;
-}
-
-.trainer-modal-footer {
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-  padding: 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.trainer-modal-btn-close {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  color: #374151;
-  background: transparent;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.trainer-modal-btn-close:hover {
-  background: #f9fafb;
-}
-
-.trainer-modal-btn-start {
-  padding: 0.5rem 1rem;
-  background: #16a34a;
-  color: #ffffff;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.trainer-modal-btn-start:hover {
-  background: #15803d;
-}
-
-.trainer-modal-btn-resume {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(to right, #f59e0b, #d97706);
-  color: #ffffff;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
-}
-
-.trainer-modal-btn-resume:hover {
-  background: linear-gradient(to right, #d97706, #ea580c);
 }

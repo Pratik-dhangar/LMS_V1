@@ -9,7 +9,6 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
-import "../../styles/Pages.css";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -153,7 +152,7 @@ const ManageTrainers = () => {
             />
             <button
               onClick={() => navigate("/head/register-trainer")}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -214,7 +213,7 @@ const ManageTrainers = () => {
                   {!activeSearchQuery && (
                     <button
                       onClick={() => navigate("/head/register-trainer")}
-                      className="btn-success"
+                      className="app-modal-btn app-modal-btn--success"
                     >
                       Register Trainer
                     </button>
@@ -287,7 +286,7 @@ const ManageTrainers = () => {
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditTrainer(trainer.id)}
-                              className="btn-primary btn-icon"
+                              className="app-modal-btn app-modal-btn--primary btn-icon"
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile

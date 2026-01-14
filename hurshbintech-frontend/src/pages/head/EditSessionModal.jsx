@@ -4,7 +4,8 @@ import { Search } from 'lucide-react';
 import learningGoalsService from '../../api/services/learningGoalsService';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
-import '../../styles/Pages.css';
+import '../../styles/components/common/Modal.css';
+
 
 const EditSessionModal = ({ session, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
@@ -139,8 +140,8 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
 
     if (loadingData) {
         return (
-            <div className="modal-overlay">
-                <div className="modal-container" style={{ maxWidth: '1024px' }}>
+            <div className="app-modal-overlay">
+                <div className="app-modal-container" style={{ maxWidth: '1024px' }}>
                     <div className="loading-container">
                         <div className="loading-spinner"></div>
                     </div>
@@ -150,56 +151,56 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
     }
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="app-modal-overlay">
+            <div className="app-modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh', overflowY: 'auto' }}>
                 {/* Header */}
-                <div className="modal-header modal-header-purple">
+                <div className="app-modal-header app-modal-header--primary">
                     <div>
-                        <h2 className="modal-title">✏️ Edit Session</h2>
-                        <p className="modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
+                        <h2 className="app-modal-title">Edit Session</h2>
+                        <p className="app-modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="modal-close-button"
+                        className="app-modal-close"
                     >
                         ×
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="modal-content">
+                <div className="app-modal-content">
                     <form onSubmit={handleSubmit}>
                         {/* Title */}
-                        <div className="form-field">
-                            <label className="form-label">
+                        <div className="app-modal-form-field">
+                            <label className="app-modal-form-label">
                                 Session Title <span className="text-required">*</span>
                             </label>
                             <input
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="form-input"
+                                className="app-modal-form-input"
                                 placeholder="e.g., Introduction to Fruits"
                                 required
                             />
                         </div>
 
                         {/* Description */}
-                        <div className="form-field">
-                            <label className="form-label">Description</label>
+                        <div className="app-modal-form-field">
+                            <label className="app-modal-form-label">Description</label>
                             <textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="form-textarea"
+                                className="app-modal-form-textarea"
                                 rows="3"
                                 placeholder="Session description (optional)"
                             />
                         </div>
 
-                        <div className="form-grid form-grid-2">
+                        <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
                             {/* Scheduled Date/Time */}
-                            <div className="form-field">
-                                <label className="form-label">
+                            <div className="app-modal-form-field">
+                                <label className="app-modal-form-label">
                                     Date & Time <span className="text-required">*</span>
                                 </label>
                                 <div className="input-group">
@@ -207,13 +208,13 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                         type="datetime-local"
                                         value={tempDate}
                                         onChange={(e) => setTempDate(e.target.value)}
-                                        className="form-input"
+                                        className="app-modal-form-input"
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={handleSetDate}
-                                        className="btn-primary"
+                                        className="app-modal-btn app-modal-btn--primary"
                                         style={{ whiteSpace: 'nowrap', padding: '0.5rem 1rem' }}
                                     >
                                         Set
@@ -227,14 +228,14 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                             </div>
 
                             {/* Duration */}
-                            <div className="form-field">
-                                <label className="form-label">
+                            <div className="app-modal-form-field">
+                                <label className="app-modal-form-label">
                                     Duration (minutes) <span className="text-required">*</span>
                                 </label>
                                 <select
                                     value={formData.duration}
                                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                    className="form-select"
+                                    className="app-modal-form-select"
                                     required
                                 >
                                     <option value="">-- Select Duration --</option>
@@ -249,28 +250,30 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                         </div>
 
                         {/* Select Learning Goals */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">
+                        <div className="app-modal-form-field">
+                            <label className="app-modal-form-label">
                                 Select Learning Goals (Optional)
                             </label>
-                            <p className="text-sm text-gray-500 mb-3">Choose learning goals for this session</p>
+                            <p className="form-helper-text">Choose learning goals for this session</p>
 
                             {/* Search Bar for Goals */}
-                            <div className="mb-4">
-                                <div className="relative max-w-lg">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={18} />
                                     <input
                                         type="text"
                                         placeholder="Search goals by name or description..."
                                         value={searchTerm.goal}
                                         onChange={(e) => setSearchTerm({ ...searchTerm, goal: e.target.value })}
-                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
+                                        className="app-modal-form-input"
+                                        style={{ paddingLeft: '40px', paddingRight: '40px' }}
                                     />
                                     {searchTerm.goal && (
                                         <button
                                             type="button"
                                             onClick={() => setSearchTerm({ ...searchTerm, goal: '' })}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            className="btn-icon-secondary"
+                                            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
                                         >
                                             ✕
                                         </button>
@@ -338,28 +341,30 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                         </div>
 
                         {/* Select Learning Content */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">
+                        <div className="app-modal-form-field">
+                            <label className="app-modal-form-label">
                                 Select Learning Content (Optional)
                             </label>
-                            <p className="text-sm text-gray-500 mb-3">Choose content that will be available during the session</p>
+                            <p className="form-helper-text">Choose content that will be available during the session</p>
 
                             {/* Search Bar for Content */}
-                            <div className="mb-4">
-                                <div className="relative max-w-2xl">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ position: 'relative' }}>
+                                    <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={18} />
                                     <input
                                         type="text"
                                         placeholder="Search content by title or type..."
                                         value={searchTerm.content}
                                         onChange={(e) => setSearchTerm({ ...searchTerm, content: e.target.value })}
-                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
+                                        className="app-modal-form-input"
+                                        style={{ paddingLeft: '40px', paddingRight: '40px' }}
                                     />
                                     {searchTerm.content && (
                                         <button
                                             type="button"
                                             onClick={() => setSearchTerm({ ...searchTerm, content: '' })}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            className="btn-icon-secondary"
+                                            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}
                                         >
                                             ✕
                                         </button>
@@ -449,22 +454,23 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                         </div>
 
                         {/* Submit Buttons */}
-                        <div className="modal-actions">
-                            <button
-                                type="submit"
-                                className="btn-success"
-                                disabled={loading}
-                            >
-                                {loading ? 'Updating...' : '💾 Save Changes'}
-                            </button>
-                            <button
+                        <div className="app-modal-footer">
+                             <button
                                 type="button"
                                 onClick={onClose}
                                 className="btn-secondary"
                                 disabled={loading}
                             >
                                 Cancel
+                            </button>   
+                            <button
+                                type="submit"
+                                className="btn-primary"
+                                disabled={loading}
+                            >
+                                {loading ? 'Updating...' : 'Save Changes'}
                             </button>
+                           
                         </div>
                     </form>
                 </div>

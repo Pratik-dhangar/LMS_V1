@@ -62,7 +62,7 @@ const GuestPaymentUploadSuccess = () => {
 
                 <div className="action-buttons">
                   <button 
-                    className="btn btn-primary"
+                    className="btn app-modal-btn app-modal-btn--primary"
                     onClick={() => navigate('/')}
                   >
                     <Home size={16} />

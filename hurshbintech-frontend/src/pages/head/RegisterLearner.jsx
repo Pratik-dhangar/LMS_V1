@@ -295,14 +295,14 @@ const RegisterLearner = () => {
 
       {/* Loading/Success Modal */}
       {loading && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm modal-loading">
+        <div className="app-modal-overlay">
+          <div className="app-modal-content modal-sm modal-loading">
             {!successData ? (
               <>
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title modal-title-success">Registering Learner...</p>
+                <p className="app-modal-title modal-title-success">Registering Learner...</p>
                 <p className="modal-message">Please wait while we process your request</p>
               </>
             ) : (
@@ -314,7 +314,7 @@ const RegisterLearner = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title modal-title-success">Learner Registered Successfully!</p>
+                <p className="app-modal-title modal-title-success">Learner Registered Successfully!</p>
                 <div className="passcode-display">
                   <p className="passcode-label">Generated Passcode:</p>
                   <p className="passcode-value">{successData.passcode}</p>
@@ -421,14 +421,14 @@ const RegisterLearner = () => {
               <button
                 type="button"
                 onClick={() => navigate('/head/manage-learners')}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary"
+                className="app-modal-btn app-modal-btn--primary"
               >
                 {loading ? 'Registering...' : 'Register Learner'}
               </button>

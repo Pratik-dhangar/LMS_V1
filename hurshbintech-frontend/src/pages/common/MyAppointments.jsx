@@ -1,21 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download, Video } from 'lucide-react';
+import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download, Video, Search } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import bookingService from "../../api/services/bookingService";
 import coachSessionService from "../../api/services/coachSessionService";
 import { getFileUrl } from "../../utils/urlHelper";
-import "../../styles/Pages.css";
 import "../../styles/BookAppointment.css";
 import '../../styles/ManageUsersLayout.css';
 
 const MyAppointments = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Helper function to get role-based dashboard URL
+  const getDashboardUrl = () => {
+    if (!user || !user.role) return '/dashboard';
+    const dashboardMap = {
+      'head': '/head/dashboard',
+      'trainer': '/trainer/dashboard',
+      'coach': '/coach/dashboard',
+      'admin': '/admin/dashboard',
+      'learner': '/learner/dashboard'
+    };
+    return dashboardMap[user.role] || '/dashboard';
+  };
   const [filterDate, setFilterDate] = useState('');
   const [filterTime, setFilterTime] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -208,8 +222,45 @@ const MyAppointments = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-            <h1 className="page-title">My Appointments</h1>
-            <p className="page-subtitle">View and manage your scheduled coaching appointments</p>
+            <button
+              onClick={() => navigate(getDashboardUrl())}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Go Back to Dashboard
+            </button>
+            <div>
+              <h1 className="page-title">My Appointments</h1>
+              <p className="page-description">
+                View and manage your scheduled coaching appointments
+              </p>
+            </div>
+          </div>
+
+          {/* Search Bar and Book Button */}
+          <div className="search-section">
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search className="search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9ca3af' }} />
+              <input
+                type="text"
+                placeholder="Search appointments..."
+                value={filterDate || filterTime || filterStatus ? `Filters: ${[filterDate, filterTime, filterStatus].filter(Boolean).join(', ')}` : ''}
+                readOnly
+                className="search-input"
+                style={{ paddingLeft: '40px', cursor: 'pointer' }}
+                onClick={() => {/* Could open filter modal if needed */}}
+              />
+            </div>
+            <button 
+              onClick={() => navigate('/book-appointment')}
+              className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <Calendar className="w-4 h-4" />
+              Book Appointment
+            </button>
           </div>
 
           {error && (
@@ -295,14 +346,14 @@ const MyAppointments = () => {
                   }
                 </p>
                 {appointments.length === 0 && (
-                  <a href="/book-appointment" className="btn-primary inline-block">
+                  <a href="/book-appointment" className="app-modal-btn app-modal-btn--primary inline-block">
                     Book Your First Appointment
                   </a>
                 )}
                 {appointments.length > 0 && (
                   <button
                     onClick={clearFilters}
-                    className="btn-primary inline-block"
+                    className="app-modal-btn app-modal-btn--primary inline-block"
                   >
                     Clear Filters
                   </button>
@@ -385,7 +436,7 @@ const MyAppointments = () => {
                         href={getFileUrl(apt.refund_receipt_url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                        className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
                         style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                       >
                         <Download className="w-4 h-4" />

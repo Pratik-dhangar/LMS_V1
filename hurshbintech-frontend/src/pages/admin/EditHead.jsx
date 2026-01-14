@@ -378,7 +378,7 @@ const EditHead = () => {
             <div className="form-section">
               <h2 className="form-section-title">Reference Data</h2>
               <div>
-                <label htmlFor="reference_files" className="form-label">
+                <label htmlFor="reference_files" className="app-modal-form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
                 </label>
                 <input
@@ -455,13 +455,49 @@ const EditHead = () => {
             {/* Notes & Messages */}
             <NotesSection formData={formData} handleChange={handleChange} />
 
-            {/* Action Buttons */}
-            <div className="form-actions form-actions-split">
+          {/* Action Buttons */}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="app-modal-btn app-modal-btn--primary btn-icon"
+              >
+                {saving ? (
+                  <>
+                    <div className="btn-spinner"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="icon-sm"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Changes
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/manage-heads")}
+                disabled={saving || deleting}
+                className="app-modal-btn app-modal-btn--secondary"
+              >
+                Cancel
+              </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="btn-danger btn-icon"
+                className="app-modal-btn app-modal-btn--danger btn-icon"
               >
                 <svg
                   className="icon-sm"
@@ -476,44 +512,6 @@ const EditHead = () => {
                 </svg>
                 Delete Head
               </button>
-
-              <div className="form-actions-group">
-                <button
-                  type="button"
-                  onClick={() => navigate("/admin/manage-heads")}
-                  disabled={saving || deleting}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || deleting}
-                  className="btn-primary btn-icon"
-                >
-                  {saving ? (
-                    <>
-                      <div className="btn-spinner"></div>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="icon-sm"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </form>
         </div>

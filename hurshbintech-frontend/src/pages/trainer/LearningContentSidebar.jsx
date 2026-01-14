@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import learningContentService from '../../api/services/learningContentService';
-import '../../styles/Pages.css';
+
 
 const LearningContentSidebar = ({
   learningContentSearch,

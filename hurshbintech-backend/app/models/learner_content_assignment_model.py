@@ -6,7 +6,7 @@ from datetime import datetime
 import enum
 import json
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, func, Text, Boolean
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, func, Text, Boolean, String
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -14,7 +14,7 @@ from app.db.session import Base
 
 class ContentCompletionStatus(enum.Enum):
     """Enum for content completion status"""
-    NOT_STARTED = "NOT_STARTED"
+    NEW = "NEW"
     IN_PROGRESS = "IN_PROGRESS"
     SUBMITTED = "SUBMITTED"
     LATE_SUBMITTED = "LATE_SUBMITTED"
@@ -53,8 +53,8 @@ class LearnerContentAssignment(Base):
     
     # Status tracking
     completion_status = Column(
-        Enum(ContentCompletionStatus),
-        default=ContentCompletionStatus.NOT_STARTED,
+        String(50),
+        default=ContentCompletionStatus.NEW.value,
         nullable=False
     )
     started_at = Column(DateTime(timezone=True), nullable=True)

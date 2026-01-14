@@ -1,0 +1,5 @@
+/* SessionModals.css - Now uses shared Modal.css */
+/* Import the shared modal styles */
+@import '../components/common/Modal.css';
+
+/* Component-specific overrides if needed */

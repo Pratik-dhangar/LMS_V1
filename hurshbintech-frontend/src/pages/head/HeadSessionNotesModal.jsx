@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import headSessionNotesService from '../../api/services/headSessionNotesService';
-import '../../styles/Pages.css';
+import '../../styles/components/common/Modal.css';
+
 
 /**
  * HeadSessionNotesModal - Modal for adding/editing head notes on completed sessions
@@ -52,17 +53,17 @@ const HeadSessionNotesModal = ({ session, onClose, onSuccess }) => {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-container" style={{ maxWidth: '768px' }}>
+        <div className="app-modal-overlay">
+            <div className="app-modal-container" style={{ maxWidth: '768px' }}>
                 {/* Modal Header */}
-                <div className="modal-header modal-header-blue">
-                    <div className="modal-header-content">
-                        <h2 className="modal-title">👔 Head Session Notes</h2>
-                        <p className="modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
+                <div className="app-modal-header app-modal-header--primary modal-header-blue">
+                    <div className="app-modal-header-content">
+                        <h2 className="app-modal-title">👔 Head Session Notes</h2>
+                        <p className="app-modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="modal-close-button"
+                        className="app-modal-close"
                         title="Close"
                         disabled={loading}
                     >
@@ -71,7 +72,7 @@ const HeadSessionNotesModal = ({ session, onClose, onSuccess }) => {
                 </div>
 
                 {/* Modal Content */}
-                <div className="modal-content">
+                <div className="app-modal-content">
                     {/* Session Info */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
@@ -108,7 +109,7 @@ const HeadSessionNotesModal = ({ session, onClose, onSuccess }) => {
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Write your observations, feedback, or recommendations about this session..."
-                            className="form-textarea"
+                            className="app-modal-form-textarea"
                             rows="8"
                             style={{
                                 width: '100%',
@@ -127,17 +128,17 @@ const HeadSessionNotesModal = ({ session, onClose, onSuccess }) => {
                 </div>
 
                 {/* Modal Actions */}
-                <div className="modal-actions">
+                <div className="app-modal-footer">
                     <button
                         onClick={onClose}
-                        className="btn-secondary"
+                        className="app-modal-btn app-modal-btn--secondary"
                         disabled={loading || fetchingNotes}
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
-                        className="btn-primary"
+                        className="app-modal-btn app-modal-btn--primary"
                         disabled={loading || fetchingNotes}
                         style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >

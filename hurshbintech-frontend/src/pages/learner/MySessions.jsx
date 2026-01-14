@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
+import "../../styles/components/common/Modal.css";
 import "../../styles/admin/index.css";
 
 const MySessions = () => {
@@ -369,38 +370,36 @@ const MySessions = () => {
 
       {/* Session Details Modal */}
       {showSessionDetailsModal && selectedSession && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeSessionDetailsModal}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="app-modal-overlay" onClick={closeSessionDetailsModal}>
+          <div className="app-modal-container app-modal-container--lg" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">Session Details</h2>
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Session Details</h2>
               <button
                 onClick={closeSessionDetailsModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="app-modal-close"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6">
+            <div className="app-modal-content">
               {/* Title */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Session Title</label>
-                <p className="text-lg text-gray-800">{selectedSession.title || `Session with ${selectedSession.trainer?.name || selectedSession.trainer_name || "Trainer"}`}</p>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Session Title</label>
+                <p className="app-modal-text">{selectedSession.title || `Session with ${selectedSession.trainer?.name || selectedSession.trainer_name || "Trainer"}`}</p>
               </div>
 
               {/* Trainer Info */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Trainer</label>
-                <p className="text-gray-800">{selectedSession.trainer?.name || selectedSession.trainer_name || "Unknown Trainer"}</p>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Trainer</label>
+                <p className="app-modal-text">{selectedSession.trainer?.name || selectedSession.trainer_name || "Unknown Trainer"}</p>
               </div>
 
               {/* Status */}
-              <div>
-                <label className="text-sm font-semibold text-gray-600 block mb-2">Status</label>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Status</label>
                 {(() => {
                   // Helper function to get actual status (considering expired sessions)
                   const getSessionStatus = (sess) => {
@@ -437,19 +436,15 @@ const MySessions = () => {
                     return sess.status;
                   };
                   const actualStatus = getSessionStatus(selectedSession);
+                  const statusColors = {
+                    active: 'bg-green-100 text-green-800',
+                    scheduled: 'bg-yellow-100 text-yellow-800',
+                    cancelled: 'bg-red-100 text-red-800',
+                    expired: 'bg-gray-100 text-gray-800',
+                    ended: 'bg-gray-100 text-gray-800'
+                  };
                   return (
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold" style={{
-                      background: actualStatus === 'active' ? '#d1fae5' :
-                        actualStatus === 'scheduled' ? '#fef3c7' :
-                          actualStatus === 'cancelled' ? '#fee2e2' :
-                            actualStatus === 'expired' ? '#e5e7eb' :
-                              actualStatus === 'ended' ? '#f3f4f6' : '#f9fafb',
-                      color: actualStatus === 'active' ? '#065f46' :
-                        actualStatus === 'scheduled' ? '#92400e' :
-                          actualStatus === 'cancelled' ? '#dc2626' :
-                            actualStatus === 'expired' ? '#374151' :
-                              actualStatus === 'ended' ? '#1f2937' : '#1f2937'
-                    }}>
+                    <span className={`app-modal-badge ${statusColors[actualStatus] || 'bg-gray-100 text-gray-800'}`}>
                       {actualStatus === 'expired' ? 'Expired' : actualStatus === 'cancelled' ? 'Cancelled' : actualStatus ? actualStatus.charAt(0).toUpperCase() + actualStatus.slice(1) : 'Scheduled'}
                     </span>
                   );
@@ -457,10 +452,10 @@ const MySessions = () => {
               </div>
 
               {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Date</label>
-                  <p className="text-gray-800">
+              <div className="app-modal-form-grid app-modal-form-grid--2">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Date</label>
+                  <p className="app-modal-text">
                     {selectedSession.scheduled_date
                       ? new Date(selectedSession.scheduled_date).toLocaleDateString('en-US', {
                         weekday: 'long',
@@ -471,9 +466,9 @@ const MySessions = () => {
                       : "—"}
                   </p>
                 </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Time</label>
-                  <p className="text-gray-800">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Time</label>
+                  <p className="app-modal-text">
                     {selectedSession.scheduled_date
                       ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -485,14 +480,14 @@ const MySessions = () => {
               </div>
 
               {/* Duration & Program */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Duration</label>
-                  <p className="text-gray-800">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
+              <div className="app-modal-form-grid app-modal-form-grid--2">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Duration</label>
+                  <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Program / IIP</label>
-                  <p className="text-gray-800">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Program / IIP</label>
+                  <p className="app-modal-text">
                     {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
                       ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
                       : "—"}
@@ -502,11 +497,21 @@ const MySessions = () => {
 
               {/* Description */}
               {selectedSession.description && (
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 block mb-2">Description</label>
-                  <p className="text-gray-800 whitespace-pre-wrap">{selectedSession.description}</p>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Description</label>
+                  <p className="app-modal-text" style={{ whiteSpace: 'pre-wrap' }}>{selectedSession.description}</p>
                 </div>
               )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="app-modal-footer">
+              <button
+                onClick={closeSessionDetailsModal}
+                className="app-modal-btn app-modal-btn--secondary"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

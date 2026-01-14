@@ -146,7 +146,7 @@ const ManageBlogs = () => {
                         />
                         <button
                             onClick={handleCreate}
-                            className="btn-success"
+                            className="app-modal-btn app-modal-btn--success"
                         >
                             + Create Blog
                         </button>
@@ -222,7 +222,7 @@ const ManageBlogs = () => {
                                                     {blog.status === 'published' && (
                                                         <button
                                                             onClick={() => handleViewPublic(blog)}
-                                                            className="btn-primary btn-sm btn-icon"
+                                                            className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
                                                         >
                                                             <svg
                                                                 className="table-primary-icon-sm"
@@ -250,7 +250,7 @@ const ManageBlogs = () => {
                                                 <td className="table-primary-td table-primary-td-center">
                                                     <button
                                                         onClick={() => handleEdit(blog)}
-                                                        className="btn-primary btn-sm btn-icon"
+                                                        className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
                                                     >
                                                         <svg
                                                             className="table-primary-icon-sm"
@@ -271,7 +271,7 @@ const ManageBlogs = () => {
                                                 <td className="table-primary-td table-primary-td-center">
                                                     <button
                                                         onClick={() => handleDeleteClick(blog)}
-                                                        className="btn-danger btn-sm btn-icon"
+                                                        className="app-modal-btn app-modal-btn--danger btn-sm btn-icon"
                                                     >
                                                         <svg
                                                             className="table-primary-icon-sm"

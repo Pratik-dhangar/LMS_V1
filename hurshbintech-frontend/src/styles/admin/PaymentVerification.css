@@ -1,0 +1,658 @@
+/* PaymentVerification.css - Payment Verification Page Styles */
+
+
+
+/* Filter Buttons */
+.payment-verification-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.payment-verification-filter-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.payment-verification-filter-btn.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.payment-verification-filter-btn.inactive {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.payment-verification-filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading State */
+.payment-verification-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+/* Empty State */
+.payment-verification-empty {
+    text-align: center;
+    padding: 3rem;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    color: #666;
+}
+
+.payment-verification-empty-icon {
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
+
+/* Orders Grid */
+.payment-verification-orders-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+}
+
+/* Order Card */
+.payment-verification-order-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+}
+
+.payment-verification-order-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.payment-verification-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.payment-verification-order-info h3 {
+    font-weight: bold;
+    font-size: 1.125rem;
+    margin-bottom: 0.25rem;
+}
+
+.payment-verification-order-info p {
+    font-size: 0.875rem;
+    color: #666;
+}
+
+/* Status Badge */
+.payment-verification-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.payment-verification-status-badge.pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.payment-verification-status-badge.approved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.payment-verification-status-badge.rejected {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.payment-verification-status-badge.delivered {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Order Details */
+.payment-verification-order-details {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.payment-verification-order-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    font-size: 0.875rem;
+}
+
+.payment-verification-detail-item p:first-child {
+    color: #6b7280;
+    margin: 0;
+}
+
+.payment-verification-detail-item p:last-child {
+    font-weight: bold;
+    color: #1f2937;
+    margin: 0.25rem 0 0 0;
+}
+
+.payment-verification-detail-item .amount {
+    font-size: 1.125rem;
+}
+
+/* Rejection Reason Alert */
+.payment-verification-rejection-alert {
+    background-color: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.payment-verification-rejection-header {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.payment-verification-rejection-header p {
+    font-weight: bold;
+    color: #991b1b;
+    margin: 0;
+}
+
+.payment-verification-rejection-text {
+    color: #7f1d1d;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Action Buttons Container */
+.payment-verification-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.payment-verification-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.payment-verification-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.payment-verification-btn-view {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.payment-verification-btn-view:hover:not(:disabled) {
+    background-color: #e5e7eb;
+}
+
+.payment-verification-btn-delivered {
+    background-color: #0ea5e9;
+    color: white;
+}
+
+.payment-verification-btn-delivered:hover:not(:disabled) {
+    background-color: #0284c7;
+}
+
+.payment-verification-btn-approve {
+    background-color: #10b981;
+    color: white;
+}
+
+.payment-verification-btn-approve:hover:not(:disabled) {
+    background-color: #059669;
+}
+
+.payment-verification-btn-reject {
+    background-color: #ef4444;
+    color: white;
+}
+
+.payment-verification-btn-reject:hover:not(:disabled) {
+    background-color: #dc2626;
+}
+
+/* Modal Overlay */
+.payment-verification-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 1rem;
+}
+
+.payment-verification-modal {
+    background-color: white;
+    border-radius: 0.75rem;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    padding: 2rem;
+}
+
+.payment-verification-modal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+}
+
+/* Modal Sections */
+.payment-verification-modal-section {
+    margin-bottom: 1.5rem;
+}
+
+.payment-verification-section-title {
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+    color: #374151;
+}
+
+.payment-verification-section-content {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.payment-verification-section-content p {
+    margin: 0.25rem 0;
+}
+
+.payment-verification-section-content strong {
+    color: #1f2937;
+}
+
+/* Order Items */
+.payment-verification-items-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.payment-verification-item {
+    padding: 1rem;
+    font-size: 0.875rem;
+}
+
+.payment-verification-item:not(:last-child) {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-verification-item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.payment-verification-item-header strong {
+    color: #1f2937;
+}
+
+.payment-verification-item-details {
+    display: flex;
+    justify-content: space-between;
+    color: #666;
+}
+
+/* Payment Summary */
+.payment-verification-summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.payment-verification-summary-row.discount {
+    color: #ef4444;
+}
+
+.payment-verification-summary-row.total {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.5rem;
+    font-weight: bold;
+}
+
+/* Receipt Preview */
+.payment-verification-receipt-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.payment-verification-pdf-placeholder {
+    background-color: #f9fafb;
+    padding: 1rem;
+    text-align: center;
+}
+
+.payment-verification-pdf-icon {
+    margin-bottom: 0.5rem;
+    color: #6b7280;
+}
+
+.payment-verification-pdf-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.payment-verification-pdf-name {
+    color: #374151;
+    font-weight: bold;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+}
+
+.payment-verification-pdf-link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #3b82f6;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: background-color 0.2s ease;
+}
+
+.payment-verification-pdf-link:hover {
+    background-color: #2563eb;
+}
+
+.payment-verification-receipt-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    background-color: #f9fafb;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.payment-verification-receipt-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.payment-verification-receipt-meta {
+    padding: 0.75rem;
+    background-color: #f9fafb;
+    font-size: 0.75rem;
+    color: #6b7280;
+    border-top: 1px solid #e5e7eb;
+}
+
+.payment-verification-receipt-meta p {
+    margin: 0.25rem 0;
+}
+
+/* No Receipt Alert */
+.payment-verification-no-receipt {
+    background-color: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.payment-verification-no-receipt-icon {
+    color: #dc2626;
+    flex-shrink: 0;
+}
+
+.payment-verification-no-receipt-title {
+    font-weight: bold;
+    color: #991b1b;
+    margin: 0 0 0.25rem 0;
+}
+
+.payment-verification-no-receipt-text {
+    color: #7f1d1d;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Rejection Reason Input */
+.payment-verification-input-label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.payment-verification-input-label .required {
+    color: #ef4444;
+}
+
+.payment-verification-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    box-sizing: border-box;
+}
+
+.payment-verification-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Modal Action Buttons */
+.payment-verification-modal-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.payment-verification-btn-close {
+    flex: 1;
+    padding: 0.75rem;
+    background-color: #e5e7eb;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.payment-verification-btn-close:hover {
+    background-color: #d1d5db;
+}
+
+.payment-verification-btn-modal-approve {
+    flex: 1;
+    padding: 0.75rem;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.payment-verification-btn-modal-approve:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.payment-verification-btn-modal-approve:not(:disabled) {
+    background-color: #10b981;
+}
+
+.payment-verification-btn-modal-approve:not(:disabled):hover {
+    background-color: #059669;
+}
+
+.payment-verification-btn-modal-reject {
+    flex: 1;
+    padding: 0.75rem;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.payment-verification-btn-modal-reject:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.payment-verification-btn-modal-reject:not(:disabled) {
+    background-color: #ef4444;
+}
+
+.payment-verification-btn-modal-reject:not(:disabled):hover {
+    background-color: #dc2626;
+}
+
+/* Receipt Preview Modal (Full Screen) */
+.payment-verification-preview-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+}
+
+.payment-verification-preview-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.payment-verification-preview-close {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 0.5rem;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.payment-verification-preview-close:hover {
+    background-color: #dc2626;
+}
+
+.payment-verification-preview-image {
+    max-width: 100%;
+    max-height: 85vh;
+    display: block;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 0.375rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .payment-verification-main {
+        padding: 1rem;
+    }
+
+    .payment-verification-title {
+        font-size: 1.5rem;
+    }
+
+    .payment-verification-orders-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-verification-order-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-verification-filters {
+        flex-direction: column;
+    }
+
+    .payment-verification-filter-btn {
+        width: 100%;
+    }
+
+    .payment-verification-actions {
+        flex-direction: column;
+    }
+
+    .payment-verification-modal {
+        padding: 1.5rem;
+    }
+
+    .payment-verification-modal-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .payment-verification-main {
+        padding: 0.5rem;
+    }
+
+    .payment-verification-title {
+        font-size: 1.25rem;
+    }
+
+    .payment-verification-modal-title {
+        font-size: 1.25rem;
+    }
+}

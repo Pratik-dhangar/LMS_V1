@@ -21,7 +21,7 @@ import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import Emoji from '../../components/common/Emoji';
 import LearningContentSidebar from '../trainer/LearningContentSidebar';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-import '../../styles/Pages.css';
+
 
 const REACTION_SVG_ASSETS = {
   smiley: {

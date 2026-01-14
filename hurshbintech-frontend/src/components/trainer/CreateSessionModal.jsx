@@ -49,9 +49,9 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-container">
-        <h2 className="modal-title">Create New Session</h2>
+    <div className="app-modal-overlay">
+      <div className="app-modal-container">
+        <h2 className="app-modal-title">Create New Session</h2>
         <form onSubmit={handleSubmit}>
           <div className="modal-form-group">
             <label htmlFor="title" className="modal-label">
@@ -106,7 +106,7 @@ const CreateSessionModal = ({ isOpen, onClose, onSessionCreated }) => {
               className="modal-textarea"
             ></textarea>
           </div>
-          <div className="modal-actions">
+          <div className="app-modal-footer">
             <button
               type="button"
               onClick={handleClose}

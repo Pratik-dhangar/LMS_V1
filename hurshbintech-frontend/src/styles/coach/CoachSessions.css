@@ -53,10 +53,6 @@
     height: 1.25rem;
 }
 
-/* Content Area */
-.coach-sessions-content {
-    padding: 2rem 0;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {

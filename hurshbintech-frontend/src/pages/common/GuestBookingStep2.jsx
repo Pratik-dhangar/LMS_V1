@@ -259,11 +259,8 @@ const GuestBookingStep2 = () => {
       <div className="guest-booking-flow page-container">
         <div className="page-main-guest">
           <div className="page-header">
-            <button className="btn-back" onClick={() => navigate(-1)}>
-              <ArrowLeft size={20} /> Back
-            </button>
+            
             <h1 className="page-title">Guest Booking - Step 2</h1>
-            <p className="page-subtitle">Verify OTP and provide booking details</p>
           </div>
 
           <div className="page-content">
