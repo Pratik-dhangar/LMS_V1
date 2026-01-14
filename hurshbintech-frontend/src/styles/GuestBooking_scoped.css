@@ -39,9 +39,7 @@
   margin-top: 1rem;
 }
 
-.guest-booking-flow .guest-booking-flow .page-header {
-  margin-bottom: 2.5rem;
-}
+
 
 .guest-booking-flow .guest-booking-flow .btn-back {
   display: inline-flex;
@@ -109,8 +107,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 2.5rem;
-  padding: 1.5rem;
-  background: #f9fafb;
+  padding: 1rem;
+  background: #fbfaf9;
   border-radius: 0.75rem;
 }
 
@@ -643,22 +641,7 @@
   font-size: 0.95rem;
 }
 
-.guest-booking-flow .btn-primary {
-  background: linear-gradient(135deg, #41a67e 0%, #10b981 100%);
-  color: white;
-  box-shadow: 0 4px 6px rgba(65, 166, 126, 0.2);
-}
 
-.guest-booking-flow .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 12px rgba(65, 166, 126, 0.3);
-}
-
-.guest-booking-flow .btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
 
 .guest-booking-flow .btn-secondary {
   background: #e5e7eb;

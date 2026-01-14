@@ -199,7 +199,7 @@ const GuestPaymentUpload = () => {
                   </div>
 
                   <button 
-                    className="btn btn-primary"
+                    className="btn app-modal-btn app-modal-btn--primary"
                     onClick={() => navigate('/')}
                   >
                     Return to Home

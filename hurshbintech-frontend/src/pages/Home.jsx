@@ -509,16 +509,16 @@ const Home = () => {
 
           {/* Modal Content */}
           <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="modal-content">
-              <div className="modal-header">
+            <div className="app-modal-content">
+              <div className="app-modal-header app-modal-header--primary">
                 <div className="modal-header-bg"></div>
-                <div className="modal-header-content">
+                <div className="app-modal-header-content">
                   <div className="modal-title-wrapper">
                     <div className="modal-icon-wrapper">
                       <span className="modal-icon" aria-hidden="true">{selectedSection.icon}</span>
                     </div>
                     <div>
-                      <h2 id="modal-title" className="modal-title">
+                      <h2 id="modal-title" className="app-modal-title">
                         {selectedSection.title}
                       </h2>
                       <div className="modal-title-underline"></div>
@@ -535,7 +535,7 @@ const Home = () => {
                 />
               </div>
 
-              <div className="modal-footer">
+              <div className="app-modal-footer">
                 <button
                   onClick={closeModal}
                   className="modal-footer-button"

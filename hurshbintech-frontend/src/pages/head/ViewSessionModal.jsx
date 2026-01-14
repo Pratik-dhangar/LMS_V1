@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import '../../styles/Pages.css';
 import learningContentService from '../../api/services/learningContentService';
+import '../../styles/components/common/Modal.css';
 
 /**
  * ViewSessionModal - Display session details in read-only mode
@@ -167,17 +167,17 @@ const ViewSessionModal = ({ session, onClose }) => {
     }, []);
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh' }}>
+        <div className="app-modal-overlay">
+            <div className="app-modal-container app-modal-container--lg" style={{ maxHeight: '90vh' }}>
                 {/* Modal Header */}
-                <div className="modal-header modal-header-blue">
-                    <div className="modal-header-content">
-                        <h2 className="modal-title">👁️ View Session Details</h2>
-                        <p className="modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
+                <div className="app-modal-header app-modal-header--primary">
+                    <div className="app-modal-header-content">
+                        <h2 className="app-modal-title">View Session Details</h2>
+                        <p className="app-modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="modal-close-button"
+                        className="app-modal-close"
                         title="Close"
                     >
                         ✕
@@ -185,7 +185,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                 </div>
 
                 {/* Modal Content */}
-                <div className="modal-content" style={{ maxWidth: 'none' }}>
+                <div className="app-modal-content" style={{ maxWidth: 'none' }}>
                     {/* Session Information */}
                     <div className="grid grid-cols-2 gap-6 mb-6">
                         <div>
@@ -298,17 +298,19 @@ const ViewSessionModal = ({ session, onClose }) => {
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Modal Actions */}
-                <div className="modal-actions">
+                     {/* Modal Actions */}
+                <div className="app-modal-footer">
                     <button
                         onClick={onClose}
-                        className="btn-secondary"
+                        className="app-modal-btn app-modal-btn--secondary"
                     >
                         Close
                     </button>
                 </div>
+                </div>
+
+               
             </div>
 
             {/* Learning Content Popup Modal */}

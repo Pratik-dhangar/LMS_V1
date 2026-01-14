@@ -15,7 +15,7 @@ import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-import '../../styles/Pages.css';
+
 
 const GuestSession = () => {
   const { token } = useParams(); // Guest session token from URL

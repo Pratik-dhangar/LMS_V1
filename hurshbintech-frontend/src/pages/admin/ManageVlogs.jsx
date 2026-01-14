@@ -134,7 +134,7 @@ const ManageVlogs = () => {
             />
             <button
               onClick={() => setShowCreateModal(true)}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               + Add New Vlog
             </button>
@@ -250,13 +250,13 @@ const ManageVlogs = () => {
                         href={getFullUrl(vlog.file_url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary btn-sm"
+                        className="app-modal-btn app-modal-btn--secondary btn-sm"
                       >
                         Play
                       </a>
                       <button
                         onClick={() => handleEdit(vlog)}
-                        className="btn-primary btn-sm"
+                        className="app-modal-btn app-modal-btn--primary btn-sm"
                       >
                         Edit
                       </button>
@@ -266,7 +266,7 @@ const ManageVlogs = () => {
                           setSelectedVlog(vlog);
                           setShowDeleteModal(true);
                         }}
-                        className="btn-danger btn-sm"
+                        className="app-modal-btn app-modal-btn--danger btn-sm"
                       >
                         Delete
                       </button>

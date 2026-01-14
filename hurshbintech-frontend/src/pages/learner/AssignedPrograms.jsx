@@ -185,20 +185,20 @@ const AssignedPrograms = () => {
           </div>
 
           {/* Assigned Home Programs */}
-          <div style={{ 
-            marginTop: '2.5rem', 
-            background: '#ffffff', 
-            borderRadius: '0.75rem', 
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
-            padding: '1.5rem' 
+          <div style={{
+            marginTop: '2.5rem',
+            background: '#ffffff',
+            borderRadius: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            padding: '1.5rem'
           }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '700', 
-              color: '#1f2937', 
-              borderBottom: '1px solid #e5e7eb', 
-              paddingBottom: '0.75rem', 
-              marginBottom: '1rem' 
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: '#1f2937',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '0.75rem',
+              marginBottom: '1rem'
             }}>
               📚 Assigned Programs (Grouped by Assignment Title)
             </h2>
@@ -211,12 +211,12 @@ const AssignedPrograms = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {Object.entries(groupedPrograms).map(([titleKey, programsList]) => {
                   const firstProg = programsList[0];
-                  const completionStatus = firstProg.completion_status || 'NOT_STARTED';
+                  const completionStatus = firstProg.completion_status || 'NEW';
                   const hasFinalFeedback = firstProg.final_feedback_rating && firstProg.final_feedback_rating > 0;
                   const isSubmitted = completionStatus === 'COMPLETED';
                   const needsResubmission = isSubmitted && hasFinalFeedback;
                   const isInProgress = completionStatus === 'IN_PROGRESS';
-                  const isNotStarted = completionStatus === 'NOT_STARTED';
+                  const isNotStarted = completionStatus === 'NEW';
 
                   return (
                     <div
@@ -257,15 +257,15 @@ const AssignedPrograms = () => {
                           </div>
 
                           {/* Timeline Info */}
-                          <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '0.25rem', 
-                            fontSize: '0.75rem', 
-                            color: '#4b5563', 
-                            marginTop: '0.5rem', 
-                            paddingTop: '0.5rem', 
-                            borderTop: '1px solid #e5e7eb' 
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            fontSize: '0.75rem',
+                            color: '#4b5563',
+                            marginTop: '0.5rem',
+                            paddingTop: '0.5rem',
+                            borderTop: '1px solid #e5e7eb'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span>📅 Start:</span>
@@ -613,7 +613,7 @@ const AssignedPrograms = () => {
 
             {/* Modal Content */}
             <div style={{ padding: '1.5rem' }}>
-              
+
               {/* Learner Notes */}
               <div style={{ marginBottom: '1rem' }}>
                 <label htmlFor="submit-notes" style={{ fontSize: '0.875rem', fontWeight: '600', color: '#4b5563', marginBottom: '0.5rem', display: 'block' }}>

@@ -6,7 +6,6 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime
-from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, Integer, Text, Date, String, JSON
 from sqlalchemy.orm import relationship
 
@@ -15,7 +14,7 @@ from app.db.session import Base
 
 class CompletionStatus(str, enum.Enum):
     """Enum for program assignment completion status"""
-    NOT_STARTED = "NOT_STARTED"
+    NEW = "NEW"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
 
@@ -54,9 +53,9 @@ class ProgramAssignment(Base):
     
     # Completion tracking
     completion_status = Column(
-        SQLEnum(CompletionStatus),
+        String(50),
         nullable=False,
-        default=CompletionStatus.NOT_STARTED,
+        default=CompletionStatus.NEW.value,
         index=True
     )
     completed_at = Column(DateTime, nullable=True)

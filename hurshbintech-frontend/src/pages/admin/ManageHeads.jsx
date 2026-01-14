@@ -9,7 +9,6 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
 import adminService from "../../api/services/adminService";
-import "../../styles/Pages.css";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -145,7 +144,7 @@ const ManageHeads = () => {
             />
             <button
               onClick={() => navigate("/admin/register-head")}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -206,7 +205,7 @@ const ManageHeads = () => {
                   {!activeSearchQuery && (
                     <button
                       onClick={() => navigate("/admin/register-head")}
-                      className="btn-success"
+                      className="app-modal-btn app-modal-btn--success"
                     >
                       Register Head
                     </button>
@@ -282,7 +281,7 @@ const ManageHeads = () => {
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditHead(head.id)}
-                              className="btn-primary btn-sm btn-icon"
+                              className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile

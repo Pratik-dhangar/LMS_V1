@@ -1,181 +1,95 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import coachService from '../../api/services/coachService';
 import { toast } from 'react-toastify';
-import { Plus, X, Calendar, Clock, Users, BookOpen, Search } from 'lucide-react';
-import '../../styles/Dashboards.css';
-import '../../styles/Coach.css';
+import SearchBar from '../common/SearchBar';
+import '../../styles/coach/SessionsManager.css';
+import '../../styles/Table.css';
 
-const SessionsManager = ({ showForm, setShowForm }) => {
+
+const SessionsManager = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    session_date: '',
-    session_time: '',
-    session_title: '',
-    learning_content_id: '',
-    description: '',
-    notes: '',
-    learner_ids: [],
-    trainer_ids: [],
-    head_ids: [],
-  });
-
-  // Available users and content
-  const [allUsers, setAllUsers] = useState([]); // Combined users array
-  const [learningContents, setLearningContents] = useState([]);
-
-  // Unified search states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'learner', 'trainer', 'head'
-  const [selectedParticipants, setSelectedParticipants] = useState([]); // Array of user objects
-
-  const timeSlots = ['10am', '1pm', '3pm', '5pm'];
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   useEffect(() => {
-    fetchData();
+    fetchSessions();
   }, []);
 
-  const fetchData = async () => {
+  const fetchSessions = async () => {
     try {
       setLoading(true);
-      const [sessionsData, learnersData, trainersData, headsData, contentsData] = await Promise.all([
-        coachService.getMySessions(),
-        coachService.getAvailableLearners(),
-        coachService.getAvailableTrainers(),
-        coachService.getAvailableHeads(),
-        coachService.getLearningContents(),
-      ]);
-      
+      const sessionsData = await coachService.getMySessions();
       setSessions(sessionsData);
-      
-      // Combine all users with role information
-      const combined = [
-        ...learnersData.map(u => ({ ...u, role: 'learner', roleLabel: 'Learner' })),
-        ...trainersData.map(u => ({ ...u, role: 'trainer', roleLabel: 'Trainer' })),
-        ...headsData.map(u => ({ ...u, role: 'head', roleLabel: 'Head' })),
-      ];
-      setAllUsers(combined);
-      
-      setLearningContents(contentsData);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+      console.error('Error fetching sessions:', error);
+      toast.error('Failed to load sessions');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const addParticipant = (user) => {
-    if (!selectedParticipants.find(p => p.id === user.id)) {
-      setSelectedParticipants(prev => [...prev, user]);
+  const getSessionStatus = (session) => {
+    if (session.status === 'cancelled') {
+      return 'cancelled';
     }
-    setSearchQuery(''); // Clear search after adding
-  };
-
-  const removeParticipant = (userId) => {
-    setSelectedParticipants(prev => prev.filter(p => p.id !== userId));
-  };
-
-  // Filter users based on search query and role filter
-  const getFilteredUsers = () => {
-    let filtered = allUsers;
-    
-    // Filter by role
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(u => u.role === roleFilter);
+    if (session.status === 'active') {
+      return 'active';
     }
-    
-    // Filter by search query
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    if (session.status === 'ended') {
+      return 'ended';
     }
-    
-    // Exclude already selected participants
-    filtered = filtered.filter(u =>
-      !selectedParticipants.find(p => p.id === u.id)
-    );
-    
-    return filtered;
+    if (session.status === 'scheduled' && session.session_date) {
+      try {
+        const now = new Date();
+        const scheduled = new Date(session.session_date);
+        const sessionTime = session.session_time || '10am';
+        
+        const timeParts = sessionTime.match(/(\d+)(am|pm)/i);
+        if (timeParts) {
+          let hours = parseInt(timeParts[1]);
+          const meridiem = timeParts[2].toLowerCase();
+          if (meridiem === 'pm' && hours !== 12) hours += 12;
+          if (meridiem === 'am' && hours === 12) hours = 0;
+          scheduled.setHours(hours, 0, 0, 0);
+        }
+        
+        const durationMs = 60 * 60 * 1000;
+        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+        
+        if (now >= sessionEndTime) {
+          return 'expired';
+        }
+      } catch (e) {
+        console.warn('Error parsing session date:', e);
+      }
+    }
+    return session.status;
   };
 
-  const getRoleBadgeColor = (role) => {
-    const colors = {
-      learner: 'bg-blue-100 text-blue-700 border-blue-300',
-      trainer: 'bg-purple-100 text-purple-700 border-purple-300',
-      head: 'bg-green-100 text-green-700 border-green-300',
+  const getStatusBadge = (status) => {
+    const badges = {
+      scheduled: 'bg-blue-100 text-blue-800',
+      active: 'bg-green-100 text-green-800',
+      ended: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-red-100 text-red-800',
+      expired: 'bg-gray-300 text-gray-900'
     };
-    return colors[role] || 'bg-gray-100 text-gray-700';
+    return badges[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.session_date || !formData.session_time) {
-      toast.error('Please fill in date and time');
-      return;
-    }
-
-    try {
-      // Prepare participant IDs by role
-      const learner_ids = selectedParticipants.filter(p => p.role === 'learner').map(p => p.id);
-      const trainer_ids = selectedParticipants.filter(p => p.role === 'trainer').map(p => p.id);
-      const head_ids = selectedParticipants.filter(p => p.role === 'head').map(p => p.id);
-
-      const sessionData = {
-        ...formData,
-        learner_ids,
-        trainer_ids,
-        head_ids,
-      };
-
-      await coachService.createSession(sessionData);
-      toast.success('Session created successfully!');
-      setShowForm(false);
-      resetForm();
-      fetchData();
-    } catch (error) {
-      console.error('Error creating session:', error);
-      toast.error(error.response?.data?.detail || 'Failed to create session');
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      session_date: '',
-      session_time: '',
-      session_title: '',
-      learning_content_id: '',
-      description: '',
-      notes: '',
-      learner_ids: [],
-      trainer_ids: [],
-      head_ids: [],
-    });
-    setSearchQuery('');
-    setRoleFilter('all');
-    setSelectedParticipants([]);
-  };
-
-  const filterUsers = (users, searchTerm) => {
-    if (!searchTerm) return users;
-    return users.filter(user =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
+  const filteredSessions = sessions.filter(session => {
+    const matchesFilter = filter === 'all' || getSessionStatus(session) === filter;
+    const matchesSearch = !searchTerm ||
+      session.session_title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDate = !dateFilter || (session.session_date && session.session_date.slice(0, 10) === dateFilter);
+    return matchesFilter && matchesSearch && matchesDate;
+  });
 
   if (loading) {
     return <div className="loading-container">Loading sessions...</div>;
@@ -183,284 +97,156 @@ const SessionsManager = ({ showForm, setShowForm }) => {
 
   return (
     <div className="sessions-manager">
-      {/* Create Session Form */}
-      {showForm && (
-        <div className="form-card mb-6">
-          <h3 className="form-section-title mb-4">Create New Session</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">
-                  <Calendar className="icon-sm inline mr-2" />
-                  Session Date *
-                </label>
-                <input
-                  type="date"
-                  name="session_date"
-                  value={formData.session_date}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  <Clock className="icon-sm inline mr-2" />
-                  Time Slot *
-                </label>
-                <select
-                  name="session_time"
-                  value={formData.session_time}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                >
-                  <option value="">Select time</option>
-                  {timeSlots.map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Session Title</label>
-              <input
-                type="text"
-                name="session_title"
-                value={formData.session_title}
-                onChange={handleInputChange}
-                className="form-input"
-                placeholder="e.g., Group Coaching Session"
-              />
-            </div>
-
-            {/* Learning Content */}
-            <div className="form-group">
-              <label className="form-label">
-                <BookOpen className="icon-sm inline mr-2" />
-                Learning Content (Optional)
-              </label>
-              <select
-                name="learning_content_id"
-                value={formData.learning_content_id}
-                onChange={handleInputChange}
-                className="form-input"
-              >
-                <option value="">Select learning content</option>
-                {learningContents.map(content => (
-                  <option key={content.id} value={content.id}>
-                    {content.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Participants Section - Unified Smart Search */}
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3 flex items-center">
-                <Users className="icon-sm mr-2" />
-                Add Participants
-              </h4>
-
-              {/* Search Input */}
-              <div className="form-group">
-                <label className="form-label">Search People</label>
-                <div className="relative">
-                  <Search className="absolute left-4 top-6 icon-sm text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by name..."
-                    className="form-input pl-10"
-                  />
-                </div>
-              </div>
-
-              {/* Role Filter Tabs */}
-              <div className="flex gap-2 mb-3 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('all')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    roleFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  All ({allUsers.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('learner')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    roleFilter === 'learner'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Learners ({allUsers.filter(u => u.role === 'learner').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('trainer')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    roleFilter === 'trainer'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Trainers ({allUsers.filter(u => u.role === 'trainer').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('head')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    roleFilter === 'head'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Heads ({allUsers.filter(u => u.role === 'head').length})
-                </button>
-              </div>
-
-              {/* Selected Participants */}
-              {selectedParticipants.length > 0 && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Selected Participants ({selectedParticipants.length})
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedParticipants.map(participant => (
-                      <div
-                        key={participant.id}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border rounded-full shadow-sm"
-                      >
-                        <span className="text-sm font-medium">{participant.name}</span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full border ${getRoleBadgeColor(participant.role)}`}>
-                          {participant.roleLabel}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeParticipant(participant.id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Search Results Dropdown */}
-              {(searchQuery.trim() || roleFilter !== 'all') && (
-                <div className="border rounded-lg max-h-64 overflow-y-auto bg-white shadow-sm">
-                  {getFilteredUsers().length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">
-                      {searchQuery.trim() ? 'No users found matching your search' : 'No users available'}
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {getFilteredUsers().map(user => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => addParticipant(user)}
-                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium text-gray-900">{user.name}</span>
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRoleBadgeColor(user.role)}`}>
-                            {user.roleLabel}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="form-input"
-                rows="3"
-                placeholder="Session description"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                className="form-input"
-                rows="2"
-                placeholder="Additional notes"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button type="submit" className="btn-success">
-                Create Session
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      <div className="search-section search-section-extended">
+        <SearchBar
+          onSearch={setSearchTerm}
+          placeholder="Search by session title..."
+        />
+        <div className="date-filter-group">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="app-modal-form-input"
+            aria-label="Filter by date"
+            title="Filter sessions by date"
+          />
+          {dateFilter && (
+            <button
+              type="button"
+              onClick={() => setDateFilter('')}
+              className="btn-icon-secondary"
+              title="Clear date filter"
+            >
+              ✕
+            </button>
+          )}
         </div>
-      )}
+        <button
+          onClick={() => navigate('/coach/sessions/create')}
+          className="app-modal-btn app-modal-btn--success"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          Create Session
+        </button>
+      </div>
 
-      {/* Sessions List */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Scheduled Sessions</h3>
-        {sessions.length === 0 ? (
-          <p className="text-gray-500">No sessions scheduled yet</p>
+      <div className="filter-tabs">
+        <button
+          onClick={() => setFilter('all')}
+          className={`filter-tab ${filter === 'all' ? 'filter-tab-active' : ''}`}
+        >
+          All ({sessions.length})
+        </button>
+        <button
+          onClick={() => setFilter('scheduled')}
+          className={`filter-tab ${filter === 'scheduled' ? 'filter-tab-active' : ''}`}
+        >
+          Scheduled ({sessions.filter(s => getSessionStatus(s) === 'scheduled').length})
+        </button>
+        <button
+          onClick={() => setFilter('active')}
+          className={`filter-tab ${filter === 'active' ? 'filter-tab-active' : ''}`}
+        >
+          Active ({sessions.filter(s => s.status === 'active').length})
+        </button>
+        <button
+          onClick={() => setFilter('ended')}
+          className={`filter-tab ${filter === 'ended' ? 'filter-tab-active' : ''}`}
+        >
+          Completed ({sessions.filter(s => s.status === 'ended').length})
+        </button>
+        <button
+          onClick={() => setFilter('cancelled')}
+          className={`filter-tab ${filter === 'cancelled' ? 'filter-tab-active' : ''}`}
+        >
+          Cancelled ({sessions.filter(s => s.status === 'cancelled').length})
+        </button>
+      </div>
+
+      <div className="table-primary-container">
+        {filteredSessions.length === 0 ? (
+          <div className="table-primary-empty">
+            <p className="table-primary-empty-title">No {filter !== 'all' ? filter : ''} sessions found</p>
+            <p className="table-primary-empty-description">Create a new session to get started</p>
+          </div>
         ) : (
-          sessions.map(session => (
-            <div key={session.id} className="session-card">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-semibold text-lg">
-                    {session.session_title || 'Untitled Session'}
-                  </h4>
-                  <p className="text-gray-600">
-                    {new Date(session.session_date).toLocaleDateString()} at {session.session_time}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Status: <span className={`status-badge status-${session.status}`}>{session.status}</span>
-                  </p>
-                  {session.participants && session.participants.length > 0 && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Participants: {session.participants.length}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
+          <div className="table-primary-wrapper">
+            <table className="table-primary">
+              <thead className="table-primary-header">
+                <tr>
+                  <th className="table-primary-th">Session Title</th>
+                  <th className="table-primary-th">Date</th>
+                  <th className="table-primary-th">Time</th>
+                  <th className="table-primary-th">Participants</th>
+                  <th className="table-primary-th">Status</th>
+                  <th className="table-primary-th">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="table-primary-body">
+                {filteredSessions.map((session) => (
+                  <tr key={session.id} className="table-primary-row">
+                    <td className="table-primary-td">
+                      <div className="table-primary-cell-name-text">
+                        {session.session_title || 'Untitled Session'}
+                      </div>
+                      {session.description && (
+                        <div className="table-primary-cell-subtitle">{session.description}</div>
+                      )}
+                    </td>
+                    <td className="table-primary-td">
+                      <div>
+                        {session.session_date
+                          ? new Date(session.session_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })
+                          : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="table-primary-td">
+                      <div>{session.session_time || 'N/A'}</div>
+                    </td>
+                    <td className="table-primary-td">
+                      <div>
+                        {session.participants?.length || 0} participant(s)
+                      </div>
+                    </td>
+                    <td className="table-primary-td">
+                      <span className={`status-badge ${getStatusBadge(getSessionStatus(session))}`}>
+                        {getSessionStatus(session) === 'expired' ? 'Expired' : getSessionStatus(session).charAt(0).toUpperCase() + getSessionStatus(session).slice(1)}
+                      </span>
+                    </td>
+                    <td className="table-primary-td">
+                      <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => navigate(`/coach/sessions/${session.id}`)}
+                          className="btn app-modal-btn app-modal-btn--secondary"
+                          title="View session details"
+                          style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                        >
+                          👁️ View
+                        </button>
+                        {getSessionStatus(session) === 'scheduled' && (
+                          <button
+                            onClick={() => navigate(`/coach/sessions/edit/${session.id}`)}
+                            className="app-modal-btn app-modal-btn--primary"
+                            title="Edit this session"
+                            style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                          >
+                            ✏️ Edit
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

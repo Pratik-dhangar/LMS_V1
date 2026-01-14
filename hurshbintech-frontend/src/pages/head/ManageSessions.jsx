@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { Edit2, X, Eye, FileText } from 'lucide-react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
@@ -11,7 +12,6 @@ import EditSessionModal from './EditSessionModal';
 import ViewSessionModal from './ViewSessionModal';
 import HeadSessionNotesModal from './HeadSessionNotesModal';
 import SessionTooltip from '../../components/common/SessionTooltip';
-import '../../styles/Pages.css';
 import '../../styles/Table.css';
 import '../../styles/ManageUsersLayout.css';
 
@@ -212,7 +212,7 @@ const ManageSessions = () => {
           </div>
 
           {/* Search and Add Section */}
-          <div className="search-section search-section-extended">
+          <div className="search-section ">
 
             <SearchBar
               onSearch={setSearchTerm}
@@ -223,7 +223,7 @@ const ManageSessions = () => {
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="form-input"
+                className="app-modal-form-input"
                 aria-label="Filter by date"
                 title="Filter sessions by date"
               />
@@ -240,7 +240,7 @@ const ManageSessions = () => {
             </div>
             <button
               onClick={() => navigate('/head/schedule-session')}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -249,10 +249,7 @@ const ManageSessions = () => {
             </button>
           </div>
 
-          {/* Stats Line */}
-          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
-            All ({sessions.length})<span style={{ marginLeft: '0.5rem' }}>Scheduled ({sessions.filter(s => s.status === 'scheduled').length})</span><span style={{ marginLeft: '0.5rem' }}>Active ({sessions.filter(s => s.status === 'active').length})</span><span style={{ marginLeft: '0.5rem' }}>Completed ({sessions.filter(s => s.status === 'ended').length})</span><span style={{ marginLeft: '0.5rem' }}>Cancelled ({sessions.filter(s => s.status === 'cancelled').length})</span>
-          </div>
+       
 
           {/* Filters */}
           <div className="filter-tabs">
@@ -404,19 +401,18 @@ const ManageSessions = () => {
                                 <>
                                   <button
                                     onClick={() => handleEditSession(session)}
-                                    className="btn-primary"
+                                    className="btn-icon app-modal-btn app-modal-btn--primary"
                                     title="Edit this scheduled session"
-                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                   >
-                                    ✏️ Edit
+                                    <Edit2 size={14} />
                                   </button>
                                   <button
                                     onClick={() => handleCancelSession(session.session_id, session.title)}
-                                    className="btn btn-warning"
+                                    className="btn-icon app-modal-btn app-modal-btn--secondary"
                                     title="Cancel this scheduled session"
-                                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                    
                                   >
-                                    ❌ Cancel
+                                    <X size={14} />
                                   </button>
                                 </>
                               )}
@@ -424,26 +420,24 @@ const ManageSessions = () => {
                               <button
                                 onClick={() => handleViewSession(session)}
                                 disabled={false}
-                                className="btn btn-secondary"
+                                className="btn-icon app-modal-btn app-modal-btn--secondary"
                                 title="View session details"
-                                style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                               >
-                                👁️ View
+                                <Eye size={14} />
                               </button>
                               {/* Head Notes action should display for all accessible rows but only be active once session ended */}
                               {(user?.role === 'head' || user?.role === 'manager' || user?.role === 'trainer') && (
                                 <button
                                   onClick={() => canHeadNotes && setEditingHeadNotes(session)}
                                   disabled={!canHeadNotes}
-                                  className="btn btn-primary"
+                                  className="btn-icon app-modal-btn app-modal-btn--primary"
                                   title={canHeadNotes ? 'Add head notes for this completed session' : 'Head notes available after session completion'}
-                                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                                 >
-                                  📝 Head Notes
+                                  <FileText size={14} />
                                 </button>
                               )}
                               {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && session.status !== 'cancelled' && (
-                                <span className="material-badge material-badge-gray" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                                <span className="material-badge material-badge-gray">
                                   Can't edit/delete
                                 </span>
                               )}

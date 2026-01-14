@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import '../../styles/Pages.css';
+
 
 const VideoSection = ({
   remoteStream,

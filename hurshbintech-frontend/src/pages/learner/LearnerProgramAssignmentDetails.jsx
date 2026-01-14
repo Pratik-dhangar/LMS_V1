@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import programAssignmentService from '../../api/services/programAssignmentService';
-import '../../styles/Pages.css';
+
 import '../../styles/LearnerProgramAssignmentDetails.css';
 import { toast } from 'react-toastify';
 
@@ -299,7 +299,7 @@ const LearnerProgramAssignmentDetails = () => {
     // ============ HELPER FUNCTIONS ============
     const getStatusBadge = (status) => {
         const statusColors = {
-            'NOT_STARTED': 'gray',
+            'NEW': 'gray',
             'IN_PROGRESS': 'blue',
             'SUBMITTED': 'green',
             'LATE_SUBMITTED': 'orange',
@@ -600,7 +600,7 @@ const LearnerProgramAssignmentDetails = () => {
 
                                     <div className="content-actions">
                                         <button
-                                            className="btn btn-secondary"
+                                            className="btn app-modal-btn app-modal-btn--secondary"
                                             onClick={() => handleViewContent(contentAssignment)}
                                         >
                                             👁️ View
@@ -639,9 +639,9 @@ const LearnerProgramAssignmentDetails = () => {
             </div>
             {/* Content Modal */}
             {showContentModal && selectedContent && (
-                <div className="modal-overlay" onClick={closeContentModal}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
+                <div className="app-modal-overlay" onClick={closeContentModal}>
+                    <div className="app-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="app-modal-header app-modal-header--primary">
                             <h2>{selectedContent.title}</h2>
                             <button className="close-btn" onClick={closeContentModal}>×</button>
                         </div>
@@ -654,9 +654,9 @@ const LearnerProgramAssignmentDetails = () => {
 
             {/* Proof of Work Submission Modal - Can submit multiple times */}
             {showProofModal && (
-                <div className="modal-overlay" onClick={closeProofModal}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
+                <div className="app-modal-overlay" onClick={closeProofModal}>
+                    <div className="app-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="app-modal-header app-modal-header--primary">
                             <h2>📤 Submit More Proof of Work</h2>
                             <button type="button" className="close-btn" onClick={(e) => { e.preventDefault(); closeProofModal(); }}>×</button>
                         </div>
@@ -706,10 +706,10 @@ const LearnerProgramAssignmentDetails = () => {
                                 <p className="form-hint">{proofNotes.length}/500 characters</p>
                             </div>
 
-                            <div className="modal-actions">
+                            <div className="app-modal-footer">
                                 <button
                                     type="button"
-                                    className="btn btn-secondary"
+                                    className="btn app-modal-btn app-modal-btn--secondary"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         closeProofModal();

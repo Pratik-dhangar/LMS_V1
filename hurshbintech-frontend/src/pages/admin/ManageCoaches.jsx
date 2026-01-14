@@ -9,7 +9,6 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import adminService from "../../api/services/adminService";
 import SearchBar from "../../components/common/SearchBar";
-import "../../styles/Pages.css";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -147,7 +146,7 @@ const ViewConsultants = () => {
             />
             <button
               onClick={() => navigate("/admin/register-coach")}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -208,7 +207,7 @@ const ViewConsultants = () => {
                   {!activeSearchQuery && (
                     <button
                       onClick={() => navigate("/admin/register-coach")}
-                      className="btn-success"
+                      className="app-modal-btn app-modal-btn--success"
                     >
                       Register Coach
                     </button>
@@ -284,7 +283,7 @@ const ViewConsultants = () => {
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditCoach(consultant.id)}
-                              className="btn-primary btn-sm btn-icon"
+                              className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import '../../styles/Pages.css';
+
 
 const OverallReportModal = ({ statistics, onClose }) => {
     // Prepare data for Program breakdown bar chart
@@ -51,24 +51,24 @@ const OverallReportModal = ({ statistics, onClose }) => {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-container" style={{ maxWidth: '1792px' }}>
+        <div className="app-modal-overlay">
+            <div className="app-modal-container" style={{ maxWidth: '1792px' }}>
                 {/* Header */}
-                <div className="modal-header modal-header-teal">
+                <div className="app-modal-header app-modal-header--primary modal-header-teal">
                     <div>
-                        <h2 className="modal-title">📊 Overall Session Reports</h2>
-                        <p className="modal-subtitle">Statistics across all learners and programs</p>
+                        <h2 className="app-modal-title">📊 Overall Session Reports</h2>
+                        <p className="app-modal-subtitle">Statistics across all learners and programs</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="modal-close-button"
+                        className="app-modal-close"
                     >
                         ×
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="modal-content">
+                <div className="app-modal-content">
                     {/* Summary Cards */}
                     <div className="chart-summary-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                         <div className="chart-summary-card chart-summary-blue">

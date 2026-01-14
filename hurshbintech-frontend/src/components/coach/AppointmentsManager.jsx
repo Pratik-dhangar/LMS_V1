@@ -501,7 +501,7 @@ const AppointmentsManager = () => {
                   {/* View Details Button */}
                   <button
                     onClick={() => handleViewDetails(apt)}
-                    className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
+                    className="app-modal-btn app-modal-btn--primary px-4 py-2 text-sm whitespace-nowrap"
                   >
                     View Details
                   </button>
@@ -514,12 +514,12 @@ const AppointmentsManager = () => {
 
       {/* Modal for Appointment Details */}
       {showModal && selectedAppointment && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+        <div className="app-modal-overlay" onClick={closeModal}>
+          <div className="app-modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
             {/* Modal Header */}
-            <div className="modal-header">
-              <h3 className="modal-title">Appointment Details</h3>
-              <button onClick={closeModal} className="modal-close">
+            <div className="app-modal-header app-modal-header--primary">
+              <h3 className="app-modal-title">Appointment Details</h3>
+              <button onClick={closeModal} className="app-modal-close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -613,7 +613,7 @@ const AppointmentsManager = () => {
                       href={getFileUrl(selectedAppointment.payment_screenshot_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                      className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
                     >
                       <FileText className="w-4 h-4" />
                       View Payment Screenshot
@@ -634,7 +634,7 @@ const AppointmentsManager = () => {
                       href={getFileUrl(selectedAppointment.payment_receipt_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                      className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
                     >
                       <FileText className="w-4 h-4" />
                       View Payment Receipt
@@ -668,12 +668,12 @@ const AppointmentsManager = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="modal-footer">
+            <div className="app-modal-footer">
               {!isAppointmentCompleted(selectedAppointment) && (selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
                 <>
                   <button 
                     onClick={handleOpenRejectModal}
-                    className="btn-secondary flex items-center gap-2"
+                    className="app-modal-btn app-modal-btn--secondary flex items-center gap-2"
                     disabled={updating}
                   >
                     <XCircle className="w-4 h-4" />
@@ -681,7 +681,7 @@ const AppointmentsManager = () => {
                   </button>
                   <button 
                     onClick={() => handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')}
-                    className="btn-primary flex items-center gap-2"
+                    className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
                     disabled={updating}
                   >
                     <Check className="w-4 h-4" />
@@ -690,7 +690,7 @@ const AppointmentsManager = () => {
                 </>
               )}
               {(isAppointmentCompleted(selectedAppointment) || (selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && selectedAppointment.status !== 'GUEST_INTENT' && selectedAppointment.status !== 'VERIFICATION_PENDING')) && (
-                <button onClick={closeModal} className="btn-secondary">
+                <button onClick={closeModal} className="app-modal-btn app-modal-btn--secondary">
                   Close
                 </button>
               )}
@@ -701,12 +701,12 @@ const AppointmentsManager = () => {
 
       {/* Rejection Modal */}
       {showRejectModal && selectedAppointment && (
-        <div className="modal-overlay" onClick={handleCloseRejectModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+        <div className="app-modal-overlay" onClick={handleCloseRejectModal}>
+          <div className="app-modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
             {/* Modal Header */}
-            <div className="modal-header">
-              <h3 className="modal-title">Reject Appointment</h3>
-              <button onClick={handleCloseRejectModal} className="modal-close">
+            <div className="app-modal-header app-modal-header--primary">
+              <h3 className="app-modal-title">Reject Appointment</h3>
+              <button onClick={handleCloseRejectModal} className="app-modal-close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -727,7 +727,7 @@ const AppointmentsManager = () => {
               </div>
 
               {/* Rejection Reason */}
-              <div className="form-field">
+              <div className="app-modal-form-field">
                 <label className="field-label">Rejection Reason *</label>
                 <textarea
                   value={rejectReason}
@@ -746,7 +746,7 @@ const AppointmentsManager = () => {
               </div>
 
               {/* Refund Receipt Upload */}
-              <div className="form-field">
+              <div className="app-modal-form-field">
                 <label className="field-label">Refund Receipt (Optional)</label>
                 
                 {!refundPreview ? (
@@ -779,17 +779,17 @@ const AppointmentsManager = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="modal-footer">
+            <div className="app-modal-footer">
               <button
                 onClick={handleCloseRejectModal}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={updating}
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectAppointment}
-                className="btn-secondary flex items-center gap-2"
+                className="app-modal-btn app-modal-btn--secondary flex items-center gap-2"
                 disabled={updating || !rejectReason.trim()}
               >
                 <XCircle className="w-4 h-4" />

@@ -72,7 +72,7 @@ const SessionTooltip = ({ session, position, onClose }) => {
                 }}
             >
                 <div className="tooltip-header-with-close">
-                    <div></div>
+                    
                     <button
                         onClick={onClose}
                         className="tooltip-close-button"
@@ -100,7 +100,7 @@ const SessionTooltip = ({ session, position, onClose }) => {
         >
             {/* Close Button */}
             <div className="tooltip-header-with-close">
-                <div></div>
+               
                 <button
                     onClick={onClose}
                     className="tooltip-close-button"

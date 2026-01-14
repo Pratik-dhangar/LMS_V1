@@ -1,7 +1,7 @@
 import React from 'react';
 import Whiteboard from '../../components/common/Whiteboard';
 import Emoji from '../../components/common/Emoji';
-import '../../styles/Pages.css';
+
 
 const WhiteboardSection = ({
   whiteboardService,
