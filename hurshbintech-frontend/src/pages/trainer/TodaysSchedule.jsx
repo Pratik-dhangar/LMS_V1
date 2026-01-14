@@ -412,28 +412,28 @@ const TodaysSchedule = () => {
             {/* Modal Body */}
             <div className="app-modal-content">
               {/* Title */}
-              <div className="trainer-modal-field">
-                <label className="trainer-modal-label">Session Title</label>
-                <p className="trainer-modal-text">{selectedSession.title || `Session with ${selectedSession.learner?.name || selectedSession.learner_name || "Learner"}`}</p>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Session Title</label>
+                <p className="app-modal-text">{selectedSession.title || `Session with ${selectedSession.learner?.name || selectedSession.learner_name || "Learner"}`}</p>
               </div>
 
               {/* Learner Info */}
-              <div className="trainer-modal-field">
-                <label className="trainer-modal-label">Learner</label>
-                <p className="trainer-modal-text-normal">{selectedSession.learner?.name || selectedSession.learner_name || "Unknown Learner"}</p>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Learner</label>
+                <p className="app-modal-text">{selectedSession.learner?.name || selectedSession.learner_name || "Unknown Learner"}</p>
               </div>
 
               {/* Status */}
-              <div className="trainer-modal-field">
-                <label className="trainer-modal-label">Status</label>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Status</label>
                 <span className={getStatusBadge(getSessionStatus(selectedSession))}>{getSessionStatus(selectedSession).charAt(0).toUpperCase() + getSessionStatus(selectedSession).slice(1)}</span>
               </div>
 
               {/* Date & Time */}
-              <div className="trainer-modal-grid">
-                <div>
-                  <label className="trainer-modal-label">Date</label>
-                  <p className="trainer-modal-text-normal">
+              <div className="app-modal-form-grid app-modal-form-grid--2">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Date</label>
+                  <p className="app-modal-text">
                     {selectedSession.scheduled_date
                       ? new Date(selectedSession.scheduled_date).toLocaleDateString('en-US', {
                         weekday: 'long',
@@ -444,9 +444,9 @@ const TodaysSchedule = () => {
                       : "—"}
                   </p>
                 </div>
-                <div>
-                  <label className="trainer-modal-label">Time</label>
-                  <p className="trainer-modal-text-normal">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Time</label>
+                  <p className="app-modal-text">
                     {selectedSession.scheduled_date
                       ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -458,14 +458,14 @@ const TodaysSchedule = () => {
               </div>
 
               {/* Duration & Program */}
-              <div className="trainer-modal-grid">
-                <div>
-                  <label className="trainer-modal-label">Duration</label>
-                  <p className="trainer-modal-text-normal">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
+              <div className="app-modal-form-grid app-modal-form-grid--2">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Duration</label>
+                  <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
                 </div>
-                <div>
-                  <label className="trainer-modal-label">Program / IIP</label>
-                  <p className="trainer-modal-text-normal">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Program / IIP</label>
+                  <p className="app-modal-text">
                     {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
                       ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
                       : "—"}
@@ -475,17 +475,17 @@ const TodaysSchedule = () => {
 
               {/* Description */}
               {selectedSession.description && (
-                <div className="trainer-modal-field">
-                  <label className="trainer-modal-label">Description</label>
-                  <p className="trainer-modal-description">{selectedSession.description}</p>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Description</label>
+                  <p className="app-modal-text" style={{ whiteSpace: 'pre-wrap' }}>{selectedSession.description}</p>
                 </div>
               )}
 
               {/* Recording Status */}
               {(selectedSession.recording_url || selectedSession.recording_status) && (
-                <div className="trainer-modal-field">
-                  <label className="trainer-modal-label">Recording Status</label>
-                  <div className="trainer-modal-recording-status">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Recording Status</label>
+                  <div>
                     {selectedSession.recording_status === "completed" && (
                       <span className="trainer-badge-completed">
                         ✓ Completed
@@ -511,8 +511,8 @@ const TodaysSchedule = () => {
               )}
 
               {/* Additional Info */}
-              <div className="trainer-modal-info-box">
-                <p className="trainer-modal-info-text">
+              <div className="app-modal-info-box">
+                <p className="app-modal-text" style={{ fontSize: '0.875rem' }}>
                   <strong>Scheduled:</strong> {selectedSession.scheduled_date
                     ? new Date(selectedSession.scheduled_date).toLocaleString()
                     : "—"}
@@ -524,7 +524,7 @@ const TodaysSchedule = () => {
             <div className="app-modal-footer">
               <button
                 onClick={closeSessionDetailsModal}
-                className="trainer-modal-btn-close"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Close
               </button>
@@ -534,7 +534,7 @@ const TodaysSchedule = () => {
                     closeSessionDetailsModal();
                     handleStartSession(selectedSession.session_id || selectedSession.id);
                   }}
-                  className="trainer-modal-btn-start"
+                  className="app-modal-btn app-modal-btn--success"
                 >
                   Start Session
                 </button>
@@ -545,7 +545,7 @@ const TodaysSchedule = () => {
                     closeSessionDetailsModal();
                     handleResumeSession(selectedSession.session_id || selectedSession.id);
                   }}
-                  className="trainer-modal-btn-resume"
+                  className="app-modal-btn app-modal-btn--primary"
                 >
                   Resume Session
                 </button>
