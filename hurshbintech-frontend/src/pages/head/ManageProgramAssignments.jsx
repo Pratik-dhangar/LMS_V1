@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import programAssignmentService from '../../api/services/programAssignmentService';
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
@@ -11,6 +12,7 @@ import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
 
 const ManageProgramAssignments = () => {
+  const navigate = useNavigate();
   const [learners, setLearners] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -565,19 +567,42 @@ const ManageProgramAssignments = () => {
   };
 
   return (
-    <div className="page-container">
+     <div className="page-container">
       <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate("/head/dashboard")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             <div>
               <h1 className="page-title">Manage Program Assignments</h1>
-              <p className="page-description">Assign learning programs to learners and track their progress</p>
+              <p className="page-description">
+                Assign learning programs to learners and track their progress
+              </p>
             </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="search-section">
             <button
               onClick={() => setShowAssignModal(true)}
-              className="mpa-btn-assign-gradient"
+              className="btn-primary"
             >
               + Assign Program
             </button>

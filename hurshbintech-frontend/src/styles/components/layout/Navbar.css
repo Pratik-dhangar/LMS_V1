@@ -151,28 +151,29 @@
         
     }
 
+    /* Keep hamburger menu on medium screens */
     .navbar-nav {
-        display: flex;
+        display: none;
     }
 
     .navbar-nav-desktop {
-        display: flex;
+        display: none;
     }
 
     .navbar-actions-desktop {
-        display: flex;
+        display: none;
     }
     
     .navbar-brand{
-        gap: 8rem;
+        gap: 2rem;
     }
 
     .navbar-toggle {
-        display: none;
+        display: block;
     }
 
     .navbar-mobile-menu {
-        display: none;
+        display: flex;
     }
 }
 
@@ -190,6 +191,22 @@
         gap: 8rem;
     }
 
+    /* Show desktop navigation on large screens */
+    .navbar-nav {
+        display: flex;
+    }
+
+    .navbar-nav-desktop {
+        display: flex;
+    }
+
+    .navbar-actions-desktop {
+        display: flex;
+    }
+
+    .navbar-toggle {
+        display: none;
+    }
 
     .navbar-mobile-menu {
         display: none;

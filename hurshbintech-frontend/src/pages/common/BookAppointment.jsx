@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Search, Star, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
@@ -12,11 +13,25 @@ import '../../styles/ManageUsersLayout.css';
 
 const BookAppointment = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [coaches, setCoaches] = useState([]);
   const [filteredCoaches, setFilteredCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
+
+  // Helper function to get role-based dashboard URL
+  const getDashboardUrl = () => {
+    if (!user || !user.role) return '/dashboard';
+    const dashboardMap = {
+      'head': '/head/dashboard',
+      'trainer': '/trainer/dashboard',
+      'coach': '/coach/dashboard',
+      'admin': '/admin/dashboard',
+      'learner': '/learner/dashboard'
+    };
+    return dashboardMap[user.role] || '/dashboard';
+  };
 
   useEffect(() => {
     fetchCoaches();
@@ -133,11 +148,39 @@ const BookAppointment = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate(getDashboardUrl())}
+              className="back-button"
+            >
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Go Back to Dashboard
+            </button>
             <div>
-              <h1 className="page-title">Book an Appointment</h1>
-              <p className="page-description">Choose from our experienced coaches</p>
+              <h1 className="page-title">
+                Book an Appointment
+              </h1>
+              <p className="page-description">
+                Choose a coach and schedule your session
+              </p>
             </div>
-            <button 
+          </div>
+
+          {/* Search Bar and Add Button */}
+          <div className="search-section">
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search className="search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9ca3af' }} />
+              <input
+                type="text"
+                placeholder="Search by name or specialization..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+                style={{ paddingLeft: '40px' }}
+              />
+            </div>
+             <button 
               onClick={() => navigate('/my-appointments')}
               className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
               style={{ alignSelf: 'flex-start' }}
@@ -146,20 +189,7 @@ const BookAppointment = () => {
               My Appointments
             </button>
           </div>
-
-          {/* Search Bar */}
-          <div className="search-container">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search by name or specialization..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-            </div>
-          </div>
+          
 
           {/* Coaches Grid */}
           {filteredCoaches.length === 0 ? (
