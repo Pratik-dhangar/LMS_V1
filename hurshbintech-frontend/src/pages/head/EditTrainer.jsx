@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
-import headService from '../../api/services/headService';
-import Loader from '../../components/common/Loader';
-import ErrorState from '../../components/common/ErrorState';
-import ConfirmModal from '../../components/common/ConfirmModal';
-import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
-import ProfessionalInfoSection from '../../components/admin/EditHead/ProfessionalInfoSection';
-import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
-import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
-import NotesSection from '../../components/admin/EditHead/NotesSection';
-import '../../styles/ManageUsersLayout.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useAuth } from "../../context/AuthContext";
+import Navbar from "../../components/layout/Navbar";
+import Footer from "../../components/layout/Footer";
+import headService from "../../api/services/headService";
+import Loader from "../../components/common/Loader";
+import ErrorState from "../../components/common/ErrorState";
+import ConfirmModal from "../../components/common/ConfirmModal";
+import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
+import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
+import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
+import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
+import NotesSection from "../../components/admin/EditHead/NotesSection";
+import "../../styles/ManageUsersLayout.css";
 
 const EditTrainer = () => {
   const navigate = useNavigate();
@@ -21,24 +21,24 @@ const EditTrainer = () => {
   const { user: _user } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    age: '',
-    address: '',
-    contact_no: '',
-    qualification: '',
-    experience: '',
-    date_of_joining: '',
-    experience_with_hurshbin: '',
-    interest: '',
-    self_description: '',
-    future_vision: '',
+    name: "",
+    email: "",
+    age: "",
+    address: "",
+    contact_no: "",
+    qualification: "",
+    experience: "",
+    date_of_joining: "",
+    experience_with_hurshbin: "",
+    interest: "",
+    self_description: "",
+    future_vision: "",
     number_of_sessions_done: 0,
-    head_description: '',
-    learners_guardian_description: '',
-    input_at_hurshbin: '',
-    note_box: '',
-    message_box: ''
+    head_description: "",
+    learners_guardian_description: "",
+    input_at_hurshbin: "",
+    note_box: "",
+    message_box: "",
   });
 
   const [originalData, setOriginalData] = useState(null);
@@ -48,7 +48,7 @@ const EditTrainer = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [fetchError, setFetchError] = useState('');
+  const [fetchError, setFetchError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -56,49 +56,48 @@ const EditTrainer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainerId]);
 
-
   const fetchTrainerData = async () => {
     try {
       setLoading(true);
-      setFetchError('');
+      setFetchError("");
       const data = await headService.getTrainerById(trainerId);
 
       // Format date for input and handle null/undefined values
       const formattedData = {
-        name: data.name || '',
-        email: data.email || '',
-        age: data.age || '',
-        address: data.address || '',
-        contact_no: data.contact_no || '',
-        qualification: data.qualification || '',
-        experience: data.experience || '',
+        name: data.name || "",
+        email: data.email || "",
+        age: data.age || "",
+        address: data.address || "",
+        contact_no: data.contact_no || "",
+        qualification: data.qualification || "",
+        experience: data.experience || "",
         date_of_joining: data.date_of_joining
-          ? new Date(data.date_of_joining).toISOString().split('T')[0]
-          : '',
-        experience_with_hurshbin: data.experience_with_hurshbin || '',
-        interest: data.interest || '',
-        self_description: data.self_description || '',
-        future_vision: data.future_vision || '',
+          ? new Date(data.date_of_joining).toISOString().split("T")[0]
+          : "",
+        experience_with_hurshbin: data.experience_with_hurshbin || "",
+        interest: data.interest || "",
+        self_description: data.self_description || "",
+        future_vision: data.future_vision || "",
         number_of_sessions_done: data.number_of_sessions_done || 0,
-        head_description: data.head_description || '',
-        learners_guardian_description: data.learners_guardian_description || '',
-        input_at_hurshbin: data.input_at_hurshbin || '',
-        note_box: data.note_box || '',
-        message_box: data.message_box || '',
+        head_description: data.head_description || "",
+        learners_guardian_description: data.learners_guardian_description || "",
+        input_at_hurshbin: data.input_at_hurshbin || "",
+        note_box: data.note_box || "",
+        message_box: data.message_box || "",
         // read only data
         id: data.id,
         role: data.role,
         passcode: data.passcode,
         created_at: data.created_at,
-        created_by: data.created_by
+        created_by: data.created_by,
       };
 
       setFormData(formattedData);
       setOriginalData(formattedData);
       setExistingReferenceData(data.reference_data || []);
     } catch (error) {
-      console.error('Error fetching head data:', error);
-      toast.error('Failed to load head data', {
+      console.error("Error fetching head data:", error);
+      toast.error("Failed to load head data", {
         position: "top-center",
         autoClose: 3000,
       });
@@ -110,41 +109,43 @@ const EditTrainer = () => {
   //   Handle form changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   //   Handle file uploads
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setReferenceFiles(prev => [...prev, ...files]);
+    setReferenceFiles((prev) => [...prev, ...files]);
   };
 
   const removeFile = (index) => {
-    setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+    setReferenceFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteExistingFile = async (referenceId) => {
-    if (!window.confirm('Are you sure you want to delete this file?')) {
+    if (!window.confirm("Are you sure you want to delete this file?")) {
       return;
     }
 
     try {
       await headService.deleteTrainerReferenceFile(trainerId, referenceId);
-      setExistingReferenceData(prev => prev.filter(file => file.id !== referenceId));
-      toast.success('File deleted successfully', {
+      setExistingReferenceData((prev) =>
+        prev.filter((file) => file.id !== referenceId)
+      );
+      toast.success("File deleted successfully", {
         position: "top-center",
         autoClose: 2000,
       });
     } catch (error) {
-      console.error('Error deleting file:', error);
-      toast.error('Failed to delete file', {
+      console.error("Error deleting file:", error);
+      toast.error("Failed to delete file", {
         position: "top-center",
         autoClose: 3000,
       });
@@ -156,10 +157,11 @@ const EditTrainer = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
-    const backendUrl = apiBaseUrl.replace('/api', '');
+    const apiBaseUrl =
+      import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";
+    const backendUrl = apiBaseUrl.replace("/api", "");
     const fullUrl = `${backendUrl}${filePath}`;
-    window.open(fullUrl, '_blank');
+    window.open(fullUrl, "_blank");
   };
 
   const validate = () => {
@@ -167,29 +169,29 @@ const EditTrainer = () => {
 
     // Required fields validation
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     }
 
     if (!formData.contact_no.trim()) {
-      newErrors.contact_no = 'Contact number is required';
+      newErrors.contact_no = "Contact number is required";
     } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact_no)) {
-      newErrors.contact_no = 'Invalid contact number format';
+      newErrors.contact_no = "Invalid contact number format";
     }
 
     if (!formData.age) {
-      newErrors.age = 'Age is required';
+      newErrors.age = "Age is required";
     } else if (isNaN(formData.age) || formData.age < 18 || formData.age > 100) {
-      newErrors.age = 'Age must be between 18 and 100';
+      newErrors.age = "Age must be between 18 and 100";
     }
 
     if (!formData.date_of_joining) {
-      newErrors.date_of_joining = 'Date of joining is required';
+      newErrors.date_of_joining = "Date of joining is required";
     } else if (new Date(formData.date_of_joining) > new Date()) {
-      newErrors.date_of_joining = 'Date of joining cannot be in the future';
+      newErrors.date_of_joining = "Date of joining cannot be in the future";
     }
 
     if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = "Address is required";
     }
 
     return newErrors;
@@ -211,12 +213,12 @@ const EditTrainer = () => {
       const firstErrorField = Object.keys(validationErrors)[0];
       const errorElement = document.getElementsByName(firstErrorField)[0];
       if (errorElement) {
-        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
         errorElement.focus();
       }
 
       // Show error toast
-      toast.error('Please fill in all required fields correctly', {
+      toast.error("Please fill in all required fields correctly", {
         position: "top-center",
         autoClose: 3000,
         theme: "colored",
@@ -230,25 +232,27 @@ const EditTrainer = () => {
     try {
       // Prepare FormData for submission (to support file uploads)
       const submitFormData = new FormData();
-      
+
       // Append all form fields (except read-only ones)
-      Object.keys(formData).forEach(key => {
-        if (!['id', 'role', 'passcode', 'created_at', 'created_by'].includes(key)) {
-          if (formData[key] !== null && formData[key] !== '') {
+      Object.keys(formData).forEach((key) => {
+        if (
+          !["id", "role", "passcode", "created_at", "created_by"].includes(key)
+        ) {
+          if (formData[key] !== null && formData[key] !== "") {
             submitFormData.append(key, formData[key]);
           }
         }
       });
 
       // Append new reference files
-      referenceFiles.forEach(file => {
-        submitFormData.append('reference_files', file);
+      referenceFiles.forEach((file) => {
+        submitFormData.append("reference_files", file);
       });
 
       // Update trainer
       await headService.updateTrainer(trainerId, submitFormData);
 
-      toast.success('Trainer profile updated successfully!', {
+      toast.success("Trainer profile updated successfully!", {
         position: "top-center",
         autoClose: 3000,
         theme: "colored",
@@ -256,9 +260,8 @@ const EditTrainer = () => {
 
       // Refresh data
       await fetchTrainerData();
-
     } catch (error) {
-      console.error('Error updating trainer:', error);
+      console.error("Error updating trainer:", error);
       setSaving(false);
 
       // Handle validation errors from backend (422)
@@ -268,21 +271,21 @@ const EditTrainer = () => {
 
         if (Array.isArray(validationDetails)) {
           // FastAPI validation error format
-          validationDetails.forEach(err => {
+          validationDetails.forEach((err) => {
             const fieldName = err.loc?.[1]; // loc is like ['body', 'field_name']
             if (fieldName) {
-              backendErrors[fieldName] = err.msg || 'Invalid value';
+              backendErrors[fieldName] = err.msg || "Invalid value";
             }
           });
           setErrors(backendErrors);
 
           // Show general error message
-          toast.error('Please check the form for validation errors', {
+          toast.error("Please check the form for validation errors", {
             position: "top-center",
             autoClose: 4000,
             theme: "colored",
           });
-        } else if (typeof validationDetails === 'string') {
+        } else if (typeof validationDetails === "string") {
           toast.error(validationDetails, {
             position: "top-center",
             autoClose: 4000,
@@ -291,9 +294,10 @@ const EditTrainer = () => {
         }
       } else {
         // Handle other errors
-        const errorMessage = error.response?.data?.detail ||
+        const errorMessage =
+          error.response?.data?.detail ||
           error.message ||
-          'Failed to update trainer profile. Please try again.';
+          "Failed to update trainer profile. Please try again.";
         toast.error(errorMessage, {
           position: "top-center",
           autoClose: 5000,
@@ -312,19 +316,20 @@ const EditTrainer = () => {
     try {
       await headService.deleteTrainer(trainerId);
 
-      toast.success('Trainer deleted successfully!', {
+      toast.success("Trainer deleted successfully!", {
         position: "top-center",
         autoClose: 2000,
         theme: "colored",
       });
 
       setTimeout(() => {
-        navigate('/');
+        navigate("/");
       }, 1500);
-
     } catch (error) {
-      console.error('Error deleting trainer:', error);
-      const errorMessage = error.response?.data?.detail || 'Failed to delete trainer. Please try again.';
+      console.error("Error deleting trainer:", error);
+      const errorMessage =
+        error.response?.data?.detail ||
+        "Failed to delete trainer. Please try again.";
       toast.error(errorMessage, {
         position: "top-center",
         autoClose: 5000,
@@ -372,25 +377,32 @@ const EditTrainer = () => {
           {/* Header */}
           <div className="page-header">
             <button
-              onClick={() => navigate('/head/manage-trainers')}
+              onClick={() => navigate("/head/manage-trainers")}
               className="back-button"
             >
-              <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="icon-sm"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
               Back to Manage Trainers
             </button>
             <div>
-              <h1 className="page-title">
-              Edit Trainer Profile
-            </h1>
-            <p className="page-description">Update profile information for {formData.name}</p>
+              <h1 className="page-title">Edit Trainer Profile</h1>
+              <p className="page-description">
+                Update profile information for {formData.name}
+              </p>
             </div>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="form-container">
-
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}
@@ -418,9 +430,7 @@ const EditTrainer = () => {
 
             {/* Reference Data Upload */}
             <div className="form-section">
-              <h2 className="form-section-title">
-                Reference Data
-              </h2>
+              <h2 className="form-section-title">Reference Data</h2>
               <div>
                 <label htmlFor="reference_files" className="form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
@@ -440,11 +450,17 @@ const EditTrainer = () => {
                 {/* Existing Reference Files */}
                 {existingReferenceData.length > 0 && (
                   <div className="existing-files-section">
-                    <h4 className="subsection-title">Existing Reference Files</h4>
+                    <h4 className="subsection-title">
+                      Existing Reference Files
+                    </h4>
                     <div className="file-list">
                       {existingReferenceData.map((file) => (
                         <div key={file.id} className="file-item">
-                          <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                          <span className="file-name">
+                            {file.file_name ||
+                              file.description ||
+                              "Unnamed File"}
+                          </span>
                           <div className="file-actions">
                             <button
                               type="button"
@@ -491,54 +507,65 @@ const EditTrainer = () => {
             </div>
 
             {/* Notes & Messages */}
-            <NotesSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+            <NotesSection formData={formData} handleChange={handleChange} />
 
             {/* Action Buttons */}
-            <div className="form-actions-split">
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="btn-primary btn-icon"
+              >
+                {saving ? (
+                  <>
+                    <div className="btn-spinner"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="icon-sm"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Changes
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/head/manage-trainers")}
+                disabled={saving || deleting}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
                 className="btn-danger btn-icon"
               >
-                <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="icon-sm"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Delete Trainer
               </button>
-
-              <div className="form-actions-group">
-                <button
-                  type="button"
-                  onClick={() => navigate('/head/manage-trainers')}
-                  disabled={saving || deleting}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || deleting}
-                  className="btn-primary btn-icon"
-                >
-                  {saving ? (
-                    <>
-                      <div className="btn-spinner"></div>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </form>
         </div>

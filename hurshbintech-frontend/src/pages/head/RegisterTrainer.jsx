@@ -9,6 +9,7 @@ import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
 import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
 import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
 import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
+import NotesSection from "../../components/admin/EditHead/NotesSection";
 import "../../styles/ManageUsersLayout.css";
 
 // register trainer
