@@ -171,6 +171,17 @@ const TrainingDetailView = () => {
                         </div>
                     </div>
 
+                    {/* Featured Image */}
+                    {training.custom_metadata?.featured_image_url && (
+                        <div className="featured-image-section">
+                            <img
+                                src={training.custom_metadata.featured_image_url}
+                                alt={training.title}
+                                className="featured-image"
+                            />
+                        </div>
+                    )}
+
                     {/* Training Details Section */}
                     <div className="detail-sections">
                         {/* Description */}

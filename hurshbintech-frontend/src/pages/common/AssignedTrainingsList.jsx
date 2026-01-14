@@ -59,6 +59,23 @@ const AssignedTrainingsList = () => {
                     {/* Header */}
                     <div className="page-header">
                         <div>
+                            <button
+                            onClick={() => navigate("/admin/dashboard")}
+                            className="back-button"
+                        >
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Dashboard
+                        </button>
                             <h1 className="page-title">Assigned Learning</h1>
                             <p className="page-description">
                                 View trainings assigned to you

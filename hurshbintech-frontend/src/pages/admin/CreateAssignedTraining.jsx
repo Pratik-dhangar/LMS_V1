@@ -337,7 +337,7 @@ const CreateAssignedTraining = () => {
     }
 
     return (
-      <div className="page-container">
+        <div className="page-container">
             <Navbar />
             <main className="page-main">
                 <div className="page-content">
@@ -435,8 +435,9 @@ const CreateAssignedTraining = () => {
                                                 setFeaturedImagePreview(null);
                                             }}
                                             className="remove-image-btn"
+                                            title="Remove featured image"
                                         >
-                                            Remove Image
+                                            <X size={20} />
                                         </button>
                                     </div>
                                 ) : (
