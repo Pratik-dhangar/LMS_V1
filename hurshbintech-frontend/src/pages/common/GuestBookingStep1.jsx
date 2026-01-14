@@ -211,11 +211,9 @@ const GuestBookingStep1 = () => {
                           required
                         />
                         <small>We'll send an OTP to this email</small>
-                      </div>
-
-                      <button 
+                        <button 
                         type="submit" 
-                        className="app-modal-btn app-modal-btn--primary btn-full"
+                        className="btn-primary" 
                         disabled={loading}
                       >
                         {loading ? (
@@ -227,6 +225,9 @@ const GuestBookingStep1 = () => {
                           <>Send OTP</>
                         )}
                       </button>
+                      </div>
+
+                      
                     </form>
                      <div className="instruction-box">
                       <h3>📧 Verify Your Email</h3>
