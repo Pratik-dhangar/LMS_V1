@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-
 import learningContentService from '../../api/services/learningContentService';
+import '../../styles/head/SessionModals.css';
 
 /**
  * ViewSessionModal - Display session details in read-only mode

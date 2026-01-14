@@ -1,0 +1,746 @@
+/* SessionModals.css - Scoped styles for Edit/View/HeadNotes Session Modals */
+
+/* Modal Overlay - High specificity to override other styles */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1000 !important;
+  padding: 1rem !important;
+  overflow-y: auto !important;
+}
+
+/* Modal Container */
+.modal-overlay .modal-container {
+  background: white !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  width: 100% !important;
+  margin: auto !important;
+  position: relative !important;
+}
+
+/* Modal Header */
+.modal-overlay .modal-header {
+  padding: 1.5rem !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.modal-overlay .modal-header-blue {
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
+}
+
+.modal-overlay .modal-header-content {
+  flex: 1 !important;
+}
+
+.modal-overlay .modal-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  margin: 0 !important;
+}
+
+.modal-overlay .modal-subtitle {
+  font-size: 0.875rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0.25rem 0 0 0 !important;
+}
+
+/* Modal Close Button */
+.modal-overlay .modal-close-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+.modal-overlay .modal-close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Modal Content */
+.modal-overlay .modal-content {
+  padding: 1.5rem !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+
+/* Modal Actions */
+.modal-overlay .modal-actions {
+  padding: 1rem 1.5rem !important;
+  border-top: 1px solid #e5e7eb !important;
+  display: flex !important;
+  gap: 0.75rem !important;
+  justify-content: flex-end !important;
+  background: #f9fafb !important;
+  border-radius: 0 0 0.75rem 0.75rem !important;
+}
+
+/* Form Elements in Modals */
+.modal-overlay .form-field {
+  margin-bottom: 1.5rem !important;
+}
+
+.modal-overlay .form-label {
+  display: block !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.modal-overlay .form-input {
+  width: 100% !important;
+  padding: 0.625rem 0.875rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s !important;
+  background: white !important;
+  color: #111827 !important;
+}
+
+.modal-overlay .form-input:focus {
+  outline: none !important;
+  border-color: #db9d32 !important;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1) !important;
+}
+
+.modal-overlay .form-textarea {
+  width: 100% !important;
+  padding: 0.625rem 0.875rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s !important;
+  resize: vertical !important;
+  min-height: 100px !important;
+  font-family: inherit !important;
+  background: white !important;
+  color: #111827 !important;
+}
+
+.modal-overlay .form-textarea:focus {
+  outline: none !important;
+  border-color: #db9d32 !important;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1) !important;
+}
+
+.modal-overlay .form-select {
+  width: 100% !important;
+  padding: 0.625rem 0.875rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  background: white !important;
+  color: #111827 !important;
+  cursor: pointer !important;
+}
+
+.modal-overlay .form-select:focus {
+  outline: none !important;
+  border-color: #db9d32 !important;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1) !important;
+}
+
+.modal-overlay .form-grid {
+  display: grid !important;
+  gap: 1rem !important;
+}
+
+.modal-overlay .form-grid-2 {
+  grid-template-columns: repeat(1, 1fr) !important;
+}
+
+@media (min-width: 768px) {
+  .modal-overlay .form-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+.modal-overlay .text-required {
+  color: #ef4444 !important;
+}
+
+.modal-overlay .form-helper-text {
+  font-size: 0.75rem !important;
+  color: #6b7280 !important;
+  margin-top: 0.5rem !important;
+}
+
+/* Buttons in Modals */
+.modal-overlay .btn-primary {
+  padding: 0.625rem 1.25rem !important;
+  background: #db9d32 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.modal-overlay .btn-primary:hover:not(:disabled) {
+  background: #c98d1e !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-overlay .btn-primary:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.modal-overlay .btn-secondary {
+  padding: 0.625rem 1.25rem !important;
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.modal-overlay .btn-secondary:hover:not(:disabled) {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+}
+
+.modal-overlay .btn-secondary:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.modal-overlay .btn-danger {
+  padding: 0.625rem 1.25rem !important;
+  background: #ef4444 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.modal-overlay .btn-danger:hover:not(:disabled) {
+  background: #dc2626 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Input Group (for datetime + set button) */
+.modal-overlay .input-group {
+  display: flex !important;
+  gap: 0.5rem !important;
+  align-items: stretch !important;
+}
+
+.modal-overlay .input-group .form-input {
+  flex: 1 !important;
+}
+
+.modal-overlay .input-group .btn-set {
+  white-space: nowrap !important;
+  padding: 0.5rem 1.5rem !important;
+  background-color: #34495e !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0.375rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+}
+
+.modal-overlay .input-group .btn-set:hover {
+  background-color: #2c3e50 !important;
+}
+
+/* Search Container in Modals */
+.modal-overlay .search-container {
+  position: relative !important;
+  margin-bottom: 1rem !important;
+}
+
+.modal-overlay .search-icon {
+  position: absolute !important;
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #9ca3af !important;
+  pointer-events: none !important;
+}
+
+.modal-overlay .search-input {
+  width: 100% !important;
+  padding: 0.75rem 2.5rem 0.75rem 2.75rem !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease-in-out !important;
+  background: white !important;
+  color: #111827 !important;
+}
+
+.modal-overlay .search-input:focus {
+  outline: none !important;
+  border-color: #db9d32 !important;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1) !important;
+}
+
+.modal-overlay .search-clear {
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: none !important;
+  border: none !important;
+  color: #6b7280 !important;
+  cursor: pointer !important;
+  font-size: 1.125rem !important;
+  padding: 0.25rem 0.5rem !important;
+  transition: color 0.15s !important;
+}
+
+.modal-overlay .search-clear:hover {
+  color: #374151 !important;
+}
+
+/* Section Containers in Modals */
+.modal-overlay .section-container {
+  margin-bottom: 1.5rem !important;
+}
+
+.modal-overlay .section-label {
+  display: block !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.5rem !important;
+  color: #1f2937 !important;
+}
+
+.modal-overlay .section-description {
+  font-size: 0.875rem !important;
+  color: #6b7280 !important;
+  margin-bottom: 1rem !important;
+}
+
+.modal-overlay .section-footer {
+  font-size: 0.875rem !important;
+  color: #6b7280 !important;
+  margin-top: 0.75rem !important;
+}
+
+/* Table in Modals */
+.modal-overlay .table-container {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-overlay .data-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.modal-overlay .table-header {
+  background-color: #34495e !important;
+  color: white !important;
+}
+
+.modal-overlay .table-header th {
+  padding: 0.75rem 1rem !important;
+  text-align: left !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.modal-overlay .table-header th.checkbox-col {
+  width: 48px !important;
+}
+
+.modal-overlay .table-body {
+  background-color: white !important;
+}
+
+.modal-overlay .table-body tr {
+  border-top: 1px solid #e5e7eb !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s !important;
+}
+
+.modal-overlay .table-body tr:hover {
+  background-color: #f9fafb !important;
+}
+
+.modal-overlay .table-body tr.row-selected {
+  background-color: #eff6ff !important;
+}
+
+.modal-overlay .table-body td {
+  padding: 0.75rem 1rem !important;
+}
+
+.modal-overlay .table-body td.cell-center {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.modal-overlay .cell-text-primary {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #111827 !important;
+}
+
+.modal-overlay .cell-text-secondary {
+  font-size: 0.875rem !important;
+  color: #6b7280 !important;
+}
+
+.modal-overlay .table-empty {
+  text-align: center !important;
+  color: #6b7280 !important;
+  font-size: 0.875rem !important;
+  padding: 1.5rem !important;
+}
+
+/* Custom Checkbox */
+.modal-overlay .custom-checkbox {
+  width: 1rem !important;
+  height: 1rem !important;
+  color: #2563eb !important;
+  border-radius: 0.25rem !important;
+  cursor: pointer !important;
+}
+
+.modal-overlay .custom-checkbox-sm {
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+  color: #2563eb !important;
+  border-radius: 0.25rem !important;
+  cursor: pointer !important;
+}
+
+/* Content Grid in Modals */
+.modal-overlay .content-grid-container {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0.75rem !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  background-color: #f9fafb !important;
+}
+
+@media (min-width: 768px) {
+  .modal-overlay .content-grid-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modal-overlay .content-grid-container {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* Content Cards in Modals */
+.modal-overlay .content-card {
+  position: relative !important;
+  padding: 0.75rem !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  background-color: white !important;
+}
+
+.modal-overlay .content-card:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-overlay .content-card.card-selected {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.modal-overlay .content-thumbnail {
+  position: relative !important;
+  width: 100% !important;
+  height: 80px !important;
+  background-color: #f3f4f6 !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+}
+
+.modal-overlay .content-thumbnail img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.modal-overlay .content-icon-container {
+  width: 100% !important;
+  height: 80px !important;
+  background: linear-gradient(to bottom right, #f3f4f6, #e5e7eb) !important;
+  border-radius: 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modal-overlay .content-icon {
+  font-size: 2rem !important;
+}
+
+.modal-overlay .content-info {
+  margin-top: 0.5rem !important;
+}
+
+.modal-overlay .content-title {
+  font-weight: 500 !important;
+  font-size: 0.813rem !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #111827 !important;
+}
+
+.modal-overlay .content-type {
+  font-size: 0.688rem !important;
+  color: #6b7280 !important;
+  text-transform: uppercase !important;
+  margin-top: 0.25rem !important;
+}
+
+.modal-overlay .content-checkbox {
+  position: absolute !important;
+  top: 0.5rem !important;
+  right: 0.5rem !important;
+}
+
+.modal-overlay .content-empty {
+  grid-column: 1 / -1 !important;
+  text-align: center !important;
+  color: #6b7280 !important;
+  padding: 3rem 0 !important;
+}
+
+/* Empty State */
+.modal-overlay .empty-state {
+  color: #6b7280 !important;
+  text-align: center !important;
+  padding: 1.5rem !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  background-color: #f9fafb !important;
+}
+
+/* Image Error Fallback */
+.modal-overlay .img-fallback {
+  display: none !important;
+  position: absolute !important;
+  inset: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(to bottom right, #f3f4f6, #e5e7eb) !important;
+}
+
+/* Grid utilities in modals - Override Tailwind */
+.modal-overlay .grid {
+  display: grid !important;
+}
+
+.modal-overlay .grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.modal-overlay .gap-4 {
+  gap: 1rem !important;
+}
+
+.modal-overlay .mb-6 {
+  margin-bottom: 1.5rem !important;
+}
+
+.modal-overlay .block {
+  display: block !important;
+}
+
+.modal-overlay .text-sm {
+  font-size: 0.875rem !important;
+}
+
+.modal-overlay .font-medium {
+  font-weight: 500 !important;
+}
+
+.modal-overlay .text-gray-700 {
+  color: #374151 !important;
+}
+
+.modal-overlay .mb-1 {
+  margin-bottom: 0.25rem !important;
+}
+
+.modal-overlay .mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+.modal-overlay .p-3 {
+  padding: 0.75rem !important;
+}
+
+.modal-overlay .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+.modal-overlay .rounded-lg {
+  border-radius: 0.5rem !important;
+}
+
+.modal-overlay .border {
+  border-width: 1px !important;
+}
+
+.modal-overlay .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.modal-overlay .text-gray-900 {
+  color: #111827 !important;
+}
+
+.modal-overlay .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.modal-overlay .text-xs {
+  font-size: 0.75rem !important;
+}
+
+.modal-overlay .mt-2 {
+  margin-top: 0.5rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0.5rem !important;
+    align-items: flex-start !important;
+  }
+  
+  .modal-overlay .modal-container {
+    max-width: 100% !important;
+    margin: 0.5rem auto !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+
+  .modal-overlay .modal-header {
+    padding: 1rem !important;
+    flex-direction: row !important;
+  }
+
+  .modal-overlay .modal-title {
+    font-size: 1.25rem !important;
+  }
+
+  .modal-overlay .modal-subtitle {
+    font-size: 0.75rem !important;
+  }
+  
+  .modal-overlay .modal-content {
+    padding: 1rem !important;
+    max-height: calc(100vh - 180px) !important;
+  }
+
+  .modal-overlay .modal-actions {
+    padding: 0.75rem 1rem !important;
+    flex-direction: column-reverse !important;
+  }
+
+  .modal-overlay .modal-actions button {
+    width: 100% !important;
+  }
+
+  .modal-overlay .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-overlay .grid-cols-2,
+  .modal-overlay .grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .modal-overlay .content-grid-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  
+  .modal-overlay .content-card {
+    padding: 0.5rem !important;
+  }
+  
+  .modal-overlay .content-thumbnail,
+  .modal-overlay .content-icon-container {
+    height: 60px !important;
+  }
+  
+  .modal-overlay .content-icon {
+    font-size: 1.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay .modal-header {
+    padding: 0.75rem !important;
+  }
+
+  .modal-overlay .modal-title {
+    font-size: 1.125rem !important;
+  }
+
+  .modal-overlay .modal-close-button {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .modal-overlay .content-grid-container {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-overlay .search-container {
+    max-width: 100% !important;
+  }
+}

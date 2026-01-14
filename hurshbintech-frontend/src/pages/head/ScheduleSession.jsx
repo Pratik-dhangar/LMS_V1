@@ -9,6 +9,7 @@ import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
 import "../../styles/ManageUsersLayout.css";
+import "../../styles/head/ScheduleSession.css";
 
 const ScheduleSession = () => {
   const navigate = useNavigate();
@@ -250,7 +251,7 @@ const ScheduleSession = () => {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container schedule-session">
       <Navbar />
       <div className="page-main">
         <div className="page-content">
@@ -261,7 +262,7 @@ const ScheduleSession = () => {
               className="back-button"
             >
               <svg
-                className="w-5 h-5"
+                className="back-icon"
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -274,7 +275,7 @@ const ScheduleSession = () => {
               Back to Manage Sessions
             </button>
             <div>
-              <h1 className="page-title"> Schedule Training Session</h1>
+              <h1 className="page-title">Schedule Training Session</h1>
               <p className="page-description">
                 Create new training sessions
               </p>
@@ -441,20 +442,7 @@ const ScheduleSession = () => {
             </div>
 
             <div className="form-grid form-grid-2">
-              {/* Scheduled Date/Time */}
-              {/* <div>
-                <label className="block text-sm font-medium mb-2">
-                  Date & Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.scheduled_date}
-                  onChange={(e) => setFormData({...formData, scheduled_date: e.target.value})}
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div> */}
-
+              {/* Date & Time */}
               <div className="form-field">
                 <label className="form-label">
                   Date & Time <span className="text-required">*</span>
@@ -473,7 +461,6 @@ const ScheduleSession = () => {
                     type="button"
                     onClick={handleSetDate}
                     className="btn-primary"
-                    style={{ whiteSpace: "nowrap", padding: "0.5rem 1rem" }}
                   >
                     Set
                   </button>
@@ -513,87 +500,81 @@ const ScheduleSession = () => {
             </div>
 
             {/* Select Learning Goals */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
+            <div className="section-container">
+              <label className="section-label">
                 Select Learning Goals (Optional)
               </label>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="section-description">
                 Choose learning goals for this session
               </p>
 
-              {/* Search Bar for Goals (attractive) */}
-              <div className="mb-4">
-                <div className="relative max-w-lg">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search goals by name or description..."
-                    value={searchTerm.goal}
-                    onChange={(e) =>
-                      setSearchTerm({ ...searchTerm, goal: e.target.value })
-                    }
-                    className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
-                  />
-                  {searchTerm.goal && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchTerm({ ...searchTerm, goal: "" })}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      aria-label="Clear goal search"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+              {/* Search Bar for Goals */}
+              <div className="search-container">
+                <Search className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search goals by name or description..."
+                  value={searchTerm.goal}
+                  onChange={(e) =>
+                    setSearchTerm({ ...searchTerm, goal: e.target.value })
+                  }
+                  className="search-input"
+                />
+                {searchTerm.goal && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm({ ...searchTerm, goal: "" })}
+                    className="search-clear"
+                    aria-label="Clear goal search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {learningGoals.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 border rounded">
+                <p className="empty-state">
                   No learning goals available
                 </p>
               ) : (
-                <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-[#34495e] text-white">
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead className="table-header">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-12">
+                        <th className="checkbox-col">
                           Select
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                        <th>
                           Goal
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                        <th>
                           Description
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="table-body">
                       {filteredGoals.length > 0 ? (
                         filteredGoals.map((goal) => (
                           <tr
                             key={goal.id}
                             onClick={() => handleGoalToggle(goal.id)}
-                            className={`cursor-pointer hover:bg-gray-50 transition-colors ${
-                              formData.goal_ids.includes(goal.id)
-                                ? "bg-blue-50"
-                                : ""
-                            }`}
+                            className={formData.goal_ids.includes(goal.id) ? "row-selected" : ""}
                           >
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="cell-center">
                               <input
                                 type="checkbox"
                                 checked={formData.goal_ids.includes(goal.id)}
                                 onChange={() => {}}
-                                className="h-4 w-4 text-blue-600 rounded"
+                                className="custom-checkbox"
                               />
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm font-medium text-gray-900">
+                            <td>
+                              <div className="cell-text-primary">
                                 {goal.goal}
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-500">
+                            <td>
+                              <div className="cell-text-secondary">
                                 {goal.goal_description}
                               </div>
                             </td>
@@ -601,10 +582,7 @@ const ScheduleSession = () => {
                         ))
                       ) : (
                         <tr>
-                          <td
-                            colSpan="3"
-                            className="px-4 py-3 text-center text-gray-500 text-sm"
-                          >
+                          <td colSpan="3" className="table-empty">
                             No goals match your search
                           </td>
                         </tr>
@@ -613,54 +591,52 @@ const ScheduleSession = () => {
                   </table>
                 </div>
               )}
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="section-footer">
                 {formData.goal_ids.length} goal(s) selected
               </p>
             </div>
 
             {/* Select Learning Content */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
+            <div className="section-container">
+              <label className="section-label">
                 Select Learning Content (Optional)
               </label>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="section-description">
                 Choose content that will be available during the session
               </p>
 
-              {/* Search Bar for Content (attractive) */}
-              <div className="mb-4">
-                <div className="relative max-w-2xl">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search content by title or type..."
-                    value={searchTerm.content}
-                    onChange={(e) =>
-                      setSearchTerm({ ...searchTerm, content: e.target.value })
+              {/* Search Bar for Content */}
+              <div className="search-container">
+                <Search className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search content by title or type..."
+                  value={searchTerm.content}
+                  onChange={(e) =>
+                    setSearchTerm({ ...searchTerm, content: e.target.value })
+                  }
+                  className="search-input"
+                />
+                {searchTerm.content && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSearchTerm({ ...searchTerm, content: "" })
                     }
-                    className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-150"
-                  />
-                  {searchTerm.content && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSearchTerm({ ...searchTerm, content: "" })
-                      }
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      aria-label="Clear content search"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                    className="search-clear"
+                    aria-label="Clear content search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {contents.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 border rounded">
+                <p className="empty-state">
                   No learning content available
                 </p>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto border rounded p-2">
+                <div className="content-grid-container">
                   {filteredContents.length > 0 ? (
                     filteredContents.map((content) => {
                       const getContentIcon = (type) => {
@@ -686,19 +662,18 @@ const ScheduleSession = () => {
                               : content.thumbnail_url
                           );
                           return (
-                            <div className="relative w-full h-16 bg-gray-100 rounded overflow-hidden">
+                            <div className="content-thumbnail">
                               <img
                                 src={imageUrl}
                                 alt={content.title}
-                                className="w-full h-full object-cover"
                                 onError={(e) => {
                                   e.target.style.display = "none";
                                   e.target.nextElementSibling.style.display =
                                     "flex";
                                 }}
                               />
-                              <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                                <span className="text-2xl">
+                              <div className="img-fallback">
+                                <span className="content-icon">
                                   {getContentIcon(content.content_type)}
                                 </span>
                               </div>
@@ -706,8 +681,8 @@ const ScheduleSession = () => {
                           );
                         }
                         return (
-                          <div className="w-full h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center">
-                            <span className="text-2xl">
+                          <div className="content-icon-container">
+                            <span className="content-icon">
                               {getContentIcon(content.content_type)}
                             </span>
                           </div>
@@ -718,66 +693,67 @@ const ScheduleSession = () => {
                         <div
                           key={content.id}
                           onClick={() => handleContentToggle(content.id)}
-                          className={`p-2 border rounded cursor-pointer transition-all relative ${
+                          className={`content-card ${
                             formData.content_ids.includes(content.id)
-                              ? "border-blue-500 bg-blue-50 shadow-md"
-                              : "border-gray-300 hover:border-blue-300 hover:shadow"
+                              ? "card-selected"
+                              : ""
                           }`}
                         >
                           {/* Thumbnail */}
                           {renderThumbnail()}
 
                           {/* Content Info */}
-                          <div className="mt-1.5">
+                          <div className="content-info">
                             <h4
-                              className="font-medium text-xs line-clamp-1"
+                              className="content-title"
                               title={content.title}
                             >
                               {content.title}
                             </h4>
-                            <p className="text-[10px] text-gray-500 uppercase mt-0.5">
+                            <p className="content-type">
                               {content.content_type}
                             </p>
                           </div>
 
                           {/* Checkbox */}
-                          <div className="absolute top-1 right-1">
+                          <div className="content-checkbox">
                             <input
                               type="checkbox"
                               checked={formData.content_ids.includes(
                                 content.id
                               )}
                               onChange={() => {}}
-                              className="h-3.5 w-3.5 text-blue-600 rounded"
+                              className="custom-checkbox-sm"
                             />
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="col-span-full text-center text-gray-500 py-8">
+                    <div className="content-empty">
                       No content matches your search
                     </div>
                   )}
                 </div>
               )}
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="section-footer">
                 {formData.content_ids.length} item(s) selected
               </p>
             </div>
 
             {/* Submit Buttons */}
             <div className="form-actions">
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? "Scheduling..." : "Schedule Session"}
-              </button>
+              
               <button
                 type="button"
                 onClick={() => navigate("/head/dashboard")}
-                className="btn-danger"
+                className="btn-secondary"
                 disabled={loading}
               >
                 Cancel
+              </button>
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? "Scheduling..." : "Schedule Session"}
               </button>
             </div>
           </form>

@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import learningGoalsService from '../../api/services/learningGoalsService';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
+import '../../styles/head/SessionModals.css';
 
 
 const EditSessionModal = ({ session, onClose, onSuccess }) => {
