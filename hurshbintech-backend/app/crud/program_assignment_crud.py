@@ -32,8 +32,8 @@ async def check_duplicate_active_assignment(
                     func.json_array_elements_text(ProgramAssignment.program_ids)
                 ),
                 or_(
-                    ProgramAssignment.completion_status == CompletionStatus.NOT_STARTED,
-                    ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS
+                    ProgramAssignment.completion_status == CompletionStatus.NEW.value,
+                    ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS.value
                 )
             )
         )
@@ -67,7 +67,7 @@ async def create_assignment(
         end_date=end_date,
         duration_days=duration_days,
         head_notes=head_notes,
-        completion_status=CompletionStatus.NOT_STARTED,
+        completion_status=CompletionStatus.NEW.value,
         notification_sent=False
     )
     
@@ -158,7 +158,7 @@ async def mark_assignment_complete(
     if not assignment:
         return None
     
-    assignment.completion_status = CompletionStatus.COMPLETED
+    assignment.completion_status = CompletionStatus.COMPLETED.value
     assignment.completed_at = datetime.utcnow()
     assignment.updated_at = datetime.utcnow()
     
@@ -199,7 +199,7 @@ async def get_learner_completion_stats(
         select(func.count(ProgramAssignment.id))
         .where(
             ProgramAssignment.learner_id == learner_id,
-            ProgramAssignment.completion_status == CompletionStatus.COMPLETED
+            ProgramAssignment.completion_status == CompletionStatus.COMPLETED.value
         )
     )
     completed_count = completed_result.scalar()
@@ -209,20 +209,20 @@ async def get_learner_completion_stats(
         select(func.count(ProgramAssignment.id))
         .where(
             ProgramAssignment.learner_id == learner_id,
-            ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS
+            ProgramAssignment.completion_status == CompletionStatus.IN_PROGRESS.value
         )
     )
     in_progress_count = in_progress_result.scalar()
     
-    # Not started assignments
-    not_started_result = await db.execute(
+    # New assignments
+    new_result = await db.execute(
         select(func.count(ProgramAssignment.id))
         .where(
             ProgramAssignment.learner_id == learner_id,
-            ProgramAssignment.completion_status == CompletionStatus.NOT_STARTED
+            ProgramAssignment.completion_status == CompletionStatus.NEW.value
         )
     )
-    not_started_count = not_started_result.scalar()
+    new_count = new_result.scalar()
     
     # Calculate completion percentage
     completion_percentage = (completed_count / total_count * 100) if total_count > 0 else 0
@@ -231,7 +231,7 @@ async def get_learner_completion_stats(
         "total_assignments": total_count,
         "completed": completed_count,
         "in_progress": in_progress_count,
-        "not_started": not_started_count,
+        "not_started": new_count,
         "completion_percentage": round(completion_percentage, 2)
     }
 
@@ -274,8 +274,8 @@ async def update_program_status_from_content(
     ] for status in content_statuses):
         new_program_status = CompletionStatus.IN_PROGRESS
     # All not started
-    elif all(status == ContentCompletionStatus.NOT_STARTED for status in content_statuses):
-        new_program_status = CompletionStatus.NOT_STARTED
+    elif all(status == ContentCompletionStatus.NEW for status in content_statuses):
+        new_program_status = CompletionStatus.NEW
     else:
         # Mixed states, default to IN_PROGRESS
         new_program_status = CompletionStatus.IN_PROGRESS

@@ -1,0 +1,153 @@
+/* Global Animation and Transition Effects */
+
+/* ============================================
+   PAGE LOADING ANIMATIONS
+   ============================================ */
+
+/* Fade in and slide up animation for page content */
+@keyframes pageSlideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header slide down animation */
+@keyframes headerSlideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Content fade in animation */
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   LOADER ANIMATIONS
+   ============================================ */
+
+/* Smooth spinning animation for loading spinner */
+@keyframes spinnerRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Pulsing animation for loading text */
+@keyframes loadingPulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Smooth scaleup animation for loading */
+@keyframes scaleUpSmooth {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ============================================
+   INTERACTIVE ANIMATIONS
+   ============================================ */
+
+/* Smooth button transitions */
+@keyframes buttonHoverScale {
+    to {
+        transform: scale(1.02);
+    }
+}
+
+/* Icon rotation on hover */
+@keyframes iconRotate {
+    to {
+        transform: rotate(180deg);
+    }
+}
+
+/* Card lift animation */
+@keyframes cardLift {
+    to {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.12);
+    }
+}
+
+/* ============================================
+   UTILITY ANIMATIONS
+   ============================================ */
+
+/* Skeleton loader shimmer effect */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Smooth fade transition */
+.fade-transition {
+    animation: pageSlideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced loading spinner */
+.loading-spinner {
+    animation: spinnerRotate 1.2s linear infinite;
+    color: #db9d32;
+}
+
+/* Loading text with pulse */
+.loading-text {
+    animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+/* Loading container */
+.loading-container {
+    animation: scaleUpSmooth 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+}

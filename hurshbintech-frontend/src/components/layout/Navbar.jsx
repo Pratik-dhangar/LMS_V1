@@ -102,6 +102,16 @@ const Navbar = () => {
               Book Appointment
             </button>
 
+            {/* Assigned Learning - for authenticated users */}
+            {user && (
+              <button
+                className={`navbar-btn ${location.pathname.includes("/assigned-trainings") ? "active" : ""}`}
+                onClick={() => handleNavigate("/assigned-trainings")}
+              >
+                Assigned Learning
+              </button>
+            )}
+
             {/* Buy Learning Material */}
             <button
               className="navbar-btn"
@@ -176,6 +186,16 @@ const Navbar = () => {
             >
               Book Appointment
             </button>
+
+            {/* Assigned Learning - for authenticated users */}
+            {user && (
+              <button
+                className={`navbar-btn ${location.pathname.includes("/assigned-trainings") ? "active" : ""}`}
+                onClick={() => handleNavigate("/assigned-trainings")}
+              >
+                Assigned Learning
+              </button>
+            )}
 
             {/* Buy Learning Material */}
             <button

@@ -299,7 +299,7 @@ const LearnerProgramAssignmentDetails = () => {
     // ============ HELPER FUNCTIONS ============
     const getStatusBadge = (status) => {
         const statusColors = {
-            'NOT_STARTED': 'gray',
+            'NEW': 'gray',
             'IN_PROGRESS': 'blue',
             'SUBMITTED': 'green',
             'LATE_SUBMITTED': 'orange',

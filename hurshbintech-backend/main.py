@@ -21,6 +21,7 @@ from slowapi.util import get_remote_address
 # Import all routers
 from app.api.endpoints.about_us import router as about_us_router
 from app.api.endpoints.admin import router as admin_router
+from app.api.endpoints.assigned_trainings import router as assigned_trainings_router
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
@@ -129,6 +130,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(booking_router, prefix="/api/booking")
 app.include_router(guest_sessions_router, prefix="/api")  # Public guest session endpoints
 app.include_router(admin_router, prefix="/api")
+app.include_router(assigned_trainings_router)  # Already has /api prefix in router
 app.include_router(head_endpoint_router, prefix="/api")
 app.include_router(head_session_notes_router, prefix="/api")
 app.include_router(coach_router, prefix="/api")

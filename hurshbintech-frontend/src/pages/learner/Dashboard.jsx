@@ -41,7 +41,7 @@ const LearnerDashboard = () => {
     },
     {
       icon: "👤",
-      title: "Profile & Order History",
+      title: "Learning Material Purchase History",
       onClick: () => navigate("/learner/profile-order-history"),
     },
   ];
