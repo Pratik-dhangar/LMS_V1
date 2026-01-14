@@ -24,6 +24,9 @@ class AssignedTrainingCRUD:
         target_roles: List[str],
         assigned_by_admin: int,
         active: bool = True,
+        featured_image_url: Optional[str] = None,
+        training_files: Optional[List[Dict[str, Any]]] = None,
+        training_folder: Optional[str] = None,
         custom_metadata: Optional[Dict[str, Any]] = None,
     ) -> AssignedTraining:
         """Create a new assigned training"""
@@ -34,6 +37,9 @@ class AssignedTrainingCRUD:
             training_ref_ids=training_ref_ids or [],
             target_roles=target_roles,  # Should be normalized to lowercase
             assigned_by_admin=assigned_by_admin,
+            featured_image_url=featured_image_url,
+            training_files=training_files or [],
+            training_folder=training_folder,
             active=active,
             custom_metadata=custom_metadata or {},
         )
@@ -100,7 +106,8 @@ class AssignedTrainingCRUD:
         # Map of allowed fields
         allowed_fields = {
             "title", "description", "custom_content",
-            "training_ref_ids", "target_roles", "active", "custom_metadata"
+            "training_ref_ids", "target_roles", "active", "custom_metadata",
+            "featured_image_url", "training_files", "training_folder"
         }
         
         for field, value in kwargs.items():
@@ -192,9 +199,9 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        user_assignment = result.scalar_one_or_none()
+        user_assignment = result.scalars().first()
         
         if user_assignment:
             return user_assignment
@@ -226,9 +233,9 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        user_assignment = user_assignment.scalar_one_or_none()
+        user_assignment = user_assignment.scalars().first()
         
         if not user_assignment:
             return None
@@ -262,9 +269,10 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        return result.scalar_one_or_none()
+        # Return the most recent entry (handles potential duplicates gracefully)
+        return result.scalars().first()
 
     async def get_user_assignments_for_training(
         self,

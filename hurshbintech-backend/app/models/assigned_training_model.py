@@ -4,7 +4,7 @@ Tracks admin-created role-targeted training assignments for Internal Training an
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -23,6 +23,16 @@ class AssignedTraining(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     custom_content = Column(Text, nullable=True)  # HTML/rich text content for custom trainings
+    
+    # Featured image URL (local or S3)
+    featured_image_url = Column(String(500), nullable=True)
+    
+    # Training files metadata
+    # Stored as JSON array: [{"name": "file.pdf", "url": "/uploads/...", "size": 1024, "type": "pdf"}, ...]
+    training_files = Column(JSON, nullable=True, default=list)
+    
+    # Folder path for training files (local or S3 prefix)
+    training_folder = Column(String(255), nullable=True)
     
     # References to existing training content (optional)
     # Stored as JSON array of IDs: [id1, id2, ...]
@@ -105,3 +115,7 @@ class AssignedTrainingUser(Base):
     # Relationships
     assigned_training = relationship("AssignedTraining", back_populates="user_assignments")
     user = relationship("User", backref="assigned_trainings")
+    
+    __table_args__ = (
+        UniqueConstraint('assigned_training_id', 'user_id', name='unique_training_user'),
+    )
