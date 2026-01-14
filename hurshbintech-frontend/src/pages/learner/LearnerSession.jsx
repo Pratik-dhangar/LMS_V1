@@ -19,6 +19,7 @@ import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
+import '../../styles/components/common/sessionHeader.css';
 
 
 const LearnerSession = () => {
@@ -1388,7 +1389,7 @@ const LearnerSession = () => {
 
       {/* Main Container - Responsive 3-column layout */}
       <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+        <div className={`w-full bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
           {/* Trainer Video Feed - Above Prompt Line */}
           {remoteStream && (
             <div className="mb-4 md:mb-5">

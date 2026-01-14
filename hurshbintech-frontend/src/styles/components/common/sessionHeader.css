@@ -1,0 +1,384 @@
+/* ============================================================================
+   SESSION HEADER STYLES - Shared styles for session headers/navbar
+   ============================================================================ */
+
+/* Session Header - Auto-hide on mobile/tablet after 5 seconds */
+.session-header {
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  cursor: pointer;
+  background: #2a3f5f;
+  color: white;
+  padding: clamp(0.5rem, 1.5vw, 1rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+/* Desktop: Always show header */
+@media (min-width: 1024px) {
+  .session-header {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+    position: relative;
+  }
+}
+
+/* Mobile/Tablet: Auto-hide after 5 seconds */
+@media (max-width: 1023px) {
+  .session-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(0);
+    opacity: 1;
+    width: 100%;
+    height: auto;
+    visibility: visible;
+  }
+
+  /* When header is hidden - completely remove from view */
+  .session-header.navbar-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+  }
+
+  /* Hide video overlay labels (Trainer badge & connection status) when navbar is hidden */
+  .navbar-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+/* Session Header Main Container */
+.session-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Session Header Title */
+.session-header-title {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: bold;
+  color: white;
+}
+
+/* Session Header Subtitle */
+.session-header-subtitle {
+  font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 0.25rem;
+}
+
+/* Session Header Controls Container */
+.session-header-controls {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  flex-wrap: wrap;
+}
+
+/* Session Header Info (Status, Time, etc.) */
+.session-header-info {
+  font-size: clamp(0.75rem, 1.4vw, 0.875rem);
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+}
+
+.session-header-info strong {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+/* Session Header Buttons - Responsive */
+.btn-session {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.625rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.btn-session:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-session:active {
+  transform: translateY(0);
+}
+
+.btn-session-end {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-session-end:hover {
+  background: #b91c1c;
+}
+
+.btn-session-settings {
+  background: #475569;
+  color: white;
+}
+
+.btn-session-settings:hover {
+  background: #334155;
+}
+
+.btn-session-active {
+  background: #10b981;
+  color: white;
+}
+
+.btn-session-active:hover {
+  background: #059669;
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 480px) {
+  .session-header {
+    padding: 0.5rem;
+  }
+
+  .session-header-main {
+    gap: 0.5rem;
+  }
+
+  .session-header-controls {
+    gap: 0.5rem;
+  }
+
+  .btn-session {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================================================
+   LEARNER SESSION PAGE LAYOUT
+   ============================================================================ */
+
+/* Learner Session Page Container */
+.learner-session-page {
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Sidebar Toggle Buttons - Mobile and Tablet only */
+.session-sidebar-toggle,
+.session-sidebar-toggles {
+  position: fixed;
+  top: 5rem;
+  left: 1rem;
+  z-index: 999;
+}
+
+.session-sidebar-toggles {
+  left: 1rem;
+  right: 1rem;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+/* Mobile sidebar toggles */
+@media (max-width: 812px) {
+  .session-sidebar-toggle,
+  .session-sidebar-toggles {
+    top: 4rem;
+    left: 0.5rem;
+  }
+
+  .session-sidebar-toggles {
+    right: 0.5rem;
+  }
+}
+
+/* Tablet and Desktop: Hide sidebar toggles and show permanent 3-column layout */
+@media (min-width: 813px) {
+  .session-sidebar-toggle,
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+}
+
+.sidebar-toggle-button {
+  background-color: #2563eb;
+  color: #ffffff;
+  padding: 0.75rem;
+  border-radius: 9999px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile toggle button */
+@media (max-width: 812px) {
+  .sidebar-toggle-button {
+    padding: 0.625rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+.sidebar-toggle-button:hover {
+  background-color: #1d4ed8;
+  transform: scale(1.05);
+}
+
+.sidebar-toggle-button:active {
+  transform: scale(0.95);
+}
+
+/* Sidebar Overlay for Mobile ONLY */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+  backdrop-filter: blur(2px);
+  display: none;
+}
+
+/* Mobile: Show overlay */
+@media (max-width: 812px) {
+  .sidebar-overlay {
+    display: block !important;
+  }
+}
+
+/* Desktop: Hide overlay */
+@media (min-width: 1367px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Learner Session Layout - Fits within viewport */
+.learner-responsive-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  flex: 1;
+  overflow: visible;
+  min-height: 0;
+}
+
+@media (min-width: 813px) {
+  .learner-responsive-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.25rem;
+    overflow: visible;
+  }
+}
+
+/* Learner Sidebar - scrolls internally */
+.learner-responsive-sidebar-left {
+  width: 100%;
+  order: 1;
+  display: block;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+@media (min-width: 813px) {
+  .learner-responsive-sidebar-left {
+    width: 320px;
+    min-width: 320px;
+    max-width: 320px;
+    flex: 0 0 320px;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+    transform: none !important;
+    overflow-y: auto !important;
+    max-height: 100%;
+  }
+}
+
+/* Learner Whiteboard Section - no scroll, fixed height */
+.learner-responsive-whiteboard-section {
+  width: 100%;
+  flex: 1;
+  order: 2;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 813px) {
+  .learner-responsive-whiteboard-section {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Learner Responsive Main Area */
+.learner-responsive-main-area {
+  width: 100%;
+  flex: 1;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@media (max-width: 812px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
