@@ -34,9 +34,6 @@
   border-radius: 0.75rem 0.75rem 0 0 !important;
 }
 
-.modal-overlay .modal-header-blue {
-  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
-}
 
 .modal-overlay .modal-header-content {
   flex: 1 !important;

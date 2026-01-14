@@ -170,9 +170,9 @@ const ViewSessionModal = ({ session, onClose }) => {
         <div className="modal-overlay">
             <div className="modal-container" style={{ maxWidth: '1024px', maxHeight: '90vh' }}>
                 {/* Modal Header */}
-                <div className="modal-header modal-header-blue">
+                <div className="modal-header">
                     <div className="modal-header-content">
-                        <h2 className="modal-title">👁️ View Session Details</h2>
+                        <h2 className="modal-title">View Session Details</h2>
                         <p className="modal-subtitle">{session.learner_name} - {session.trainer_name}</p>
                     </div>
                     <button
@@ -298,9 +298,8 @@ const ViewSessionModal = ({ session, onClose }) => {
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Modal Actions */}
+                     {/* Modal Actions */}
                 <div className="modal-actions">
                     <button
                         onClick={onClose}
@@ -309,6 +308,9 @@ const ViewSessionModal = ({ session, onClose }) => {
                         Close
                     </button>
                 </div>
+                </div>
+
+               
             </div>
 
             {/* Learning Content Popup Modal */}
