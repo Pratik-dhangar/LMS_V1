@@ -24,6 +24,16 @@ class AssignedTraining(Base):
     description = Column(Text, nullable=True)
     custom_content = Column(Text, nullable=True)  # HTML/rich text content for custom trainings
     
+    # Featured image URL (local or S3)
+    featured_image_url = Column(String(500), nullable=True)
+    
+    # Training files metadata
+    # Stored as JSON array: [{"name": "file.pdf", "url": "/uploads/...", "size": 1024, "type": "pdf"}, ...]
+    training_files = Column(JSON, nullable=True, default=list)
+    
+    # Folder path for training files (local or S3 prefix)
+    training_folder = Column(String(255), nullable=True)
+    
     # References to existing training content (optional)
     # Stored as JSON array of IDs: [id1, id2, ...]
     training_ref_ids = Column(JSON, nullable=True, default=list)

@@ -24,6 +24,9 @@ class AssignedTrainingCRUD:
         target_roles: List[str],
         assigned_by_admin: int,
         active: bool = True,
+        featured_image_url: Optional[str] = None,
+        training_files: Optional[List[Dict[str, Any]]] = None,
+        training_folder: Optional[str] = None,
         custom_metadata: Optional[Dict[str, Any]] = None,
     ) -> AssignedTraining:
         """Create a new assigned training"""
@@ -34,6 +37,9 @@ class AssignedTrainingCRUD:
             training_ref_ids=training_ref_ids or [],
             target_roles=target_roles,  # Should be normalized to lowercase
             assigned_by_admin=assigned_by_admin,
+            featured_image_url=featured_image_url,
+            training_files=training_files or [],
+            training_folder=training_folder,
             active=active,
             custom_metadata=custom_metadata or {},
         )
@@ -100,7 +106,8 @@ class AssignedTrainingCRUD:
         # Map of allowed fields
         allowed_fields = {
             "title", "description", "custom_content",
-            "training_ref_ids", "target_roles", "active", "custom_metadata"
+            "training_ref_ids", "target_roles", "active", "custom_metadata",
+            "featured_image_url", "training_files", "training_folder"
         }
         
         for field, value in kwargs.items():

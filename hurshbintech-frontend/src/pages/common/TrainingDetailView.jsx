@@ -150,14 +150,7 @@ const TrainingDetailView = () => {
             <Navbar />
             <main className="page-main">
                 <div className={`page-content ${pageLoaded ? 'fade-transition' : ''}`}>
-                    {/* Back Button */}
-                    <button
-                        onClick={() => navigate("/assigned-learning")}
-                        className="back-button"
-                    >
-                        <ArrowLeft size={20} />
-                        Back to Trainings
-                    </button>
+
 
                     {/* Training Header */}
                     <div className="detail-header">
@@ -172,10 +165,10 @@ const TrainingDetailView = () => {
                     </div>
 
                     {/* Featured Image */}
-                    {training.custom_metadata?.featured_image_url && (
+                    {training.featured_image_url && (
                         <div className="featured-image-section">
                             <img
-                                src={training.custom_metadata.featured_image_url}
+                                src={training.featured_image_url}
                                 alt={training.title}
                                 className="featured-image"
                             />
@@ -252,54 +245,53 @@ const TrainingDetailView = () => {
                         )}
 
                         {/* Training Files */}
-                        {training.custom_metadata?.training_files &&
-                            training.custom_metadata.training_files.length > 0 && (
-                                <section className="detail-section">
-                                    <h2 className="section-title">Training Materials</h2>
-                                    <div className="files-list">
-                                        {training.custom_metadata.training_files.map((file, index) => {
-                                            // Handle both string and object file formats
-                                            const fileName = typeof file === 'string' ? file : (file.name || file);
-                                            let fileUrl = typeof file === 'object' && file.url ? file.url : null;
+                        {training.training_files && training.training_files.length > 0 && (
+                            <section className="detail-section">
+                                <h2 className="section-title">Training Materials</h2>
+                                <div className="files-list">
+                                    {training.training_files.map((file, index) => {
+                                        // Handle both string and object file formats
+                                        const fileName = typeof file === 'string' ? file : (file.name || file);
+                                        let fileUrl = typeof file === 'object' && file.url ? file.url : null;
 
-                                            // If URL is a relative path, prepend the API base URL
-                                            if (fileUrl && !fileUrl.startsWith('http')) {
-                                                const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-                                                // Remove /api from the end and append the file path
-                                                const baseUrl = apiBase.replace('/api', '');
-                                                fileUrl = `${baseUrl}/${fileUrl}`;
-                                            }
+                                        // If URL is a relative path, prepend the base URL
+                                        if (fileUrl && !fileUrl.startsWith('http')) {
+                                            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+                                            // Remove /api from the end and append the file path
+                                            const baseUrl = apiBase.replace('/api', '');
+                                            fileUrl = `${baseUrl}${fileUrl}`;
+                                        }
 
-                                            return (
-                                                <div key={index} className="file-item">
-                                                    <span className="file-name">{fileName}</span>
-                                                    {fileUrl && (
-                                                        <div className="file-actions">
-                                                            <a
-                                                                href={fileUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="file-link view"
-                                                                title="View file"
-                                                            >
-                                                                <Eye size={16} />
-                                                                View
-                                                            </a>
-                                                            <button
-                                                                onClick={() => handleDownloadFile(fileUrl, fileName)}
-                                                                className="file-link download"
-                                                                title="Download file"
-                                                            >
-                                                                Download
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </section>
-                            )}
+                                        return (
+                                            <div key={index} className="file-item">
+                                                <span className="file-name">{fileName}</span>
+                                                {fileUrl && (
+                                                    <div className="file-actions">
+                                                        <a
+                                                            href={fileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="file-link view"
+                                                            title="View file"
+                                                        >
+                                                            <Eye size={16} />
+                                                            View
+                                                        </a>
+                                                        <button
+                                                            onClick={() => handleDownloadFile(fileUrl, fileName)}
+                                                            className="file-link download"
+                                                            title="Download file"
+                                                        >
+                                                            Download
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
                     </div>
                 </div>
             </main>
