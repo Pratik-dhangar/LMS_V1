@@ -11,6 +11,7 @@ import api from "../../api/axios";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/admin/CreateAssignedTraining.css";
 
+
 const CreateAssignedTraining = () => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -336,24 +337,32 @@ const CreateAssignedTraining = () => {
     }
 
     return (
-        <div className="page-layout">
+      <div className="page-container">
             <Navbar />
-            <div className="page-content">
-                <div className="training-editor-container">
+            <main className="page-main">
+                <div className="page-content">
                     {/* Header */}
-                    <div className="editor-header">
+                    <div className="page-header">
                         <button
-                            className="back-btn"
                             onClick={() => navigate("/admin/assigned-trainings")}
-                            title="Back to trainings list"
+                            className="back-button"
                         >
-                            <ArrowLeft size={20} />
-                            Back to Trainings
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Manage Trainings
                         </button>
-                        <h1 className="editor-title">
-                            {isEditMode ? "Edit Training" : "Create New Training"}
-                        </h1>
-                        <div className="header-spacer"></div>
+                        <div>
+                            <h1 className="page-title">Create Training</h1>
+                        </div>
                     </div>
 
                     {/* Form */}
@@ -632,7 +641,7 @@ const CreateAssignedTraining = () => {
                         </div>
                     </form>
                 </div>
-            </div>
+            </main>
             <Footer />
         </div>
     );

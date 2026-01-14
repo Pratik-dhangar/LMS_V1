@@ -9,7 +9,6 @@ import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import AssignedTrainingCard from "../../components/AssignedTrainingCard";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
-import "../../styles/Pages.css";
 import "../../styles/admin/AssignedTrainingsList.css";
 import "../../styles/admin/AssignedTrainingsListAdditions.css";
 

@@ -8,7 +8,6 @@ import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
-import "../../styles/Pages.css";
 import "../../styles/animations.css";
 import "../../styles/admin/AdminTrainingDetail.css";
 

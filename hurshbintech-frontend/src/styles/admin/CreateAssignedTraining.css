@@ -309,7 +309,8 @@
 .checkbox-label span {
     font-weight: 600;
     color: #374151;
-    font-size: 0.9375rem;
+    font-size: 1.2rem;
+    margin-left: 1rem;
 }
 
 .help-text {
@@ -346,12 +347,12 @@
 }
 
 .btn-primary {
-    background-color: #3b82f6;
+    background-color: #db9d32 ;
     color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: #c58d2c;
 }
 
 .btn-primary:disabled {
