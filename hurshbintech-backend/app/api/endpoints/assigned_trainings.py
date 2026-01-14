@@ -4,6 +4,7 @@ Assigned Training endpoints - Admin CRUD and user viewing
 
 from typing import List, Optional
 import os
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
@@ -20,60 +21,148 @@ from app.schemas.assigned_training import (
     AssignedTrainingResponse,
     AssignedTrainingListResponse,
     AssignedTrainingUserResponse,
+    TrainingFileInfo,
 )
-from app.utils.file_handler import upload_file
+from app.utils.training_file_handler import training_file_handler
 from app.core.config import settings
-from app.utils.s3_utils import S3Manager
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Assigned Trainings"])
 
 
 # ========== FILE UPLOAD ENDPOINTS ==========
 
-@router.post("/upload/training-file")
-async def upload_training_file(
+@router.post("/admin/trainings/upload-featured-image")
+async def upload_featured_image(
     file: UploadFile = File(...),
-    folder: str = Form(default="trainings"),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Upload a training file (Admin only)"""
-    
-    # Validate file
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No file provided",
-        )
-    
-    # Validate file size (100MB max)
-    max_size = 100 * 1024 * 1024
-    file_content = await file.read()
-    if len(file_content) > max_size:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Max size is 100MB",
-        )
+    """Upload featured image for training (Admin only)"""
     
     try:
-        # Upload file
-        file_url = await upload_file(
+        if not file or not file.filename:
+            logger.error("No file provided in upload request")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file provided",
+            )
+        
+        logger.info(f"Uploading featured image: {file.filename}")
+        file_content = await file.read()
+        
+        if not file_content:
+            logger.error("File content is empty")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File is empty",
+            )
+        
+        # Create temporary training folder for featured image
+        # We'll use timestamp-based folder for now
+        from datetime import datetime
+        from pathlib import Path
+        from app.utils.training_file_handler import LOCAL_UPLOADS_DIR
+        
+        temp_folder_name = f"training_featured_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        temp_folder = str(LOCAL_UPLOADS_DIR / temp_folder_name)
+        
+        logger.info(f"Using temporary folder: {temp_folder}")
+        
+        # Upload featured image
+        result = training_file_handler.upload_training_file(
             file_content=file_content,
-            folder=folder,
             filename=file.filename,
-            content_type=file.content_type or "application/octet-stream",
+            training_folder=temp_folder,
+            file_type="image",
         )
+        
+        logger.info(f"Featured image uploaded successfully: {result['file_url']}")
         
         return {
             "success": True,
-            "filename": file.filename,
-            "file_url": file_url,
-            "size": len(file_content),
+            "file_url": result["file_url"],
+            "original_filename": result["original_filename"],
         }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except Exception as e:
+        logger.error(f"Error uploading featured image: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}",
+            detail=f"Failed to upload featured image: {str(e)}",
         )
+
+
+@router.post("/admin/trainings/upload-files")
+async def upload_training_files(
+    files: List[UploadFile] = File(...),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Upload training content files (Admin only)"""
+    
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided",
+        )
+    
+    # Create training folder for files
+    from datetime import datetime
+    from pathlib import Path
+    from app.utils.training_file_handler import LOCAL_UPLOADS_DIR
+    
+    temp_folder_name = f"training_files_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_folder = str(LOCAL_UPLOADS_DIR / temp_folder_name)
+    
+    uploaded_files = []
+    errors = []
+    
+    for file in files:
+        try:
+            if not file.filename:
+                errors.append({"file": "unknown", "error": "No filename"})
+                continue
+            
+            file_content = await file.read()
+            
+            # Upload file
+            result = training_file_handler.upload_training_file(
+                file_content=file_content,
+                filename=file.filename,
+                training_folder=temp_folder,
+            )
+            
+            # Create file info
+            file_category = training_file_handler._get_file_category(file.filename)
+            file_info = {
+                "name": result["original_filename"],
+                "url": result["file_url"],
+                "size": len(file_content),
+                "type": file_category,
+            }
+            
+            uploaded_files.append(file_info)
+            
+        except ValueError as e:
+            errors.append({"file": file.filename, "error": str(e)})
+        except Exception as e:
+            logger.error(f"Error uploading file {file.filename}: {str(e)}")
+            errors.append({"file": file.filename, "error": str(e)})
+    
+    return {
+        "success": len(uploaded_files) > 0,
+        "uploaded_files": uploaded_files,
+        "errors": errors,
+        "temporary_folder": temp_folder,
+    }
+
+
 
 
 # ========== ADMIN ENDPOINTS (CRUD) ==========
@@ -84,24 +173,62 @@ async def create_assigned_training(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Create a new assigned training (Admin only)"""
+    """Create a new assigned training with files (Admin only)"""
     
     # Normalize target_roles to lowercase
     normalized_roles = [role.lower() for role in payload.target_roles]
     
-    training = await assigned_training_crud.create_assigned_training(
-        db,
-        title=payload.title,
-        description=payload.description,
-        custom_content=payload.custom_content,
-        training_ref_ids=payload.training_ref_ids,
-        target_roles=normalized_roles,
-        assigned_by_admin=current_admin.id,
-        active=payload.active,
-        custom_metadata=payload.custom_metadata,
-    )
+    # Convert TrainingFileInfo objects to dictionaries for JSON storage
+    training_files_list = None
+    if payload.training_files:
+        training_files_list = [
+            file.dict() if hasattr(file, 'dict') else file
+            for file in payload.training_files
+        ]
     
-    return AssignedTrainingResponse.from_orm(training)
+    # Create training folder for this training
+    # Note: We'll use a temporary ID approach, then update folder name with real ID after creation
+    training_folder = None
+    
+    try:
+        # First, create the training
+        training = await assigned_training_crud.create_assigned_training(
+            db,
+            title=payload.title,
+            description=payload.description,
+            custom_content=payload.custom_content,
+            training_ref_ids=payload.training_ref_ids,
+            target_roles=normalized_roles,
+            assigned_by_admin=current_admin.id,
+            featured_image_url=payload.featured_image_url,
+            training_files=training_files_list,
+            training_folder=training_folder,
+            active=payload.active,
+            custom_metadata=payload.custom_metadata,
+        )
+        
+        # Now create the actual training folder with the training ID
+        if training.id:
+            training_folder = training_file_handler.create_training_folder(training.id)
+            
+            # Update the training with the folder path
+            await assigned_training_crud.update_assigned_training(
+                db,
+                training.id,
+                training_folder=training_folder,
+            )
+            
+            # Refresh to get updated data
+            training = await assigned_training_crud.get_assigned_training(db, training.id)
+        
+        return AssignedTrainingResponse.from_orm(training)
+        
+    except Exception as e:
+        logger.error(f"Error creating training: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create training: {str(e)}",
+        )
 
 
 @router.get("/admin/assigned-trainings", response_model=AssignedTrainingListResponse)
@@ -181,8 +308,21 @@ async def delete_assigned_training(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Delete an assigned training (Admin only)"""
+    """Delete an assigned training and its files (Admin only)"""
     
+    # Get training to access folder path
+    training = await assigned_training_crud.get_assigned_training(db, training_id)
+    if not training:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assigned training not found",
+        )
+    
+    # Delete training folder and files
+    if training.training_folder:
+        training_file_handler.delete_training_folder(training.training_folder)
+    
+    # Delete from database
     success = await assigned_training_crud.delete_assigned_training(db, training_id)
     if not success:
         raise HTTPException(
