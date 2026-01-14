@@ -76,15 +76,15 @@ const CreateAssignedTraining = () => {
                 custom_metadata: training.custom_metadata || {},
             });
 
-            // Load featured image from metadata if exists
-            if (training.custom_metadata?.featured_image_url) {
-                setFeaturedImagePreview(training.custom_metadata.featured_image_url);
+            // Load featured image if exists
+            if (training.featured_image_url) {
+                setFeaturedImagePreview(training.featured_image_url);
             }
 
-            // Load training files from metadata if they exist
-            if (training.custom_metadata?.training_files && Array.isArray(training.custom_metadata.training_files)) {
-                const filesList = training.custom_metadata.training_files.map((file) => {
-                    // Create a minimal file object with the stored data
+            // Load training files if they exist
+            if (training.training_files && Array.isArray(training.training_files)) {
+                const filesList = training.training_files.map((file) => {
+                    // Create a file object from stored data
                     return {
                         name: file.name,
                         size: file.size,
@@ -227,58 +227,58 @@ const CreateAssignedTraining = () => {
 
         setSaving(true);
         try {
-            const submitData = { ...formData };
+            const submitData = {
+                title: formData.title,
+                description: formData.description,
+                custom_content: formData.custom_content,
+                training_ref_ids: formData.training_ref_ids,
+                target_roles: formData.target_roles,
+                active: formData.active,
+                featured_image_url: null,
+                training_files: [],
+            };
 
-            // Prepare metadata
-            if (featuredImagePreview) {
-                submitData.custom_metadata = {
-                    ...submitData.custom_metadata,
-                    featured_image: featuredImagePreview,
-                    featured_image_url: featuredImagePreview,
-                };
+            // Upload featured image
+            if (featuredImage && !featuredImagePreview.startsWith("http")) {
+                try {
+                    toast.info("Uploading featured image...");
+                    submitData.featured_image_url = await uploadFeaturedImage(featuredImage);
+                } catch (error) {
+                    toast.error("Failed to upload featured image");
+                    console.error(error);
+                    setSaving(false);
+                    return;
+                }
+            } else if (featuredImagePreview) {
+                // Already has a URL
+                submitData.featured_image_url = featuredImagePreview;
             }
 
-            // Upload training files and get URLs
-            const trainingFilesData = [];
+            // Upload training files
             if (trainingFiles.length > 0) {
-                for (const file of trainingFiles) {
-                    try {
-                        // Check if file is already uploaded (from draft)
-                        if (file.isUploaded && file.url) {
-                            // Use existing URL without re-uploading
-                            trainingFilesData.push({
-                                name: file.name,
-                                size: file.size,
-                                type: file.type,
-                                url: file.url,
-                            });
-                        } else {
-                            // Upload new file
-                            const fileUrl = await uploadTrainingFile(file);
-                            trainingFilesData.push({
-                                name: file.name,
-                                size: file.size,
-                                type: file.type,
-                                url: fileUrl,
-                            });
-                        }
-                    } catch (fileError) {
-                        console.error(`Failed to upload ${file.name}:`, fileError);
-                        toast.error(`Failed to upload ${file.name}`);
+                try {
+                    toast.info(`Uploading ${trainingFiles.length} file(s)...`);
+                    const filesToUpload = trainingFiles.filter(f => !f.isUploaded || !f.url);
+
+                    if (filesToUpload.length > 0) {
+                        const uploadedFiles = await uploadTrainingFiles(filesToUpload);
+                        submitData.training_files = uploadedFiles;
+                    } else {
+                        // Use already uploaded files
+                        submitData.training_files = trainingFiles.map(f => ({
+                            name: f.name,
+                            url: f.url,
+                            size: f.size,
+                            type: f.type || "document",
+                        }));
                     }
+                } catch (error) {
+                    toast.error("Failed to upload training files");
+                    console.error(error);
+                    setSaving(false);
+                    return;
                 }
             }
-
-            // Store uploaded files in metadata
-            if (trainingFilesData.length > 0) {
-                submitData.custom_metadata = {
-                    ...submitData.custom_metadata,
-                    training_files: trainingFilesData,
-                };
-            }
-
-            // Remove the simple file names list since we now have URLs
-            submitData.training_files = [];
 
             if (isEditMode && id) {
                 await assignedTrainingService.adminUpdate(id, submitData);
@@ -297,18 +297,28 @@ const CreateAssignedTraining = () => {
         }
     };
 
-    const uploadTrainingFile = async (file) => {
+    const uploadFeaturedImage = async (file) => {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("folder", `trainings`);
 
-        const response = await api.post("/upload/training-file", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
+        const response = await api.post("/admin/trainings/upload-featured-image", formData);
 
         return response.data.file_url;
+    };
+
+    const uploadTrainingFiles = async (files) => {
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append("files", file);
+        });
+
+        const response = await api.post("/admin/trainings/upload-files", formData);
+
+        if (!response.data.success && response.data.uploaded_files.length === 0) {
+            throw new Error(response.data.errors[0]?.error || "Failed to upload files");
+        }
+
+        return response.data.uploaded_files;
     };
 
     const handleCancel = () => {
