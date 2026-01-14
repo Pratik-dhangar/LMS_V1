@@ -223,7 +223,7 @@ const ManageSessions = () => {
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="form-input"
+                className="app-modal-form-input"
                 aria-label="Filter by date"
                 title="Filter sessions by date"
               />
@@ -240,7 +240,7 @@ const ManageSessions = () => {
             </div>
             <button
               onClick={() => navigate('/head/schedule-session')}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -401,14 +401,14 @@ const ManageSessions = () => {
                                 <>
                                   <button
                                     onClick={() => handleEditSession(session)}
-                                    className="btn-icon btn-primary"
+                                    className="btn-icon app-modal-btn app-modal-btn--primary"
                                     title="Edit this scheduled session"
                                   >
                                     <Edit2 size={14} />
                                   </button>
                                   <button
                                     onClick={() => handleCancelSession(session.session_id, session.title)}
-                                    className="btn-icon btn-secondary"
+                                    className="btn-icon app-modal-btn app-modal-btn--secondary"
                                     title="Cancel this scheduled session"
                                     
                                   >
@@ -420,7 +420,7 @@ const ManageSessions = () => {
                               <button
                                 onClick={() => handleViewSession(session)}
                                 disabled={false}
-                                className="btn-icon btn-secondary"
+                                className="btn-icon app-modal-btn app-modal-btn--secondary"
                                 title="View session details"
                               >
                                 <Eye size={14} />
@@ -430,7 +430,7 @@ const ManageSessions = () => {
                                 <button
                                   onClick={() => canHeadNotes && setEditingHeadNotes(session)}
                                   disabled={!canHeadNotes}
-                                  className="btn-icon btn-primary"
+                                  className="btn-icon app-modal-btn app-modal-btn--primary"
                                   title={canHeadNotes ? 'Add head notes for this completed session' : 'Head notes available after session completion'}
                                 >
                                   <FileText size={14} />

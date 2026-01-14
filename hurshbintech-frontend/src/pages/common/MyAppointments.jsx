@@ -294,14 +294,14 @@ const MyAppointments = () => {
                   }
                 </p>
                 {appointments.length === 0 && (
-                  <a href="/book-appointment" className="btn-primary inline-block">
+                  <a href="/book-appointment" className="app-modal-btn app-modal-btn--primary inline-block">
                     Book Your First Appointment
                   </a>
                 )}
                 {appointments.length > 0 && (
                   <button
                     onClick={clearFilters}
-                    className="btn-primary inline-block"
+                    className="app-modal-btn app-modal-btn--primary inline-block"
                   >
                     Clear Filters
                   </button>
@@ -384,7 +384,7 @@ const MyAppointments = () => {
                         href={getFileUrl(apt.refund_receipt_url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                        className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
                         style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                       >
                         <Download className="w-4 h-4" />

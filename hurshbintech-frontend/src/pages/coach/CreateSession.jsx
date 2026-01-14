@@ -195,7 +195,7 @@ const CreateSession = () => {
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="form-group">
-                    <label className="form-label">
+                    <label className="app-modal-form-label">
                       <Calendar className="icon-sm inline mr-2" />
                       Session Date *
                     </label>
@@ -204,13 +204,13 @@ const CreateSession = () => {
                       name="session_date"
                       value={formData.session_date}
                       onChange={handleInputChange}
-                      className="form-input"
+                      className="app-modal-form-input"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                    <label className="app-modal-form-label">
                       <Clock className="icon-sm inline mr-2" />
                       Time Slot *
                     </label>
@@ -218,7 +218,7 @@ const CreateSession = () => {
                       name="session_time"
                       value={formData.session_time}
                       onChange={handleInputChange}
-                      className="form-input"
+                      className="app-modal-form-input"
                       required
                     >
                       <option value="">Select time</option>
@@ -230,20 +230,20 @@ const CreateSession = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Session Title</label>
+                  <label className="app-modal-form-label">Session Title</label>
                   <input
                     type="text"
                     name="session_title"
                     value={formData.session_title}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className="app-modal-form-input"
                     placeholder="e.g., Group Coaching Session"
                   />
                 </div>
 
                 {/* Learning Content */}
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="app-modal-form-label">
                     <BookOpen className="icon-sm inline mr-2" />
                     Learning Content (Optional)
                   </label>
@@ -251,7 +251,7 @@ const CreateSession = () => {
                     name="learning_content_id"
                     value={formData.learning_content_id}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className="app-modal-form-input"
                   >
                     <option value="">Select learning content</option>
                     {learningContents.map(content => (
@@ -271,7 +271,7 @@ const CreateSession = () => {
 
                   {/* Search Input */}
                   <div className="form-group">
-                    <label className="form-label">Search People</label>
+                    <label className="app-modal-form-label">Search People</label>
                     <div className="search-input-wrapper">
                       <Search className="search-icon" />
                       <input
@@ -376,24 +376,24 @@ const CreateSession = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Description</label>
+                  <label className="app-modal-form-label">Description</label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className="app-modal-form-input"
                     rows="3"
                     placeholder="Session description"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Notes</label>
+                  <label className="app-modal-form-label">Notes</label>
                   <textarea
                     name="notes"
                     value={formData.notes}
                     onChange={handleInputChange}
-                    className="form-input"
+                    className="app-modal-form-input"
                     rows="2"
                     placeholder="Additional notes"
                   />
@@ -404,11 +404,11 @@ const CreateSession = () => {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="btn-secondary"
+                    className="app-modal-btn app-modal-btn--secondary"
                   >
                     Cancel
                   </button>
-                   <button type="submit" className="btn-primary ">
+                   <button type="submit" className="app-modal-btn app-modal-btn--primary ">
                     Create Session
                   </button>
                 </div>

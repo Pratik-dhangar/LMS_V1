@@ -5,6 +5,7 @@ import learningGoalsService from "../../api/services/learningGoalsService";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
+import "../../styles/components/common/Modal.css";
 import "../../styles/Table.css";
 import "../../styles/admin/AdminManageLearningGoals.css";
 import "../../styles/ManageUsersLayout.css";
@@ -140,7 +141,7 @@ const ManageLearningGoals = () => {
             />
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               + Add New Goal
             </button>
@@ -215,7 +216,7 @@ const ManageLearningGoals = () => {
                         <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleEdit(goal)}
-                            className="btn-primary btn-sm btn-icon"
+                            className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
                           >
                             <svg
                               className="table-primary-icon-sm"
@@ -236,7 +237,7 @@ const ManageLearningGoals = () => {
                         <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleDelete(goal.id)}
-                            className="btn-danger btn-sm btn-icon"
+                            className="app-modal-btn app-modal-btn--danger btn-sm btn-icon"
                           >
                             <svg
                               className="table-primary-icon-sm"
@@ -267,17 +268,30 @@ const ManageLearningGoals = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm">
-            <h2 className="modal-title">Add Learning Goal</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--md">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Add Learning Goal</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setFormData({ goal: "", goal_description: "" });
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handleSubmit}>
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-content">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Goal (Title) <span className="form-required">*</span>
                 </label>
                 <input
                   type="text"
-                  className="form-input"
+                  className="app-modal-form-input"
                   placeholder="Enter goal title"
                   value={formData.goal}
                   onChange={(e) =>
@@ -287,10 +301,10 @@ const ManageLearningGoals = () => {
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">Description</label>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Description</label>
                 <textarea
-                  className="form-textarea"
+                  className="app-modal-form-textarea"
                   placeholder="Enter goal description"
                   rows="4"
                   value={formData.goal_description}
@@ -302,19 +316,20 @@ const ManageLearningGoals = () => {
                   }
                 />
               </div>
+              </div>
 
-              <div className="modal-actions">
+              <div className="app-modal-footer">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     setFormData({ goal: "", goal_description: "" });
                   }}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-gradient">
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
                   Add Goal
                 </button>
               </div>
@@ -325,17 +340,30 @@ const ManageLearningGoals = () => {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm">
-            <h2 className="modal-title">Edit Learning Goal</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--md">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Edit Learning Goal</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setFormData({ goal: "", goal_description: "" });
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handleUpdate}>
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-content">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Goal (Title) <span className="form-required">*</span>
                 </label>
                 <input
                   type="text"
-                  className="form-input"
+                  className="app-modal-form-input"
                   placeholder="Enter goal title"
                   value={formData.goal}
                   onChange={(e) =>
@@ -345,10 +373,10 @@ const ManageLearningGoals = () => {
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">Description</label>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Description</label>
                 <textarea
-                  className="form-textarea"
+                  className="app-modal-form-textarea"
                   placeholder="Enter goal description"
                   rows="4"
                   value={formData.goal_description}
@@ -360,19 +388,20 @@ const ManageLearningGoals = () => {
                   }
                 />
               </div>
+              </div>
 
-              <div className="modal-actions">
+              <div className="app-modal-footer">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditModal(false);
                     setFormData({ goal: "", goal_description: "" });
                   }}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-gradient">
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
                   Update Goal
                 </button>
               </div>

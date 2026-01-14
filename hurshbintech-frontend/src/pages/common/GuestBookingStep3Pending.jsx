@@ -107,13 +107,13 @@ const GuestBookingStep3Pending = () => {
 
                 <div className="action-buttons">
                   <button 
-                    className="btn btn-primary"
+                    className="btn app-modal-btn app-modal-btn--primary"
                     onClick={() => navigate('/guest-booking')}
                   >
                     Start Another Booking
                   </button>
                   <button 
-                    className="btn btn-secondary"
+                    className="btn app-modal-btn app-modal-btn--secondary"
                     onClick={() => navigate('/')}
                   >
                     Return to Home

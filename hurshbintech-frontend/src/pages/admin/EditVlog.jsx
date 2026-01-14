@@ -134,8 +134,8 @@ const EditVlog = () => {
                   <h2 className="admin-edit-vlog-section-title">Basic Information</h2>
                   
                   {/* Title Field */}
-                  <div className="form-field">
-                    <label className="form-label">
+                  <div className="app-modal-form-field">
+                    <label className="app-modal-form-label">
                       Title <span className="form-required">*</span>
                     </label>
                     <input
@@ -144,14 +144,14 @@ const EditVlog = () => {
                       value={formData.title}
                       onChange={handleChange}
                       required
-                      className="form-input"
+                      className="app-modal-form-input"
                       placeholder="Enter vlog title"
                     />
                   </div>
 
                   {/* Description Field */}
-                  <div className="form-field">
-                    <label className="form-label">
+                  <div className="app-modal-form-field">
+                    <label className="app-modal-form-label">
                       Description <span className="form-required">*</span>
                     </label>
                     <textarea
@@ -160,21 +160,21 @@ const EditVlog = () => {
                       onChange={handleChange}
                       required
                       rows="4"
-                      className="form-textarea"
+                      className="app-modal-form-textarea"
                       placeholder="Enter vlog description"
                     />
                   </div>
 
                   {/* Status Field */}
-                  <div className="form-field">
-                    <label className="form-label">
+                  <div className="app-modal-form-field">
+                    <label className="app-modal-form-label">
                       Status <span className="form-required">*</span>
                     </label>
                     <select
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="form-input"
+                      className="app-modal-form-input"
                       required
                     >
                       <option value="draft">Draft</option>
@@ -192,8 +192,8 @@ const EditVlog = () => {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
                     {/* Video File */}
-                    <div className="form-field">
-                      <label className="form-label">
+                    <div className="app-modal-form-field">
+                      <label className="app-modal-form-label">
                         🎥 Video File (Optional)
                       </label>
                       <input
@@ -201,7 +201,7 @@ const EditVlog = () => {
                         name="video"
                         accept="video/*"
                         onChange={handleFileChange}
-                        className="form-input"
+                        className="app-modal-form-input"
                       />
                       <p className="form-hint">
                         💡 Upload only to replace current video
@@ -209,8 +209,8 @@ const EditVlog = () => {
                     </div>
 
                     {/* Thumbnail File */}
-                    <div className="form-field">
-                      <label className="form-label">
+                    <div className="app-modal-form-field">
+                      <label className="app-modal-form-label">
                         🖼️ Thumbnail Image (Optional)
                       </label>
                       <input
@@ -218,7 +218,7 @@ const EditVlog = () => {
                         name="thumbnail"
                         accept="image/*"
                         onChange={handleFileChange}
-                        className="form-input"
+                        className="app-modal-form-input"
                       />
                       <p className="form-hint">
                         💡 Upload only to replace current thumbnail
@@ -232,14 +232,14 @@ const EditVlog = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/admin/vlogs')}
-                    className="btn-secondary"
+                    className="app-modal-btn app-modal-btn--secondary"
                     disabled={saving}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary"
+                    className="app-modal-btn app-modal-btn--primary"
                     disabled={saving}
                   >
                     {saving ? (

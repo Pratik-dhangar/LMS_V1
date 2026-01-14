@@ -107,7 +107,7 @@ const SessionsManager = () => {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="form-input"
+            className="app-modal-form-input"
             aria-label="Filter by date"
             title="Filter sessions by date"
           />
@@ -124,7 +124,7 @@ const SessionsManager = () => {
         </div>
         <button
           onClick={() => navigate('/coach/sessions/create')}
-          className="btn-success"
+          className="app-modal-btn app-modal-btn--success"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="icon-sm" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -224,7 +224,7 @@ const SessionsManager = () => {
                       <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => navigate(`/coach/sessions/${session.id}`)}
-                          className="btn btn-secondary"
+                          className="btn app-modal-btn app-modal-btn--secondary"
                           title="View session details"
                           style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                         >
@@ -233,7 +233,7 @@ const SessionsManager = () => {
                         {getSessionStatus(session) === 'scheduled' && (
                           <button
                             onClick={() => navigate(`/coach/sessions/edit/${session.id}`)}
-                            className="btn-primary"
+                            className="app-modal-btn app-modal-btn--primary"
                             title="Edit this session"
                             style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           >

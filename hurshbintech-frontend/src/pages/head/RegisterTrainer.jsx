@@ -238,15 +238,15 @@ const RegisterTrainer = () => {
 
       {/* Loading/Success Overlay */}
       {loading && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm modal-loading">
+        <div className="app-modal-overlay">
+          <div className="app-modal-content modal-sm modal-loading">
             {!successData ? (
               // Loading State
               <>
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title modal-title-success">
+                <p className="app-modal-title modal-title-success">
                   Registering Trainer...
                 </p>
                 <p className="modal-message">
@@ -271,7 +271,7 @@ const RegisterTrainer = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title modal-title-success">
+                <p className="app-modal-title modal-title-success">
                   Trainer Registered Successfully!
                 </p>
                 <div className="passcode-display">
@@ -365,7 +365,7 @@ const RegisterTrainer = () => {
             <div className="form-section">
               <h2 className="form-section-title">Reference Data</h2>
               <div>
-                <label htmlFor="reference_files" className="form-label">
+                <label htmlFor="reference_files" className="app-modal-form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
                 </label>
                 <input
@@ -408,11 +408,11 @@ const RegisterTrainer = () => {
               <button
                 type="button"
                 onClick={() => navigate("/head/manage-trainers")}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Cancel
               </button>
-              <button type="submit" disabled={loading} className="btn-primary">
+              <button type="submit" disabled={loading} className="app-modal-btn app-modal-btn--primary">
                 {loading ? "Registering..." : "Register Trainer"}
               </button>
             </div>

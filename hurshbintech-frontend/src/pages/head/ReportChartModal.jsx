@@ -108,24 +108,24 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-container" style={{ maxWidth: '1536px' }}>
+    <div className="app-modal-overlay">
+      <div className="app-modal-container" style={{ maxWidth: '1536px' }}>
         {/* Header */}
-        <div className="modal-header modal-header-purple">
+        <div className="app-modal-header app-modal-header--primary modal-header-purple">
           <div>
-            <h2 className="modal-title">📊 Session Report Charts</h2>
-            <p className="modal-subtitle">{learnerName}</p>
+            <h2 className="app-modal-title">📊 Session Report Charts</h2>
+            <p className="app-modal-subtitle">{learnerName}</p>
           </div>
           <button
             onClick={onClose}
-            className="modal-close-button"
+            className="app-modal-close"
           >
             ×
           </button>
         </div>
 
         {/* Content */}
-        <div className="modal-content">
+        <div className="app-modal-content">
           {/* Summary Cards */}
           <div className="chart-summary-grid">
             <div className="chart-summary-card chart-summary-blue">
@@ -202,22 +202,22 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
           )}
 
           {/* Action Buttons */}
-          <div className="modal-actions">
+          <div className="app-modal-footer">
             <button
               onClick={handleDownloadPDF}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               📥 Download PDF
             </button>
             <button
               onClick={handlePrint}
-              className="btn-primary"
+              className="app-modal-btn app-modal-btn--primary"
             >
               🖨️ Print Report
             </button>
             <button
               onClick={onClose}
-              className="btn-secondary"
+              className="app-modal-btn app-modal-btn--secondary"
             >
               Close
             </button>

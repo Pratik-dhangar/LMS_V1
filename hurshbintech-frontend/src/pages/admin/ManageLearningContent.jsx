@@ -5,6 +5,7 @@ import learningContentService from "../../api/services/learningContentService";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
+import '../../styles/components/common/Modal.css';
 import '../../styles/admin/AdminManageLearningContent.css';
 import '../../styles/ManageUsersLayout.css';
 
@@ -311,7 +312,7 @@ const ManageLearningContent = () => {
             />
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
             >
               + Add New Content
             </button>
@@ -405,19 +406,19 @@ const ManageLearningContent = () => {
                         href={learningContentService.getFileUrl(content.file_url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-secondary btn-sm"
+                        className="app-modal-btn app-modal-btn--secondary btn-sm"
                       >
                         View
                       </a>
                       <button
                         onClick={() => handleEdit(content)}
-                        className="btn-primary btn-sm"
+                        className="app-modal-btn app-modal-btn--primary btn-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(content.id)}
-                        className="btn-danger btn-sm"
+                        className="app-modal-btn app-modal-btn--danger btn-sm"
                       >
                         Delete
                       </button>
@@ -433,18 +434,38 @@ const ManageLearningContent = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm">
-            <h2 className="modal-title">Add Learning Content</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--md">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Add Learning Content</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setFormData({
+                    title: "",
+                    description: "",
+                    content_type: "",
+                    file_url: "",
+                    file_size: null,
+                    thumbnail_url: "",
+                  });
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handleSubmit}>
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-content">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Upload File <span className="form-required">*</span>
                 </label>
                 <input
                   type="file"
                   onChange={handleFileUpload}
-                  className="form-input"
+                  className="app-modal-form-input"
                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.ppt,.pptx"
                   required
                   disabled={uploading}
@@ -467,8 +488,8 @@ const ManageLearningContent = () => {
                 )}
               </div>
 
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Title <span className="form-required">*</span>
                 </label>
                 <input
@@ -477,14 +498,14 @@ const ManageLearningContent = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                   required
                   placeholder="Enter content title"
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Description
                 </label>
                 <textarea
@@ -492,14 +513,14 @@ const ManageLearningContent = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="form-textarea"
+                  className="app-modal-form-textarea"
                   rows="3"
                   placeholder="Enter description (optional)"
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Thumbnail URL (optional)
                 </label>
                 <input
@@ -508,12 +529,13 @@ const ManageLearningContent = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, thumbnail_url: e.target.value })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                   placeholder="https://example.com/thumbnail.jpg"
                 />
               </div>
 
-              <div className="modal-actions">
+              </div>
+              <div className="app-modal-footer">
                 <button
                   type="button"
                   onClick={() => {
@@ -527,13 +549,13 @@ const ManageLearningContent = () => {
                       thumbnail_url: "",
                     });
                   }}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="app-modal-btn app-modal-btn--primary"
                   disabled={uploading || !formData.file_url}
                 >
                   Create
@@ -546,25 +568,35 @@ const ManageLearningContent = () => {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm">
-            <h2 className="modal-title">Edit Content Details</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--md">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Edit Content Details</h2>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handleUpdate}>
-              <div className="form-field">
-                <label className="form-label">Title</label>
+              <div className="app-modal-content">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                   required
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Description
                 </label>
                 <textarea
@@ -572,13 +604,13 @@ const ManageLearningContent = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="form-textarea"
+                  className="app-modal-form-textarea"
                   rows="3"
                 />
               </div>
 
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Thumbnail URL
                 </label>
                 <input
@@ -587,19 +619,20 @@ const ManageLearningContent = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, thumbnail_url: e.target.value })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                 />
               </div>
 
-              <div className="modal-actions">
+              </div>
+              <div className="app-modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
                   Update
                 </button>
               </div>

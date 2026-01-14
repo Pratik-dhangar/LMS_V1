@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import InputField from '../../../components/common/InputField';
 import TextAreaField from '../../../components/common/TextAreaField';
 import vlogService from '../../../api/services/vlogService';
+import '../../../styles/components/common/Modal.css';
 
 const CreateVlogModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -58,17 +59,27 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content modal-sm">
-        <h2 className="modal-title">Create New Vlog</h2>
-
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
+    <div className="app-modal-overlay">
+      <div className="app-modal-container app-modal-container--md">
+        <div className="app-modal-header app-modal-header--primary">
+          <h2 className="app-modal-title">Create New Vlog</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="app-modal-close"
+            disabled={loading}
+          >
+            ✕
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit}>
+          <div className="app-modal-content">
+            {error && (
+              <div className="alert alert-error">
+                {error}
+              </div>
+            )}
           <InputField
             label="Title"
             name="title"
@@ -85,15 +96,15 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
             required
           />
 
-          <div className="form-field">
-            <label className="form-label">
+          <div className="app-modal-form-field">
+            <label className="app-modal-form-label">
               Status <span className="form-required">*</span>
             </label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="form-input"
+              className="app-modal-form-input"
               required
             >
               <option value="draft">Draft</option>
@@ -101,8 +112,8 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
             </select>
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
+          <div className="app-modal-form-field">
+            <label className="app-modal-form-label">
               Video File <span className="form-required">*</span>
             </label>
             <input
@@ -111,12 +122,12 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="video/*"
               onChange={handleFileChange}
               required
-              className="form-input"
+              className="app-modal-form-input"
             />
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
+          <div className="app-modal-form-field">
+            <label className="app-modal-form-label">
               Thumbnail Image <span className="form-required">*</span>
             </label>
             <input
@@ -125,22 +136,23 @@ const CreateVlogModal = ({ onClose, onSuccess }) => {
               accept="image/*"
               onChange={handleFileChange}
               required
-              className="form-input"
+              className="app-modal-form-input"
             />
           </div>
+          </div>
 
-          <div className="modal-actions">
+          <div className="app-modal-footer">
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary"
+              className="app-modal-btn app-modal-btn--secondary"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className="app-modal-btn app-modal-btn--primary"
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create'}

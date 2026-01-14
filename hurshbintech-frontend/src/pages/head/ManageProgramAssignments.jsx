@@ -6,6 +6,7 @@ import learningProgramsService from '../../api/services/learningProgramsService'
 import learningContentService from '../../api/services/learningContentService';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import '../../styles/components/common/Modal.css';
 import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
 
@@ -849,11 +850,36 @@ const ManageProgramAssignments = () => {
 
       {/* Assign Program Modal */}
       {showAssignModal && (
-        <div className="mpa-modal-overlay">
-          <div className="mpa-modal-content mpa-modal-lg">
-            <h2 className="mpa-modal-title">Assign Program to Learners</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--lg">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Assign Program to Learners</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssignModal(false);
+                  setFormData({
+                    learner_ids: [],
+                    program_ids: [],
+                    extra_content_ids: [],
+                    start_date: '',
+                    end_date: '',
+                    duration_days: '',
+                    head_notes: '',
+                    manual_duration: false,
+                    assignment_title: '',
+                  });
+                  setSelectedProgram(null);
+                  setSearchExtraContent('');
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit}>
+              <div className="app-modal-content">
               {/* Assignment Title */}
               <div className="mpa-form-field">
                 <label className="mpa-form-label">
@@ -1073,8 +1099,9 @@ const ManageProgramAssignments = () => {
                   onChange={(e) => setFormData({ ...formData, head_notes: e.target.value })}
                 />
               </div>
+              </div>
 
-              <div className="mpa-modal-actions">
+              <div className="app-modal-footer">
                 <button
                   type="button"
                   onClick={() => {
@@ -1092,11 +1119,11 @@ const ManageProgramAssignments = () => {
                     setSelectedProgram(null);
                     setSearchExtraContent('');
                   }}
-                  className="mpa-btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="mpa-btn-assign-gradient">
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
                   Assign Program
                 </button>
               </div>
@@ -1107,9 +1134,9 @@ const ManageProgramAssignments = () => {
 
       {/* Contents Preview Modal */}
       {showContentsPreviewModal && selectedProgram && (
-        <div className="mpa-modal-overlay">
-          <div className="mpa-modal-content">
-            <h2 className="mpa-modal-title">Program Contents</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container">
+            <h2 className="app-modal-title">Program Contents</h2>
 
             <div className="mpa-contents-preview-list">
               {selectedProgram.contents.map((content, index) => (
@@ -1140,10 +1167,10 @@ const ManageProgramAssignments = () => {
 
       {/* Tracking Modal */}
       {showTrackingModal && selectedAssignment && (
-        <div className="mpa-modal-overlay">
-          <div className="mpa-modal-content mpa-modal-lg">
+        <div className="app-modal-overlay">
+          <div className="app-modal-container mpa-modal-lg">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="mpa-modal-title" style={{ margin: 0 }}>Assignment Tracking</h2>
+              <h2 className="app-modal-title" style={{ margin: 0 }}>Assignment Tracking</h2>
               <button
                 onClick={handleRefreshTracking}
                 className="mpa-btn-secondary mpa-btn-sm"
@@ -1350,9 +1377,9 @@ const ManageProgramAssignments = () => {
 
       {/* Feedback Modal */}
       {showFeedbackModal && selectedContentAssignment && (
-        <div className="mpa-modal-overlay">
-          <div className="mpa-modal-content mpa-modal-md">
-            <h2 className="mpa-modal-title">Add Feedback</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container mpa-modal-md">
+            <h2 className="app-modal-title">Add Feedback</h2>
 
             {/* Learner Submission Section */}
             {selectedContentAssignment && (
@@ -1442,9 +1469,9 @@ const ManageProgramAssignments = () => {
 
       {/* Final Feedback Modal */}
       {showFinalFeedbackModal && selectedAssignment && (
-        <div className="mpa-modal-overlay">
-          <div className="mpa-modal-content mpa-modal-md">
-            <h2 className="mpa-modal-title">⭐ Final Feedback for {selectedAssignment.learner?.name}</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-container mpa-modal-md">
+            <h2 className="app-modal-title">⭐ Final Feedback for {selectedAssignment.learner?.name}</h2>
 
             <div className="mpa-feedback-program-info">
               <h3 className="mpa-subsection-title">Program</h3>

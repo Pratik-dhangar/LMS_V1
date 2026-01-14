@@ -85,9 +85,9 @@ const ManageAssignedPrograms = () => {
           <>
             {/* Select Learner */}
             <div className="form-container">
-              <label className="form-label">Select Learner</label>
+              <label className="app-modal-form-label">Select Learner</label>
               <select
-                className="form-select"
+                className="app-modal-form-select"
                 onChange={(e) => {
                   setSelectedLearner(e.target.value);
                   loadAssignedPrograms(e.target.value);
@@ -115,7 +115,7 @@ const ManageAssignedPrograms = () => {
               <input
                 type="text"
                 placeholder="Search learning program..."
-                className="form-input"
+                className="app-modal-form-input"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
 
@@ -176,7 +176,7 @@ const ManageAssignedPrograms = () => {
               <div className="assign-actions">
                 <span className="assign-count">{selectedPrograms.length} selected</span>
                 <button
-                  className="btn-primary"
+                  className="app-modal-btn app-modal-btn--primary"
                   disabled={assigning}
                   onClick={handleAssign}
                 >
@@ -207,7 +207,7 @@ const ManageAssignedPrograms = () => {
                             <td className="table-primary-td">{row.program_title}</td>
                             <td className="table-primary-td table-primary-td-center">
                               <button
-                                className="btn-danger btn-icon"
+                                className="app-modal-btn app-modal-btn--danger btn-icon"
                                 onClick={() => handleRemove(row.id)}
                               >
                                 <Trash2 className="table-primary-icon-sm" />

@@ -155,7 +155,7 @@ const LearnerProgramsView = () => {
             />
             <button
               onClick={handleDownloadAllProgramsPDF}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
               disabled={loading || programs.length === 0}
               title={
                 programs.length === 0

@@ -338,8 +338,8 @@ const BookAppointmentForm = () => {
                   <Calendar className="w-5 h-5" />
                   Date & Time
                 </h3>
-                <div className="form-grid">
-                  <div className="form-field">
+                <div className="app-modal-form-grid">
+                  <div className="app-modal-form-field">
                     <label className="field-label">Appointment Date *</label>
                     <input
                       type="date"
@@ -357,7 +357,7 @@ const BookAppointmentForm = () => {
                     )}
                   </div>
 
-                  <div className="form-field">
+                  <div className="app-modal-form-field">
                     <label className="field-label">Time Slot *</label>
                     {loadingSlots ? (
                       <div className="field-input" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280' }}>
@@ -475,7 +475,7 @@ const BookAppointmentForm = () => {
                 </div>
 
                 {/* File Upload */}
-                <div className="form-field">
+                <div className="app-modal-form-field">
                   <label className="field-label">Upload Payment Screenshot *</label>
                   
                   {!previewImage ? (

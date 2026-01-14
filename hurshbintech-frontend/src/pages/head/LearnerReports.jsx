@@ -132,7 +132,7 @@ const LearnerReports = () => {
           <div className="button-group">
             <button
               onClick={handleDownloadAllProgramsPDF}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
               disabled={loading || groupedReports.length === 0}
               title={groupedReports.length === 0 ? 'No reports available to download' : 'Download all reports as PDF'}
             >
@@ -147,7 +147,7 @@ const LearnerReports = () => {
             </button>
             <button
               onClick={() => navigate('/head/reports')}
-              className="btn-secondary"
+              className="app-modal-btn app-modal-btn--secondary"
             >
               ← Back
             </button>

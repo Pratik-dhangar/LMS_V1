@@ -297,7 +297,7 @@ const ViewAssignedPrograms = () => {
 
                   <button
                     onClick={() => navigate(`/learner/program-assignment/${assignment.id}`)}
-                    className="btn-primary btn-full"
+                    className="app-modal-btn app-modal-btn--primary btn-full"
                   >
                     View Details
                   </button>
@@ -312,9 +312,9 @@ const ViewAssignedPrograms = () => {
 
       {/* Assignment Detail Modal */}
       {showDetailModal && selectedAssignment && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-lg">
-            <h2 className="modal-title">{selectedAssignment.program.goal}</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-content modal-lg">
+            <h2 className="app-modal-title">{selectedAssignment.program.goal}</h2>
 
             {/* Tabs */}
             <div className="tabs-container">
@@ -410,7 +410,7 @@ const ViewAssignedPrograms = () => {
                   <div className="notes-section">
                     <h4 className="subsection-title">My Notes</h4>
                     <textarea
-                      className="form-textarea"
+                      className="app-modal-form-textarea"
                       placeholder="Add your notes here..."
                       rows="4"
                       value={learnerNotes}
@@ -420,7 +420,7 @@ const ViewAssignedPrograms = () => {
                     {selectedAssignment.completion_status !== 'COMPLETED' && (
                       <button
                         onClick={handleSaveNotes}
-                        className="btn-primary btn-sm"
+                        className="app-modal-btn app-modal-btn--primary btn-sm"
                         style={{ marginTop: '0.5rem' }}
                       >
                         Save Notes
@@ -474,7 +474,7 @@ const ViewAssignedPrograms = () => {
                                 href={attachment.file_path}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn-primary btn-sm"
+                                className="app-modal-btn app-modal-btn--primary btn-sm"
                               >
                                 View
                               </a>
@@ -490,7 +490,7 @@ const ViewAssignedPrograms = () => {
                     <div className="action-section">
                       <button
                         onClick={handleMarkComplete}
-                        className="btn-success btn-full"
+                        className="app-modal-btn app-modal-btn--success btn-full"
                       >
                         Mark as Complete
                       </button>
@@ -500,7 +500,7 @@ const ViewAssignedPrograms = () => {
               </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="app-modal-footer">
               <button
                 onClick={() => {
                   setShowDetailModal(false);
@@ -508,7 +508,7 @@ const ViewAssignedPrograms = () => {
                   setLearnerNotes('');
                   setAttachments([]);
                 }}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Close
               </button>

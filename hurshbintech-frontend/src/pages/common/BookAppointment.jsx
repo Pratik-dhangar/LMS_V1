@@ -139,7 +139,7 @@ const BookAppointment = () => {
             </div>
             <button 
               onClick={() => navigate('/my-appointments')}
-              className="btn-primary flex items-center gap-2"
+              className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
               style={{ alignSelf: 'flex-start' }}
             >
               <Calendar className="w-4 h-4" />

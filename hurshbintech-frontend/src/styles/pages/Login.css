@@ -2,9 +2,9 @@
 
 .login-container {
   min-height: 100vh;
-  display: flex;
+  display: flex;  
   flex-direction: column;
-  background: linear-gradient(135deg, #f5f1ed 0%, #e8ddd5 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f7f4f3 100%);
 }
 
 .login-main {

@@ -220,7 +220,7 @@ const CreateEditBlog = () => {
 
               {/* Title */}
               <div className="form-group">
-                <label htmlFor="title" className="form-label">
+                <label htmlFor="title" className="app-modal-form-label">
                   Title <span className="form-required">*</span>
                 </label>
                 <input
@@ -239,7 +239,7 @@ const CreateEditBlog = () => {
 
               {/* Excerpt */}
               <div className="form-group">
-                <label htmlFor="excerpt" className="form-label">
+                <label htmlFor="excerpt" className="app-modal-form-label">
                   Excerpt
                 </label>
                 <textarea
@@ -248,7 +248,7 @@ const CreateEditBlog = () => {
                   value={formData.excerpt}
                   onChange={handleChange}
                   rows={3}
-                  className="form-textarea"
+                  className="app-modal-form-textarea"
                   placeholder="Brief summary of the blog post (optional)"
                   maxLength={500}
                 />
@@ -338,7 +338,7 @@ const CreateEditBlog = () => {
             <div className="admin-edit-vlog-section">
               <h2 className="admin-edit-vlog-section-title">Publishing</h2>
               <div className="form-group">
-                <label htmlFor="status" className="form-label">
+                <label htmlFor="status" className="app-modal-form-label">
                   Status
                 </label>
                 <select
@@ -346,7 +346,7 @@ const CreateEditBlog = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  className="form-select"
+                  className="app-modal-form-select"
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
@@ -364,12 +364,12 @@ const CreateEditBlog = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={saving}
               >
                 Cancel
               </button>
-              <button type="submit" disabled={saving} className="btn-primary">
+              <button type="submit" disabled={saving} className="app-modal-btn app-modal-btn--primary">
                 {saving ? (
                   <>
                     <svg

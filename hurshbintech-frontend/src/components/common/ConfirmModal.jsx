@@ -33,36 +33,38 @@ const ConfirmModal = ({
   const buttonClass = variant === "danger" ? "danger" : "primary";
 
   return (
-    <div className="confirm-modal-overlay">
-      <div className="confirm-modal-container">
-        <div className="confirm-modal-header">
-          <div className={`confirm-modal-icon ${iconClass}`}>
-            <svg fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
+    <div className="app-modal-overlay">
+      <div className="app-modal-container app-modal-container--sm">
+        <div className="app-modal-content">
+          <div className="confirm-modal-header">
+            <div className={`confirm-modal-icon ${iconClass}`}>
+              <svg fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <div className="confirm-modal-header-text">
+              <h3>{title}</h3>
+              <p>This action cannot be undone</p>
+            </div>
           </div>
-          <div className="confirm-modal-header-text">
-            <h3>{title}</h3>
-            <p>This action cannot be undone</p>
-          </div>
+          <p className="confirm-modal-message">{message}</p>
         </div>
-        <p className="confirm-modal-message">{message}</p>
-        <div className="confirm-modal-buttons">
+        <div className="app-modal-footer">
           <button
             onClick={onClose}
             disabled={loading}
-            className="confirm-modal-cancel-btn"
+            className="app-modal-btn app-modal-btn--secondary"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className={`confirm-modal-confirm-btn ${buttonClass}`}
+            className={`app-modal-btn app-modal-btn--${buttonClass}`}
           >
             {loading ? (
               <>
-                <div className="confirm-modal-spinner"></div>
+                <div className="app-modal-loading-spinner"></div>
                 Processing...
               </>
             ) : (

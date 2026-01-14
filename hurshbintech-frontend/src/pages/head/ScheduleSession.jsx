@@ -283,8 +283,8 @@ const ScheduleSession = () => {
           </div>
           <form onSubmit={handleSubmit} className="form-section">
             {/* Title */}
-            <div className="form-field">
-              <label className="form-label">
+            <div className="app-modal-form-field">
+              <label className="app-modal-form-label">
                 Session Title <span className="text-required">*</span>
               </label>
               <input
@@ -293,30 +293,30 @@ const ScheduleSession = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                className="form-input"
+                className="app-modal-form-input"
                 placeholder="e.g., Introduction to Fruits"
                 required
               />
             </div>
 
             {/* Description */}
-            <div className="form-field">
-              <label className="form-label">Description</label>
+            <div className="app-modal-form-field">
+              <label className="app-modal-form-label">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="form-textarea"
+                className="app-modal-form-textarea"
                 rows="3"
                 placeholder="Session description (optional)"
               />
             </div>
 
-            <div className="form-grid form-grid-2">
+            <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
               {/* Select Trainer with Searchable Dropdown */}
               <div className="dropdown-field" ref={trainerDropdownRef}>
-                <label className="form-label">
+                <label className="app-modal-form-label">
                   Select Trainer <span className="text-required">*</span>
                 </label>
                 <input
@@ -334,7 +334,7 @@ const ScheduleSession = () => {
                   onFocus={() =>
                     setShowDropdown({ ...showDropdown, trainer: true })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                   required={!formData.trainer_id}
                 />
                 {showDropdown.trainer && (
@@ -379,7 +379,7 @@ const ScheduleSession = () => {
 
               {/* Select Learner with Searchable Dropdown */}
               <div className="dropdown-field" ref={learnerDropdownRef}>
-                <label className="form-label">
+                <label className="app-modal-form-label">
                   Select Learner <span className="text-required">*</span>
                 </label>
                 <input
@@ -397,7 +397,7 @@ const ScheduleSession = () => {
                   onFocus={() =>
                     setShowDropdown({ ...showDropdown, learner: true })
                   }
-                  className="form-input"
+                  className="app-modal-form-input"
                   required={!formData.learner_id}
                 />
                 {showDropdown.learner && (
@@ -441,10 +441,10 @@ const ScheduleSession = () => {
               </div>
             </div>
 
-            <div className="form-grid form-grid-2">
+            <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
               {/* Date & Time */}
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Date & Time <span className="text-required">*</span>
                 </label>
 
@@ -454,13 +454,13 @@ const ScheduleSession = () => {
                     type="datetime-local"
                     value={tempDate}
                     onChange={(e) => setTempDate(e.target.value)}
-                    className="form-input"
+                    className="app-modal-form-input"
                     required
                   />
                   <button
                     type="button"
                     onClick={handleSetDate}
-                    className="btn-primary"
+                    className="app-modal-btn app-modal-btn--primary"
                   >
                     Set
                   </button>
@@ -476,8 +476,8 @@ const ScheduleSession = () => {
               </div>
 
               {/* Duration */}
-              <div className="form-field">
-                <label className="form-label">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">
                   Duration (minutes) <span className="text-required">*</span>
                 </label>
                 <select
@@ -485,7 +485,7 @@ const ScheduleSession = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, duration: e.target.value })
                   }
-                  className="form-select"
+                  className="app-modal-form-select"
                   required
                 >
                   <option value="">-- Select Duration --</option>
@@ -747,12 +747,12 @@ const ScheduleSession = () => {
               <button
                 type="button"
                 onClick={() => navigate("/head/dashboard")}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={loading}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <button type="submit" className="app-modal-btn app-modal-btn--primary" disabled={loading}>
                 {loading ? "Scheduling..." : "Schedule Session"}
               </button>
             </div>

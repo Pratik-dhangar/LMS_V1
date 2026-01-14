@@ -396,23 +396,21 @@ const TodaysSchedule = () => {
 
       {/* Session Details Modal */}
       {showSessionDetailsModal && selectedSession && (
-        <div className="trainer-modal-overlay" onClick={closeSessionDetailsModal}>
-          <div className="trainer-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="app-modal-overlay" onClick={closeSessionDetailsModal}>
+          <div className="app-modal-container app-modal-container--lg" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="trainer-modal-header">
-              <h2 className="trainer-modal-title">Session Details</h2>
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Session Details</h2>
               <button
                 onClick={closeSessionDetailsModal}
-                className="trainer-modal-close"
+                className="app-modal-close"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ✕
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="trainer-modal-body">
+            <div className="app-modal-content">
               {/* Title */}
               <div className="trainer-modal-field">
                 <label className="trainer-modal-label">Session Title</label>
@@ -523,7 +521,7 @@ const TodaysSchedule = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="trainer-modal-footer">
+            <div className="app-modal-footer">
               <button
                 onClick={closeSessionDetailsModal}
                 className="trainer-modal-btn-close"

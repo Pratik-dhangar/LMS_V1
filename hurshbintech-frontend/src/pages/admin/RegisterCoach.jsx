@@ -243,15 +243,15 @@ const RegisterCoach = () => {
 
       {/* Loading/Success Overlay */}
       {loading && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-sm modal-loading">
+        <div className="app-modal-overlay">
+          <div className="app-modal-content modal-sm modal-loading">
             {!successData ? (
               // Loading State
               <>
                 <div className="loading-spinner-container">
                   <div className="loading-spinner"></div>
                 </div>
-                <p className="modal-title modal-title-success">
+                <p className="app-modal-title modal-title-success">
                   Registering Coach...
                 </p>
                 <p className="modal-message">
@@ -276,7 +276,7 @@ const RegisterCoach = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="modal-title modal-title-success">
+                <p className="app-modal-title modal-title-success">
                   Coach Registered Successfully!
                 </p>
                 <div className="passcode-display">
@@ -358,7 +358,7 @@ const RegisterCoach = () => {
               <div className="grid-2">
                 {/* Availability Days - Multi Select */}
                 <div>
-                  <label className="form-label">
+                  <label className="app-modal-form-label">
                     Availability Days <span className="required-mark">*</span>
                   </label>
                   <div className="checkbox-group">
@@ -391,7 +391,7 @@ const RegisterCoach = () => {
 
                 {/* Time Slots - Multi Select */}
                 <div>
-                  <label className="form-label">
+                  <label className="app-modal-form-label">
                     Time Slots <span className="required-mark">*</span>
                   </label>
                   <div className="checkbox-group">
@@ -422,7 +422,7 @@ const RegisterCoach = () => {
 
                 {/* Specialization */}
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label htmlFor="specialization" className="form-label">
+                  <label htmlFor="specialization" className="app-modal-form-label">
                     Specialization
                   </label>
                   <textarea
@@ -431,14 +431,14 @@ const RegisterCoach = () => {
                     value={formData.specialization}
                     onChange={handleChange}
                     placeholder="Coach's area of specialization"
-                    className="form-textarea"
+                    className="app-modal-form-textarea"
                     rows="3"
                   />
                 </div>
 
                 {/* Profile Picture */}
                 <div>
-                  <label htmlFor="profile_picture_url" className="form-label">
+                  <label htmlFor="profile_picture_url" className="app-modal-form-label">
                     Profile Picture
                   </label>
                   <input
@@ -460,7 +460,7 @@ const RegisterCoach = () => {
 
                 {/* Reference Data */}
                 <div>
-                  <label htmlFor="reference_files" className="form-label">
+                  <label htmlFor="reference_files" className="app-modal-form-label">
                     Reference Data
                   </label>
                   <input
@@ -513,12 +513,12 @@ const RegisterCoach = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={loading}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <button type="submit" className="app-modal-btn app-modal-btn--primary" disabled={loading}>
                 {loading ? "Registering..." : "Register Coach"}
               </button>
             </div>

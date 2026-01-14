@@ -378,7 +378,7 @@ const EditHead = () => {
             <div className="form-section">
               <h2 className="form-section-title">Reference Data</h2>
               <div>
-                <label htmlFor="reference_files" className="form-label">
+                <label htmlFor="reference_files" className="app-modal-form-label">
                   Upload Reference Data (Documents, Images, Videos, Links)
                 </label>
                 <input
@@ -461,7 +461,7 @@ const EditHead = () => {
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="btn-danger btn-icon"
+                className="app-modal-btn app-modal-btn--danger btn-icon"
               >
                 <svg
                   className="icon-sm"
@@ -482,14 +482,14 @@ const EditHead = () => {
                   type="button"
                   onClick={() => navigate("/admin/manage-heads")}
                   disabled={saving || deleting}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || deleting}
-                  className="btn-primary btn-icon"
+                  className="app-modal-btn app-modal-btn--primary btn-icon"
                 >
                   {saving ? (
                     <>

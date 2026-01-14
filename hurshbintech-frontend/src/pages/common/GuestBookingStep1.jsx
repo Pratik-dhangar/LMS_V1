@@ -215,7 +215,7 @@ const GuestBookingStep1 = () => {
 
                       <button 
                         type="submit" 
-                        className="btn-primary btn-full"
+                        className="app-modal-btn app-modal-btn--primary btn-full"
                         disabled={loading}
                       >
                         {loading ? (

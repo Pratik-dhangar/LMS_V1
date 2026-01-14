@@ -216,7 +216,7 @@ const ProgramGraphView = () => {
           <div className="search-section">
             <button
               onClick={handleDownloadPDF}
-              className="btn-success"
+              className="app-modal-btn app-modal-btn--success"
               disabled={loading || sessionData.length === 0}
               title={
                 sessionData.length === 0

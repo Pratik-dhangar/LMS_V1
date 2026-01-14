@@ -346,7 +346,7 @@ const ManageLearningMaterials = () => {
                                     resetForm();
                                     setShowForm(true);
                                 }}
-                                className="btn-success"
+                                className="app-modal-btn app-modal-btn--success"
                             >
                                 <Plus size={20} /> Add New Product
                             </button>

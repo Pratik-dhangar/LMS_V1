@@ -55,13 +55,13 @@ const ViewVlogs = () => {
       </div>
 
       {selectedVlog && (
-        <div className="modal-overlay">
-          <div className="modal-content modal-content-wide">
-            <div className="modal-header">
-              <h2 className="modal-title">{selectedVlog.title}</h2>
+        <div className="app-modal-overlay">
+          <div className="app-modal-content modal-content-wide">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">{selectedVlog.title}</h2>
               <button
                 onClick={() => setSelectedVlog(null)}
-                className="modal-close"
+                className="app-modal-close"
               >
                 ✕
               </button>

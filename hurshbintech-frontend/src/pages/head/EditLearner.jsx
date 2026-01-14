@@ -515,16 +515,16 @@ const EditLearner = () => {
 
       {/* Saving/Deleting Modal */}
       {(saving || deleting) && (
-        <div className="modal-overlay modal-overlay-blur">
+        <div className="app-modal-overlay modal-overlay-blur">
           <div className="modal-success">
             <div className="spinner-wrapper">
               <div className="spinner-large"></div>
               <div className="spinner-center"></div>
             </div>
-            <p className="modal-title">
+            <p className="app-modal-title">
               {saving ? 'Updating Learner...' : 'Deleting Learner...'}
             </p>
-            <p className="modal-subtitle">Please wait while we process your request</p>
+            <p className="app-modal-subtitle">Please wait while we process your request</p>
           </div>
         </div>
       )}
@@ -602,7 +602,7 @@ const EditLearner = () => {
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="btn-danger btn-icon"
+                className="app-modal-btn app-modal-btn--danger btn-icon"
               >
                 <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -615,14 +615,14 @@ const EditLearner = () => {
                   type="button"
                   onClick={() => navigate('/head/manage-learners')}
                   disabled={saving || deleting}
-                  className="btn-secondary"
+                  className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || deleting}
-                  className="btn-primary btn-icon"
+                  className="app-modal-btn app-modal-btn--primary btn-icon"
                 >
                   {saving ? (
                     <>
