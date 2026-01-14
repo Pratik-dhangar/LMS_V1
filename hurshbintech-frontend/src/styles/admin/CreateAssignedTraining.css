@@ -226,24 +226,28 @@
 
 .preview-image {
     width: 100%;
-    max-height: 400px;
-    object-fit: contain;
+    height: auto;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
 }
 
 .remove-image-btn {
-    display: block;
-    margin-top: 1rem;
-    padding: 0.625rem 1.25rem;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background-color: #ef4444;
     color: white;
     border: none;
-    border-radius: 6px;
-    font-weight: 600;
+    border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 0.875rem;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .remove-image-btn:hover {
@@ -347,7 +351,7 @@
 }
 
 .btn-primary {
-    background-color: #db9d32 ;
+    background-color: #db9d32;
     color: white;
 }
 
