@@ -4,7 +4,7 @@ Tracks admin-created role-targeted training assignments for Internal Training an
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -115,3 +115,7 @@ class AssignedTrainingUser(Base):
     # Relationships
     assigned_training = relationship("AssignedTraining", back_populates="user_assignments")
     user = relationship("User", backref="assigned_trainings")
+    
+    __table_args__ = (
+        UniqueConstraint('assigned_training_id', 'user_id', name='unique_training_user'),
+    )

@@ -25,6 +25,14 @@
 - ✅ `DELETE /vlogs/{id}` - Deletes video files from S3
 - ✅ All endpoints now support both S3 and local storage based on `USE_S3` setting
 
+#### Assigned Trainings (`app/api/endpoints/assigned_trainings.py`)
+- ✅ `POST /admin/trainings/upload-featured-image` - Uploads training featured images
+- ✅ `POST /admin/trainings/upload-files` - Uploads training content files
+- ✅ `POST /admin/assigned-trainings` - Creates trainings with S3 file URLs
+- ✅ `DELETE /admin/assigned-trainings/{id}` - Deletes training and all associated files from S3
+- ✅ All endpoints now support both S3 and local storage based on `USE_S3` setting
+- **Storage Path**: `uploads/trainings/featured-images/` and `uploads/trainings/content/`
+
 ### 3. Configuration Support
 - **`app/core/config.py`** - Already includes S3 settings:
   - `USE_S3` (bool, default: False)

@@ -199,9 +199,9 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        user_assignment = result.scalar_one_or_none()
+        user_assignment = result.scalars().first()
         
         if user_assignment:
             return user_assignment
@@ -233,9 +233,9 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        user_assignment = user_assignment.scalar_one_or_none()
+        user_assignment = user_assignment.scalars().first()
         
         if not user_assignment:
             return None
@@ -269,9 +269,10 @@ class AssignedTrainingUserCRUD:
                     AssignedTrainingUser.assigned_training_id == assigned_training_id,
                     AssignedTrainingUser.user_id == user_id,
                 )
-            )
+            ).order_by(AssignedTrainingUser.updated_at.desc())
         )
-        return result.scalar_one_or_none()
+        # Return the most recent entry (handles potential duplicates gracefully)
+        return result.scalars().first()
 
     async def get_user_assignments_for_training(
         self,

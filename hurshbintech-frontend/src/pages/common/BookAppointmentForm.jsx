@@ -288,45 +288,47 @@ const BookAppointmentForm = () => {
   return (
     <div className="page-container">
       <Navbar />
-      <main >
-        <div className="page-content" style={{maxWidth: '900px'}}>
-          {/* Back Button */}
-          <button onClick={() => navigate(-1)} className="back-button">
-            <ArrowLeft className="w-5 h-5" />
-            Back to Coaches
-          </button>
-
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            {/* Back Button */}
+            <button onClick={() => navigate(-1)} className="back-button">
+              <ArrowLeft className="w-5 h-5" />
+              Back to Coaches
+            </button>
+
+            {/* Title */}
             <h1 className="page-title">Book Appointment</h1>
-            {coach && (
-              <div className="selected-coach-info">
-                <div className="coach-avatar-sm">
-                  {coach.profile_picture_url ? (
-                    <img 
-                      src={getFileUrl(coach.profile_picture_url)}
-                      alt={coach.name}
-                      onError={(e) => {
-                        console.error(`[BookAppointmentForm] Failed to load image for ${coach.name}: ${e.target.src}`);
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <span style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
-                    {coach.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <p className="coach-name-sm">{coach.name}</p>
-                  {coach.specialization && (
-                    <p className="coach-spec-sm">{coach.specialization}</p>
-                  )}
-                </div>
-              </div>
-    
-            )}
           </div>
+
+          {/* Coach Info */}
+          {coach && (
+            <div className="selected-coach-info">
+              <div className="coach-avatar-sm">
+                {coach.profile_picture_url ? (
+                  <img 
+                    src={getFileUrl(coach.profile_picture_url)}
+                    alt={coach.name}
+                    onError={(e) => {
+                      console.error(`[BookAppointmentForm] Failed to load image for ${coach.name}: ${e.target.src}`);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
+                  {coach.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="coach-name-sm">{coach.name}</p>
+                {coach.specialization && (
+                  <p className="coach-spec-sm">{coach.specialization}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Form Card */}
           <div className="appointment-form-card">
@@ -523,7 +525,7 @@ const BookAppointmentForm = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-confirm"
+                  className="btn-primary"
                   disabled={loading || !isFormComplete()}
                   title={!isFormComplete() ? 'Please fill in all required fields' : 'Confirm your booking'}
                 >
