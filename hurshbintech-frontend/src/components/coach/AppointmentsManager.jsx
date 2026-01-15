@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/Dashboards.css';
 import '../../styles/Coach.css';
+import '../../styles/components/common/Modal.css';
 
 const AppointmentsManager = () => {
   const navigate = useNavigate();
@@ -501,7 +502,7 @@ const AppointmentsManager = () => {
                   {/* View Details Button */}
                   <button
                     onClick={() => handleViewDetails(apt)}
-                    className="app-modal-btn app-modal-btn--primary px-4 py-2 text-sm whitespace-nowrap"
+                    className="app-modal-btn app-modal-btn--primary whitespace-nowrap"
                   >
                     View Details
                   </button>
@@ -515,17 +516,19 @@ const AppointmentsManager = () => {
       {/* Modal for Appointment Details */}
       {showModal && selectedAppointment && (
         <div className="app-modal-overlay" onClick={closeModal}>
-          <div className="app-modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="app-modal-header app-modal-header--primary">
-              <h3 className="app-modal-title">Appointment Details</h3>
+              <div className="app-modal-header-content">
+                <h3 className="app-modal-title">Appointment Details</h3>
+              </div>
               <button onClick={closeModal} className="app-modal-close">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="modal-body space-y-4">
+            <div className="app-modal-content space-y-4">
               {/* Guest Badge */}
               {selectedAppointment.guest_name && (
                 <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded">
@@ -613,7 +616,7 @@ const AppointmentsManager = () => {
                       href={getFileUrl(selectedAppointment.payment_screenshot_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                      className="app-modal-btn app-modal-btn--primary"
                     >
                       <FileText className="w-4 h-4" />
                       View Payment Screenshot
@@ -634,7 +637,7 @@ const AppointmentsManager = () => {
                       href={getFileUrl(selectedAppointment.payment_receipt_url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="app-modal-btn app-modal-btn--primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                      className="app-modal-btn app-modal-btn--primary"
                     >
                       <FileText className="w-4 h-4" />
                       View Payment Receipt
@@ -673,7 +676,7 @@ const AppointmentsManager = () => {
                 <>
                   <button 
                     onClick={handleOpenRejectModal}
-                    className="app-modal-btn app-modal-btn--secondary flex items-center gap-2"
+                    className="app-modal-btn app-modal-btn--secondary"
                     disabled={updating}
                   >
                     <XCircle className="w-4 h-4" />
@@ -681,7 +684,7 @@ const AppointmentsManager = () => {
                   </button>
                   <button 
                     onClick={() => handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')}
-                    className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
+                    className="app-modal-btn app-modal-btn--primary"
                     disabled={updating}
                   >
                     <Check className="w-4 h-4" />
@@ -702,17 +705,19 @@ const AppointmentsManager = () => {
       {/* Rejection Modal */}
       {showRejectModal && selectedAppointment && (
         <div className="app-modal-overlay" onClick={handleCloseRejectModal}>
-          <div className="app-modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="app-modal-header app-modal-header--primary">
-              <h3 className="app-modal-title">Reject Appointment</h3>
+              <div className="app-modal-header-content">
+                <h3 className="app-modal-title">Reject Appointment</h3>
+              </div>
               <button onClick={handleCloseRejectModal} className="app-modal-close">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="modal-body space-y-4">
+            <div className="app-modal-content space-y-4">
               {/* Appointment Info */}
               <div className="bg-gray-50 p-3 rounded">
                 <p className="text-sm text-gray-600 mb-1">Appointment for:</p>
@@ -728,18 +733,17 @@ const AppointmentsManager = () => {
 
               {/* Rejection Reason */}
               <div className="app-modal-form-field">
-                <label className="field-label">Rejection Reason *</label>
+                <label className="app-modal-form-label">Rejection Reason *</label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Explain why you're rejecting this appointment..."
-                  className="field-input"
+                  className="app-modal-form-textarea"
                   rows="4"
-                  style={{ fontFamily: 'inherit', resize: 'vertical' }}
                   required
                 />
                 {rejectReason && (
-                  <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p className="app-modal-form-helper">
                     {rejectReason.length} characters
                   </p>
                 )}
@@ -747,7 +751,7 @@ const AppointmentsManager = () => {
 
               {/* Refund Receipt Upload */}
               <div className="app-modal-form-field">
-                <label className="field-label">Refund Receipt (Optional)</label>
+                <label className="app-modal-form-label">Refund Receipt (Optional)</label>
                 
                 {!refundPreview ? (
                   <label className="file-upload-area">
@@ -789,7 +793,7 @@ const AppointmentsManager = () => {
               </button>
               <button
                 onClick={handleRejectAppointment}
-                className="app-modal-btn app-modal-btn--secondary flex items-center gap-2"
+                className="app-modal-btn app-modal-btn--primary"
                 disabled={updating || !rejectReason.trim()}
               >
                 <XCircle className="w-4 h-4" />

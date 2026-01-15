@@ -73,6 +73,36 @@ const ClientSession = () => {
     };
   }, [webRTC, addReceivedMessage]);
 
+  // Listen for session end from coach
+  useEffect(() => {
+    if (!whiteboardService) return;
+
+    whiteboardService.onSessionEnded = (data) => {
+      console.log('[ClientSession] Session ended by coach:', data);
+      toast.info('Session has been ended by the coach');
+      
+      // Clean up and redirect after a short delay
+      setTimeout(() => {
+        if (webRTC?.localStream) {
+          webRTC.localStream.getTracks().forEach(track => track.stop());
+        }
+        if (webRTC) {
+          webRTC.close();
+        }
+        if (whiteboardService) {
+          whiteboardService.close();
+        }
+        navigate('/my-appointments');
+      }, 2000);
+    };
+
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onSessionEnded = null;
+      }
+    };
+  }, [whiteboardService, webRTC, navigate]);
+
   // Learning content from coach
   const [textMessages, setTextMessages] = useState([]);
   const [feedbackMessage, setFeedbackMessage] = useState('');

@@ -53,18 +53,24 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Check if this is a silent auth check (browsing without login)
+      // Don't show error toast or redirect for optional authentication
+      if (error.config?.silentAuthCheck) {
+        return Promise.reject(error);
+      }
+
       logger.warn('[Axios] Received 401 Unauthorized - clearing auth and redirecting to login');
-      
+
       toast.error("Session expired! Please login Again.");
-      
+
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_data');
       // Use setTimeout to ensure state updates complete before navigation
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
-      
-      return new Promise(() => {});
+
+      return new Promise(() => { });
     }
 
     // Handle 403 - Forbidden

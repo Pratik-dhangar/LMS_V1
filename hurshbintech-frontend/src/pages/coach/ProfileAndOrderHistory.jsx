@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
@@ -7,10 +7,9 @@ import Footer from "../../components/layout/Footer";
 import orderService from "../../api/services/ecommerce/orderService";
 import "../../styles/admin/index.css";
 
-const LearnerProfileAndOrderHistory = () => {
+const CoachProfileAndOrderHistory = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
 
     // Order History state
     const [orderHistory, setOrderHistory] = useState([]);
@@ -25,22 +24,8 @@ const LearnerProfileAndOrderHistory = () => {
     const [showReceiptPreview, setShowReceiptPreview] = useState(false);
     const [previewReceiptUrl, setPreviewReceiptUrl] = useState(null);
 
-    // Check if coming from email link with order_id
     useEffect(() => {
-        const orderId = searchParams.get('order_id');
-        if (orderId) {
-            fetchOrderHistory().then(() => {
-                setTimeout(() => {
-                    const order = orderHistory.find(o => o.id === orderId || o.uuid === orderId);
-                    if (order) {
-                        setSelectedOrderDetails(order);
-                        setShowOrderDetailsModal(true);
-                    }
-                }, 500);
-            });
-        } else {
-            fetchOrderHistory();
-        }
+        fetchOrderHistory();
     }, []);
 
     const fetchOrderHistory = async () => {
@@ -141,7 +126,7 @@ const LearnerProfileAndOrderHistory = () => {
         return orderHistory.filter(order => statuses.includes(order.status));
     };
 
-    const getStatusBadge = (status) => {
+    const getOrderStatusBadge = (status) => {
         const statusConfig = {
             'CREATED': { bg: 'bg-yellow-200', text: 'text-yellow-800', label: '⏳ Pending', icon: '⏳' },
             'PAYMENT_UPLOADED': { bg: 'bg-blue-200', text: 'text-blue-800', label: '📤 Payment Uploaded', icon: '📤' },
@@ -171,7 +156,7 @@ const LearnerProfileAndOrderHistory = () => {
                             👤 My Profile & Order History
                         </h1>
                         <button
-                            onClick={() => navigate("/learner/dashboard")}
+                            onClick={() => navigate("/coach/dashboard")}
                             className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
                         >
                             ← Back to Dashboard
@@ -198,7 +183,7 @@ const LearnerProfileAndOrderHistory = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Role</p>
-                                    <p className="text-lg font-bold text-gray-900">{user?.role || "Learner"}</p>
+                                    <p className="text-lg font-bold text-gray-900">{user?.role || "Coach"}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Phone</p>
@@ -246,7 +231,7 @@ const LearnerProfileAndOrderHistory = () => {
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600 mx-auto mb-2"></div>
                                     Loading order history...
                                 </div>
-                            ) : orderHistory.length === 0 ? (
+                            ) : getFilteredOrders().length === 0 ? (
                                 <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                                     <p className="text-2xl mb-2">📦</p>
                                     <p className="text-gray-600 font-medium">No orders found</p>
@@ -280,7 +265,7 @@ const LearnerProfileAndOrderHistory = () => {
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Status</p>
-                                                                {getStatusBadge(order.status)}
+                                                                {getOrderStatusBadge(order.status)}
                                                             </div>
                                                         </div>
                                                         <button
@@ -386,7 +371,7 @@ const LearnerProfileAndOrderHistory = () => {
             {/* Order Details Modal */}
             {showOrderDetailsModal && selectedOrderDetails && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowOrderDetailsModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fadeIn" onClick={(e) => e.stopPropagation()}>
                         {/* Modal Header */}
                         <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 flex items-center justify-between rounded-t-2xl">
                             <h2 className="text-2xl font-bold">Order Details</h2>
@@ -405,7 +390,7 @@ const LearnerProfileAndOrderHistory = () => {
                                 <div className="flex items-center gap-3 mb-4">
                                     <div>
                                         <p className="text-sm font-semibold text-gray-600 mb-2">Status</p>
-                                        {getStatusBadge(selectedOrderDetails.status)}
+                                        {getOrderStatusBadge(selectedOrderDetails.status)}
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -643,7 +628,7 @@ const LearnerProfileAndOrderHistory = () => {
             {/* Receipt Preview Modal */}
             {showReceiptPreview && previewReceiptUrl && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setShowReceiptPreview(false)}>
-                    <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full animate-fadeIn">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full animate-fadeIn" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 bg-gray-100 border-b">
                             <h3 className="text-lg font-bold text-gray-800">Receipt Preview</h3>
                             <button
@@ -669,4 +654,4 @@ const LearnerProfileAndOrderHistory = () => {
     );
 };
 
-export default LearnerProfileAndOrderHistory;
+export default CoachProfileAndOrderHistory;

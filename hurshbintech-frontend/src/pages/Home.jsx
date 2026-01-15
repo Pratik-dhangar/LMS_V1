@@ -10,6 +10,7 @@ import vlogService from '../api/services/vlogService';
 import DOMPurify from 'dompurify';
 import '../styles/pages/Home.css';
 import '../styles/pages/AboutUs.css';
+import '../styles/components/common/Modal.css';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -496,102 +497,47 @@ const Home = () => {
       {/* Modal for Section Details */}
       {modalOpen && selectedSection && (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto animate-fade-in"
+          className="app-modal-overlay"
+          onClick={closeModal}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
         >
-          <div
-            className="modal-backdrop"
-            onClick={closeModal}
-            aria-hidden="true"
-          ></div>
-
-          {/* Modal Content */}
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="app-modal-content">
-              <div className="app-modal-header app-modal-header--primary">
-                <div className="modal-header-bg"></div>
-                <div className="app-modal-header-content">
-                  <div className="modal-title-wrapper">
-                    <div className="modal-icon-wrapper">
-                      <span className="modal-icon" aria-hidden="true">{selectedSection.icon}</span>
-                    </div>
-                    <div>
-                      <h2 id="modal-title" className="app-modal-title">
-                        {selectedSection.title}
-                      </h2>
-                      <div className="modal-title-underline"></div>
-                    </div>
-                  </div>
-                 
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="app-modal-header app-modal-header--primary">
+              <div className="app-modal-header-content">
+                <div className="modal-title-wrapper">
+                  <span className="modal-icon" aria-hidden="true">{selectedSection.icon}</span>
+                  <h2 id="modal-title" className="app-modal-title">
+                    {selectedSection.title}
+                  </h2>
                 </div>
               </div>
+              <button onClick={closeModal} className="app-modal-close">
+                ✕
+              </button>
+            </div>
 
-              <div className="modal-body custom-scrollbar">
-                <div
-                  className="modal-body-content"
-                  dangerouslySetInnerHTML={sanitizeHTML(selectedSection.content)}
-                />
-              </div>
+            {/* Modal Body */}
+            <div className="app-modal-content">
+              <div
+                dangerouslySetInnerHTML={sanitizeHTML(selectedSection.content)}
+              />
+            </div>
 
-              <div className="app-modal-footer">
-                <button
-                  onClick={closeModal}
-                  className="modal-footer-button"
-                >
-                  Close
-                </button>
-              </div>
+            {/* Modal Footer */}
+            <div className="app-modal-footer">
+              <button
+                onClick={closeModal}
+                className="app-modal-btn app-modal-btn--secondary"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes scale-in {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f3f4f6;
-          border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #db9d32, #c98d1e);
-          border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #c98d1e, #b67d0e);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .animate-fade-in,
-          .animate-scale-in {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 };

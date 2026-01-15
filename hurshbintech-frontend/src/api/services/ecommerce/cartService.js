@@ -10,7 +10,9 @@ const cartService = {
      */
     getCart: async () => {
         try {
-            const response = await axiosInstance.get('/cart');
+            const response = await axiosInstance.get('/cart', {
+                silentAuthCheck: true // Don't show session expired error for browsing
+            });
             return response.data;
         } catch (error) {
             console.error('Error fetching cart:', error);
@@ -25,7 +27,9 @@ const cartService = {
      */
     addToCart: async (itemData) => {
         try {
-            const response = await axiosInstance.post('/cart/items', itemData);
+            const response = await axiosInstance.post('/cart/items', itemData, {
+                silentAuthCheck: true // Let component handle auth error
+            });
             return response.data;
         } catch (error) {
             console.error('Error adding to cart:', error);

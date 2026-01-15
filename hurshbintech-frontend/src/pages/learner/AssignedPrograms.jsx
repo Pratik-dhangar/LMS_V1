@@ -490,7 +490,7 @@ const AssignedPrograms = () => {
                           color: star <= selectedFeedback.rating ? '#fbbf24' : '#d1d5db'
                         }}
                       >
-                        ⭐
+                        {star <= selectedFeedback.rating ? '★' : '☆'}
                       </span>
                     ))}
                   </div>

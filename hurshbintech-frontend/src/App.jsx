@@ -54,7 +54,6 @@ import ProgramGraphView from './pages/head/ProgramGraphView';
 import TrainerDashboard from './pages/trainer/Dashboard';
 import TrainerSession from './pages/trainer/TrainerSession';
 import TodaysSchedule from './pages/trainer/TodaysSchedule';
-import TrainerProfileAndOrderHistory from './pages/trainer/ProfileAndOrderHistory';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
@@ -74,7 +73,6 @@ import FeedbackPage from "./pages/learner/FeedbackPage";
 import MySessions from "./pages/learner/MySessions";
 import AssignedPrograms from "./pages/learner/AssignedPrograms";
 import LearningContent from "./pages/learner/LearningContent";
-import LearnerProfileAndOrderHistory from './pages/learner/ProfileAndOrderHistory';
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -88,9 +86,9 @@ import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
-import AboutUs from './pages/AboutUs';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 import TrainingDetailView from './pages/common/TrainingDetailView';
+import ProfileAndOrderHistory from './pages/common/ProfileAndOrderHistory';
 
 // Guest Booking Pages
 import GuestBookingStep1 from './pages/common/GuestBookingStep1';
@@ -171,7 +169,6 @@ function AppRoutes() {
       <Routes>
         {/* Public Routes */}
         <Route path="" element={<Home />} />
-        <Route path="/about" element={<AboutUs />} />
 
         <Route
           path="/login"
@@ -363,6 +360,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ProfileAndOrderHistory />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Head Routes */}
         <Route
@@ -479,6 +484,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/head/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['head']}>
+              <ProfileAndOrderHistory />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Trainer Routes */}
         <Route
@@ -509,7 +522,7 @@ function AppRoutes() {
           path="/trainer/profile-order-history"
           element={
             <ProtectedRoute allowedRoles={['trainer']}>
-              <TrainerProfileAndOrderHistory />
+              <ProfileAndOrderHistory />
             </ProtectedRoute>
           }
         />
@@ -562,8 +575,14 @@ function AppRoutes() {
               <CoachSession />
             </ProtectedRoute>
           }
+        />        <Route
+          path="/coach/profile-order-history"
+          element={
+            <ProtectedRoute allowedRoles={['coach']}>
+              <ProfileAndOrderHistory />
+            </ProtectedRoute>
+          }
         />
-
         {/* Learner Routes */}
         <Route
           path="/learner/dashboard"
@@ -601,7 +620,7 @@ function AppRoutes() {
           path="/learner/profile-order-history"
           element={
             <ProtectedRoute allowedRoles={['learner']}>
-              <LearnerProfileAndOrderHistory />
+              <ProfileAndOrderHistory />
             </ProtectedRoute>
           }
         />
@@ -616,7 +635,7 @@ function AppRoutes() {
         <Route
           path="/book-appointment"
           element={
-            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner', 'coach', 'admin']}>
               <BookAppointment />
             </ProtectedRoute>
           }
@@ -624,7 +643,7 @@ function AppRoutes() {
         <Route
           path="/book-appointment/:coachId"
           element={
-            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner', 'coach', 'admin']}>
               <BookAppointmentForm />
             </ProtectedRoute>
           }
@@ -720,19 +739,20 @@ function AppRoutes() {
 
         {/* Store/E-commerce Routes */}
         <Route path="/store" element={<StoreCatalog />} />
+        <Route path="/learning-materials" element={<StoreCatalog />} />
         <Route path="/store/product/:productId" element={<ProductDetail />} />
         <Route path="/store/cart" element={
-          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
             <Cart />
           </ProtectedRoute>
         } />
         <Route path="/store/checkout" element={
-          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
             <Checkout />
           </ProtectedRoute>
         } />
         <Route path="/store/orders" element={
-          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin"]}>
+          <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
             <OrderHistory />
           </ProtectedRoute>
         } />

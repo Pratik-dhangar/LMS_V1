@@ -87,7 +87,7 @@ const StoreCatalog = () => {
         } catch (error) {
             if (error.response?.status === 401) {
                 toast.info('Please login to add items to cart');
-                navigate('/auth/login');
+                navigate('/login');
             } else {
                 toast.error(error.response?.data?.detail || 'Failed to add to cart');
             }

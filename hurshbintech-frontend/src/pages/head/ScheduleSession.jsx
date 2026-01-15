@@ -321,13 +321,17 @@ const ScheduleSession = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder={
+                  placeholder="Search trainer by name or ID..."
+                  value={
                     formData.trainer_id
                       ? getSelectedTrainerName()
-                      : "Search trainer by name or ID..."
+                      : searchTerm.trainer
                   }
-                  value={searchTerm.trainer}
                   onChange={(e) => {
+                    // Clear selection when user starts typing
+                    if (formData.trainer_id) {
+                      setFormData({ ...formData, trainer_id: "" });
+                    }
                     setSearchTerm({ ...searchTerm, trainer: e.target.value });
                     setShowDropdown({ ...showDropdown, trainer: true });
                   }}
@@ -363,7 +367,7 @@ const ScheduleSession = () => {
                     )}
                   </div>
                 )}
-                {formData.trainer_id && !showDropdown.trainer && (
+                {/* {formData.trainer_id && !showDropdown.trainer && (
                   <button
                     type="button"
                     onClick={() => {
@@ -374,7 +378,7 @@ const ScheduleSession = () => {
                   >
                     ✕
                   </button>
-                )}
+                )} */}
               </div>
 
               {/* Select Learner with Searchable Dropdown */}
@@ -384,13 +388,17 @@ const ScheduleSession = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder={
+                  placeholder="Search learner by name or ID..."
+                  value={
                     formData.learner_id
                       ? getSelectedLearnerName()
-                      : "Search learner by name or ID..."
+                      : searchTerm.learner
                   }
-                  value={searchTerm.learner}
                   onChange={(e) => {
+                    // Clear selection when user starts typing
+                    if (formData.learner_id) {
+                      setFormData({ ...formData, learner_id: "" });
+                    }
                     setSearchTerm({ ...searchTerm, learner: e.target.value });
                     setShowDropdown({ ...showDropdown, learner: true });
                   }}
@@ -426,7 +434,7 @@ const ScheduleSession = () => {
                     )}
                   </div>
                 )}
-                {formData.learner_id && !showDropdown.learner && (
+                {/* {formData.learner_id && !showDropdown.learner && (
                   <button
                     type="button"
                     onClick={() => {
@@ -437,7 +445,7 @@ const ScheduleSession = () => {
                   >
                     ✕
                   </button>
-                )}
+                )} */}
               </div>
             </div>
 
