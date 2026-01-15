@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Calendar, Clock, Upload, X, ArrowLeft, Check } from 'lucide-react';
+import { Calendar, Clock, Upload, X, ArrowLeft, Check, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
@@ -14,6 +15,7 @@ const BookAppointmentForm = () => {
   const { coachId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const coach = location.state?.coach;
 
   const [loading, setLoading] = useState(false);
@@ -215,6 +217,12 @@ const BookAppointmentForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Restrict admin and coach users from booking appointments
+    if (user && (user.role === 'admin' || user.role === 'coach')) {
+      toast.error('Admin and Coach users cannot book appointments. Only Head, Trainer, and Learner users can book appointments.');
+      return;
+    }
+
     if (!formData.appointment_date || !formData.appointment_time || !formData.session_type) {
       toast.error('Please fill in all required fields');
       return;
@@ -301,6 +309,25 @@ const BookAppointmentForm = () => {
             {/* Title */}
             <h1 className="page-title">Book Appointment</h1>
           </div>
+
+          {/* Warning for Admin and Coach users */}
+          {user && (user.role === 'admin' || user.role === 'coach') && (
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <p style={{ margin: 0, color: '#92400E', fontSize: '0.95rem' }}>
+                <strong>View-Only Mode:</strong> As an {user.role === 'admin' ? 'Admin' : 'Coach'} user, you can view this page but cannot book appointments. Only Head, Trainer, and Learner users can book appointments.
+              </p>
+            </div>
+          )}
 
           {/* Coach Info */}
           {coach && (

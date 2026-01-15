@@ -69,12 +69,12 @@
 }
 
 /* Clear Button for Dropdown */
-.schedule-session .dropdown-clear {
+/* .schedule-session .dropdown-clear {
   position: absolute !important;
   right: 12px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
-  background: #ef4444 !important;
+  background: #221212 !important;
   color: white !important;
   border: none !important;
   border-radius: 50% !important;
@@ -91,7 +91,7 @@
 
 .schedule-session .dropdown-clear:hover {
   background: #dc2626 !important;
-}
+} */
 
 /* Search Icon */
 .schedule-session .search-icon {

@@ -167,6 +167,25 @@ const BookAppointment = () => {
             </div>
           </div>
 
+          {/* Warning for Admin and Coach users */}
+          {user && (user.role === 'admin' || user.role === 'coach') && (
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <p style={{ margin: 0, color: '#92400E', fontSize: '0.95rem' }}>
+                <strong>View-Only Mode:</strong> As an {user.role === 'admin' ? 'Admin' : 'Coach'} user, you can view this page but cannot book appointments. Only Head, Trainer, and Learner users can book appointments.
+              </p>
+            </div>
+          )}
+
           {/* Search Bar and Add Button */}
           <div className="search-section">
             <div style={{ position: 'relative', flex: 1 }}>
@@ -180,14 +199,17 @@ const BookAppointment = () => {
                 style={{ paddingLeft: '40px' }}
               />
             </div>
-             <button 
-              onClick={() => navigate('/my-appointments')}
-              className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
-              style={{ alignSelf: 'flex-start' }}
-            >
-              <Calendar className="w-4 h-4" />
-              My Appointments
-            </button>
+            {/* Only show My Appointments button for roles that can book appointments */}
+            {user && user.role !== 'admin' && user.role !== 'coach' && (
+              <button 
+                onClick={() => navigate('/my-appointments')}
+                className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
+                style={{ alignSelf: 'flex-start' }}
+              >
+                <Calendar className="w-4 h-4" />
+                My Appointments
+              </button>
+            )}
           </div>
           
 
