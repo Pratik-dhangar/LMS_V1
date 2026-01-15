@@ -7,7 +7,7 @@ import Footer from "../../components/layout/Footer";
 import { downloadProgressReportPDF } from "../../utils/pdfGenerator";
 
 import "../../styles/ManageUsersLayout.css";
-import "../../styles/head/ReportCard.css";
+import "../../styles/head/reportCard.css";
 
 const LearnerProgramsView = () => {
   const { learnerId } = useParams();

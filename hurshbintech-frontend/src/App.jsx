@@ -86,7 +86,6 @@ import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
-import AboutUs from './pages/AboutUs';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 import TrainingDetailView from './pages/common/TrainingDetailView';
 import ProfileAndOrderHistory from './pages/common/ProfileAndOrderHistory';
@@ -170,7 +169,6 @@ function AppRoutes() {
       <Routes>
         {/* Public Routes */}
         <Route path="" element={<Home />} />
-        <Route path="/about" element={<AboutUs />} />
 
         <Route
           path="/login"
@@ -637,7 +635,7 @@ function AppRoutes() {
         <Route
           path="/book-appointment"
           element={
-            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner', 'coach', 'admin']}>
               <BookAppointment />
             </ProtectedRoute>
           }
@@ -645,7 +643,7 @@ function AppRoutes() {
         <Route
           path="/book-appointment/:coachId"
           element={
-            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner']}>
+            <ProtectedRoute allowedRoles={['head', 'trainer', 'learner', 'coach', 'admin']}>
               <BookAppointmentForm />
             </ProtectedRoute>
           }

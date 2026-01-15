@@ -28,6 +28,7 @@ class WhiteboardService {
         this.onTextBoxAdded = null; // New callback for text box added
         this.onTextBoxUpdate = null; // New callback for text box updates
         this.onTextBoxRemoved = null; // New callback for text box removed
+        this.onSessionEnded = null; // New callback for session ended by coach/trainer
     }
 
     initialize() {
@@ -202,6 +203,12 @@ class WhiteboardService {
                 case 'text_box_removed':
                     if (this.onTextBoxRemoved) {
                         this.onTextBoxRemoved(message.data);
+                    }
+                    break;
+
+                case 'session_ended':
+                    if (this.onSessionEnded) {
+                        this.onSessionEnded(message.data);
                     }
                     break;
 

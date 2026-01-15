@@ -812,6 +812,14 @@ const TrainerSession = () => {
   const handleEndSession = async () => {
     if (window.confirm('Are you sure you want to end this session?')) {
       try {
+        // Broadcast session end to learner before ending
+        if (whiteboardService) {
+          whiteboardService.send('session_ended', {
+            message: 'Trainer has ended the session',
+            timestamp: Date.now()
+          });
+        }
+        
         // Save notes before ending session
         if (autoSaveTimerRef.current) {
           clearTimeout(autoSaveTimerRef.current);

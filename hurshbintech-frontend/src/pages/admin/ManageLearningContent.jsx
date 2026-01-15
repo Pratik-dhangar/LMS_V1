@@ -279,7 +279,7 @@ const ManageLearningContent = () => {
   }
 
   return (
-    <>
+    <div className="page-container">
       <Navbar />
       <div className="page-main">
         <div className="page-content">
@@ -640,7 +640,7 @@ const ManageLearningContent = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

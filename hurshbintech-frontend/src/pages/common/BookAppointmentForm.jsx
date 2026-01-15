@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Calendar, Clock, Upload, X, ArrowLeft, Check } from 'lucide-react';
+import { Calendar, Clock, Upload, X, ArrowLeft, Check, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
@@ -14,6 +15,7 @@ const BookAppointmentForm = () => {
   const { coachId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const coach = location.state?.coach;
 
   const [loading, setLoading] = useState(false);
@@ -215,6 +217,12 @@ const BookAppointmentForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Restrict admin and coach users from booking appointments
+    if (user && (user.role === 'admin' || user.role === 'coach')) {
+      toast.error('Admin and Coach users cannot book appointments. Only Head, Trainer, and Learner users can book appointments.');
+      return;
+    }
+
     if (!formData.appointment_date || !formData.appointment_time || !formData.session_type) {
       toast.error('Please fill in all required fields');
       return;
@@ -288,45 +296,66 @@ const BookAppointmentForm = () => {
   return (
     <div className="page-container">
       <Navbar />
-      <main >
-        <div className="page-content" style={{maxWidth: '900px'}}>
-          {/* Back Button */}
-          <button onClick={() => navigate(-1)} className="back-button">
-            <ArrowLeft className="w-5 h-5" />
-            Back to Coaches
-          </button>
-
+      <main className="page-main">
+        <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            {/* Back Button */}
+            <button onClick={() => navigate(-1)} className="back-button">
+              <ArrowLeft className="w-5 h-5" />
+              Back to Coaches
+            </button>
+
+            {/* Title */}
             <h1 className="page-title">Book Appointment</h1>
-            {coach && (
-              <div className="selected-coach-info">
-                <div className="coach-avatar-sm">
-                  {coach.profile_picture_url ? (
-                    <img 
-                      src={getFileUrl(coach.profile_picture_url)}
-                      alt={coach.name}
-                      onError={(e) => {
-                        console.error(`[BookAppointmentForm] Failed to load image for ${coach.name}: ${e.target.src}`);
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <span style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
-                    {coach.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <p className="coach-name-sm">{coach.name}</p>
-                  {coach.specialization && (
-                    <p className="coach-spec-sm">{coach.specialization}</p>
-                  )}
-                </div>
-              </div>
-    
-            )}
           </div>
+
+          {/* Warning for Admin and Coach users */}
+          {user && (user.role === 'admin' || user.role === 'coach') && (
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <p style={{ margin: 0, color: '#92400E', fontSize: '0.95rem' }}>
+                <strong>View-Only Mode:</strong> As an {user.role === 'admin' ? 'Admin' : 'Coach'} user, you can view this page but cannot book appointments. Only Head, Trainer, and Learner users can book appointments.
+              </p>
+            </div>
+          )}
+
+          {/* Coach Info */}
+          {coach && (
+            <div className="selected-coach-info">
+              <div className="coach-avatar-sm">
+                {coach.profile_picture_url ? (
+                  <img 
+                    src={getFileUrl(coach.profile_picture_url)}
+                    alt={coach.name}
+                    onError={(e) => {
+                      console.error(`[BookAppointmentForm] Failed to load image for ${coach.name}: ${e.target.src}`);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span style={{ display: coach.profile_picture_url ? 'none' : 'flex' }}>
+                  {coach.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="coach-name-sm">{coach.name}</p>
+                {coach.specialization && (
+                  <p className="coach-spec-sm">{coach.specialization}</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Form Card */}
           <div className="appointment-form-card">
@@ -523,7 +552,7 @@ const BookAppointmentForm = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-confirm"
+                  className="btn-primary"
                   disabled={loading || !isFormComplete()}
                   title={!isFormComplete() ? 'Please fill in all required fields' : 'Confirm your booking'}
                 >

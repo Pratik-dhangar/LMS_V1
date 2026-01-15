@@ -98,6 +98,36 @@ const LearnerSession = () => {
     };
   }, [webRTC, addReceivedMessage]);
 
+  // Listen for session end from trainer
+  useEffect(() => {
+    if (!whiteboardService) return;
+
+    whiteboardService.onSessionEnded = (data) => {
+      console.log('[LearnerSession] Session ended by trainer:', data);
+      toast.info('Session has been ended by the trainer');
+      
+      // Clean up and redirect after a short delay
+      setTimeout(() => {
+        if (webRTC?.localStream) {
+          webRTC.localStream.getTracks().forEach(track => track.stop());
+        }
+        if (webRTC) {
+          webRTC.close();
+        }
+        if (whiteboardService) {
+          whiteboardService.close();
+        }
+        navigate('/learner/dashboard');
+      }, 2000);
+    };
+
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onSessionEnded = null;
+      }
+    };
+  }, [whiteboardService, webRTC, navigate]);
+
   // Set up remote video stream
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {

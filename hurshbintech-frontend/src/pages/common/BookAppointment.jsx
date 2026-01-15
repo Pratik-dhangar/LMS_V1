@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Search, Star, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
@@ -12,11 +13,25 @@ import '../../styles/ManageUsersLayout.css';
 
 const BookAppointment = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [coaches, setCoaches] = useState([]);
   const [filteredCoaches, setFilteredCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
+
+  // Helper function to get role-based dashboard URL
+  const getDashboardUrl = () => {
+    if (!user || !user.role) return '/dashboard';
+    const dashboardMap = {
+      'head': '/head/dashboard',
+      'trainer': '/trainer/dashboard',
+      'coach': '/coach/dashboard',
+      'admin': '/admin/dashboard',
+      'learner': '/learner/dashboard'
+    };
+    return dashboardMap[user.role] || '/dashboard';
+  };
 
   useEffect(() => {
     fetchCoaches();
@@ -133,33 +148,70 @@ const BookAppointment = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-            <div>
-              <h1 className="page-title">Book an Appointment</h1>
-              <p className="page-description">Choose from our experienced coaches</p>
-            </div>
-            <button 
-              onClick={() => navigate('/my-appointments')}
-              className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
-              style={{ alignSelf: 'flex-start' }}
+            <button
+              onClick={() => navigate(getDashboardUrl())}
+              className="back-button"
             >
-              <Calendar className="w-4 h-4" />
-              My Appointments
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Go Back to Dashboard
             </button>
+            <div>
+              <h1 className="page-title">
+                Book an Appointment
+              </h1>
+              <p className="page-description">
+                Choose a coach and schedule your session
+              </p>
+            </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="search-container">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" />
+          {/* Warning for Admin and Coach users */}
+          {user && (user.role === 'admin' || user.role === 'coach') && (
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <p style={{ margin: 0, color: '#92400E', fontSize: '0.95rem' }}>
+                <strong>View-Only Mode:</strong> As an {user.role === 'admin' ? 'Admin' : 'Coach'} user, you can view this page but cannot book appointments. Only Head, Trainer, and Learner users can book appointments.
+              </p>
+            </div>
+          )}
+
+          {/* Search Bar and Add Button */}
+          <div className="search-section">
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search className="search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9ca3af' }} />
               <input
                 type="text"
                 placeholder="Search by name or specialization..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
+                style={{ paddingLeft: '40px' }}
               />
             </div>
+            {/* Only show My Appointments button for roles that can book appointments */}
+            {user && user.role !== 'admin' && user.role !== 'coach' && (
+              <button 
+                onClick={() => navigate('/my-appointments')}
+                className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
+                style={{ alignSelf: 'flex-start' }}
+              >
+                <Calendar className="w-4 h-4" />
+                My Appointments
+              </button>
+            )}
           </div>
+          
 
           {/* Coaches Grid */}
           {filteredCoaches.length === 0 ? (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import programAssignmentService from '../../api/services/programAssignmentService';
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
@@ -11,6 +12,7 @@ import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
 
 const ManageProgramAssignments = () => {
+  const navigate = useNavigate();
   const [learners, setLearners] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -565,19 +567,42 @@ const ManageProgramAssignments = () => {
   };
 
   return (
-    <div className="page-container">
+     <div className="page-container">
       <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
+            <button
+              onClick={() => navigate("/head/dashboard")}
+              className="back-button"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
             <div>
               <h1 className="page-title">Manage Program Assignments</h1>
-              <p className="page-description">Assign learning programs to learners and track their progress</p>
+              <p className="page-description">
+                Assign learning programs to learners and track their progress
+              </p>
             </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="search-section">
             <button
               onClick={() => setShowAssignModal(true)}
-              className="mpa-btn-assign-gradient"
+              className="btn-primary"
             >
               + Assign Program
             </button>
@@ -1136,27 +1161,38 @@ const ManageProgramAssignments = () => {
       {showContentsPreviewModal && selectedProgram && (
         <div className="app-modal-overlay">
           <div className="app-modal-container">
-            <h2 className="app-modal-title">Program Contents</h2>
-
-            <div className="mpa-contents-preview-list">
-              {selectedProgram.contents.map((content, index) => (
-                <div key={content.content_id} className="mpa-content-preview-item">
-                  <div className="mpa-content-preview-order">{index + 1}</div>
-                  {content.thumbnail_url && (
-                    <img src={content.thumbnail_url} alt="" className="mpa-content-preview-thumbnail" />
-                  )}
-                  <div className="mpa-content-preview-info">
-                    <div className="mpa-content-preview-title">{content.content_title}</div>
-                    <div className="mpa-content-preview-type">{content.content_type}</div>
-                  </div>
-                </div>
-              ))}
+            <div className="app-modal-header">
+              <h2 className="app-modal-title">Program Contents</h2>
+              <button
+                type="button"
+                onClick={() => setShowContentsPreviewModal(false)}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="mpa-modal-actions">
+            <div className="app-modal-content">
+              <div className="mpa-contents-preview-list">
+                {selectedProgram.contents.map((content, index) => (
+                  <div key={content.content_id} className="mpa-content-preview-item">
+                    <div className="mpa-content-preview-order">{index + 1}</div>
+                    {content.thumbnail_url && (
+                      <img src={content.thumbnail_url} alt="" className="mpa-content-preview-thumbnail" />
+                    )}
+                    <div className="mpa-content-preview-info">
+                      <div className="mpa-content-preview-title">{content.content_title}</div>
+                      <div className="mpa-content-preview-type">{content.content_type}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="app-modal-footer">
               <button
                 onClick={() => setShowContentsPreviewModal(false)}
-                className="mpa-btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Close
               </button>
@@ -1169,17 +1205,34 @@ const ManageProgramAssignments = () => {
       {showTrackingModal && selectedAssignment && (
         <div className="app-modal-overlay">
           <div className="app-modal-container mpa-modal-lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="app-modal-title" style={{ margin: 0 }}>Assignment Tracking</h2>
-              <button
-                onClick={handleRefreshTracking}
-                className="mpa-btn-secondary mpa-btn-sm"
-                style={{ padding: '6px 12px' }}
-                title="Refresh data"
-              >
-                🔄 Refresh
-              </button>
+            <div className="app-modal-header">
+              <h2 className="app-modal-title">Assignment Tracking</h2>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  onClick={handleRefreshTracking}
+                  className="app-modal-btn app-modal-btn--secondary"
+                  style={{ padding: '6px 12px', fontSize: '0.875rem' }}
+                  title="Refresh data"
+                >
+                  🔄 Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTrackingModal(false);
+                    setSelectedAssignment(null);
+                    setAttachments([]);
+                    setCompletionStats(null);
+                    fetchAssignments();
+                  }}
+                  className="app-modal-close"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+
+            <div className="app-modal-content">
 
             {/* Assignment Details */}
             <div className="mpa-assignment-details">
@@ -1346,12 +1399,14 @@ const ManageProgramAssignments = () => {
               </div>
             </div>
 
-            <div className="mpa-modal-actions">
+            </div>
+
+            <div className="app-modal-footer">
               {/* Final Feedback Button - Show for COMPLETED assignments */}
               {selectedAssignment?.completion_status === 'COMPLETED' && (
                 <button
                   onClick={handleOpenFinalFeedbackModal}
-                  className="mpa-btn-primary"
+                  className="app-modal-btn app-modal-btn--primary"
                   style={{ marginRight: 'auto' }}
                 >
                   ⭐ {selectedAssignment.final_feedback_rating ? 'Update' : 'Add'} Final Feedback
@@ -1366,7 +1421,7 @@ const ManageProgramAssignments = () => {
                   // Refresh the main list when closing to show updated statuses
                   fetchAssignments();
                 }}
-                className="mpa-btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
               >
                 Close
               </button>
@@ -1379,56 +1434,67 @@ const ManageProgramAssignments = () => {
       {showFeedbackModal && selectedContentAssignment && (
         <div className="app-modal-overlay">
           <div className="app-modal-container mpa-modal-md">
-            <h2 className="app-modal-title">Add Feedback</h2>
-
-            {/* Learner Submission Section */}
-            {selectedContentAssignment && (
-              <div className="mpa-feedback-learner-submission">
-                <h3 className="mpa-subsection-title">Learner Submission</h3>
-                <p className="mpa-text-muted">
-                  Submitted on: {new Date(selectedContentAssignment.submitted_at).toLocaleString()}
-                </p>
-                {selectedContentAssignment.learner_notes && (
-                  <div className="mpa-learner-notes-box">
-                    <h4>Learner Notes:</h4>
-                    <p>{selectedContentAssignment.learner_notes}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Star Rating Section */}
-            <div className="mpa-feedback-rating-section">
-              <label className="mpa-label">Rating (1-5 Stars)</label>
-              <div className="mpa-star-rating">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => setFeedbackData({ ...feedbackData, rating: star })}
-                    className={`mpa-star-btn ${feedbackData.rating >= star ? 'mpa-star-active' : ''}`}
-                    title={`${star} stars`}
-                  >
-                    ⭐
-                  </button>
-                ))}
-              </div>
-              {feedbackData.rating > 0 && <p className="mpa-text-muted">{feedbackData.rating} out of 5 stars</p>}
+            <div className="app-modal-header">
+              <h2 className="app-modal-title">Add Feedback</h2>
+              <button
+                type="button"
+                onClick={handleCloseFeedbackModal}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Remarks Section */}
-            <div className="mpa-feedback-remarks-section">
-              <label className="mpa-label" htmlFor="feedback_text">
-                Remarks (Optional)
-              </label>
-              <textarea
-                id="feedback_text"
-                value={feedbackData.feedback_text}
-                onChange={(e) => setFeedbackData({ ...feedbackData, feedback_text: e.target.value })}
-                placeholder="Enter your feedback and remarks..."
-                className="mpa-textarea"
-                rows="5"
-              />
-            </div>
+            <div className="app-modal-content">
+              {/* Learner Submission Section */}
+              {selectedContentAssignment && (
+                <div className="mpa-feedback-learner-submission">
+                  <h3 className="mpa-subsection-title">Learner Submission</h3>
+                  <p className="mpa-text-muted">
+                    Submitted on: {new Date(selectedContentAssignment.submitted_at).toLocaleString()}
+                  </p>
+                  {selectedContentAssignment.learner_notes && (
+                    <div className="mpa-learner-notes-box">
+                      <h4>Learner Notes:</h4>
+                      <p>{selectedContentAssignment.learner_notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Star Rating Section */}
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Rating (1-5 Stars)</label>
+                <div className="mpa-star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFeedbackData({ ...feedbackData, rating: star })}
+                      className={`mpa-star-btn ${feedbackData.rating >= star ? 'mpa-star-active' : ''}`}
+                      title={`${star} stars`}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+                {feedbackData.rating > 0 && <p className="mpa-text-muted">{feedbackData.rating} out of 5 stars</p>}
+              </div>
+
+              {/* Remarks Section */}
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label" htmlFor="feedback_text">
+                  Remarks (Optional)
+                </label>
+                <textarea
+                  id="feedback_text"
+                  value={feedbackData.feedback_text}
+                  onChange={(e) => setFeedbackData({ ...feedbackData, feedback_text: e.target.value })}
+                  placeholder="Enter your feedback and remarks..."
+                  className="app-modal-form-textarea"
+                  rows="5"
+                />
+              </div>
 
             {/* Feedback History (if exists) */}
             {selectedContentAssignment.feedback_history && selectedContentAssignment.feedback_history.length > 0 && (
@@ -1446,18 +1512,20 @@ const ManageProgramAssignments = () => {
               </div>
             )}
 
+            </div>
+
             {/* Modal Actions */}
-            <div className="mpa-modal-actions">
+            <div className="app-modal-footer">
               <button
                 onClick={handleCloseFeedbackModal}
-                className="mpa-btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={feedbackSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitFeedback}
-                className="mpa-btn-primary"
+                className="app-modal-btn app-modal-btn--primary"
                 disabled={feedbackSubmitting || feedbackData.rating < 1}
               >
                 {feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'}
@@ -1471,83 +1539,95 @@ const ManageProgramAssignments = () => {
       {showFinalFeedbackModal && selectedAssignment && (
         <div className="app-modal-overlay">
           <div className="app-modal-container mpa-modal-md">
-            <h2 className="app-modal-title">⭐ Final Feedback for {selectedAssignment.learner?.name}</h2>
-
-            <div className="mpa-feedback-program-info">
-              <h3 className="mpa-subsection-title">Program</h3>
-              <p className="mpa-text-lg">{selectedAssignment.program?.goal || selectedAssignment.program_name}</p>
-              {selectedAssignment.final_feedback_given_at && (
-                <p className="mpa-text-muted">
-                  Last updated: {new Date(selectedAssignment.final_feedback_given_at).toLocaleString()}
-                </p>
-              )}
-            </div>
-
-            {/* Star Rating Section */}
-            <div className="mpa-feedback-rating-section">
-              <label className="mpa-label">Rating (1-5 Stars) *</label>
-              <div className="mpa-star-rating">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => setFinalFeedbackData({ ...finalFeedbackData, rating: star })}
-                    className={`mpa-star-btn ${finalFeedbackData.rating >= star ? 'mpa-star-active' : ''}`}
-                    title={`${star} stars`}
-                  >
-                    ⭐
-                  </button>
-                ))}
-              </div>
-              {finalFeedbackData.rating > 0 && <p className="mpa-text-muted">{finalFeedbackData.rating} out of 5 stars</p>}
-            </div>
-
-            {/* Remarks Section */}
-            <div className="mpa-feedback-remarks-section">
-              <label className="mpa-label" htmlFor="final_remarks">
-                Remarks (Optional)
-              </label>
-              <textarea
-                id="final_remarks"
-                value={finalFeedbackData.remarks}
-                onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, remarks: e.target.value })}
-                placeholder="Enter your final feedback and remarks about overall performance..."
-                className="mpa-textarea"
-                rows="6"
-              />
-            </div>
-
-            {/* Status Section */}
-            <div className="mpa-feedback-status-section">
-              <label className="mpa-label" htmlFor="completion_status">
-                Program Status
-              </label>
-              <select
-                id="completion_status"
-                value={finalFeedbackData.completion_status}
-                onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, completion_status: e.target.value })}
-                className="mpa-select"
+            <div className="app-modal-header">
+              <h2 className="app-modal-title">⭐ Final Feedback for {selectedAssignment.learner?.name}</h2>
+              <button
+                type="button"
+                onClick={handleCloseFinalFeedbackModal}
+                className="app-modal-close"
               >
-                <option value="NEW">New</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
-              <p className="mpa-text-muted" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                Select the status to change the learner's program status
-              </p>
+                ✕
+              </button>
+            </div>
+
+            <div className="app-modal-content">
+              <div className="mpa-feedback-program-info">
+                <h3 className="mpa-subsection-title">Program</h3>
+                <p className="mpa-text-lg">{selectedAssignment.program?.goal || selectedAssignment.program_name}</p>
+                {selectedAssignment.final_feedback_given_at && (
+                  <p className="mpa-text-muted">
+                    Last updated: {new Date(selectedAssignment.final_feedback_given_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+
+              {/* Star Rating Section */}
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Rating (1-5 Stars) <span className="text-required">*</span></label>
+                <div className="mpa-star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFinalFeedbackData({ ...finalFeedbackData, rating: star })}
+                      className={`mpa-star-btn ${finalFeedbackData.rating >= star ? 'mpa-star-active' : ''}`}
+                      title={`${star} stars`}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+                {finalFeedbackData.rating > 0 && <p className="mpa-text-muted">{finalFeedbackData.rating} out of 5 stars</p>}
+              </div>
+
+              {/* Remarks Section */}
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label" htmlFor="final_remarks">
+                  Remarks (Optional)
+                </label>
+                <textarea
+                  id="final_remarks"
+                  value={finalFeedbackData.remarks}
+                  onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, remarks: e.target.value })}
+                  placeholder="Enter your final feedback and remarks about overall performance..."
+                  className="app-modal-form-textarea"
+                  rows="6"
+                />
+              </div>
+
+              {/* Status Section */}
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label" htmlFor="completion_status">
+                  Program Status
+                </label>
+                <select
+                  id="completion_status"
+                  value={finalFeedbackData.completion_status}
+                  onChange={(e) => setFinalFeedbackData({ ...finalFeedbackData, completion_status: e.target.value })}
+                  className="app-modal-form-input"
+                >
+                  <option value="NEW">New</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+                <p className="mpa-text-muted" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                  Select the status to change the learner's program status
+                </p>
+              </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="mpa-modal-actions">
+            <div className="app-modal-footer">
               <button
                 onClick={handleCloseFinalFeedbackModal}
-                className="mpa-btn-secondary"
+                className="app-modal-btn app-modal-btn--secondary"
                 disabled={finalFeedbackSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitFinalFeedback}
-                className="mpa-btn-primary"
+                className="app-modal-btn app-modal-btn--primary"
                 disabled={finalFeedbackSubmitting || finalFeedbackData.rating < 1}
               >
                 {finalFeedbackSubmitting ? 'Submitting...' : 'Submit Final Feedback'}
