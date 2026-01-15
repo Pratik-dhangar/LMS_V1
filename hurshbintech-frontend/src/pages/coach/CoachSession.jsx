@@ -277,23 +277,55 @@ const CoachSession = () => {
 
   // Countdown timer
   useEffect(() => {
-    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) return;
+    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) {
+      setTimeLeft('--:--');
+      return;
+    }
 
-    const startTime = new Date(sessionInfo.started_at).getTime();
+    // Ensure we're parsing the date correctly - handle both ISO strings and timestamps
+    let startTime;
+    if (typeof sessionInfo.started_at === 'string') {
+      // Parse ISO string to UTC timestamp
+      startTime = new Date(sessionInfo.started_at.replace(' ', 'T')).getTime();
+    } else {
+      startTime = new Date(sessionInfo.started_at).getTime();
+    }
+
+    // Validate the parsed time
+    if (isNaN(startTime)) {
+      console.error('[CoachSession] Invalid start time:', sessionInfo.started_at);
+      setTimeLeft('--:--');
+      return;
+    }
+
     const durationMs = sessionInfo.duration * 60 * 1000;
     const endTime = startTime + durationMs;
 
-    const intervalId = setInterval(() => {
+    // Update immediately
+    const updateTimer = () => {
       const now = Date.now();
       const remaining = endTime - now;
 
       if (remaining <= 0) {
         setTimeLeft('00:00');
-        clearInterval(intervalId);
+        return false; // Timer finished
       } else {
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
         setTimeLeft(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+        return true; // Timer still running
+      }
+    };
+
+    // Initial update
+    if (!updateTimer()) {
+      return; // Don't start interval if already finished
+    }
+
+    // Set up interval
+    const intervalId = setInterval(() => {
+      if (!updateTimer()) {
+        clearInterval(intervalId);
       }
     }, 1000);
 
@@ -505,6 +537,14 @@ const CoachSession = () => {
   const handleEndSession = async () => {
     if (window.confirm('Are you sure you want to end this session?')) {
       try {
+        // Broadcast session end to client/guest before ending
+        if (whiteboardService) {
+          whiteboardService.send('session_ended', {
+            message: 'Coach has ended the session',
+            timestamp: Date.now()
+          });
+        }
+        
         await coachSessionService.endSession(sessionId, '');
         cleanup();
         toast.success('Session ended successfully');
@@ -1253,7 +1293,7 @@ const CoachSession = () => {
               </button>
 
               {/* Keyboard Tool Toggle */}
-              <button
+              {/* <button
                 onClick={() => {
                   // Toggle keyboard access for client/guest
                   toggleClientToolAccess('keyboard');
@@ -1267,7 +1307,7 @@ const CoachSession = () => {
               >
                 <span>⌨️</span>
                 <span>Keyboard</span>
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
