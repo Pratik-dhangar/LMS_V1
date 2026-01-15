@@ -88,7 +88,6 @@ import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
-import AboutUs from './pages/AboutUs';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 import TrainingDetailView from './pages/common/TrainingDetailView';
 
@@ -171,7 +170,6 @@ function AppRoutes() {
       <Routes>
         {/* Public Routes */}
         <Route path="" element={<Home />} />
-        <Route path="/about" element={<AboutUs />} />
 
         <Route
           path="/login"
