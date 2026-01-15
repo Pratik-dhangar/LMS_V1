@@ -14,6 +14,7 @@ const CoachDashboard = () => {
     { id: '1', title: 'My Appointments', description: 'View and manage appointments scheduled by clients', icon: Calendar, onClick: () => navigate('/coach/appointments') },
     { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, onClick: () => navigate('/coach/sessions') },
     { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, onClick: () => navigate('/coach/availability') },
+    { id: '4', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: Calendar, onClick: () => navigate('/coach/profile-order-history') },
   ];
 
 

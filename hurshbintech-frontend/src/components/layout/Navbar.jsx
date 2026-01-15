@@ -115,7 +115,7 @@ const Navbar = () => {
             {/* Buy Learning Material */}
             <button
               className="navbar-btn"
-              onClick={() => handleNavigate("/learning-materials")}
+              onClick={() => handleNavigate("/store")}
             >
               Buy Learning Material
             </button>
@@ -200,7 +200,7 @@ const Navbar = () => {
             {/* Buy Learning Material */}
             <button
               className="navbar-btn"
-              onClick={() => handleNavigate("/learning-materials")}
+              onClick={() => handleNavigate("/store")}
             >
               Buy Learning Material
             </button>

@@ -21,7 +21,7 @@ const Cart = () => {
         } catch (error) {
             if (error.response?.status === 401) {
                 toast.info('Please login to view your cart');
-                navigate('/auth/login');
+                navigate('/login');
             } else {
                 console.error('Failed to load cart:', error);
                 toast.error('Failed to load cart');

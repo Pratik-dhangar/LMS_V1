@@ -12,7 +12,7 @@ import '../../styles/admin/index.css';
 const HeadDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const menuItems = [
     { id: '1', title: 'Manage Trainers', description: 'Register and manage HurshBin Trainers', icon: UserCog, onClick: () => navigate('/head/manage-trainers') },
     { id: '2', title: 'Manage Learners', description: 'View and manage learner profiles, assessments, and progress', icon: Users, onClick: () => navigate('/head/manage-learners') },
@@ -20,7 +20,8 @@ const HeadDashboard = () => {
     { id: '4', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') },
     { id: '5', title: 'Manage Home Program', description: 'Assign and manage learning programs for learners', icon: BookOpen, onClick: () => navigate('/head/manage-program-assignments') },
     { id: '6', title: 'Session Reports', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
-    { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') }
+    { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') },
+    { id: '8', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: BookOpen, onClick: () => navigate('/head/profile-order-history') }
   ];
 
   return (
