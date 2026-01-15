@@ -9,6 +9,7 @@ import blogService from '../api/services/blogService';
 import vlogService from '../api/services/vlogService';
 import DOMPurify from 'dompurify';
 import '../styles/pages/Home.css';
+import '../styles/pages/AboutUs.css';
 import '../styles/components/common/Modal.css';
 
 const Home = () => {
