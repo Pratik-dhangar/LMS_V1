@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import sessionService from "../../api/services/sessionService";
-import '../../styles/admin/index.css';
+import { ArrowLeft } from 'lucide-react';
+import '../../styles/ManageUsersLayout.css';
 import '../../styles/trainer/Schedule.css';
 
 const TodaysSchedule = () => {
@@ -153,18 +154,19 @@ const TodaysSchedule = () => {
   }, []);
 
   return (
-    <div className="admin-dashboard-container">
-      <main className="admin-dashboard-main">
-        <div className="admin-dashboard-content-wrapper">
-          {/* Page Header */}
-          <div className="admin-dashboard-header">
-            <h1 className="admin-dashboard-title">
-              Today's Schedule
-            </h1>
-            <div className="admin-dashboard-welcome">
-              Welcome, <span className="admin-dashboard-welcome-name">{user?.name || "Trainer"}</span>!
-            </div>
-          </div>
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
+        {/* Page Header */}
+        <div className="page-header">
+          <button onClick={() => navigate('/trainer/dashboard')} className="back-button">
+            <ArrowLeft size={20} />
+            Back to Dashboard
+          </button>
+          <h1 className="page-title">
+            Today's Schedule
+          </h1>
+        </div>
 
           {/* Schedule Section */}
           <div className="trainer-schedule-section">
@@ -388,7 +390,7 @@ const TodaysSchedule = () => {
               )}
             </div>
           </div>
-        </div>
+          </div>
       </main>
 
       {/* Session Details Modal */}
