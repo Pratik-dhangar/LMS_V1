@@ -334,9 +334,7 @@ const TrainerDashboard = () => {
 
           {/* Trainer Menu */}
           <div className="admin-dashboard-menu">
-            <div className="admin-menu-title">
-              <h2>Trainer Menu - Click to Open</h2>
-            </div>
+            
 
             <div className="admin-menu-grid">
               {menuItems.map((item) => {

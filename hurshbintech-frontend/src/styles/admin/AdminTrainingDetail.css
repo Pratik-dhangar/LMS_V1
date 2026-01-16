@@ -81,18 +81,22 @@
     color: #6b7280;
 }
 
-/* Featured Image Section */
+/* Thumbnail Image Section */
 .featured-image-section {
     margin-bottom: 2rem;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
 }
 
 .featured-image {
-    width: 100%;
-    height: auto;
+    width: 35rem;
+    height: 25rem;
     display: block;
+    
+    border-radius: 8px;
 }
 
 /* Detail Sections */

@@ -42,6 +42,7 @@ const BookAppointmentForm = () => {
       if (!coachId) return;
       try {
         const data = await getCoachAvailabilityPublic(coachId);
+        console.log('[BookAppointment] Coach Availability Data:', data);
         setCoachAvailability(data);
       } catch (error) {
         console.error('Error fetching coach availability:', error);
@@ -71,6 +72,32 @@ const BookAppointmentForm = () => {
     return false;
   };
 
+  // Check if selected date's day is in coach's availability days
+  const isDateDayUnavailable = (date) => {
+    if (!date || !coachAvailability?.availability_days) return false;
+    
+    const selectedDate = new Date(date);
+    const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const availableDays = coachAvailability.availability_days.split(',').map(day => day.trim());
+    
+    console.log('[BookAppointment] Day Check:', { 
+      selectedDate: date, 
+      dayName, 
+      availableDays, 
+      isUnavailable: !availableDays.includes(dayName) 
+    });
+    
+    return !availableDays.includes(dayName);
+  };
+
+  // Check if selected time slot is not in coach's available time slots
+  const isTimeSlotUnavailable = (timeSlot) => {
+    if (!timeSlot || !coachAvailability?.time_slots) return false;
+    
+    const availableSlots = coachAvailability.time_slots.split(',').map(slot => slot.trim());
+    return !availableSlots.includes(timeSlot);
+  };
+
   // Get next available date after unavailable period
   const getNextAvailableDate = () => {
     if (!coachAvailability || coachAvailability.is_available || !coachAvailability.unavailable_until) return null;
@@ -83,6 +110,43 @@ const BookAppointmentForm = () => {
     nextAvailable.setDate(nextAvailable.getDate() + 1);
     
     return nextAvailable.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  // Get next available date based on coach's availability days
+  const getNextAvailableDayOfWeek = (fromDate) => {
+    if (!coachAvailability?.availability_days) return null;
+    
+    const availableDays = coachAvailability.availability_days.split(',').map(day => day.trim());
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Get indices of available days
+    const availableDayIndices = availableDays.map(day => daysOfWeek.indexOf(day)).filter(i => i !== -1);
+    if (availableDayIndices.length === 0) return null;
+    
+    // Start from tomorrow or the provided date
+    const startDate = fromDate ? new Date(fromDate) : new Date();
+    startDate.setDate(startDate.getDate() + 1);
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Find next available day (within next 14 days to avoid infinite loop)
+    for (let i = 0; i < 14; i++) {
+      const checkDate = new Date(startDate);
+      checkDate.setDate(startDate.getDate() + i);
+      const dayIndex = checkDate.getDay();
+      
+      if (availableDayIndices.includes(dayIndex)) {
+        // Also check if this date is not in unavailable period
+        if (!isDateUnavailable(checkDate.toISOString().split('T')[0])) {
+          return {
+            date: checkDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            dateString: checkDate.toISOString().split('T')[0],
+            dayName: daysOfWeek[dayIndex]
+          };
+        }
+      }
+    }
+    
+    return null;
   };
 
   // Fetch available slots when date changes
@@ -239,6 +303,18 @@ const BookAppointmentForm = () => {
       return;
     }
 
+    // Check if selected date's day is in coach's availability days
+    if (isDateDayUnavailable(formData.appointment_date)) {
+      toast.error('Coach is not available on the selected day. Please choose another date.');
+      return;
+    }
+
+    // Check if selected time slot is in coach's available time slots
+    if (isTimeSlotUnavailable(formData.appointment_time)) {
+      toast.error('Selected time slot is not available. Please choose another time.');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -384,6 +460,16 @@ const BookAppointmentForm = () => {
                         ⚠️ Coach is unavailable on this date. Slots available from {getNextAvailableDate()}
                       </small>
                     )}
+                    {formData.appointment_date && !isDateUnavailable(formData.appointment_date) && isDateDayUnavailable(formData.appointment_date) && (
+                      <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
+                        ⚠️ Coach is not available on {new Date(formData.appointment_date).toLocaleDateString('en-US', { weekday: 'long' })}s. 
+                        {coachAvailability?.availability_days && ` Available on: ${coachAvailability.availability_days}`}
+                        {(() => {
+                          const nextDay = getNextAvailableDayOfWeek(formData.appointment_date);
+                          return nextDay ? `. Next available: ${nextDay.dayName}, ${nextDay.date}` : '';
+                        })()}
+                      </small>
+                    )}
                   </div>
 
                   <div className="app-modal-form-field">
@@ -401,11 +487,13 @@ const BookAppointmentForm = () => {
                           onChange={handleInputChange}
                           className="field-input"
                           required
-                          disabled={!formData.appointment_date || availableSlots.length === 0 || isDateUnavailable(formData.appointment_date)}
+                          disabled={!formData.appointment_date || availableSlots.length === 0 || isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)}
                         >
                           <option value="">
                             {!formData.appointment_date 
                               ? "Select a date first" 
+                              : isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)
+                                ? "Selected date is unavailable"
                               : availableSlots.length === 0 
                                 ? "No slots available on this date" 
                                 : "Select a time slot"
@@ -417,14 +505,18 @@ const BookAppointmentForm = () => {
                         </select>
                         
                         {/* Show message if no slots available */}
-                        {formData.appointment_date && availableSlots.length === 0 && !isDateUnavailable(formData.appointment_date) && (
-                          <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
-                            All time slots are booked for this date. Please choose another date.
-                          </p>
+                        {formData.appointment_date && availableSlots.length === 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
+                          <small style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444', display: 'block' }}>
+                            ⚠️ All time slots are booked for this date. 
+                            {(() => {
+                              const nextDay = getNextAvailableDayOfWeek(formData.appointment_date);
+                              return nextDay ? ` Next available: ${nextDay.dayName}, ${nextDay.date}` : ' Please choose another date.';
+                            })()}
+                          </small>
                         )}
                         
                         {/* Show available slots count - only if date is not unavailable */}
-                        {formData.appointment_date && availableSlots.length > 0 && !isDateUnavailable(formData.appointment_date) && (
+                        {formData.appointment_date && availableSlots.length > 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
                           <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#10b981' }}>
                             {availableSlots.length} slot{availableSlots.length !== 1 ? 's' : ''} available
                           </p>
@@ -572,6 +664,7 @@ const BookAppointmentForm = () => {
             </form>
           </div>
         </div>
+        
       </main>
       <Footer />
     </div>

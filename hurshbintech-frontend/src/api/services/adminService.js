@@ -6,17 +6,6 @@ import axiosInstance from '../axios';
  */
 const adminService = {
   /**
-   * Get Dashboard Statistics
-   * @returns {Promise} - Dashboard stats object
-   */
-  getDashboardStats: async () => {
-    console.log('Fetching dashboard statistics');
-    const response = await axiosInstance.get('/admin/dashboard/stats');
-    console.log('Dashboard stats received:', { stats: response.data });
-    return response.data;
-  },
-
-  /**
    * Create a new Head
    * @param {Object} headData 
    * @returns {Promise} 
