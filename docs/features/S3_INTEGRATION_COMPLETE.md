@@ -27,11 +27,14 @@
 
 #### Assigned Trainings (`app/api/endpoints/assigned_trainings.py`)
 - ✅ `POST /admin/trainings/upload-featured-image` - Uploads training featured images
-- ✅ `POST /admin/trainings/upload-files` - Uploads training content files
-- ✅ `POST /admin/assigned-trainings` - Creates trainings with S3 file URLs
+- ✅ `POST /admin/trainings/upload-files?training_id={id}` - Uploads training content files (requires existing training)
+- ✅ `POST /admin/assigned-trainings` - Creates training (upload files after creation)
 - ✅ `DELETE /admin/assigned-trainings/{id}` - Deletes training and all associated files from S3
 - ✅ All endpoints now support both S3 and local storage based on `USE_S3` setting
-- **Storage Path**: `uploads/trainings/featured-images/` and `uploads/trainings/content/`
+- **Storage Path**: 
+  - Featured Images: `uploads/trainings/featured-images/`
+  - Learning Materials: `uploads/trainings/learning-materials/{training_id}/`
+- **Workflow**: Create training first → Upload files with training_id → No orphaned files in temp folders
 
 ### 3. Configuration Support
 - **`app/core/config.py`** - Already includes S3 settings:
@@ -71,9 +74,15 @@ aws s3 mb s3://hurshbintech-media-bucket --region ap-south-1
 **IMPORTANT**: Do NOT manually create folders. The backend will do this automatically!
 
 When you deploy and start the backend, the S3Manager will automatically create:
-- `uploads/learning-content/` prefix
-- `uploads/vlogs/` prefix  
-- `uploads/reference_data/` prefix
+- `uploads/learning-content/` - Main learning content
+- `uploads/vlogs/` - Video blogs
+- `uploads/reference_data/` - Reference materials
+- `uploads/profile_pictures/` - User profile images
+- `uploads/coach_references/` - Coach reference materials
+- `uploads/payment_screenshots/` - Payment verification
+- `uploads/session_recordings/` - Session recordings
+- `uploads/trainings/featured-images/` - Training featured images
+- `uploads/trainings/learning-materials/` - Training content files (PDFs, videos, audio, documents)
 
 You'll see in the logs:
 ```
@@ -81,6 +90,12 @@ S3 manager initialized successfully
 uploads/learning-content/ folder created in S3
 uploads/vlogs/ folder created in S3
 uploads/reference_data/ folder created in S3
+uploads/profile_pictures/ folder created in S3
+uploads/coach_references/ folder created in S3
+uploads/payment_screenshots/ folder created in S3
+uploads/session_recordings/ folder created in S3
+uploads/trainings/featured-images/ folder created in S3
+uploads/trainings/learning-materials/ folder created in S3
 ```
 
 **Note on S3 "Folders"**: S3 doesn't have real folders. These are object key prefixes that the console displays as folders. The backend code creates them automatically with `put_object()` calls.

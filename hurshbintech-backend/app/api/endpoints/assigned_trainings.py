@@ -6,9 +6,10 @@ from typing import List, Optional
 import logging
 import mimetypes
 import uuid
+import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -121,7 +122,7 @@ async def save_featured_image(image_file: UploadFile) -> str:
             )
 
         if settings.USE_S3:
-            # Upload to S3
+            # Upload to S3 - uploads/trainings/featured-images/
             s3_key = s3_manager.upload_file(
                 image_content,
                 folder="trainings/featured-images",
@@ -147,8 +148,8 @@ async def save_featured_image(image_file: UploadFile) -> str:
         )
 
 
-async def save_training_file(upload_file: UploadFile, training_id: Optional[int] = None) -> dict:
-    """Save training file to S3 or local storage"""
+async def save_training_file(upload_file: UploadFile, training_id: int) -> dict:
+    """Save training file to S3 or local storage - requires existing training_id"""
     try:
         file_content = await upload_file.read()
         validate_training_file(upload_file)
@@ -163,8 +164,8 @@ async def save_training_file(upload_file: UploadFile, training_id: Optional[int]
         filename = f"{uuid.uuid4()}{Path(upload_file.filename).suffix}"
         
         if settings.USE_S3:
-            # Upload to S3
-            folder = f"trainings/content/{training_id}" if training_id else "trainings/content/temp"
+            # Upload to S3 - uploads/trainings/learning-materials/{training_id}/
+            folder = f"trainings/learning-materials/{training_id}"
             s3_key = s3_manager.upload_file(
                 file_content,
                 folder=folder,
@@ -173,16 +174,13 @@ async def save_training_file(upload_file: UploadFile, training_id: Optional[int]
             )
             file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
         else:
-            # Save locally
-            if training_id:
-                folder_path = LOCAL_UPLOAD_DIR / "content" / str(training_id)
-            else:
-                folder_path = LOCAL_UPLOAD_DIR / "content" / "temp"
+            # Save locally - matches S3 structure
+            folder_path = LOCAL_UPLOAD_DIR / "learning-materials" / str(training_id)
             folder_path.mkdir(parents=True, exist_ok=True)
             file_path = folder_path / filename
             with open(file_path, "wb") as f:
                 f.write(file_content)
-            file_url = f"/uploads/trainings/content/{training_id or 'temp'}/{filename}"
+            file_url = f"/uploads/trainings/learning-materials/{training_id}/{filename}"
         
         return {
             "name": upload_file.filename,
@@ -269,10 +267,20 @@ async def upload_featured_image(
 
 @router.post("/admin/trainings/upload-files")
 async def upload_training_files(
+    training_id: int = Query(..., description="ID of the training to upload files for"),
     files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Upload training content files (Admin only) - stores in S3 in production"""
+    """Upload training content files (Admin only) - requires existing training ID"""
+    
+    # Verify training exists
+    training = await assigned_training_crud.get_assigned_training(db, training_id)
+    if not training:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Training with ID {training_id} not found",
+        )
     
     if not files:
         raise HTTPException(
@@ -289,8 +297,8 @@ async def upload_training_files(
                 errors.append({"file": "unknown", "error": "No filename"})
                 continue
             
-            # Upload file (training_id is None for temp uploads)
-            file_info = await save_training_file(file, training_id=None)
+            # Upload file with training_id
+            file_info = await save_training_file(file, training_id=training_id)
             uploaded_files.append(file_info)
             
         except HTTPException as e:
@@ -306,9 +314,167 @@ async def upload_training_files(
     }
 
 
+@router.post("/admin/assigned-trainings/{training_id}/add-files", response_model=AssignedTrainingResponse)
+async def add_files_to_training(
+    training_id: int,
+    files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Upload files and automatically add them to training - combines upload + update in one call"""
+    
+    # Verify training exists
+    training = await assigned_training_crud.get_assigned_training(db, training_id)
+    if not training:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Training with ID {training_id} not found",
+        )
+    
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided",
+        )
+    
+    uploaded_files = []
+    errors = []
+    
+    # Upload all files
+    for file in files:
+        try:
+            if not file.filename:
+                errors.append({"file": "unknown", "error": "No filename"})
+                continue
+            
+            # Upload file with training_id
+            file_info = await save_training_file(file, training_id=training_id)
+            uploaded_files.append(file_info)
+            
+        except HTTPException as e:
+            errors.append({"file": file.filename, "error": e.detail})
+        except Exception as e:
+            logger.error(f"Error uploading file {file.filename}: {str(e)}")
+            errors.append({"file": file.filename, "error": str(e)})
+    
+    if not uploaded_files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files were uploaded successfully",
+        )
+    
+    # Get existing training_files and append new ones
+    existing_files = training.training_files or []
+    updated_files = existing_files + uploaded_files
+    
+    # Update training with new files
+    updated_training = await assigned_training_crud.update_assigned_training(
+        db, 
+        training_id, 
+        training_files=updated_files
+    )
+    
+    logger.info(f"Added {len(uploaded_files)} files to training {training_id}")
+    
+    return AssignedTrainingResponse.from_orm(updated_training)
 
 
 # ========== ADMIN ENDPOINTS (CRUD) ==========
+
+@router.post("/admin/assigned-trainings/with-files", response_model=AssignedTrainingResponse, status_code=status.HTTP_201_CREATED)
+async def create_training_with_files(
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    custom_content: Optional[str] = Form(None),
+    target_roles: str = Form(..., description="JSON array of roles, e.g. ['all'] or ['admin','coach']"),
+    active: bool = Form(True),
+    training_ref_ids: Optional[str] = Form(None, description="JSON array of training reference IDs"),
+    custom_metadata: Optional[str] = Form(None, description="JSON object of custom metadata"),
+    featured_image: Optional[UploadFile] = File(None),
+    learning_files: Optional[List[UploadFile]] = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Create training with featured image and learning materials in one call - handles all uploads automatically"""
+    
+    try:
+        # Parse JSON fields
+        parsed_roles = json.loads(target_roles) if target_roles else []
+        normalized_roles = [role.lower() for role in parsed_roles]
+        
+        parsed_ref_ids = json.loads(training_ref_ids) if training_ref_ids else []
+        parsed_metadata = json.loads(custom_metadata) if custom_metadata else {}
+        
+        # Step 1: Create training first (without files)
+        training = await assigned_training_crud.create_assigned_training(
+            db,
+            title=title,
+            description=description,
+            custom_content=custom_content,
+            training_ref_ids=parsed_ref_ids,
+            target_roles=normalized_roles,
+            assigned_by_admin=current_admin.id,
+            featured_image_url=None,  # Will update after upload
+            training_files=[],  # Will update after upload
+            training_folder=None,
+            active=active,
+            custom_metadata=parsed_metadata,
+        )
+        
+        logger.info(f"Created training {training.id}, now uploading files...")
+        
+        # Step 2: Upload featured image if provided
+        featured_image_url = None
+        if featured_image and featured_image.filename:
+            try:
+                featured_image_url = await save_featured_image(featured_image)
+                logger.info(f"Featured image uploaded: {featured_image_url}")
+            except Exception as e:
+                logger.error(f"Failed to upload featured image: {str(e)}")
+                # Continue without featured image
+        
+        # Step 3: Upload learning materials if provided
+        uploaded_files = []
+        if learning_files:
+            for file in learning_files:
+                try:
+                    if file and file.filename:
+                        file_info = await save_training_file(file, training_id=training.id)
+                        uploaded_files.append(file_info)
+                        logger.info(f"Uploaded learning file: {file.filename}")
+                except Exception as e:
+                    logger.error(f"Failed to upload file {file.filename}: {str(e)}")
+                    # Continue with other files
+        
+        # Step 4: Update training with file URLs
+        update_data = {}
+        if featured_image_url:
+            update_data["featured_image_url"] = featured_image_url
+        if uploaded_files:
+            update_data["training_files"] = uploaded_files
+        
+        if update_data:
+            training = await assigned_training_crud.update_assigned_training(
+                db, 
+                training.id, 
+                **update_data
+            )
+            logger.info(f"Training {training.id} updated with {len(uploaded_files)} files")
+        
+        return AssignedTrainingResponse.from_orm(training)
+        
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid JSON in form fields: {str(e)}",
+        )
+    except Exception as e:
+        logger.error(f"Error creating training with files: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create training: {str(e)}",
+        )
+
 
 @router.post("/admin/assigned-trainings", response_model=AssignedTrainingResponse, status_code=status.HTTP_201_CREATED)
 async def create_assigned_training(
