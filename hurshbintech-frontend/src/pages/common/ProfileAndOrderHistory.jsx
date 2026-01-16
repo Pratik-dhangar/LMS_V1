@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import orderService from "../../api/services/ecommerce/orderService";
-import "../../styles/admin/index.css";
+import { ArrowLeft } from 'lucide-react';
+import "../../styles/ManageUsersLayout.css";
 
 const ProfileAndOrderHistory = () => {
     const { user } = useAuth();
@@ -155,21 +156,19 @@ const ProfileAndOrderHistory = () => {
     };
 
     return (
-        <div className="admin-dashboard-container">
-            <main className="admin-dashboard-main">
-                <div className="admin-dashboard-content-wrapper">
-                    {/* Page Header */}
-                    <div className="admin-dashboard-header flex items-center justify-between">
-                        <h1 className="admin-dashboard-title">
-                            👤 Learning Material Purchase History
-                        </h1>
-                        <button
-                            onClick={() => navigate(getDashboardPath())}
-                            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
-                        >
-                            ← Back to Dashboard
-                        </button>
-                    </div>
+        <div className="page-container">
+            <main className="page-main">
+                <div className="page-content">
+                {/* Page Header */}
+                <div className="page-header">
+                    <button onClick={() => navigate(getDashboardPath())} className="back-button">
+                        <ArrowLeft size={20} />
+                        Back to Dashboard
+                    </button>
+                    <h1 className="page-title">
+                        Learning Material Purchase History
+                    </h1>
+                </div>
 
                     {/* Profile Section */}
                     <div className="mt-8 bg-white rounded-xl shadow-md p-6">
@@ -373,7 +372,7 @@ const ProfileAndOrderHistory = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                    </div>
             </main>
 
             {/* Order Details Modal */}
