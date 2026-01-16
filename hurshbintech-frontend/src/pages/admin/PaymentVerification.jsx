@@ -21,7 +21,7 @@ const PaymentVerification = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("PAYMENT_UPLOADED");
+  const [filter, setFilter] = useState("ALL");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -38,11 +38,15 @@ const PaymentVerification = () => {
   const loadPendingOrders = async () => {
     try {
       setLoading(true);
+      const params = {
+        _t: Date.now(), // Cache buster
+      };
+      // Only add status filter if not "ALL"
+      if (filter !== "ALL") {
+        params.status = filter;
+      }
       const response = await axiosInstance.get(`/orders/admin/orders`, {
-        params: {
-          status: filter,
-          _t: Date.now(), // Cache buster
-        },
+        params,
       });
       setOrders(response.data.orders || []);
     } catch (error) {
@@ -221,13 +225,14 @@ const PaymentVerification = () => {
             </button>
             {/* Left Side: Title and Subtitle */}
             <div>
-              <h1 className="page-title">Payment Verification</h1>
+              <h1 className="page-title">MarketPlace Orders</h1>
             </div>
           </div>
 
           {/* Filters */}
           <div className="payment-verification-filters">
             {[
+              "ALL",
               "PAYMENT_UPLOADED",
               "PAYMENT_APPROVED",
               "DELIVERED",
@@ -236,10 +241,10 @@ const PaymentVerification = () => {
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`payment-verification-filter-btn ${
-                  filter === status ? "active" : "inactive"
-                }`}
+                className={`payment-verification-filter-btn ${filter === status ? "active" : "inactive"
+                  }`}
               >
+                {status === "ALL" && "All"}
                 {status === "PAYMENT_UPLOADED" && "Pending"}
                 {status === "PAYMENT_APPROVED" && "Approved"}
                 {status === "DELIVERED" && "Delivered"}
@@ -259,105 +264,97 @@ const PaymentVerification = () => {
               <p>No orders found</p>
             </div>
           ) : (
-            <div className="payment-verification-orders-grid">
-              {orders.map((order) => (
-                <div
-                  key={order.order_id}
-                  className="payment-verification-order-card"
-                >
-                  <div className="payment-verification-order-header">
-                    <div className="payment-verification-order-info">
-                      <h3>Order #{order.order_number}</h3>
-                      <p>
-                        {order.user_name} ({order.user_email})
-                      </p>
-                    </div>
-                    {getStatusBadge(order.status)}
-                  </div>
-
-                  <div className="payment-verification-order-details">
-                    <div className="payment-verification-order-grid">
-                      <div className="payment-verification-detail-item">
-                        <p>Total Amount</p>
-                        <p className="amount">
-                          {formatCurrency(order.total_amount)}
-                        </p>
-                      </div>
-                      <div className="payment-verification-detail-item">
-                        <p>Payment Method</p>
-                        <p>
-                          {order.payment_method === "UPI_QR"
-                            ? "UPI QR"
-                            : "Bank Transfer"}
-                        </p>
-                      </div>
-                      <div className="payment-verification-detail-item">
-                        <p>Items</p>
-                        <p>{order.items?.length || 0} products</p>
-                      </div>
-                      <div className="payment-verification-detail-item">
-                        <p>Date</p>
-                        <p>{formatDate(order.created_at)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {order.rejection_reason && (
-                    <div className="payment-verification-rejection-alert">
-                      <div className="payment-verification-rejection-header">
-                        <AlertCircle size={18} />
-                        <p>Rejection Reason</p>
-                      </div>
-                      <p className="payment-verification-rejection-text">
-                        {order.rejection_reason}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="payment-verification-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowDetails(true);
-                      }}
-                      className="payment-verification-btn payment-verification-btn-view"
+            <div className="payment-verification-table-container">
+              <table className="payment-verification-table">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Items</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr
+                      key={order.order_id}
+                      className={`payment-verification-table-row ${order.status === "PAYMENT_REJECTED" ? "rejected-row" : ""
+                        }`}
                     >
-                      <Eye size={18} />
-                      View Details
-                    </button>
-                    {order.status === "PAYMENT_APPROVED" && (
-                      <button
-                        onClick={() => handleMarkDelivered(order.order_id)}
-                        disabled={delivering}
-                        className="payment-verification-btn payment-verification-btn-delivered"
-                      >
-                        <TrendingUp size={18} />
-                        {delivering ? "Delivering..." : "Delivered"}
-                      </button>
-                    )}
-                    {order.status === "PAYMENT_UPLOADED" && (
-                      <>
-                        <button
-                          onClick={() => handleApprovePayment(order.order_id)}
-                          disabled={approving}
-                          className="payment-verification-btn payment-verification-btn-approve"
-                        >
-                          <CheckCircle size={18} />
-                          {approving ? "Approving..." : "Approve"}
-                        </button>
-                        <button
-                          onClick={() => handleRejectPayment(order.order_id)}
-                          disabled={rejecting}
-                          className="payment-verification-btn payment-verification-btn-reject"
-                        >
-                          <XCircle size={18} />
-                          {rejecting ? "Rejecting..." : "Reject"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <td className="payment-verification-order-number">
+                        #{order.order_number}
+                      </td>
+                      
+                      <td className="payment-verification-status">
+                        {getStatusBadge(order.status)}
+                      </td>
+                      <td className="payment-verification-amount">
+                        <span className="amount-value">
+                          {formatCurrency(order.total_amount)}
+                        </span>
+                      </td>
+                      <td className="payment-verification-method">
+                        {order.payment_method === "UPI_QR"
+                          ? "UPI QR"
+                          : "Bank Transfer"}
+                      </td>
+                      <td className="payment-verification-items">
+                        {order.items?.length || 0} products
+                      </td>
+                      <td className="payment-verification-date">
+                        {formatDate(order.created_at)}
+                      </td>
+                      <td className="payment-verification-actions-cell">
+                        <div className="payment-verification-actions">
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowDetails(true);
+                            }}
+                            className="payment-verification-btn payment-verification-btn-view"
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {order.status === "PAYMENT_APPROVED" && (
+                            <button
+                              onClick={() => handleMarkDelivered(order.order_id)}
+                              disabled={delivering}
+                              className="payment-verification-btn payment-verification-btn-delivered"
+                              title="Mark as Delivered"
+                            >
+                              <TrendingUp size={16} />
+                            </button>
+                          )}
+                          {order.status === "PAYMENT_UPLOADED" && (
+                            <>
+                              <button
+                                onClick={() => handleApprovePayment(order.order_id)}
+                                disabled={approving}
+                                className="payment-verification-btn payment-verification-btn-approve"
+                                title="Approve Payment"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleRejectPayment(order.order_id)}
+                                disabled={rejecting}
+                                className="payment-verification-btn payment-verification-btn-reject"
+                                title="Reject Payment"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -429,7 +426,7 @@ const PaymentVerification = () => {
                     <span>
                       {formatCurrency(
                         parseFloat(selectedOrder.total_amount) +
-                          parseFloat(selectedOrder.discount_total || 0)
+                        parseFloat(selectedOrder.discount_total || 0)
                       )}
                     </span>
                   </div>
@@ -454,7 +451,7 @@ const PaymentVerification = () => {
                 {selectedOrder.payment_receipt ? (
                   <div className="payment-verification-receipt-container">
                     {selectedOrder.payment_receipt.file_type?.toLowerCase() ===
-                    "pdf" ? (
+                      "pdf" ? (
                       <div className="payment-verification-pdf-placeholder">
                         <FileUp
                           size={32}
@@ -473,8 +470,8 @@ const PaymentVerification = () => {
                             )
                               ? selectedOrder.payment_receipt.s3_path
                               : getFileUrl(
-                                  selectedOrder.payment_receipt.s3_path
-                                )
+                                selectedOrder.payment_receipt.s3_path
+                              )
                           }
                           target="_blank"
                           rel="noopener noreferrer"

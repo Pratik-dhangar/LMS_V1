@@ -22,9 +22,8 @@ const AdminDashboard = () => {
     { id: '1.7', title: 'Manage Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
     { id: '1.8', title: 'Manage Blogs', description: 'Create and manage blog posts', icon: FileText, color: 'indigo', onClick: () => navigate('/admin/blogs') },
     { id: '1.9', title: 'Manage About Us', description: 'Edit About Us page content', icon: Info, color: 'cyan', onClick: () => navigate('/admin/about-us') },
-    { id: '1.10', title: 'Manage Learning Materials', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
-    { id: '1.11', title: 'Order Management', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
-    { id: '1.12', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: ShoppingCart, color: 'purple', onClick: () => navigate('/admin/profile-order-history') },
+    { id: '1.10', title: 'MarketPlace Inventory', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
+    { id: '1.11', title: 'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
   ];
 
   return (
@@ -41,7 +40,7 @@ const AdminDashboard = () => {
 
           {/* Admin Menu */}
           <div className="admin-dashboard-menu">
-           
+
 
             <div className="admin-menu-grid">
               {menuItems.map((item) => {
@@ -67,9 +66,9 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-        
+
       </main>
-      
+
       <Footer />
     </div>
   );
