@@ -164,7 +164,7 @@ const TrainingDetailView = () => {
                         </div>
                     </div>
 
-                    {/* Featured Image */}
+                    {/* Thumbnail Image */}
                     {training.featured_image_url && (
                         <div className="featured-image-section">
                             <img
