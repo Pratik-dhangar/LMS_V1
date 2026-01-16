@@ -225,7 +225,7 @@ class S3Manager:
             "uploads/payment_screenshots/",
             "uploads/session_recordings/",
             "uploads/trainings/featured-images/",
-            "uploads/trainings/content/",
+            "uploads/trainings/learning-materials/",
         ]
 
         try:

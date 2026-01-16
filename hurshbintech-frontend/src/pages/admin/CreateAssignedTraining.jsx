@@ -227,44 +227,43 @@ const CreateAssignedTraining = () => {
 
         setSaving(true);
         try {
-            const submitData = {
-                title: formData.title,
-                description: formData.description,
-                custom_content: formData.custom_content,
-                training_ref_ids: formData.training_ref_ids,
-                target_roles: formData.target_roles,
-                active: formData.active,
-                featured_image_url: null,
-                training_files: [],
-            };
+            if (isEditMode && id) {
+                // Edit mode - use old workflow
+                const submitData = {
+                    title: formData.title,
+                    description: formData.description,
+                    custom_content: formData.custom_content,
+                    training_ref_ids: formData.training_ref_ids,
+                    target_roles: formData.target_roles,
+                    active: formData.active,
+                    featured_image_url: null,
+                    training_files: [],
+                };
 
-            // Upload featured image
-            if (featuredImage && !featuredImagePreview.startsWith("http")) {
-                try {
-                    toast.info("Uploading featured image...");
-                    submitData.featured_image_url = await uploadFeaturedImage(featuredImage);
-                } catch (error) {
-                    toast.error("Failed to upload featured image");
-                    console.error(error);
-                    setSaving(false);
-                    return;
+                // Upload featured image
+                if (featuredImage && !featuredImagePreview.startsWith("http")) {
+                    try {
+                        toast.info("Uploading featured image...");
+                        submitData.featured_image_url = await uploadFeaturedImage(featuredImage);
+                    } catch (error) {
+                        toast.error("Failed to upload featured image");
+                        console.error(error);
+                        setSaving(false);
+                        return;
+                    }
+                } else if (featuredImagePreview) {
+                    submitData.featured_image_url = featuredImagePreview;
                 }
-            } else if (featuredImagePreview) {
-                // Already has a URL
-                submitData.featured_image_url = featuredImagePreview;
-            }
 
-            // Upload training files
-            if (trainingFiles.length > 0) {
-                try {
-                    toast.info(`Uploading ${trainingFiles.length} file(s)...`);
+                // Upload training files
+                if (trainingFiles.length > 0) {
                     const filesToUpload = trainingFiles.filter(f => !f.isUploaded || !f.url);
 
                     if (filesToUpload.length > 0) {
-                        const uploadedFiles = await uploadTrainingFiles(filesToUpload);
-                        submitData.training_files = uploadedFiles;
+                        toast.info(`Uploading ${filesToUpload.length} file(s)...`);
+                        const uploadedFiles = await uploadTrainingFilesWithId(id, filesToUpload);
+                        submitData.training_files = [...trainingFiles.filter(f => f.isUploaded), ...uploadedFiles];
                     } else {
-                        // Use already uploaded files
                         submitData.training_files = trainingFiles.map(f => ({
                             name: f.name,
                             url: f.url,
@@ -272,20 +271,49 @@ const CreateAssignedTraining = () => {
                             type: f.type || "document",
                         }));
                     }
-                } catch (error) {
-                    toast.error("Failed to upload training files");
-                    console.error(error);
-                    setSaving(false);
-                    return;
                 }
-            }
 
-            if (isEditMode && id) {
                 await assignedTrainingService.adminUpdate(id, submitData);
                 toast.success("Training updated successfully");
             } else {
-                await assignedTrainingService.adminCreate(submitData);
-                toast.success("Training created successfully");
+                // Create mode - use new single-call endpoint
+                toast.info("Creating training with files...");
+
+                const formDataPayload = new FormData();
+                formDataPayload.append('title', formData.title);
+                formDataPayload.append('description', formData.description);
+                formDataPayload.append('target_roles', JSON.stringify(formData.target_roles));
+                formDataPayload.append('active', formData.active);
+
+                if (formData.custom_content) {
+                    formDataPayload.append('custom_content', formData.custom_content);
+                }
+                if (formData.training_ref_ids.length > 0) {
+                    formDataPayload.append('training_ref_ids', JSON.stringify(formData.training_ref_ids));
+                }
+                if (formData.custom_metadata && Object.keys(formData.custom_metadata).length > 0) {
+                    formDataPayload.append('custom_metadata', JSON.stringify(formData.custom_metadata));
+                }
+
+                // Add featured image
+                if (featuredImage) {
+                    formDataPayload.append('featured_image', featuredImage);
+                }
+
+                // Add learning files
+                if (trainingFiles.length > 0) {
+                    trainingFiles.forEach(file => {
+                        formDataPayload.append('learning_files', file);
+                    });
+                }
+
+                const response = await api.post('/admin/assigned-trainings/with-files', formDataPayload, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+
+                toast.success("Training created successfully with all files!");
             }
 
             navigate("/admin/assigned-trainings");
@@ -306,13 +334,13 @@ const CreateAssignedTraining = () => {
         return response.data.file_url;
     };
 
-    const uploadTrainingFiles = async (files) => {
+    const uploadTrainingFilesWithId = async (trainingId, files) => {
         const formData = new FormData();
         files.forEach(file => {
             formData.append("files", file);
         });
 
-        const response = await api.post("/admin/trainings/upload-files", formData);
+        const response = await api.post(`/admin/trainings/upload-files?training_id=${trainingId}`, formData);
 
         if (!response.data.success && response.data.uploaded_files.length === 0) {
             throw new Error(response.data.errors[0]?.error || "Failed to upload files");
