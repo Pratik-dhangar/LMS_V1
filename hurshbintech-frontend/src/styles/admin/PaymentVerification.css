@@ -1,7 +1,5 @@
 /* PaymentVerification.css - Payment Verification Page Styles */
 
-
-
 /* Filter Buttons */
 .payment-verification-filters {
     display: flex;
@@ -20,7 +18,7 @@
 }
 
 .payment-verification-filter-btn.active {
-    background-color: #3b82f6;
+    background-color: #DB9D32;
     color: white;
 }
 
@@ -32,6 +30,10 @@
 .payment-verification-filter-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.payment-verification-filter-btn.inactive:hover {
+    background-color: #d1d5db;
 }
 
 /* Loading State */
@@ -55,43 +57,107 @@
     opacity: 0.5;
 }
 
-/* Orders Grid */
-.payment-verification-orders-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-}
-
-/* Order Card */
-.payment-verification-order-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
+/* Table Container */
+.payment-verification-table-container {
     background-color: #fff;
+    border-radius: 0.75rem;
+    overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.2s ease;
+    border: 1px solid #e5e7eb;
 }
 
-.payment-verification-order-card:hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.payment-verification-order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 1rem;
-}
-
-.payment-verification-order-info h3 {
-    font-weight: bold;
-    font-size: 1.125rem;
-    margin-bottom: 0.25rem;
-}
-
-.payment-verification-order-info p {
+/* Table Styles */
+.payment-verification-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 0.875rem;
-    color: #666;
+}
+
+.payment-verification-table thead {
+    background: linear-gradient(135deg, #5C1E1E 0%, #9C4D0B 100%);
+    color: white;
+}
+
+.payment-verification-table thead th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.payment-verification-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.2s ease;
+}
+
+.payment-verification-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.payment-verification-table tbody tr.rejected-row {
+    background-color: #fee2e2;
+}
+
+.payment-verification-table tbody tr.rejected-row:hover {
+    background-color: #fecaca;
+}
+
+.payment-verification-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.payment-verification-table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* Table Cell Specific Styles */
+.payment-verification-order-number {
+    font-weight: 600;
+    color: #9C4D0B;
+    white-space: nowrap;
+}
+
+.payment-verification-customer .customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.payment-verification-customer .customer-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.payment-verification-customer .customer-email {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.payment-verification-amount .amount-value {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.95rem;
+}
+
+.payment-verification-method {
+    text-align: center;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.payment-verification-items {
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.payment-verification-date {
+    color: #6b7280;
+    font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 /* Status Badge */
@@ -99,10 +165,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0.375rem 0.75rem;
     border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .payment-verification-status-badge.pending {
@@ -125,24 +192,86 @@
     color: #1e40af;
 }
 
-/* Order Details */
-.payment-verification-order-details {
-    background-color: #f9fafb;
-    padding: 1rem;
+/* Actions Cell */
+.payment-verification-actions-cell {
+    padding: 0.5rem 1rem;
+}
+
+.payment-verification-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.payment-verification-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
     border-radius: 0.375rem;
-    margin-bottom: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
 
-.payment-verification-order-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    font-size: 0.875rem;
+.payment-verification-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-.payment-verification-detail-item p:first-child {
-    color: #6b7280;
-    margin: 0;
+.payment-verification-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.payment-verification-btn-view {
+    background-color: #5C1E1E;
+    color: white;
+}
+
+.payment-verification-btn-view:hover {
+    background-color: #7a2828;
+}
+
+.payment-verification-btn-approve {
+    background-color: #10b981;
+    color: white;
+}
+
+.payment-verification-btn-approve:hover {
+    background-color: #059669;
+}
+
+.payment-verification-btn-reject {
+    background-color: #ef4444;
+    color: white;
+}
+
+.payment-verification-btn-reject:hover {
+    background-color: #dc2626;
+}
+
+.payment-verification-btn-delivered {
+    background-color: #DB9D32;
+    color: white;
+}
+
+.payment-verification-btn-delivered:hover {
+    background-color: #c88a28;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+    .payment-verification-table {
+        font-size: 0.8rem;
+    }
+
+    .payment-verification-table thead th,
+    .payment-verification-table td {
+        padding: 0.75rem 0.5rem;
+    }
 }
 
 .payment-verification-detail-item p:last-child {

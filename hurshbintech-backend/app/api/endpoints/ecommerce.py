@@ -404,13 +404,13 @@ async def upload_payment_receipt(
 # Admin endpoints
 @router.get("/admin/orders", response_model=OrderListResponse)
 async def get_admin_orders(
-    status: Optional[str] = "PAYMENT_UPLOADED",
+    status: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    """Get all orders for admin review (Admin only)"""
+    """Get all orders for admin review (Admin only). If status is None, returns all orders."""
     orders, total = await ecommerce_crud.get_orders_for_admin(db, status, page, limit)
     
     total_pages = (total + limit - 1) // limit

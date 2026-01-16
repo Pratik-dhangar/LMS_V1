@@ -112,13 +112,15 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Buy Learning Material */}
-            <button
-              className="navbar-btn"
-              onClick={() => handleNavigate("/store")}
-            >
-              Buy Learning Material
-            </button>
+            {/* Buy Learning Material - Hidden for admins */}
+            {(!user || user.role !== 'admin') && (
+              <button
+                className="navbar-btn"
+                onClick={() => handleNavigate("/store")}
+              >
+                Buy Learning Material
+              </button>
+            )}
           </div>
         </div>
 
@@ -197,13 +199,15 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Buy Learning Material */}
-            <button
-              className="navbar-btn"
-              onClick={() => handleNavigate("/store")}
-            >
-              Buy Learning Material
-            </button>
+            {/* Buy Learning Material - Hidden for admins */}
+            {(!user || user.role !== 'admin') && (
+              <button
+                className="navbar-btn"
+                onClick={() => handleNavigate("/store")}
+              >
+                Buy Learning Material
+              </button>
+            )}
 
             {/* Admin Blog Management - Only for admins */}
             {user && user.role === 'admin' && (
