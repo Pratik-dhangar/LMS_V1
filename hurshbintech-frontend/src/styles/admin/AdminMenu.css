@@ -22,8 +22,8 @@
 
 .admin-menu-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2rem;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1.5rem;
     width: 100%;
     max-width: 100%;
 }
@@ -35,13 +35,13 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1rem;
     background: linear-gradient(to bottom right, #ffac1f, #fc781d, #ea580c);
     border: none;
     border-radius: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    min-height: 220px;
+    min-height: 160px;
     flex: 1;
     width: 100%;
     position: relative;
@@ -70,8 +70,8 @@
 }
 
 .admin-menu-card-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,7 +86,7 @@
 }
 
 .admin-menu-card-title {
-    font-size: 1.8rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: #ffffff;
     margin: 0.5rem 0;
@@ -161,7 +161,7 @@
 @media (max-width: 1024px) {
     .admin-menu-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
      .admin-menu-title h2 {
@@ -184,17 +184,17 @@
     }
 
     .admin-menu-card {
-        padding: 1.5rem;
-        min-height: 160px;
+        padding: 1.25rem;
+        min-height: 140px;
     }
 
     .admin-menu-card-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
     }
 
     .admin-menu-card-title {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
 
     .admin-menu-card-description {

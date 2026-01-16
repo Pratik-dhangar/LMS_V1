@@ -22,15 +22,6 @@ from app.schemas.user import HeadCreate, HeadResponse, HeadUpdate, LearnerRespon
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
 
-# dashboard stats
-@router.get("/dashboard/stats")
-async def get_admin_dashboard_stats(
-    db: AsyncSession = Depends(get_db), current_admin: User = Depends(get_current_admin)
-):
-    stats = await user_crud.get_admin_dashboard_stats(db)
-    return stats
-
-
 # head management
 
 
@@ -721,31 +712,36 @@ async def update_coach_profile(
                 detail="Invalid date format for date_of_joining. Use YYYY-MM-DD",
             )
 
-    # Prepare update data
-    coach_update = CoachUpdate(
-        name=name,
-        email=email,
-        age=age,
-        address=address,
-        contact_no=contact_no,
-        qualification=qualification,
-        experience=experience,
-        date_of_joining=date_of_joining_obj,
-        experience_with_hurshbin=experience_with_hurshbin,
-        interest=interest,
-        self_description=self_description,
-        future_vision=future_vision,
-        number_of_sessions_done=number_of_sessions_done,
-        head_description=head_description,
-        learners_guardian_description=learners_guardian_description,
-        input_at_hurshbin=input_at_hurshbin,
-        note_box=note_box,
-        message_box=message_box,
-        availability_days=availability_days,
-        time_slots=time_slots,
-        specialization=specialization,
-        profile_picture_url=profile_picture_path,
-    )
+    # Prepare update data - only include profile_picture_url if a new file was uploaded
+    update_dict = {
+        "name": name,
+        "email": email,
+        "age": age,
+        "address": address,
+        "contact_no": contact_no,
+        "qualification": qualification,
+        "experience": experience,
+        "date_of_joining": date_of_joining_obj,
+        "experience_with_hurshbin": experience_with_hurshbin,
+        "interest": interest,
+        "self_description": self_description,
+        "future_vision": future_vision,
+        "number_of_sessions_done": number_of_sessions_done,
+        "head_description": head_description,
+        "learners_guardian_description": learners_guardian_description,
+        "input_at_hurshbin": input_at_hurshbin,
+        "note_box": note_box,
+        "message_box": message_box,
+        "availability_days": availability_days,
+        "time_slots": time_slots,
+        "specialization": specialization,
+    }
+    
+    # Only include profile_picture_url if a new file was actually uploaded
+    if profile_picture_path is not None:
+        update_dict["profile_picture_url"] = profile_picture_path
+    
+    coach_update = CoachUpdate(**update_dict)
 
     updated_coach = await user_crud.update_coach(db, coach_id, coach_update)
     

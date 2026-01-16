@@ -31,15 +31,6 @@ from app.schemas.user import (
 router = APIRouter(prefix="/head", tags=["Head Operations"])
 
 
-# dashboard stats
-@router.get("/dashboard/stats", response_model=dict)
-async def get_head_dashboard_statistics(
-    db: AsyncSession = Depends(get_db), current_head: HeadProfile = Depends(get_current_head)
-):
-    stats = await user_crud.get_head_dashboard_stats(db)
-    return stats
-
-
 # ---trainer management---
 
 

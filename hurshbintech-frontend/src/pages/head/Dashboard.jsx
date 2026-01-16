@@ -41,10 +41,7 @@ const HeadDashboard = () => {
 
           {/* Head Menu */}
           <div className="admin-dashboard-menu">
-            <div className="admin-menu-title">
-              <h2>Head Menu - Click to Open</h2>
-            </div>
-
+          
             <div className="admin-menu-grid">
               {menuItems.map((item) => {
                 const IconComponent = item.icon;
