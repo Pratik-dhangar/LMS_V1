@@ -76,7 +76,7 @@ const CreateAssignedTraining = () => {
                 custom_metadata: training.custom_metadata || {},
             });
 
-            // Load featured image if exists
+            // Load thumbnail image if exists
             if (training.featured_image_url) {
                 setFeaturedImagePreview(training.featured_image_url);
             }
@@ -240,13 +240,13 @@ const CreateAssignedTraining = () => {
                     training_files: [],
                 };
 
-                // Upload featured image
+                // Upload thumbnail image
                 if (featuredImage && !featuredImagePreview.startsWith("http")) {
                     try {
-                        toast.info("Uploading featured image...");
-                        submitData.featured_image_url = await uploadFeaturedImage(featuredImage);
+                        toast.info("Uploading thumbnail image...");
+                        submitData.featured_image_url = await uploadFeaturedImage(featuredImage, id);
                     } catch (error) {
-                        toast.error("Failed to upload featured image");
+                        toast.error("Failed to upload thumbnail image");
                         console.error(error);
                         setSaving(false);
                         return;
@@ -295,7 +295,7 @@ const CreateAssignedTraining = () => {
                     formDataPayload.append('custom_metadata', JSON.stringify(formData.custom_metadata));
                 }
 
-                // Add featured image
+                // Add thumbnail image
                 if (featuredImage) {
                     formDataPayload.append('featured_image', featuredImage);
                 }
@@ -325,11 +325,11 @@ const CreateAssignedTraining = () => {
         }
     };
 
-    const uploadFeaturedImage = async (file) => {
+    const uploadFeaturedImage = async (file, trainingId) => {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await api.post("/admin/trainings/upload-featured-image", formData);
+        const response = await api.post(`/admin/trainings/upload-thumbnail?training_id=${trainingId}`, formData);
 
         return response.data.file_url;
     };
@@ -455,9 +455,9 @@ const CreateAssignedTraining = () => {
 
                         </div>
 
-                        {/* Featured Image Section */}
+                        {/* Thumbnail Image Section */}
                         <div className="form-section">
-                            <h2 className="section-title">Featured Image</h2>
+                            <h2 className="section-title">Thumbnail Image</h2>
                             <div className="featured-image-container">
                                 {featuredImagePreview ? (
                                     <div className="image-preview">
@@ -473,7 +473,7 @@ const CreateAssignedTraining = () => {
                                                 setFeaturedImagePreview(null);
                                             }}
                                             className="remove-image-btn"
-                                            title="Remove featured image"
+                                            title="Remove thumbnail image"
                                         >
                                             <X size={20} />
                                         </button>
@@ -503,7 +503,7 @@ const CreateAssignedTraining = () => {
                                         }}
                                     >
                                         <Upload size={32} />
-                                        <p>Click to upload featured image</p>
+                                        <p>Click to upload thumbnail image</p>
                                         <span className="image-help-text">
                                             JPG, PNG, or WebP. Max size: 5MB
                                         </span>

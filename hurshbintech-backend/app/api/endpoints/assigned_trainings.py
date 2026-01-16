@@ -70,6 +70,27 @@ def get_public_url(file_url: str) -> str:
         return file_url
 
 
+def convert_training_urls(training: AssignedTrainingResponse) -> AssignedTrainingResponse:
+    """Convert all S3 URLs in training response to public HTTP URLs"""
+    try:
+        # Convert featured image URL
+        if training.featured_image_url:
+            training.featured_image_url = get_public_url(training.featured_image_url)
+        
+        # Convert training file URLs
+        if training.training_files:
+            for file_info in training.training_files:
+                if isinstance(file_info, dict) and 'url' in file_info:
+                    file_info['url'] = get_public_url(file_info['url'])
+                elif hasattr(file_info, 'url'):
+                    file_info.url = get_public_url(file_info.url)
+        
+        return training
+    except Exception as e:
+        logger.error(f"Error converting training URLs: {str(e)}")
+        return training
+
+
 def get_file_category(filename: str) -> str:
     """Categorize file type"""
     file_extension = Path(filename).suffix.lower()
@@ -109,8 +130,9 @@ def validate_training_file(file: UploadFile):
         )
 
 
-async def save_featured_image(image_file: UploadFile) -> str:
-    """Save featured image to S3 or local storage"""
+
+async def save_thumbnail(image_file: UploadFile, training_id: int) -> str:
+    """Save thumbnail image to S3 or local storage - stores in training_id folder"""
     try:
         image_content = await image_file.read()
         validate_image_file(image_file)
@@ -121,30 +143,33 @@ async def save_featured_image(image_file: UploadFile) -> str:
                 detail=f"Image too large. Maximum: 50MB",
             )
 
+        filename = f"{uuid.uuid4()}{Path(image_file.filename).suffix}"
+        
         if settings.USE_S3:
-            # Upload to S3 - uploads/trainings/featured-images/
+            # Upload to S3 - uploads/trainings/thumbnails/{training_id}/
+            folder = f"trainings/thumbnails/{training_id}"
             s3_key = s3_manager.upload_file(
                 image_content,
-                folder="trainings/featured-images",
-                filename=f"{uuid.uuid4()}{Path(image_file.filename).suffix}",
+                folder=folder,
+                filename=filename,
                 content_type=image_file.content_type,
             )
             return f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
         else:
-            # Save locally
-            filename = f"{uuid.uuid4()}{Path(image_file.filename).suffix}"
-            file_path = LOCAL_UPLOAD_DIR / "featured-images" / filename
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+            # Save locally - matches S3 structure
+            folder_path = LOCAL_UPLOAD_DIR / "thumbnails" / str(training_id)
+            folder_path.mkdir(parents=True, exist_ok=True)
+            file_path = folder_path / filename
             with open(file_path, "wb") as f:
                 f.write(image_content)
-            return f"/uploads/trainings/featured-images/{filename}"
+            return f"/uploads/trainings/thumbnails/{training_id}/{filename}"
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving featured image: {str(e)}")
+        logger.error(f"Error saving thumbnail: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to save featured image"
+            detail="Failed to save thumbnail"
         )
 
 
@@ -228,14 +253,24 @@ def delete_file_from_storage(file_url: str) -> bool:
 
 # ========== FILE UPLOAD ENDPOINTS ==========
 
-@router.post("/admin/trainings/upload-featured-image")
-async def upload_featured_image(
+@router.post("/admin/trainings/upload-thumbnail")
+async def upload_thumbnail(
+    training_id: int = Query(..., description="ID of the training to upload thumbnail for"),
     file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Upload featured image for training (Admin only) - stores in S3 in production"""
+    """Upload thumbnail for training (Admin only) - stores in training_id folder"""
     
     try:
+        # Verify training exists
+        training = await assigned_training_crud.get_assigned_training(db, training_id)
+        if not training:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Training with ID {training_id} not found",
+            )
+        
         if not file or not file.filename:
             logger.error("No file provided in upload request")
             raise HTTPException(
@@ -243,12 +278,12 @@ async def upload_featured_image(
                 detail="No file provided",
             )
         
-        logger.info(f"Uploading featured image: {file.filename}")
+        logger.info(f"Uploading thumbnail for training {training_id}: {file.filename}")
         
-        # Upload featured image
-        file_url = await save_featured_image(file)
+        # Upload thumbnail
+        file_url = await save_thumbnail(file, training_id)
         
-        logger.info(f"Featured image uploaded successfully: {file_url}")
+        logger.info(f"Thumbnail uploaded successfully: {file_url}")
         
         return {
             "success": True,
@@ -258,10 +293,10 @@ async def upload_featured_image(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error uploading featured image: {str(e)}", exc_info=True)
+        logger.error(f"Error uploading thumbnail: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload featured image: {str(e)}",
+            detail=f"Failed to upload thumbnail: {str(e)}",
         )
 
 
@@ -423,15 +458,15 @@ async def create_training_with_files(
         
         logger.info(f"Created training {training.id}, now uploading files...")
         
-        # Step 2: Upload featured image if provided
+        # Step 2: Upload thumbnail if provided
         featured_image_url = None
         if featured_image and featured_image.filename:
             try:
-                featured_image_url = await save_featured_image(featured_image)
-                logger.info(f"Featured image uploaded: {featured_image_url}")
+                featured_image_url = await save_thumbnail(featured_image, training.id)
+                logger.info(f"Thumbnail uploaded: {featured_image_url}")
             except Exception as e:
-                logger.error(f"Failed to upload featured image: {str(e)}")
-                # Continue without featured image
+                logger.error(f"Failed to upload thumbnail: {str(e)}")
+                # Continue without thumbnail
         
         # Step 3: Upload learning materials if provided
         uploaded_files = []
@@ -542,8 +577,14 @@ async def list_assigned_trainings(
         search=search,
     )
     
+    # Convert S3 URLs to public URLs
+    converted_trainings = [
+        convert_training_urls(AssignedTrainingResponse.from_orm(t)) 
+        for t in trainings
+    ]
+    
     return AssignedTrainingListResponse(
-        items=[AssignedTrainingResponse.from_orm(t) for t in trainings],
+        items=converted_trainings,
         total=total,
         skip=skip,
         limit=limit,
@@ -565,7 +606,9 @@ async def get_assigned_training_detail(
             detail="Assigned training not found",
         )
     
-    return AssignedTrainingResponse.from_orm(training)
+    # Convert S3 URLs to public URLs
+    training_response = AssignedTrainingResponse.from_orm(training)
+    return convert_training_urls(training_response)
 
 
 @router.patch("/admin/assigned-trainings/{training_id}", response_model=AssignedTrainingResponse)
@@ -669,6 +712,8 @@ async def get_my_assigned_trainings(
             training_response.user_started_at = user_assignment.started_at
             training_response.user_completed_at = user_assignment.completed_at
         
+        # Convert S3 URLs to public URLs
+        training_response = convert_training_urls(training_response)
         enriched_trainings.append(training_response)
     
     return AssignedTrainingListResponse(
@@ -715,6 +760,9 @@ async def get_assigned_training_for_user(
     )
     
     training_response.user_status = user_assignment.status
+    # Convert S3 URLs to public URLs
+    training_response = convert_training_urls(training_response)
+    
     training_response.user_progress = user_assignment.progress
     training_response.user_started_at = user_assignment.started_at
     training_response.user_completed_at = user_assignment.completed_at

@@ -17,7 +17,7 @@ class AssignedTrainingBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
     custom_content: Optional[str] = Field(None)  # HTML or rich text content
-    featured_image_url: Optional[str] = Field(None)  # Featured image URL
+    featured_image_url: Optional[str] = Field(None)  # Thumbnail URL
     training_files: Optional[List[TrainingFileInfo]] = Field(default_factory=list)  # List of uploaded files
     training_ref_ids: Optional[List[int]] = Field(default_factory=list)
     target_roles: List[str] = Field(...)  # e.g., ["all"], ["admin", "head"], etc.
