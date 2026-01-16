@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import headService from '../../api/services/headService';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
@@ -477,9 +475,7 @@ const EditLearner = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <Loader message="Loading learner data..." />
-        <Footer />
       </div>
     );
   }
@@ -487,17 +483,13 @@ const EditLearner = () => {
   if (fetchError) {
     return (
       <div className="page-container">
-        <Navbar />
         <ErrorState message={fetchError} onRetry={fetchLearnerData} />
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteConfirm}
@@ -656,7 +648,6 @@ const EditLearner = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

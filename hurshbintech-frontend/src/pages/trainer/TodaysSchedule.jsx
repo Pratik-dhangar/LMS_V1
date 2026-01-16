@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
 import '../../styles/admin/index.css';
 import '../../styles/trainer/Schedule.css';
@@ -156,7 +154,6 @@ const TodaysSchedule = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-content-wrapper">
           {/* Page Header */}
@@ -553,9 +550,8 @@ const TodaysSchedule = () => {
             </div>
           </div>
         </div>
-      )}
+      )}  
 
-      <Footer />
     </div>
   );
 };

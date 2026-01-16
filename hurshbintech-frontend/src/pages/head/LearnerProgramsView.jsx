@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import sessionReportService from "../../api/services/sessionReportService";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import { downloadProgressReportPDF } from "../../utils/pdfGenerator";
 
 import "../../styles/ManageUsersLayout.css";
@@ -114,7 +112,6 @@ const LearnerProgramsView = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -262,7 +259,6 @@ const LearnerProgramsView = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

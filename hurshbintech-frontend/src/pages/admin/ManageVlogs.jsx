@@ -6,8 +6,6 @@ import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
 import CreateVlogModal from "../../components/admin/Vlogs/CreateVlogModal";
 import SearchBar from "../../components/common/SearchBar";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import "../../styles/admin/AdminManageVlogs.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -95,8 +93,7 @@ const ManageVlogs = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="page-main">
+    <div className="page-main">
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
@@ -278,7 +275,6 @@ const ManageVlogs = () => {
           )}
         </div>
       </div>
-      <Footer />
 
       {showCreateModal && (
         <CreateVlogModal

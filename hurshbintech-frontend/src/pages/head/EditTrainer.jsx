@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
@@ -357,8 +355,6 @@ const EditTrainer = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         show={showDeleteConfirm}
@@ -570,7 +566,6 @@ const EditTrainer = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

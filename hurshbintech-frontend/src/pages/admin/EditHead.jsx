@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import adminService from "../../api/services/adminService";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
@@ -303,8 +301,6 @@ const EditHead = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         show={showDeleteConfirm}
@@ -516,7 +512,6 @@ const EditHead = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

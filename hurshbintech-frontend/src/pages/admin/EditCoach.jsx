@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import headService from '../../api/services/headService';
 import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
@@ -346,22 +344,18 @@ const EditCoach = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <main className="page-main">
           <div className="loading-container">
             <Loader2 className="loading-spinner-icon" />
             <p className="loading-text">Loading coach details...</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         show={showDeleteConfirm}
@@ -694,7 +688,6 @@ const EditCoach = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

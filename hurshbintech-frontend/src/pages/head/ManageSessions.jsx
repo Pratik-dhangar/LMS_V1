@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Edit2, X, Eye, FileText } from 'lucide-react';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
 // import headSessionNotesService from '../../api/services/headSessionNotesService';
 import { useAuth } from '../../context/AuthContext';
@@ -181,7 +179,6 @@ const ManageSessions = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -457,7 +454,6 @@ const ManageSessions = () => {
 
 
       </main>
-      <Footer />
 
       {/* Edit Session Modal */}
       {editingSession && (

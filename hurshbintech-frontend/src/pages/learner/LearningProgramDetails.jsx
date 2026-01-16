@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import learningProgramsService from "../../api/services/learningProgramsService";
 
 
@@ -37,8 +35,6 @@ const LearningProgramDetails = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       <main className="page-main">
         <button
           onClick={() => navigate(-1)}
@@ -61,8 +57,6 @@ const LearningProgramDetails = () => {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

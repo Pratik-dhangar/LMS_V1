@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaCalendar, FaUser, FaArrowLeft } from 'react-icons/fa';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import blogService from '../../api/services/blogService';
@@ -72,8 +70,6 @@ const BlogDetail = () => {
 
     return (
         <>
-            <Navbar />
-
             <div className="bg-gray-50">
                 {/* Breadcrumb */}
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -217,8 +213,7 @@ const BlogDetail = () => {
                     />
                 </div>
             )}
-
-            <Footer />
+            )
         </>
     );
 };

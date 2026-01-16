@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import learningGoalsService from "../../api/services/learningGoalsService";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
 import "../../styles/components/common/Modal.css";
 import "../../styles/Table.css";
@@ -103,7 +101,6 @@ const ManageLearningGoals = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -264,7 +261,6 @@ const ManageLearningGoals = () => {
           )}
         </div>
       </div>
-      <Footer />
 
       {/* Add Modal */}
       {showAddModal && (

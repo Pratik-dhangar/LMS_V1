@@ -5,8 +5,6 @@ import programAssignmentService from '../../api/services/programAssignmentServic
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
 import learningContentService from '../../api/services/learningContentService';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/components/common/Modal.css';
 import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
@@ -568,7 +566,6 @@ const ManageProgramAssignments = () => {
 
   return (
      <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -871,7 +868,6 @@ const ManageProgramAssignments = () => {
           )}
         </div>
       </div>
-      <Footer />
 
       {/* Assign Program Modal */}
       {showAssignModal && (

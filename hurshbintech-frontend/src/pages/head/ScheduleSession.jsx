@@ -3,8 +3,6 @@ import { toast } from "react-toastify";
 import { Search } from "lucide-react";
 import learningGoalsService from "../../api/services/learningGoalsService";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
@@ -241,18 +239,15 @@ const ScheduleSession = () => {
   if (loadingData) {
     return (
       <>
-        <Navbar />
         <div className="loading-container">
           <div className="loading-spinner"></div>
         </div>
-        <Footer />
       </>
     );
   }
 
   return (
     <div className="page-container schedule-session">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -767,8 +762,6 @@ const ScheduleSession = () => {
           </form>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 };

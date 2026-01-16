@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { toast } from "react-toastify";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
 
 import '../../styles/ManageUsersLayout.css';
@@ -188,8 +186,6 @@ const ViewAssignedPrograms = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       <main className="page-main">
         <div className="page-content">
           {/* Header with Stats */}
@@ -307,8 +303,6 @@ const ViewAssignedPrograms = () => {
           )}
         </div>
       </main>
-
-      <Footer />
 
       {/* Assignment Detail Modal */}
       {showDetailModal && selectedAssignment && (

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
 
 import "../../styles/LearnerProgramAssignmentDetails.css";
@@ -505,11 +503,9 @@ const LearnerProgramAssignmentDetails = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <div className="page-content">
           <div className="loading">Loading assignment...</div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -517,14 +513,12 @@ const LearnerProgramAssignmentDetails = () => {
   if (!assignedContents || assignedContents.length === 0) {
     return (
       <div className="page-container">
-        <Navbar />
         <div className="page-content">
           <div className="error-state">
             <h2>No Contents Found</h2>
             <p>This program assignment has no contents assigned yet.</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -553,7 +547,6 @@ const LearnerProgramAssignmentDetails = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header with Back Button */}
@@ -849,7 +842,6 @@ const LearnerProgramAssignmentDetails = () => {
 
        
       </div>
-       <Footer />
     </div>
   );
 };

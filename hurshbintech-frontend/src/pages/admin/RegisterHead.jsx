@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import adminService from "../../api/services/adminService";
 import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
 import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
@@ -235,8 +233,6 @@ const RegisterHead = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Loading/Success Overlay */}
       {loading && (
         <div className="app-modal-overlay">
@@ -420,7 +416,6 @@ const RegisterHead = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

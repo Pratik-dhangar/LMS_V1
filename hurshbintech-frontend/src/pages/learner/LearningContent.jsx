@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
 import "../../styles/admin/index.css";
 
@@ -210,8 +208,6 @@ const LearningContent = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
-
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-content-wrapper">
           {/* Page Header */}
@@ -478,8 +474,7 @@ const LearningContent = () => {
           </div>
         </div>
       )}
-
-      <Footer />
+      )
     </div>
   );
 };

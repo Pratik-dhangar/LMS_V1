@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaCalendar, FaArrowLeft, FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaExpand, FaCompress } from 'react-icons/fa';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import vlogService from '../../api/services/vlogService';
@@ -172,8 +170,6 @@ const VlogDetail = () => {
 
     return (
         <>
-            <Navbar />
-
             <div className="bg-gray-50">
                 {/* Breadcrumb */}
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -405,8 +401,6 @@ const VlogDetail = () => {
                     </div>
                 </article>
             </div>
-
-            <Footer />
         </>
     );
 };

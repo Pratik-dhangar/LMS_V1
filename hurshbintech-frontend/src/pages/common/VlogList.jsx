@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaSearch, FaCalendar, FaPlay } from 'react-icons/fa';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import vlogService from '../../api/services/vlogService';
@@ -93,8 +91,6 @@ const VlogList = () => {
 
     return (
         <>
-            <Navbar />
-
             {/* Hero Section */}
             <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white py-20 relative overflow-hidden">
                 {/* Background Pattern */}
@@ -283,8 +279,6 @@ const VlogList = () => {
                     </>
                 )}
             </div>
-
-            <Footer />
         </>
     );
 };

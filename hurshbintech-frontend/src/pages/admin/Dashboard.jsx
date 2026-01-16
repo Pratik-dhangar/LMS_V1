@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb } from 'lucide-react';
 import '../../styles/admin/index.css';
@@ -28,7 +26,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-content-wrapper">
           {/* Header */}
@@ -68,8 +65,6 @@ const AdminDashboard = () => {
         </div>
 
       </main>
-
-      <Footer />
     </div>
   );
 };

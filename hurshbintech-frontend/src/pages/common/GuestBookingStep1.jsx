@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import '../../styles/GuestBooking.css';
 import '../../styles/ManageUsersLayout.css';
@@ -168,7 +166,6 @@ const GuestBookingStep1 = () => {
 
   return (
     <>
-      <Navbar />
       <div className="guest-booking-flow page-container">
         <div className="page-main-guest">
           <div className="page-header">
@@ -335,7 +332,6 @@ const GuestBookingStep1 = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 };

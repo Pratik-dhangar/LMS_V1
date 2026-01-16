@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, User, Phone, Shield, Loader } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import '../../styles/GuestBooking.css';
@@ -238,7 +236,6 @@ const GuestBookingStep2 = () => {
   if (!email) {
     return (
       <>
-        <Navbar />
         <div className="page-container">
           <div className="page-content">
             <div className="error-message">
@@ -246,7 +243,6 @@ const GuestBookingStep2 = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </>
     );
   }
@@ -255,7 +251,6 @@ const GuestBookingStep2 = () => {
 
   return (
     <>
-      <Navbar />
       <div className="guest-booking-flow page-container">
         <div className="page-main-guest">
           <div className="page-header">
@@ -457,7 +452,6 @@ const GuestBookingStep2 = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 };

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaSearch, FaCalendar, FaUser } from 'react-icons/fa';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import blogService from '../../api/services/blogService';
@@ -86,8 +84,6 @@ const BlogList = () => {
 
     return (
         <>
-            <Navbar />
-
             {/* Hero Section */}
             <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white py-20 relative overflow-hidden">
                 {/* Background Pattern */}
@@ -275,8 +271,6 @@ const BlogList = () => {
                     </>
                 )}
             </div>
-
-            <Footer />
         </>
     );
 };

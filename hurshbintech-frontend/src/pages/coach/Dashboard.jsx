@@ -1,9 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
 import { Calendar, Clock, Settings } from 'lucide-react';
-import Footer from '../../components/layout/Footer';
 import '../../styles/admin/index.css';
 
 const CoachDashboard = () => {
@@ -21,7 +19,6 @@ const CoachDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-content-wrapper">
           {/* Header */}
@@ -63,7 +60,6 @@ const CoachDashboard = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

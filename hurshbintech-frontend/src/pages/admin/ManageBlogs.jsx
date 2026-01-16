@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import SearchBar from '../../components/common/SearchBar';
 import '../../styles/Table.css';
 import '../../styles/admin/AdminManageLearningGoals.css';
@@ -108,7 +106,6 @@ const ManageBlogs = () => {
 
     return (
         <div className="page-container">
-            <Navbar />
             <div className="page-main">
                 <div className="page-content">
                     {/* Header */}
@@ -298,7 +295,6 @@ const ManageBlogs = () => {
                     )}
                 </div>
             </div>
-            <Footer />
         </div>
     );
 };

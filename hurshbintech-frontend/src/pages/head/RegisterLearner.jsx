@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
 import '../../styles/ManageUsersLayout.css';
@@ -291,8 +289,6 @@ const RegisterLearner = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Loading/Success Modal */}
       {loading && (
         <div className="app-modal-overlay">
@@ -436,7 +432,6 @@ const RegisterLearner = () => {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

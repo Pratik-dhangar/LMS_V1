@@ -9,8 +9,6 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Emoji from '../../components/common/Emoji';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';

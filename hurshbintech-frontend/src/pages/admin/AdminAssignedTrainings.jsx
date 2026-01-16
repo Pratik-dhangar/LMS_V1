@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Plus, AlertCircle, Loader2, Search, X, File, Upload } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import AssignedTrainingCard from "../../components/AssignedTrainingCard";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/admin/AdminAssignedTrainings.css";
@@ -269,7 +267,6 @@ const AdminAssignedTrainings = () => {
 
     return (
         <div className="page-container">
-            <Navbar />
             <main className="page-main">
                 <div className="page-content">
                     {/* Header */}
@@ -602,7 +599,6 @@ const AdminAssignedTrainings = () => {
                 </div>
             )}
 
-            <Footer />
         </div>
     );
 };

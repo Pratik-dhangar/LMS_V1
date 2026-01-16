@@ -3,8 +3,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar } from 'lucide-react';
 import '../../styles/admin/index.css';
 
@@ -26,7 +24,6 @@ const HeadDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      <Navbar />
       <main className="admin-dashboard-main">
         <div className="admin-dashboard-content-wrapper">
           {/* Header */}
@@ -67,7 +64,6 @@ const HeadDashboard = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
