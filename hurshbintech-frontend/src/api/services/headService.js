@@ -5,17 +5,6 @@ import axiosInstance from '../axios';
  * Handles head-specific API calls
  */
 const headService = {
-  /**
-   * Get Dashboard Statistics
-   * @returns {Promise} - Dashboard stats object
-   */
-  getDashboardStats: async () => {
-    console.log('Fetching dashboard statistics');
-    const response = await axiosInstance.get('/head/dashboard/stats');
-    console.log('Dashboard stats received:', { stats: response.data });
-    return response.data;
-  },
-
   // Trainer Management APIs
   /**
    * Create a new Trainer

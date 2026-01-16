@@ -36,9 +36,7 @@ const CoachDashboard = () => {
 
           {/* Coach Menu */}
           <div className="admin-dashboard-menu">
-            <div className="admin-menu-title">
-              <h2>Coach Menu - Click to Open</h2>
-            </div>
+            
 
             <div className="admin-menu-grid">
               {menuItems.map((item) => {

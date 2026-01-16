@@ -499,6 +499,13 @@ const EditCoach = () => {
                     className="form-file-input"
                     accept="image/*"
                   />
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('profile_picture_url').click()}
+                    className="btn-upload-file"
+                  >
+                    Upload Image
+                  </button>
                   <p className="form-hint">Supported formats: JPG, PNG, GIF</p>
 
                   {/* Existing Profile Picture */}
@@ -551,6 +558,13 @@ const EditCoach = () => {
                     className="form-file-input"
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
                   />
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('reference_files').click()}
+                    className="btn-upload-file"
+                  >
+                    Upload Files
+                  </button>
                   <p className="form-hint">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
 
                   {/* Existing Reference Files */}
@@ -619,49 +633,63 @@ const EditCoach = () => {
               handleChange={handleChange}
             />
 
-            {/* Form Actions */}
-            <div className="form-actions-split">
+             {/* Action Buttons */}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="app-modal-btn app-modal-btn--primary btn-icon"
+              >
+                {saving ? (
+                  <>
+                    <div className="btn-spinner"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="icon-sm"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Save Changes
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/manage-heads")}
+                disabled={saving || deleting}
+                className="app-modal-btn app-modal-btn--secondary"
+              >
+                Cancel
+              </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
                 className="app-modal-btn app-modal-btn--danger btn-icon"
               >
-                <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="icon-sm"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
                 Delete Coach
               </button>
-
-              <div className="form-actions-group">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={saving || deleting}
-                  className="app-modal-btn app-modal-btn--secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || deleting}
-                  className="app-modal-btn app-modal-btn--primary btn-icon"
-                >
-                  {saving ? (
-                    <>
-                      <div className="btn-spinner"></div>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="icon-sm" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </form>
         </div>

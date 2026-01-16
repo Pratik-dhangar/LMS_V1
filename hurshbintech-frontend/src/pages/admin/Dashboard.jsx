@@ -10,31 +10,6 @@ import '../../styles/admin/index.css';
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    total_users: 0,
-    active_sessions: 0,
-    total_trainers: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await adminService.getDashboardStats();
-      setStats(data);
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-      setError('Failed to load dashboard statistics');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const menuItems = [
     { id: '1.1', title: 'Manage HurshBin Heads', description: 'Register and manage HurshBin Heads', icon: Users2, color: 'blue', onClick: () => navigate('/admin/manage-heads') },
@@ -64,39 +39,9 @@ const AdminDashboard = () => {
             </h1>
           </div>
 
-          {/* Stats Cards */}
-          <div className="admin-stats-grid">
-            {loading ? (
-              <div className="admin-stat-loading">
-                Loading stats...
-              </div>
-            ) : error ? (
-              <div className="admin-stat-error">
-                {error}
-              </div>
-            ) : (
-              <>
-                <div className="admin-stat-card">
-                  <div className="admin-stat-label">Total Users</div>
-                  <div className="admin-stat-value admin-stat-value-blue">{stats.total_users}</div>
-                </div>
-                <div className="admin-stat-card">
-                  <div className="admin-stat-label">Active Sessions Today</div>
-                  <div className="admin-stat-value admin-stat-value-green">{stats.active_sessions}</div>
-                </div>
-                <div className="admin-stat-card">
-                  <div className="admin-stat-label">Total Trainers</div>
-                  <div className="admin-stat-value admin-stat-value-red">{stats.total_trainers}</div>
-                </div>
-              </>
-            )}
-          </div>
-
           {/* Admin Menu */}
           <div className="admin-dashboard-menu">
-            <div className="admin-menu-title">
-              <h2>Admin Menu - Click to Open</h2>
-            </div>
+           
 
             <div className="admin-menu-grid">
               {menuItems.map((item) => {
@@ -122,7 +67,9 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+        
       </main>
+      
       <Footer />
     </div>
   );
