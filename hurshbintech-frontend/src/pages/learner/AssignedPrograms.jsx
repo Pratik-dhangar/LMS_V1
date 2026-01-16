@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import programAssignmentService from "../../api/services/programAssignmentService";
-import "../../styles/admin/index.css";
+import "../../styles/ManageUsersLayout.css";
 
 const AssignedPrograms = () => {
   const { user } = useAuth();
@@ -170,12 +171,16 @@ const AssignedPrograms = () => {
   };
 
   return (
-    <div className="admin-dashboard-container">
-      <main className="admin-dashboard-main">
-        <div className="admin-dashboard-content-wrapper">
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
           {/* Page Header */}
-          <div className="admin-dashboard-header">
-            <h1 className="admin-dashboard-title">
+          <div className="page-header">
+            <button onClick={() => navigate('/learner/dashboard')} className="back-button">
+              <ArrowLeft size={20} />
+              Back to Dashboard
+            </button>
+            <h1 className="page-title">
               Assigned Programs (Home Program)
             </h1>
           </div>
