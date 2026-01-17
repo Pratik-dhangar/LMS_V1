@@ -6,6 +6,12 @@ import './styles/session.css'
 import 'react-toastify/dist/ReactToastify.css'
 import App from './App.jsx'
 
+if (process.env.NODE_ENV === 'production') {
+  console.log = () => {};
+  console.error = () => {};
+  console.debug = () => {};
+}
+
 // Handle Chrome extension messages to prevent async response errors
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onMessage?.addListener((request, sender, sendResponse) => {

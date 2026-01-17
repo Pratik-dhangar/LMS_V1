@@ -152,7 +152,7 @@ const ScheduleSession = () => {
       setLoading(true);
       await sessionService.createSession(sessionPayload);
       toast.success("Session scheduled successfully!");
-      navigate("/head/dashboard");
+      navigate("/head/manage-sessions");
     } catch (error) {
       if (error.response?.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
@@ -749,7 +749,7 @@ const ScheduleSession = () => {
               
               <button
                 type="button"
-                onClick={() => navigate("/head/dashboard")}
+                onClick={() => navigate("/head/manage-sessions")}
                 className="app-modal-btn app-modal-btn--secondary"
                 disabled={loading}
               >
