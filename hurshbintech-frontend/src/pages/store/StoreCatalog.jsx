@@ -4,6 +4,9 @@ import storeService from "../../api/services/ecommerce/storeService";
 import cartService from "../../api/services/ecommerce/cartService";
 import { toast } from "react-toastify";
 
+
+
+
 const StoreCatalog = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -26,6 +29,27 @@ const StoreCatalog = () => {
   });
 
   const [pagination, setPagination] = useState({ total: 0, pages: 0 });
+
+  // Helper function to get role-based dashboard URL
+  const getDashboardUrl = () => {
+    try {
+      const userData = localStorage.getItem('user_data');
+      const user = userData ? JSON.parse(userData) : null;
+      if (!user || !user.role) return '/dashboard';
+      const dashboardMap = {
+        'head': '/head/dashboard',
+        'trainer': '/trainer/dashboard',
+        'coach': '/coach/dashboard',
+        'admin': '/admin/dashboard',
+        'learner': '/learner/dashboard'
+      };
+      return dashboardMap[user.role] || '/dashboard';
+    } catch (error) {
+      console.error('Error getting dashboard URL:', error);
+      return '/dashboard';
+    }
+  };
+
 
   useEffect(() => {
     loadMetadata();
@@ -146,7 +170,7 @@ const StoreCatalog = () => {
           {/* Header */}
           <div className="page-header">
             <button
-              onClick={() => navigate("/head/manage-learners")}
+              onClick={() => navigate(getDashboardUrl())}
               className="back-button"
             >
               <svg
@@ -160,7 +184,7 @@ const StoreCatalog = () => {
               >
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
-              Back to Manage Learners
+              Back to Dashboard
             </button>
             <div>
               <h1 className="page-title">Learning Materials Store</h1>
