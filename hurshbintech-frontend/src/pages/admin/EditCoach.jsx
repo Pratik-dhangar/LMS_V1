@@ -400,7 +400,8 @@ const EditCoach = () => {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container">
+          <div className="modern-form-card">
+            <form onSubmit={handleSubmit} >
             <BasicInfoSection
               formData={formData}
               errors={errors}
@@ -421,57 +422,61 @@ const EditCoach = () => {
             />
 
             {/* Coach-Specific Fields */}
-            <section className="section">
-              <h2 className="section-title">Coach-Specific Information</h2>
+            <section className="coach-specific-section">
+              <h2 className="coach-specific-title">Coach-Specific Information</h2>
 
-              <div className="grid-2">
+              <div className="coach-grid-layout">
                 {/* Availability Days - Multi Select */}
-                <div>
-                  <label className="app-modal-form-label">Availability Days <span className="required-mark">*</span></label>
-                  <div className="checkbox-group">
+                <div className="coach-field-group">
+                  <label className="coach-field-label">
+                    Availability Days <span className="required-indicator">*</span>
+                  </label>
+                  <div className="coach-checkbox-group">
                     {DAYS_OF_WEEK.map(day => (
-                      <div key={day} className="checkbox-item">
+                      <div key={day} className="coach-checkbox-item">
                         <input
                           type="checkbox"
                           id={`day_${day}`}
                           checked={formData.availability_days.includes(day)}
                           onChange={() => handleMultiSelect('availability_days', day)}
-                          className="checkbox-input"
+                          className="coach-checkbox-input"
                         />
-                        <label htmlFor={`day_${day}`} className="checkbox-label">{day}</label>
+                        <label htmlFor={`day_${day}`} className="coach-checkbox-label">{day}</label>
                       </div>
                     ))}
                   </div>
                   {formData.availability_days.length > 0 && (
-                    <p className="form-hint">Selected: {formData.availability_days.join(', ')}</p>
+                    <p className="coach-selected-hint">Selected: {formData.availability_days.join(', ')}</p>
                   )}
                 </div>
 
                 {/* Time Slots - Multi Select */}
-                <div>
-                  <label className="app-modal-form-label">Time Slots <span className="required-mark">*</span></label>
-                  <div className="checkbox-group">
+                <div className="coach-field-group">
+                  <label className="coach-field-label">
+                    Time Slots <span className="required-indicator">*</span>
+                  </label>
+                  <div className="coach-checkbox-group">
                     {TIME_SLOT_OPTIONS.map(slot => (
-                      <div key={slot} className="checkbox-item">
+                      <div key={slot} className="coach-checkbox-item">
                         <input
                           type="checkbox"
                           id={`slot_${slot}`}
                           checked={formData.time_slots.includes(slot)}
                           onChange={() => handleMultiSelect('time_slots', slot)}
-                          className="checkbox-input"
+                          className="coach-checkbox-input"
                         />
-                        <label htmlFor={`slot_${slot}`} className="checkbox-label">{slot}</label>
+                        <label htmlFor={`slot_${slot}`} className="coach-checkbox-label">{slot}</label>
                       </div>
                     ))}
                   </div>
                   {formData.time_slots.length > 0 && (
-                    <p className="form-hint">Selected: {formData.time_slots.join(', ')}</p>
+                    <p className="coach-selected-hint">Selected: {formData.time_slots.join(', ')}</p>
                   )}
                 </div>
 
                 {/* Specialization */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="specialization" className="app-modal-form-label">Specialization</label>
+                <div className="coach-field-group">
+                  <label htmlFor="specialization" className="coach-field-label">Specialization</label>
                   <textarea
                     id="specialization"
                     name="specialization"
@@ -484,7 +489,7 @@ const EditCoach = () => {
                 </div>
 
                 {/* Profile Picture */}
-                <div>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <label htmlFor="profile_picture_url" className="app-modal-form-label">Profile Picture</label>
                   <input
                     type="file"
@@ -492,37 +497,39 @@ const EditCoach = () => {
                     onChange={handleProfileImageChange}
                     className="form-file-input"
                     accept="image/*"
+                    style={{ display: 'none' }}
                   />
                   <button
                     type="button"
                     onClick={() => document.getElementById('profile_picture_url').click()}
-                    className="btn-upload-file"
+                    className="reference-btn-upload"
                   >
                     Upload Image
                   </button>
-                  <p className="form-hint">Supported formats: JPG, PNG, GIF</p>
+                  <p className="reference-data-help-text">Supported formats: JPG, PNG, GIF</p>
 
                   {/* Existing Profile Picture */}
                   {existingProfilePicture && (
-                    <div className="existing-files-section">
-                      <h4 className="subsection-title">Current Profile Picture</h4>
-                      <div className="file-list">
-                        <div className="file-item">
-                          <span className="file-name">Profile Picture</span>
-                          <div className="file-actions">
+                    <div className="reference-existing-files">
+                      <h4 className="reference-files-title">Current Profile Picture</h4>
+                      <div className="reference-files-list">
+                        <div className="reference-file-item">
+                          <span className="reference-file-name">Profile Picture</span>
+                          <div className="reference-file-actions">
                             <button
                               type="button"
                               onClick={(e) => handleViewProfilePicture(e)}
-                              className="btn-view-file"
+                              className="reference-btn-view"
                             >
                               View
                             </button>
                             <button
                               type="button"
                               onClick={handleDeleteProfilePicture}
-                              className="file-remove-btn"
+                              className="reference-btn-remove"
+                              title="Delete picture"
                             >
-                              Remove
+                              <Trash2 size={20} />
                             </button>
                           </div>
                         </div>
@@ -532,11 +539,13 @@ const EditCoach = () => {
 
                   {/* New Profile Picture to Upload */}
                   {formData.profile_picture_url && (
-                    <div className="new-files-section">
-                      <h4 className="subsection-title">New Profile Picture to Upload</h4>
-                      <p className="form-hint" style={{ color: '#4caf50' }}>
-                        ✓ {formData.profile_picture_url.name}
-                      </p>
+                    <div className="reference-new-files">
+                      <h4 className="reference-files-title">New Profile Picture to Upload</h4>
+                      <div className="reference-files-list">
+                        <div className="reference-file-item">
+                          <span className="reference-file-name">✓ {formData.profile_picture_url.name}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -689,6 +698,8 @@ const EditCoach = () => {
               </button>
             </div>
           </form>
+          </div>
+          
         </div>
       </main>
     </div>
