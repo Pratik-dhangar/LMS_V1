@@ -283,9 +283,9 @@ const TrainerSession = () => {
   const [lineWidth, setLineWidth] = useState(2);
   // Unified whiteboard button styles (white background, black text)
   const wbBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
-  const wbBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
+  const wbBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
-  const wbSmallBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+  const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
   const [toolActive, setToolActive] = useState(false); // Track if drawing tool is active
   const [eraserActive, setEraserActive] = useState(false); // Track if eraser tool is active
@@ -1809,7 +1809,8 @@ const TrainerSession = () => {
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
             <button
-              className="btn-session btn-session-end"
+              className="btn-secondary"
+              style={{color: 'white'}}
               onClick={() =>
                 window.open('/trainer/dashboard', '_blank', 'noopener,noreferrer')
               }
@@ -2197,7 +2198,7 @@ const TrainerSession = () => {
                 </button>
               </div>
               <textarea
-                className="w-full rounded mt-1 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded mt-1 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#DB9D32]"
                 style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', minHeight: 'clamp(60px, 15vw, 80px)' }}
                 value={sessionNotes}
                 onChange={handleNotesChange}
@@ -2230,7 +2231,7 @@ const TrainerSession = () => {
                 />
                 <button
                   onClick={sendMessage}
-                  className="btn-primary text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                  className="btn-primary text-white border-none rounded cursor-pointer hover:bg-[#9C4D0B]"
                   style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
                 >
                   Send

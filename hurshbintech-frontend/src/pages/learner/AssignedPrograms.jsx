@@ -240,8 +240,8 @@ const AssignedPrograms = () => {
                           </h3>
 
                           {/* Programs List */}
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <p style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
+                          <div style={{ marginBottom: '.75rem' }}>
+                            <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
                             <div style={{ marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               {firstProg.program_names && firstProg.program_names.length > 0 ? (
                                 firstProg.program_names.map((name, idx) => (
@@ -392,21 +392,9 @@ const AssignedPrograms = () => {
 
                           {isSubmitted && (
                             <button
-                              style={{
-                                background: 'linear-gradient(to right, #a855f7, #9333ea)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s'
-                              }}
+                             className="btn-primary"
                               onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #9333ea, #7e22ce)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #a855f7, #9333ea)'}
+                             
                             >
                               View
                             </button>

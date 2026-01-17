@@ -127,7 +127,7 @@ const StoreCatalog = () => {
         const tagColors = {
             'Recommended': 'bg-green-600',
             'Bestseller': 'bg-red-500',
-            'New': 'bg-blue-500'
+            'New': 'bg-[#DB9D32]'
         };
         const tag = tags[0];
         return (
@@ -141,7 +141,7 @@ const StoreCatalog = () => {
         <div style={{ minHeight: '100vh', background: '#f5f6fa' }}>
             {/* Hero Header */}
             <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #FE971E 0%, #9C4D0B 100%)',
                 color: 'white',
                 padding: '40px 20px',
                 textAlign: 'center'
@@ -267,7 +267,7 @@ const StoreCatalog = () => {
                                 style={{
                                     width: '100%',
                                     padding: '10px',
-                                    background: '#3498db',
+                                    background: '#DB9D32',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
@@ -432,7 +432,7 @@ const StoreCatalog = () => {
                                                         top: '10px',
                                                         right: '10px',
                                                         background: product.tags[0] === 'Recommended' ? '#27ae60' :
-                                                            product.tags[0] === 'Bestseller' ? '#e74c3c' : '#3498db',
+                                                            product.tags[0] === 'Bestseller' ? '#9C4D0B' : '#DB9D32',
                                                         color: 'white',
                                                         padding: '4px 8px',
                                                         borderRadius: '3px',
@@ -538,7 +538,7 @@ const StoreCatalog = () => {
                                                         onClick={() => handleFilterChange('page', page)}
                                                         style={{
                                                             padding: '10px 15px',
-                                                            background: filters.page === page ? '#3498db' : 'white',
+                                                            background: filters.page === page ? '#DB9D32' : 'white',
                                                             color: filters.page === page ? 'white' : '#2c3e50',
                                                             border: '1px solid #ddd',
                                                             borderRadius: '6px',

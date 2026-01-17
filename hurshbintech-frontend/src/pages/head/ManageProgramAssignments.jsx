@@ -1032,7 +1032,7 @@ const ManageProgramAssignments = () => {
                             {content.description && (
                               <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{content.description}</div>
                             )}
-                            <div className="mpa-text-xs mpa-text-purple-600 mpa-mt-1">
+                            <div className="mpa-text-xs mpa-text-[#9C4D0B] mpa-mt-1">
                               📄 {content.content_type}
                             </div>
                           </div>

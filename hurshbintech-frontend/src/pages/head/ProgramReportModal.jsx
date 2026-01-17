@@ -21,8 +21,8 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
     const progressData = statistics.progress_data || [];
 
     // Color palettes
-    const promptColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-    const reinforcementColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#f59e0b', '#fbbf24', '#fcd34d', '#ef4444'];
+    const promptColors = ['#DB9D32', '#9C4D0B', '#FE971E', '#ef4444', '#7A2C2C', '#ec4899', '#06b6d4', '#84cc16'];
+    const reinforcementColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#FE971E', '#fbbf24', '#fcd34d', '#ef4444'];
 
     const handlePrint = () => {
         window.print();
@@ -64,7 +64,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                 <div className="app-modal-content">
                     {/* Summary Cards */}
                     <div className="chart-summary-grid">
-                        <div className="chart-summary-card chart-summary-blue">
+                        <div className="chart-summary-card chart-summary-gold">
                             <div className="chart-summary-value">{statistics.total_reports || 0}</div>
                             <div className="chart-summary-label">Total Sessions</div>
                         </div>
@@ -74,7 +74,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                             </div>
                             <div className="chart-summary-label">Prompt Levels Used</div>
                         </div>
-                        <div className="chart-summary-card chart-summary-purple">
+                        <div className="chart-summary-card chart-summary-orange">
                             <div className="chart-summary-value">
                                 {Object.keys(statistics.reinforcement_distribution || {}).length}
                             </div>
@@ -104,7 +104,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                                                 return (
                                                     <div className="bg-white border border-gray-300 rounded p-3 shadow-lg">
                                                         <p className="font-bold">Session #{label}</p>
-                                                        <p className="text-sm text-blue-600">Prompt: {data.prompt_meter}</p>
+                                                        <p className="text-sm text-[#DB9D32]">Prompt: {data.prompt_meter}</p>
                                                         <p className="text-sm text-green-600">Reinforcement: {data.reinforcement_meter}</p>
                                                         {data.date && (
                                                             <p className="text-xs text-gray-500 mt-1">
@@ -121,10 +121,10 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                                     <Line
                                         type="monotone"
                                         dataKey="prompt_value"
-                                        stroke="#3b82f6"
+                                        stroke="#DB9D32"
                                         strokeWidth={2}
                                         name="Prompt Level"
-                                        dot={{ fill: '#3b82f6', strokeWidth: 2 }}
+                                        dot={{ fill: '#DB9D32', strokeWidth: 2 }}
                                     />
                                     <Line
                                         type="monotone"
@@ -254,7 +254,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                         </button>
                         <button
                             onClick={handlePrint}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                            className="bg-[#DB9D32] hover:bg-[#9C4D0B] text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
                         >
                             🖨️ Print Report
                         </button>

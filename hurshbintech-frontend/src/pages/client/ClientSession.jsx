@@ -523,11 +523,11 @@ const ClientSession = () => {
               Please wait while <strong>{sessionInfo?.coach_name ?? 'your coach'}</strong> joins the session.
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
               <span>Connecting...</span>
             </div>
             {sessionInfo && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <div className="mt-6 p-4 bg-[#fef3e2] rounded-lg">
                 <p className="text-sm text-gray-700">
                   <strong>Session Details:</strong>
                 </p>
@@ -645,11 +645,11 @@ const ClientSession = () => {
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="[Type message...]"
-                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-[#DB9D32]"
               />
               <button
                 onClick={sendMessage}
-                className="px-4 py-2 md:px-5 md:py-3 bg-blue-500 text-white text-xs md:text-sm rounded hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 md:px-5 md:py-3 bg-[#DB9D32] text-white text-xs md:text-sm rounded hover:bg-[#9C4D0B] transition-colors"
               >
                 Send
               </button>

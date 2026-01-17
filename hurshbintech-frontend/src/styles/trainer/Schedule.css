@@ -62,8 +62,8 @@
 
 .trainer-pagination-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #DB9D32;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1);
 }
 
 /* Sessions List */
