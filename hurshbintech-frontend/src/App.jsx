@@ -104,6 +104,12 @@ import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
 import OrderHistory from './pages/store/OrderHistory';
 
+// Subscription Pages
+import SubscriptionPackageManager from './pages/head/SubscriptionPackageManager';
+import LearnerSubscriptionManager from './pages/head/LearnerSubscriptionManager';
+import SubscriptionRecords from './pages/admin/SubscriptionRecords';
+import DiscountCodeManager from './pages/admin/DiscountCodeManager';
+
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -406,6 +412,24 @@ function AppRoutes() {
             }
           />
 
+          {/* Admin Subscription Routes */}
+          <Route
+            path="/admin/subscriptions/discounts"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DiscountCodeManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/subscriptions/records"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SubscriptionRecords />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Head Routes */}
           <Route
             path="/head/dashboard"
@@ -524,6 +548,32 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['head']}>
                 <ProfileAndOrderHistory />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Head Subscription Routes */}
+          <Route
+            path="/head/subscriptions/packages"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <SubscriptionPackageManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/subscriptions/learners"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <LearnerSubscriptionManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/subscriptions/records"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <SubscriptionRecords />
               </ProtectedRoute>
             }
           />

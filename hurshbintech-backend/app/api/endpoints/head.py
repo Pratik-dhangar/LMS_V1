@@ -3,12 +3,12 @@ Head CRUD endpoints - Manage Trainers and Learners
 Only accessible by heads
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 import logging
 
@@ -16,8 +16,10 @@ from app.core.deps import get_current_head
 from app.core.security import decrypt_passcode
 from app.core.config import settings
 from app.crud import user_crud
+from app.crud import subscription_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile
+from app.models.subscription import SubscriptionPaymentReceipt, PaymentStatus
 from app.schemas.user import (
     LearnerCreate,
     LearnerResponse,
@@ -27,6 +29,29 @@ from app.schemas.user import (
     TrainerUpdate,
     CoachResponse,
 )
+from app.schemas.subscription import LearnerSubscriptionCreate
+from app.schemas.subscription import (
+    SubscriptionPackageCreate,
+    SubscriptionPackageUpdate,
+    SubscriptionPackageResponse,
+    LearnerSubscriptionCreate,
+    LearnerSubscriptionBackdateCreate,
+    LearnerSubscriptionResponse,
+    LearnerSubscriptionDetailResponse,
+    PaymentReceiptResponse,
+    SessionAdjustmentCreate,
+    SessionAdjustmentLogResponse,
+    SubscriptionPauseRequest,
+    SubscriptionFreezeRequest,
+    SubscriptionResumeRequest,
+    SubscriptionCancelRequest,
+    SubscriptionRefundRequest,
+    SubscriptionRefundResponse,
+    ExpiringSubscriptionResponse,
+    BackdateValidationResponse,
+    SessionGapWarning,
+)
+from app.models.subscription import RefundType
 
 router = APIRouter(prefix="/head", tags=["Head Operations"])
 
@@ -481,7 +506,7 @@ async def create_new_learner(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Create a new learner with optional reference file uploads"""
+    """Create a new learner with optional reference file uploads and initial subscription"""
     
     # Parse the JSON string to LearnerCreate object
     import json
@@ -507,16 +532,27 @@ async def create_new_learner(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # Handle reference files upload
+    # Handle reference files upload (including payment receipt)
+    payment_receipt_file = None
     if reference_files:
-        for ref_file in reference_files:
+        for idx, ref_file in enumerate(reference_files):
             # Skip if ref_file is None or empty
             if not ref_file or not hasattr(ref_file, 'filename') or not ref_file.filename:
                 continue
-                
+            
+            # The last file in the list is the payment receipt
+            is_payment_receipt = (idx == len(reference_files) - 1)
+            
             try:
                 file_extension = ref_file.filename.split(".")[-1]
-                filename = f"learner_{new_learner.id}_ref_{ref_file.filename}"
+                
+                if is_payment_receipt:
+                    # Store for subscription payment receipt with learner name
+                    filename = f"Payment_Receipt_of_{new_learner.user.name}.{file_extension}"
+                    payment_receipt_file = ref_file
+                else:
+                    # Regular reference data
+                    filename = f"learner_{new_learner.id}_ref_{ref_file.filename}"
                 
                 if settings.USE_S3:
                     # Save to S3
@@ -525,35 +561,103 @@ async def create_new_learner(
                     await ref_file.seek(0)
                     file_content = await ref_file.read()
                     content_type = ref_file.content_type or "application/octet-stream"
-                    s3_key = s3_manager.upload_file(
-                        file_content,
-                        folder="reference_data",
-                        filename=filename,
-                        content_type=content_type,
-                    )
+                    
+                    if is_payment_receipt:
+                        s3_key = s3_manager.upload_file(
+                            file_content,
+                            folder="payment_receipts",
+                            filename=filename,
+                            content_type=content_type,
+                        )
+                    else:
+                        s3_key = s3_manager.upload_file(
+                            file_content,
+                            folder="reference_data",
+                            filename=filename,
+                            content_type=content_type,
+                        )
+                    
                     file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 else:
-                    upload_dir = Path("uploads/reference_data")
+                    if is_payment_receipt:
+                        upload_dir = Path("uploads/payment_receipts")
+                    else:
+                        upload_dir = Path("uploads/reference_data")
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     file_path = upload_dir / filename
                     content = await ref_file.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    file_url = f"/uploads/reference_data/{filename}"
+                    file_url = f"/uploads/payment_receipts/{filename}" if is_payment_receipt else f"/uploads/reference_data/{filename}"
                 
-                # Save reference data entry in database
-                await user_crud.create_learner_reference_data(
-                    db,
-                    learner_id=new_learner.id,
-                    file_url=file_url,
-                    file_type=file_extension,
-                    description=ref_file.filename
-                )
-                logging.info(f"Saved reference data for learner {new_learner.id}: {file_url}")
+                if not is_payment_receipt:
+                    # Save reference data entry in database
+                    await user_crud.create_learner_reference_data(
+                        db,
+                        learner_id=new_learner.id,
+                        file_url=file_url,
+                        file_type=file_extension,
+                        description=ref_file.filename
+                    )
+                    logging.info(f"Saved reference data for learner {new_learner.id}: {file_url}")
+                else:
+                    # Store payment receipt file info for later use
+                    payment_receipt_file = {
+                        'file_url': file_url,
+                        'file_name': filename,
+                        'file_size': len(file_content) if 'file_content' in locals() else None,
+                        'storage_type': 's3' if settings.USE_S3 else 'local'
+                    }
+                    logging.info(f"Saved payment receipt for learner {new_learner.id}: {file_url}")
             except Exception as e:
                 # Log error but don't fail
                 filename_str = getattr(ref_file, 'filename', 'unknown')
-                logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
+                logging.warning(f"Failed to upload file {filename_str}: {str(e)}")
+    
+    # Create initial subscription if package_id is provided
+    if learner_create.package_id:
+        try:
+            # Get the package
+            package = await subscription_crud.get_package_by_id(db, learner_create.package_id)
+            if not package:
+                raise HTTPException(status_code=400, detail="Invalid package selected")
+            
+            # Create subscription
+            from datetime import date
+            subscription_data = LearnerSubscriptionCreate(
+                learner_id=new_learner.id,
+                package_id=learner_create.package_id,
+                start_date=date.today(),
+                discount_code=learner_create.discount_code
+            )
+            
+            subscription, error = await subscription_crud.create_subscription(
+                db, subscription_data, current_head.id
+            )
+            
+            if error or not subscription:
+                logging.warning(f"Failed to create subscription for learner {new_learner.id}: {error}")
+            else:
+                # Upload payment receipt if provided
+                if payment_receipt_file and isinstance(payment_receipt_file, dict):
+                    receipt_model = SubscriptionPaymentReceipt(
+                        subscription_id=subscription.id,
+                        uploaded_by_head_id=current_head.id,
+                        file_name=payment_receipt_file['file_name'],
+                        file_path=payment_receipt_file['file_url'],
+                        file_size=payment_receipt_file.get('file_size'),
+                        storage_type=payment_receipt_file.get('storage_type', 'local'),
+                        payment_status=PaymentStatus.PENDING
+                    )
+                    db.add(receipt_model)
+                    await db.commit()
+                    logging.info(f"Created payment receipt for subscription {subscription.id}")
+                
+                logging.info(f"Created initial subscription {subscription.id} for learner {new_learner.id}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.warning(f"Failed to create initial subscription for learner {new_learner.id}: {str(e)}")
     
     # Refresh learner to get the reference_data relationship
     await db.refresh(new_learner, ['reference_data'])
@@ -592,7 +696,18 @@ async def get_learner_details(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this learner"
         )
 
-    return LearnerResponse.from_orm_with_user(learner)
+    # Get active subscription for this learner to fetch package_id and discount_code
+    from app.crud import subscription_crud
+    active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner_id)
+    
+    response_dict = LearnerResponse.from_orm_with_user(learner).dict()
+    
+    # Add subscription data if exists
+    if active_subscription:
+        response_dict['package_id'] = active_subscription.package_id
+        response_dict['discount_code'] = active_subscription.discount_code
+    
+    return response_dict
 
 
 @router.patch("/learners/{learner_id}", response_model=LearnerResponse)
@@ -600,10 +715,11 @@ async def update_learner_profile(
     learner_id: int,
     learner_update: str = Form(None),
     reference_files: List[UploadFile] = File(None),
+    payment_receipt: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Update learner profile with optional reference file uploads"""
+    """Update learner profile with optional reference file and payment receipt uploads"""
 
     learner = await user_crud.get_learner_by_id(db, learner_id)
 
@@ -631,6 +747,62 @@ async def update_learner_profile(
         updated_learner = await user_crud.update_learner(db, learner_id, learner_update_obj)
     else:
         updated_learner = learner
+    
+    # Handle payment receipt upload if provided
+    if payment_receipt and payment_receipt.filename:
+        try:
+            from app.crud import subscription_crud
+            
+            # Get active subscription for this learner
+            active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner_id)
+            
+            if active_subscription:
+                file_extension = payment_receipt.filename.split(".")[-1]
+                filename = f"Payment_Receipt_of_{learner.user.name}.{file_extension}"
+                
+                if settings.USE_S3:
+                    # Save to S3
+                    from app.utils.s3_utils import S3Manager
+                    s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+                    await payment_receipt.seek(0)
+                    file_content = await payment_receipt.read()
+                    content_type = payment_receipt.content_type or "application/octet-stream"
+                    s3_key = s3_manager.upload_file(
+                        file_content,
+                        folder="payment_receipts",
+                        filename=filename,
+                        content_type=content_type,
+                    )
+                    file_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+                else:
+                    upload_dir = Path("uploads/payment_receipts")
+                    upload_dir.mkdir(parents=True, exist_ok=True)
+                    file_path_obj = upload_dir / filename
+                    content = await payment_receipt.read()
+                    with open(file_path_obj, "wb") as f:
+                        f.write(content)
+                    file_path = f"/uploads/payment_receipts/{filename}"
+                
+                # Create payment receipt record with PENDING status
+                from app.models.subscription_model import SubscriptionPaymentReceipt, PaymentStatus
+                new_receipt = SubscriptionPaymentReceipt(
+                    subscription_id=active_subscription.id,
+                    uploaded_by_head_id=current_head.id,
+                    file_name=filename,
+                    file_path=file_path,
+                    file_size=len(content),
+                    storage_type="s3" if settings.USE_S3 else "local",
+                    payment_status=PaymentStatus.PENDING,
+                    uploaded_at=func.now()
+                )
+                db.add(new_receipt)
+                await db.commit()
+                logging.info(f"Payment receipt uploaded for learner {learner_id}: {file_path}")
+            else:
+                logging.warning(f"No active subscription found for learner {learner_id}, payment receipt not saved")
+        except Exception as e:
+            logging.error(f"Failed to upload payment receipt for learner {learner_id}: {str(e)}")
+            # Don't fail the entire request if receipt upload fails
     
     # Handle reference files upload
     if reference_files:
@@ -683,7 +855,18 @@ async def update_learner_profile(
     # Refresh learner to get the updated reference_data relationship
     await db.refresh(updated_learner, ['reference_data'])
     
-    return LearnerResponse.from_orm_with_user(updated_learner)
+    # Get active subscription for response
+    from app.crud import subscription_crud
+    active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner_id)
+    
+    response_dict = LearnerResponse.from_orm_with_user(updated_learner).dict()
+    
+    # Add subscription data if exists
+    if active_subscription:
+        response_dict['package_id'] = active_subscription.package_id
+        response_dict['discount_code'] = active_subscription.discount_code
+    
+    return response_dict
 
 
 # Delete learner reference file
@@ -845,3 +1028,477 @@ async def reveal_user_passcode(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to decrypt passcode"
         )
+
+
+# ============ SUBSCRIPTION PACKAGE MANAGEMENT ============
+
+@router.post("/subscription-packages", response_model=SubscriptionPackageResponse, status_code=status.HTTP_201_CREATED)
+async def create_subscription_package(
+    package_data: SubscriptionPackageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Create a new subscription package"""
+    package = await subscription_crud.create_package(db, package_data, current_head.id)
+    return package
+
+
+@router.get("/subscription-packages", response_model=List[SubscriptionPackageResponse])
+async def get_my_subscription_packages(
+    active_only: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get all subscription packages created by current HEAD"""
+    packages = await subscription_crud.get_packages_by_head(db, current_head.id, active_only)
+    return packages
+
+
+@router.get("/subscription-packages/{package_id}", response_model=SubscriptionPackageResponse)
+async def get_subscription_package_details(
+    package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get subscription package details"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    # Verify package belongs to current head
+    if package.head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this package")
+    
+    return package
+
+
+@router.patch("/subscription-packages/{package_id}", response_model=SubscriptionPackageResponse)
+async def update_subscription_package(
+    package_id: int,
+    package_data: SubscriptionPackageUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Update a subscription package"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    # Verify package belongs to current head
+    if package.head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this package")
+    
+    updated_package = await subscription_crud.update_package(db, package_id, package_data)
+    return updated_package
+
+
+@router.delete("/subscription-packages/{package_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_subscription_package(
+    package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Delete a subscription package (hard delete if no subscriptions, soft delete if subscriptions exist)"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    # Verify package belongs to current head
+    if package.head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this package")
+    
+    await subscription_crud.soft_delete_package(db, package_id)
+    return None
+
+
+# ============ LEARNER SUBSCRIPTION MANAGEMENT ============
+
+@router.post("/subscriptions", response_model=LearnerSubscriptionResponse, status_code=status.HTTP_201_CREATED)
+async def create_learner_subscription(
+    subscription_data: LearnerSubscriptionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Create a new subscription for a learner"""
+    subscription, error = await subscription_crud.create_subscription(db, subscription_data, current_head.id)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.post("/subscriptions/backdate", response_model=LearnerSubscriptionResponse, status_code=status.HTTP_201_CREATED)
+async def create_backdated_subscription(
+    subscription_data: LearnerSubscriptionBackdateCreate,
+    old_subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Create a backdated subscription renewal within grace period"""
+    subscription, error = await subscription_crud.create_backdated_subscription(
+        db, subscription_data, current_head.id, old_subscription_id
+    )
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.get("/subscriptions/validate-backdate", response_model=BackdateValidationResponse)
+async def validate_backdate(
+    learner_id: int,
+    old_subscription_id: int,
+    new_start_date: date,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Validate backdate request and check for session gaps"""
+    old_sub = await subscription_crud.get_subscription_by_id(db, old_subscription_id)
+    if not old_sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Previous subscription not found")
+    
+    # Check grace period
+    days_since_expiry = (date.today() - old_sub.expiry_date).days
+    within_grace = days_since_expiry <= settings.SUBSCRIPTION_GRACE_PERIOD_DAYS
+    
+    if not within_grace:
+        return BackdateValidationResponse(
+            is_valid=False,
+            within_grace_period=False,
+            error_message=f"Backdate exceeds grace period of {settings.SUBSCRIPTION_GRACE_PERIOD_DAYS} days"
+        )
+    
+    # Check for sessions in gap
+    has_sessions, session_count = await subscription_crud.validate_backdate_for_renewal(
+        db, learner_id, old_sub.expiry_date, new_start_date
+    )
+    
+    warning = None
+    if has_sessions:
+        warning = SessionGapWarning(
+            has_sessions_in_gap=True,
+            session_count=session_count,
+            gap_start_date=old_sub.expiry_date,
+            gap_end_date=new_start_date,
+            warning_message=f"⚠️ Warning: Learner has {session_count} sessions between expiry ({old_sub.expiry_date}) and selected backdate ({new_start_date}). Backdating may cause data inconsistency."
+        )
+    
+    return BackdateValidationResponse(
+        is_valid=True,
+        within_grace_period=True,
+        session_gap_warning=warning
+    )
+
+
+@router.get("/subscriptions", response_model=List[LearnerSubscriptionResponse])
+async def get_my_subscriptions(
+    status: Optional[str] = None,
+    limit: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get all subscriptions managed by current HEAD"""
+    from app.models.subscription import SubscriptionStatus
+    
+    status_enum = None
+    if status:
+        try:
+            status_enum = SubscriptionStatus[status.upper()]
+        except KeyError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+    
+    subscriptions = await subscription_crud.get_subscriptions_by_head(db, current_head.id, status_enum, limit)
+    return subscriptions
+
+
+@router.get("/subscriptions/{subscription_id}", response_model=LearnerSubscriptionDetailResponse)
+async def get_subscription_details(
+    subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get detailed subscription information"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id, load_relations=True)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this subscription")
+    
+    return subscription
+
+
+@router.get("/subscriptions/{subscription_id}/renewal-chain", response_model=List[LearnerSubscriptionResponse])
+async def get_subscription_renewal_chain(
+    subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get full renewal chain for a subscription (A→B→C)"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this subscription")
+    
+    chain = await subscription_crud.get_renewal_chain(db, subscription_id)
+    return chain
+
+
+@router.post("/subscriptions/{subscription_id}/pause", response_model=LearnerSubscriptionResponse)
+async def pause_subscription(
+    subscription_id: int,
+    pause_data: SubscriptionPauseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Pause a subscription (stops expiry, allows sessions)"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to pause this subscription")
+    
+    subscription, error = await subscription_crud.pause_subscription(db, subscription_id, pause_data.reason)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.post("/subscriptions/{subscription_id}/freeze", response_model=LearnerSubscriptionResponse)
+async def freeze_subscription(
+    subscription_id: int,
+    freeze_data: SubscriptionFreezeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Freeze a subscription (blocks sessions, stops expiry)"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to freeze this subscription")
+    
+    subscription, error = await subscription_crud.freeze_subscription(db, subscription_id, freeze_data.reason)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.post("/subscriptions/{subscription_id}/resume", response_model=LearnerSubscriptionResponse)
+async def resume_subscription(
+    subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Resume a paused/frozen subscription"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to resume this subscription")
+    
+    subscription, error = await subscription_crud.resume_subscription(db, subscription_id)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.post("/subscriptions/{subscription_id}/cancel", response_model=LearnerSubscriptionResponse)
+async def cancel_subscription(
+    subscription_id: int,
+    cancel_data: SubscriptionCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Cancel a subscription"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this subscription")
+    
+    subscription, error = await subscription_crud.cancel_subscription(db, subscription_id, cancel_data.reason)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return subscription
+
+
+@router.post("/subscriptions/{subscription_id}/refund", response_model=SubscriptionRefundResponse)
+async def process_subscription_refund(
+    subscription_id: int,
+    refund_data: SubscriptionRefundRequest,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Process refund for a subscription"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to refund this subscription")
+    
+    refund_amount, error = await subscription_crud.process_refund(db, refund_data)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Refresh subscription after refund
+    await db.refresh(subscription)
+    
+    return SubscriptionRefundResponse(
+        subscription_id=subscription.id,
+        refund_amount=refund_amount,
+        refund_type=refund_data.refund_type,
+        sessions_remaining=subscription.sessions_remaining,
+        sessions_total=subscription.sessions_total,
+        net_price_paid=subscription.net_price_paid
+    )
+
+
+@router.post("/subscriptions/{subscription_id}/adjust-sessions", response_model=SessionAdjustmentLogResponse)
+async def adjust_subscription_sessions(
+    subscription_id: int,
+    adjustment_data: SessionAdjustmentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Manually adjust session count for a subscription"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to adjust this subscription")
+    
+    # Verify adjustment amount
+    if adjustment_data.adjustment_amount > settings.MAX_SESSION_ADJUSTMENT_AMOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Adjustment amount cannot exceed {settings.MAX_SESSION_ADJUSTMENT_AMOUNT}"
+        )
+    
+    adjustment_log, error = await subscription_crud.create_session_adjustment(
+        db, adjustment_data, current_head.id, "HEAD"
+    )
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return adjustment_log
+
+
+@router.post("/subscriptions/{subscription_id}/upload-receipt", response_model=PaymentReceiptResponse)
+async def upload_payment_receipt(
+    subscription_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Upload payment receipt for a subscription"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to upload receipt for this subscription")
+    
+    # Generate filename
+    file_extension = file.filename.split(".")[-1] if file.filename else "pdf"
+    filename = f"receipt_sub_{subscription_id}_{datetime.utcnow().timestamp()}.{file_extension}"
+    
+    try:
+        if settings.USE_S3:
+            # Upload to S3
+            from app.utils.s3_utils import S3Manager
+            s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
+            file_content = await file.read()
+            content_type = file.content_type or "application/pdf"
+            s3_key = s3_manager.upload_file(
+                file_content,
+                folder="payment_receipts",
+                filename=filename,
+                content_type=content_type,
+            )
+            file_path = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+            storage_type = "s3"
+        else:
+            # Save locally
+            upload_dir = Path("uploads/payment_receipts")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            file_path_local = upload_dir / filename
+            content = await file.read()
+            with open(file_path_local, "wb") as f:
+                f.write(content)
+            file_path = f"/uploads/payment_receipts/{filename}"
+            storage_type = "local"
+        
+        # Create receipt record
+        receipt = await subscription_crud.create_payment_receipt(
+            db,
+            subscription_id=subscription_id,
+            uploaded_by_head_id=current_head.id,
+            file_name=filename,
+            file_path=file_path,
+            file_size=len(content) if 'content' in locals() else len(file_content),
+            storage_type=storage_type
+        )
+        
+        return receipt
+        
+    except Exception as e:
+        logger.error(f"Failed to upload payment receipt: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload payment receipt"
+        )
+
+
+@router.get("/subscriptions/expiring-soon", response_model=List[ExpiringSubscriptionResponse])
+async def get_expiring_subscriptions(
+    days: int = 7,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get subscriptions expiring in the next N days"""
+    if days < 1 or days > 30:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Days must be between 1 and 30")
+    
+    subscriptions = await subscription_crud.get_expiring_subscriptions(db, current_head.id, days)
+    
+    # Build response with learner details
+    result = []
+    for sub in subscriptions:
+        learner = await user_crud.get_user_by_id(db, sub.learner_id)
+        days_until_expiry = (sub.expiry_date - date.today()).days
+        
+        result.append(ExpiringSubscriptionResponse(
+            subscription_id=sub.id,
+            learner_id=sub.learner_id,
+            learner_name=learner.name if learner else "Unknown",
+            learner_email=learner.email if learner else None,
+            package_name=sub.package_name,
+            expiry_date=sub.expiry_date,
+            days_until_expiry=days_until_expiry,
+            sessions_remaining=sub.sessions_remaining,
+            net_price_paid=sub.net_price_paid
+        ))
+    
+    return result

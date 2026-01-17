@@ -10,6 +10,7 @@ import '../../styles/ManageUsersLayout.css';
 
 // Form Section Components
 import PersonalDetailsSection from '../../components/head/RegisterLearner/PersonalDetailsSection';
+import PackageAndPaymentSection from '../../components/head/RegisterLearner/PackageAndPaymentSection';
 import DeliveryHistorySection from '../../components/head/RegisterLearner/DeliveryHistorySection';
 import MedicalHistorySection from '../../components/head/RegisterLearner/MedicalHistorySection';
 import LearningHistorySection from '../../components/head/RegisterLearner/LearningHistorySection';
@@ -31,6 +32,10 @@ const EditLearner = () => {
     date_of_assessment: '',
     dlb_concerns_checklist: [],  // Initialize as empty array
     personal_notes: '',
+
+    // Package & Payment
+    package_id: '',
+    discount_code: '',
 
     // Delivery History
     mother_bed_rest: null,
@@ -114,6 +119,10 @@ const EditLearner = () => {
         date_of_assessment: data.date_of_assessment ? new Date(data.date_of_assessment).toISOString().split('T')[0] : '',
         dlb_concerns_checklist: Array.isArray(data.dlb_concerns_checklist) ? data.dlb_concerns_checklist : [],
         personal_notes: data.personal_notes || '',
+
+        // Package & Payment
+        package_id: data.package_id || '',
+        discount_code: data.discount_code || '',
 
         // Delivery History
         mother_bed_rest: data.mother_bed_rest,
@@ -378,7 +387,12 @@ const EditLearner = () => {
 
       console.log('Updating learner with data:', updateData);
       console.log('Reference files to upload:', referenceFiles);
-      await headService.updateLearner(learnerId, updateData, referenceFiles);
+      console.log('Payment receipt file:', window.paymentReceipt);
+
+      // Get payment receipt if it exists
+      const paymentReceiptFile = window.paymentReceipt || null;
+
+      await headService.updateLearner(learnerId, updateData, referenceFiles, paymentReceiptFile);
 
       toast.success('Learner updated successfully!', {
         position: 'top-center',
@@ -388,7 +402,14 @@ const EditLearner = () => {
 
       // Clear reference files after successful upload
       setReferenceFiles([]);
-      
+
+      // Clear payment receipt
+      window.paymentReceipt = null;
+      const receiptInput = document.getElementById('payment_receipt_input');
+      if (receiptInput) {
+        receiptInput.value = '';
+      }
+
       // Reset file input
       const fileInput = document.getElementById('intervention_reference_files');
       if (fileInput) {
@@ -536,9 +557,9 @@ const EditLearner = () => {
             </button>
             <div>
               <h1 className="page-title">
-              Edit Learner Profile
-            </h1>
-            <p className="page-description">Update profile information for {formData.name}</p>
+                Edit Learner Profile
+              </h1>
+              <p className="page-description">Update profile information for {formData.name}</p>
             </div>
           </div>
 
@@ -549,6 +570,12 @@ const EditLearner = () => {
               formData={formData}
               errors={errors}
               handleChange={handleChange}
+            />
+
+            <PackageAndPaymentSection
+              formData={formData}
+              handleChange={handleChange}
+              errors={errors}
             />
 
             <DeliveryHistorySection

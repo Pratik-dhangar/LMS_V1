@@ -68,6 +68,14 @@ class Settings(BaseSettings):
     SENDER_EMAIL: str = "noreply@hurshbintech.com"
     ENABLE_EMAIL: bool = True  # Toggle email sending on/off
 
+    # Subscription Management Configuration
+    SUBSCRIPTION_GRACE_PERIOD_DAYS: int = 7
+    MAX_PAUSE_DURATION_DAYS: int = 90
+    MAX_FREEZE_DURATION_DAYS: int = 180
+    MAX_SESSION_ADJUSTMENT_AMOUNT: int = 10
+    MAX_ADJUSTMENTS_PER_SUBSCRIPTION_HEAD: int = 3
+    RENEWAL_REMINDER_DAYS: List[int] = [14, 7, 3]
+
     @property
     def DATABASE_URI(self) -> str:
         if self.DATABASE_URL:

@@ -1,0 +1,1188 @@
+// LearnerSubscriptionManager.jsx - Manage learner subscriptions for HEAD
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import {
+  Users,
+  Plus,
+  Search,
+  Pause,
+  Play,
+  Snowflake,
+  XCircle,
+  DollarSign,
+  Edit3,
+  Upload,
+  AlertCircle,
+  Loader2,
+  Calendar,
+  Package,
+  Link2,
+  TrendingUp,
+  Clock
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import subscriptionService from "../../api/services/subscriptionService";
+import headService from "../../api/services/headService";
+import SearchBar from "../../components/common/SearchBar";
+import "../../styles/Table.css";
+import "../../styles/ManageUsersLayout.css";
+import "../../styles/Subscription.css";
+
+const LearnerSubscriptionManager = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [filteredSubscriptions, setFilteredSubscriptions] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [learners, setLearners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBackdateModal, setShowBackdateModal] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [showFreezeModal, setShowFreezeModal] = useState(false);
+  const [showRenewalChainModal, setShowRenewalChainModal] = useState(false);
+
+  const [selectedSubscription, setSelectedSubscription] = useState(null);
+  const [renewalChain, setRenewalChain] = useState([]);
+
+  // Form states
+  const [createForm, setCreateForm] = useState({
+    learner_id: "",
+    package_id: "",
+    discount_code: "",
+    start_date: new Date().toISOString().split("T")[0],
+  });
+
+  const [backdateForm, setBackdateForm] = useState({
+    learner_id: "",
+    old_subscription_id: "",
+    package_id: "",
+    new_start_date: "",
+    acknowledge_session_gap: false,
+    discount_code: "",
+  });
+
+  const [adjustForm, setAdjustForm] = useState({
+    adjustment_amount: "",
+    adjustment_type: "ADD",
+    reason: "",
+  });
+
+  const [refundForm, setRefundForm] = useState({
+    refund_type: "FULL",
+    refund_reason: "",
+  });
+
+  const [pauseForm, setPauseForm] = useState({
+    pause_reason: "",
+    expected_resume_date: "",
+  });
+
+  const [freezeForm, setFreezeForm] = useState({
+    freeze_reason: "",
+    expected_resume_date: "",
+  });
+
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptNotes, setReceiptNotes] = useState("");
+
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sessionGapWarning, setSessionGapWarning] = useState(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [subsData, pkgsData, learnersData] = await Promise.all([
+        subscriptionService.getAllSubscriptions(),
+        subscriptionService.getAllPackages(true),
+        headService.getAllLearners(),
+      ]);
+
+      console.log('Fetched data:', {
+        subscriptions: subsData.length,
+        packages: pkgsData.length,
+        learners: learnersData.length,
+        learnersData
+      });
+
+      setSubscriptions(subsData);
+      setFilteredSubscriptions(subsData);
+      setPackages(pkgsData);
+      setLearners(learnersData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load data. Please try again.");
+      toast.error("Failed to load subscriptions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (query) => {
+    if (query.trim() === "") {
+      setFilteredSubscriptions(subscriptions);
+    } else {
+      const lowerQuery = query.toLowerCase();
+      const filtered = subscriptions.filter(
+        (sub) =>
+          sub.learner_name?.toLowerCase().includes(lowerQuery) ||
+          sub.package_name?.toLowerCase().includes(lowerQuery)
+      );
+      setFilteredSubscriptions(filtered);
+    }
+  };
+
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    if (status === "ALL") {
+      setFilteredSubscriptions(subscriptions);
+    } else {
+      setFilteredSubscriptions(subscriptions.filter((sub) => sub.status === status));
+    }
+  };
+
+  const handleCreateSubscription = async (e) => {
+    e.preventDefault();
+
+    if (!createForm.learner_id || !createForm.package_id) {
+      toast.error("Please select learner and package");
+      return;
+    }
+
+    try {
+      await subscriptionService.createSubscription({
+        learner_id: parseInt(createForm.learner_id),
+        package_id: parseInt(createForm.package_id),
+        discount_code: createForm.discount_code || null,
+        start_date: createForm.start_date,
+      });
+
+      toast.success("Subscription created successfully!");
+      setShowCreateModal(false);
+      setCreateForm({
+        learner_id: "",
+        package_id: "",
+        discount_code: "",
+        start_date: new Date().toISOString().split("T")[0],
+      });
+      fetchData();
+    } catch (err) {
+      console.error("Error creating subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to create subscription");
+    }
+  };
+
+  const handleValidateBackdate = async () => {
+    if (!backdateForm.learner_id || !backdateForm.old_subscription_id || !backdateForm.new_start_date) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    try {
+      const validation = await subscriptionService.validateBackdate(
+        parseInt(backdateForm.learner_id),
+        parseInt(backdateForm.old_subscription_id),
+        backdateForm.new_start_date
+      );
+
+      if (validation.has_session_gap) {
+        setSessionGapWarning(validation.session_gap_warning);
+        toast.warning(`Warning: ${validation.session_gap_warning.session_count} sessions found in gap period`, {
+          autoClose: 5000,
+        });
+      } else {
+        setSessionGapWarning(null);
+        toast.success("Backdate validation passed!");
+      }
+    } catch (err) {
+      console.error("Error validating backdate:", err);
+      toast.error(err.response?.data?.detail || "Validation failed");
+    }
+  };
+
+  const handleBackdateSubscription = async (e) => {
+    e.preventDefault();
+
+    if (!backdateForm.package_id) {
+      toast.error("Please select a package");
+      return;
+    }
+
+    if (sessionGapWarning && !backdateForm.acknowledge_session_gap) {
+      toast.error("Please acknowledge session gap warning");
+      return;
+    }
+
+    try {
+      await subscriptionService.createBackdatedSubscription({
+        learner_id: parseInt(backdateForm.learner_id),
+        package_id: parseInt(backdateForm.package_id),
+        start_date: backdateForm.new_start_date,
+        acknowledge_session_gap: backdateForm.acknowledge_session_gap,
+        discount_code: backdateForm.discount_code || null,
+      }, parseInt(backdateForm.old_subscription_id));
+
+      toast.success("Backdated subscription created successfully!");
+      setShowBackdateModal(false);
+      setBackdateForm({
+        learner_id: "",
+        old_subscription_id: "",
+        package_id: "",
+        new_start_date: "",
+        acknowledge_session_gap: false,
+        discount_code: "",
+      });
+      setSessionGapWarning(null);
+      fetchData();
+    } catch (err) {
+      console.error("Error creating backdated subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to create backdated subscription");
+    }
+  };
+
+  const handlePauseSubscription = async (e) => {
+    e.preventDefault();
+
+    try {
+      await subscriptionService.pauseSubscription(selectedSubscription.id, pauseForm.pause_reason);
+
+      toast.success("Subscription paused successfully!");
+      setShowPauseModal(false);
+      setPauseForm({ pause_reason: "", expected_resume_date: "" });
+      fetchData();
+    } catch (err) {
+      console.error("Error pausing subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to pause subscription");
+    }
+  };
+
+  const handleFreezeSubscription = async (e) => {
+    e.preventDefault();
+
+    try {
+      await subscriptionService.freezeSubscription(selectedSubscription.id, freezeForm.freeze_reason);
+
+      toast.success("Subscription frozen successfully!");
+      setShowFreezeModal(false);
+      setFreezeForm({ freeze_reason: "", expected_resume_date: "" });
+      fetchData();
+    } catch (err) {
+      console.error("Error freezing subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to freeze subscription");
+    }
+  };
+
+  const handleResumeSubscription = async (subscriptionId) => {
+    if (!window.confirm("Are you sure you want to resume this subscription?")) {
+      return;
+    }
+
+    try {
+      await subscriptionService.resumeSubscription(subscriptionId);
+      toast.success("Subscription resumed successfully!");
+      fetchData();
+    } catch (err) {
+      console.error("Error resuming subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to resume subscription");
+    }
+  };
+
+  const handleCancelSubscription = async (subscriptionId) => {
+    const reason = window.prompt("Please provide a reason for cancellation (minimum 10 characters):");
+    if (!reason || reason.trim().length < 10) {
+      toast.error("Please provide a valid cancellation reason (minimum 10 characters)");
+      return;
+    }
+
+    try {
+      await subscriptionService.cancelSubscription(subscriptionId, reason);
+      toast.success("Subscription cancelled successfully!");
+      fetchData();
+    } catch (err) {
+      console.error("Error cancelling subscription:", err);
+      toast.error(err.response?.data?.detail || "Failed to cancel subscription");
+    }
+  };
+
+  const handleRefundSubscription = async (e) => {
+    e.preventDefault();
+
+    if (!refundForm.refund_reason || refundForm.refund_reason.trim().length < 10) {
+      toast.error("Please provide a valid refund reason (minimum 10 characters)");
+      return;
+    }
+
+    try {
+      await subscriptionService.processRefund(
+        selectedSubscription.id,
+        refundForm.refund_type,
+        refundForm.refund_reason
+      );
+
+      toast.success("Refund processed successfully!");
+      setShowRefundModal(false);
+      setRefundForm({ refund_type: "FULL", refund_reason: "" });
+      fetchData();
+    } catch (err) {
+      console.error("Error processing refund:", err);
+      toast.error(err.response?.data?.detail || "Failed to process refund");
+    }
+  };
+
+  const handleAdjustSessions = async (e) => {
+    e.preventDefault();
+
+    if (!adjustForm.adjustment_amount || !adjustForm.reason) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    if (adjustForm.reason.length < 10) {
+      toast.error("Reason must be at least 10 characters");
+      return;
+    }
+
+    try {
+      await subscriptionService.adjustSessions(selectedSubscription.id, {
+        subscription_id: selectedSubscription.id,
+        adjustment_amount: parseInt(adjustForm.adjustment_amount),
+        adjustment_type: adjustForm.adjustment_type,
+        reason: adjustForm.reason,
+      });
+
+      toast.success("Sessions adjusted successfully!");
+      setShowAdjustModal(false);
+      setAdjustForm({ adjustment_amount: "", adjustment_type: "ADD", reason: "" });
+      fetchData();
+    } catch (err) {
+      console.error("Error adjusting sessions:", err);
+      toast.error(err.response?.data?.detail || "Failed to adjust sessions");
+    }
+  };
+
+  const handleUploadReceipt = async (e) => {
+    e.preventDefault();
+
+    if (!receiptFile) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    try {
+      await subscriptionService.uploadPaymentReceipt(
+        selectedSubscription.id,
+        receiptFile,
+        receiptNotes
+      );
+
+      toast.success("Receipt uploaded successfully!");
+      setShowReceiptModal(false);
+      setReceiptFile(null);
+      setReceiptNotes("");
+      fetchData();
+    } catch (err) {
+      console.error("Error uploading receipt:", err);
+      toast.error(err.response?.data?.detail || "Failed to upload receipt");
+    }
+  };
+
+  const handleViewRenewalChain = async (subscriptionId) => {
+    try {
+      const chain = await subscriptionService.getRenewalChain(subscriptionId);
+      setRenewalChain(chain);
+      setShowRenewalChainModal(true);
+    } catch (err) {
+      console.error("Error fetching renewal chain:", err);
+      toast.error("Failed to load renewal chain");
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      ACTIVE: { className: "status-badge status-badge-active", label: "Active" },
+      PAUSED: { className: "status-badge status-badge-paused", label: "Paused" },
+      FROZEN: { className: "status-badge status-badge-frozen", label: "Frozen" },
+      EXPIRED: { className: "status-badge status-badge-expired", label: "Expired" },
+      CANCELLED: { className: "status-badge status-badge-cancelled", label: "Cancelled" },
+    };
+
+    const config = statusConfig[status] || statusConfig.EXPIRED;
+
+    return (
+      <span className={config.className}>
+        {config.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
+          {/* Header */}
+          <div className="page-header">
+            <button onClick={() => navigate("/head/dashboard")} className="back-button">
+              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Dashboard
+            </button>
+
+            <div>
+              <h1 className="page-title">Manage Learner Subscriptions</h1>
+              <p className="page-description">
+                Create, manage, and track learner subscriptions
+              </p>
+            </div>
+          </div>
+
+          {/* Actions Bar */}
+          <div className="search-section">
+            <SearchBar onSearch={handleSearch} placeholder="Search by learner or package..." />
+            <div className="filter-section">
+              <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
+                <Plus size={18} />
+                Create Subscription
+              </button>
+              <button onClick={() => {
+                console.log('Opening backdate modal - Current state:', {
+                  learners: learners.length,
+                  subscriptions: subscriptions.length,
+                  packages: packages.length,
+                  learnersArray: learners
+                });
+                setShowBackdateModal(true);
+              }} className="btn btn-secondary">
+                <Clock size={18} />
+                Backdate Renewal
+              </button>
+            </div>
+          </div>
+
+          {/* Status Filters */}
+          <div className="filter-section">
+            {["ALL", "ACTIVE", "PAUSED", "FROZEN", "EXPIRED", "CANCELLED"].map((status) => (
+              <button
+                key={status}
+                onClick={() => handleStatusFilter(status)}
+                className={`filter-button ${statusFilter === status ? 'filter-button-active' : ''}`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="loading-container">
+              <Loader2 className="spinner" size={48} />
+              <p>Loading subscriptions...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="error-container">
+              <AlertCircle size={48} />
+              <p>{error}</p>
+              <button onClick={fetchData} className="retry-button">
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Subscriptions Grid */}
+          {!loading && !error && (
+            <div className="cards-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: "20px" }}>
+              {filteredSubscriptions.length === 0 ? (
+                <div className="empty-state" style={{ gridColumn: "1 / -1" }}>
+                  <Users size={64} />
+                  <p>No subscriptions found</p>
+                  <button onClick={() => setShowCreateModal(true)} className="primary-button">
+                    <Plus size={18} />
+                    Create First Subscription
+                  </button>
+                </div>
+              ) : (
+                filteredSubscriptions.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="subscription-card"
+                  >
+                    <div className="receipt-card-header">
+                      <div>
+                        <h3 className="receipt-card-title">
+                          {sub.learner_name || `Learner #${sub.learner_id}`}
+                        </h3>
+                        <p className="card-subtitle">{sub.package_name}</p>
+                      </div>
+                      {getStatusBadge(sub.status)}
+                    </div>
+
+                    <div className="discount-details">
+                      <div className="discount-detail-row">
+                        <span className="discount-detail-label">Sessions:</span>
+                        <span className="discount-detail-value">
+                          {sub.sessions_remaining} / {sub.sessions_count}
+                        </span>
+                      </div>
+                      <div className="discount-detail-row">
+                        <span className="discount-detail-label">Start Date:</span>
+                        <span className="discount-detail-value">
+                          {new Date(sub.start_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="discount-detail-row">
+                        <span className="discount-detail-label">Expiry Date:</span>
+                        <span className="discount-detail-value">
+                          {new Date(sub.expiry_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="discount-detail-row">
+                        <span className="discount-detail-label">Price Paid:</span>
+                        <span className="card-price">₹{parseFloat(sub.net_price_paid).toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="card-actions-column">
+                      {sub.status === "ACTIVE" && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedSubscription(sub);
+                              setShowPauseModal(true);
+                            }}
+                            className="btn btn-warning btn-full"
+                          >
+                            <Pause size={16} />
+                            Pause
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedSubscription(sub);
+                              setShowFreezeModal(true);
+                            }}
+                            className="btn btn-blue btn-full"
+                          >
+                            <Snowflake size={16} />
+                            Freeze
+                          </button>
+                        </>
+                      )}
+
+                      {(sub.status === "PAUSED" || sub.status === "FROZEN") && (
+                        <button
+                          onClick={() => handleResumeSubscription(sub.id)}
+                          className="btn btn-success btn-full"
+                        >
+                          <Play size={16} />
+                          Resume
+                        </button>
+                      )}
+
+                      {["ACTIVE", "PAUSED", "FROZEN"].includes(sub.status) && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedSubscription(sub);
+                              setShowAdjustModal(true);
+                            }}
+                            className="btn btn-purple btn-full"
+                          >
+                            <Edit3 size={16} />
+                            Adjust Sessions
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedSubscription(sub);
+                              setShowReceiptModal(true);
+                            }}
+                            className="btn btn-info btn-full"
+                          >
+                            <Upload size={16} />
+                            Upload Receipt
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedSubscription(sub);
+                              setShowRefundModal(true);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "5px",
+                              padding: "8px",
+                              borderRadius: "6px",
+                              backgroundColor: "#ef4444",
+                              color: "#fff",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "14px",
+                            }}
+                          >
+                            <DollarSign size={16} />
+                            Process Refund
+                          </button>
+                          <button
+                            onClick={() => handleCancelSubscription(sub.id)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "5px",
+                              padding: "8px",
+                              borderRadius: "6px",
+                              backgroundColor: "#6b7280",
+                              color: "#fff",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "14px",
+                            }}
+                          >
+                            <XCircle size={16} />
+                            Cancel
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => handleViewRenewalChain(sub.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "5px",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          backgroundColor: "#64748b",
+                          color: "#fff",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                      >
+                        <Link2 size={16} />
+                        View Chain
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Create Subscription Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Create New Subscription</h2>
+              <button onClick={() => setShowCreateModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleCreateSubscription} className="modal-body">
+              <div className="form-group">
+                <label>Learner *</label>
+                <select value={createForm.learner_id} onChange={(e) => setCreateForm({ ...createForm, learner_id: e.target.value })} required>
+                  <option value="">Select Learner</option>
+                  {learners.map((learner) => (
+                    <option key={learner.id} value={learner.id}>
+                      {learner.name} ({learner.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Package *</label>
+                <select value={createForm.package_id} onChange={(e) => setCreateForm({ ...createForm, package_id: e.target.value })} required>
+                  <option value="">Select Package</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.package_name} - {pkg.sessions_count} sessions, {pkg.validity_days} days - ₹{pkg.price}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Start Date *</label>
+                <input
+                  type="date"
+                  value={createForm.start_date}
+                  onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Discount Code (Optional)</label>
+                <input
+                  type="text"
+                  value={createForm.discount_code}
+                  onChange={(e) => setCreateForm({ ...createForm, discount_code: e.target.value })}
+                  placeholder="Enter discount code"
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Create Subscription
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Backdate Renewal Modal */}
+      {showBackdateModal && (
+        <div className="modal-overlay" onClick={() => setShowBackdateModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Backdate Subscription Renewal</h2>
+              <button onClick={() => setShowBackdateModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleBackdateSubscription} className="modal-body">
+              <div className="form-group">
+                <label>Learner *</label>
+                <select
+                  value={backdateForm.learner_id}
+                  onChange={(e) => {
+                    const selectedLearnerId = e.target.value;
+                    const learnerSubscriptions = subscriptions.filter((s) => s.learner_id === parseInt(selectedLearnerId));
+
+                    // Auto-select the first subscription if available
+                    const autoSelectedSubId = learnerSubscriptions.length > 0 ? learnerSubscriptions[0].id : '';
+
+                    setBackdateForm({
+                      ...backdateForm,
+                      learner_id: selectedLearnerId,
+                      old_subscription_id: autoSelectedSubId.toString()
+                    });
+                  }}
+                  required
+                >
+                  <option value="">Select Learner</option>
+                  {(() => {
+                    console.log('Rendering learners dropdown - learners:', learners);
+                    console.log('First learner object:', learners[0]);
+                    return learners.map((learner) => {
+                      console.log('Learner:', { id: learner.id, full_name: learner.full_name, user_id: learner.user_id, name: learner.name });
+                      return (
+                        <option key={learner.id || learner.user_id} value={learner.id || learner.user_id}>
+                          {learner.full_name || learner.name || `Learner ${learner.id}`}
+                        </option>
+                      );
+                    });
+                  })()}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Old Subscription *</label>
+                <select
+                  value={backdateForm.old_subscription_id}
+                  onChange={(e) => setBackdateForm({ ...backdateForm, old_subscription_id: e.target.value })}
+                  required
+                >
+                  <option value="">Select Old Subscription</option>
+                  {(() => {
+                    const allForLearner = subscriptions.filter((s) => s.learner_id === parseInt(backdateForm.learner_id));
+                    const filtered = allForLearner;  // Show ALL subscriptions for the selected learner
+                    console.log('Rendering old subscriptions dropdown:', {
+                      learnerId: backdateForm.learner_id,
+                      learnerIdType: typeof backdateForm.learner_id,
+                      totalSubscriptions: subscriptions.length,
+                      allForLearnerCount: allForLearner.length,
+                      allForLearner: allForLearner.map(s => ({ id: s.id, learner_id: s.learner_id, status: s.status, package: s.package_name })),
+                      filteredCount: filtered.length,
+                      filtered: filtered.map(s => ({ id: s.id, status: s.status, package: s.package_name }))
+                    });
+                    return filtered.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.package_name} ({sub.status}: {new Date(sub.expiry_date).toLocaleDateString()})
+                      </option>
+                    ));
+                  })()}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>New Start Date *</label>
+                <input
+                  type="date"
+                  value={backdateForm.new_start_date}
+                  onChange={(e) => setBackdateForm({ ...backdateForm, new_start_date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <button type="button" onClick={handleValidateBackdate} className="btn btn-secondary btn-full" style={{ marginBottom: "15px" }}>
+                Validate Backdate
+              </button>
+
+              {sessionGapWarning && (
+                <div className="warning-box">
+                  <p className="warning-text">
+                    <AlertCircle size={16} className="warning-icon" />
+                    Session Gap Warning
+                  </p>
+                  <p className="card-subtitle">
+                    {sessionGapWarning.session_count} sessions found between {new Date(sessionGapWarning.gap_start).toLocaleDateString()} and{" "}
+                    {new Date(sessionGapWarning.gap_end).toLocaleDateString()}
+                  </p>
+                  <label className="form-checkbox-label" style={{ marginTop: "10px" }}>
+                    <input
+                      type="checkbox"
+                      checked={backdateForm.acknowledge_session_gap}
+                      onChange={(e) => setBackdateForm({ ...backdateForm, acknowledge_session_gap: e.target.checked })}
+                    />
+                    <span className="card-subtitle">I acknowledge this session gap</span>
+                  </label>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>New Package *</label>
+                <select value={backdateForm.package_id} onChange={(e) => setBackdateForm({ ...backdateForm, package_id: e.target.value })} required>
+                  <option value="">Select Package</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.package_name} - ₹{pkg.price}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Discount Code (Optional)</label>
+                <input
+                  type="text"
+                  value={backdateForm.discount_code}
+                  onChange={(e) => setBackdateForm({ ...backdateForm, discount_code: e.target.value })}
+                  placeholder="Enter discount code"
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowBackdateModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Create Backdated Renewal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pause Modal */}
+      {showPauseModal && (
+        <div className="modal-overlay" onClick={() => setShowPauseModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Pause Subscription</h2>
+              <button onClick={() => setShowPauseModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handlePauseSubscription} className="modal-body">
+              <div className="form-group">
+                <label>Reason *</label>
+                <textarea
+                  value={pauseForm.pause_reason}
+                  onChange={(e) => setPauseForm({ ...pauseForm, pause_reason: e.target.value })}
+                  required
+                  rows="3"
+                  placeholder="Reason for pausing..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Expected Resume Date (Optional)</label>
+                <input
+                  type="date"
+                  value={pauseForm.expected_resume_date}
+                  onChange={(e) => setPauseForm({ ...pauseForm, expected_resume_date: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowPauseModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Pause Subscription
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Freeze Modal */}
+      {showFreezeModal && (
+        <div className="modal-overlay" onClick={() => setShowFreezeModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Freeze Subscription</h2>
+              <button onClick={() => setShowFreezeModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleFreezeSubscription} className="modal-body">
+              <div className="form-group">
+                <label>Reason *</label>
+                <textarea
+                  value={freezeForm.freeze_reason}
+                  onChange={(e) => setFreezeForm({ ...freezeForm, freeze_reason: e.target.value })}
+                  required
+                  rows="3"
+                  placeholder="Reason for freezing..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Expected Resume Date (Optional)</label>
+                <input
+                  type="date"
+                  value={freezeForm.expected_resume_date}
+                  onChange={(e) => setFreezeForm({ ...freezeForm, expected_resume_date: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowFreezeModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Freeze Subscription
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Adjust Sessions Modal */}
+      {showAdjustModal && (
+        <div className="modal-overlay" onClick={() => setShowAdjustModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Adjust Sessions</h2>
+              <button onClick={() => setShowAdjustModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleAdjustSessions} className="modal-body">
+              <div className="info-box" style={{ backgroundColor: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#92400e' }}>
+                  <strong>Note:</strong> As HEAD, you can adjust sessions up to 3 times per subscription (max ±10 sessions per adjustment). For additional adjustments, contact ADMIN.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label>Adjustment Type *</label>
+                <select
+                  value={adjustForm.adjustment_type}
+                  onChange={(e) => setAdjustForm({ ...adjustForm, adjustment_type: e.target.value })}
+                  required
+                >
+                  <option value="ADD">Add Sessions</option>
+                  <option value="SUBTRACT">Subtract Sessions</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Amount * (Max: 10 per adjustment)</label>
+                <input
+                  type="number"
+                  value={adjustForm.adjustment_amount}
+                  onChange={(e) => setAdjustForm({ ...adjustForm, adjustment_amount: e.target.value })}
+                  min="1"
+                  max="10"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Reason * (minimum 10 characters)</label>
+                <textarea
+                  value={adjustForm.reason}
+                  onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })}
+                  required
+                  rows="3"
+                  minLength="10"
+                  placeholder="Enter detailed reason for adjustment (min. 10 characters)..."
+                />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                  {adjustForm.reason.length}/10 characters
+                </small>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowAdjustModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Adjust Sessions
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Modal */}
+      {showRefundModal && (
+        <div className="modal-overlay" onClick={() => setShowRefundModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Process Refund</h2>
+              <button onClick={() => setShowRefundModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleRefundSubscription} className="modal-body">
+              <div className="form-group">
+                <label>Refund Type *</label>
+                <select value={refundForm.refund_type} onChange={(e) => setRefundForm({ ...refundForm, refund_type: e.target.value })} required>
+                  <option value="FULL">Full Refund</option>
+                  <option value="PRORATED">Prorated Refund (Based on remaining sessions)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Reason *</label>
+                <textarea
+                  value={refundForm.refund_reason}
+                  onChange={(e) => setRefundForm({ ...refundForm, refund_reason: e.target.value })}
+                  required
+                  rows="3"
+                  placeholder="Reason for refund..."
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowRefundModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-danger">
+                  Process Refund
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Receipt Modal */}
+      {showReceiptModal && (
+        <div className="modal-overlay" onClick={() => setShowReceiptModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Upload Payment Receipt</h2>
+              <button onClick={() => setShowReceiptModal(false)} className="modal-close">×</button>
+            </div>
+
+            <form onSubmit={handleUploadReceipt} className="modal-body">
+              <div className="form-group">
+                <label>Receipt File *</label>
+                <input type="file" onChange={(e) => setReceiptFile(e.target.files[0])} accept="image/*,application/pdf" required />
+              </div>
+
+              <div className="form-group">
+                <label>Notes (Optional)</label>
+                <textarea value={receiptNotes} onChange={(e) => setReceiptNotes(e.target.value)} rows="3" placeholder="Additional notes..." />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowReceiptModal(false)} className="secondary-button">
+                  Cancel
+                </button>
+                <button type="submit" className="primary-button">
+                  Upload Receipt
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Renewal Chain Modal */}
+      {showRenewalChainModal && (
+        <div className="modal-overlay" onClick={() => setShowRenewalChainModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Renewal Chain History</h2>
+              <button onClick={() => setShowRenewalChainModal(false)} className="modal-close">×</button>
+            </div>
+
+            <div className="modal-body">
+              {renewalChain.length === 0 ? (
+                <p className="empty-state-text">No renewal history found.</p>
+              ) : (
+                <div className="card-actions-column">
+                  {renewalChain.map((sub, index) => (
+                    <div
+                      key={sub.id}
+                      className={`subscription-card ${index === renewalChain.length - 1 ? '' : ''}`}
+                      style={{
+                        backgroundColor: index === renewalChain.length - 1 ? "#dbeafe" : "#fff",
+                      }}
+                    >
+                      <div className="receipt-card-header">
+                        <h4 className="discount-detail-value">
+                          #{index + 1} - {sub.package_name}
+                        </h4>
+                        {getStatusBadge(sub.status)}
+                      </div>
+                      <div className="card-subtitle">
+                        <p>
+                          Period: {new Date(sub.start_date).toLocaleDateString()} - {new Date(sub.expiry_date).toLocaleDateString()}
+                        </p>
+                        <p>
+                          Sessions: {sub.sessions_remaining} / {sub.sessions_count} remaining
+                        </p>
+                        <p>Price: ₹{parseFloat(sub.net_price_paid).toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={() => setShowRenewalChainModal(false)} className="primary-button">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LearnerSubscriptionManager;

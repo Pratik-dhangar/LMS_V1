@@ -2,7 +2,7 @@
 Admin CRUD endpoints - Manage Heads and Coaches
 """
 
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 from datetime import date, datetime
 
@@ -15,9 +15,21 @@ from app.core.deps import get_current_admin
 from app.core.config import settings
 from app.core.security import decrypt_passcode
 from app.crud import user_crud
+from app.crud import subscription_crud
 from app.db.session import get_db
 from app.models.user_model import User
 from app.schemas.user import HeadCreate, HeadResponse, HeadUpdate, LearnerResponse, TrainerResponse, CoachResponse, CoachCreate, CoachUpdate
+from app.schemas.subscription import (
+    SubscriptionDiscountCreate,
+    SubscriptionDiscountBulkCreate,
+    SubscriptionDiscountUpdate,
+    SubscriptionDiscountResponse,
+    LearnerSubscriptionResponse,
+    SubscriptionStatsResponse,
+    RevenueByHeadResponse,
+    SessionAdjustmentCreate,
+    SessionAdjustmentLogResponse,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
@@ -1020,3 +1032,337 @@ async def remove_content_from_program(
         )
     
     return None
+
+
+# ============ SUBSCRIPTION DISCOUNT CODE MANAGEMENT ============
+
+@router.post("/discount-codes", response_model=SubscriptionDiscountResponse, status_code=status.HTTP_201_CREATED)
+async def create_discount_code(
+    discount_data: SubscriptionDiscountCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Create a new discount code"""
+    # Check if code already exists
+    existing = await subscription_crud.get_discount_by_code(db, discount_data.code)
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discount code already exists")
+    
+    discount = await subscription_crud.create_discount_code(db, discount_data, current_admin.id)
+    return discount
+
+
+@router.post("/discount-codes/bulk", response_model=List[SubscriptionDiscountResponse], status_code=status.HTTP_201_CREATED)
+async def bulk_create_discount_codes(
+    bulk_data: SubscriptionDiscountBulkCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Bulk create discount codes with prefix pattern"""
+    if bulk_data.count > 1000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Maximum 1000 codes per bulk creation")
+    
+    codes = await subscription_crud.bulk_create_discount_codes(db, bulk_data, current_admin.id)
+    return codes
+
+
+@router.get("/discount-codes", response_model=List[SubscriptionDiscountResponse])
+async def get_all_discount_codes(
+    active_only: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get all discount codes"""
+    codes = await subscription_crud.get_all_discount_codes(db, active_only)
+    return codes
+
+
+@router.get("/discount-codes/{code}", response_model=SubscriptionDiscountResponse)
+async def get_discount_code(
+    code: str,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get discount code by code"""
+    discount = await subscription_crud.get_discount_by_code(db, code)
+    if not discount:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discount code not found")
+    return discount
+
+
+@router.patch("/discount-codes/{discount_id}", response_model=SubscriptionDiscountResponse)
+async def update_discount_code(
+    discount_id: int,
+    discount_data: SubscriptionDiscountUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Update a discount code"""
+    discount = await subscription_crud.update_discount_code(db, discount_id, discount_data)
+    if not discount:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discount code not found")
+    return discount
+
+
+@router.delete("/discount-codes/{discount_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_discount_code(
+    discount_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Delete a discount code"""
+    discount = await subscription_crud.get_discount_by_id(db, discount_id)
+    if not discount:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discount code not found")
+    
+    await db.delete(discount)
+    await db.commit()
+    return None
+
+
+# ============ SUBSCRIPTION RECORDS (READ-ONLY) ============
+
+@router.get("/subscriptions", response_model=List[LearnerSubscriptionResponse])
+async def get_all_subscriptions(
+    status: Optional[str] = None,
+    head_id: Optional[int] = None,
+    learner_id: Optional[int] = None,
+    limit: Optional[int] = 100,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get all subscriptions with optional filters"""
+    from app.models.subscription import SubscriptionStatus
+    from sqlalchemy import and_, desc
+    from app.models.subscription import LearnerSubscription
+    from sqlalchemy.orm import selectinload
+    
+    query = select(LearnerSubscription).options(
+        selectinload(LearnerSubscription.learner),
+        selectinload(LearnerSubscription.current_head)
+    )
+    
+    filters = []
+    if status:
+        try:
+            status_enum = SubscriptionStatus[status.upper()]
+            filters.append(LearnerSubscription.status == status_enum)
+        except KeyError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+    
+    if head_id:
+        filters.append(LearnerSubscription.current_head_id == head_id)
+    
+    if learner_id:
+        filters.append(LearnerSubscription.learner_id == learner_id)
+    
+    if filters:
+        query = query.where(and_(*filters))
+    
+    query = query.order_by(desc(LearnerSubscription.created_at)).limit(limit)
+    
+    result = await db.execute(query)
+    subscriptions = result.scalars().all()
+    
+    # Enrich with learner_name and head_name
+    enriched = []
+    for sub in subscriptions:
+        sub_dict = {
+            "id": sub.id,
+            "learner_id": sub.learner_id,
+            "learner_name": sub.learner.name if sub.learner else None,
+            "package_id": sub.package_id,
+            "created_by_head_id": sub.created_by_head_id,
+            "current_head_id": sub.current_head_id,
+            "head_name": sub.current_head.name if sub.current_head else None,
+            "package_name": sub.package_name,
+            "package_sessions": sub.package_sessions,
+            "package_validity_days": sub.package_validity_days,
+            "package_original_price": sub.package_original_price,
+            "start_date": sub.start_date,
+            "expiry_date": sub.expiry_date,
+            "status": sub.status,
+            "sessions_total": sub.sessions_total,
+            "sessions_completed": sub.sessions_completed,
+            "sessions_remaining": sub.sessions_remaining,
+            "discount_applied": sub.discount_applied,
+            "discount_code_id": sub.discount_code_id,
+            "applied_by_head_id": sub.applied_by_head_id,
+            "net_price_paid": sub.net_price_paid,
+            "paused_at": sub.paused_at,
+            "paused_duration_days": sub.paused_duration_days,
+            "frozen_at": sub.frozen_at,
+            "frozen_duration_days": sub.frozen_duration_days,
+            "renewed_from_subscription_id": sub.renewed_from_subscription_id,
+            "renewed_to_subscription_id": sub.renewed_to_subscription_id,
+            "refund_amount": sub.refund_amount,
+            "refund_type": sub.refund_type,
+            "refund_date": sub.refund_date,
+            "refund_reason": sub.refund_reason,
+            "created_at": sub.created_at,
+            "updated_at": sub.updated_at,
+        }
+        enriched.append(LearnerSubscriptionResponse(**sub_dict))
+    
+    return enriched
+
+
+@router.get("/subscriptions/stats", response_model=SubscriptionStatsResponse)
+async def get_subscription_statistics(
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get overall subscription statistics"""
+    stats = await subscription_crud.get_subscription_stats(db)
+    
+    # Get expiring counts
+    from app.models.subscription import LearnerSubscription, SubscriptionStatus
+    from datetime import timedelta
+    from sqlalchemy import and_
+    
+    result_7 = await db.execute(
+        select(LearnerSubscription).where(
+            and_(
+                LearnerSubscription.status == SubscriptionStatus.ACTIVE,
+                LearnerSubscription.expiry_date <= date.today() + timedelta(days=7),
+                LearnerSubscription.expiry_date >= date.today()
+            )
+        )
+    )
+    stats["expiring_in_7_days"] = len(list(result_7.scalars().all()))
+    
+    result_14 = await db.execute(
+        select(LearnerSubscription).where(
+            and_(
+                LearnerSubscription.status == SubscriptionStatus.ACTIVE,
+                LearnerSubscription.expiry_date <= date.today() + timedelta(days=14),
+                LearnerSubscription.expiry_date >= date.today()
+            )
+        )
+    )
+    stats["expiring_in_14_days"] = len(list(result_14.scalars().all()))
+    
+    return SubscriptionStatsResponse(**stats)
+
+
+@router.get("/subscriptions/{subscription_id}", response_model=LearnerSubscriptionResponse)
+async def get_subscription_details(
+    subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get subscription details"""
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+    from app.models.subscription import LearnerSubscription
+    
+    query = select(LearnerSubscription).where(
+        LearnerSubscription.id == subscription_id
+    ).options(
+        selectinload(LearnerSubscription.learner),
+        selectinload(LearnerSubscription.current_head),
+        selectinload(LearnerSubscription.payment_receipts),
+        selectinload(LearnerSubscription.session_adjustments),
+        selectinload(LearnerSubscription.event_logs)
+    )
+    
+    result = await db.execute(query)
+    subscription = result.scalar_one_or_none()
+    
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Enrich with learner_name and head_name
+    sub_dict = {
+        "id": subscription.id,
+        "learner_id": subscription.learner_id,
+        "learner_name": subscription.learner.name if subscription.learner else None,
+        "package_id": subscription.package_id,
+        "created_by_head_id": subscription.created_by_head_id,
+        "current_head_id": subscription.current_head_id,
+        "head_name": subscription.current_head.name if subscription.current_head else None,
+        "package_name": subscription.package_name,
+        "package_sessions": subscription.package_sessions,
+        "package_validity_days": subscription.package_validity_days,
+        "package_original_price": subscription.package_original_price,
+        "start_date": subscription.start_date,
+        "expiry_date": subscription.expiry_date,
+        "status": subscription.status,
+        "sessions_total": subscription.sessions_total,
+        "sessions_completed": subscription.sessions_completed,
+        "sessions_remaining": subscription.sessions_remaining,
+        "discount_applied": subscription.discount_applied,
+        "discount_code_id": subscription.discount_code_id,
+        "applied_by_head_id": subscription.applied_by_head_id,
+        "net_price_paid": subscription.net_price_paid,
+        "paused_at": subscription.paused_at,
+        "paused_duration_days": subscription.paused_duration_days,
+        "frozen_at": subscription.frozen_at,
+        "frozen_duration_days": subscription.frozen_duration_days,
+        "renewed_from_subscription_id": subscription.renewed_from_subscription_id,
+        "renewed_to_subscription_id": subscription.renewed_to_subscription_id,
+        "refund_amount": subscription.refund_amount,
+        "refund_type": subscription.refund_type,
+        "refund_date": subscription.refund_date,
+        "refund_reason": subscription.refund_reason,
+        "created_at": subscription.created_at,
+        "updated_at": subscription.updated_at,
+    }
+    return LearnerSubscriptionResponse(**sub_dict)
+
+@router.get("/revenue/by-head", response_model=List[RevenueByHeadResponse])
+async def get_revenue_by_head(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get revenue statistics by HEAD"""
+    # Get all heads
+    heads = await user_crud.get_all_heads(db)
+    
+    result = []
+    for head in heads:
+        revenue_data = await subscription_crud.get_revenue_by_head(db, head.id, start_date, end_date)
+        
+        result.append(RevenueByHeadResponse(
+            head_id=head.id,
+            head_name=head.user.name,
+            total_subscriptions=revenue_data["total_subscriptions"],
+            total_revenue=revenue_data["total_revenue"],
+            total_refunds=revenue_data["total_refunds"],
+            net_revenue=revenue_data["net_revenue"],
+            active_subscriptions=revenue_data["active_subscriptions"],
+            period_start=start_date,
+            period_end=end_date
+        ))
+    
+    return result
+
+
+@router.post("/subscriptions/{subscription_id}/adjust-sessions", response_model=SessionAdjustmentLogResponse)
+async def adjust_subscription_sessions_admin(
+    subscription_id: int,
+    adjustment_data: SessionAdjustmentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Manually adjust session count (ADMIN has unlimited adjustments)"""
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # ADMIN has no adjustment limit
+    if adjustment_data.adjustment_amount > settings.MAX_SESSION_ADJUSTMENT_AMOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Adjustment amount cannot exceed {settings.MAX_SESSION_ADJUSTMENT_AMOUNT}"
+        )
+    
+    adjustment_log, error = await subscription_crud.create_session_adjustment(
+        db, adjustment_data, current_admin.id, "ADMIN"
+    )
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    return adjustment_log

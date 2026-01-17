@@ -91,19 +91,19 @@ const headService = {
    */
   createLearner: async (learnerData, referenceFiles = []) => {
     console.log('Creating new learner:', { name: learnerData.name });
-    
+
     const formData = new FormData();
-    
+
     // Append learner_data as JSON string
     formData.append('learner_data', JSON.stringify(learnerData));
-    
+
     // Append reference files if any
     if (referenceFiles && referenceFiles.length > 0) {
       referenceFiles.forEach((file) => {
         formData.append('reference_files', file);
       });
     }
-    
+
     const response = await axiosInstance.post('/head/learners', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -142,21 +142,27 @@ const headService = {
    * @param {number} learnerId
    * @param {Object} updateData
    * @param {Array<File>} referenceFiles - Optional reference files
+   * @param {File} paymentReceipt - Optional payment receipt file
    * @returns {Promise} - Updated learner object
    */
-  updateLearner: async (learnerId, updateData, referenceFiles = []) => {
+  updateLearner: async (learnerId, updateData, referenceFiles = [], paymentReceipt = null) => {
     const formData = new FormData();
-    
+
     // Always append learner_update as JSON string (even if empty)
     formData.append('learner_update', JSON.stringify(updateData));
-    
+
     // Append reference files if any
     if (referenceFiles && referenceFiles.length > 0) {
       referenceFiles.forEach((file) => {
         formData.append('reference_files', file);
       });
     }
-    
+
+    // Append payment receipt if provided
+    if (paymentReceipt) {
+      formData.append('payment_receipt', paymentReceipt);
+    }
+
     const response = await axiosInstance.patch(`/head/learners/${learnerId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -254,6 +260,21 @@ const headService = {
     const response = await axiosInstance.get(`/head/users/${userId}/reveal-passcode`);
     console.log('Passcode revealed successfully');
     return response.data;
+  },
+
+  /**
+   * Get all Heads (ADMIN endpoint)
+   * @returns {Promise} - Array of all heads
+   */
+  getAllHeads: async () => {
+    console.log('Fetching all Heads');
+    try {
+      const response = await axiosInstance.get('/admin/heads');
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching heads:', error);
+      return [];
+    }
   },
 };
 
