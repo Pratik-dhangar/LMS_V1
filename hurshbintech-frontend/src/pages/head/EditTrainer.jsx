@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import headService from "../../api/services/headService";
 import Loader from "../../components/common/Loader";
@@ -398,7 +399,8 @@ const EditTrainer = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container">
+          <div className="modern-form-card">
+             <form onSubmit={handleSubmit}>
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}
@@ -425,52 +427,66 @@ const EditTrainer = () => {
             />
 
             {/* Reference Data Upload */}
-            <div className="form-section">
-              <h2 className="form-section-title">Reference Data</h2>
-              <div>
-                <label htmlFor="reference_files" className="app-modal-form-label">
-                  Upload Reference Data (Documents, Images, Videos, Links)
-                </label>
-                <input
-                  type="file"
-                  id="reference_files"
-                  multiple
-                  onChange={handleFileChange}
-                  className="form-file-input"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                />
-                <p className="form-help-text">
-                  Supported formats: PDF, DOCX, Images, Videos
-                </p>
+            <div className="modern-form-section">
+              <h2 className="modern-form-section-title">Reference Data</h2>
+              <p className="modern-form-section-description">
+                Upload and manage reference documents, images, videos, or other materials
+              </p>
+              <div className="reference-data-section">
+                <div className="reference-data-upload-area">
+                  <label htmlFor="reference_files">
+                    Upload Reference Data (Documents, Images, Videos, Links)
+                  </label>
+                  <input
+                    type="file"
+                    id="reference_files"
+                    multiple
+                    onChange={handleFileChange}
+                    className="form-file-input"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('reference_files').click()}
+                    className="reference-btn-upload"
+                  >
+                    Upload Files
+                  </button>
+                  <p className="reference-data-help-text">
+                    Supported formats: PDF, DOCX, Images, Videos
+                  </p>
+                </div>
 
                 {/* Existing Reference Files */}
                 {existingReferenceData.length > 0 && (
-                  <div className="existing-files-section">
-                    <h4 className="subsection-title">
+                  <div className="reference-existing-files">
+                    <h4 className="reference-files-title">
                       Existing Reference Files
                     </h4>
-                    <div className="file-list">
+                    <div className="reference-files-list">
                       {existingReferenceData.map((file) => (
-                        <div key={file.id} className="file-item">
-                          <span className="file-name">
+                        <div key={file.id} className="reference-file-item">
+                          <span className="reference-file-name">
                             {file.file_name ||
                               file.description ||
                               "Unnamed File"}
                           </span>
-                          <div className="file-actions">
+                          <div className="reference-file-actions">
                             <button
                               type="button"
                               onClick={(e) => handleViewFile(file.file_path, e)}
-                              className="btn-view-file"
+                              className="reference-btn-view"
                             >
                               View
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteExistingFile(file.id)}
-                              className="file-remove-btn"
+                              className="reference-btn-remove"
+                              title="Delete file"
                             >
-                              Remove
+                              <Trash2 size={20} />
                             </button>
                           </div>
                         </div>
@@ -481,18 +497,19 @@ const EditTrainer = () => {
 
                 {/* New File List */}
                 {referenceFiles.length > 0 && (
-                  <div className="new-files-section">
-                    <h4 className="subsection-title">New Files to Upload</h4>
-                    <div className="file-list">
+                  <div className="reference-new-files">
+                    <h4 className="reference-files-title">New Files to Upload</h4>
+                    <div className="reference-files-list">
                       {referenceFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          <span className="file-name">{file.name}</span>
+                        <div key={index} className="reference-file-item">
+                          <span className="reference-file-name">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => removeFile(index)}
-                            className="file-remove-btn"
+                            className="reference-btn-remove"
+                            title="Delete file"
                           >
-                            Remove
+                            <Trash2 size={20} />
                           </button>
                         </div>
                       ))}
@@ -564,6 +581,8 @@ const EditTrainer = () => {
               </button>
             </div>
           </form>
+          </div>
+         
         </div>
       </main>
     </div>

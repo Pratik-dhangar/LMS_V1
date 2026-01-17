@@ -474,3 +474,199 @@
     font-size: 1.125rem;
   }
 }
+
+/* Enhanced Reference Data Section (for Edit forms with file management) */
+.reference-data-section {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.reference-data-upload-area {
+  margin-bottom: 1.5rem;
+}
+
+.reference-data-upload-area label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.reference-data-help-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+/* Upload Button */
+.reference-btn-upload {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: #db9d32;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reference-btn-upload:hover {
+  background: #c28d2d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(219, 157, 50, 0.3);
+}
+
+/* Existing Files Section */
+.reference-existing-files {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.reference-files-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reference-files-title::before {
+  content: '';
+  width: 3px;
+  height: 1rem;
+  background: #db9d32;
+  border-radius: 2px;
+}
+
+.reference-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reference-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.reference-file-item:hover {
+  border-color: #db9d32;
+  box-shadow: 0 2px 8px rgba(219, 157, 50, 0.1);
+}
+
+.reference-file-name {
+  font-size: 0.9375rem;
+  color: #1f2937;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-file-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reference-btn-view {
+  padding: 0.5rem 1rem;
+  background: #db9d32;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reference-btn-view:hover {
+  background: #c28d2d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(219, 157, 50, 0.3);
+}
+
+.reference-btn-remove {
+  padding: 0.5rem;
+  background: transparent;
+  color: #ef4444;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.reference-btn-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  transform: scale(1.1);
+}
+
+.reference-btn-remove svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* New Files Section */
+.reference-new-files {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border-radius: 0.5rem;
+  border: 1px solid #bbf7d0;
+}
+
+.reference-new-files .reference-files-title::before {
+  background: #22c55e;
+}
+
+.reference-new-files .reference-file-item {
+  background: white;
+  border-color: #bbf7d0;
+}
+
+.reference-new-files .reference-file-item:hover {
+  border-color: #22c55e;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .reference-file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .reference-file-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .reference-file-name {
+    width: 100%;
+  }
+}

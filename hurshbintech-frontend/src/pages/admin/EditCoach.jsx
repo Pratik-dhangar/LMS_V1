@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import headService from '../../api/services/headService';
@@ -542,7 +542,7 @@ const EditCoach = () => {
                 </div>
 
                 {/* Reference Data */}
-                <div>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <label htmlFor="reference_files" className="app-modal-form-label">Reference Data</label>
                   <input
                     type="file"
@@ -551,38 +551,40 @@ const EditCoach = () => {
                     onChange={handleFileChange}
                     className="form-file-input"
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                    style={{ display: 'none' }}
                   />
                   <button
                     type="button"
                     onClick={() => document.getElementById('reference_files').click()}
-                    className="btn-upload-file"
+                    className="reference-btn-upload"
                   >
                     Upload Files
                   </button>
-                  <p className="form-hint">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
+                  <p className="reference-data-help-text">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
 
                   {/* Existing Reference Files */}
                   {existingReferenceData.length > 0 && (
-                    <div className="existing-files-section">
-                      <h4 className="subsection-title">Existing Reference Files</h4>
-                      <div className="file-list">
+                    <div className="reference-existing-files">
+                      <h4 className="reference-files-title">Existing Reference Files</h4>
+                      <div className="reference-files-list">
                         {existingReferenceData.map((file) => (
-                          <div key={file.id} className="file-item">
-                            <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
-                            <div className="file-actions">
+                          <div key={file.id} className="reference-file-item">
+                            <span className="reference-file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                            <div className="reference-file-actions">
                               <button
                                 type="button"
                                 onClick={(e) => handleViewFile(file.file_path, e)}
-                                className="btn-view-file"
+                                className="reference-btn-view"
                               >
                                 View
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteExistingFile(file.id)}
-                                className="file-remove-btn"
+                                className="reference-btn-remove"
+                                title="Delete file"
                               >
-                                Remove
+                                <Trash2 size={20} />
                               </button>
                             </div>
                           </div>
@@ -593,18 +595,19 @@ const EditCoach = () => {
 
                   {/* New File List */}
                   {referenceFiles.length > 0 && (
-                    <div className="new-files-section">
-                      <h4 className="subsection-title">New Files to Upload</h4>
-                      <div className="file-list">
+                    <div className="reference-new-files">
+                      <h4 className="reference-files-title">New Files to Upload</h4>
+                      <div className="reference-files-list">
                         {referenceFiles.map((file, index) => (
-                          <div key={index} className="file-item">
-                            <span className="file-name">{file.name}</span>
+                          <div key={index} className="reference-file-item">
+                            <span className="reference-file-name">{file.name}</span>
                             <button
                               type="button"
                               onClick={() => removeFile(index)}
-                              className="file-remove-btn"
+                              className="reference-btn-remove"
+                              title="Delete file"
                             >
-                              Remove
+                              <Trash2 size={20} />
                             </button>
                           </div>
                         ))}
