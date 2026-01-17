@@ -7,6 +7,7 @@ import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
 import "../../styles/ManageUsersLayout.css";
+import "../../styles/Table.css";
 import "../../styles/head/ScheduleSession.css";
 
 const ScheduleSession = () => {
@@ -276,43 +277,49 @@ const ScheduleSession = () => {
               </p>
             </div>
           </div>
-          <form onSubmit={handleSubmit} className="form-section">
+          <form onSubmit={handleSubmit} className="modern-form-card">
             {/* Title */}
-            <div className="app-modal-form-field">
-              <label className="app-modal-form-label">
-                Session Title <span className="text-required">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="app-modal-form-input"
-                placeholder="e.g., Introduction to Fruits"
-                required
-              />
+            <div className="modern-form-section">
+              <div className="modern-form-grid">
+                <div className="modern-form-grid-full">
+                  <label className="modern-form-label">
+                    Session Title <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="modern-form-input"
+                    placeholder="e.g., Introduction to Fruits"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="modern-form-grid-full">
+                  <label className="modern-form-label">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className="modern-form-textarea"
+                    rows="3"
+                    placeholder="Session description (optional)"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Description */}
-            <div className="app-modal-form-field">
-              <label className="app-modal-form-label">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="app-modal-form-textarea"
-                rows="3"
-                placeholder="Session description (optional)"
-              />
-            </div>
-
-            <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
+            {/* Trainer & Learner Selection */}
+            <div className="modern-form-section">
+              <div className="modern-form-grid-two-col">
               {/* Select Trainer with Searchable Dropdown */}
               <div className="dropdown-field" ref={trainerDropdownRef}>
-                <label className="app-modal-form-label">
-                  Select Trainer <span className="text-required">*</span>
+                <label className="modern-form-label">
+                  Select Trainer <span className="required-indicator">*</span>
                 </label>
                 <input
                   type="text"
@@ -333,7 +340,7 @@ const ScheduleSession = () => {
                   onFocus={() =>
                     setShowDropdown({ ...showDropdown, trainer: true })
                   }
-                  className="app-modal-form-input"
+                  className="modern-form-input"
                   required={!formData.trainer_id}
                 />
                 {showDropdown.trainer && (
@@ -362,24 +369,12 @@ const ScheduleSession = () => {
                     )}
                   </div>
                 )}
-                {/* {formData.trainer_id && !showDropdown.trainer && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, trainer_id: "" });
-                      setSearchTerm({ ...searchTerm, trainer: "" });
-                    }}
-                    className="dropdown-clear"
-                  >
-                    ✕
-                  </button>
-                )} */}
               </div>
 
               {/* Select Learner with Searchable Dropdown */}
               <div className="dropdown-field" ref={learnerDropdownRef}>
-                <label className="app-modal-form-label">
-                  Select Learner <span className="text-required">*</span>
+                <label className="modern-form-label">
+                  Select Learner <span className="required-indicator">*</span>
                 </label>
                 <input
                   type="text"
@@ -400,7 +395,7 @@ const ScheduleSession = () => {
                   onFocus={() =>
                     setShowDropdown({ ...showDropdown, learner: true })
                   }
-                  className="app-modal-form-input"
+                  className="modern-form-input"
                   required={!formData.learner_id}
                 />
                 {showDropdown.learner && (
@@ -429,86 +424,76 @@ const ScheduleSession = () => {
                     )}
                   </div>
                 )}
-                {/* {formData.learner_id && !showDropdown.learner && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, learner_id: "" });
-                      setSearchTerm({ ...searchTerm, learner: "" });
-                    }}
-                    className="dropdown-clear"
-                  >
-                    ✕
-                  </button>
-                )} */}
               </div>
             </div>
+            </div>
 
-            <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
-              {/* Date & Time */}
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Date & Time <span className="text-required">*</span>
-                </label>
+            {/* Date & Time and Duration */}
+            <div className="modern-form-section">
+              <div className="modern-form-grid-two-col">
+                {/* Date & Time */}
+                <div>
+                  <label className="modern-form-label">
+                    Date & Time <span className="required-indicator">*</span>
+                  </label>
 
-                {/* Flex container to hold input and button */}
-                <div className="input-group">
-                  <input
-                    type="datetime-local"
-                    value={tempDate}
-                    onChange={(e) => setTempDate(e.target.value)}
-                    className="app-modal-form-input"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSetDate}
-                    className="app-modal-btn app-modal-btn--primary"
-                  >
-                    Set
-                  </button>
+                  {/* Flex container to hold input and button */}
+                  <div className="input-group">
+                    <input
+                      type="datetime-local"
+                      value={tempDate}
+                      onChange={(e) => setTempDate(e.target.value)}
+                      className="modern-form-input"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSetDate}
+                      className="modern-form-btn modern-form-btn-primary"
+                    >
+                      Set
+                    </button>
+                  </div>
+
+                  {/* Optional: Show the user what date is currently *confirmed* */}
+                  {formData.scheduled_date && (
+                    <p className="modern-form-helper-text">
+                      Confirmed time:{" "}
+                      {new Date(formData.scheduled_date).toLocaleString()}
+                    </p>
+                  )}
                 </div>
 
-                {/* Optional: Show the user what date is currently *confirmed* */}
-                {formData.scheduled_date && (
-                  <p className="form-helper-text">
-                    Confirmed time:{" "}
-                    {new Date(formData.scheduled_date).toLocaleString()}
-                  </p>
-                )}
-              </div>
-
-              {/* Duration */}
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Duration (minutes) <span className="text-required">*</span>
-                </label>
-                <select
-                  value={formData.duration}
-                  onChange={(e) =>
-                    setFormData({ ...formData, duration: e.target.value })
-                  }
-                  className="app-modal-form-select"
-                  required
-                >
-                  <option value="">-- Select Duration --</option>
-                  <option value="30">30 minutes</option>
-                  <option value="60">60 minutes</option>
-                  <option value="90">90 minutes</option>
-                  <option value="120">120 minutes</option>
-                  <option value="150">150 minutes</option>
-                  <option value="180">180 minutes</option>
-                </select>
+                {/* Duration */}
+                <div>
+                  <label className="modern-form-label">
+                    Duration (minutes) <span className="required-indicator">*</span>
+                  </label>
+                  <select
+                    value={formData.duration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, duration: e.target.value })
+                    }
+                    className="modern-form-select"
+                    required
+                  >
+                    <option value="">-- Select Duration --</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="90">90 minutes</option>
+                    <option value="120">120 minutes</option>
+                    <option value="150">150 minutes</option>
+                    <option value="180">180 minutes</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Select Learning Goals */}
-            <div className="section-container">
-              <label className="section-label">
-                Select Learning Goals (Optional)
-              </label>
-              <p className="section-description">
-                Choose learning goals for this session
+            <div className="modern-form-section">
+              <h2 className="modern-form-section-title">Select Learning Goals</h2>
+              <p className="modern-form-section-description">
+                Choose learning goals for this session (optional)
               </p>
 
               {/* Search Bar for Goals */}
@@ -540,72 +525,72 @@ const ScheduleSession = () => {
                   No learning goals available
                 </p>
               ) : (
-                <div className="table-container">
-                  <table className="data-table">
-                    <thead className="table-header">
-                      <tr>
-                        <th className="checkbox-col">
-                          Select
-                        </th>
-                        <th>
-                          Goal
-                        </th>
-                        <th>
-                          Description
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="table-body">
-                      {filteredGoals.length > 0 ? (
-                        filteredGoals.map((goal) => (
-                          <tr
-                            key={goal.id}
-                            onClick={() => handleGoalToggle(goal.id)}
-                            className={formData.goal_ids.includes(goal.id) ? "row-selected" : ""}
-                          >
-                            <td className="cell-center">
-                              <input
-                                type="checkbox"
-                                checked={formData.goal_ids.includes(goal.id)}
-                                onChange={() => {}}
-                                className="custom-checkbox"
-                              />
-                            </td>
-                            <td>
-                              <div className="cell-text-primary">
-                                {goal.goal}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="cell-text-secondary">
-                                {goal.goal_description}
-                              </div>
+                <div className="table-primary-container">
+                  <div className="table-primary-wrapper">
+                    <table className="table-primary">
+                      <thead className="table-primary-header">
+                        <tr>
+                          <th className="table-primary-th table-primary-th-center" style={{ width: '60px' }}>
+                            Select
+                          </th>
+                          <th className="table-primary-th">
+                            Goal
+                          </th>
+                          <th className="table-primary-th">
+                            Description
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="table-primary-body">
+                        {filteredGoals.length > 0 ? (
+                          filteredGoals.map((goal) => (
+                            <tr
+                              key={goal.id}
+                              onClick={() => handleGoalToggle(goal.id)}
+                              className={`table-primary-row ${formData.goal_ids.includes(goal.id) ? "row-selected" : ""}`}
+                            >
+                              <td className="table-primary-td table-primary-td-center">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.goal_ids.includes(goal.id)}
+                                  onChange={() => {}}
+                                  className="custom-checkbox"
+                                />
+                              </td>
+                              <td className="table-primary-td">
+                                <div className="table-primary-cell-name-text">
+                                  {goal.goal}
+                                </div>
+                              </td>
+                              <td className="table-primary-td">
+                                <div className="table-primary-cell-subtitle">
+                                  {goal.goal_description}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="3" className="table-primary-td" style={{ textAlign: 'center', padding: '2rem' }}>
+                              No goals match your search
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="3" className="table-empty">
-                            No goals match your search
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
-              <p className="section-footer">
+              <p className="modern-form-section-description">
                 {formData.goal_ids.length} goal(s) selected
               </p>
             </div>
 
             {/* Select Learning Content */}
-            <div className="section-container">
-              <label className="section-label">
-                Select Learning Content (Optional)
-              </label>
-              <p className="section-description">
-                Choose content that will be available during the session
+            <div className="modern-form-section">
+              <h2 className="modern-form-section-title">Select Learning Content</h2>
+              <p className="modern-form-section-description">
+                Choose content that will be available during the session (optional)
               </p>
 
               {/* Search Bar for Content */}
@@ -739,23 +724,22 @@ const ScheduleSession = () => {
                   )}
                 </div>
               )}
-              <p className="section-footer">
+              <p className="modern-form-section-description">
                 {formData.content_ids.length} item(s) selected
               </p>
             </div>
 
             {/* Submit Buttons */}
-            <div className="form-actions">
-              
+            <div className="modern-form-actions">
               <button
                 type="button"
                 onClick={() => navigate("/head/manage-sessions")}
-                className="app-modal-btn app-modal-btn--secondary"
+                className="modern-form-btn modern-form-btn-secondary"
                 disabled={loading}
               >
                 Cancel
               </button>
-              <button type="submit" className="app-modal-btn app-modal-btn--primary" disabled={loading}>
+              <button type="submit" className="modern-form-btn modern-form-btn-primary" disabled={loading}>
                 {loading ? "Scheduling..." : "Schedule Session"}
               </button>
             </div>
