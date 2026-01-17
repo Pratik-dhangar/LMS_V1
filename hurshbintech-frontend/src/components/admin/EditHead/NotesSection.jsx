@@ -1,7 +1,7 @@
 // NotesSection Component
 import React from 'react';
 import TextAreaField from '../../common/TextAreaField';
-import '../../../styles/components/admin/EditHeadSections.css';
+import FormSection from '../../common/FormSection';
 
 /**
  * @param {object} formData
@@ -9,11 +9,11 @@ import '../../../styles/components/admin/EditHeadSections.css';
  */
 
 const NotesSection = ({ formData, handleChange }) => (
-  <section className="edit-head-section">
-    <h2 className="edit-head-section-title">
-      Notes & Messages
-    </h2>
-    <div className="edit-head-section-grid">
+  <FormSection 
+    title="Notes & Messages"
+    description="Additional notes and communications"
+  >
+    <div className="modern-form-grid-full">
       <TextAreaField
         label="Box of Note"
         name="note_box"
@@ -22,7 +22,9 @@ const NotesSection = ({ formData, handleChange }) => (
         rows={4}
         placeholder="Additional notes"
       />
+    </div>
 
+    <div className="modern-form-grid-full">
       <TextAreaField
         label="Message Box"
         name="message_box"
@@ -32,7 +34,7 @@ const NotesSection = ({ formData, handleChange }) => (
         placeholder="Messages and communications"
       />
     </div>
-  </section>
+  </FormSection>
 );
 
 export default NotesSection;
