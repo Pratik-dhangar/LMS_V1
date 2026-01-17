@@ -107,7 +107,7 @@ const LearningProgramSidebar = ({
         {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
           <button
             onClick={onSaveReport}
-            className="btn-save-report"
+            className="btn-primary w-50 ml-3.5"
           >
             💾 Save Session Report
           </button>

@@ -2230,7 +2230,7 @@ const TrainerSession = () => {
                 />
                 <button
                   onClick={sendMessage}
-                  className="bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                  className="btn-primary text-white border-none rounded cursor-pointer hover:bg-blue-600"
                   style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
                 >
                   Send
@@ -2245,7 +2245,7 @@ const TrainerSession = () => {
           {/* Learning Content - 25% height */}
           <div className=" learning-content-container ">
             <div className="section-content">
-              <span className='bg-green-600 text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
+              <span className='bg-[#7a2c2c] text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
               <LearningContentSidebar
                 learningContentSearch={learningContentSearch}
                 handleLearningContentSearch={handleLearningContentSearch}

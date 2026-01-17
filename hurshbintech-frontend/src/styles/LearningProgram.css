@@ -38,7 +38,7 @@
    ============================== */
 
 .sidebar-header {
-    background: #1e88e5;
+    background: #7a2c2c;
     color: white;
     font-weight: 600;
     padding: clamp(0.5rem, 1vw, 0.75rem);
@@ -281,7 +281,7 @@
    SAVE REPORT BUTTON
    ============================== */
 
-.btn-save-report {
+/* .btn-save-report {
     width: calc(100% - 24px);
     margin: 12px;
     background: #7b1fa2;
@@ -296,7 +296,7 @@
 
 .btn-save-report:hover {
     background: #6a1890;
-}
+} */
 
 /* ==============================
    WARNING MESSAGE
