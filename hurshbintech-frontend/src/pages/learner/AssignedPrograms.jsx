@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
-import "../../styles/admin/index.css";
+import "../../styles/ManageUsersLayout.css";
 
 const AssignedPrograms = () => {
   const { user } = useAuth();
@@ -172,14 +171,16 @@ const AssignedPrograms = () => {
   };
 
   return (
-    <div className="admin-dashboard-container">
-      <Navbar />
-
-      <main className="admin-dashboard-main">
-        <div className="admin-dashboard-content-wrapper">
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
           {/* Page Header */}
-          <div className="admin-dashboard-header">
-            <h1 className="admin-dashboard-title">
+          <div className="page-header">
+            <button onClick={() => navigate('/learner/dashboard')} className="back-button">
+              <ArrowLeft size={20} />
+              Back to Dashboard
+            </button>
+            <h1 className="page-title">
               Assigned Programs (Home Program)
             </h1>
           </div>
@@ -239,8 +240,8 @@ const AssignedPrograms = () => {
                           </h3>
 
                           {/* Programs List */}
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <p style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
+                          <div style={{ marginBottom: '.75rem' }}>
+                            <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
                             <div style={{ marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               {firstProg.program_names && firstProg.program_names.length > 0 ? (
                                 firstProg.program_names.map((name, idx) => (
@@ -391,21 +392,9 @@ const AssignedPrograms = () => {
 
                           {isSubmitted && (
                             <button
-                              style={{
-                                background: 'linear-gradient(to right, #a855f7, #9333ea)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s'
-                              }}
+                             className="btn-primary"
                               onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #9333ea, #7e22ce)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #a855f7, #9333ea)'}
+                             
                             >
                               View
                             </button>
@@ -717,7 +706,6 @@ const AssignedPrograms = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

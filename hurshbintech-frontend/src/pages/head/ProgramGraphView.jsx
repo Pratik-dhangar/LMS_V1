@@ -13,8 +13,6 @@ import {
 } from "recharts";
 import sessionReportService from "../../api/services/sessionReportService";
 import { downloadProgressReportPDF } from "../../utils/pdfGenerator";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 
 import "../../styles/ManageUsersLayout.css";
 
@@ -182,7 +180,6 @@ const ProgramGraphView = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -422,7 +419,6 @@ const ProgramGraphView = () => {
           )}
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

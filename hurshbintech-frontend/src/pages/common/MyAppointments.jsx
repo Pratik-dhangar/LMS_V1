@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, AlertCircle, FileText, MapPin, Phone, Download, Video, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import bookingService from "../../api/services/bookingService";
 import coachSessionService from "../../api/services/coachSessionService";
 import { getFileUrl } from "../../utils/urlHelper";
@@ -86,7 +84,7 @@ const MyAppointments = () => {
       'PENDING': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'CONFIRMED': 'bg-green-100 text-green-800 border-green-200',
       'CANCELLED': 'bg-red-100 text-red-800 border-red-200',
-      'COMPLETED': 'bg-blue-100 text-blue-800 border-blue-200',
+      'COMPLETED': 'bg-[#fef3e2] text-[#9C4D0B] border-[#DB9D32]',
       'REJECTED': 'bg-red-100 text-red-800 border-red-200',
       'NO_SHOW': 'bg-gray-100 text-gray-800 border-gray-200',
     };
@@ -204,20 +202,17 @@ const MyAppointments = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <main className="page-main">
           <div className="page-content">
             <div className="stat-loading">Loading your appointments...</div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -240,28 +235,7 @@ const MyAppointments = () => {
           </div>
 
           {/* Search Bar and Book Button */}
-          <div className="search-section">
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search className="search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9ca3af' }} />
-              <input
-                type="text"
-                placeholder="Search appointments..."
-                value={filterDate || filterTime || filterStatus ? `Filters: ${[filterDate, filterTime, filterStatus].filter(Boolean).join(', ')}` : ''}
-                readOnly
-                className="search-input"
-                style={{ paddingLeft: '40px', cursor: 'pointer' }}
-                onClick={() => {/* Could open filter modal if needed */}}
-              />
-            </div>
-            <button 
-              onClick={() => navigate('/book-appointment')}
-              className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
-              style={{ alignSelf: 'flex-start' }}
-            >
-              <Calendar className="w-4 h-4" />
-              Book Appointment
-            </button>
-          </div>
+          
 
           {error && (
             <div className="stat-error mb-4 flex items-center gap-2">
@@ -375,7 +349,7 @@ const MyAppointments = () => {
                   {/* Coach Info */}
                   <div className="appointment-coach-section">
                     <div className="flex items-center gap-2 mb-3">
-                      <User className="w-5 h-5 text-blue-600" />
+                      <User className="w-5 h-5 text-[#DB9D32]" />
                       <span className="appointment-label">Coach</span>
                     </div>
                     <p className="appointment-coach-name">Coach (ID: {apt.coach_id})</p>
@@ -384,7 +358,7 @@ const MyAppointments = () => {
                   {/* Date & Time */}
                   <div className="appointment-details">
                     <div className="appointment-detail-item">
-                      <Calendar className="w-5 h-5 text-blue-500" />
+                      <Calendar className="w-5 h-5 text-[#DB9D32]" />
                       <div>
                         <p className="appointment-detail-label">Date</p>
                         <p className="appointment-detail-value">{formatDate(apt.scheduled_date)}</p>
@@ -392,7 +366,7 @@ const MyAppointments = () => {
                     </div>
 
                     <div className="appointment-detail-item">
-                      <Clock className="w-5 h-5 text-blue-500" />
+                      <Clock className="w-5 h-5 text-[#DB9D32]" />
                       <div>
                         <p className="appointment-detail-label">Time</p>
                         <p className="appointment-detail-value">{formatTime(apt.scheduled_time)}</p>
@@ -400,7 +374,7 @@ const MyAppointments = () => {
                     </div>
 
                     <div className="appointment-detail-item">
-                      <FileText className="w-5 h-5 text-blue-500" />
+                      <FileText className="w-5 h-5 text-[#DB9D32]" />
                       <div>
                         <p className="appointment-detail-label">Session Type</p>
                         <p className="appointment-detail-value">{formatSessionType(apt.session_type)}</p>
@@ -466,7 +440,7 @@ const MyAppointments = () => {
                         disabled={!isSessionJoinable(apt) || joiningSession}
                         className={`w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           isSessionJoinable(apt) && !joiningSession
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            ? 'bg-[#DB9D32] text-white hover:bg-[#9C4D0B]'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                         title={!isSessionJoinable(apt) ? 'Wait for coach to start the session' : 'Join video session'}
@@ -485,7 +459,6 @@ const MyAppointments = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

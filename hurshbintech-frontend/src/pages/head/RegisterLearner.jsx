@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
 import '../../styles/ManageUsersLayout.css';
+import '../../styles/components/common/ModernForm.css';
 
 
 
@@ -17,6 +16,7 @@ import LearningHistorySection from '../../components/head/RegisterLearner/Learni
 import InterventionHistorySection from '../../components/head/RegisterLearner/InterventionHistorySection';
 import AssessmentBehaviourSection from '../../components/head/RegisterLearner/AssessmentBehaviourSection';
 import SkillDevelopmentSection from '../../components/head/RegisterLearner/SkillDevelopmentSection';
+import PackageAndPaymentSection from '../../components/head/RegisterLearner/PackageAndPaymentSection';
 
 const RegisterLearner = () => {
   const navigate = useNavigate();
@@ -31,6 +31,10 @@ const RegisterLearner = () => {
     date_of_assessment: '',
     dlb_concerns_checklist: [],  // Initialize as empty array
     personal_notes: '',
+
+    // Package & Payment
+    package_id: '',
+    discount_code: '',
 
     // Delivery History
     mother_bed_rest: null,
@@ -168,6 +172,16 @@ const RegisterLearner = () => {
       newErrors.personal_notes = 'Personal notes is required';
     }
 
+    // Package is required
+    if (!formData.package_id) {
+      newErrors.package_id = 'Please select a subscription package';
+    }
+
+    // Payment receipt is required
+    if (!window.paymentReceipt) {
+      newErrors.payment_receipt = 'Please upload a payment receipt';
+    }
+
     return newErrors;
   };
 
@@ -210,6 +224,7 @@ const RegisterLearner = () => {
       const submitData = {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
+        package_id: formData.package_id ? parseInt(formData.package_id) : null,
         ultrasounds_performed: formData.ultrasounds_performed ? parseInt(formData.ultrasounds_performed) : null,
         years_school_attended: formData.years_school_attended ? parseInt(formData.years_school_attended) : null,
       };
@@ -221,8 +236,14 @@ const RegisterLearner = () => {
         }
       });
 
+      // Prepare files array with payment receipt
+      const allFiles = [...referenceFiles];
+      if (window.paymentReceipt) {
+        allFiles.push(window.paymentReceipt);
+      }
+
       console.log('Submitting learner data:', submitData);
-      const response = await headService.createLearner(submitData, referenceFiles);
+      const response = await headService.createLearner(submitData, allFiles);
 
       console.log('Learner registered successfully:', response);
       setSuccessData(response);
@@ -291,8 +312,6 @@ const RegisterLearner = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Loading/Success Modal */}
       {loading && (
         <div className="app-modal-overlay">
@@ -347,34 +366,48 @@ const RegisterLearner = () => {
               </svg>
               Back to Manage Learners
             </button>
-           <div>
-             <h1 className="page-title">
-              Register New Learner
-            </h1>
-            <p className="page-description">Fill in the details to register a new learner</p>
-           </div>
+            <div>
+              <h1 className="page-title">
+                Register New Learner
+              </h1>
+              <p className="page-description">Fill in the details to register a new learner</p>
+            </div>
           </div>
 
           {/* Error Message */}
           {submitError && (
-            <div className="error-message">
-              <div className="error-message-content">
-                <svg className="icon-md error-icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <p>{submitError}</p>
-              </div>
+            <div className="modern-form-error-alert">
+              <svg
+                className="modern-form-error-icon"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="modern-form-error-text">{submitError}</p>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container register-learner-container">
+          {/* Form Card */}
+          <div className="modern-form-card">
+            <form onSubmit={handleSubmit}>
 
             {/* Personal Details */}
             <PersonalDetailsSection
               formData={formData}
               errors={errors}
               handleChange={handleChange}
+            />
+
+            {/* Package & Payment */}
+            <PackageAndPaymentSection
+              formData={formData}
+              handleChange={handleChange}
+              errors={errors}
             />
 
             {/* Delivery History */}
@@ -416,27 +449,27 @@ const RegisterLearner = () => {
               handleChange={handleChange}
             />
 
-            {/* Submit Buttons */}
-            <div className="form-actions register-learner-actions">
+            {/* Submit Actions */}
+            <div className="modern-form-actions">
               <button
                 type="button"
                 onClick={() => navigate('/head/manage-learners')}
-                className="app-modal-btn app-modal-btn--secondary"
+                className="modern-form-btn modern-form-btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="app-modal-btn app-modal-btn--primary"
+                className="modern-form-btn modern-form-btn-primary"
               >
                 {loading ? 'Registering...' : 'Register Learner'}
               </button>
             </div>
           </form>
         </div>
+        </div>
       </main>
-      <Footer />
     </div>
   );
 };

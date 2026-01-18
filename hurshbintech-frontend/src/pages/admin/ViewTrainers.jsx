@@ -10,8 +10,6 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import adminService from '../../api/services/adminService';
 import SearchBar from '../../components/common/SearchBar';
 import { useNavigate } from 'react-router-dom';
@@ -102,7 +100,6 @@ const ViewTrainers = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -250,7 +247,6 @@ const ViewTrainers = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

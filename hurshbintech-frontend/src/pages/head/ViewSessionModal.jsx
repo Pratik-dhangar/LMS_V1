@@ -100,7 +100,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                     <div
                         key={content.id || index}
                         onClick={() => setSelectedContent(content)}
-                        className="border border-gray-200 rounded-lg overflow-hidden bg-white hover:border-blue-400 hover:shadow-md transition cursor-pointer"
+                        className="border border-gray-200 rounded-lg overflow-hidden bg-white hover:border-[#DB9D32] hover:shadow-md transition cursor-pointer"
                     >
                         {/* Content Preview */}
                         <div className="w-full h-32 bg-gray-100 flex items-center justify-center overflow-hidden relative">
@@ -117,12 +117,12 @@ const ViewSessionModal = ({ session, onClose }) => {
                                 />
                             )}
                             {content.content_type === 'video' && (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#DB9D32] to-[#9C4D0B]">
                                     <span className="text-3xl">🎥</span>
                                 </div>
                             )}
                             {content.content_type === 'audio' && (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-purple-600">
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FE971E] to-[#9C4D0B]">
                                     <span className="text-3xl">🎵</span>
                                 </div>
                             )}
@@ -200,7 +200,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                                 {(() => {
                                     const actualStatus = getSessionStatus(session);
                                     const statusColors = {
-                                        scheduled: 'bg-blue-100 text-blue-800',
+                                        scheduled: 'bg-[#fef3e2] text-[#9C4D0B]',
                                         active: 'bg-green-100 text-green-800',
                                         ended: 'bg-gray-100 text-gray-800',
                                         expired: 'bg-gray-100 text-gray-800',
@@ -281,7 +281,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                 <span>📝</span> Session Notes
                             </h3>
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="p-4 bg-[#fef3e2] rounded-lg border border-[#DB9D32]">
                                 <p className="text-gray-700 whitespace-pre-wrap">{session.session_notes}</p>
                             </div>
                         </div>
@@ -324,17 +324,17 @@ const ViewSessionModal = ({ session, onClose }) => {
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Popup Header */}
-                        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex items-center justify-between rounded-t-lg">
+                        <div className="sticky top-0 bg-gradient-to-r from-[#DB9D32] to-[#9C4D0B] text-white p-6 flex items-center justify-between rounded-t-lg">
                             <div className="flex items-center gap-3">
                                 <span className="text-3xl">{getContentIcon(selectedContent.content_type)}</span>
                                 <div>
                                     <h2 className="text-2xl font-bold">{selectedContent.title}</h2>
-                                    <p className="text-blue-100 text-sm capitalize mt-1">{selectedContent.content_type}</p>
+                                    <p className="text-white opacity-90 text-sm capitalize mt-1">{selectedContent.content_type}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setSelectedContent(null)}
-                                className="text-white hover:bg-blue-600 p-2 rounded-lg transition"
+                                className="text-white hover:bg-[#9C4D0B] p-2 rounded-lg transition"
                                 title="Close"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -383,7 +383,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                                                 href={learningContentService.getFileUrl(selectedContent.file_url)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                                className="inline-block px-4 py-2 bg-[#DB9D32] text-white rounded-lg hover:bg-[#9C4D0B] transition"
                                             >
                                                 📥 Download / View PDF
                                             </a>
@@ -396,7 +396,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                                                 href={learningContentService.getFileUrl(selectedContent.file_url)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                                className="inline-block px-4 py-2 bg-[#DB9D32] text-white rounded-lg hover:bg-[#9C4D0B] transition"
                                             >
                                                 📥 Open Document
                                             </a>

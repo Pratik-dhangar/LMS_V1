@@ -30,9 +30,9 @@ const OverallReportModal = ({ statistics, onClose }) => {
     }));
 
     // Color palettes
-    const barColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-    const promptColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-    const reinforcementColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#f59e0b', '#fbbf24', '#fcd34d', '#ef4444'];
+    const barColors = ['#DB9D32', '#10b981', '#FE971E', '#ef4444', '#9C4D0B', '#ec4899', '#06b6d4', '#84cc16'];
+    const promptColors = ['#DB9D32', '#10b981', '#FE971E', '#ef4444', '#9C4D0B', '#ec4899', '#06b6d4', '#84cc16'];
+    const reinforcementColors = ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#FE971E', '#fbbf24', '#fcd34d', '#ef4444'];
 
     const handlePrint = () => {
         window.print();
@@ -71,7 +71,7 @@ const OverallReportModal = ({ statistics, onClose }) => {
                 <div className="app-modal-content">
                     {/* Summary Cards */}
                     <div className="chart-summary-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                        <div className="chart-summary-card chart-summary-blue">
+                        <div className="chart-summary-card chart-summary-gold">
                             <div className="chart-summary-value">{statistics.total_reports || 0}</div>
                             <div className="chart-summary-label">Total Reports</div>
                         </div>
@@ -79,7 +79,7 @@ const OverallReportModal = ({ statistics, onClose }) => {
                             <div className="chart-summary-value">{statistics.total_learners || 0}</div>
                             <div className="chart-summary-label">Total Learners</div>
                         </div>
-                        <div className="chart-summary-card chart-summary-purple">
+                        <div className="chart-summary-card chart-summary-orange">
                             <div className="chart-summary-value">{statistics.total_programs || 0}</div>
                             <div className="chart-summary-label">Total Programs</div>
                         </div>
@@ -261,7 +261,7 @@ const OverallReportModal = ({ statistics, onClose }) => {
                     <div className="flex justify-center gap-4 pt-4">
                         <button
                             onClick={handlePrint}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                            className="bg-[#DB9D32] hover:bg-[#9C4D0B] text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
                         >
                             🖨️ Print Report
                         </button>

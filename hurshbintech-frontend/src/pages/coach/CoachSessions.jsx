@@ -1,8 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import SessionsManager from '../../components/coach/SessionsManager';
 import '../../styles/coach/CoachSessions.css';
 
@@ -12,7 +10,6 @@ const CoachSessions = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -40,7 +37,6 @@ const CoachSessions = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

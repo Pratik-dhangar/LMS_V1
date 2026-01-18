@@ -77,7 +77,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
         <div className="bg-white border-2 border-gray-300 rounded-lg p-3 shadow-lg">
           <p className="font-bold text-sm mb-2">{data.sessionTime}</p>
           <p className="text-xs text-gray-700 mb-2"><strong>Goals:</strong> {data.goals}</p>
-          <p className="text-xs text-blue-600"><strong>Prompt:</strong> {data.prompt}</p>
+          <p className="text-xs text-[#DB9D32]"><strong>Prompt:</strong> {data.prompt}</p>
           <p className="text-xs text-green-600"><strong>Reinforcement:</strong> {data.reinforcement}</p>
         </div>
       );
@@ -128,7 +128,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
         <div className="app-modal-content">
           {/* Summary Cards */}
           <div className="chart-summary-grid">
-            <div className="chart-summary-card chart-summary-blue">
+            <div className="chart-summary-card chart-summary-gold">
               <div className="chart-summary-value">{statistics.total_reports}</div>
               <div className="chart-summary-label">Total Reports</div>
             </div>
@@ -138,7 +138,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
               </div>
               <div className="chart-summary-label">Prompt Levels</div>
             </div>
-            <div className="chart-summary-card chart-summary-purple">
+            <div className="chart-summary-card chart-summary-orange">
               <div className="chart-summary-value">
                 {Object.keys(statistics.program_breakdown).length}
               </div>
@@ -182,7 +182,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
                   />
                   <Bar
                     dataKey="prompt"
-                    fill="#3b82f6"
+                    fill="#DB9D32"
                     name="Prompt Meter"
                     radius={[8, 8, 0, 0]}
                   />

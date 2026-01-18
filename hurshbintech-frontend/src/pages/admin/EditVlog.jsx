@@ -5,8 +5,6 @@ import InputField from '../../components/common/InputField';
 import TextAreaField from '../../components/common/TextAreaField';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/admin/AdminEditVlog.css';
 import '../../styles/ManageUsersLayout.css';
 
@@ -91,9 +89,7 @@ const EditVlog = () => {
   if (error) return <ErrorState message={error} />;
 
   return (
-    <>
-      <Navbar />
-     <div className="page-main">
+    <div className="page-main">
         <div className="page-content">
           <div className="page-header">
             <button
@@ -260,8 +256,6 @@ const EditVlog = () => {
           </div>
         </div>
     
-      <Footer />
-    </>
   );
 };
 

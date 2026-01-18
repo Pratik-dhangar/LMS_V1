@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Search, Star, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import { getFileUrl } from '../../utils/urlHelper';
@@ -129,21 +127,18 @@ const BookAppointment = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <main className="page-main">
           <div className="loading-container">
             <div className="spinner"></div>
             <p>Loading coaches...</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -332,7 +327,6 @@ const BookAppointment = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

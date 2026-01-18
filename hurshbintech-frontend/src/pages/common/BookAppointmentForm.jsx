@@ -3,8 +3,6 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Calendar, Clock, Upload, X, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
 import { getFileUrl } from '../../utils/urlHelper';
@@ -371,7 +369,6 @@ const BookAppointmentForm = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -666,7 +663,6 @@ const BookAppointmentForm = () => {
         </div>
         
       </main>
-      <Footer />
     </div>
   );
 };

@@ -1,8 +1,6 @@
 
 
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import learningProgramsService from "../../api/services/learningProgramsService";
 import { Loader2, Trash2, ListChecks } from "lucide-react";
@@ -71,8 +69,6 @@ const ManageAssignedPrograms = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       <main className="page-main">
         <h1 className="page-title">Manage Assigned Programs</h1>
 
@@ -224,8 +220,6 @@ const ManageAssignedPrograms = () => {
           </>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 };

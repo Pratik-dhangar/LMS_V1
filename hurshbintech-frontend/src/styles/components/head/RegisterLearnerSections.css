@@ -1,45 +1,63 @@
-/* RegisterLearner Section Styles */
+/* RegisterLearner Section Styles - Modern Form Design */
 
 .register-learner-section,
 .register-section {
-  margin-bottom: 2rem;
+  padding: 2rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.register-section:last-child {
+  border-bottom: none;
 }
 
 .register-learner-section-title,
 .register-section-title {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #1f2937;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #d1d5db;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.register-section-title::before {
+  content: '';
+  width: 4px;
+  height: 1.5rem;
+  background: #db9d32;
+  border-radius: 2px;
 }
 
 .register-learner-grid,
 .register-section-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
 
-@media (min-width: 768px) {
-
+@media (max-width: 768px) {
   .register-learner-grid,
   .register-section-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+  }
+  
+  .register-learner-section,
+  .register-section {
+    padding: 1.5rem 1rem;
   }
 }
 
 .register-learner-form-group,
 .register-form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .register-learner-label,
 .register-field-label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
   margin-bottom: 0.5rem;
 }
@@ -47,56 +65,106 @@
 .register-learner-required,
 .register-required {
   color: #ef4444;
+  margin-left: 0.125rem;
 }
 
 .register-learner-input,
 .register-input {
   width: 100%;
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  background: white;
 }
 
-.register-learner-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.register-learner-input::placeholder,
+.register-input::placeholder {
+  color: #9ca3af;
+}
+
+.register-learner-input:hover,
+.register-input:hover {
+  border-color: #d1d5db;
+}
+
+.register-learner-input:focus,
+.register-input:focus {
+  border-color: #db9d32;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1);
 }
 
 .register-learner-input.error,
 .register-input-error {
   border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.register-learner-input.error:focus,
+.register-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .register-learner-error-text,
 .register-error-text {
   color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .register-learner-textarea,
 .register-textarea {
   width: 100%;
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
   outline: none;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  font-size: 0.9375rem;
+  color: #1f2937;
+  background: white;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
 }
 
-.register-learner-textarea:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.register-learner-textarea::placeholder,
+.register-textarea::placeholder {
+  color: #9ca3af;
 }
 
-/* Radio Group Styles */
+.register-learner-textarea:hover,
+.register-textarea:hover {
+  border-color: #d1d5db;
+}
+
+.register-learner-textarea:focus,
+.register-textarea:focus {
+  border-color: #db9d32;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1);
+}
+
+/* Radio Group Styles - Modern Design */
 .register-learner-radio-group,
 .register-radio-group {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
   margin-bottom: 1rem;
 }
 
@@ -104,56 +172,95 @@
 .register-radio-label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
-  margin-bottom: 0;
-  flex: 1;
+  margin-bottom: 0.75rem;
 }
 
 .register-learner-radio-options,
 .register-radio-options {
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .register-learner-radio-option,
 .register-radio-option {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   cursor: pointer;
 }
 
 .register-learner-radio-input,
 .register-radio-input {
-  width: 1rem;
-  height: 1rem;
-  color: #2563eb;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  appearance: none;
+  background: white;
+  margin: 0;
 }
 
-.register-learner-radio-input:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+.register-learner-radio-input:checked,
+.register-radio-input:checked {
+  border-color: #db9d32;
+  background: #db9d32;
+}
+
+.register-learner-radio-input:checked::after,
+.register-radio-input:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  background: white;
+  border-radius: 50%;
+}
+
+.register-learner-radio-input:hover,
+.register-radio-input:hover {
+  border-color: #db9d32;
+}
+
+.register-learner-radio-input:focus,
+.register-radio-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(219, 157, 50, 0.1);
 }
 
 .register-learner-radio-text,
 .register-radio-text {
-  margin-left: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   color: #374151;
+  user-select: none;
+  margin: 0;
 }
 
 /* Conditional Details */
 .register-learner-conditional-details,
 .register-conditional-field {
   margin-left: 2rem;
-  margin-bottom: 1rem;
+  margin-top: 1rem;
+  padding-left: 1rem;
+  border-left: 3px solid #e5e7eb;
 }
 
 /* File Upload */
 .register-learner-file-list,
 .register-file-list {
-  margin-top: 0.5rem;
+  margin-top: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: white;
 }
 
 .register-learner-file-item,
@@ -161,33 +268,54 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem;
-  background-color: #f3f4f6;
-  border-radius: 0.375rem;
-  margin-bottom: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.register-learner-file-item:last-child,
+.register-file-item:last-child {
+  border-bottom: none;
+}
+
+.register-learner-file-item:hover,
+.register-file-item:hover {
+  background: #f9fafb;
 }
 
 .register-learner-file-name,
 .register-file-name {
   font-size: 0.875rem;
   color: #374151;
+  font-weight: 500;
 }
 
 .register-learner-file-remove,
 .register-file-remove {
   color: #ef4444;
-  background: none;
-  border: none;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
-.register-learner-file-remove:hover {
+.register-learner-file-remove:hover,
+.register-file-remove:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
   color: #dc2626;
 }
 
-/* Aliases for existing Register component class prefixes used in JSX
-  These map older class names (register-*) to the new register-learner-* styles so components don't need to be updated */
+/* Full Width Fields */
 .register-field-full {
   grid-column: 1 / -1;
+}
+
+/* Margin utilities */
+.mt-6 {
+  margin-top: 1.5rem;
 }

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import learningContentService from "../../api/services/learningContentService";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import SearchBar from "../../components/common/SearchBar";
 import '../../styles/components/common/Modal.css';
 import '../../styles/admin/AdminManageLearningContent.css';
@@ -280,7 +278,6 @@ const ManageLearningContent = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -430,7 +427,7 @@ const ManageLearningContent = () => {
           )}
         </div>
       </div>
-      <Footer />
+
 
       {/* Add Modal */}
       {showAddModal && (

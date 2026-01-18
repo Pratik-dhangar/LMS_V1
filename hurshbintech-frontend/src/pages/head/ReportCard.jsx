@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionReportService from '../../api/services/sessionReportService';
 import headService from '../../api/services/headService';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/head/reportCard.css';
 
@@ -61,7 +59,6 @@ const ReportCard = () => {
 
   return (
    <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -199,7 +196,6 @@ const ReportCard = () => {
         )}
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

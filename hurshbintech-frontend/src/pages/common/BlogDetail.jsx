@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaCalendar, FaUser, FaArrowLeft } from 'react-icons/fa';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import blogService from '../../api/services/blogService';
+import '../../styles/ManageUsersLayout.css';
+import '../../styles/pages/BlogList.css';
 
 const BlogDetail = () => {
     const { slug } = useParams();
@@ -71,140 +71,117 @@ const BlogDetail = () => {
     if (!blog) return <ErrorState message="Blog not found" />;
 
     return (
-        <>
-            <Navbar />
-
-            <div className="bg-gray-50">
-                {/* Breadcrumb */}
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                    <nav className="mb-4 text-sm">
-                        <ol className="flex items-center space-x-2">
-                            <li>
-                                <Link to="/" className="text-blue-600 hover:text-blue-800">
-                                    Home
-                                </Link>
-                            </li>
-                            <li className="text-gray-400">/</li>
-                            <li>
-                                <Link to="/blogs" className="text-blue-600 hover:text-blue-800">
-                                    Blogs
-                                </Link>
-                            </li>
-                            <li className="text-gray-400">/</li>
-                            <li className="text-gray-600 truncate max-w-xs">{blog.title}</li>
-                        </ol>
-                    </nav>
-
-                    <button
-                        onClick={() => navigate('/blogs')}
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
-                    >
-                        <FaArrowLeft className="mr-2" />
-                        Back to Blogs
-                    </button>
-                </div>
-
-                {/* Featured Image Banner */}
-                {blog.featured_image_url && (
-                    <div className="w-full h-96 bg-gray-200 overflow-hidden">
-                        <img
-                            src={blog.featured_image_url}
-                            alt={blog.title}
-                            className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => handleImageClick(blog.featured_image_url)}
-                        />
-                    </div>
-                )}
-
-                {/* Article Content */}
-                <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="bg-white rounded-lg shadow-lg p-8 lg:p-12">
-                        {/* Title */}
-                        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                            {blog.title}
-                        </h1>
-
-                        {/* Meta Information */}
-                        <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-8 pb-8 border-b border-gray-200">
-                            <div className="flex items-center">
-                                <FaUser className="mr-2" />
-                                <span className="font-medium">
-                                    {blog.author.name}
-                                </span>
-                            </div>
-                            <div className="flex items-center">
-                                <FaCalendar className="mr-2" />
-                                <time dateTime={blog.created_at}>{formatDate(blog.created_at)}</time>
-                            </div>
-                        </div>
-
-                        {/* Excerpt */}
-                        {blog.excerpt && (
-                            <div className="text-xl text-gray-600 italic mb-8 pb-8 border-b border-gray-200">
-                                {blog.excerpt}
-                            </div>
-                        )}
-
-                        {/* Blog Content */}
-                        <div
-                            className="prose prose-lg max-w-none
-                prose-headings:font-bold prose-headings:text-gray-900
-                prose-h1:text-4xl prose-h1:mb-6
-                prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8
-                prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6
-                prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-4
-                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-                prose-strong:text-gray-900 prose-strong:font-bold
-                prose-ul:my-6 prose-ul:list-disc prose-ul:pl-6
-                prose-ol:my-6 prose-ol:list-decimal prose-ol:pl-6
-                prose-li:my-2 prose-li:text-gray-700
-                prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600
-                prose-code:bg-gray-100 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm
-                prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto
-                prose-img:rounded-lg prose-img:shadow-md prose-img:my-8"
-                            dangerouslySetInnerHTML={{ __html: blog.content }}
-                        />
-
-                        {/* Author Attribution */}
-                        <div className="mt-12 pt-8 border-t border-gray-200">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
-                                        {blog.author.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                    </div>
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-lg font-semibold text-gray-900">
-                                        {blog.author.name}
-                                    </p>
-                                    <p className="text-sm text-gray-600">Author</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Back to Blogs Button */}
-                    <div className="mt-8 text-center">
+        <div className="page-container">
+            <main className="page-main">
+                <div className="page-content">
+                    {/* Header with Back Button */}
+                    <div className="page-header">
                         <button
                             onClick={() => navigate('/blogs')}
-                            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="back-button"
                         >
-                            <FaArrowLeft className="mr-2" />
-                            Back to All Blogs
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Blogs
                         </button>
+                        <div>
+                            <h1 className="page-title">Blog Article</h1>
+                        </div>
                     </div>
-                </article>
-            </div>
+
+                    {/* Featured Image Banner */}
+                    {blog.featured_image_url && (
+                        <div className="blog-detail-featured-image">
+                            <img
+                                src={blog.featured_image_url}
+                                alt={blog.title}
+                                className="blog-detail-featured-img"
+                                onClick={() => handleImageClick(blog.featured_image_url)}
+                            />
+                        </div>
+                    )}
+
+                    {/* Article Content */}
+                    <article className="blog-detail-article">
+                        <div className="blog-detail-card">
+                            {/* Title */}
+                            <h1 className="blog-detail-title">
+                                {blog.title}
+                            </h1>
+
+                            {/* Meta Information */}
+                            <div className="blog-detail-meta">
+                                <div className="blog-detail-meta-item">
+                                    <FaUser className="blog-detail-meta-icon" />
+                                    <span>{blog.author.name}</span>
+                                </div>
+                                <div className="blog-detail-meta-item">
+                                    <FaCalendar className="blog-detail-meta-icon" />
+                                    <time dateTime={blog.created_at}>{formatDate(blog.created_at)}</time>
+                                </div>
+                            </div>
+
+                            {/* Excerpt */}
+                            {blog.excerpt && (
+                                <div className="blog-detail-excerpt">
+                                    {blog.excerpt}
+                                </div>
+                            )}
+
+                            {/* Blog Content */}
+                            <div
+                                className="blog-detail-content"
+                                dangerouslySetInnerHTML={{ __html: blog.content }}
+                            />
+
+                            {/* Author Attribution */}
+                            <div className="blog-detail-author">
+                                <div className="blog-detail-author-wrapper">
+                                    <div className="blog-detail-author-avatar">
+                                        {blog.author.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                    </div>
+                                    <div className="blog-detail-author-info">
+                                        <p className="blog-detail-author-name">
+                                            {blog.author.name}
+                                        </p>
+                                        <p className="blog-detail-author-role">Author</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Back to Blogs Button */}
+                        <div className="blog-detail-back-button-wrapper">
+                            <button
+                                onClick={() => navigate('/blogs')}
+                                className="blog-detail-back-button"
+                            >
+                                <FaArrowLeft />
+                                Back to All Blogs
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </main>
 
             {/* Image Modal */}
             {showImageModal && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+                    className="blog-image-modal"
                     onClick={handleCloseModal}
                 >
                     <button
                         onClick={handleCloseModal}
-                        className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition-colors z-10"
+                        className="blog-image-modal-close"
                         aria-label="Close"
                     >
                         ×
@@ -212,14 +189,12 @@ const BlogDetail = () => {
                     <img
                         src={selectedImage}
                         alt="Full size"
-                        className="max-w-full max-h-full object-contain"
+                        className="blog-image-modal-img"
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>
             )}
-
-            <Footer />
-        </>
+        </div>
     );
 };
 

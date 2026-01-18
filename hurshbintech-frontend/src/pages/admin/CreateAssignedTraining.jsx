@@ -5,8 +5,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ArrowLeft, Upload, Loader2, X, File } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import api from "../../api/axios";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/admin/CreateAssignedTraining.css";
@@ -362,21 +360,18 @@ const CreateAssignedTraining = () => {
     if (loading) {
         return (
             <div className="page-layout">
-                <Navbar />
                 <div className="page-content">
                     <div className="loading-container">
                         <Loader2 className="spinner" />
                         <p>Loading training...</p>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
 
     return (
         <div className="page-container">
-            <Navbar />
             <main className="page-main">
                 <div className="page-content">
                     {/* Header */}
@@ -681,7 +676,6 @@ const CreateAssignedTraining = () => {
                     </form>
                 </div>
             </main>
-            <Footer />
         </div>
     );
 };

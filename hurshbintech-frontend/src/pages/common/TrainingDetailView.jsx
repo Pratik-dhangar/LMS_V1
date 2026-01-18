@@ -5,8 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ArrowLeft, AlertCircle, Loader2, Eye } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/animations.css";
 import "../../styles/admin/AdminTrainingDetail.css";
@@ -105,7 +103,6 @@ const TrainingDetailView = () => {
     if (loading) {
         return (
             <div className="page-container">
-                <Navbar />
                 <main className="page-main">
                     <div className="page-content">
                         <div className="loading-container">
@@ -114,7 +111,6 @@ const TrainingDetailView = () => {
                         </div>
                     </div>
                 </main>
-                <Footer />
             </div>
         );
     }
@@ -122,7 +118,6 @@ const TrainingDetailView = () => {
     if (error || !training) {
         return (
             <div className="page-container">
-                <Navbar />
                 <main className="page-main">
                     <div className="page-content">
                         <button
@@ -140,14 +135,12 @@ const TrainingDetailView = () => {
                         </div>
                     </div>
                 </main>
-                <Footer />
             </div>
         );
     }
 
     return (
         <div className="page-container">
-            <Navbar />
             <main className="page-main">
                 <div className={`page-content ${pageLoaded ? 'fade-transition' : ''}`}>
 
@@ -295,7 +288,6 @@ const TrainingDetailView = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
         </div>
     );
 };

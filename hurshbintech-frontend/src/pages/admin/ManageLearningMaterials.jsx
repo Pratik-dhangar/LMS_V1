@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import axios from '../../api/axios';
 import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, X, Upload, ArrowLeft } from 'lucide-react';
@@ -301,7 +299,6 @@ const ManageLearningMaterials = () => {
     if (loading) {
         return (
             <div className="page-container">
-                <Navbar />
                 <div className="loading-container">
                     <div className="loading-spinner-icon"></div>
                     <p className="loading-text">Loading...</p>
@@ -311,9 +308,7 @@ const ManageLearningMaterials = () => {
     }
 
     return (
-        <>
-            <Navbar />
-            <div className="page-container">
+        <div className="page-container">
                 <main className="page-main">
                     <div className="page-content">
                         {/* Page Header */}
@@ -716,8 +711,6 @@ const ManageLearningMaterials = () => {
                 </div>
             </main>
         </div>
-            <Footer />
-        </>
     );
 };
 

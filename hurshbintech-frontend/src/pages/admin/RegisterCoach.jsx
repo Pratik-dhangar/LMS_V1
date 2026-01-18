@@ -2,15 +2,16 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
 import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
 import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
 import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
 import NotesSection from "../../components/admin/EditHead/NotesSection";
-import "../../styles/admin/AdminRegisterCoach.css";
+import FormSection from "../../components/common/FormSection";
+import FormFileUpload from "../../components/common/FormFileUpload";
+import TextAreaField from "../../components/common/TextAreaField";
+import "../../styles/components/common/ModernForm.css";
 import "../../styles/ManageUsersLayout.css";
 
 const RegisterCoach = () => {
@@ -239,8 +240,6 @@ const RegisterCoach = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
-
       {/* Loading/Success Overlay */}
       {loading && (
         <div className="app-modal-overlay">
@@ -323,15 +322,25 @@ const RegisterCoach = () => {
 
           {/* Error Message */}
           {submitError && (
-            <div className="error-message" style={{ marginBottom: "2rem" }}>
-              <div className="error-message-content">
-                <p>{submitError}</p>
-              </div>
+            <div className="modern-form-error-alert">
+              <svg
+                className="modern-form-error-icon"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="modern-form-error-text">{submitError}</p>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container">
+          {/* Form Card */}
+          <div className="modern-form-card">
+            <form onSubmit={handleSubmit}>
             <BasicInfoSection
               formData={formData}
               errors={errors}
@@ -351,19 +360,20 @@ const RegisterCoach = () => {
               handleChange={handleChange}
             />
 
-            {/* Coach-Specific Fields */}
-            <section className="section">
-              <h2 className="section-title">Coach-Specific Information</h2>
-
-              <div className="grid-2">
-                {/* Availability Days - Multi Select */}
+            {/* Coach-Specific Information */}
+            <FormSection
+              title="Coach-Specific Information"
+              description="Availability, specialization, and profile details"
+            >
+              <div className="modern-form-grid">
+                {/* Availability Days */}
                 <div>
-                  <label className="app-modal-form-label">
-                    Availability Days <span className="required-mark">*</span>
+                  <label className="input-field-label">
+                    Availability Days <span className="input-field-required">*</span>
                   </label>
-                  <div className="checkbox-group">
+                  <div className="modern-form-checkbox-group">
                     {DAYS_OF_WEEK.map((day) => (
-                      <div key={day} className="checkbox-item">
+                      <div key={day} className="modern-form-checkbox-item">
                         <input
                           type="checkbox"
                           id={`day_${day}`}
@@ -371,11 +381,11 @@ const RegisterCoach = () => {
                           onChange={() =>
                             handleMultiSelect("availability_days", day)
                           }
-                          className="checkbox-input"
+                          className="modern-form-checkbox-input"
                         />
                         <label
                           htmlFor={`day_${day}`}
-                          className="checkbox-label"
+                          className="modern-form-checkbox-label"
                         >
                           {day}
                         </label>
@@ -383,30 +393,30 @@ const RegisterCoach = () => {
                     ))}
                   </div>
                   {formData.availability_days.length > 0 && (
-                    <p className="form-hint">
+                    <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
                       Selected: {formData.availability_days.join(", ")}
                     </p>
                   )}
                 </div>
 
-                {/* Time Slots - Multi Select */}
+                {/* Time Slots */}
                 <div>
-                  <label className="app-modal-form-label">
-                    Time Slots <span className="required-mark">*</span>
+                  <label className="input-field-label">
+                    Time Slots <span className="input-field-required">*</span>
                   </label>
-                  <div className="checkbox-group">
+                  <div className="modern-form-checkbox-group">
                     {TIME_SLOT_OPTIONS.map((slot) => (
-                      <div key={slot} className="checkbox-item">
+                      <div key={slot} className="modern-form-checkbox-item">
                         <input
                           type="checkbox"
                           id={`slot_${slot}`}
                           checked={formData.time_slots.includes(slot)}
                           onChange={() => handleMultiSelect("time_slots", slot)}
-                          className="checkbox-input"
+                          className="modern-form-checkbox-input"
                         />
                         <label
                           htmlFor={`slot_${slot}`}
-                          className="checkbox-label"
+                          className="modern-form-checkbox-label"
                         >
                           {slot}
                         </label>
@@ -414,87 +424,53 @@ const RegisterCoach = () => {
                     ))}
                   </div>
                   {formData.time_slots.length > 0 && (
-                    <p className="form-hint">
+                    <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
                       Selected: {formData.time_slots.join(", ")}
                     </p>
                   )}
                 </div>
-
-                {/* Specialization */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label htmlFor="specialization" className="app-modal-form-label">
-                    Specialization
-                  </label>
-                  <textarea
-                    id="specialization"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleChange}
-                    placeholder="Coach's area of specialization"
-                    className="app-modal-form-textarea"
-                    rows="3"
-                  />
-                </div>
-
-                {/* Profile Picture */}
-                <div>
-                  <label htmlFor="profile_picture_url" className="app-modal-form-label">
-                    Profile Picture
-                  </label>
-                  <input
-                    type="file"
-                    id="profile_picture_url"
-                    onChange={handleProfileImageChange}
-                    className="form-file-input"
-                    accept="image/*"
-                  />
-                  <p className="form-hint">Supported formats: JPG, PNG, GIF</p>
-                  {formData.profile_picture_url && (
-                    <p className="form-hint" style={{ color: "#4caf50" }}>
-                      ✓{" "}
-                      {formData.profile_picture_url.name ||
-                        "Profile picture selected"}
-                    </p>
-                  )}
-                </div>
-
-                {/* Reference Data */}
-                <div>
-                  <label htmlFor="reference_files" className="app-modal-form-label">
-                    Reference Data
-                  </label>
-                  <input
-                    type="file"
-                    id="reference_files"
-                    multiple
-                    onChange={handleFileChange}
-                    className="form-file-input"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                  />
-                  <p className="form-hint">
-                    Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)
-                  </p>
-
-                  {/* File List */}
-                  {referenceFiles.length > 0 && (
-                    <div className="file-list" style={{ marginTop: "1rem" }}>
-                      {referenceFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          <span className="file-name">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="file-remove-btn"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
-            </section>
+
+              {/* Specialization */}
+              <div className="modern-form-grid-full">
+                <TextAreaField
+                  label="Specialization"
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Coach's area of specialization"
+                />
+              </div>
+
+              {/* Profile Picture */}
+              <div className="modern-form-grid-full">
+                <FormFileUpload
+                  label="Profile Picture"
+                  name="profile_picture_url"
+                  files={formData.profile_picture_url ? [formData.profile_picture_url] : []}
+                  onChange={handleProfileImageChange}
+                  onRemove={() => setFormData(prev => ({ ...prev, profile_picture_url: null }))}
+                  accept="image/*"
+                  multiple={false}
+                  helpText="Supported formats: JPG, PNG, GIF"
+                />
+              </div>
+
+              {/* Reference Data */}
+              <div className="modern-form-grid-full">
+                <FormFileUpload
+                  label="Reference Data"
+                  name="reference_files"
+                  files={referenceFiles}
+                  onChange={handleFileChange}
+                  onRemove={removeFile}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                  multiple={true}
+                  helpText="Documents, Images, Videos (PDF, DOCX, Images, Videos)"
+                />
+              </div>
+            </FormSection>
 
             <PerformanceFeedbackSection
               formData={formData}
@@ -508,24 +484,28 @@ const RegisterCoach = () => {
               handleChange={handleChange}
             />
 
-            {/* Form Actions */}
-            <div className="form-actions">
+            {/* Submit Actions */}
+            <div className="modern-form-actions">
               <button
                 type="button"
                 onClick={handleCancel}
-                className="app-modal-btn app-modal-btn--secondary"
+                className="modern-form-btn modern-form-btn-secondary"
                 disabled={loading}
               >
                 Cancel
               </button>
-              <button type="submit" className="app-modal-btn app-modal-btn--primary" disabled={loading}>
+              <button 
+                type="submit" 
+                className="modern-form-btn modern-form-btn-primary" 
+                disabled={loading}
+              >
                 {loading ? "Registering..." : "Register Coach"}
               </button>
             </div>
           </form>
         </div>
+        </div>
       </main>
-      <Footer />
     </div>
   );
 };

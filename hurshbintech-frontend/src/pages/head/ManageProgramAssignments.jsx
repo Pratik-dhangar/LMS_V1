@@ -5,8 +5,6 @@ import programAssignmentService from '../../api/services/programAssignmentServic
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
 import learningContentService from '../../api/services/learningContentService';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/components/common/Modal.css';
 import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
@@ -568,7 +566,6 @@ const ManageProgramAssignments = () => {
 
   return (
      <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -871,7 +868,6 @@ const ManageProgramAssignments = () => {
           )}
         </div>
       </div>
-      <Footer />
 
       {/* Assign Program Modal */}
       {showAssignModal && (
@@ -1036,7 +1032,7 @@ const ManageProgramAssignments = () => {
                             {content.description && (
                               <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{content.description}</div>
                             )}
-                            <div className="mpa-text-xs mpa-text-purple-600 mpa-mt-1">
+                            <div className="mpa-text-xs mpa-text-[#9C4D0B] mpa-mt-1">
                               📄 {content.content_type}
                             </div>
                           </div>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import sessionService from "../../api/services/sessionService";
 import "../../styles/components/common/Modal.css";
-import "../../styles/admin/index.css";
+import "../../styles/ManageUsersLayout.css";
 
 const MySessions = () => {
   const { user } = useAuth();
@@ -80,14 +79,16 @@ const MySessions = () => {
   };
 
   return (
-    <div className="admin-dashboard-container">
-      <Navbar />
-
-      <main className="admin-dashboard-main">
-        <div className="admin-dashboard-content-wrapper">
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
           {/* Page Header */}
-          <div className="admin-dashboard-header">
-            <h1 className="admin-dashboard-title">
+          <div className="page-header">
+            <button onClick={() => navigate('/learner/dashboard')} className="back-button">
+              <ArrowLeft size={20} />
+              Back to Dashboard
+            </button>
+            <h1 className="page-title">
               My Sessions (IIP)
             </h1>
           </div>
@@ -517,7 +518,6 @@ const MySessions = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

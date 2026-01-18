@@ -489,6 +489,10 @@ class LearnerCreate(BaseModel):
     dlb_concerns_checklist: Optional[str] = None  # Will store JSON string
     personal_notes: Optional[str] = None
 
+    # --- Subscription details ---
+    package_id: Optional[int] = None  # Package ID for initial subscription
+    discount_code: Optional[str] = None  # Discount code for initial subscription
+
     @field_validator("dlb_concerns_checklist", mode="before")
     @classmethod
     def validate_checklist(cls, v):
@@ -653,6 +657,10 @@ class LearnerResponse(BaseModel):
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[List[str]] = None  # Return list to frontend
     personal_notes: Optional[str] = None
+
+    # --- Package & Subscription ---
+    package_id: Optional[int] = None
+    discount_code: Optional[str] = None
 
     # --- Delivery History ---
     mother_bed_rest: Optional[bool] = None
