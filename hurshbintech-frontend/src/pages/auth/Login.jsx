@@ -26,13 +26,13 @@ const Login = () => {
       id: "admin",
       name: "HurshBin Admin",
       description: "Full system management access",
-      icon: <Shield className="text-blue-600 w-6 h-6" />,
+      icon: <Shield className="text-[#DB9D32] w-6 h-6" />,
     },
     {
       id: "head",
       name: "HurshBin Heads",
       description: "Program coordination and management",
-      icon: <UserCheck className="text-indigo-600 w-6 h-6" />,
+      icon: <UserCheck className="text-[#DB9D32] w-6 h-6" />,
     },
     {
       id: "trainer",
@@ -50,7 +50,7 @@ const Login = () => {
       id: "learner",
       name: "Learners",
       description: "Access learning materials and sessions",
-      icon: <GraduationCap className="text-purple-600 w-6 h-6" />,
+      icon: <GraduationCap className="text-[#9C4D0B] w-6 h-6" />,
     },
   ];
 

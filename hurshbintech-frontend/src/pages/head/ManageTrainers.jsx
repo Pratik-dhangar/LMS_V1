@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
 import "../../styles/Table.css";
@@ -113,7 +111,6 @@ const ManageTrainers = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -310,7 +307,6 @@ const ManageTrainers = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

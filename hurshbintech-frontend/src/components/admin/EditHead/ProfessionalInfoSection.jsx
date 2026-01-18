@@ -1,17 +1,17 @@
 import React from 'react';
 import TextAreaField from '../../common/TextAreaField';
-import '../../../styles/components/admin/EditHeadSections.css';
+import FormSection from '../../common/FormSection';
 
 /**
  * @param {object} formData 
  * @param {function} handleChange 
  */
 const ProfessionalInfoSection = ({ formData, handleChange }) => (
-  <section className="edit-head-section">
-    <h2 className="edit-head-section-title">
-      Professional Information
-    </h2>
-    <div className="edit-head-section-grid">
+  <FormSection 
+    title="Professional Information"
+    description="Professional background and qualifications"
+  >
+    <div className="modern-form-grid-full">
       <TextAreaField
         label="Qualification"
         name="qualification"
@@ -20,7 +20,9 @@ const ProfessionalInfoSection = ({ formData, handleChange }) => (
         rows={3}
         placeholder="Enter educational qualifications"
       />
+    </div>
 
+    <div className="modern-form-grid-full">
       <TextAreaField
         label="Experience"
         name="experience"
@@ -29,7 +31,9 @@ const ProfessionalInfoSection = ({ formData, handleChange }) => (
         rows={3}
         placeholder="Enter work experience"
       />
+    </div>
 
+    <div className="modern-form-grid-full">
       <TextAreaField
         label="Experience with HurshBin"
         name="experience_with_hurshbin"
@@ -39,7 +43,7 @@ const ProfessionalInfoSection = ({ formData, handleChange }) => (
         placeholder="Describe experience with HurshBin"
       />
     </div>
-  </section>
+  </FormSection>
 );
 
 export default ProfessionalInfoSection;

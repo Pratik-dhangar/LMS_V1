@@ -11,8 +11,6 @@ import {
   FileUp,
   TrendingUp,
 } from "lucide-react";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import { getFileUrl } from "../../utils/fileUrlBuilder";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/admin/PaymentVerification.css";
@@ -200,10 +198,7 @@ const PaymentVerification = () => {
   };
 
   return (
-    <>
-      <Navbar />
-
-      <div className="page-main">
+    <div className="page-main">
         <div className="page-content">
           <div className="page-header">
             <button
@@ -655,8 +650,6 @@ const PaymentVerification = () => {
           </div>
         )}
       </div>
-      <Footer />
-    </>
   );
 };
 

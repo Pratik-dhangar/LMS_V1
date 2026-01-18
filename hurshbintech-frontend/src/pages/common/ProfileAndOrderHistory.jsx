@@ -2,10 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import orderService from "../../api/services/ecommerce/orderService";
-import "../../styles/admin/index.css";
+import { ArrowLeft } from 'lucide-react';
+import "../../styles/ManageUsersLayout.css";
 
 const ProfileAndOrderHistory = () => {
     const { user } = useAuth();
@@ -141,11 +140,11 @@ const ProfileAndOrderHistory = () => {
     const getOrderStatusBadge = (status) => {
         const statusConfig = {
             'CREATED': { bg: 'bg-yellow-200', text: 'text-yellow-800', label: '⏳ Pending', icon: '⏳' },
-            'PAYMENT_UPLOADED': { bg: 'bg-blue-200', text: 'text-blue-800', label: '📤 Payment Uploaded', icon: '📤' },
+            'PAYMENT_UPLOADED': { bg: 'bg-[#fef3e2]', text: 'text-[#9C4D0B]', label: '📤 Payment Uploaded', icon: '📤' },
             'PAYMENT_APPROVED': { bg: 'bg-green-200', text: 'text-green-800', label: '✅ Approved', icon: '✅' },
             'DELIVERED': { bg: 'bg-teal-200', text: 'text-teal-800', label: '🚚 Delivered', icon: '🚚' },
             'PAYMENT_REJECTED': { bg: 'bg-red-200', text: 'text-red-800', label: '❌ Rejected', icon: '❌' },
-            'SHIPPED': { bg: 'bg-purple-200', text: 'text-purple-800', label: '📦 Shipped', icon: '📦' },
+            'SHIPPED': { bg: 'bg-[#fef3e2]', text: 'text-[#9C4D0B]', label: '📦 Shipped', icon: '📦' },
             'CANCELLED': { bg: 'bg-gray-200', text: 'text-gray-800', label: '❌ Cancelled', icon: '❌' }
         };
         const config = statusConfig[status] || { bg: 'bg-gray-200', text: 'text-gray-800', label: status, icon: '?' };
@@ -157,23 +156,19 @@ const ProfileAndOrderHistory = () => {
     };
 
     return (
-        <div className="admin-dashboard-container">
-            <Navbar />
-
-            <main className="admin-dashboard-main">
-                <div className="admin-dashboard-content-wrapper">
-                    {/* Page Header */}
-                    <div className="admin-dashboard-header flex items-center justify-between">
-                        <h1 className="admin-dashboard-title">
-                            👤 Learning Material Purchase History
-                        </h1>
-                        <button
-                            onClick={() => navigate(getDashboardPath())}
-                            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
-                        >
-                            ← Back to Dashboard
-                        </button>
-                    </div>
+        <div className="page-container">
+            <main className="page-main">
+                <div className="page-content">
+                {/* Page Header */}
+                <div className="page-header">
+                    <button onClick={() => navigate(getDashboardPath())} className="back-button">
+                        <ArrowLeft size={20} />
+                        Back to Dashboard
+                    </button>
+                    <h1 className="page-title">
+                        Learning Material Purchase History
+                    </h1>
+                </div>
 
                     {/* Profile Section */}
                     <div className="mt-8 bg-white rounded-xl shadow-md p-6">
@@ -184,7 +179,7 @@ const ProfileAndOrderHistory = () => {
                             </h2>
 
                             {/* User Profile Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gradient-to-br from-[#fef3e2] to-[#fef3e2] rounded-lg border border-[#DB9D32]">
                                 <div>
                                     <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Name</p>
                                     <p className="text-lg font-bold text-gray-900">{user?.name || "N/A"}</p>
@@ -325,7 +320,7 @@ const ProfileAndOrderHistory = () => {
                                                                             <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
                                                                                 <span>Qty: <span className="font-bold text-gray-800">{item.quantity || 1}</span></span>
                                                                                 {item.category && (
-                                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                                                                                    <span className="bg-[#fef3e2] text-[#9C4D0B] px-2 py-1 rounded text-xs font-semibold">
                                                                                         {item.category}
                                                                                     </span>
                                                                                 )}
@@ -364,7 +359,7 @@ const ProfileAndOrderHistory = () => {
                                                                 setSelectedOrderDetails(order);
                                                                 setShowOrderDetailsModal(true);
                                                             }}
-                                                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                                                            className="bg-[#DB9D32] hover:bg-[#9C4D0B] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                                                         >
                                                             View Details
                                                         </button>
@@ -377,7 +372,7 @@ const ProfileAndOrderHistory = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                    </div>
             </main>
 
             {/* Order Details Modal */}
@@ -385,11 +380,11 @@ const ProfileAndOrderHistory = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowOrderDetailsModal(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fadeIn" onClick={(e) => e.stopPropagation()}>
                         {/* Modal Header */}
-                        <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 flex items-center justify-between rounded-t-2xl">
+                        <div className="sticky top-0 bg-gradient-to-r from-[#DB9D32] to-[#9C4D0B] text-white p-6 flex items-center justify-between rounded-t-2xl">
                             <h2 className="text-2xl font-bold">Order Details</h2>
                             <button
                                 onClick={() => setShowOrderDetailsModal(false)}
-                                className="text-white hover:bg-blue-700 rounded-full w-8 h-8 flex items-center justify-center"
+                                className="text-white hover:bg-[#7A2C2C] rounded-full w-8 h-8 flex items-center justify-center"
                             >
                                 ✕
                             </button>
@@ -398,7 +393,7 @@ const ProfileAndOrderHistory = () => {
                         {/* Modal Content */}
                         <div className="p-6 space-y-6">
                             {/* Order Status & Timeline */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                            <div className="bg-[#fef3e2] border border-[#DB9D32] rounded-lg p-6">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div>
                                         <p className="text-sm font-semibold text-gray-600 mb-2">Status</p>
@@ -463,7 +458,7 @@ const ProfileAndOrderHistory = () => {
                                                 href={selectedOrderDetails.receipt_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-2"
+                                                className="text-[#DB9D32] hover:text-[#9C4D0B] font-semibold flex items-center gap-2"
                                             >
                                                 📄 View PDF Receipt
                                             </a>
@@ -486,7 +481,7 @@ const ProfileAndOrderHistory = () => {
                             {selectedOrderDetails.delivery_address && (
                                 <div>
                                     <label className="text-sm font-semibold text-gray-600 block mb-2">📍 Delivery Address</label>
-                                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="p-4 bg-[#fef3e2] rounded-lg border border-[#DB9D32]">
                                         <p className="text-gray-800 font-semibold">{selectedOrderDetails.delivery_address}</p>
                                         {selectedOrderDetails.delivery_city && (
                                             <p className="text-gray-600 text-sm mt-2">
@@ -514,7 +509,7 @@ const ProfileAndOrderHistory = () => {
                                                         <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
                                                             <span>Qty: <span className="font-bold">{item.quantity || 1}</span></span>
                                                             {item.category && (
-                                                                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                                                                <span className="bg-[#fef3e2] text-[#9C4D0B] px-2 py-1 rounded text-xs font-semibold">
                                                                     {item.category}
                                                                 </span>
                                                             )}
@@ -560,7 +555,7 @@ const ProfileAndOrderHistory = () => {
                         <div className="bg-gray-50 border-t border-gray-200 p-6 sticky bottom-0">
                             <button
                                 onClick={() => setShowOrderDetailsModal(false)}
-                                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                                className="w-full bg-gradient-to-r from-[#DB9D32] to-[#9C4D0B] hover:from-[#9C4D0B] hover:to-[#7A2C2C] text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                                 Close
                             </button>
@@ -660,8 +655,7 @@ const ProfileAndOrderHistory = () => {
                     </div>
                 </div>
             )}
-
-            <Footer />
+            )
         </div>
     );
 };

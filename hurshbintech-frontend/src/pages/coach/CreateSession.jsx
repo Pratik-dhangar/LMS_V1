@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import coachService from '../../api/services/coachService';
 import { toast } from 'react-toastify';
 import { Calendar, Clock, Users, BookOpen, Search, X } from 'lucide-react';
@@ -152,21 +150,18 @@ const CreateSession = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <Navbar />
         <main className="page-main">
           <div className="loading-container">
             <div className="loading-spinner-icon"></div>
             <p className="loading-text">Loading...</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -417,7 +412,6 @@ const CreateSession = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

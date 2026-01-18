@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Clock, CheckCircle, AlertCircle, Loader, Download, X } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import bookingService from '../../api/services/bookingService';
 import '../../styles/GuestBooking.css';
 import '../../styles/ManageUsersLayout.css';
@@ -160,7 +158,6 @@ const GuestPaymentUpload = () => {
   if (validating) {
     return (
       <>
-        <Navbar />
         <div className="page-container">
           <div className="page-main">
             <div className="page-content">
@@ -173,7 +170,6 @@ const GuestPaymentUpload = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </>
     );
   }
@@ -181,7 +177,6 @@ const GuestPaymentUpload = () => {
   if (!tokenValid) {
     return (
       <>
-        <Navbar />
         <div className="page-container">
           <div className="page-main">
             <div className="page-content">
@@ -209,14 +204,12 @@ const GuestPaymentUpload = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </>
     );
   }
 
   return (
     <>
-      <Navbar />
       <div className="guest-booking-flow page-container">
         <div className="page-main-guest">
           <div className="page-header">
@@ -363,7 +356,6 @@ const GuestPaymentUpload = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 };

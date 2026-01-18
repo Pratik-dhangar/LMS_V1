@@ -14,24 +14,6 @@ const VideoSection = ({
   // Debug video element when stream changes
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
-      console.log('[VideoSection] Remote stream updated:', {
-        streamActive: remoteStream.active,
-        tracks: remoteStream.getTracks().map(t => ({
-          kind: t.kind,
-          enabled: t.enabled,
-          muted: t.muted,
-          readyState: t.readyState
-        })),
-        videoElement: {
-          srcObject: !!remoteVideoRef.current.srcObject,
-          readyState: remoteVideoRef.current.readyState,
-          paused: remoteVideoRef.current.paused,
-          width: remoteVideoRef.current.offsetWidth,
-          height: remoteVideoRef.current.offsetHeight,
-          videoWidth: remoteVideoRef.current.videoWidth,
-          videoHeight: remoteVideoRef.current.videoHeight
-        }
-      });
     }
   }, [remoteStream, remoteVideoRef]);
 
@@ -85,13 +67,10 @@ const VideoSection = ({
                 transition: 'opacity 0.3s ease'
               }}
               onLoadedMetadata={() => {
-                console.log('[VideoSection] Video metadata loaded');
               }}
               onPlay={() => {
-                console.log('[VideoSection] Video started playing');
               }}
               onError={(e) => {
-                console.error('[VideoSection] Video error:', e);
               }}
             />
             {remoteStream && (

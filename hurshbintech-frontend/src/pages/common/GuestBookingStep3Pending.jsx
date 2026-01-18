@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, Mail, AlertCircle, RotateCw, Loader } from 'lucide-react';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/GuestBooking.css';
 
 const GuestBookingStep3Pending = () => {
@@ -24,7 +22,6 @@ const GuestBookingStep3Pending = () => {
 
   return (
     <>
-      <Navbar />
       <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-content">
@@ -128,7 +125,6 @@ const GuestBookingStep3Pending = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 };

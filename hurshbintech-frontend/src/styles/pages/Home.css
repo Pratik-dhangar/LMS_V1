@@ -440,7 +440,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: linear-gradient(135deg, #312e81 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #7A2C2C 0%, #DB9D32 100%);
 }
 
 .home-vlog-thumbnail {
@@ -478,7 +478,7 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  color: #6366f1;
+  color: #DB9D32;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
@@ -530,14 +530,14 @@
 }
 
 .home-vlog-watch {
-  color: #6366f1;
+  color: #DB9D32;
   font-size: 0.875rem;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .home-vlog-card:hover .home-vlog-watch {
-  color: #312e81;
+  color: #7A2C2C;
 }
 
 /* View All Button Styles */

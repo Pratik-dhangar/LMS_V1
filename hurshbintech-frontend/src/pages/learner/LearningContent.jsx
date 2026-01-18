@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from 'lucide-react';
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import programAssignmentService from "../../api/services/programAssignmentService";
-import "../../styles/admin/index.css";
+import "../../styles/ManageUsersLayout.css";
 
 const LearningContent = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [learningContents, setLearningContents] = useState([]);
   const [programContents, setProgramContents] = useState({});
@@ -209,14 +210,16 @@ const LearningContent = () => {
   };
 
   return (
-    <div className="admin-dashboard-container">
-      <Navbar />
-
-      <main className="admin-dashboard-main">
-        <div className="admin-dashboard-content-wrapper">
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
           {/* Page Header */}
-          <div className="admin-dashboard-header">
-            <h1 className="admin-dashboard-title">
+          <div className="page-header">
+            <button onClick={() => navigate('/learner/dashboard')} className="back-button">
+              <ArrowLeft size={20} />
+              Back to Dashboard
+            </button>
+            <h1 className="page-title">
               Learning Content
             </h1>
           </div>
@@ -363,7 +366,7 @@ const LearningContent = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 50,
+          zIndex: 9999,
           padding: '1rem'
         }}>
           <div style={{
@@ -478,8 +481,7 @@ const LearningContent = () => {
           </div>
         </div>
       )}
-
-      <Footer />
+      )
     </div>
   );
 };

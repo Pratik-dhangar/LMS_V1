@@ -9,8 +9,6 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import Emoji from '../../components/common/Emoji';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
@@ -1341,10 +1339,10 @@ const LearnerSession = () => {
               Please wait while <strong>{sessionInfo?.trainer_name ?? 'your trainer'}</strong> joins the session.
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
               <span>Connecting...</span>
             </div>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-[#fef3e2] rounded-lg">
               <p className="text-sm text-gray-700">
                 <strong>Session Details:</strong>
               </p>
@@ -1419,7 +1417,7 @@ const LearnerSession = () => {
 
       {/* Main Container - Responsive 3-column layout */}
       <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        <div className={`w-full bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
+        <div className={`w-full bg-white p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
           {/* Trainer Video Feed - Above Prompt Line */}
           {remoteStream && (
             <div className="mb-4 md:mb-5">
@@ -1465,11 +1463,11 @@ const LearnerSession = () => {
               </div>
             )}
           </div>
-          <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-3 sm:p-1 md:p-5 mb-1 md:mb-1">
+          <div className="bg-[#fef3e2] border-2 border-[#DB9D32] rounded-lg p-3 sm:p-1 md:p-5 mb-1 md:mb-1">
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
-              <div className="bg-white border border-blue-300 rounded p-2 sm:p-3 md:p-1">
+              <div className="bg-white border border-[#DB9D32] rounded p-2 sm:p-3 md:p-1">
                 <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Prompt <br /> Level</div>
-                <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-600">
+                <div className="text-base sm:text-lg md:text-2xl font-bold text-[#9C4D0B]">
                   {promptMeter ?? 0}
                 </div>
               </div>
@@ -1498,18 +1496,18 @@ const LearnerSession = () => {
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 sm:gap-2 w-full min-w-0">
               <input
                 type="text"
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="[Type message...]"
-                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-400"
+                className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-[#DB9D32]"
               />
               <button
                 onClick={sendMessage}
-                className="px-4 py-2 md:px-5 md:py-3 bg-blue-500 text-white text-xs md:text-sm rounded hover:bg-blue-600 transition-colors"
+                className="flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#DB9D32] text-white text-xs rounded hover:bg-[#9C4D0B] transition-colors whitespace-nowrap"
               >
                 Send
               </button>

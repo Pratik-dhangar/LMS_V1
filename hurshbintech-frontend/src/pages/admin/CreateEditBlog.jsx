@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import RichTextEditor from "../../components/RichTextEditor";
 import blogService from "../../api/services/blogService";
 import "../../styles/admin/AdminEditVlog.css";
@@ -171,21 +169,17 @@ const CreateEditBlog = () => {
   if (loading) {
     return (
       <div className="admin-edit-vlog-container">
-        <Navbar />
         <div className="admin-edit-vlog-main">
           <div className="admin-edit-vlog-loading">
             <div className="loading-spinner"></div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="page-main">
+    <div className="page-main">
         <div className="page-content">
           <div className="page-header">
             <button
@@ -416,8 +410,6 @@ const CreateEditBlog = () => {
           </form>
         </div>
       </div>
-      <Footer />
-    </>
   );
 };
 

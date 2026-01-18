@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import programAssignmentService from '../../api/services/programAssignmentService';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/FeedbackPage.css';
 
 const FeedbackPage = () => {
@@ -51,13 +49,11 @@ const FeedbackPage = () => {
     if (loading) {
         return (
             <div className="page-container">
-                <Navbar />
                 <div className="page-main">
                     <div className="page-content">
                         <div className="feedback-loading">Loading feedback...</div>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
@@ -65,13 +61,11 @@ const FeedbackPage = () => {
     if (!contentAssignment) {
         return (
             <div className="page-container">
-                <Navbar />
                 <div className="page-main">
                     <div className="page-content">
                         <div className="feedback-error">Feedback not found</div>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
@@ -98,7 +92,6 @@ const FeedbackPage = () => {
 
     return (
         <div className="page-container">
-            <Navbar />
             <div className="page-main">
                 <div className="page-content">
                     <div className="feedback-page">
@@ -337,7 +330,6 @@ const FeedbackPage = () => {
                     </div>
                 </div>
             </div>
-            <Footer />
         </div>
     );
 };

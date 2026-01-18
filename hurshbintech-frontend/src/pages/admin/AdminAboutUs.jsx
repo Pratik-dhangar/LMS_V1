@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import Loader from "../../components/common/Loader";
 import RichTextEditor from "../../components/RichTextEditor";
 import { FaSave, FaTimes, FaImage, FaGlobe } from "react-icons/fa";
@@ -238,10 +236,7 @@ const AdminAboutUs = () => {
   }
 
   return (
-    <>
-      <Navbar />
-
-      <div className="page-main">
+    <div className="page-main">
         <div className="page-content">
           <div className="page-header">
             <button
@@ -803,9 +798,6 @@ const AdminAboutUs = () => {
           </form>
         </div>
       </div>
-
-      <Footer />
-    </>
   );
 };
 

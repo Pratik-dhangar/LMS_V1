@@ -275,6 +275,10 @@
     animation-delay: 1.1s;
 }
 
+.admin-menu-card:nth-child(12) {
+    animation-delay: 1.2s;
+}
+
 /* Additional hover animation - subtle shine effect */
 .admin-menu-card::after {
     content: '';

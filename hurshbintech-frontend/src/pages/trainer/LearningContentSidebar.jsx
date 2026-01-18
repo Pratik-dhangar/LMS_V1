@@ -147,14 +147,14 @@ const LearningContentSidebar = ({
                     //   console.log('[TrainerSession] Image loaded successfully:', imageUrl);
                     // }}
                     />
-                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-xl">
+                    <div className="hidden absolute inset-0 items-center justify-center text-xl" style={{ background: 'linear-gradient(to bottom right, #DB9D32, #9C4D0B)' }}>
                       {getContentIcon(content.content_type)}
                     </div>
                   </div>
                 );
               }
               return (
-                <div className="w-full h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md flex items-center justify-center mb-1 text-xl">
+                <div className="w-full h-12 rounded-md flex items-center justify-center mb-1 text-xl" style={{ background: 'linear-gradient(to bottom right, #DB9D32, #9C4D0B)' }}>
                   {getContentIcon(content.content_type)}
                 </div>
               );
@@ -163,7 +163,8 @@ const LearningContentSidebar = ({
             return (
               <div
                 key={content.id}
-                className="border-2 border-dashed border-blue-500 bg-white rounded-md p-1 my-1 cursor-grab shadow-sm hover:shadow-md transition-shadow"
+                className="border-2 border-dashed rounded-md p-1 my-1 cursor-grab shadow-sm hover:shadow-md transition-shadow"
+                style={{ borderColor: '#DB9D32', backgroundColor: 'white' }}
                 draggable
                 onDragStart={(e) => {
                   onDragStartContent(e, content);

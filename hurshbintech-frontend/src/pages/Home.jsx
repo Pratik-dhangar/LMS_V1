@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
 import Loader from "../components/common/Loader";
 import aboutUsService from '../api/services/aboutUsService';
 import blogService from '../api/services/blogService';
@@ -197,8 +195,6 @@ const Home = () => {
 
   return (
     <div className="home-container">
-      <Navbar />
-
       {/* Hero Section */}
       <section className="home-hero">
         {/* Navigation Links */}
@@ -491,8 +487,6 @@ const Home = () => {
           ↑
         </button>
       )}
-
-      <Footer />
 
       {/* Modal for Section Details */}
       {modalOpen && selectedSection && (

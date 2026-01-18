@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import AvailabilityManager from '../../components/coach/AvailabilityManager';
 import '../../styles/coach/CoachAvailability.css';
 
@@ -12,7 +10,6 @@ const CoachAvailability = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -48,7 +45,6 @@ const CoachAvailability = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

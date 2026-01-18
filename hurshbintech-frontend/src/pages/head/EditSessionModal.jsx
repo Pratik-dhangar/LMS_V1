@@ -305,7 +305,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                     <tr
                                                         key={goal.id}
                                                         onClick={() => handleGoalToggle(goal.id)}
-                                                        className={`cursor-pointer hover:bg-gray-50 transition-colors ${formData.goal_ids.includes(goal.id) ? 'bg-blue-50' : ''
+                                                        className={`cursor-pointer hover:bg-gray-50 transition-colors ${formData.goal_ids.includes(goal.id) ? 'bg-[#fef3e2]' : ''
                                                             }`}
                                                     >
                                                         <td className="px-4 py-3 whitespace-nowrap">
@@ -313,7 +313,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                                 type="checkbox"
                                                                 checked={formData.goal_ids.includes(goal.id)}
                                                                 onChange={() => { }}
-                                                                className="h-4 w-4 text-blue-600 rounded"
+                                                                className="h-4 w-4 text-[#DB9D32] rounded"
                                                             />
                                                         </td>
                                                         <td className="px-4 py-3">
@@ -417,8 +417,8 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                     key={content.id}
                                                     onClick={() => handleContentToggle(content.id)}
                                                     className={`p-2 border rounded cursor-pointer transition-all relative ${formData.content_ids.includes(content.id)
-                                                            ? 'border-blue-500 bg-blue-50 shadow-md'
-                                                            : 'border-gray-300 hover:border-blue-300 hover:shadow'
+                                                            ? 'border-[#DB9D32] bg-[#fef3e2] shadow-md'
+                                                            : 'border-gray-300 hover:border-[#DB9D32] hover:shadow'
                                                         }`}
                                                 >
                                                     {renderThumbnail()}
@@ -435,7 +435,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                             type="checkbox"
                                                             checked={formData.content_ids.includes(content.id)}
                                                             onChange={() => { }}
-                                                            className="h-3.5 w-3.5 text-blue-600 rounded"
+                                                            className="h-3.5 w-3.5 text-[#DB9D32] rounded"
                                                         />
                                                     </div>
                                                 </div>

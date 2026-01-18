@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const InterventionHistorySection = ({ 
@@ -29,33 +30,42 @@ const InterventionHistorySection = ({
           onChange={handleFileChange}
           className="register-file-input"
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+          style={{ display: 'none' }}
         />
+        <button
+          type="button"
+          onClick={() => document.getElementById('intervention_reference_files').click()}
+          className="reference-btn-upload"
+        >
+          Upload Files
+        </button>
         <p className="register-file-hint">
           Supported formats: PDF, DOCX, Images, Videos
         </p>
 
         {/* Existing Reference Files */}
         {existingReferenceData && existingReferenceData.length > 0 && (
-          <div className="existing-files-section" style={{ marginTop: '1rem' }}>
-            <h4 className="subsection-title">Existing Reference Files</h4>
-            <div className="file-list">
+          <div className="reference-existing-files" style={{ marginTop: '1rem' }}>
+            <h4 className="reference-files-title">Existing Reference Files</h4>
+            <div className="reference-files-list">
               {existingReferenceData.map((file) => (
-                <div key={file.id} className="file-item">
-                  <span className="file-name">{file.file_name || file.description || 'Unnamed File'}</span>
-                  <div className="file-actions">
+                <div key={file.id} className="reference-file-item">
+                  <span className="reference-file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                  <div className="reference-file-actions">
                     <button
                       type="button"
                       onClick={(e) => handleViewFile(file.file_path, e)}
-                      className="btn-view-file"
+                      className="reference-btn-view"
                     >
                       View
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteExistingFile(file.id)}
-                      className="file-remove-btn"
+                      className="reference-btn-remove"
+                      title="Delete file"
                     >
-                      Remove
+                      <Trash2 size={20} />
                     </button>
                   </div>
                 </div>
@@ -66,20 +76,23 @@ const InterventionHistorySection = ({
 
         {/* New Files to Upload */}
         {referenceFiles.length > 0 && (
-          <div className="register-file-list">
-            <h4 className="subsection-title">New Files to Upload</h4>
-            {referenceFiles.map((file, index) => (
-              <div key={index} className="register-file-item">
-                <span className="register-file-name">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="register-file-remove"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+          <div className="reference-new-files">
+            <h4 className="reference-files-title">New Files to Upload</h4>
+            <div className="reference-files-list">
+              {referenceFiles.map((file, index) => (
+                <div key={index} className="reference-file-item">
+                  <span className="reference-file-name">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="reference-btn-remove"
+                    title="Delete file"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Mail, ArrowRight, Home } from 'lucide-react';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import '../../styles/GuestBooking.css';
 
 const GuestPaymentUploadSuccess = () => {
@@ -24,7 +22,6 @@ const GuestPaymentUploadSuccess = () => {
 
   return (
     <>
-      <Navbar />
       <div className="guest-booking-flow page-container">
         <div className="page-main">
           <div className="page-content">
@@ -78,7 +75,6 @@ const GuestPaymentUploadSuccess = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </>
   );
 };

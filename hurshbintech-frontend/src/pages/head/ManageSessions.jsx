@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Edit2, X, Eye, FileText } from 'lucide-react';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import sessionService from '../../api/services/sessionService';
 // import headSessionNotesService from '../../api/services/headSessionNotesService';
 import { useAuth } from '../../context/AuthContext';
@@ -160,7 +158,7 @@ const ManageSessions = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      scheduled: 'bg-blue-100 text-blue-800',
+      scheduled: 'bg-[#fef3e2] text-[#9C4D0B]',
       active: 'bg-green-100 text-green-800',
       ended: 'bg-gray-100 text-gray-800',
       cancelled: 'bg-red-100 text-red-800',
@@ -181,7 +179,6 @@ const ManageSessions = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -378,14 +375,14 @@ const ManageSessions = () => {
                             </span>
                           </td>
                           <td className="table-primary-td">
-                            <div className="materials-list">
+                            <div className="materials-list flex flex-wrap gap-2">
                               {session.learning_goals && session.learning_goals.length > 0 && (
-                                <span className="material-badge material-badge-green">
+                                <span className="material-badge material-badge-orange">
                                   {session.learning_goals.length} Goal(s)
                                 </span>
                               )}
                               {session.learning_contents && session.learning_contents.length > 0 && (
-                                <span className="material-badge material-badge-blue">
+                                <span className="material-badge material-badge-orange">
                                   {session.learning_contents.length} Content(s)
                                 </span>
                               )}
@@ -457,7 +454,6 @@ const ManageSessions = () => {
 
 
       </main>
-      <Footer />
 
       {/* Edit Session Modal */}
       {editingSession && (

@@ -218,9 +218,9 @@ const CoachSession = () => {
 
   // Unified whiteboard button styles
   const wbBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
-  const wbBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
+  const wbBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
-  const wbSmallBtnActive = 'bg-white border-2 border-blue-500 text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+  const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
 
   const timersRef = useRef(new Map());
   const stopwatchesRef = useRef(new Map());
@@ -1004,7 +1004,8 @@ const CoachSession = () => {
               Time Left: <strong>{timeLeft ?? '--:--'}</strong>
             </div>
             <button
-              className="btn-session btn-session-end"
+              className="btn-secondary"
+              style={{color: 'white'}}
               onClick={() => window.open('/coach/dashboard', '_blank', 'noopener,noreferrer')}
             >
               🏠 Dashboard
@@ -1074,7 +1075,7 @@ const CoachSession = () => {
               />
               <button
                 onClick={sendMessage}
-                className="bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600"
+                className="bg-[#DB9D32] text-white border-none rounded cursor-pointer hover:bg-[#9C4D0B]"
                 style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
               >
                 Send
@@ -1249,7 +1250,7 @@ const CoachSession = () => {
                     key={paletteColor}
                     onClick={() => setColor(paletteColor)}
                     disabled={tool === 'eraser'}
-                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${color === paletteColor ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300'
+                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${color === paletteColor ? 'border-[#DB9D32] ring-2 ring-[#DB9D32]' : 'border-gray-300'
                       }`}
                     style={{ backgroundColor: paletteColor }}
                     title={paletteColor}

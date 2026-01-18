@@ -1,8 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
-import Footer from '../../components/layout/Footer';
 import AppointmentsManager from '../../components/coach/AppointmentsManager';
 import '../../styles/coach/CoachAppointments.css';
 
@@ -12,7 +10,6 @@ const CoachAppointments = () => {
 
   return (
     <div className="page-container">
-      <Navbar />
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -42,7 +39,6 @@ const CoachAppointments = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

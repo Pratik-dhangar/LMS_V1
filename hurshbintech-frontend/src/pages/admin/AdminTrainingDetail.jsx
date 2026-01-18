@@ -5,8 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ArrowLeft, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Navbar from "../../components/layout/Navbar";
-import Footer from "../../components/layout/Footer";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
 import "../../styles/animations.css";
 import "../../styles/admin/AdminTrainingDetail.css";
@@ -139,7 +137,6 @@ const AdminTrainingDetail = () => {
     if (loading) {
         return (
             <div className="page-container">
-                <Navbar />
                 <main className="page-main">
                     <div className="page-content">
                         <div className="loading-container">
@@ -148,7 +145,6 @@ const AdminTrainingDetail = () => {
                         </div>
                     </div>
                 </main>
-                <Footer />
             </div>
         );
     }
@@ -156,7 +152,6 @@ const AdminTrainingDetail = () => {
     if (error || !training) {
         return (
             <div className="page-container">
-                <Navbar />
                 <main className="page-main">
                     <div className="page-content">
                         <button
@@ -174,14 +169,12 @@ const AdminTrainingDetail = () => {
                         </div>
                     </div>
                 </main>
-                <Footer />
             </div>
         );
     }
 
     return (
         <div className="page-container">
-            <Navbar />
             <main className="page-main">
                 <div className={`page-content ${pageLoaded ? 'fade-transition' : ''}`}>
                     {/* Training Header */}
@@ -407,7 +400,6 @@ const AdminTrainingDetail = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
         </div>
     );
 };
