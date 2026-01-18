@@ -632,7 +632,7 @@ async def create_new_learner(
             )
             
             subscription, error = await subscription_crud.create_subscription(
-                db, subscription_data, current_head.id
+                db, subscription_data, current_head.user_id
             )
             
             if error or not subscription:
@@ -642,7 +642,7 @@ async def create_new_learner(
                 if payment_receipt_file and isinstance(payment_receipt_file, dict):
                     receipt_model = SubscriptionPaymentReceipt(
                         subscription_id=subscription.id,
-                        uploaded_by_head_id=current_head.id,
+                        uploaded_by_head_id=current_head.user_id,
                         file_name=payment_receipt_file['file_name'],
                         file_path=payment_receipt_file['file_url'],
                         file_size=payment_receipt_file.get('file_size'),
@@ -787,7 +787,7 @@ async def update_learner_profile(
                 from app.models.subscription_model import SubscriptionPaymentReceipt, PaymentStatus
                 new_receipt = SubscriptionPaymentReceipt(
                     subscription_id=active_subscription.id,
-                    uploaded_by_head_id=current_head.id,
+                    uploaded_by_head_id=current_head.user_id,
                     file_name=filename,
                     file_path=file_path,
                     file_size=len(content),
@@ -1039,7 +1039,7 @@ async def create_subscription_package(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """Create a new subscription package"""
-    package = await subscription_crud.create_package(db, package_data, current_head.id)
+    package = await subscription_crud.create_package(db, package_data, current_head.user_id)
     return package
 
 
@@ -1050,7 +1050,9 @@ async def get_my_subscription_packages(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """Get all subscription packages created by current HEAD"""
-    packages = await subscription_crud.get_packages_by_head(db, current_head.id, active_only)
+    logger.info(f"Fetching packages for HEAD user_id={current_head.user_id}, head_id={current_head.id}, active_only={active_only}")
+    packages = await subscription_crud.get_packages_by_head(db, current_head.user_id, active_only)
+    logger.info(f"Found {len(packages)} packages for HEAD {current_head.user_id}")
     return packages
 
 
@@ -1066,7 +1068,7 @@ async def get_subscription_package_details(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     # Verify package belongs to current head
-    if package.head_id != current_head.id:
+    if package.head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this package")
     
     return package
@@ -1085,7 +1087,7 @@ async def update_subscription_package(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     # Verify package belongs to current head
-    if package.head_id != current_head.id:
+    if package.head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this package")
     
     updated_package = await subscription_crud.update_package(db, package_id, package_data)
@@ -1120,7 +1122,7 @@ async def create_learner_subscription(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """Create a new subscription for a learner"""
-    subscription, error = await subscription_crud.create_subscription(db, subscription_data, current_head.id)
+    subscription, error = await subscription_crud.create_subscription(db, subscription_data, current_head.user_id)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     
@@ -1136,7 +1138,7 @@ async def create_backdated_subscription(
 ):
     """Create a backdated subscription renewal within grace period"""
     subscription, error = await subscription_crud.create_backdated_subscription(
-        db, subscription_data, current_head.id, old_subscription_id
+        db, subscription_data, current_head.user_id, old_subscription_id
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
@@ -1199,6 +1201,7 @@ async def get_my_subscriptions(
 ):
     """Get all subscriptions managed by current HEAD"""
     from app.models.subscription import SubscriptionStatus
+    from app.schemas.subscription import LearnerSubscriptionResponse
     
     status_enum = None
     if status:
@@ -1207,8 +1210,59 @@ async def get_my_subscriptions(
         except KeyError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
     
-    subscriptions = await subscription_crud.get_subscriptions_by_head(db, current_head.id, status_enum, limit)
-    return subscriptions
+    subscriptions = await subscription_crud.get_subscriptions_by_head(db, current_head.user_id, status_enum, limit)
+    
+    # Enrich with learner_name and head_name
+    enriched = []
+    for sub in subscriptions:
+        # Get learner name - check if learner exists and has a name
+        learner_name = None
+        if sub.learner and hasattr(sub.learner, 'name'):
+            learner_name = sub.learner.name
+        
+        # Get head name - check if head exists and has a name
+        head_name = None
+        if sub.current_head and hasattr(sub.current_head, 'name'):
+            head_name = sub.current_head.name
+        
+        sub_dict = {
+            "id": sub.id,
+            "learner_id": sub.learner_id,
+            "learner_name": learner_name,
+            "package_id": sub.package_id,
+            "created_by_head_id": sub.created_by_head_id,
+            "current_head_id": sub.current_head_id,
+            "head_name": head_name,
+            "package_name": sub.package_name,
+            "package_sessions": sub.package_sessions,
+            "package_validity_days": sub.package_validity_days,
+            "package_original_price": sub.package_original_price,
+            "start_date": sub.start_date,
+            "expiry_date": sub.expiry_date,
+            "status": sub.status,
+            "sessions_total": sub.sessions_total,
+            "sessions_completed": sub.sessions_completed,
+            "sessions_remaining": sub.sessions_remaining,
+            "discount_applied": sub.discount_applied,
+            "discount_code_id": sub.discount_code_id,
+            "applied_by_head_id": sub.applied_by_head_id,
+            "net_price_paid": sub.net_price_paid,
+            "paused_at": sub.paused_at,
+            "paused_duration_days": sub.paused_duration_days,
+            "frozen_at": sub.frozen_at,
+            "frozen_duration_days": sub.frozen_duration_days,
+            "renewed_from_subscription_id": sub.renewed_from_subscription_id,
+            "renewed_to_subscription_id": sub.renewed_to_subscription_id,
+            "refund_amount": sub.refund_amount,
+            "refund_type": sub.refund_type,
+            "refund_date": sub.refund_date,
+            "refund_reason": sub.refund_reason,
+            "created_at": sub.created_at,
+            "updated_at": sub.updated_at,
+        }
+        enriched.append(LearnerSubscriptionResponse(**sub_dict))
+    
+    return enriched
 
 
 @router.get("/subscriptions/{subscription_id}", response_model=LearnerSubscriptionDetailResponse)
@@ -1223,7 +1277,7 @@ async def get_subscription_details(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this subscription")
     
     return subscription
@@ -1241,7 +1295,7 @@ async def get_subscription_renewal_chain(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this subscription")
     
     chain = await subscription_crud.get_renewal_chain(db, subscription_id)
@@ -1261,7 +1315,7 @@ async def pause_subscription(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to pause this subscription")
     
     subscription, error = await subscription_crud.pause_subscription(db, subscription_id, pause_data.reason)
@@ -1284,7 +1338,7 @@ async def freeze_subscription(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to freeze this subscription")
     
     subscription, error = await subscription_crud.freeze_subscription(db, subscription_id, freeze_data.reason)
@@ -1306,7 +1360,7 @@ async def resume_subscription(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to resume this subscription")
     
     subscription, error = await subscription_crud.resume_subscription(db, subscription_id)
@@ -1329,7 +1383,7 @@ async def cancel_subscription(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this subscription")
     
     subscription, error = await subscription_crud.cancel_subscription(db, subscription_id, cancel_data.reason)
@@ -1352,7 +1406,7 @@ async def process_subscription_refund(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to refund this subscription")
     
     refund_amount, error = await subscription_crud.process_refund(db, refund_data)
@@ -1385,7 +1439,7 @@ async def adjust_subscription_sessions(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to adjust this subscription")
     
     # Verify adjustment amount
@@ -1417,7 +1471,7 @@ async def upload_payment_receipt(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     
     # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.id:
+    if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to upload receipt for this subscription")
     
     # Generate filename

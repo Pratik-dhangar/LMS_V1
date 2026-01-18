@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 import logging
 
 from app.core.deps import get_current_admin
@@ -1132,14 +1132,15 @@ async def get_all_subscriptions(
     current_admin: User = Depends(get_current_admin),
 ):
     """Get all subscriptions with optional filters"""
-    from app.models.subscription import SubscriptionStatus
-    from sqlalchemy import and_, desc
-    from app.models.subscription import LearnerSubscription
-    from sqlalchemy.orm import selectinload
+    from app.models.subscription import SubscriptionStatus, LearnerSubscription
+    from sqlalchemy import and_, or_, desc
+    from sqlalchemy.orm import joinedload
     
+    # Use joinedload for better relationship loading
     query = select(LearnerSubscription).options(
-        selectinload(LearnerSubscription.learner),
-        selectinload(LearnerSubscription.current_head)
+        joinedload(LearnerSubscription.learner),
+        joinedload(LearnerSubscription.current_head),
+        joinedload(LearnerSubscription.created_by_head)
     )
     
     filters = []
@@ -1148,10 +1149,15 @@ async def get_all_subscriptions(
             status_enum = SubscriptionStatus[status.upper()]
             filters.append(LearnerSubscription.status == status_enum)
         except KeyError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+            raise HTTPException(status_code=400, detail="Invalid status")
     
     if head_id:
-        filters.append(LearnerSubscription.current_head_id == head_id)
+        # Filter by either created_by_head_id or current_head_id (both store user IDs)
+        head_filter = or_(
+            LearnerSubscription.created_by_head_id == head_id,
+            LearnerSubscription.current_head_id == head_id
+        )
+        filters.append(head_filter)
     
     if learner_id:
         filters.append(LearnerSubscription.learner_id == learner_id)
@@ -1162,19 +1168,35 @@ async def get_all_subscriptions(
     query = query.order_by(desc(LearnerSubscription.created_at)).limit(limit)
     
     result = await db.execute(query)
-    subscriptions = result.scalars().all()
+    subscriptions = result.unique().scalars().all()
     
     # Enrich with learner_name and head_name
     enriched = []
     for sub in subscriptions:
+        # Get learner name - check if learner exists and has a name
+        learner_name = None
+        if sub.learner and hasattr(sub.learner, 'name'):
+            learner_name = sub.learner.name
+        
+        # Get head name - try current_head first, then fallback to created_by_head
+        head_name = None
+        if sub.current_head and hasattr(sub.current_head, 'name'):
+            head_name = sub.current_head.name
+            logger.info(f"Subscription {sub.id}: Found head_name from current_head: {head_name}")
+        elif sub.created_by_head and hasattr(sub.created_by_head, 'name'):
+            head_name = sub.created_by_head.name
+            logger.info(f"Subscription {sub.id}: Found head_name from created_by_head: {head_name}")
+        else:
+            logger.warning(f"Subscription {sub.id}: No head_name found - current_head_id={sub.current_head_id}, created_by_head_id={sub.created_by_head_id}")
+        
         sub_dict = {
             "id": sub.id,
             "learner_id": sub.learner_id,
-            "learner_name": sub.learner.name if sub.learner else None,
+            "learner_name": learner_name,
             "package_id": sub.package_id,
             "created_by_head_id": sub.created_by_head_id,
             "current_head_id": sub.current_head_id,
-            "head_name": sub.current_head.name if sub.current_head else None,
+            "head_name": head_name,
             "package_name": sub.package_name,
             "package_sessions": sub.package_sessions,
             "package_validity_days": sub.package_validity_days,
@@ -1366,3 +1388,52 @@ async def adjust_subscription_sessions_admin(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     
     return adjustment_log
+
+
+@router.get("/subscriptions/diagnosis/problematic-learners")
+async def diagnose_problematic_subscriptions(
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """
+    DIAGNOSTIC ENDPOINT: Identify subscriptions where learner_id points to non-LEARNER users
+    This helps identify data integrity issues where subscriptions may have incorrect learner references
+    """
+    from app.models.subscription import LearnerSubscription
+    from app.models.user_model import UserRole
+    from sqlalchemy.orm import joinedload
+    
+    query = select(LearnerSubscription).options(
+        joinedload(LearnerSubscription.learner)
+    ).order_by(LearnerSubscription.id)
+    
+    result = await db.execute(query)
+    subscriptions = result.unique().scalars().all()
+    
+    problematic = []
+    for sub in subscriptions:
+        if not sub.learner:
+            # Learner user doesn't exist
+            problematic.append({
+                "subscription_id": sub.id,
+                "learner_id": sub.learner_id,
+                "issue": "Learner user does not exist in database",
+                "learner_name": None,
+            })
+        elif sub.learner.role != UserRole.LEARNER:
+            # Learner is not actually a learner role
+            problematic.append({
+                "subscription_id": sub.id,
+                "learner_id": sub.learner_id,
+                "issue": f"User is {sub.learner.role.value}, not LEARNER",
+                "learner_name": sub.learner.name,
+                "user_role": sub.learner.role.value,
+            })
+    
+    return {
+        "total_subscriptions": len(subscriptions),
+        "problematic_count": len(problematic),
+        "problematic_subscriptions": problematic,
+        "status": "OK" if len(problematic) == 0 else "ISSUES_FOUND"
+    }
+

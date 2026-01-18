@@ -16,14 +16,7 @@ import LearningHistorySection from "../../components/head/RegisterLearner/Learni
 import InterventionHistorySection from "../../components/head/RegisterLearner/InterventionHistorySection";
 import AssessmentBehaviourSection from "../../components/head/RegisterLearner/AssessmentBehaviourSection";
 import SkillDevelopmentSection from "../../components/head/RegisterLearner/SkillDevelopmentSection";
-import PersonalDetailsSection from '../../components/head/RegisterLearner/PersonalDetailsSection';
 import PackageAndPaymentSection from '../../components/head/RegisterLearner/PackageAndPaymentSection';
-import DeliveryHistorySection from '../../components/head/RegisterLearner/DeliveryHistorySection';
-import MedicalHistorySection from '../../components/head/RegisterLearner/MedicalHistorySection';
-import LearningHistorySection from '../../components/head/RegisterLearner/LearningHistorySection';
-import InterventionHistorySection from '../../components/head/RegisterLearner/InterventionHistorySection';
-import AssessmentBehaviourSection from '../../components/head/RegisterLearner/AssessmentBehaviourSection';
-import SkillDevelopmentSection from '../../components/head/RegisterLearner/SkillDevelopmentSection';
 
 const EditLearner = () => {
   const navigate = useNavigate();
@@ -39,13 +32,6 @@ const EditLearner = () => {
     date_of_assessment: "",
     dlb_concerns_checklist: [], // Initialize as empty array
     personal_notes: "",
-    name: '',
-    email: '',
-    age: '',
-    dob: '',
-    date_of_assessment: '',
-    dlb_concerns_checklist: [],  // Initialize as empty array
-    personal_notes: '',
 
     // Package & Payment
     package_id: '',
@@ -137,13 +123,6 @@ const EditLearner = () => {
           ? data.dlb_concerns_checklist
           : [],
         personal_notes: data.personal_notes || "",
-        name: data.name || '',
-        email: data.email || '',
-        age: data.age || '',
-        dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : '',
-        date_of_assessment: data.date_of_assessment ? new Date(data.date_of_assessment).toISOString().split('T')[0] : '',
-        dlb_concerns_checklist: Array.isArray(data.dlb_concerns_checklist) ? data.dlb_concerns_checklist : [],
-        personal_notes: data.personal_notes || '',
 
         // Package & Payment
         package_id: data.package_id || '',
@@ -645,25 +624,18 @@ const EditLearner = () => {
 
           {/* Form */}
           <div className="modern-form-card">
-            <form onSubmit={handleUpdate}>
+            <form onSubmit={handleUpdate} className="form-container">
               <PersonalDetailsSection
                 formData={formData}
                 errors={errors}
                 handleChange={handleChange}
               />
-          <form onSubmit={handleUpdate} className="form-container">
 
-            <PersonalDetailsSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
-
-            <PackageAndPaymentSection
-              formData={formData}
-              handleChange={handleChange}
-              errors={errors}
-            />
+              <PackageAndPaymentSection
+                formData={formData}
+                handleChange={handleChange}
+                errors={errors}
+              />
 
               <DeliveryHistorySection
                 formData={formData}

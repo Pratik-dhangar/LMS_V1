@@ -63,12 +63,10 @@ const SubscriptionRecords = () => {
   useEffect(() => {
     // Set current date on component mount - this gets the actual system date
     const today = new Date();
-    console.log('System Date:', today); // Debug log to verify
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const year = today.getFullYear();
     const formattedDate = `${month}/${day}/${year}`;
-    console.log('Formatted Date:', formattedDate); // Debug log
     setCurrentDate(formattedDate);
   }, []);
 
@@ -98,7 +96,6 @@ const SubscriptionRecords = () => {
       setHeads(headsData);
       setStats(statsData);
     } catch (err) {
-      console.error("Error fetching data:", err);
       setError("Failed to load subscription records.");
       toast.error("Failed to load data");
     } finally {
@@ -111,7 +108,6 @@ const SubscriptionRecords = () => {
       const data = await subscriptionService.getRevenueByHead(startDate, endDate);
       setRevenueData(data);
     } catch (err) {
-      console.error("Error fetching revenue data:", err);
       toast.error("Failed to load revenue data");
     }
   };
@@ -176,7 +172,6 @@ const SubscriptionRecords = () => {
       handleCloseAdjustModal();
       fetchData();
     } catch (err) {
-      console.error("Error adjusting sessions:", err);
       toast.error(err.response?.data?.detail || "Failed to adjust sessions");
     }
   };
@@ -364,8 +359,8 @@ const SubscriptionRecords = () => {
               >
                 <option value="">All HEADs</option>
                 {heads.map((head) => (
-                  <option key={head.id} value={head.id}>
-                    {head.full_name}
+                  <option key={head.id} value={head.user_id}>
+                    {head.name || `HEAD ${head.id}`}
                   </option>
                 ))}
               </select>
@@ -422,7 +417,7 @@ const SubscriptionRecords = () => {
                           <td className="table-primary-td table-primary-td-id">{sub.id}</td>
                           <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
                           <td className="table-primary-td">{sub.package_name}</td>
-                          <td className="table-primary-td">{sub.head_name || `ID: ${sub.head_id}`}</td>
+                          <td className="table-primary-td subscription-head-name" data-empty="Not assigned">{sub.head_name || `HEAD ${sub.head_id || 'N/A'}`}</td>
                           <td className="table-primary-td table-primary-td-center">
                             {sub.sessions_remaining} / {sub.sessions_total}
                           </td>

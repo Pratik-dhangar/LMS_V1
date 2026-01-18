@@ -493,7 +493,12 @@ async def get_subscriptions_by_head(
     limit: Optional[int] = None
 ) -> List[LearnerSubscription]:
     """Get all subscriptions managed by a HEAD"""
-    query = select(LearnerSubscription).where(LearnerSubscription.current_head_id == head_id)
+    from sqlalchemy.orm import joinedload
+    
+    query = select(LearnerSubscription).options(
+        joinedload(LearnerSubscription.learner),
+        joinedload(LearnerSubscription.current_head)
+    ).where(LearnerSubscription.current_head_id == head_id)
     
     if status:
         query = query.where(LearnerSubscription.status == status)
@@ -504,7 +509,7 @@ async def get_subscriptions_by_head(
         query = query.limit(limit)
     
     result = await db.execute(query)
-    return list(result.scalars().all())
+    return list(result.unique().scalars().all())
 
 
 async def get_subscriptions_by_learner(

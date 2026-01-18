@@ -16,41 +16,32 @@ const LOCAL_STORAGE_PREFIX = 'device_session_';
 export const markSessionActive = (sessionId, role) => {
     try {
         const currentTabId = getTabId();
-        console.log(`[SessionActivityTracker] Current tab ID: ${currentTabId}`);
 
         // Check if session is already active on this device
         const deviceSessionKey = `${LOCAL_STORAGE_PREFIX}${sessionId}_${role}`;
         const deviceSessionData = localStorage.getItem(deviceSessionKey);
-
-        console.log(`[SessionActivityTracker] Checking session: ${deviceSessionKey}`, deviceSessionData);
 
         if (deviceSessionData) {
             const parsedData = JSON.parse(deviceSessionData);
             const now = Date.now();
             const timeSinceLastActivity = now - parsedData.lastActivityTime;
 
-            console.log(`[SessionActivityTracker] Session found. TabId from storage: ${parsedData.tabId}, Current TabId: ${currentTabId}, Time since activity: ${timeSinceLastActivity}ms`);
-
             // If session was active less than 5 minutes ago, it's still considered active
             if (timeSinceLastActivity < 5 * 60 * 1000) {
                 // Check if it's from a different tab
                 if (parsedData.tabId !== currentTabId) {
-                    console.warn(`[SessionActivityTracker] RESTRICTION: Session already active in another tab (${parsedData.tabId})`);
                     return {
                         success: false,
                         message: 'Active already, Please close previous session.',
                         isAnotherTab: true
                     };
                 } else {
-                    console.log(`[SessionActivityTracker] Same tab ID, allowing continuation`);
                 }
             } else {
                 // Session expired, clear it
-                console.log(`[SessionActivityTracker] Session expired, clearing old session`);
                 localStorage.removeItem(deviceSessionKey);
             }
         } else {
-            console.log(`[SessionActivityTracker] No existing session found`);
         }
 
         // Mark as active in current tab
@@ -74,14 +65,11 @@ export const markSessionActive = (sessionId, role) => {
         };
         localStorage.setItem(deviceSessionKey, JSON.stringify(deviceData));
 
-        console.log(`[SessionActivityTracker] Session marked as active with tabId: ${currentTabId}`);
-
         return {
             success: true,
             message: 'Session marked as active'
         };
     } catch (error) {
-        console.error('Error marking session active:', error);
         return {
             success: false,
             message: 'Error tracking session activity'
@@ -116,7 +104,6 @@ export const updateSessionActivity = (sessionId, role) => {
             localStorage.setItem(deviceSessionKey, JSON.stringify(parsed));
         }
     } catch (error) {
-        console.error('Error updating session activity:', error);
     }
 };
 
@@ -144,15 +131,10 @@ export const clearSessionActivity = (sessionId, role) => {
             // Only remove if this tab's ID matches the stored ID
             if (parsedData.tabId === currentTabId) {
                 localStorage.removeItem(deviceSessionKey);
-                console.log(`[SessionActivityTracker] Cleared device session activity for ${role} - ${sessionId} (this tab was using it)`);
             } else {
-                console.log(`[SessionActivityTracker] Preserved device session activity for ${role} - ${sessionId} (another tab is using it with tabId: ${parsedData.tabId})`);
             }
         }
-
-        console.log(`[SessionActivityTracker] Cleared tab-specific session activity for ${role} - ${sessionId}`);
     } catch (error) {
-        console.error('Error clearing session activity:', error);
     }
 };
 
@@ -186,7 +168,6 @@ export const checkSessionActivity = (sessionId, role) => {
             details: isActive ? parsedData : null
         };
     } catch (error) {
-        console.error('Error checking session activity:', error);
         return {
             isActive: false,
             details: null
@@ -237,9 +218,7 @@ function getTabId() {
 
         // CRITICAL: Store in sessionStorage (tab-specific, not shared with other tabs)
         sessionStorage.setItem(TAB_ID_KEY, tabId);
-        console.log(`[SessionActivityTracker] Generated unique tab ID: ${tabId}`);
     } else {
-        console.log(`[SessionActivityTracker] Retrieved tab ID from sessionStorage: ${tabId}`);
     }
 
     return tabId;
@@ -272,7 +251,6 @@ export const getAllActiveSessions = () => {
             }
         }
     } catch (error) {
-        console.error('Error getting active sessions:', error);
     }
     return activeSessions;
 };

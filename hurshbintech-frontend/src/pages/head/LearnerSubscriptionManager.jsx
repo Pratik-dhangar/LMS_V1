@@ -102,6 +102,8 @@ const LearnerSubscriptionManager = () => {
     fetchData();
   }, []);
 
+
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -113,19 +115,11 @@ const LearnerSubscriptionManager = () => {
         headService.getAllLearners(),
       ]);
 
-      console.log('Fetched data:', {
-        subscriptions: subsData.length,
-        packages: pkgsData.length,
-        learners: learnersData.length,
-        learnersData
-      });
-
       setSubscriptions(subsData);
       setFilteredSubscriptions(subsData);
       setPackages(pkgsData);
       setLearners(learnersData);
     } catch (err) {
-      console.error("Error fetching data:", err);
       setError("Failed to load data. Please try again.");
       toast.error("Failed to load subscriptions");
     } finally {
@@ -182,7 +176,6 @@ const LearnerSubscriptionManager = () => {
       });
       fetchData();
     } catch (err) {
-      console.error("Error creating subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to create subscription");
     }
   };
@@ -210,7 +203,6 @@ const LearnerSubscriptionManager = () => {
         toast.success("Backdate validation passed!");
       }
     } catch (err) {
-      console.error("Error validating backdate:", err);
       toast.error(err.response?.data?.detail || "Validation failed");
     }
   };
@@ -250,7 +242,6 @@ const LearnerSubscriptionManager = () => {
       setSessionGapWarning(null);
       fetchData();
     } catch (err) {
-      console.error("Error creating backdated subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to create backdated subscription");
     }
   };
@@ -266,7 +257,6 @@ const LearnerSubscriptionManager = () => {
       setPauseForm({ pause_reason: "", expected_resume_date: "" });
       fetchData();
     } catch (err) {
-      console.error("Error pausing subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to pause subscription");
     }
   };
@@ -282,7 +272,6 @@ const LearnerSubscriptionManager = () => {
       setFreezeForm({ freeze_reason: "", expected_resume_date: "" });
       fetchData();
     } catch (err) {
-      console.error("Error freezing subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to freeze subscription");
     }
   };
@@ -297,7 +286,6 @@ const LearnerSubscriptionManager = () => {
       toast.success("Subscription resumed successfully!");
       fetchData();
     } catch (err) {
-      console.error("Error resuming subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to resume subscription");
     }
   };
@@ -314,7 +302,6 @@ const LearnerSubscriptionManager = () => {
       toast.success("Subscription cancelled successfully!");
       fetchData();
     } catch (err) {
-      console.error("Error cancelling subscription:", err);
       toast.error(err.response?.data?.detail || "Failed to cancel subscription");
     }
   };
@@ -339,7 +326,6 @@ const LearnerSubscriptionManager = () => {
       setRefundForm({ refund_type: "FULL", refund_reason: "" });
       fetchData();
     } catch (err) {
-      console.error("Error processing refund:", err);
       toast.error(err.response?.data?.detail || "Failed to process refund");
     }
   };
@@ -370,7 +356,6 @@ const LearnerSubscriptionManager = () => {
       setAdjustForm({ adjustment_amount: "", adjustment_type: "ADD", reason: "" });
       fetchData();
     } catch (err) {
-      console.error("Error adjusting sessions:", err);
       toast.error(err.response?.data?.detail || "Failed to adjust sessions");
     }
   };
@@ -396,7 +381,6 @@ const LearnerSubscriptionManager = () => {
       setReceiptNotes("");
       fetchData();
     } catch (err) {
-      console.error("Error uploading receipt:", err);
       toast.error(err.response?.data?.detail || "Failed to upload receipt");
     }
   };
@@ -407,7 +391,6 @@ const LearnerSubscriptionManager = () => {
       setRenewalChain(chain);
       setShowRenewalChainModal(true);
     } catch (err) {
-      console.error("Error fetching renewal chain:", err);
       toast.error("Failed to load renewal chain");
     }
   };
@@ -460,16 +443,10 @@ const LearnerSubscriptionManager = () => {
                 Create Subscription
               </button>
               <button onClick={() => {
-                console.log('Opening backdate modal - Current state:', {
-                  learners: learners.length,
-                  subscriptions: subscriptions.length,
-                  packages: packages.length,
-                  learnersArray: learners
-                });
                 setShowBackdateModal(true);
               }} className="btn btn-secondary">
                 <Clock size={18} />
-                Backdate Renewal
+                Renewal
               </button>
             </div>
           </div>
@@ -705,8 +682,8 @@ const LearnerSubscriptionManager = () => {
                 <select value={createForm.learner_id} onChange={(e) => setCreateForm({ ...createForm, learner_id: e.target.value })} required>
                   <option value="">Select Learner</option>
                   {learners.map((learner) => (
-                    <option key={learner.id} value={learner.id}>
-                      {learner.name} ({learner.email})
+                    <option key={learner.user_id || learner.id} value={learner.user_id || learner.id}>
+                      {learner.user?.name || learner.name || `Learner ${learner.id}`} ({learner.user?.email || learner.email})
                     </option>
                   ))}
                 </select>
@@ -773,60 +750,57 @@ const LearnerSubscriptionManager = () => {
                   value={backdateForm.learner_id}
                   onChange={(e) => {
                     const selectedLearnerId = e.target.value;
-                    const learnerSubscriptions = subscriptions.filter((s) => s.learner_id === parseInt(selectedLearnerId));
-
-                    // Auto-select the first subscription if available
-                    const autoSelectedSubId = learnerSubscriptions.length > 0 ? learnerSubscriptions[0].id : '';
+                    // Auto-select the most recent subscription for this learner
+                    const learnersubs = subscriptions
+                      .filter((s) => String(s.learner_id) === selectedLearnerId)
+                      .sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date));
 
                     setBackdateForm({
                       ...backdateForm,
                       learner_id: selectedLearnerId,
-                      old_subscription_id: autoSelectedSubId.toString()
+                      old_subscription_id: learnersubs.length > 0 ? String(learnersubs[0].id) : ''
                     });
                   }}
                   required
                 >
                   <option value="">Select Learner</option>
-                  {(() => {
-                    console.log('Rendering learners dropdown - learners:', learners);
-                    console.log('First learner object:', learners[0]);
-                    return learners.map((learner) => {
-                      console.log('Learner:', { id: learner.id, full_name: learner.full_name, user_id: learner.user_id, name: learner.name });
-                      return (
-                        <option key={learner.id || learner.user_id} value={learner.id || learner.user_id}>
-                          {learner.full_name || learner.name || `Learner ${learner.id}`}
-                        </option>
-                      );
-                    });
-                  })()}
+                  {learners.map((learner) => (
+                    <option key={learner.user_id || learner.id} value={learner.user_id || learner.id}>
+                      {learner.user?.name || learner.name || `Learner ${learner.id}`}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Old Subscription *</label>
+                <label>Old Subscription * (Most Recent Package)</label>
                 <select
                   value={backdateForm.old_subscription_id}
                   onChange={(e) => setBackdateForm({ ...backdateForm, old_subscription_id: e.target.value })}
                   required
+                  disabled={!backdateForm.learner_id}
                 >
-                  <option value="">Select Old Subscription</option>
-                  {(() => {
-                    const allForLearner = subscriptions.filter((s) => s.learner_id === parseInt(backdateForm.learner_id));
-                    const filtered = allForLearner;  // Show ALL subscriptions for the selected learner
-                    console.log('Rendering old subscriptions dropdown:', {
-                      learnerId: backdateForm.learner_id,
-                      learnerIdType: typeof backdateForm.learner_id,
-                      totalSubscriptions: subscriptions.length,
-                      allForLearnerCount: allForLearner.length,
-                      allForLearner: allForLearner.map(s => ({ id: s.id, learner_id: s.learner_id, status: s.status, package: s.package_name })),
-                      filteredCount: filtered.length,
-                      filtered: filtered.map(s => ({ id: s.id, status: s.status, package: s.package_name }))
-                    });
-                    return filtered.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.package_name} ({sub.status}: {new Date(sub.expiry_date).toLocaleDateString()})
-                      </option>
-                    ));
+                  {!backdateForm.learner_id ? (
+                    <option value="">Select learner first</option>
+                  ) : (() => {
+                    const learnersubs = subscriptions
+                      .filter((s) => String(s.learner_id) === String(backdateForm.learner_id))
+                      .sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date));
+
+                    if (learnersubs.length === 0) {
+                      return <option value="">No subscriptions available</option>;
+                    }
+
+                    return (
+                      <>
+                        <option value="">Select Subscription</option>
+                        {learnersubs.map((sub, index) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.package_name} - {sub.status} (Expires: {new Date(sub.expiry_date).toLocaleDateString()})
+                          </option>
+                        ))}
+                      </>
+                    );
                   })()}
                 </select>
               </div>

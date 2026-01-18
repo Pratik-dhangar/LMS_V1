@@ -15,7 +15,6 @@ export default defineConfig(({ mode }) => {
 
   // Add PWA plugin only if VITE_ENABLE_PWA=true
   if (enablePWA) {
-    console.log("⚡ PWA Enabled");
     plugins.push(
       VitePWA({
         registerType: 'autoUpdate',
@@ -103,7 +102,6 @@ export default defineConfig(({ mode }) => {
       })
     );
   } else {
-    console.log("❌ PWA Disabled");
   }
 
   // Helper to safely read certs (prevents crash if file missing during local build)
@@ -116,7 +114,6 @@ export default defineConfig(({ mode }) => {
         };
       }
     } catch (e) {
-      console.warn("⚠️ SSL Certs not found, falling back to HTTP");
     }
     return false;
   };

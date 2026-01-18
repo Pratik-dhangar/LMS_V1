@@ -30,10 +30,18 @@ const subscriptionService = {
       const response = await axiosInstance.get('/head/subscription-packages', {
         params: { active_only: activeOnly }
       });
-      console.log('Packages fetched:', { count: response.data.length });
+      console.log('Packages fetched successfully:', {
+        count: response.data?.length || 0,
+        data: response.data
+      });
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching packages:', error);
+      console.error('Error fetching packages:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        error: error
+      });
       return [];
     }
   },
@@ -137,12 +145,15 @@ const subscriptionService = {
    * @returns {Promise} - Array of subscriptions
    */
   getAllSubscriptions: async (status = null, limit = null) => {
-    console.log('Fetching subscriptions:', { status, limit });
-    const response = await axiosInstance.get('/head/subscriptions', {
-      params: { status, limit }
-    });
-    console.log('Subscriptions fetched:', { count: response.data.length });
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/head/subscriptions', {
+        params: { status, limit }
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error.response?.data || error.message);
+      return [];
+    }
   },
 
   /**
@@ -151,7 +162,6 @@ const subscriptionService = {
    * @returns {Promise} - Subscription details
    */
   getSubscriptionById: async (subscriptionId) => {
-    console.log('Fetching subscription details:', { subscriptionId });
     const response = await axiosInstance.get(`/head/subscriptions/${subscriptionId}`);
     return response.data;
   },
