@@ -145,7 +145,7 @@
 .blog-card-img-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #4f46e5 100%);
+    background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 50%, #FE971E 100%);
 }
 
 .blog-card-content {
@@ -166,7 +166,7 @@
 }
 
 .blog-card:hover .blog-card-title {
-    color: #3b82f6;
+    color: #DB9D32;
 }
 
 .blog-card-excerpt {
@@ -213,9 +213,9 @@
 .blog-pagination-btn {
     padding: 0.625rem 1.25rem;
     background-color: white;
-    border: 2px solid #bfdbfe;
+    border: 2px solid #fef3e2;
     border-radius: 0.5rem;
-    color: #1e40af;
+    color: #7A2C2C;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -223,7 +223,7 @@
 }
 
 .blog-pagination-btn:hover:not(:disabled) {
-    background-color: #eff6ff;
+    background-color: #fef3e2;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -240,9 +240,9 @@
 .blog-pagination-page {
     padding: 0.5rem 0.875rem;
     background-color: white;
-    border: 2px solid #bfdbfe;
+    border: 2px solid #fef3e2;
     border-radius: 0.5rem;
-    color: #1e40af;
+    color: #7A2C2C;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -250,14 +250,14 @@
 }
 
 .blog-pagination-page:hover {
-    background-color: #eff6ff;
+    background-color: #fef3e2;
 }
 
 .blog-pagination-page.active {
-    background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 100%);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 6px rgba(219, 157, 50, 0.3);
 }
 
 .blog-pagination-ellipsis {
@@ -270,7 +270,7 @@
     text-align: center;
     margin-top: 2rem;
     padding: 1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    background: linear-gradient(135deg, #fef3e2 0%, #fef3e2 100%);
     border-radius: 0.5rem;
     color: #475569;
     font-size: 0.9375rem;
@@ -278,7 +278,7 @@
 }
 
 .blog-results-highlight {
-    color: #3b82f6;
+    color: #DB9D32;
     font-weight: bold;
 }
 

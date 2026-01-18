@@ -2,7 +2,7 @@
 import React from 'react';
 import InputField from '../../common/InputField';
 import TextAreaField from '../../common/TextAreaField';
-import '../../../styles/SharedComponents.css';
+import FormSection from '../../common/FormSection';
 
 /**
  * @param {object} formData
@@ -10,11 +10,11 @@ import '../../../styles/SharedComponents.css';
  * @param {function} handleChange
  */
 const BasicInfoSection = ({ formData, errors, handleChange }) => (
-  <section className="section">
-    <h2 className="section-title">
-      Basic Information
-    </h2>
-    <div className="grid-2">
+  <FormSection 
+    title="Basic Information"
+    description="Enter the essential details of the Candidate"
+  >
+    <div className="modern-form-grid-two-col">
       <InputField
         label="Name"
         name="name"
@@ -70,7 +70,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         error={errors.date_of_joining}
       />
 
-      <div style={{ gridColumn: '1 / -1' }}>
+      <div className="modern-form-grid-full">
         <TextAreaField
           label="Address"
           name="address"
@@ -83,7 +83,7 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
         />
       </div>
     </div>
-  </section>
+  </FormSection>
 );
 
 export default BasicInfoSection;

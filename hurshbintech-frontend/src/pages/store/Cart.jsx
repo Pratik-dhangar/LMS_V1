@@ -99,7 +99,7 @@ const Cart = () => {
                                 onClick={() => navigate('/store')}
                                 style={{
                                     padding: '12px 30px',
-                                    background: '#3498db',
+                                    background: '#DB9D32',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',

@@ -117,7 +117,7 @@
 .vlog-card-img-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(to bottom right, #8b5cf6, #6366f1, #8b5cf6);
+  background: linear-gradient(to bottom right, #DB9D32, #9C4D0B, #DB9D32);
 }
 
 /* Play Button Overlay */
@@ -149,7 +149,7 @@
 }
 
 .vlog-card-play-icon {
-  color: #8b5cf6;
+  color: #DB9D32;
   font-size: 2.25rem;
   margin-left: 0.25rem;
 }
@@ -176,7 +176,7 @@
 }
 
 .vlog-card:hover .vlog-card-title {
-  color: #8b5cf6;
+  color: #DB9D32;
 }
 
 .vlog-card-description {
@@ -203,7 +203,7 @@
 
 .vlog-card-meta-icon {
   margin-right: 0.5rem;
-  color: #8b5cf6;
+  color: #DB9D32;
 }
 
 .vlog-card-meta span {
@@ -253,9 +253,9 @@
 .vlog-pagination-btn {
   padding: 0.75rem 1.5rem;
   background: white;
-  border: 2px solid #ddd6fe;
+  border: 2px solid #fef3e2;
   border-radius: 0.75rem;
-  color: #7c3aed;
+  color: #9C4D0B;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -263,7 +263,7 @@
 }
 
 .vlog-pagination-btn:hover:not(:disabled) {
-  background: #faf5ff;
+  background: #fef3e2;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
@@ -291,12 +291,12 @@
 
 .vlog-pagination-page:hover {
   background: #f9fafb;
-  border-color: #ddd6fe;
+  border-color: #fef3e2;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .vlog-pagination-page.active {
-  background: linear-gradient(to right, #8b5cf6, #6366f1);
+  background: linear-gradient(to right, #DB9D32, #9C4D0B);
   color: white;
   transform: scale(1.1);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -323,7 +323,7 @@
 }
 
 .vlog-results-highlight {
-  color: #8b5cf6;
+  color: #DB9D32;
   font-weight: 700;
 }
 /* Vlog Detail Page Styles */

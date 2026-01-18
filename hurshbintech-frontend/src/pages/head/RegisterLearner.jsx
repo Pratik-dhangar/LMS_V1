@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
 import '../../styles/ManageUsersLayout.css';
+import '../../styles/components/common/ModernForm.css';
 
 
 
@@ -375,18 +376,25 @@ const RegisterLearner = () => {
 
           {/* Error Message */}
           {submitError && (
-            <div className="error-message">
-              <div className="error-message-content">
-                <svg className="icon-md error-icon" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <p>{submitError}</p>
-              </div>
+            <div className="modern-form-error-alert">
+              <svg
+                className="modern-form-error-icon"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="modern-form-error-text">{submitError}</p>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container register-learner-container">
+          {/* Form Card */}
+          <div className="modern-form-card">
+            <form onSubmit={handleSubmit}>
 
             {/* Personal Details */}
             <PersonalDetailsSection
@@ -441,24 +449,25 @@ const RegisterLearner = () => {
               handleChange={handleChange}
             />
 
-            {/* Submit Buttons */}
-            <div className="form-actions register-learner-actions">
+            {/* Submit Actions */}
+            <div className="modern-form-actions">
               <button
                 type="button"
                 onClick={() => navigate('/head/manage-learners')}
-                className="app-modal-btn app-modal-btn--secondary"
+                className="modern-form-btn modern-form-btn-secondary"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="app-modal-btn app-modal-btn--primary"
+                className="modern-form-btn modern-form-btn-primary"
               >
                 {loading ? 'Registering...' : 'Register Learner'}
               </button>
             </div>
           </form>
+        </div>
         </div>
       </main>
     </div>

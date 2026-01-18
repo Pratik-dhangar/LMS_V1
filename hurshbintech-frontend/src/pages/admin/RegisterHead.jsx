@@ -8,7 +8,9 @@ import ProfessionalInfoSection from "../../components/admin/EditHead/Professiona
 import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
 import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
 import NotesSection from "../../components/admin/EditHead/NotesSection";
-import "../../styles/admin/AdminRegisterHead.css";
+import FormSection from "../../components/common/FormSection";
+import FormFileUpload from "../../components/common/FormFileUpload";
+import "../../styles/components/common/ModernForm.css";
 import "../../styles/ManageUsersLayout.css";
 
 const RegisterHead = () => {
@@ -235,47 +237,42 @@ const RegisterHead = () => {
     <div className="page-container">
       {/* Loading/Success Overlay */}
       {loading && (
-        <div className="app-modal-overlay">
-          <div className="app-modal-content modal-sm modal-loading">
+        <div className="modern-form-overlay">
+          <div className="modern-form-overlay-content">
             {!successData ? (
               // Loading State
               <>
-                <div className="loading-spinner-container">
-                  <div className="loading-spinner"></div>
-                </div>
-                <p className="app-modal-title modal-title-success">
+                <div className="modern-form-spinner"></div>
+                <p className="modern-form-overlay-title">
                   Registering Head...
                 </p>
-                <p className="modal-message">
+                <p className="modern-form-overlay-message">
                   Please wait while we process your request
                 </p>
               </>
             ) : (
               // Success State
               <>
-                <div className="success-icon-container">
-                  <div className="success-icon">
-                    <svg
-                      className="success-icon-svg"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="3"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </div>
+                <div className="modern-form-success-icon">
+                  <svg
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M5 13l4 4L19 7"></path>
+                  </svg>
                 </div>
-                <p className="app-modal-title modal-title-success">
+                <p className="modern-form-success-title">
                   Head Registered Successfully!
                 </p>
-                <div className="passcode-display">
-                  <p className="passcode-label">Generated Passcode:</p>
-                  <p className="passcode-value">{successData.passcode}</p>
+                <div className="modern-form-passcode-display">
+                  <p className="modern-form-passcode-label">Generated Passcode:</p>
+                  <p className="modern-form-passcode-value">{successData.passcode}</p>
                 </div>
-                <p className="modal-message">Redirecting to dashboard...</p>
+                <p className="modern-form-overlay-message">Redirecting to dashboard...</p>
               </>
             )}
           </div>
@@ -313,26 +310,25 @@ const RegisterHead = () => {
 
           {/* Error Message */}
           {submitError && (
-            <div className="error-message">
-              <div className="error-message-content">
-                <svg
-                  className="error-icon"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <p>{submitError}</p>
-              </div>
+            <div className="modern-form-error-alert">
+              <svg
+                className="modern-form-error-icon"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="modern-form-error-text">{submitError}</p>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="form-container">
+          {/* Form Card */}
+          <div className="modern-form-card">
+            <form onSubmit={handleSubmit}>
             {/* Basic Information */}
             <BasicInfoSection
               formData={formData}
@@ -359,62 +355,47 @@ const RegisterHead = () => {
             />
 
             {/* Reference Data Upload */}
-            <div className="form-section">
-              <h2 className="form-section-title">Reference Data</h2>
-              <div>
-                <label htmlFor="reference_files" className="app-modal-form-label">
-                  Upload Reference Data (Documents, Images, Videos, Links)
-                </label>
-                <input
-                  type="file"
-                  id="reference_files"
-                  multiple
+            <FormSection 
+              title="Reference Data"
+              description="Upload documents, images, videos, or other reference materials"
+            >
+              <div className="modern-form-grid-full">
+                <FormFileUpload
+                  label="Upload Reference Data"
+                  name="reference_files"
+                  files={referenceFiles}
                   onChange={handleFileChange}
-                  className="form-file-input"
+                  onRemove={removeFile}
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                  multiple={true}
+                  helpText="Supported formats: PDF, DOCX, Images, Videos"
                 />
-                <p className="form-help-text">
-                  Supported formats: PDF, DOCX, Images, Videos
-                </p>
-
-                {/* File List */}
-                {referenceFiles.length > 0 && (
-                  <div className="file-list">
-                    {referenceFiles.map((file, index) => (
-                      <div key={index} className="file-item">
-                        <span className="file-name">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="file-remove-btn"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            </div>
+            </FormSection>
 
             {/* Notes & Messages */}
             <NotesSection formData={formData} handleChange={handleChange} />
 
             {/* Submit Button */}
-            <div className="form-actions">
+            <div className="modern-form-actions">
               <button
                 type="button"
                 onClick={() => navigate("/admin/manage-heads")}
-                className="app-modal-btn app-modal-btn--secondary"
+                className="modern-form-btn modern-form-btn-secondary"
               >
                 Cancel
               </button>
-              <button type="submit" disabled={loading} className="app-modal-btn app-modal-btn--primary">
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="modern-form-btn modern-form-btn-primary"
+              >
                 {loading ? "Registering..." : "Register Head"}
               </button>
             </div>
           </form>
         </div>
+      </div>
       </main>
     </div>
   );
