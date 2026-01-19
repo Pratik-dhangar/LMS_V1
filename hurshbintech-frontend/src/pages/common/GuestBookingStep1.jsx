@@ -210,7 +210,7 @@ const GuestBookingStep1 = () => {
                         <small>We'll send an OTP to this email</small>
                         <button 
                         type="submit" 
-                        className="btn-primary" 
+                        className="btn btn-primary btn-full" 
                         disabled={loading}
                       >
                         {loading ? (
