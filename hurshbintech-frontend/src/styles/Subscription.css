@@ -281,23 +281,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.btn-primary {
-    background-color: #3b82f6;
-    color: #ffffff;
-}
 
-.btn-primary:hover {
-    background-color: #2563eb;
-}
-
-.btn-secondary {
-    background-color: #6b7280;
-    color: #ffffff;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563;
-}
 
 .btn-success {
     background-color: #10b981;

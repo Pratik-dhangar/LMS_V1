@@ -813,11 +813,16 @@ async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
         return False
 
     # Import necessary models
-    from app.models.user_model import Appointment
-    from sqlalchemy import update
+    from app.models.user_model import Appointment, LearnerReferenceData
+    from sqlalchemy import update, delete
     
     # Get the user_id before deleting
     user_id = learner.user_id
+    
+    # Delete all reference data associated with this learner
+    await db.execute(
+        delete(LearnerReferenceData).where(LearnerReferenceData.learner_id == learner_id)
+    )
     
     # Set user_id to NULL for all appointments associated with this learner
     await db.execute(

@@ -901,6 +901,14 @@ const Whiteboard = ({
                 setCanvasItems([]);
             };
 
+            // Handle clear_canvas message from coach (clears all items including videos)
+            whiteboardService.onClearCanvas = (data) => {
+                clearCanvas();
+                setCanvasItems([]);
+                setInlineVideo(null);
+                setBuckets([]);
+            };
+
             whiteboardService.onImage = (data) => {
                 // Add the image to canvasItems if not already present
                 // The useEffect will handle redrawing via redrawCanvas()

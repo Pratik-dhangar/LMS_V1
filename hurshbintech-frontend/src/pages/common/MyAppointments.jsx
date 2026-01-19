@@ -155,8 +155,37 @@ const MyAppointments = () => {
   const isSessionJoinable = (appointment) => {
     // Session can be joined if:
     // 1. Appointment is CONFIRMED
-    // 2. Coach has started the session (we'll check this when clicking join)
-    return appointment.status?.toUpperCase() === 'CONFIRMED';
+    // 2. Within 2 hours of scheduled time
+    if (appointment.status?.toUpperCase() !== 'CONFIRMED') {
+      return false;
+    }
+
+    // Check if within 2 hours of scheduled time
+    const scheduledDateTime = new Date(appointment.scheduled_date);
+    const timeString = appointment.scheduled_time;
+    
+    // Parse time string (e.g., "10am", "2:30 PM")
+    const timeMatch = timeString.match(/(\d+):?(\d+)?\s*(am|pm)/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+      const period = timeMatch[3].toLowerCase();
+      
+      // Convert to 24-hour format
+      if (period === 'pm' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'am' && hours === 12) {
+        hours = 0;
+      }
+      
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+    }
+    
+    const now = new Date();
+    const twoHoursAfterScheduled = new Date(scheduledDateTime.getTime() + (2 * 60 * 60 * 1000));
+    
+    // Session is joinable only if current time is before 2 hours after scheduled time
+    return now <= twoHoursAfterScheduled;
   };
 
   // Filter appointments based on selected filters
@@ -440,16 +469,19 @@ const MyAppointments = () => {
                         disabled={!isSessionJoinable(apt) || joiningSession}
                         className={`w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           isSessionJoinable(apt) && !joiningSession
-                            ? 'bg-[#DB9D32] text-white hover:bg-[#9C4D0B]'
+                            ? 'bg-[#ecab3b] text-white hover:bg-[#b9862f]'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
-                        title={!isSessionJoinable(apt) ? 'Wait for coach to start the session' : 'Join video session'}
+                        title={!isSessionJoinable(apt) ? 'Session available only within 2 hours of scheduled time' : 'Join video session'}
                       >
                         <Video className="w-5 h-5" />
                         {joiningSession ? 'Joining...' : 'Join Session'}
                       </button>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        Session will be available when coach starts it
+                      <p className="text-xs text-gray-500 mt-2 mb-2 text-center">
+                        {isSessionJoinable(apt) 
+                          ? 'Session will be available when coach starts it'
+                          : 'Session available only within 2 hours of scheduled time'
+                        }
                       </p>
                     </div>
                   )}

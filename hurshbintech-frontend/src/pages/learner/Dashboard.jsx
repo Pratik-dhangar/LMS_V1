@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Package, Calendar, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
+import {
+  GraduationCap,
+  BookMarked,
+  BookOpen,
+  ShoppingCart,
+  MessageSquare,
+  Calendar,
+  History,
+  Package,
+  TrendingUp,
+  AlertCircle,
+  Loader2
+} from "lucide-react";
 import subscriptionService from "../../api/services/subscriptionService";
 import "../../styles/admin/index.css";
 
@@ -47,39 +59,39 @@ const LearnerDashboard = () => {
 
   const menuItems = [
     {
-      icon: "🎓",
+      icon: GraduationCap,
       title: "Individualised Intervention Program(IIP)",
       onClick: () => navigate("/learner/my-sessions"),
     },
     {
-      icon: "📚",
+      icon: BookMarked,
       title: "Home Program (HP)",
       onClick: () => navigate("/learner/assigned-programs"),
     },
     {
-      icon: "📖",
+      icon: BookOpen,
       title: "Learning Content",
       onClick: () => navigate("/learner/learning-content"),
     },
     {
-      icon: "🛒",
+      icon: ShoppingCart,
       title: "Buy Learning Material",
       onClick: () => navigate("/learner/learning-material"),
     },
     {
-      icon: "💬",
-      title: "Communication",
-      onClick: () => navigate("/learner/communication"),
-    },
-    {
-      icon: "📅",
+      icon: Calendar,
       title: "Book Appointment",
       onClick: () => navigate("/book-appointment"),
     },
     {
-      icon: "👤",
+      icon: History,
       title: "Learning Material Purchase History",
       onClick: () => navigate("/learner/profile-order-history"),
+    },
+    {
+      icon: MessageSquare,
+      title: "Communication",
+      onClick: () => navigate("/learner/communication"),
     },
   ];
 
@@ -220,18 +232,22 @@ const LearnerDashboard = () => {
           {/* Menu Cards */}
           <div className="admin-dashboard-menu">
             <div className="admin-menu-grid">
-              {menuItems.map((item, index) => (
-                <div
-                  key={index}
-                  onClick={item.onClick}
-                  className="admin-menu-card"
-                >
-                  <div className="admin-menu-card-icon">
-                    {item.icon}
+              {menuItems.map((item, index) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={index}
+                    onClick={item.onClick}
+                    className="admin-menu-card"
+                    style={{ '--i': index }}
+                  >
+                    <div className="admin-menu-card-icon">
+                      <IconComponent size={48} strokeWidth={1.5} />
+                    </div>
+                    <div className="admin-menu-card-title">{item.title}</div>
                   </div>
-                  <div className="admin-menu-card-title">{item.title}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

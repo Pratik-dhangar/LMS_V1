@@ -672,21 +672,23 @@ const GuestSession = () => {
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={currentMessage}
-                onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="[Type message...]"
-                className="flex-1 px-3 py-2 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-[#DB9D32]"
-              />
-              <button
-                onClick={sendMessage}
-                className="px-4 py-2 md:px-5 md:py-3 bg-[#DB9D32] text-white text-xs md:text-sm rounded hover:bg-[#9C4D0B] transition-colors"
-              >
-                Send
-              </button>
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              <div className="flex-1 flex items-center border border-gray-300 rounded focus-within:border-[#DB9D32] min-w-0">
+                <input
+                  type="text"
+                  value={currentMessage}
+                  onChange={(e) => setCurrentMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="[Type message...]"
+                  className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs md:text-sm focus:outline-none min-w-0"
+                />
+                <button
+                  onClick={sendMessage}
+                  className="flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#DB9D32] text-white text-xs md:text-sm rounded-r hover:bg-[#9C4D0B] transition-colors"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
         </div>
