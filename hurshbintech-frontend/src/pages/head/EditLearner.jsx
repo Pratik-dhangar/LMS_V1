@@ -615,10 +615,6 @@ const EditLearner = () => {
               <p className="page-description">
                 Update profile information for {formData.name}
               </p>
-              <h1 className="page-title">
-                Edit Learner Profile
-              </h1>
-              <p className="page-description">Update profile information for {formData.name}</p>
             </div>
           </div>
 

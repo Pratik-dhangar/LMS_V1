@@ -440,7 +440,7 @@ const MyAppointments = () => {
                         disabled={!isSessionJoinable(apt) || joiningSession}
                         className={`w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           isSessionJoinable(apt) && !joiningSession
-                            ? 'bg-[#DB9D32] text-white hover:bg-[#9C4D0B]'
+                            ? 'bg-[#ecab3b] text-white hover:bg-[#b9862f]'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                         title={!isSessionJoinable(apt) ? 'Wait for coach to start the session' : 'Join video session'}
@@ -448,7 +448,7 @@ const MyAppointments = () => {
                         <Video className="w-5 h-5" />
                         {joiningSession ? 'Joining...' : 'Join Session'}
                       </button>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
+                      <p className="text-xs text-gray-500 mt-2 mb-2 text-center">
                         Session will be available when coach starts it
                       </p>
                     </div>
