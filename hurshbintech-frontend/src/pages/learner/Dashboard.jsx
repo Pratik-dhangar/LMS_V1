@@ -239,6 +239,7 @@ const LearnerDashboard = () => {
                     key={index}
                     onClick={item.onClick}
                     className="admin-menu-card"
+                    style={{ '--i': index }}
                   >
                     <div className="admin-menu-card-icon">
                       <IconComponent size={48} strokeWidth={1.5} />

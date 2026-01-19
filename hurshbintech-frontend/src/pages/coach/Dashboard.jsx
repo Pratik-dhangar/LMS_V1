@@ -36,13 +36,14 @@ const CoachDashboard = () => {
             
 
             <div className="admin-menu-grid">
-              {menuItems.map((item) => {
+              {menuItems.map((item, index) => {
                 const IconComponent = item.icon;
                 return (
                   <div
                     key={item.id}
                     onClick={item.onClick}
                     className="admin-menu-card"
+                    style={{ '--i': index }}
                   >
                     <div className="admin-menu-card-icon">
                       <IconComponent size={48} />
