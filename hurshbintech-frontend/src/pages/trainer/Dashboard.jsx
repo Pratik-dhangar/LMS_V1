@@ -17,13 +17,6 @@ const TrainerDashboard = () => {
       onClick: () => navigate('/trainer/schedule')
     },
     {
-      id: '2',
-      title: 'Communication',
-      description: 'Send messages and communicate with team',
-      icon: MessageSquare,
-      onClick: () => navigate('/trainer/communication')
-    },
-    {
       id: '3',
       title: 'Book Appointment',
       description: 'Schedule appointments with coaches',
@@ -43,6 +36,13 @@ const TrainerDashboard = () => {
       description: 'View your profile and manage orders',
       icon: User,
       onClick: () => navigate('/trainer/profile-order-history')
+    },
+    {
+      id: '2',
+      title: 'Communication',
+      description: 'Send messages and communicate with team',
+      icon: MessageSquare,
+      onClick: () => navigate('/trainer/communication')
     },
   ];
 
@@ -66,13 +66,14 @@ const TrainerDashboard = () => {
             
 
             <div className="admin-menu-grid">
-              {menuItems.map((item) => {
+              {menuItems.map((item, index) => {
                 const IconComponent = item.icon;
                 return (
                   <div
                     key={item.id}
                     onClick={item.onClick}
                     className="admin-menu-card"
+                    style={{ '--i': index }}
                   >
                     <div className="admin-menu-card-icon">
                       <IconComponent size={48} />

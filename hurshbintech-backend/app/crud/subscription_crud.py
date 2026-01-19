@@ -297,7 +297,7 @@ async def create_subscription(
         if discount:
             discount.usage_count += 1
     
-    await db.commit()
+    await db.flush()  # Flush instead of commit to let caller handle transaction
     await db.refresh(subscription)
     
     # Create event log
@@ -492,12 +492,15 @@ async def get_subscriptions_by_head(
     status: Optional[SubscriptionStatus] = None,
     limit: Optional[int] = None
 ) -> List[LearnerSubscription]:
-    """Get all subscriptions managed by a HEAD"""
-    from sqlalchemy.orm import joinedload
+    """Get all subscriptions managed by a HEAD with all relationships loaded"""
+    from sqlalchemy.orm import selectinload
     
     query = select(LearnerSubscription).options(
-        joinedload(LearnerSubscription.learner),
-        joinedload(LearnerSubscription.current_head)
+        selectinload(LearnerSubscription.learner),  # User object
+        selectinload(LearnerSubscription.current_head),  # User object
+        selectinload(LearnerSubscription.package),  # SubscriptionPackage object
+        selectinload(LearnerSubscription.created_by_head),  # User object
+        selectinload(LearnerSubscription.discount_code)  # SubscriptionDiscount object
     ).where(LearnerSubscription.current_head_id == head_id)
     
     if status:
@@ -509,17 +512,24 @@ async def get_subscriptions_by_head(
         query = query.limit(limit)
     
     result = await db.execute(query)
-    return list(result.unique().scalars().all())
+    return list(result.scalars().all())
 
 
 async def get_subscriptions_by_learner(
     db: AsyncSession,
     learner_id: int
 ) -> List[LearnerSubscription]:
-    """Get all subscriptions for a learner"""
+    """Get all subscriptions for a learner with relationships loaded"""
     result = await db.execute(
         select(LearnerSubscription)
         .where(LearnerSubscription.learner_id == learner_id)
+        .options(
+            selectinload(LearnerSubscription.learner),
+            selectinload(LearnerSubscription.created_by_head),
+            selectinload(LearnerSubscription.current_head),
+            selectinload(LearnerSubscription.package),
+            selectinload(LearnerSubscription.discount_code)
+        )
         .order_by(desc(LearnerSubscription.created_at))
     )
     return list(result.scalars().all())
