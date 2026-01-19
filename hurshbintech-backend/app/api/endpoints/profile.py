@@ -84,6 +84,7 @@ async def get_my_subscriptions(
         logger.warning(f"Non-learner tried to access endpoint: {type(current_user).__name__}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Only learners can access this endpoint. Your role: {type(current_user).__name__}")
     
-    subscriptions = await crud.subscription_crud.get_subscriptions_by_learner(db, current_user.id)
-    logger.info(f"Found {len(subscriptions)} subscriptions for learner {current_user.id}")
+    # Use user_id instead of profile id for subscription lookup
+    subscriptions = await crud.subscription_crud.get_subscriptions_by_learner(db, current_user.user_id)
+    logger.info(f"Found {len(subscriptions)} subscriptions for learner {current_user.user_id}")
     return subscriptions

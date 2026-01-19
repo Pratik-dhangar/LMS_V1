@@ -166,6 +166,22 @@ class LearnerSubscriptionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+    @field_validator('learner_name', mode='before')
+    @classmethod
+    def populate_learner_name(cls, v, info):
+        """Populate learner_name from learner relationship if not provided"""
+        if v is None and 'learner' in info.data and info.data['learner'] is not None:
+            return info.data['learner'].name
+        return v
+
+    @field_validator('head_name', mode='before')
+    @classmethod
+    def populate_head_name(cls, v, info):
+        """Populate head_name from current_head relationship if not provided"""
+        if v is None and 'current_head' in info.data and info.data['current_head'] is not None:
+            return info.data['current_head'].name
+        return v
+
 
 class LearnerSubscriptionDetailResponse(LearnerSubscriptionResponse):
     """Detailed subscription response with related data"""
