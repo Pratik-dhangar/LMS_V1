@@ -156,6 +156,51 @@
     pointer-events: auto;
 }
 
+/* Whiteboard-specific video controls styling */
+.whiteboard-split-video .video-controls-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.whiteboard-split-video .video-control-btn {
+    padding: 0.6rem 0.8rem;
+    min-width: 40px;
+    height: 40px;
+    background: rgba(59, 130, 246, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.whiteboard-split-video .video-control-btn:hover {
+    background: rgba(59, 130, 246, 1);
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+
+.whiteboard-split-video .video-control-btn:active {
+    transform: scale(0.95);
+}
+
+.whiteboard-split-video .video-close-btn {
+    background: rgba(239, 68, 68, 1);
+    border-color: rgba(255, 107, 107, 0.8);
+}
+
+.whiteboard-split-video .video-close-btn:hover {
+    background: rgba(220, 38, 38, 1);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+}
+
 .video-progress-bar {
     margin-bottom: 0.9rem;
     width: 100%;

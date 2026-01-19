@@ -614,18 +614,26 @@ async def create_new_learner(
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logging.warning(f"Failed to upload file {filename_str}: {str(e)}")
     
+    # Store learner ID before attempting subscription creation (for error handling)
+    learner_id = new_learner.id
+    logging.info(f"Created learner with ID: {learner_id}")
+    
     # Create initial subscription if package_id is provided
     if learner_create.package_id:
+        logging.info(f"Attempting to create subscription for learner {learner_id} with package {learner_create.package_id}")
         try:
             # Get the package
             package = await subscription_crud.get_package_by_id(db, learner_create.package_id)
             if not package:
+                logging.error(f"Package {learner_create.package_id} not found")
                 raise HTTPException(status_code=400, detail="Invalid package selected")
+            
+            logging.info(f"Found package: {package.package_name} (ID: {package.id})")
             
             # Create subscription
             from datetime import date
             subscription_data = LearnerSubscriptionCreate(
-                learner_id=new_learner.id,
+                learner_id=learner_id,
                 package_id=learner_create.package_id,
                 start_date=date.today(),
                 discount_code=learner_create.discount_code
@@ -636,8 +644,12 @@ async def create_new_learner(
             )
             
             if error or not subscription:
-                logging.warning(f"Failed to create subscription for learner {new_learner.id}: {error}")
+                # Rollback on subscription creation error
+                logging.error(f"Subscription creation returned error: {error}")
+                await db.rollback()
+                logging.warning(f"Failed to create subscription for learner {learner_id}: {error}")
             else:
+                logging.info(f"Subscription created successfully: {subscription.id}, current_head_id: {subscription.current_head_id}")
                 # Upload payment receipt if provided
                 if payment_receipt_file and isinstance(payment_receipt_file, dict):
                     receipt_model = SubscriptionPaymentReceipt(
@@ -650,14 +662,22 @@ async def create_new_learner(
                         payment_status=PaymentStatus.PENDING
                     )
                     db.add(receipt_model)
-                    await db.commit()
-                    logging.info(f"Created payment receipt for subscription {subscription.id}")
+                    logging.info(f"Added payment receipt for subscription {subscription.id}")
                 
-                logging.info(f"Created initial subscription {subscription.id} for learner {new_learner.id}")
+                # Commit the entire transaction (learner + subscription + receipt)
+                await db.commit()
+                logging.info(f"Transaction committed. Created subscription {subscription.id} for learner {learner_id}")
         except HTTPException:
+            await db.rollback()
             raise
         except Exception as e:
-            logging.warning(f"Failed to create initial subscription for learner {new_learner.id}: {str(e)}")
+            await db.rollback()
+            logging.error(f"Exception during subscription creation: {type(e).__name__}: {str(e)}", exc_info=True)
+    else:
+        logging.info(f"No package_id provided, skipping subscription creation")
+        # No subscription requested, commit just the learner creation
+        await db.commit()
+        logging.info(f"Transaction committed. Learner {learner_id} created without subscription")
     
     # Refresh learner to get the reference_data relationship
     await db.refresh(new_learner, ['reference_data'])
@@ -708,6 +728,82 @@ async def get_learner_details(
         response_dict['discount_code'] = active_subscription.discount_code
     
     return response_dict
+
+
+@router.get("/learners/{learner_id}/subscriptions", response_model=List[LearnerSubscriptionResponse])
+async def get_learner_subscriptions(
+    learner_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Get all subscriptions for a specific learner"""
+    from app.crud import subscription_crud
+    from app.schemas.subscription import LearnerSubscriptionResponse
+    
+    # Verify learner belongs to current head
+    learner = await user_crud.get_learner_by_id(db, learner_id)
+    if not learner:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learner not found")
+    
+    if learner.created_by_head_id != current_head.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this learner's subscriptions"
+        )
+    
+    subscriptions = await subscription_crud.get_subscriptions_by_learner(db, learner_id)
+    
+    enriched = []
+    for sub in subscriptions:
+        # Get learner name
+        learner_name = None
+        if sub.learner and hasattr(sub.learner, 'name'):
+            learner_name = sub.learner.name
+        else:
+            learner_name = learner.user.name
+        
+        # Get head name
+        head_name = None
+        if sub.current_head and hasattr(sub.current_head, 'name'):
+            head_name = sub.current_head.name
+        
+        sub_dict = {
+            "id": sub.id,
+            "learner_id": sub.learner_id,
+            "learner_name": learner_name,
+            "package_id": sub.package_id,
+            "created_by_head_id": sub.created_by_head_id,
+            "current_head_id": sub.current_head_id,
+            "head_name": head_name,
+            "package_name": sub.package_name,
+            "package_sessions": sub.package_sessions,
+            "package_validity_days": sub.package_validity_days,
+            "package_original_price": sub.package_original_price,
+            "start_date": sub.start_date,
+            "expiry_date": sub.expiry_date,
+            "status": sub.status,
+            "sessions_total": sub.sessions_total,
+            "sessions_completed": sub.sessions_completed,
+            "sessions_remaining": sub.sessions_remaining,
+            "discount_applied": sub.discount_applied,
+            "discount_code_id": sub.discount_code_id,
+            "applied_by_head_id": sub.applied_by_head_id,
+            "net_price_paid": sub.net_price_paid,
+            "paused_at": sub.paused_at,
+            "paused_duration_days": sub.paused_duration_days,
+            "frozen_at": sub.frozen_at,
+            "frozen_duration_days": sub.frozen_duration_days,
+            "renewed_from_subscription_id": sub.renewed_from_subscription_id,
+            "renewed_to_subscription_id": sub.renewed_to_subscription_id,
+            "refund_amount": sub.refund_amount,
+            "refund_type": sub.refund_type,
+            "refund_date": sub.refund_date,
+            "refund_reason": sub.refund_reason,
+            "created_at": sub.created_at,
+            "updated_at": sub.updated_at,
+        }
+        enriched.append(LearnerSubscriptionResponse(**sub_dict))
+    
+    return enriched
 
 
 @router.patch("/learners/{learner_id}", response_model=LearnerResponse)

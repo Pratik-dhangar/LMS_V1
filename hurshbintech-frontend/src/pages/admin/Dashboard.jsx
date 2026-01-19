@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../api/services/adminService';
-import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift } from 'lucide-react';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
@@ -20,10 +20,11 @@ const AdminDashboard = () => {
     { id: '1.7', title: 'Manage Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
     { id: '1.8', title: 'Manage Blogs', description: 'Create and manage blog posts', icon: FileText, color: 'indigo', onClick: () => navigate('/admin/blogs') },
     { id: '1.9', title: 'Manage About Us', description: 'Edit About Us page content', icon: Info, color: 'cyan', onClick: () => navigate('/admin/about-us') },
-    { id: '1.10', title: 'MarketPlace Inventory', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
-    { id: '1.11', title: 'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
+    { id: '1.10', title:'MarketPlace Inventory', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
+    { id: '1.11', title:'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
     { id: '3.2', title: 'Manage Discount Codes', description: 'Create and manage discount codes for subscriptions', icon: Gift, color: 'violet', onClick: () => navigate('/admin/subscriptions/discounts') },
     { id: '3.3', title: 'Subscription Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'blue', onClick: () => navigate('/admin/subscriptions/records') },
+    { id: '2.2', title: 'Communication', description: 'Send messages and communicate with team members', icon: MessageSquare, color: 'purple', onClick: () => navigate('/admin/communication') },
   ];
 
   return (
@@ -42,13 +43,14 @@ const AdminDashboard = () => {
 
 
             <div className="admin-menu-grid">
-              {menuItems.map((item) => {
+              {menuItems.map((item, index) => {
                 const IconComponent = item.icon;
                 return (
                   <div
                     key={item.id}
                     onClick={item.onClick}
                     className={`admin-menu-card`}
+                    style={{ '--i': index }}
                   >
                     <div className="admin-menu-card-icon">
                       <IconComponent size={48} />
