@@ -22,7 +22,6 @@ const useSpeechRecognition = (options = {}) => {
       null;
 
     if (!SpeechRecognition) {
-      console.warn("SpeechRecognition not supported");
       setIsSupported(false);
       return;
     }
@@ -49,8 +48,6 @@ const useSpeechRecognition = (options = {}) => {
         else interim += text;
       }
 
-      console.log('[useSpeechRecognition] onresult event, final:', final, 'interim:', interim);
-
       if (final) {
         setFinalTranscript(_prev => {
           const nextFinal = _prev + final;
@@ -71,9 +68,7 @@ const useSpeechRecognition = (options = {}) => {
     };
 
     recognition.onerror = (event) => {
-      console.error("STT Error:", event.error);
       setListening(false);
-      console.log('[useSpeechRecognition] recognition.onerror', event);
 
       // Chrome auto-stop fix (network / no-speech errors)
       if (event.error === "no-speech" || event.error === "network") {
@@ -84,11 +79,9 @@ const useSpeechRecognition = (options = {}) => {
     };
 
     recognition.onstart = () => {
-      console.log('[useSpeechRecognition] Recognition started');
     };
 
     recognition.onend = () => {
-      console.log("Recognition ended");
 
       if (listening) {
         // Auto restart to prevent Chrome 60-sec stop
@@ -110,11 +103,9 @@ const useSpeechRecognition = (options = {}) => {
     setTranscript('');
     try {
       recognitionRef.current.start();
-      console.log("STT Started");
       setListening(true);
       return true;
     } catch (err) {
-      console.log("Restarting STT...", err);
       recognitionRef.current.stop();
       setTimeout(() => recognitionRef.current.start(), 300);
       setListening(true);

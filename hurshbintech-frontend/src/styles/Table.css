@@ -16,7 +16,7 @@
 
 .table-primary {
     width: 100%;
-    min-width: 100%;
+    min-width: 1200px;
     border-collapse: collapse;
 }
 
@@ -35,11 +35,12 @@
     border-bottom: 2px solid #7a2c2c;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    min-width: 120px;
+    min-width: 100px;
 }
 
 .table-primary-th:last-child {
     border-right: none;
+    min-width: 140px;
 }
 
 .table-primary-th-center {
@@ -48,6 +49,10 @@
 
 .table-primary-th-right {
     text-align: right;
+}
+
+.table-primary-th-id {
+    min-width: 60px;
 }
 
 .table-primary-body {
@@ -72,11 +77,12 @@
     font-size: 0.95rem;
     color: #1f2937;
     border-right: 1px solid #f3f4f6;
-    min-width: 120px;
+    min-width: 100px;
 }
 
 .table-primary-td:last-child {
     border-right: none;
+    min-width: 140px;
 }
 
 .table-primary-td-center {
@@ -85,6 +91,10 @@
 
 .table-primary-td-right {
     text-align: right;
+}
+
+.table-primary-td-id {
+    min-width: 60px;
 }
 
 /* Table Cell Variants */
@@ -231,6 +241,7 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }

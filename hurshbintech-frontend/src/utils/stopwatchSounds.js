@@ -40,7 +40,6 @@ export const playTickSound = () => {
         oscillator.start(now);
         oscillator.stop(now + 0.08);
     } catch (e) {
-        console.warn('Tick sound error:', e);
     }
 };
 
@@ -48,11 +47,9 @@ export const playTickSound = () => {
  * Play celebration sound - 5 second victory fanfare with clapping
  */
 export const playCelebrationSound = () => {
-    console.log('🎉 Playing celebration sound!');
     try {
         const ctx = getAudioContext();
         if (!ctx) {
-            console.error('No audio context available');
             return;
         }
 
@@ -80,7 +77,6 @@ export const playCelebrationSound = () => {
                 osc.start(now + time);
                 osc.stop(now + time + duration);
             } catch (e) {
-                console.warn('Note play error:', e);
             }
         };
 
@@ -116,9 +112,7 @@ export const playCelebrationSound = () => {
             playNote(200, time + 0.01, 0.03, 0.2, 'square');
         });
 
-        console.log('🎉 Celebration sound scheduled successfully');
     } catch (e) {
-        console.error('Celebration sound error:', e);
     }
 };
 

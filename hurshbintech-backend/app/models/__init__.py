@@ -45,6 +45,19 @@ from app.models.ecommerce_model import (
     PaymentReceipt,
     OrderAuditLog,
 )
+from app.models.subscription import (
+    SubscriptionPackage,
+    LearnerSubscription,
+    SubscriptionPaymentReceipt,
+    SubscriptionDiscount,
+    SessionAdjustmentLog,
+    SubscriptionEventLog,
+    SubscriptionStatus,
+    PaymentStatus,
+    DiscountType,
+    RefundType,
+    AdjustmentType,
+)
 
 __all__ = [
     "User",
@@ -87,4 +100,15 @@ __all__ = [
     "PaymentMethod",
     "PaymentReceipt",
     "OrderAuditLog",
+    "SubscriptionPackage",
+    "LearnerSubscription",
+    "SubscriptionPaymentReceipt",
+    "SubscriptionDiscount",
+    "SessionAdjustmentLog",
+    "SubscriptionEventLog",
+    "SubscriptionStatus",
+    "PaymentStatus",
+    "DiscountType",
+    "RefundType",
+    "AdjustmentType",
 ]

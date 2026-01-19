@@ -16,6 +16,7 @@ import LearningHistorySection from '../../components/head/RegisterLearner/Learni
 import InterventionHistorySection from '../../components/head/RegisterLearner/InterventionHistorySection';
 import AssessmentBehaviourSection from '../../components/head/RegisterLearner/AssessmentBehaviourSection';
 import SkillDevelopmentSection from '../../components/head/RegisterLearner/SkillDevelopmentSection';
+import PackageAndPaymentSection from '../../components/head/RegisterLearner/PackageAndPaymentSection';
 
 const RegisterLearner = () => {
   const navigate = useNavigate();
@@ -30,6 +31,10 @@ const RegisterLearner = () => {
     date_of_assessment: '',
     dlb_concerns_checklist: [],  // Initialize as empty array
     personal_notes: '',
+
+    // Package & Payment
+    package_id: '',
+    discount_code: '',
 
     // Delivery History
     mother_bed_rest: null,
@@ -167,6 +172,16 @@ const RegisterLearner = () => {
       newErrors.personal_notes = 'Personal notes is required';
     }
 
+    // Package is required
+    if (!formData.package_id) {
+      newErrors.package_id = 'Please select a subscription package';
+    }
+
+    // Payment receipt is required
+    if (!window.paymentReceipt) {
+      newErrors.payment_receipt = 'Please upload a payment receipt';
+    }
+
     return newErrors;
   };
 
@@ -209,6 +224,7 @@ const RegisterLearner = () => {
       const submitData = {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
+        package_id: formData.package_id ? parseInt(formData.package_id) : null,
         ultrasounds_performed: formData.ultrasounds_performed ? parseInt(formData.ultrasounds_performed) : null,
         years_school_attended: formData.years_school_attended ? parseInt(formData.years_school_attended) : null,
       };
@@ -220,8 +236,14 @@ const RegisterLearner = () => {
         }
       });
 
+      // Prepare files array with payment receipt
+      const allFiles = [...referenceFiles];
+      if (window.paymentReceipt) {
+        allFiles.push(window.paymentReceipt);
+      }
+
       console.log('Submitting learner data:', submitData);
-      const response = await headService.createLearner(submitData, referenceFiles);
+      const response = await headService.createLearner(submitData, allFiles);
 
       console.log('Learner registered successfully:', response);
       setSuccessData(response);
@@ -355,12 +377,12 @@ const RegisterLearner = () => {
               </svg>
               Back to Manage Learners
             </button>
-           <div>
-             <h1 className="page-title">
-              Register New Learner
-            </h1>
-            <p className="page-description">Fill in the details to register a new learner</p>
-           </div>
+            <div>
+              <h1 className="page-title">
+                Register New Learner
+              </h1>
+              <p className="page-description">Fill in the details to register a new learner</p>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -390,6 +412,13 @@ const RegisterLearner = () => {
               formData={formData}
               errors={errors}
               handleChange={handleChange}
+            />
+
+            {/* Package & Payment */}
+            <PackageAndPaymentSection
+              formData={formData}
+              handleChange={handleChange}
+              errors={errors}
             />
 
             {/* Delivery History */}
