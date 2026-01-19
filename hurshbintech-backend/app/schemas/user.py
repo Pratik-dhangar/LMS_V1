@@ -44,6 +44,13 @@ class ReferenceDataSchema(BaseModel):
     class Config:
         from_attributes = True
 
+    @field_validator('file_path', mode='after')
+    @classmethod
+    def convert_s3_to_public_url(cls, v):
+        """Convert S3 URLs to public HTTPS URLs using existing helper"""
+        from app.utils.s3_utils import convert_s3_url_to_signed
+        return convert_s3_url_to_signed(v)
+
 
 # ============ ADMIN SCHEMAS ============
 # Schema for admin response
