@@ -679,8 +679,8 @@ async def create_new_learner(
         await db.commit()
         logging.info(f"Transaction committed. Learner {learner_id} created without subscription")
     
-    # Refresh learner to get the reference_data relationship
-    await db.refresh(new_learner, ['reference_data'])
+    # Refresh learner to load user relationship
+    await db.refresh(new_learner, ['reference_data', 'user'])
     
     return LearnerResponse.from_orm_with_user(new_learner)
 
