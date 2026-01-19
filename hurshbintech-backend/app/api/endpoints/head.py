@@ -659,8 +659,8 @@ async def create_new_learner(
         except Exception as e:
             logging.warning(f"Failed to create initial subscription for learner {new_learner.id}: {str(e)}")
     
-    # Refresh learner to get the reference_data relationship
-    await db.refresh(new_learner, ['reference_data'])
+    # Refresh learner to load user relationship
+    await db.refresh(new_learner, ['reference_data', 'user'])
     
     return LearnerResponse.from_orm_with_user(new_learner)
 
