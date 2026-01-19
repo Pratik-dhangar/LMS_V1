@@ -290,33 +290,44 @@ const RegisterLearner = () => {
 
   return (
     <div className="page-container">
-      {/* Loading/Success Modal */}
+      {/* Loading/Success Overlay */}
       {loading && (
-        <div className="app-modal-overlay">
-          <div className="app-modal-content modal-sm modal-loading">
+        <div className="modern-form-overlay">
+          <div className="modern-form-overlay-content">
             {!successData ? (
+              // Loading State
               <>
-                <div className="loading-spinner-container">
-                  <div className="loading-spinner"></div>
-                </div>
-                <p className="app-modal-title modal-title-success">Registering Learner...</p>
-                <p className="modal-message">Please wait while we process your request</p>
+                <div className="modern-form-spinner"></div>
+                <p className="modern-form-overlay-title">
+                  Registering Learner...
+                </p>
+                <p className="modern-form-overlay-message">
+                  Please wait while we process your request
+                </p>
               </>
             ) : (
+              // Success State
               <>
-                <div className="success-icon-container">
-                  <div className="success-icon">
-                    <svg className="success-icon-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
-                      <path d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </div>
+                <div className="modern-form-success-icon">
+                  <svg
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M5 13l4 4L19 7"></path>
+                  </svg>
                 </div>
-                <p className="app-modal-title modal-title-success">Learner Registered Successfully!</p>
-                <div className="passcode-display">
-                  <p className="passcode-label">Generated Passcode:</p>
-                  <p className="passcode-value">{successData.passcode}</p>
+                <p className="modern-form-success-title">
+                  Learner Registered Successfully!
+                </p>
+                <div className="modern-form-passcode-display">
+                  <p className="modern-form-passcode-label">Generated Passcode:</p>
+                  <p className="modern-form-passcode-value">{successData.passcode}</p>
                 </div>
-                <p className="modal-message">Redirecting to manage learners...</p>
+                <p className="modern-form-overlay-message">Redirecting to dashboard...</p>
               </>
             )}
           </div>
