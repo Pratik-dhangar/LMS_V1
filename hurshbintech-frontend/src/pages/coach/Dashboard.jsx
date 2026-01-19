@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Clock, Settings } from 'lucide-react';
+import { Calendar, Clock, Settings, MessageSquare } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const CoachDashboard = () => {
@@ -13,6 +13,7 @@ const CoachDashboard = () => {
     { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, onClick: () => navigate('/coach/sessions') },
     { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, onClick: () => navigate('/coach/availability') },
     { id: '4', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: Calendar, onClick: () => navigate('/coach/profile-order-history') },
+    { id: '5', title: 'Communication', description: 'Send messages and communicate with clients', icon: MessageSquare, onClick: () => navigate('/coach/communication') },
   ];
 
 

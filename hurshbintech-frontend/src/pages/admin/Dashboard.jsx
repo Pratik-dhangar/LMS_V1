@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import adminService from '../../api/services/adminService';
-import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift } from 'lucide-react';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
@@ -24,6 +24,7 @@ const AdminDashboard = () => {
     { id: '1.11', title:'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
     { id: '3.2', title: 'Manage Discount Codes', description: 'Create and manage discount codes for subscriptions', icon: Gift, color: 'violet', onClick: () => navigate('/admin/subscriptions/discounts') },
     { id: '3.3', title: 'Subscription Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'blue', onClick: () => navigate('/admin/subscriptions/records') },
+    { id: '2.2', title: 'Communication', description: 'Send messages and communicate with team members', icon: MessageSquare, color: 'purple', onClick: () => navigate('/admin/communication') },
   ];
 
   return (

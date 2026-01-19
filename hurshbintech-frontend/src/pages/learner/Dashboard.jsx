@@ -79,11 +79,6 @@ const LearnerDashboard = () => {
       onClick: () => navigate("/learner/learning-material"),
     },
     {
-      icon: MessageSquare,
-      title: "Communication",
-      onClick: () => navigate("/learner/communication"),
-    },
-    {
       icon: Calendar,
       title: "Book Appointment",
       onClick: () => navigate("/book-appointment"),
@@ -92,6 +87,11 @@ const LearnerDashboard = () => {
       icon: History,
       title: "Learning Material Purchase History",
       onClick: () => navigate("/learner/profile-order-history"),
+    },
+    {
+      icon: MessageSquare,
+      title: "Communication",
+      onClick: () => navigate("/learner/communication"),
     },
   ];
 
