@@ -18,10 +18,9 @@ const HeadDashboard = () => {
     { id: '4', title: 'Manage Learner Subscriptions', description: 'Assign and manage learner subscriptions', icon: CreditCard, onClick: () => navigate('/head/subscriptions/learners') },
     { id: '5', title: 'Manage Home Program', description: 'Assign and manage learning programs for learners', icon: BookOpen, onClick: () => navigate('/head/manage-program-assignments') },
     { id: '6', title: 'Session Reports', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
-    { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') },
-    { id: '8', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: BookOpen, onClick: () => navigate('/head/profile-order-history') },
-    { id: '9', title: 'Manage Subscription Packages', description: 'Create and manage subscription packages for learners', icon: Package, onClick: () => navigate('/head/subscriptions/packages') },
-    { id: '10', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') }
+    { id: '7', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: BookOpen, onClick: () => navigate('/head/profile-order-history') },
+    { id: '8', title: 'Manage Subscription Packages', description: 'Create and manage subscription packages for learners', icon: Package, onClick: () => navigate('/head/subscriptions/packages') },
+    { id: '9', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') }
   ];
 
   return (
