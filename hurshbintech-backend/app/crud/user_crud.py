@@ -765,7 +765,7 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
     )
 
     db.add(new_learner_profile)
-    await db.commit()
+    await db.commit()  # Commit learner immediately to ensure it exists in database
     await db.refresh(new_learner_profile)
     await db.refresh(new_user)
 
@@ -1049,7 +1049,7 @@ async def create_learner_reference_data(
         description=description,
     )
     db.add(new_reference)
-    await db.commit()
+    await db.commit()  # Commit reference data
     await db.refresh(new_reference)
     logger.info(f"Created learner reference data: {file_url}")
     return new_reference
