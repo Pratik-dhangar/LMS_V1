@@ -605,7 +605,7 @@ async def chat_websocket_endpoint(
                     
                     if conversation_id:
                         # Verify user is in conversation
-                        if chat_crud.is_user_in_conversation(db, conversation_id, user_id):
+                        if await chat_crud.is_user_in_conversation(db, conversation_id, user_id):
                             conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
                             member_ids = [m.user_id for m in conversation.members if m.is_active]
                             
