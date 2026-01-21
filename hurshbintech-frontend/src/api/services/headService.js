@@ -114,12 +114,16 @@ const headService = {
   },
 
   /**
-   * Get all Learners
+   * Get all Learners with optional subscription status filter
+   * @param {string} subscriptionStatus - Optional filter: "ACTIVE", "PAUSED", etc.
    * @returns {Promise}
    */
-  getAllLearners: async () => {
-    console.log('Fetching all Learners');
-    const response = await axiosInstance.get('/head/learners');
+  getAllLearners: async (subscriptionStatus = null) => {
+    console.log('Fetching all Learners', subscriptionStatus ? `with subscription status: ${subscriptionStatus}` : '');
+    const url = subscriptionStatus
+      ? `/head/learners?subscription_status=${subscriptionStatus}`
+      : '/head/learners';
+    const response = await axiosInstance.get(url);
     console.log('Received learners data:', { count: response.data.length });
     return response.data;
   },

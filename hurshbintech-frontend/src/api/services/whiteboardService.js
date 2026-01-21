@@ -29,6 +29,8 @@ class WhiteboardService {
         this.onTextBoxUpdate = null; // New callback for text box updates
         this.onTextBoxRemoved = null; // New callback for text box removed
         this.onSessionEnded = null; // New callback for session ended by coach/trainer
+        this.onYoutubePopupCreated = null; // New callback for YouTube popup created
+        this.onYoutubePopupClosed = null; // New callback for YouTube popup closed
     }
 
     initialize() {
@@ -209,6 +211,18 @@ class WhiteboardService {
                 case 'session_ended':
                     if (this.onSessionEnded) {
                         this.onSessionEnded(message.data);
+                    }
+                    break;
+
+                case 'youtube_popup_created':
+                    if (this.onYoutubePopupCreated) {
+                        this.onYoutubePopupCreated(message.data);
+                    }
+                    break;
+
+                case 'youtube_popup_closed':
+                    if (this.onYoutubePopupClosed) {
+                        this.onYoutubePopupClosed(message.data);
                     }
                     break;
 

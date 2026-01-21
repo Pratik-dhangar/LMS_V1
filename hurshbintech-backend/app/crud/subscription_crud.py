@@ -98,6 +98,20 @@ async def get_packages_by_head(
     return list(result.scalars().all())
 
 
+async def get_all_packages(
+    db: AsyncSession,
+    active_only: bool = True
+) -> List[SubscriptionPackage]:
+    """Get all subscription packages (ADMIN only)"""
+    query = select(SubscriptionPackage)
+    if active_only:
+        query = query.where(SubscriptionPackage.is_active == True)
+    query = query.order_by(desc(SubscriptionPackage.created_at))
+    
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
 async def update_package(
     db: AsyncSession,
     package_id: int,

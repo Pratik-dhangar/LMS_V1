@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import headService from '../../api/services/headService';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/components/common/ModernForm.css';
+import '../../styles/components/common/Modal.css';
 
 
 
@@ -407,78 +408,78 @@ const RegisterLearner = () => {
           <div className="modern-form-card">
             <form onSubmit={handleSubmit}>
 
-            {/* Personal Details */}
-            <PersonalDetailsSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              {/* Personal Details */}
+              <PersonalDetailsSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            {/* Package & Payment */}
-            <PackageAndPaymentSection
-              formData={formData}
-              handleChange={handleChange}
-              errors={errors}
-            />
+              {/* Package & Payment */}
+              <PackageAndPaymentSection
+                formData={formData}
+                handleChange={handleChange}
+                errors={errors}
+              />
 
-            {/* Delivery History */}
-            <DeliveryHistorySection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Delivery History */}
+              <DeliveryHistorySection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Medical History */}
-            <MedicalHistorySection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Medical History */}
+              <MedicalHistorySection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Learning History */}
-            <LearningHistorySection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Learning History */}
+              <LearningHistorySection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Intervention History */}
-            <InterventionHistorySection
-              formData={formData}
-              handleChange={handleChange}
-              handleFileChange={handleFileChange}
-              referenceFiles={referenceFiles}
-              removeFile={removeFile}
-            />
+              {/* Intervention History */}
+              <InterventionHistorySection
+                formData={formData}
+                handleChange={handleChange}
+                handleFileChange={handleFileChange}
+                referenceFiles={referenceFiles}
+                removeFile={removeFile}
+              />
 
-            {/* Assessment Behaviour */}
-            <AssessmentBehaviourSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Assessment Behaviour */}
+              <AssessmentBehaviourSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Skill Development */}
-            <SkillDevelopmentSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Skill Development */}
+              <SkillDevelopmentSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Submit Actions */}
-            <div className="modern-form-actions">
-              <button
-                type="button"
-                onClick={() => navigate('/head/manage-learners')}
-                className="modern-form-btn modern-form-btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="modern-form-btn modern-form-btn-primary"
-              >
-                {loading ? 'Registering...' : 'Register Learner'}
-              </button>
-            </div>
-          </form>
-        </div>
+              {/* Submit Actions */}
+              <div className="modern-form-actions">
+                <button
+                  type="button"
+                  onClick={() => navigate('/head/manage-learners')}
+                  className="modern-form-btn modern-form-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="modern-form-btn modern-form-btn-primary"
+                >
+                  {loading ? 'Registering...' : 'Register Learner'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
     </div>

@@ -151,6 +151,9 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "thumbnail_url": (
                     get_public_url(content.thumbnail_url) if content.thumbnail_url else None
                 ),
+                "youtube_url": content.youtube_url,
+                "youtube_video_id": content.youtube_video_id,
+                "is_youtube": content.is_youtube or False,
             }
             for content in (session.learning_contents or [])
         ],

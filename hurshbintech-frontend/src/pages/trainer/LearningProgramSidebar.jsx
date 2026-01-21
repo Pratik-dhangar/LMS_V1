@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Emoji from '../../components/common/Emoji';
 import { FaMicrophone } from 'react-icons/fa';
 import '../../styles/LearningProgram.css';
@@ -21,10 +21,20 @@ const LearningProgramSidebar = ({
 }) => {
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
+  // State for editable transcript
+  const [editableTranscript, setEditableTranscript] = useState(transcript || '');
+
+  // Sync transcript from speech input to editable field
+  useEffect(() => {
+    if (transcript && transcript !== editableTranscript) {
+      setEditableTranscript(transcript);
+    }
+  }, [transcript]);
 
   const handleSendPromptToLearner = () => {
-    if (transcript) {
-      webRTC && webRTC.sendPrompt(transcript);
+    const textToSend = editableTranscript || transcript;
+    if (textToSend) {
+      webRTC && webRTC.sendPrompt(textToSend);
     }
   };
 
@@ -130,12 +140,28 @@ const LearningProgramSidebar = ({
           <p className="voice-status-text">
             {listening ? '🎤 Recording... Click to stop' : '📢 Click to start recording'}
           </p>
-          <div className="transcript-box">
-            {transcript || <span className="transcript-placeholder">Your speech will appear here...</span>}
-          </div>
+          <textarea
+            value={editableTranscript || transcript || ''}
+            onChange={(e) => setEditableTranscript(e.target.value)}
+            placeholder="Your speech will appear here... You can also edit it manually."
+            style={{
+              width: '100%',
+              padding: '10px',
+              minHeight: '80px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+              backgroundColor: '#fff',
+              color: '#000',
+              cursor: 'text'
+            }}
+          />
           <button
             onClick={handleSendPromptToLearner}
-            disabled={!transcript}
+            disabled={!editableTranscript && !transcript}
             className="btn-send-to-learner"
           >
             ✈️ Send to Learner

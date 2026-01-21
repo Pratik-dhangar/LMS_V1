@@ -76,7 +76,7 @@ const ScheduleSession = () => {
       const [trainersData, learnersData, contentsData, goalsData] =
         await Promise.all([
           headService.getAllTrainers(),
-          headService.getAllLearners(),
+          headService.getAllLearners("ACTIVE"), // Only fetch learners with ACTIVE subscriptions for session scheduling
           learningContentService.head.getAll(),
           learningGoalsService.head.getAll(),
         ]);
@@ -316,116 +316,114 @@ const ScheduleSession = () => {
             {/* Trainer & Learner Selection */}
             <div className="modern-form-section">
               <div className="modern-form-grid-two-col">
-              {/* Select Trainer with Searchable Dropdown */}
-              <div className="dropdown-field" ref={trainerDropdownRef}>
-                <label className="modern-form-label">
-                  Select Trainer <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Search trainer by name or ID..."
-                  value={
-                    formData.trainer_id
-                      ? getSelectedTrainerName()
-                      : searchTerm.trainer
-                  }
-                  onChange={(e) => {
-                    // Clear selection when user starts typing
-                    if (formData.trainer_id) {
-                      setFormData({ ...formData, trainer_id: "" });
+                {/* Select Trainer with Searchable Dropdown */}
+                <div className="dropdown-field" ref={trainerDropdownRef}>
+                  <label className="modern-form-label">
+                    Select Trainer <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search trainer by name or ID..."
+                    value={
+                      formData.trainer_id
+                        ? getSelectedTrainerName()
+                        : searchTerm.trainer
                     }
-                    setSearchTerm({ ...searchTerm, trainer: e.target.value });
-                    setShowDropdown({ ...showDropdown, trainer: true });
-                  }}
-                  onFocus={() =>
-                    setShowDropdown({ ...showDropdown, trainer: true })
-                  }
-                  className="modern-form-input"
-                  required={!formData.trainer_id}
-                />
-                {showDropdown.trainer && (
-                  <div className="dropdown-menu">
-                    {filteredTrainers.length > 0 ? (
-                      filteredTrainers.map((trainer) => (
-                        <div
-                          key={trainer.id}
-                          onClick={() => handleTrainerSelect(trainer.user_id)}
-                          className={`dropdown-item ${
-                            formData.trainer_id === trainer.user_id
+                    onChange={(e) => {
+                      // Clear selection when user starts typing
+                      if (formData.trainer_id) {
+                        setFormData({ ...formData, trainer_id: "" });
+                      }
+                      setSearchTerm({ ...searchTerm, trainer: e.target.value });
+                      setShowDropdown({ ...showDropdown, trainer: true });
+                    }}
+                    onFocus={() =>
+                      setShowDropdown({ ...showDropdown, trainer: true })
+                    }
+                    className="modern-form-input"
+                    required={!formData.trainer_id}
+                  />
+                  {showDropdown.trainer && (
+                    <div className="dropdown-menu">
+                      {filteredTrainers.length > 0 ? (
+                        filteredTrainers.map((trainer) => (
+                          <div
+                            key={trainer.id}
+                            onClick={() => handleTrainerSelect(trainer.user_id)}
+                            className={`dropdown-item ${formData.trainer_id === trainer.user_id
                               ? "dropdown-item-selected"
                               : ""
-                          }`}
-                        >
-                          {trainer.name}{" "}
-                          <span className="dropdown-item-meta">
-                            (ID: {trainer.user_id})
-                          </span>
+                              }`}
+                          >
+                            {trainer.name}{" "}
+                            <span className="dropdown-item-meta">
+                              (ID: {trainer.user_id})
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="dropdown-item dropdown-item-empty">
+                          No trainers found
                         </div>
-                      ))
-                    ) : (
-                      <div className="dropdown-item dropdown-item-empty">
-                        No trainers found
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              {/* Select Learner with Searchable Dropdown */}
-              <div className="dropdown-field" ref={learnerDropdownRef}>
-                <label className="modern-form-label">
-                  Select Learner <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Search learner by name or ID..."
-                  value={
-                    formData.learner_id
-                      ? getSelectedLearnerName()
-                      : searchTerm.learner
-                  }
-                  onChange={(e) => {
-                    // Clear selection when user starts typing
-                    if (formData.learner_id) {
-                      setFormData({ ...formData, learner_id: "" });
+                {/* Select Learner with Searchable Dropdown */}
+                <div className="dropdown-field" ref={learnerDropdownRef}>
+                  <label className="modern-form-label">
+                    Select Learner <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search learner by name or ID..."
+                    value={
+                      formData.learner_id
+                        ? getSelectedLearnerName()
+                        : searchTerm.learner
                     }
-                    setSearchTerm({ ...searchTerm, learner: e.target.value });
-                    setShowDropdown({ ...showDropdown, learner: true });
-                  }}
-                  onFocus={() =>
-                    setShowDropdown({ ...showDropdown, learner: true })
-                  }
-                  className="modern-form-input"
-                  required={!formData.learner_id}
-                />
-                {showDropdown.learner && (
-                  <div className="dropdown-menu">
-                    {filteredLearners.length > 0 ? (
-                      filteredLearners.map((learner) => (
-                        <div
-                          key={learner.id}
-                          onClick={() => handleLearnerSelect(learner.user_id)}
-                          className={`dropdown-item ${
-                            formData.learner_id === learner.user_id
+                    onChange={(e) => {
+                      // Clear selection when user starts typing
+                      if (formData.learner_id) {
+                        setFormData({ ...formData, learner_id: "" });
+                      }
+                      setSearchTerm({ ...searchTerm, learner: e.target.value });
+                      setShowDropdown({ ...showDropdown, learner: true });
+                    }}
+                    onFocus={() =>
+                      setShowDropdown({ ...showDropdown, learner: true })
+                    }
+                    className="modern-form-input"
+                    required={!formData.learner_id}
+                  />
+                  {showDropdown.learner && (
+                    <div className="dropdown-menu">
+                      {filteredLearners.length > 0 ? (
+                        filteredLearners.map((learner) => (
+                          <div
+                            key={learner.id}
+                            onClick={() => handleLearnerSelect(learner.user_id)}
+                            className={`dropdown-item ${formData.learner_id === learner.user_id
                               ? "dropdown-item-selected"
                               : ""
-                          }`}
-                        >
-                          {learner.name}{" "}
-                          <span className="dropdown-item-meta">
-                            (ID: {learner.user_id})
-                          </span>
+                              }`}
+                          >
+                            {learner.name}{" "}
+                            <span className="dropdown-item-meta">
+                              (ID: {learner.user_id})
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="dropdown-item dropdown-item-empty">
+                          No learners found
                         </div>
-                      ))
-                    ) : (
-                      <div className="dropdown-item dropdown-item-empty">
-                        No learners found
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             </div>
 
             {/* Date & Time and Duration */}
@@ -553,7 +551,7 @@ const ScheduleSession = () => {
                                 <input
                                   type="checkbox"
                                   checked={formData.goal_ids.includes(goal.id)}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   className="custom-checkbox"
                                 />
                               </td>
@@ -634,12 +632,34 @@ const ScheduleSession = () => {
                           video: "🎥",
                           audio: "🎵",
                           document: "📝",
+                          youtube: "🎥",
                         };
                         return icons[type] || "📁";
                       };
 
                       // Function to render thumbnail or icon
                       const renderThumbnail = () => {
+                        // Handle YouTube content
+                        if (content.is_youtube && content.youtube_video_id) {
+                          const youtubeThumbUrl = `https://img.youtube.com/vi/${content.youtube_video_id}/hqdefault.jpg`;
+                          return (
+                            <div className="content-thumbnail youtube-thumbnail">
+                              <img
+                                src={youtubeThumbUrl}
+                                alt={content.title}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.nextElementSibling.style.display =
+                                    "flex";
+                                }}
+                              />
+                              <div className="img-fallback">
+                                <span className="content-icon">🎥</span>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         if (
                           content.content_type === "image" ||
                           content.thumbnail_url
@@ -681,11 +701,10 @@ const ScheduleSession = () => {
                         <div
                           key={content.id}
                           onClick={() => handleContentToggle(content.id)}
-                          className={`content-card ${
-                            formData.content_ids.includes(content.id)
-                              ? "card-selected"
-                              : ""
-                          }`}
+                          className={`content-card ${formData.content_ids.includes(content.id)
+                            ? "card-selected"
+                            : ""
+                            }`}
                         >
                           {/* Thumbnail */}
                           {renderThumbnail()}
@@ -699,7 +718,7 @@ const ScheduleSession = () => {
                               {content.title}
                             </h4>
                             <p className="content-type">
-                              {content.content_type}
+                              {content.is_youtube ? "YouTube" : content.content_type}
                             </p>
                           </div>
 
@@ -710,7 +729,7 @@ const ScheduleSession = () => {
                               checked={formData.content_ids.includes(
                                 content.id
                               )}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="custom-checkbox-sm"
                             />
                           </div>
