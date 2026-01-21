@@ -115,6 +115,12 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import useNetworkSpeedNotifier from './hooks/useNetworkSpeedNotifier';
 
+// Chat Components
+import { ChatProvider } from './context/chat/ChatContext';
+import ChatIconWidget from './components/chat/ChatIconWidget';
+import ChatPage from './pages/chat/ChatPage';
+import ChatWindowPage from './pages/chat/ChatWindowPage';
+
 import './App.css';
 
 // Separate component for the actual app routes that uses AuthContext
@@ -172,6 +178,7 @@ function AppRoutes() {
 
   return (
     <MediaControlProvider>
+      <ChatIconWidget />
       <Routes>
         {/* Routes WITHOUT Navbar/Footer (Login and Session pages) */}
         <Route
@@ -803,6 +810,24 @@ function AppRoutes() {
             </ProtectedRoute>
           } />
 
+          {/* Chat Routes */}
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:conversationId"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+                <ChatWindowPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* 404 - Redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -815,7 +840,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ChatProvider>
+          <AppRoutes />
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   );

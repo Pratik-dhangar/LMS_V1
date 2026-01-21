@@ -261,6 +261,14 @@ const EditLearner = () => {
       e.preventDefault();
       e.stopPropagation();
     }
+    
+    // If it's already a full URL (http/https), open directly
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      window.open(filePath, "_blank");
+      return;
+    }
+    
+    // Otherwise, construct URL with backend base
     const apiBaseUrl =
       import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";
     const backendUrl = apiBaseUrl.replace("/api", "");

@@ -49,16 +49,7 @@ const LearnerDashboard = () => {
     return days;
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'ACTIVE': '#10b981',
-      'PAUSED': '#f59e0b',
-      'FROZEN': '#3b82f6',
-      'EXPIRED': '#ef4444',
-      'CANCELLED': '#6b7280'
-    };
-    return colors[status] || '#6b7280';
-  };
+  
 
   const menuItems = [
     {
@@ -80,11 +71,6 @@ const LearnerDashboard = () => {
       icon: ShoppingCart,
       title: "Buy Learning Material",
       onClick: () => navigate("/learner/learning-material"),
-    },
-    {
-      icon: Calendar,
-      title: "Book Appointment",
-      onClick: () => navigate("/book-appointment"),
     },
     {
       icon: History,
