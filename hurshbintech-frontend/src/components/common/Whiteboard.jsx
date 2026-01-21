@@ -3245,16 +3245,16 @@ const Whiteboard = ({
                                     left: `${animation.x}%`,
                                     animationDelay: `${animation.startDelay}ms`,
                                     animationDuration: `${animation.duration}ms`,
-                                    cursor: !isTrainer && !animation.popped ? 'pointer' : 'default',
-                                    pointerEvents: animation.popped ? 'none' : (!isTrainer ? 'auto' : 'none'),
+                                    cursor: !animation.popped ? 'pointer' : 'default',
+                                    pointerEvents: animation.popped ? 'none' : 'auto',
                                 }}
                                 onClick={(e) => {
-                                    if (!isTrainer && !animation.popped) {
+                                    if (!animation.popped) {
                                         // Get current position before popping
                                         const rect = e.currentTarget.getBoundingClientRect();
                                         const poppedLeft = rect.left + (rect.width / 2);
                                         const poppedTop = rect.top + (rect.height / 2);
-                                        console.log('Star clicked at:', poppedLeft, poppedTop);
+                                        console.log(`[${isTrainer ? 'Trainer' : 'Learner'}] Animation popped at:`, poppedLeft, poppedTop);
                                         onAnimationPop(animation.id, poppedLeft, poppedTop);
                                     }
                                 }}

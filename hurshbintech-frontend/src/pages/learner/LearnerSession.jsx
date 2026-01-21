@@ -347,9 +347,8 @@ const LearnerSession = () => {
       playPopSound(animation.type);
     }
 
-    setFloatingAnimations(prev =>
-      prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
-    );
+    // Update animation state
+    updateAnimationPopped(animationId, poppedLeft, poppedTop);
 
     // Broadcast pop event to all participants
     if (whiteboardService) {
@@ -360,6 +359,15 @@ const LearnerSession = () => {
         timestamp: Date.now()
       });
     }
+  };
+
+  // 🔹 Purpose: Update animation state when received from other participants
+  // 🔸 How it works: marks animation as popped without broadcasting (to avoid circular messages)
+  // -----------------------------------------------------------
+  const updateAnimationPopped = (animationId, poppedLeft, poppedTop) => {
+    setFloatingAnimations(prev =>
+      prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
+    );
   };
 
   // Listen for stopwatch updates from trainer
@@ -525,10 +533,10 @@ const LearnerSession = () => {
       }, 13000);
     };
 
-    // Set up callback for animation pop events from other learners
+    // Set up callback for animation pop events from other learners/trainer
     whiteboardService.onAnimationPopped = (data) => {
       console.log('[LearnerSession] Animation popped by another user:', data);
-      handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
+      updateAnimationPopped(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
     // Debug - log feedbackMessage state changes
@@ -594,11 +602,20 @@ const LearnerSession = () => {
     // Set up callback for clear canvas event (also clears video, items, and buckets)
     whiteboardService.onClearCanvas = () => {
       console.log('[LearnerSession] Received clear canvas event from trainer');
+      console.log('[LearnerSession] 🗑️ CLEARING CANVAS NOW:');
+      console.log('[LearnerSession] Current floatingAnimations count:', floatingAnimations.length);
+
       setClearCanvasTrigger(prev => prev + 1);
-      // Also clear all canvas items and buckets
+      console.log('[LearnerSession] ✅ setClearCanvasTrigger called');
+
       setCanvasItems([]);
+      console.log('[LearnerSession] ✅ setCanvasItems([]) called');
+
       setBuckets([]);
-      setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
+      console.log('[LearnerSession] ✅ setBuckets([]) called');
+
+      setFloatingAnimations([]);
+      console.log('[LearnerSession] ✅ setFloatingAnimations([]) called - SHOULD CLEAR ALL ANIMATIONS!');
     };
 
     // Set up callback for bucket added/updated
@@ -657,7 +674,7 @@ const LearnerSession = () => {
         whiteboardService.onYoutubePopupClosed = null;
       }
     };
-  }, [whiteboardService, sessionInfo]);
+  }, [whiteboardService, sessionInfo, floatingAnimations, canvasItems, buckets]);
 
   // Countdown timer with auto-end
   useEffect(() => {

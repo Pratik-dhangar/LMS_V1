@@ -80,7 +80,7 @@ const ClientSession = () => {
     whiteboardService.onSessionEnded = (data) => {
       console.log('[ClientSession] Session ended by coach:', data);
       toast.info('Session has been ended by the coach');
-      
+
       // Clean up and redirect after a short delay
       setTimeout(() => {
         if (webRTC?.localStream) {
@@ -339,7 +339,7 @@ const ClientSession = () => {
 
       wbService.onTextBoxUpdate = (update) => {
         console.log('[ClientSession] Text box updated:', update);
-        setTextBoxes(prev => prev.map(box => 
+        setTextBoxes(prev => prev.map(box =>
           box.id === update.id ? { ...box, ...update } : box
         ));
       };
@@ -461,19 +461,29 @@ const ClientSession = () => {
         console.error('[ClientSession] Error sending leave notification:', error);
       }
     }
-    
+
     cleanup();
     navigate('/my-appointments');
   };
 
   const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
-    setFloatingAnimations(prev => 
-      prev.map(anim => 
+    setFloatingAnimations(prev =>
+      prev.map(anim =>
         anim.id === animationId
           ? { ...anim, popped: true, poppedLeft, poppedTop }
           : anim
       )
     );
+
+    // Broadcast pop event to all participants
+    if (whiteboardService) {
+      whiteboardService.send('animation_popped', {
+        animationId,
+        poppedLeft,
+        poppedTop,
+        timestamp: Date.now()
+      });
+    }
   };
 
   if (loading) {
@@ -704,9 +714,8 @@ const ClientSession = () => {
           <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 mt-4 mb-4 flex-wrap" style={{ paddingBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
             <button
               onClick={handleToggleMic}
-              className={`${
-                micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-              } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+              className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+                } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
               style={{
                 padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
                 fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
@@ -718,9 +727,8 @@ const ClientSession = () => {
             </button>
             <button
               onClick={handleToggleCamera}
-              className={`${
-                cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-              } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+              className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+                } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
               style={{
                 padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
                 fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',

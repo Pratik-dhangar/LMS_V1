@@ -155,8 +155,12 @@ class WhiteboardService {
                     break;
 
                 case 'clear_canvas':
+                    console.log('[WhiteboardService] 📩 Received clear_canvas message from trainer:', message.data);
                     if (this.onClearCanvas) {
+                        console.log('[WhiteboardService] ✅ Calling onClearCanvas callback...');
                         this.onClearCanvas(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ WARNING: onClearCanvas callback is NOT registered!');
                     }
                     break;
 
@@ -321,6 +325,19 @@ class WhiteboardService {
             }));
         } else {
             console.warn('[WhiteboardService] Cannot send bucket_added - WebSocket not ready');
+        }
+    }
+
+    // Send floating animations event
+    sendFloatingAnimations(data) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            console.log('[WhiteboardService] Sending floating_animations:', data);
+            this.ws.send(JSON.stringify({
+                type: 'floating_animations',
+                data: { animations: data }
+            }));
+        } else {
+            console.warn('[WhiteboardService] Cannot send floating_animations - WebSocket not ready');
         }
     }
 

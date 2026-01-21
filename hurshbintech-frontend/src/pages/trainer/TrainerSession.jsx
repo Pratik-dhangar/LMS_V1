@@ -54,37 +54,37 @@ const REACTION_SVG_ASSETS = {
   balloon: [
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon.svg',
+      src: '/reactions/02_pastel_mint.svg',
       alt: 'Realistic Pink Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-red.svg',
+      src: '/reactions/03_pastel_pink.svg',
       alt: 'Realistic Red Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-blue.svg',
+      src: '/reactions/04_pastel_lavender.svg',
       alt: 'Realistic Blue Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-green.svg',
+      src: '/reactions/05_pastel_peach.svg',
       alt: 'Realistic Green Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-yellow.svg',
+      src: '/reactions/06_pastel_coral.svg',
       alt: 'Realistic Yellow Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-purple.svg',
+      src: '/reactions/07_pastel_teal.svg',
       alt: 'Realistic Purple Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-orange.svg',
+      src: '/reactions/08_pastel_yellow.svg',
       alt: 'Realistic Orange Balloon'
     }
   ],
@@ -1629,6 +1629,16 @@ const TrainerSession = () => {
     setFloatingAnimations(prev =>
       prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
     );
+
+    // Broadcast the animation pop event to learner
+    if (whiteboardService) {
+      whiteboardService.send('animation_popped', {
+        animationId,
+        poppedLeft,
+        poppedTop,
+        timestamp: Date.now()
+      });
+    }
   };
 
   // -----------------------------------------------------------
@@ -2094,14 +2104,20 @@ const TrainerSession = () => {
               {/* Clear Canvas Button */}
               <button
                 onClick={() => {
+                  console.log('[TrainerSession] 🗑️ Clear All button clicked!');
+                  console.log('[TrainerSession] whiteboardService available:', !!whiteboardService);
                   setCanvasItems([]);
                   setBuckets([]);
                   setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
                   setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
                   if (whiteboardService) {
+                    console.log('[TrainerSession] 📤 Sending clear_canvas message to learner...');
                     whiteboardService.send('clear_canvas', {
                       timestamp: Date.now()
                     });
+                    console.log('[TrainerSession] ✅ clear_canvas message sent!');
+                  } else {
+                    console.error('[TrainerSession] ❌ ERROR: whiteboardService is NULL/UNDEFINED!');
                   }
                 }}
                 className={wbBtnBase}
