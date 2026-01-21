@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, validator
 
-from app.models.chat_model import ConversationType, MessageType
+from app.models.Chat.chat_model import ConversationType, MessageType
 
 
 # ============ USER SCHEMAS ============

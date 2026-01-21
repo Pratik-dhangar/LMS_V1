@@ -233,7 +233,7 @@ def build_message_response(message, current_user_id: int = None) -> dict:
     }
 
 
-def build_conversation_response(conversation, current_user_id: int, db: Session) -> dict:
+async def build_conversation_response(conversation, current_user_id: int, db) -> dict:
     """
     Build conversation response dictionary with all details
     """
@@ -263,7 +263,7 @@ def build_conversation_response(conversation, current_user_id: int, db: Session)
             last_message = build_message_response(latest, current_user_id)
     
     # Get unread count
-    unread_count = chat_crud.get_unread_count(db, conversation.id, current_user_id)
+    unread_count = await chat_crud.get_unread_count(db, conversation.id, current_user_id)
     
     # For direct conversations, set name as other user's name
     conversation_name = conversation.name

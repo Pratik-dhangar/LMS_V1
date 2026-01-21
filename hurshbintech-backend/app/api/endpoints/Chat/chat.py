@@ -17,9 +17,10 @@ from fastapi import (
     status
 )
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import get_current_user
+from app.core.deps import get_current_user
 from app.crud.Chat import chat_crud
 from app.db.session import get_db
 from app.models.Chat.chat_model import ConversationType, MessageType
@@ -57,13 +58,13 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 @router.get("/users", response_model=List[ChatUserResponse])
 async def get_all_chat_users(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get all active users in the system for chat
     All users are visible to all users
     """
-    users = chat_crud.get_all_active_users(db)
+    users = await chat_crud.get_all_active_users(db)
     online_user_ids = chat_manager.get_online_users()
     
     user_responses = []
@@ -85,12 +86,12 @@ async def get_conversations(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get all conversations for the current user
     """
-    conversations, total = chat_crud.get_user_conversations(
+    conversations, total = await chat_crud.get_user_conversations(
         db=db,
         user_id=current_user.id,
         skip=skip,
@@ -100,7 +101,7 @@ async def get_conversations(
     conversation_responses = []
     for conv in conversations:
         conversation_responses.append(
-            build_conversation_response(conv, current_user.id, db)
+            await build_conversation_response(conv, current_user.id, db)
         )
     
     return {
@@ -113,7 +114,7 @@ async def get_conversations(
 async def create_conversation(
     conversation_data: ConversationCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create new conversation (direct or group)
@@ -138,17 +139,17 @@ async def create_conversation(
         
         # Check if conversation already exists
         other_user_id = conversation_data.member_ids[0]
-        existing_conv = chat_crud.get_or_create_direct_conversation(
+        existing_conv = await chat_crud.get_or_create_direct_conversation(
             db=db,
             user1_id=current_user.id,
             user2_id=other_user_id
         )
         
-        return build_conversation_response(existing_conv, current_user.id, db)
+        return await build_conversation_response(existing_conv, current_user.id, db)
     
     # Validate all member IDs exist
     for user_id in conversation_data.member_ids:
-        user = chat_crud.get_user_by_id(db, user_id)
+        user = await chat_crud.get_user_by_id(db, user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -160,7 +161,7 @@ async def create_conversation(
         conversation_data.member_ids.append(current_user.id)
     
     # Create group conversation
-    conversation = chat_crud.create_conversation(
+    conversation = await chat_crud.create_conversation(
         db=db,
         conversation_type=conversation_data.type,
         member_ids=conversation_data.member_ids,
@@ -169,7 +170,7 @@ async def create_conversation(
     )
     
     # Notify all members via WebSocket
-    conv_response = build_conversation_response(conversation, current_user.id, db)
+    conv_response = await build_conversation_response(conversation, current_user.id, db)
     await chat_manager.broadcast_conversation_update(
         conversation_id=conversation.id,
         member_ids=conversation_data.member_ids,
@@ -184,26 +185,26 @@ async def create_conversation(
 async def get_conversation(
     conversation_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get conversation details by ID
     """
     # Check if user is member of conversation
-    if not chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
+    if not await chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this conversation"
         )
     
-    conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found"
         )
     
-    return build_conversation_response(conversation, current_user.id, db)
+    return await build_conversation_response(conversation, current_user.id, db)
 
 
 @router.post("/conversations/{conversation_id}/members")
@@ -211,13 +212,13 @@ async def add_conversation_members(
     conversation_id: int,
     member_data: ConversationMemberAdd,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Add members to a group conversation
     Only group creator or ADMIN/HEAD/TRAINER/COACH can add members
     """
-    conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -242,14 +243,14 @@ async def add_conversation_members(
         )
     
     # Add members
-    new_members = chat_crud.add_conversation_members(
+    new_members = await chat_crud.add_conversation_members(
         db=db,
         conversation_id=conversation_id,
         user_ids=member_data.user_ids
     )
     
     # Get updated member list
-    updated_conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    updated_conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     all_member_ids = [m.user_id for m in updated_conversation.members if m.is_active]
     
     # Notify all members
@@ -271,14 +272,14 @@ async def remove_conversation_member(
     conversation_id: int,
     member_data: ConversationMemberRemove,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Remove member from group conversation
     Only group creator or ADMIN/HEAD/TRAINER/COACH can remove members
     Users can also leave the group themselves
     """
-    conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -305,7 +306,7 @@ async def remove_conversation_member(
             )
     
     # Remove member
-    removed = chat_crud.remove_conversation_member(
+    removed = await chat_crud.remove_conversation_member(
         db=db,
         conversation_id=conversation_id,
         user_id=member_data.user_id
@@ -318,7 +319,7 @@ async def remove_conversation_member(
         )
     
     # Get remaining members
-    updated_conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    updated_conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     remaining_member_ids = [m.user_id for m in updated_conversation.members if m.is_active]
     
     # Notify remaining members
@@ -342,19 +343,19 @@ async def get_conversation_messages(
     limit: int = Query(50, ge=1, le=100),
     before_message_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get messages for a conversation with pagination
     """
     # Check if user is member of conversation
-    if not chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
+    if not await chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this conversation"
         )
     
-    messages, total, has_more = chat_crud.get_conversation_messages(
+    messages, total, has_more = await chat_crud.get_conversation_messages(
         db=db,
         conversation_id=conversation_id,
         skip=skip,
@@ -377,20 +378,20 @@ async def get_conversation_messages(
 async def send_message(
     message_data: MessageCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Send text message to conversation
     """
     # Check if user is member of conversation
-    if not chat_crud.is_user_in_conversation(db, message_data.conversation_id, current_user.id):
+    if not await chat_crud.is_user_in_conversation(db, message_data.conversation_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this conversation"
         )
     
     # Create message
-    message = chat_crud.create_message(
+    message = await chat_crud.create_message(
         db=db,
         conversation_id=message_data.conversation_id,
         sender_id=current_user.id,
@@ -402,7 +403,7 @@ async def send_message(
     message_response = build_message_response(message, current_user.id)
     
     # Get conversation members
-    conversation = chat_crud.get_conversation_by_id(db, message_data.conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, message_data.conversation_id)
     member_ids = [m.user_id for m in conversation.members if m.is_active]
     
     # Broadcast to all members via WebSocket
@@ -422,14 +423,14 @@ async def send_message_with_file(
     file: UploadFile = File(...),
     content: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Send message with file attachment (image, video, audio, document)
     Maximum file size: 60MB
     """
     # Check if user is member of conversation
-    if not chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
+    if not await chat_crud.is_user_in_conversation(db, conversation_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this conversation"
@@ -443,7 +444,7 @@ async def send_message_with_file(
     )
     
     # Create message
-    message = chat_crud.create_message(
+    message = await chat_crud.create_message(
         db=db,
         conversation_id=conversation_id,
         sender_id=current_user.id,
@@ -459,7 +460,7 @@ async def send_message_with_file(
     message_response = build_message_response(message, current_user.id)
     
     # Get conversation members
-    conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
     member_ids = [m.user_id for m in conversation.members if m.is_active]
     
     # Broadcast to all members via WebSocket
@@ -477,20 +478,20 @@ async def send_message_with_file(
 async def mark_messages_as_read(
     read_data: MessageReadUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Mark messages as read in a conversation
     """
     # Check if user is member of conversation
-    if not chat_crud.is_user_in_conversation(db, read_data.conversation_id, current_user.id):
+    if not await chat_crud.is_user_in_conversation(db, read_data.conversation_id, current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this conversation"
         )
     
     # Mark as read
-    count = chat_crud.mark_conversation_as_read(
+    count = await chat_crud.mark_conversation_as_read(
         db=db,
         conversation_id=read_data.conversation_id,
         user_id=current_user.id,
@@ -498,7 +499,7 @@ async def mark_messages_as_read(
     )
     
     # Get conversation members
-    conversation = chat_crud.get_conversation_by_id(db, read_data.conversation_id)
+    conversation = await chat_crud.get_conversation_by_id(db, read_data.conversation_id)
     member_ids = [m.user_id for m in conversation.members if m.is_active]
     
     # Broadcast read receipts for each message
@@ -531,7 +532,7 @@ async def get_online_users(
 @router.websocket("/ws")
 async def chat_websocket_endpoint(
     websocket: WebSocket,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     WebSocket endpoint for real-time chat
@@ -569,7 +570,7 @@ async def chat_websocket_endpoint(
             return
         
         # Verify user exists
-        user = chat_crud.get_user_by_id(db, user_id)
+        user = await chat_crud.get_user_by_id(db, user_id)
         if not user:
             logger.error(f"User {user_id} not found")
             await websocket.close(code=1008)
@@ -605,7 +606,7 @@ async def chat_websocket_endpoint(
                     if conversation_id:
                         # Verify user is in conversation
                         if chat_crud.is_user_in_conversation(db, conversation_id, user_id):
-                            conversation = chat_crud.get_conversation_by_id(db, conversation_id)
+                            conversation = await chat_crud.get_conversation_by_id(db, conversation_id)
                             member_ids = [m.user_id for m in conversation.members if m.is_active]
                             
                             await chat_manager.broadcast_typing_status(
