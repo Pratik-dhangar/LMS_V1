@@ -45,8 +45,12 @@ class LearningContentInSession(BaseModel):
     id: int
     title: str
     content_type: str
-    file_url: str
+    file_url: Optional[str]  # Optional for YouTube content which doesn't use file_url
     thumbnail_url: Optional[str]
+    # YouTube-specific fields
+    youtube_url: Optional[str] = None
+    youtube_video_id: Optional[str] = None
+    is_youtube: bool = False
 
     class Config:
         from_attributes = True

@@ -15,10 +15,13 @@ import {
   Filter,
   Download,
   BarChart3,
-  Edit3
+  Edit3,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import subscriptionService from "../../api/services/subscriptionService";
+import adminService from "../../api/services/adminService";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
 import "../../styles/Table.css";
@@ -32,11 +35,12 @@ const SubscriptionRecords = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [filteredSubscriptions, setFilteredSubscriptions] = useState([]);
   const [heads, setHeads] = useState([]);
-  const [stats, setStats] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentDate, setCurrentDate] = useState("");
+  const [visiblePasscodes, setVisiblePasscodes] = useState({});
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -180,7 +184,6 @@ const SubscriptionRecords = () => {
     const statusConfig = {
       ACTIVE: { className: "status-badge status-badge-active", label: "Active" },
       PAUSED: { className: "status-badge status-badge-paused", label: "Paused" },
-      FROZEN: { className: "status-badge status-badge-frozen", label: "Frozen" },
       EXPIRED: { className: "status-badge status-badge-expired", label: "Expired" },
       CANCELLED: { className: "status-badge status-badge-cancelled", label: "Cancelled" },
     };
@@ -192,6 +195,29 @@ const SubscriptionRecords = () => {
         {config.label}
       </span>
     );
+  };
+
+  /**
+   * Toggle passcode visibility for a specific learner
+   * @param {number} learnerUserId - The user ID of the learner
+   */
+  const togglePasscodeVisibility = (learnerUserId) => {
+    const currentlyVisible = !!visiblePasscodes[learnerUserId];
+    if (currentlyVisible) {
+      setVisiblePasscodes(prev => ({ ...prev, [learnerUserId]: false }));
+      return;
+    }
+
+    (async () => {
+      try {
+        const resp = await adminService.revealPasscode(learnerUserId);
+        setVisiblePasscodes(prev => ({ ...prev, [learnerUserId]: resp.passcode }));
+      } catch (err) {
+        console.error('Failed to reveal passcode for learner', learnerUserId, err);
+        toast.error('Failed to reveal passcode', { position: 'top-center', autoClose: 3000 });
+        setVisiblePasscodes(prev => ({ ...prev, [learnerUserId]: false }));
+      }
+    })();
   };
 
   return (
@@ -223,118 +249,6 @@ const SubscriptionRecords = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          {stats && (
-            <div className="stats-grid">
-              <div className="stat-card stat-card-active">
-                <div className="stat-card-content">
-                  <Users size={24} className="stat-card-icon stat-card-icon-active" />
-                  <div>
-                    <p className="stat-card-value stat-card-value-active">
-                      {stats.total_active}
-                    </p>
-                    <p className="stat-card-label stat-card-label-active">Active Subscriptions</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card stat-card-total">
-                <div className="stat-card-content">
-                  <Package size={24} className="stat-card-icon stat-card-icon-total" />
-                  <div>
-                    <p className="stat-card-value stat-card-value-total">
-                      {stats.total_subscriptions}
-                    </p>
-                    <p className="stat-card-label stat-card-label-total">Total Subscriptions</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card stat-card-revenue">
-                <div className="stat-card-content">
-                  <TrendingUp size={24} className="stat-card-icon stat-card-icon-revenue" />
-                  <div>
-                    <p className="stat-card-value stat-card-value-revenue">
-                      ₹{parseFloat(stats.total_revenue || 0).toLocaleString("en-IN")}
-                    </p>
-                    <p className="stat-card-label stat-card-label-revenue">Total Revenue</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="stat-card stat-card-expired">
-                <div className="stat-card-content">
-                  <AlertCircle size={24} className="stat-card-icon stat-card-icon-expired" />
-                  <div>
-                    <p className="stat-card-value stat-card-value-expired">
-                      {stats.total_expired}
-                    </p>
-                    <p className="stat-card-label stat-card-label-expired">Expired Subscriptions</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Revenue Analytics Section */}
-          <div className="analytics-section">
-            <div className="analytics-header">
-              <h3 className="analytics-title">
-                <BarChart3 size={24} />
-                Revenue by HEAD
-              </h3>
-              <div className="analytics-filters">
-                <input
-                  type="date"
-                  className="form-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  placeholder="Start Date"
-                />
-                <input
-                  type="date"
-                  className="form-input"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  placeholder="End Date"
-                />
-              </div>
-            </div>
-
-            {revenueData.length > 0 ? (
-              <div className="table-primary-container">
-                <div className="table-primary-wrapper">
-                  <table className="table-primary">
-                    <thead className="table-primary-header">
-                      <tr>
-                        <th className="table-primary-th">HEAD Name</th>
-                        <th className="table-primary-th table-primary-th-center">Subscriptions Count</th>
-                        <th className="table-primary-th table-primary-th-right">Total Revenue</th>
-                        <th className="table-primary-th table-primary-th-right">Average Price</th>
-                      </tr>
-                    </thead>
-                    <tbody className="table-primary-body">
-                      {revenueData.map((item, index) => (
-                        <tr key={index} className="table-primary-row">
-                          <td className="table-primary-td">{item.head_name}</td>
-                          <td className="table-primary-td table-primary-td-center">{item.subscription_count}</td>
-                          <td className="table-primary-td table-primary-td-right card-price">
-                            ₹{parseFloat(item.total_revenue).toLocaleString("en-IN")}
-                          </td>
-                          <td className="table-primary-td table-primary-td-right">₹{parseFloat(item.average_price).toLocaleString("en-IN")}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <p className="analytics-empty">
-                Select date range to view revenue analytics
-              </p>
-            )}
-          </div>
-
           {/* Filters and Search */}
           <div className="search-section">
             <SearchBar onSearch={handleSearch} placeholder="Search by learner, package, or HEAD..." />
@@ -347,7 +261,6 @@ const SubscriptionRecords = () => {
                 <option value="">All Statuses</option>
                 <option value="ACTIVE">Active</option>
                 <option value="PAUSED">Paused</option>
-                <option value="FROZEN">Frozen</option>
                 <option value="EXPIRED">Expired</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
@@ -401,6 +314,7 @@ const SubscriptionRecords = () => {
                       <tr>
                         <th className="table-primary-th table-primary-th-id">ID</th>
                         <th className="table-primary-th">Learner</th>
+                        <th className="table-primary-th">Passcode</th>
                         <th className="table-primary-th">Package</th>
                         <th className="table-primary-th">HEAD</th>
                         <th className="table-primary-th table-primary-th-center">Sessions</th>
@@ -416,6 +330,24 @@ const SubscriptionRecords = () => {
                         <tr key={sub.id} className="table-primary-row">
                           <td className="table-primary-td table-primary-td-id">{sub.id}</td>
                           <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
+                          <td className="table-primary-td">
+                            <div className="passcode-display-inline">
+                              <span className="table-primary-badge">
+                                {visiblePasscodes[sub.learner_id] ? visiblePasscodes[sub.learner_id] : '••••••'}
+                              </span>
+                              <button
+                                onClick={() => togglePasscodeVisibility(sub.learner_id)}
+                                className="table-primary-icon-btn"
+                                title={visiblePasscodes[sub.learner_id] ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {visiblePasscodes[sub.learner_id] ? (
+                                  <EyeOff className="table-primary-icon-sm" />
+                                ) : (
+                                  <Eye className="table-primary-icon-sm" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
                           <td className="table-primary-td">{sub.package_name}</td>
                           <td className="table-primary-td subscription-head-name" data-empty="Not assigned">{sub.head_name || `HEAD ${sub.head_id || 'N/A'}`}</td>
                           <td className="table-primary-td table-primary-td-center">

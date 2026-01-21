@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 class LearningContentCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
     description: Optional[str] = None
-    content_type: str = Field(..., pattern="^(image|pdf|video|audio|document)$")
-    file_url: str = Field(..., max_length=500)
+    content_type: Optional[str] = Field(None, pattern="^(image|pdf|video|audio|document|youtube)$")
+    file_url: Optional[str] = Field(None, max_length=500)
+    youtube_url: Optional[str] = Field(None, max_length=500)
     file_size: Optional[int] = None
     thumbnail_url: Optional[str] = None
 
@@ -24,9 +25,12 @@ class LearningContentResponse(BaseModel):
     title: str
     description: Optional[str]
     content_type: str
-    file_url: str
+    file_url: Optional[str]
     file_size: Optional[int]
     thumbnail_url: Optional[str]
+    youtube_url: Optional[str]
+    youtube_video_id: Optional[str]
+    is_youtube: bool
     created_by_admin_id: int
     created_by_name: str
     updated_by_id: Optional[int]
@@ -51,6 +55,9 @@ class LearningContentResponse(BaseModel):
             file_url=content.file_url,
             file_size=content.file_size,
             thumbnail_url=content.thumbnail_url,
+            youtube_url=content.youtube_url,
+            youtube_video_id=content.youtube_video_id,
+            is_youtube=content.is_youtube or False,
             created_by_admin_id=content.created_by_admin_id,
             created_by_name=content.created_by.name if content.created_by else "Unknown",
             updated_by_id=content.updated_by_id,

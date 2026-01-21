@@ -19,6 +19,7 @@ import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
+import YouTubePopup from '../../components/common/YouTubePopup';
 import useMessages from '../../hooks/useMessages';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
@@ -287,6 +288,12 @@ const TrainerSession = () => {
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: YouTube popup state
+  // 🔸 How it works: tracks open YouTube videos dragged to whiteboard
+  // -----------------------------------------------------------
+  const [youtubePopups, setYoutubePopups] = useState([]); // Array of { id, videoId, title, position }
   const [toolActive, setToolActive] = useState(false); // Track if drawing tool is active
   const [eraserActive, setEraserActive] = useState(false); // Track if eraser tool is active
   const [eraseAllActive, setEraseAllActive] = useState(false); // Track if erase all tool is active
@@ -390,22 +397,25 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const toggleListening = async () => {
     try {
-      // If turning on voice input and video conferencing mic is on, turn it off
+      // If turning ON voice input and video conferencing mic is currently ON, turn it OFF
       if (!listening && micEnabled && webRTC) {
-        const newState = webRTC.toggleMicrophone();
-        setMicEnabled(newState);
-
+        console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
+        webRTC.toggleMicrophone();
+        setMicEnabled(false);
+        toast.info('Video conferencing mic disabled - Voice input enabled');
       }
 
       // Toggle voice input using the new hook
       // The hook will auto-send via the onMuteMic callback when mic is muted
       await handleVoiceToggle();
 
-      // Turn video conferencing mic back on after voice input is done
+      // If turning OFF voice input and video conferencing mic is currently OFF, turn it ON
+      // Note: 'listening' is the OLD state before toggle, so we check if it WAS true (now turning OFF)
       if (listening && !micEnabled && webRTC) {
-        const newState = webRTC.toggleMicrophone();
-        setMicEnabled(newState);
-
+        console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
+        webRTC.toggleMicrophone();
+        setMicEnabled(true);
+        toast.info('Voice input disabled - Video conferencing mic enabled');
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -720,7 +730,7 @@ const TrainerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
-        
+
         // Only show toast once when learner first connects
         if (!learnerConnectedRef.current) {
           learnerConnectedRef.current = true;
@@ -740,7 +750,7 @@ const TrainerSession = () => {
           'closed': 'disconnected'
         };
         setConnectionStatus(statusMap[state] || state);
-        
+
         // Handle learner disconnect
         if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
           console.log('[TrainerSession] Learner disconnected');
@@ -781,15 +791,22 @@ const TrainerSession = () => {
   // 🔹 Purpose: Toggle microphone on/off
   // 🔸 How it works: calls webRTC.toggleMicrophone() and updates state, coordinates with voice input
   // -----------------------------------------------------------
-  const handleToggleMic = () => {
+  const handleToggleMic = async () => {
     if (webRTC) {
       const newState = webRTC.toggleMicrophone();
       setMicEnabled(newState);
 
-      // If turning on video conferencing mic, turn off voice input
+      // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
-        handleVoiceToggle(); // Stop voice input
+        console.log('[TrainerSession] Turning ON video mic, turning OFF voice input');
+        await handleVoiceToggle(); // Stop voice input
         toast.info('Voice input stopped - video conferencing mic enabled');
+      }
+      // If turning OFF video conferencing mic, don't auto-enable voice input
+      // User should manually enable voice input if they want it
+      else if (!newState && !listening) {
+        console.log('[TrainerSession] Video mic turned OFF');
+        toast.info('Video conferencing mic disabled');
       }
     }
   };
@@ -819,7 +836,7 @@ const TrainerSession = () => {
             timestamp: Date.now()
           });
         }
-        
+
         // Save notes before ending session
         if (autoSaveTimerRef.current) {
           clearTimeout(autoSaveTimerRef.current);
@@ -927,7 +944,7 @@ const TrainerSession = () => {
       webRTC.close();
       console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
-    
+
     // Reset initialization flag to allow re-initialization
     isInitializingRef.current = false;
     if (whiteboardService) {
@@ -956,16 +973,66 @@ const TrainerSession = () => {
   // 🔸 How it works: sets a JSON payload into dataTransfer so drop target can parse it
   // -----------------------------------------------------------
   const onDragStartContent = (e, content) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({
+    const dragPayload = {
       id: content.id,
       title: content.title,
-      type: content.content_type,
-      url: content.file_url,
-      thumbnail: content.thumbnail_url,
+      type: content.is_youtube ? 'youtube' : content.content_type,
+      url: content.file_url || null,
+      thumbnail: content.thumbnail_url || null,
       mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
-      originalFilename: content.title
-    }));
+      originalFilename: content.title,
+      is_youtube: content.is_youtube || false,
+      youtube_url: content.youtube_url || null,
+      youtube_video_id: content.youtube_video_id || null,
+    };
+
+    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle YouTube content dropped on whiteboard
+  // 🔸 How it works: Creates a new YouTube popup entry with position and syncs to learner
+  // -----------------------------------------------------------
+  const handleYoutubeDropped = (videoData) => {
+    const newPopup = {
+      id: Date.now(),
+      videoId: videoData.videoId,
+      title: videoData.title,
+      position: videoData.position,
+    };
+
+    console.log('[TrainerSession] YouTube popup created:', newPopup);
+    setYoutubePopups(prev => [...prev, newPopup]);
+
+    // Broadcast to learner via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_created', {
+        popupId: newPopup.id,
+        videoId: newPopup.videoId,
+        title: newPopup.title,
+        position: newPopup.position,
+        timestamp: Date.now()
+      });
+      console.log('[TrainerSession] YouTube popup sync sent to learner');
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Close a YouTube popup and sync to learner
+  // 🔸 How it works: Removes popup from state array and broadcasts closure
+  // -----------------------------------------------------------
+  const handleCloseYoutubePopup = (popupId) => {
+    setYoutubePopups(prev => prev.filter(popup => popup.id !== popupId));
+
+    // Broadcast closure to learner via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_closed', {
+        popupId: popupId,
+        timestamp: Date.now()
+      });
+      console.log('[TrainerSession] YouTube popup closed, sync sent to learner');
+    }
   };
 
   // -----------------------------------------------------------
@@ -1810,7 +1877,7 @@ const TrainerSession = () => {
             </div>
             <button
               className="btn-secondary"
-              style={{color: 'white'}}
+              style={{ color: 'white' }}
               onClick={() =>
                 window.open('/trainer/dashboard', '_blank', 'noopener,noreferrer')
               }
@@ -1914,9 +1981,23 @@ const TrainerSession = () => {
                 stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
+                onYoutubeDropped={handleYoutubeDropped}
               />
             </div>
           </div>
+
+          {/* YouTube Popups - Rendered outside whiteboard container to avoid stacking context issues */}
+          {youtubePopups.map(popup => (
+            <YouTubePopup
+              key={popup.id}
+              popupId={popup.id}
+              videoId={popup.videoId}
+              title={popup.title}
+              onClose={() => handleCloseYoutubePopup(popup.id)}
+              initialPosition={popup.position}
+              isTrainer={true}
+            />
+          ))}
 
           {/* Video Controls - Below Whiteboard */}
           <div className="w-full mt-4 mb-3">

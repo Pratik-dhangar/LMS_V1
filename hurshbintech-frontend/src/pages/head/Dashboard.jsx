@@ -3,7 +3,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar, Package, CreditCard } from 'lucide-react';
+import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar, CreditCard } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 // Head Dashboard Component
@@ -20,8 +20,7 @@ const HeadDashboard = () => {
     { id: '6', title: 'Session Reports', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
     { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') },
     { id: '8', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: BookOpen, onClick: () => navigate('/head/profile-order-history') },
-    { id: '9', title: 'Manage Subscription Packages', description: 'Create and manage subscription packages for learners', icon: Package, onClick: () => navigate('/head/subscriptions/packages') },
-    { id: '10', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') }
+    { id: '9', title: 'Manage Communication', description: 'Send messages to prompters, trainers, and admin', icon: MessageSquare, onClick: () => navigate('/head/communication') }
   ];
 
   return (

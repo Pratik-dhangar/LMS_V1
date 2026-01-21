@@ -19,7 +19,6 @@ import ManageLearningGoals from './pages/admin/ManageLearningGoals';
 import ManageLearningContent from './pages/admin/ManageLearningContent';
 import ManageLearningMaterials from './pages/admin/ManageLearningMaterials';
 import PaymentVerification from './pages/admin/PaymentVerification';
-import ViewLearners from './pages/admin/ViewLearners';
 import ViewTrainers from './pages/admin/ViewTrainers';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
@@ -105,7 +104,7 @@ import Checkout from './pages/store/Checkout';
 import OrderHistory from './pages/store/OrderHistory';
 
 // Subscription Pages
-import SubscriptionPackageManager from './pages/head/SubscriptionPackageManager';
+import ManageSubscriptionPackages from './pages/admin/ManageSubscriptionPackages';
 import LearnerSubscriptionManager from './pages/head/LearnerSubscriptionManager';
 import SubscriptionRecords from './pages/admin/SubscriptionRecords';
 import DiscountCodeManager from './pages/admin/DiscountCodeManager';
@@ -268,14 +267,6 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/admin/view-learners"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <ViewLearners />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/admin/view-trainers"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -413,6 +404,14 @@ function AppRoutes() {
           />
 
           {/* Admin Subscription Routes */}
+          <Route
+            path="/admin/subscriptions/packages"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ManageSubscriptionPackages />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/subscriptions/discounts"
             element={
@@ -553,14 +552,7 @@ function AppRoutes() {
           />
 
           {/* Head Subscription Routes */}
-          <Route
-            path="/head/subscriptions/packages"
-            element={
-              <ProtectedRoute allowedRoles={['head']}>
-                <SubscriptionPackageManager />
-              </ProtectedRoute>
-            }
-          />
+          
           <Route
             path="/head/subscriptions/learners"
             element={

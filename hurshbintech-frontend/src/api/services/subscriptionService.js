@@ -2,10 +2,21 @@ import axiosInstance from '../axios';
 
 /**
  * Subscription Service
- * Handles subscription management API calls for HEAD and ADMIN roles
+ * Handles subscription management API calls for HEAD, ADMIN, and other roles
  */
+
+// Helper function to determine the correct endpoint prefix
+const getPackageEndpointPrefix = () => {
+  // Get the current path to determine if it's admin or head
+  const path = window.location.pathname;
+  if (path.includes('/admin')) {
+    return '/admin';
+  }
+  return '/head';
+};
+
 const subscriptionService = {
-  // ============ SUBSCRIPTION PACKAGE APIs (HEAD) ============
+  // ============ SUBSCRIPTION PACKAGE APIs (HEAD & ADMIN) ============
 
   /**
    * Create a new subscription package
@@ -13,21 +24,23 @@ const subscriptionService = {
    * @returns {Promise} - Created package
    */
   createPackage: async (packageData) => {
-    console.log('Creating new subscription package:', packageData);
-    const response = await axiosInstance.post('/head/subscription-packages', packageData);
+    const prefix = getPackageEndpointPrefix();
+    console.log('Creating new subscription package:', packageData, 'Endpoint:', prefix);
+    const response = await axiosInstance.post(`${prefix}/subscription-packages`, packageData);
     console.log('Package created successfully:', response.data);
     return response.data;
   },
 
   /**
-   * Get all subscription packages for current HEAD
+   * Get all subscription packages
    * @param {boolean} activeOnly - Filter active packages only
    * @returns {Promise} - Array of packages
    */
   getAllPackages: async (activeOnly = true) => {
-    console.log('Fetching subscription packages, activeOnly:', activeOnly);
+    const prefix = getPackageEndpointPrefix();
+    console.log('Fetching subscription packages, activeOnly:', activeOnly, 'Endpoint:', prefix);
     try {
-      const response = await axiosInstance.get('/head/subscription-packages', {
+      const response = await axiosInstance.get(`${prefix}/subscription-packages`, {
         params: { active_only: activeOnly }
       });
       console.log('Packages fetched successfully:', {
@@ -52,8 +65,9 @@ const subscriptionService = {
    * @returns {Promise} - Package details
    */
   getPackageById: async (packageId) => {
+    const prefix = getPackageEndpointPrefix();
     console.log('Fetching package details:', { packageId });
-    const response = await axiosInstance.get(`/head/subscription-packages/${packageId}`);
+    const response = await axiosInstance.get(`${prefix}/subscription-packages/${packageId}`);
     return response.data;
   },
 
@@ -64,8 +78,9 @@ const subscriptionService = {
    * @returns {Promise} - Updated package
    */
   updatePackage: async (packageId, updateData) => {
+    const prefix = getPackageEndpointPrefix();
     console.log('Updating package:', { packageId, updateData });
-    const response = await axiosInstance.patch(`/head/subscription-packages/${packageId}`, updateData);
+    const response = await axiosInstance.patch(`${prefix}/subscription-packages/${packageId}`, updateData);
     return response.data;
   },
 
@@ -75,8 +90,9 @@ const subscriptionService = {
    * @returns {Promise}
    */
   deletePackage: async (packageId) => {
+    const prefix = getPackageEndpointPrefix();
     console.log('Deleting package:', { packageId });
-    const response = await axiosInstance.delete(`/head/subscription-packages/${packageId}`);
+    const response = await axiosInstance.delete(`${prefix}/subscription-packages/${packageId}`);
     return response.data;
   },
 
@@ -198,15 +214,6 @@ const subscriptionService = {
    * @param {string} reason - Optional reason
    * @returns {Promise} - Updated subscription
    */
-  freezeSubscription: async (subscriptionId, reason = null) => {
-    console.log('Freezing subscription:', { subscriptionId, reason });
-    const response = await axiosInstance.post(`/head/subscriptions/${subscriptionId}/freeze`, {
-      subscription_id: subscriptionId,
-      reason
-    });
-    return response.data;
-  },
-
   /**
    * Resume a paused/frozen subscription
    * @param {number} subscriptionId
