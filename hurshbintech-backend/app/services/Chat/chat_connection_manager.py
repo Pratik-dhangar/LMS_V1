@@ -146,9 +146,8 @@ class ChatConnectionManager:
         Broadcast user online/offline status to all connected users
         """
         message = {
-            "type": "user_online",
+            "type": "user_online" if is_online else "user_offline",
             "user_id": user_id,
-            "is_online": is_online,
             "timestamp": datetime.utcnow().isoformat()
         }
         

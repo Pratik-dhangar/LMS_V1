@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, UserPlus, Users, MessageSquarePlus } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useChatWebSocket } from '../../hooks/chat/useChatWebSocket';
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -22,9 +21,8 @@ const ChatPage = () => {
     loadConversations,
     createConversation,
     selectConversation,
+    isConnected,
   } = useChat();
-
-  const { isConnected } = useChatWebSocket();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);

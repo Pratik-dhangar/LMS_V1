@@ -3,11 +3,17 @@
  * Global state management for chat functionality
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import chatApi from '../../api/services/chat/chatApi';
 
 const ChatContext = createContext();
+
+// WebSocket configuration
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+const CHAT_WS_ENDPOINT = `${WS_URL}/api/chat/ws`;
+const RECONNECT_INTERVAL = 3000;
+const HEARTBEAT_INTERVAL = 30000;
 
 export const useChat = () => {
   const context = useContext(ChatContext);
@@ -30,6 +36,13 @@ export const ChatProvider = ({ children }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // WebSocket state
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const heartbeatIntervalRef = useRef(null);
 
   // ============ CONVERSATIONS ============
 
@@ -167,13 +180,23 @@ export const ChatProvider = ({ children }) => {
   // ============ WEBSOCKET HANDLERS ============
 
   const handleNewMessage = useCallback((message) => {
+    console.log('[ChatContext] handleNewMessage called with:', message);
     const { conversation_id } = message;
     
+    if (!conversation_id) {
+      console.error('[ChatContext] Message missing conversation_id:', message);
+      return;
+    }
+    
     // Add message to state
-    setMessages(prev => ({
-      ...prev,
-      [conversation_id]: [...(prev[conversation_id] || []), message]
-    }));
+    setMessages(prev => {
+      const updated = {
+        ...prev,
+        [conversation_id]: [...(prev[conversation_id] || []), message]
+      };
+      console.log('[ChatContext] Updated messages for conversation', conversation_id, ':', updated[conversation_id]);
+      return updated;
+    });
     
     // Update conversation's last message
     setConversations(prev => prev.map(conv => 
@@ -240,14 +263,191 @@ export const ChatProvider = ({ children }) => {
     await loadConversations();
   }, [loadConversations]);
 
+  // ============ WEBSOCKET ============
+
+  const connectWebSocket = useCallback(() => {
+    if (!user || wsRef.current) return;
+
+    try {
+      console.log('[ChatWS] Connecting to:', CHAT_WS_ENDPOINT);
+      const ws = new WebSocket(CHAT_WS_ENDPOINT);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('[ChatWS] Connected');
+        setIsConnected(true);
+        setReconnectAttempts(0);
+
+        // Get token from localStorage
+        const token = localStorage.getItem('access_token');
+
+        // Send join message
+        ws.send(JSON.stringify({
+          type: 'join',
+          user_id: user.id,
+          token: token
+        }));
+
+        // Start heartbeat
+        startHeartbeat();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (err) {
+          console.error('[ChatWS] Failed to parse message:', err);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('[ChatWS] WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        console.log('[ChatWS] Disconnected');
+        setIsConnected(false);
+        stopHeartbeat();
+        wsRef.current = null;
+
+        // Attempt reconnect
+        scheduleReconnect();
+      };
+    } catch (error) {
+      console.error('[ChatWS] Connection error:', error);
+      scheduleReconnect();
+    }
+  }, [user]);
+
+  const disconnectWebSocket = useCallback(() => {
+    if (wsRef.current) {
+      console.log('[ChatWS] Disconnecting...');
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    stopHeartbeat();
+    setIsConnected(false);
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) return;
+
+    const backoffTime = Math.min(RECONNECT_INTERVAL * (reconnectAttempts + 1), 30000);
+    
+    console.log(`[ChatWS] Reconnecting in ${backoffTime}ms...`);
+    
+    reconnectTimeoutRef.current = setTimeout(() => {
+      reconnectTimeoutRef.current = null;
+      setReconnectAttempts(prev => prev + 1);
+      connectWebSocket();
+    }, backoffTime);
+  }, [connectWebSocket, reconnectAttempts]);
+
+  const startHeartbeat = useCallback(() => {
+    stopHeartbeat();
+    
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'pong' }));
+      }
+    }, HEARTBEAT_INTERVAL);
+  }, []);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleWebSocketMessage = useCallback((data) => {
+    console.log('[ChatWS] Received message:', data);
+    const { type } = data;
+
+    switch (type) {
+      case 'connected':
+        console.log('[ChatWS] Connection confirmed');
+        break;
+
+      case 'new_message':
+        console.log('[ChatWS] New message received:', data.message);
+        handleNewMessage(data.message);
+        break;
+
+      case 'user_online':
+        console.log('[ChatWS] User online:', data.user_id);
+        handleUserOnline(data.user_id);
+        break;
+
+      case 'user_offline':
+        console.log('[ChatWS] User offline:', data.user_id);
+        handleUserOffline(data.user_id);
+        break;
+
+      case 'user_typing':
+        console.log('[ChatWS] User typing:', data);
+        handleTypingStatus(data.conversation_id, data.user_id, data.is_typing);
+        break;
+
+      case 'message_read':
+        console.log('[ChatWS] Message read:', data);
+        handleMessageRead(data.conversation_id, data.message_id, data.user_id);
+        break;
+
+      case 'conversation_update':
+        console.log('[ChatWS] Conversation update:', data);
+        handleConversationUpdate(data.conversation_id);
+        break;
+
+      case 'ping':
+        // Respond to server ping
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'pong' }));
+        }
+        break;
+
+      default:
+        console.log('[ChatWS] Unknown message type:', type, data);
+    }
+  }, [
+    handleNewMessage,
+    handleUserOnline,
+    handleUserOffline,
+    handleTypingStatus,
+    handleMessageRead,
+    handleConversationUpdate
+  ]);
+
+  const sendTypingStatus = useCallback((conversationId, isTyping) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'typing',
+        conversation_id: conversationId,
+        is_typing: isTyping
+      }));
+    }
+  }, []);
+
   // ============ INITIALIZATION ============
 
   useEffect(() => {
     if (user) {
       loadConversations();
       loadAllUsers();
+      connectWebSocket();
     }
-  }, [user, loadConversations, loadAllUsers]);
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [user, loadConversations, loadAllUsers, connectWebSocket, disconnectWebSocket]);
 
   const value = {
     // State
@@ -261,6 +461,10 @@ export const ChatProvider = ({ children }) => {
     loading,
     error,
     
+    // WebSocket state
+    isConnected,
+    reconnectAttempts,
+    
     // Actions
     loadConversations,
     createConversation,
@@ -270,6 +474,7 @@ export const ChatProvider = ({ children }) => {
     sendFileMessage,
     markAsRead,
     loadAllUsers,
+    sendTypingStatus,
     
     // WebSocket handlers
     handleNewMessage,
