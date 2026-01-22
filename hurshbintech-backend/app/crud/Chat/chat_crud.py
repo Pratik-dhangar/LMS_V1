@@ -113,7 +113,8 @@ async def get_user_conversations(
         )
         .options(
             joinedload(Conversation.members).joinedload(ConversationMember.user),
-            joinedload(Conversation.messages).joinedload(Message.sender)
+            joinedload(Conversation.messages).joinedload(Message.sender),
+            joinedload(Conversation.messages).joinedload(Message.read_receipts).joinedload(ReadReceipt.user)
         )
         .order_by(desc(Conversation.updated_at))
         .offset(skip)
@@ -131,10 +132,11 @@ async def get_conversation_by_id(db: AsyncSession, conversation_id: int) -> Opti
         .where(Conversation.id == conversation_id)
         .options(
             joinedload(Conversation.members).joinedload(ConversationMember.user),
-            joinedload(Conversation.messages).joinedload(Message.sender)
+            joinedload(Conversation.messages).joinedload(Message.sender),
+            joinedload(Conversation.messages).joinedload(Message.read_receipts).joinedload(ReadReceipt.user)
         )
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def is_user_in_conversation(db: AsyncSession, conversation_id: int, user_id: int) -> bool:
@@ -249,6 +251,18 @@ async def create_message(
 
     await db.commit()
     await db.refresh(message)
+    
+    # Eagerly load relationships to avoid lazy loading issues
+    result = await db.execute(
+        select(Message)
+        .options(
+            joinedload(Message.sender),
+            joinedload(Message.read_receipts).joinedload(ReadReceipt.user)
+        )
+        .where(Message.id == message.id)
+    )
+    message = result.unique().scalar_one()
+    
     return message
 
 

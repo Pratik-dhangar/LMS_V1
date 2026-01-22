@@ -39,14 +39,14 @@ const ChatIconWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-16 right-12 z-50">
       <button
         onClick={handleClick}
-        className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300"
+        className="relative bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300"
         aria-label="Open Chat"
         title="Chat"
       >
-        <MessageCircle size={28} />
+        <MessageCircle size={30} />
         
         {/* Unread Badge */}
         {totalUnread > 0 && (
