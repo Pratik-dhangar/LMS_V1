@@ -261,8 +261,8 @@ const TrainerSession = () => {
   // Music options - you can add URLs to your music files here
   const musicOptions = [
     { id: 0, name: '🎵 Music 1', url: '/music/background-music-1.mp3' },
-    { id: 1, name: '🎶 Music 2', url: '/music/background-music-1.mp3' },
-    { id: 2, name: '🎼 Music 3', url: '/music/background-music-1.mp3' }
+    { id: 1, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
+    { id: 2, name: '🎼 Music 3', url: '/music/background-music-3.mp3' }
   ];
 
   // Hamburger menu state for responsive sidebars
