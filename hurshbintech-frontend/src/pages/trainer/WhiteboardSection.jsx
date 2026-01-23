@@ -8,11 +8,6 @@ const WhiteboardSection = ({
   isTrainer,
   canvasItems,
   setCanvasItems,
-  keyboardMode,
-  keyboardText,
-  setKeyboardText,
-  keyboardPosition,
-  setKeyboardPosition,
   isFrozen,
   learnerSelectedItemIds,
   textMessages,
@@ -34,11 +29,6 @@ const WhiteboardSection = ({
         isTrainer={isTrainer}
         canvasItems={canvasItems}
         setCanvasItems={setCanvasItems}
-        keyboardMode={keyboardMode}
-        keyboardText={keyboardText}
-        setKeyboardText={setKeyboardText}
-        keyboardPosition={keyboardPosition}
-        setKeyboardPosition={setKeyboardPosition}
         isFrozen={isFrozen}
         learnerSelectedItemIds={learnerSelectedItemIds}
         textMessages={textMessages}
@@ -65,10 +55,13 @@ const WhiteboardSection = ({
             <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
-          {/* Keyboard Tool */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
-            <span style={{ fontSize: '12px' }}><Emoji emoji="⌨️" size="sm" /> Keyboard</span>
-            <button onClick={() => handleToolClick('⌨️ Keyboard')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TRIGGER</button>
+          {/* EXERCISE TOOL */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '2px solid #f59e0b', marginBottom: '12px' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#92400e', marginBottom: '4px' }}><Emoji emoji="💡" size="sm" /> Exercise</div>
+              <div style={{ fontSize: '11px', color: '#4b5563' }}>Create Q&A exercises with keyword validation</div>
+            </div>
+            <button onClick={() => handleToolClick('💡 Exercise')} style={{ backgroundColor: '#f59e0b', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '16px', whiteSpace: 'nowrap' }}><Emoji emoji="✨" size="sm" /> CREATE</button>
           </div>
 
           {/* FILL IN THE BLANKS TOOL - SIMPLE AND DIRECT */}

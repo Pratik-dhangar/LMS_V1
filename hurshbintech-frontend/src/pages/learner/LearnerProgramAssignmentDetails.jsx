@@ -596,6 +596,14 @@ const LearnerProgramAssignmentDetails = () => {
                 </p>
               )}
             </div>
+
+            {/* Head Notes Section */}
+            {assignment?.head_notes && (
+              <div className="notes-section">
+                <h4 className="subsection-title">👔 Instructions from Head</h4>
+                <div className="notes-content notes-readonly">{assignment.head_notes}</div>
+              </div>
+            )}
           </div>
 
           <div className="contents-section">
@@ -624,8 +632,8 @@ const LearnerProgramAssignmentDetails = () => {
                       onClick={() => handleViewContent(contentAssignment)}
                     >
                       {contentType === "image" &&
-                      fileUrl &&
-                      !failedImageIds.has(contentAssignment.id) ? (
+                        fileUrl &&
+                        !failedImageIds.has(contentAssignment.id) ? (
                         <img
                           src={fileUrl}
                           alt={content.title}
@@ -840,7 +848,7 @@ const LearnerProgramAssignmentDetails = () => {
           </div>
         )}
 
-       
+
       </div>
     </div>
   );

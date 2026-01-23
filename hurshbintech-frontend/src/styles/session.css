@@ -1,6 +1,6 @@
 /* ============================================================================
    SESSION.CSS - Session-specific Styles
-   Responsive design for video sessions, chat, and virtual keyboard
+   Responsive design for video sessions and chat
    ============================================================================ */
 
 /* ============================================================================
@@ -810,31 +810,6 @@
   background-color: var(--color-gray-50);
 }
 
-/* Virtual keyboard button styles */
-.keyboard-key {
-  padding: 0.625rem;
-  background: var(--color-gray-100);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: bold;
-  transition: background var(--transition-fast);
-  min-width: 44px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.keyboard-key:hover {
-  background: var(--color-gray-200);
-}
-
-.keyboard-key:active {
-  background: var(--color-gray-300);
-}
-
 /* Scrollbar styles for sidebars */
 .session-sidebar::-webkit-scrollbar {
   width: 8px;
@@ -920,13 +895,6 @@
     margin-bottom: 0.375rem;
   }
 
-  .keyboard-key {
-    padding: 0.35rem;
-    font-size: 0.7rem;
-    min-width: 32px;
-    min-height: 32px;
-  }
-
   .session-loader {
     width: 2rem;
     height: 2rem;
@@ -969,13 +937,6 @@
   .message-bubble {
     font-size: 0.875rem;
     padding: 0.375rem 0.75rem;
-  }
-
-  .keyboard-key {
-    padding: 0.625rem;
-    font-size: 0.875rem;
-    min-width: 44px;
-    min-height: 44px;
   }
 
   .session-loader {

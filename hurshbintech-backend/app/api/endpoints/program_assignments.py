@@ -22,7 +22,7 @@ from sqlalchemy import delete, select, and_
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.deps import get_current_head, get_current_user
-from app.crud import program_assignment_crud, program_assignment_attachment_crud
+from app.crud import program_assignment_crud, program_assignment_attachment_crud, learner_content_assignment_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile, User, UserRole
 from app.models.program_assignment_model import CompletionStatus, ProgramAssignment
@@ -503,7 +503,7 @@ async def update_assignment(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Update assignment (Head can update all fields except learner_notes)"""
+    """Update assignment (Head can update all fields including programs and extra content)"""
     
     assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
@@ -519,18 +519,101 @@ async def update_assignment(
             detail="Not authorized to update this assignment"
         )
     
+    # Extract extra_content_ids before converting to dict
+    extra_content_ids = update_data.extra_content_ids if hasattr(update_data, 'extra_content_ids') else None
+    
     # Convert to dict and remove None values
     update_dict = update_data.model_dump(exclude_unset=True)
     
+    # Remove extra_content_ids from update_dict since it's not a model field
+    if 'extra_content_ids' in update_dict:
+        del update_dict['extra_content_ids']
+    
+    # Update the assignment fields
     updated_assignment = await program_assignment_crud.update_assignment(
         db, assignment_id, update_dict
     )
     
+    # Handle extra_content_ids if provided
+    if extra_content_ids is not None:
+        # Get existing content IDs for this assignment
+        existing_query = await db.execute(
+            select(LearnerContentAssignment.content_id).where(
+                LearnerContentAssignment.program_assignment_id == assignment_id
+            )
+        )
+        existing_content_ids = set(existing_query.scalars().all())
+        
+        # Add new content assignments (append, don't delete)
+        if extra_content_ids and len(extra_content_ids) > 0:
+            for content_id in extra_content_ids:
+                # Skip if already assigned to this program_assignment
+                if content_id not in existing_content_ids:
+                    try:
+                        # Check if already assigned to learner (for any program_assignment)
+                        already_assigned = await learner_content_assignment_crud.check_duplicate_assignment(
+                            db, assignment.learner_id, content_id
+                        )
+                        
+                        if not already_assigned:
+                            await learner_content_assignment_crud.create_assignment(
+                                db=db,
+                                learner_id=assignment.learner_id,
+                                content_id=content_id,
+                                assigned_by_head=current_head.user_id,
+                                program_assignment_id=assignment_id
+                            )
+                    except Exception as e:
+                        print(f"Error creating content assignment for content {content_id}: {e}")
+                        # Continue with other contents instead of failing entirely
+    
     # Reload with relationships for response
     updated_assignment = await program_assignment_crud.get_assignment_by_id(db, assignment_id)
     
-    # Build response (programs and contents are independent)
-    learning_contents = []  # Will be empty - contents are independent
+    # Get program names for program_names list
+    program_names = []
+    if updated_assignment.program_ids:
+        try:
+            from app.models.learning_goals_model import LearningGoals
+            programs_result = await db.execute(
+                select(LearningGoals).where(LearningGoals.id.in_(updated_assignment.program_ids))
+            )
+            programs = programs_result.scalars().all()
+            program_names = [p.goal for p in programs] if programs else []
+        except Exception as e:
+            print(f"Error fetching program names: {e}")
+            program_names = []
+    
+    # Fetch content assignments with proper relationships
+    content_assignments_list = []
+    try:
+        from app.models.learning_content_model import LearningContent
+        content_query = await db.execute(
+            select(LearnerContentAssignment)
+            .options(selectinload(LearnerContentAssignment.content))
+            .where(LearnerContentAssignment.program_assignment_id == assignment_id)
+        )
+        all_content_assignments = content_query.unique().scalars().all()
+        
+        # Build content_assignments_list
+        for ca in all_content_assignments:
+            if ca.content:
+                content_assignments_list.append(
+                    ContentAssignmentInProgram(
+                        id=ca.id,
+                        content_id=ca.content_id,
+                        content_title=ca.content.title if hasattr(ca.content, 'title') else "",
+                        content_type=ca.content.content_type.value if hasattr(ca.content, 'content_type') else "unknown",
+                        completion_status=ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NEW.value,
+                        file_url=ca.content.file_url if hasattr(ca.content, 'file_url') else None,
+                    )
+                )
+    except Exception as e:
+        print(f"Error fetching content assignments: {e}")
+        content_assignments_list = []
+    
+    # Extract extra_content_ids from content_assignments
+    extra_content_ids_response = [ca.content_id for ca in content_assignments_list]
     
     return ProgramAssignmentResponse(
         id=updated_assignment.id,
@@ -541,12 +624,14 @@ async def update_assignment(
             email=updated_assignment.learner.email
         ),
         program_ids=updated_assignment.program_ids,  # List of program IDs
+        program_names=program_names,  # List of program names
         program=ProgramWithContents(
             id=updated_assignment.program_ids[0] if updated_assignment.program_ids else 0,
             goal="",
             goal_description="",
-            contents=learning_contents
+            contents=[]
         ),
+        assignment_title=updated_assignment.assignment_title,
         assigned_by_head=updated_assignment.assigned_by_head,
         assigned_by=UserBasic(
             id=updated_assignment.assigned_by.id,
@@ -560,9 +645,16 @@ async def update_assignment(
         learner_notes=updated_assignment.learner_notes,
         completion_status=updated_assignment.completion_status,
         completed_at=updated_assignment.completed_at,
+        final_feedback_rating=updated_assignment.final_feedback_rating,
+        final_feedback_remarks=updated_assignment.final_feedback_remarks,
+        final_feedback_given_at=updated_assignment.final_feedback_given_at,
         notification_sent=updated_assignment.notification_sent,
         assigned_at=updated_assignment.assigned_at,
-        updated_at=updated_assignment.updated_at
+        updated_at=updated_assignment.updated_at,
+        is_overdue=False,
+        is_late_submission=False,
+        content_assignments=content_assignments_list,
+        extra_content_ids=extra_content_ids_response
     )
 
 

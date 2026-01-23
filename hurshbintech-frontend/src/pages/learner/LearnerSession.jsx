@@ -11,6 +11,7 @@ import Whiteboard from '../../components/common/Whiteboard';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import Emoji from '../../components/common/Emoji';
 import YouTubePopup from '../../components/common/YouTubePopup';
+import Exercise from '../../components/session/Exercise';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import useMessages from '../../hooks/useMessages';
@@ -53,7 +54,7 @@ const LearnerSession = () => {
   const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
   const [promptVisible, setPromptVisible] = useState(false); // Toggle prompt line visibility (collapsed by default)
   const [isEyeBlinking, setIsEyeBlinking] = useState(false); // Eye blinking animation when new prompt received
-  const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
+  const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
@@ -172,14 +173,16 @@ const LearnerSession = () => {
   // Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
     select: false,
-    drag: false,
-    keyboard: false
+    drag: false
   });
-  const [showKeyboard, setShowKeyboard] = useState(false);
-  const [keyboardText, setKeyboardText] = useState('');
   const [_selectedItemId] = useState(null); // Track learner's own selection
-  const [isShiftActive, setIsShiftActive] = useState(false); // For shift/caps lock
-  const [isCapsLock, setIsCapsLock] = useState(false); // For persistent caps lock
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Background music player state
+  // 🔸 How it works: learner receives music commands from trainer
+  // -----------------------------------------------------------
+  const [backgroundMusicPlaying, setBackgroundMusicPlaying] = useState(false);
+  const learnerAudioRef = useRef(null); // Reference to audio element
 
   // Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
@@ -191,13 +194,20 @@ const LearnerSession = () => {
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
-  const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color (synced from trainer)
   const [_isPaused] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
-  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
   const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
   const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Exercise tool state
+  // 🔸 How it works: manages exercise display and learner responses
+  // -----------------------------------------------------------
+  const [exerciseData, setExerciseData] = useState({
+    question: ''
+  });
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Stopwatch hook for session timing
@@ -370,6 +380,74 @@ const LearnerSession = () => {
     );
   };
 
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle exercise submission from learner
+  // 🔸 How it works: sends learner's answer to trainer for evaluation
+  // -----------------------------------------------------------
+  const handleExerciseSubmit = (response) => {
+    console.log('[LearnerSession] Exercise response:', response);
+
+    if (whiteboardService) {
+      if (response.qaItems) {
+        // New multiple Q&A format
+        whiteboardService.send('exercise_response', {
+          qaItems: response.qaItems,
+          status: response.status,
+          timestamp: Date.now()
+        });
+      } else {
+        // Backward compatibility for single answer
+        whiteboardService.send('exercise_response', {
+          question: response.question,
+          learnerAnswer: response.learnerAnswer,
+          keyword: response.keyword,
+          status: response.status,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+
+  const handleExerciseAnswerChange = (answerData) => {
+    console.log('[LearnerSession] Answer changed:', answerData);
+
+    // Update local state with the answer
+    if (answerData.qaItems) {
+      setExerciseData(prev => ({
+        ...prev,
+        qaItems: answerData.qaItems
+      }));
+
+      // Send qaItems update to trainer
+      if (whiteboardService) {
+        whiteboardService.send('exercise_answer_update', {
+          qaItems: answerData.qaItems,
+          timestamp: answerData.timestamp
+        });
+      }
+    } else {
+      // Backward compatibility for single answer
+      setExerciseData(prev => ({
+        ...prev,
+        learnerAnswer: answerData.learnerAnswer
+      }));
+
+      // Send answer update to trainer
+      if (whiteboardService) {
+        whiteboardService.send('exercise_answer_update', {
+          question: answerData.question,
+          learnerAnswer: answerData.learnerAnswer,
+          timestamp: answerData.timestamp
+        });
+      }
+    }
+  };
+
+  const handleExerciseKeywordMatched = (matchData) => {
+    console.log('[LearnerSession] Keyword matched:', matchData);
+    toast.success('Keyword found! ✓');
+  };
+
   // Listen for stopwatch updates from trainer
   useEffect(() => {
     if (!whiteboardService) {
@@ -478,22 +556,6 @@ const LearnerSession = () => {
       else if (data.toolName === 'select' && data.enabled) {
         setTool('select');
       }
-
-      // Show keyboard when keyboard permission is granted
-      if (data.toolName === 'keyboard' && data.enabled) {
-        setShowKeyboard(true);
-        setKeyboardText(''); // Reset text when keyboard opens
-        // toast.info('Virtual keyboard activated');
-      } else if (data.toolName === 'keyboard' && !data.enabled) {
-        setShowKeyboard(false);
-      }
-    };
-
-    // Set up callback for keyboard trigger — show keyboard until trainer revokes
-    whiteboardService.onTriggerKeyboard = () => {
-      console.log('[LearnerSession] Keyboard triggered by trainer');
-      setShowKeyboard(true);
-      // Do not auto-hide — the keyboard will remain visible until trainer revokes 'keyboard' access
     };
 
     // NOTE: Auto-send prompt via whiteboardService disabled - only manual send via webRTC.sendPrompt is used
@@ -658,11 +720,83 @@ const LearnerSession = () => {
       setYoutubePopups(prev => prev.filter(popup => popup.id !== data.popupId));
     };
 
+    // Set up callback for background music from trainer
+    whiteboardService.onBackgroundMusic = (data) => {
+      console.log('[LearnerSession] Background music command from trainer:', data);
+      if (data.playing) {
+        // Start playing music
+        setBackgroundMusicPlaying(true);
+        if (learnerAudioRef.current) {
+          learnerAudioRef.current.src = data.musicUrl;
+          learnerAudioRef.current.loop = true;
+          learnerAudioRef.current.volume = data.volume || 0.5; // Use trainer's volume
+          learnerAudioRef.current.play().catch(err => console.log('Audio play error:', err));
+        }
+      } else {
+        // Stop playing music
+        setBackgroundMusicPlaying(false);
+        if (learnerAudioRef.current) {
+          learnerAudioRef.current.pause();
+        }
+      }
+    };
+
+    // Set up callback for background music volume changes
+    whiteboardService.onBackgroundMusicVolume = (data) => {
+      console.log('[LearnerSession] Background music volume changed:', data.volume);
+      if (learnerAudioRef.current) {
+        learnerAudioRef.current.volume = data.volume;
+      }
+    };
+
+    // Set up callback for exercise updates from trainer
+    whiteboardService.onExerciseUpdate = (data) => {
+      console.log('[LearnerSession] 📋 Exercise update received from trainer:', data);
+
+      // Handle both new qaItems format and old question format for backward compatibility
+      if (data.qaItems && Array.isArray(data.qaItems)) {
+        console.log('[LearnerSession] Setting exerciseData with qaItems:', data.qaItems);
+        setExerciseData({
+          qaItems: data.qaItems
+        });
+      } else if (data.question) {
+        console.log('[LearnerSession] Setting exerciseData with question:', data.question);
+        setExerciseData({
+          question: data.question
+        });
+      }
+    };
+
+    // Set up callback for real-time answer updates from trainer's display
+    whiteboardService.onExerciseAnswerUpdate = (data) => {
+      console.log('[LearnerSession] Exercise answer update received:', data);
+      if (data.qaItems) {
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          learnerAnswer: data.learnerAnswer
+        }));
+      }
+    };
+
+    // Set up callback for exercise closed from trainer
+    whiteboardService.onExerciseClosed = (data) => {
+      console.log('[LearnerSession] Exercise closed by trainer:', data);
+      setExerciseData({
+        qaItems: [],
+        question: ''
+      });
+    };
+
     return () => {
       // Cleanup callbacks
       if (whiteboardService) {
         whiteboardService.onToolAccess = null;
-        whiteboardService.onTriggerKeyboard = null;
         whiteboardService.onPromptUpdate = null;
         whiteboardService.onItemUpdate = null;
         whiteboardService.onItemRemove = null;
@@ -672,6 +806,11 @@ const LearnerSession = () => {
         whiteboardService.onBucketUpdate = null;
         whiteboardService.onYoutubePopupCreated = null;
         whiteboardService.onYoutubePopupClosed = null;
+        whiteboardService.onBackgroundMusic = null;
+        whiteboardService.onBackgroundMusicVolume = null;
+        whiteboardService.onExerciseUpdate = null;
+        whiteboardService.onExerciseAnswerUpdate = null;
+        whiteboardService.onExerciseClosed = null;
       }
     };
   }, [whiteboardService, sessionInfo, floatingAnimations, canvasItems, buckets]);
@@ -1265,92 +1404,6 @@ const LearnerSession = () => {
   // --------------------------
   // Keyboard controls
   // --------------------------
-  const handleKeyboardKeyPress = (key) => {
-    if (key === 'SPACE') {
-      setKeyboardText(prev => prev + ' ');
-      setIsShiftActive(false);
-    } else if (key === 'BACKSPACE') {
-      setKeyboardText(prev => prev.slice(0, -1));
-      setIsShiftActive(false);
-    } else if (key === 'SHIFT') {
-      setIsShiftActive(!isShiftActive);
-    } else if (key === 'CAPS') {
-      setIsCapsLock(!isCapsLock);
-      setIsShiftActive(false);
-    } else if (key === 'ENTER') {
-      setKeyboardText(prev => prev + '\n');
-      setIsShiftActive(false);
-    } else if (key === 'TAB') {
-      setKeyboardText(prev => prev + '\t');
-      setIsShiftActive(false);
-    } else {
-      // Apply shift/caps logic for letters
-      let finalKey = key;
-      if (typeof key === 'string' && key.length === 1) {
-        const isLetter = /[a-z]/i.test(key);
-        if (isLetter) {
-          if (isShiftActive || isCapsLock) {
-            finalKey = key.toUpperCase();
-          } else {
-            finalKey = key.toLowerCase();
-          }
-          // Auto-deactivate shift after typing a letter
-          if (isShiftActive) {
-            setIsShiftActive(false);
-          }
-        } else {
-          // For non-letters, apply shift mapping for special characters
-          const shiftMap = {
-            '1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
-            '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
-            '-': '_', '=': '+', '[': '{', ']': '}', '\\': '|',
-            ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '`': '~'
-          };
-          if (isShiftActive && shiftMap[key]) {
-            finalKey = shiftMap[key];
-            setIsShiftActive(false);
-          }
-        }
-      }
-      setKeyboardText(prev => prev + finalKey);
-    }
-  };
-
-  const handleSendText = () => {
-    if (keyboardText.trim() === '') {
-      toast.warning('Please type something first');
-      return;
-    }
-
-    // Send text to whiteboard via WebSocket
-    if (whiteboardService) {
-      const userData = JSON.parse(localStorage.getItem('user_data'));
-      const learnerName = userData?.full_name || 'Learner';
-
-      whiteboardService.send('text_added', {
-        text: keyboardText,
-        sender: learnerName,
-        id: Date.now()
-      });
-      console.log('[LearnerSession] Sent text to whiteboard:', keyboardText);
-      // toast.success('Text sent to whiteboard');
-      setKeyboardText(''); // Clear after sending
-    }
-  };
-
-  // Keyboard drag handlers - simplified since keyboard is now in document flow
-  const handleKeyboardMouseDown = (e) => {
-    if (e.target.closest('button, input')) return; // Don't drag if clicking buttons
-    // The keyboard is no longer fixed, so dragging is not needed
-    e.preventDefault();
-  };
-
-  useEffect(() => {
-    // Drag functionality removed since keyboard is positioned below whiteboard
-    // Keeping an effect in place for future keyboard drag re-introduction
-    // but should not depend on undefined values.
-  }, []);
-
   if (loading) {
     return (
       <div className="loading-container">
@@ -1423,6 +1476,12 @@ const LearnerSession = () => {
 
   return (
     <div className={`learner-session-page ${pageClassName}`}>
+      {/* Hidden audio element for background music */}
+      <audio
+        ref={learnerAudioRef}
+        crossOrigin="anonymous"
+      />
+
       {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
       <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
@@ -1479,16 +1538,22 @@ const LearnerSession = () => {
           {/* Trainer Video Feed - Collapsible */}
           {remoteStream && (
             <div className="mb-4 md:mb-5">
-              <div
-                onClick={() => setIsTrainerVideoOpen(!isTrainerVideoOpen)}
-                className="cursor-pointer bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all"
-              >
-                <div className="flex items-center justify-between p-3 bg-gray-800">
+              <div className="rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-500"
+                style={{
+                  background: 'linear-gradient(135deg, #fffbf7 0%, #fffef9 100%)',
+                  border: '1px solid rgba(217, 119, 6, 0.2)'
+                }}>
+                <div
+                  onClick={() => setIsTrainerVideoOpen(!isTrainerVideoOpen)}
+                  className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-amber-50/50"
+                >
                   <div className="flex items-center gap-2">
 
-                    <h3 className="font-semibold text-sm md:text-base text-white">Trainer Video</h3>
+                    <h3 className="font-bold text-sm md:text-base text-gray-800">Trainer Video</h3>
                   </div>
-                  <span className="text-white text-xl">{isTrainerVideoOpen ? '▼' : '▶'}</span>
+                  <span className="text-amber-600 text-lg transition-transform duration-300" style={{
+                    transform: isTrainerVideoOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>{isTrainerVideoOpen ? '▼' : '▶'}</span>
                 </div>
                 <div className={isTrainerVideoOpen ? "relative" : "hidden"} style={isTrainerVideoOpen ? { paddingBottom: '56.25%' } : {}}>
                   <video
@@ -1497,7 +1562,7 @@ const LearnerSession = () => {
                     playsInline
                     className="absolute top-0 left-0 w-full h-full object-cover"
                   />
-                  <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
+                  <div className={`absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
                     Trainer
                   </div>
                   <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
@@ -1509,40 +1574,59 @@ const LearnerSession = () => {
           )}
 
           {/* Video Conferencing - Now on whiteboard */}
-          <div className={`bg-yellow-50 border-2 border-yellow-400 rounded-lg mb-3 transition-all duration-500 ${promptLineAnimating ? 'animate-pulse shadow-lg shadow-yellow-400' : ''}`}
-            style={promptLineAnimating ? {
-              boxShadow: '0 0 20px rgba(218, 165, 32, 0.6), 0 0 40px rgba(218, 165, 32, 0.3)'
-            } : {}}>
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-all duration-500"
+            style={{
+              background: 'linear-gradient(135deg, #fffbf7 0%, #fffef9 100%)',
+              border: '1px solid rgba(217, 119, 6, 0.2)',
+              ...(promptLineAnimating ? {
+                boxShadow: '0 0 20px rgba(218, 165, 32, 0.3), 0 2px 12px rgba(217, 119, 6, 0.15)'
+              } : {})
+            }}>
             <div
               onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
-              className="flex items-center justify-between mb-2 cursor-pointer hover:bg-yellow-100 p-2 rounded transition-colors"
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-amber-50/50"
             >
-              <h3 className="font-semibold text-sm md:text-base text-gray-700">Prompt Line (For Prompter)</h3>
-              <span className="text-yellow-600 text-xl">{isPromptLineOpen ? '▼' : '▶'}</span>
+              <h3 className="font-bold text-sm md:text-base text-gray-800">Prompt Line (For Prompter)</h3>
+              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
+                transform: isPromptLineOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>{isPromptLineOpen ? '▼' : '▶'}</span>
             </div>
             {isPromptLineOpen && (
-              <div className="bg-white border border-yellow-300 rounded p-2 sm:p-3 md:p-4 min-h-[60px] mb-2">
-                <textarea
-                  value={promptText}
-                  readOnly
-                  className="w-full h-24 p-2 border border-yellow-200 rounded bg-gray-50 text-gray-700 text-xs sm:text-sm md:text-base resize-none focus:outline-none"
-                />
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl overflow-hidden" style={{
+                  boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(217, 119, 6, 0.15)'
+                }}>
+                  <textarea
+                    value={promptText}
+                    readOnly
+                    className="w-full h-24 p-4 sm:p-5 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 text-xs sm:text-sm md:text-base resize-none focus:outline-none border-0"
+                  />
+                </div>
               </div>
             )}
           </div>
-          <div className="bg-[#fef3e2] border-2 border-[#DB9D32] rounded-lg mb-3">
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
+            background: 'linear-gradient(135deg, #fef9f3 0%, #fffbf7 100%)',
+            border: '1px solid rgba(219, 157, 50, 0.2)'
+          }}>
             <div
               onClick={() => setIsPrompterMeterOpen(!isPrompterMeterOpen)}
-              className="flex items-center justify-between cursor-pointer hover:bg-[#feedd0] p-2 rounded transition-colors mb-3"
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-yellow-50/50"
             >
-              <h3 className="font-semibold text-sm md:text-base text-gray-700">Prompt Level</h3>
-              <span className="text-[#DB9D32] text-xl">{isPrompterMeterOpen ? '▼' : '▶'}</span>
+              <h3 className="font-bold text-sm md:text-base text-gray-800">Prompt Level</h3>
+              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
+                transform: isPrompterMeterOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>{isPrompterMeterOpen ? '▼' : '▶'}</span>
             </div>
             {isPrompterMeterOpen && (
-              <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
-                <div className="bg-white border border-[#DB9D32] rounded p-2 sm:p-3 md:p-1">
-                  <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Prompt <br /> Level</div>
-                  <div className="text-base sm:text-lg md:text-2xl font-bold text-[#9C4D0B]">
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl p-4 sm:p-5" style={{
+                  boxShadow: '0 2px 8px rgba(219, 157, 50, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(219, 157, 50, 0.15)'
+                }}>
+                  <div className="text-xs sm:text-sm text-gray-500 font-medium mb-2 tracking-wide">PROMPT LEVEL</div>
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-600">
                     {promptMeter ?? 0}
                   </div>
                 </div>
@@ -1550,67 +1634,85 @@ const LearnerSession = () => {
             )}
           </div>
 
-          <div className="bg-[#fef3e2] border-2 border-green-300 rounded-lg mb-3">
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
+            background: 'linear-gradient(135deg, #fef9f3 0%, #fffbf7 100%)',
+            border: '1px solid rgba(34, 197, 94, 0.2)'
+          }}>
             <div
               onClick={() => setIsReinforcementMeterOpen(!isReinforcementMeterOpen)}
-              className="flex items-center justify-between cursor-pointer hover:bg-green-50 p-2 rounded transition-colors mb-3"
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-yellow-50/50"
             >
-              <h3 className="font-semibold text-sm md:text-base text-gray-700">Reinforcement Level</h3>
-              <span className="text-green-600 text-xl">{isReinforcementMeterOpen ? '▼' : '▶'}</span>
+              <h3 className="font-bold text-sm md:text-base text-gray-800">Reinforcement Level</h3>
+              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
+                transform: isReinforcementMeterOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>{isReinforcementMeterOpen ? '▼' : '▶'}</span>
             </div>
             {isReinforcementMeterOpen && (
-              <div className="grid grid-cols-2 gap-2 sm:gap-4 md:gap-5">
-                <div className="bg-white border border-green-300 rounded p-2 sm:p-3 md:p-1">
-                  <div className="text-xs sm:text-xs md:text-sm text-gray-600 mb-1">Reinforcement <br /> Level</div>
-                  <div className="text-base sm:text-lg md:text-2xl font-bold text-green-600">
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl p-4 sm:p-5" style={{
+                  boxShadow: '0 2px 8px rgba(34, 197, 94, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(34, 197, 94, 0.15)'
+                }}>
+                  <div className="text-xs sm:text-sm text-gray-500 font-medium mb-2 tracking-wide">REINFORCEMENT LEVEL</div>
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-600">
                     {reinforcementMeter ?? 0}
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <div className="bg-gray-50 border border-gray-300 rounded-lg mb-3">
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
+            background: 'linear-gradient(135deg, #f8f9fa 0%, #f5f6f7 100%)',
+            border: '1px solid rgba(107, 114, 128, 0.15)'
+          }}>
             <div
               onClick={() => setIsMessagesOpen(!isMessagesOpen)}
-              className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors mb-2"
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-gray-100/30"
             >
-              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700">Messages</h3>
-              <span className="text-gray-600 text-xl">{isMessagesOpen ? '▼' : '▶'}</span>
+              <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800">Messages</h3>
+              <span className="text-gray-600 text-lg transition-transform duration-300" style={{
+                transform: isMessagesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>{isMessagesOpen ? '▼' : '▶'}</span>
             </div>
             {isMessagesOpen && (
-              <>
-                <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto mb-2">
-                  {messages.length > 0 ? (
-                    messages.map((msg, idx) => (
-                      <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs md:text-sm">
-                        <strong className="text-gray-800">{msg.sender === 'You' ? 'Trainer' : msg.sender}:</strong>
-                        <span className="text-gray-700"> {msg.text}</span>
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl overflow-hidden" style={{
+                  boxShadow: '0 2px 8px rgba(107, 114, 128, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(107, 114, 128, 0.12)'
+                }}>
+                  <div className="max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto p-4 sm:p-5">
+                    {messages.length > 0 ? (
+                      messages.map((msg, idx) => (
+                        <div key={idx} className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-xs md:text-sm border border-gray-200/50">
+                          <strong className="text-gray-800 font-semibold">{msg.sender === 'You' ? 'Trainer' : msg.sender}:</strong>
+                          <span className="text-gray-700 ml-2">{msg.text}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.trainer_name ?? 'Trainer'}:</p>
+                        <p className="text-xs sm:text-xs md:text-sm text-gray-500">Great job on the last activity!</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.trainer_name ?? 'Trainer'}:</p>
-                      <p className="text-xs sm:text-xs md:text-sm text-gray-500">Great job on the last activity!</p>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="flex gap-2 w-full min-w-0 mt-4 pt-4 border-t border-gray-200/50">
+                    <input
+                      type="text"
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="[Type message...]"
+                      className="flex-1 min-w-0 ml-1 mb-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      className="flex-shrink-0 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-semibold rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                      Send
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1 sm:gap-2 w-full min-w-0">
-                  <input
-                    type="text"
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="[Type message...]"
-                    className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:border-[#DB9D32]"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    className="flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#DB9D32] text-white text-xs rounded hover:bg-[#9C4D0B] transition-colors whitespace-nowrap"
-                  >
-                    Send
-                  </button>
-                </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1638,17 +1740,14 @@ const LearnerSession = () => {
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 buckets={buckets}
                 setBuckets={setBuckets}
+                bucketColor={bucketColor}
+                setBucketColor={setBucketColor}
                 tool={tool}
                 setTool={setTool}
                 color={color}
                 setColor={setColor}
                 lineWidth={lineWidth}
                 setLineWidth={setLineWidth}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
                 stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
                 stopwatchIsRunning={syncedIsRunning}
               />
@@ -1669,310 +1768,15 @@ const LearnerSession = () => {
             />
           ))}
 
-          {showKeyboard && (
-            <div
-              className="rounded-3xl p-6 sm:p-8 shadow-2xl mx-auto w-full max-w-[1086px] mt-4 mb-4 cursor-default touch-none md:p-6"
-              style={{
-                touchAction: 'none',
-                background: 'linear-gradient(135deg, #3d3531 0%, #4a4238 100%)',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
-              onMouseDown={handleKeyboardMouseDown}
-              onTouchStart={handleKeyboardMouseDown}
-            >
-              <div className="flex justify-between items-center mb-6 sm:mb-7">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <span className="text-4xl sm:text-5xl drop-shadow-lg">⌨️</span>
-                  <h4 className="m-0 text-amber-100 text-xl sm:text-2xl font-bold tracking-wider cursor-move" style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)' }}>
-                    Magic Keyboard
-                  </h4>
-                </div>
-              </div>
-              <div className="mb-6 sm:mb-7 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch">
-                <div
-                  className="flex-1 rounded-2xl px-5 sm:px-6 py-3 sm:py-4"
-                  style={{
-                    background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
-                    boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}
-                >
-                  <p className="text-sm sm:text-base text-amber-50 font-medium whitespace-pre-wrap break-words min-h-[48px] flex items-center">
-                    {keyboardText || <span className="text-amber-200 italic opacity-60">✨ Start typing...</span>}
-                  </p>
-                </div>
-                <button
-                  onClick={handleSendText}
-                  className="text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95 whitespace-nowrap"
-                  style={{
-                    background: 'linear-gradient(135deg, #A8A8D8 0%, #9090C8 100%)',
-                    boxShadow: '0 8px 25px rgba(168, 168, 216, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)'
-                  }}
-                >
-                  ✨ Send
-                </button>
-              </div>
-              <div
-                className="rounded-2xl p-5 sm:p-7 shadow-xl overflow-x-auto"
-                style={{
-                  background: 'linear-gradient(135deg, #4a4238 0%, #3d3531 100%)',
-                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-                }}
-              >
-                <div className="grid gap-3 sm:gap-3">
-                  {/* Number Row */}
-                  <div className="grid grid-cols-12 gap-2.5">
-                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='].map(char => {
-                      const shiftMap = { '1': '!', '2': '@', '3': '#', '4': '$', '5': '%', '6': '^', '7': '&', '8': '*', '9': '(', '0': ')', '-': '_', '=': '+' };
-                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
-                      return (
-                        <button
-                          key={char}
-                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                          style={{
-                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                            border: '1px solid rgba(0, 0, 0, 0.15)'
-                          }}
-                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                          onClick={() => handleKeyboardKeyPress(char)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            handleKeyboardKeyPress(char);
-                          }}
-                        >
-                          {displayChar}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Q Row */}
-                  <div className="grid grid-cols-10 md:grid-cols-10 gap-2.5">
-                    {['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].map(letter => (
-                      <button
-                        key={letter}
-                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                        style={{
-                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(0, 0, 0, 0.15)'
-                        }}
-                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onClick={() => handleKeyboardKeyPress(letter)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(letter);
-                        }}
-                      >
-                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* A Row */}
-                  <div className="grid grid-cols-9 md:grid-cols-9 gap-2.5 md:ml-6">
-                    {['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map(letter => (
-                      <button
-                        key={letter}
-                        className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                        style={{
-                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(0, 0, 0, 0.15)'
-                        }}
-                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onClick={() => handleKeyboardKeyPress(letter)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(letter);
-                        }}
-                      >
-                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Z Row and Special Chars */}
-                  <div className="flex gap-2.5">
-                    <button
-                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                      style={{
-                        background: isShiftActive ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                        boxShadow: isShiftActive ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                        border: isShiftActive ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
-                        color: isShiftActive ? 'white' : '#3a3a3a'
-                      }}
-                      onClick={() => handleKeyboardKeyPress('SHIFT')}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleKeyboardKeyPress('SHIFT');
-                      }}
-                    >
-                      ⇧ SHIFT
-                    </button>
-                    {['z', 'x', 'c', 'v', 'b', 'n', 'm'].map(letter => (
-                      <button
-                        key={letter}
-                        className="flex-1 keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                        style={{
-                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(0, 0, 0, 0.15)'
-                        }}
-                        onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                        onClick={() => handleKeyboardKeyPress(letter)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(letter);
-                        }}
-                      >
-                        {isCapsLock || isShiftActive ? letter.toUpperCase() : letter}
-                      </button>
-                    ))}
-                    <button
-                      className="flex-1 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                      style={{
-                        background: 'linear-gradient(135deg, #D8A0A0 0%, #C88080 100%)',
-                        boxShadow: '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)'
-                      }}
-                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(216, 160, 160, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(216, 160, 160, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onClick={() => handleKeyboardKeyPress('BACKSPACE')}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleKeyboardKeyPress('BACKSPACE');
-                      }}
-                    >
-                      ⌫ DEL
-                    </button>
-                  </div>
-
-                  {/* Symbol and Control Row */}
-                  <div className="grid grid-cols-12 gap-2.5">
-                    <button
-                      className="col-span-2 keyboard-key text-white font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                      style={{
-                        background: isCapsLock ? 'linear-gradient(135deg, #B89FB8 0%, #A88FA8 100%)' : 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                        boxShadow: isCapsLock ? '0 4px 12px rgba(184, 159, 184, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                        border: isCapsLock ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.15)',
-                        color: isCapsLock ? 'white' : '#3a3a3a'
-                      }}
-                      onClick={() => handleKeyboardKeyPress('CAPS')}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleKeyboardKeyPress('CAPS');
-                      }}
-                    >
-                      {isCapsLock ? '🔒 CAPS' : '🔓 CAPS'}
-                    </button>
-                    {['[', ']', ';', '\'', ',', '.', '/', '\\', '`'].map(char => {
-                      const shiftMap = { '[': '{', ']': '}', ';': ':', '\'': '"', ',': '<', '.': '>', '/': '?', '\\': '|', '`': '~' };
-                      const displayChar = isShiftActive && shiftMap[char] ? shiftMap[char] : char;
-                      return (
-                        <button
-                          key={char}
-                          className="keyboard-key text-gray-800 font-semibold rounded-lg py-3 sm:py-4 transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                          style={{
-                            background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                            border: '1px solid rgba(0, 0, 0, 0.15)'
-                          }}
-                          onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                          onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                          onClick={() => handleKeyboardKeyPress(char)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            handleKeyboardKeyPress(char);
-                          }}
-                        >
-                          {displayChar}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Space and Control Row */}
-                  <div className="grid grid-cols-12 gap-2.5">
-                    <button
-                      className="col-span-9 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                      style={{
-                        background: 'linear-gradient(135deg, #A8C8E8 0%, #98B8D8 100%)',
-                        boxShadow: '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)'
-                      }}
-                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(168, 200, 232, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(168, 200, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onClick={() => handleKeyboardKeyPress('SPACE')}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleKeyboardKeyPress('SPACE');
-                      }}
-                    >
-                      🌟 SPACE 🌟
-                    </button>
-                    <button
-                      className="col-span-3 keyboard-key text-white font-semibold py-3 sm:py-4 rounded-lg transition-all duration-150 text-xs sm:text-sm flex items-center justify-center active:scale-95"
-                      style={{
-                        background: 'linear-gradient(135deg, #B0D8A8 0%, #A0C898 100%)',
-                        boxShadow: '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)'
-                      }}
-                      onMouseEnter={(e) => e.target.style.boxShadow = '0 6px 16px rgba(176, 216, 168, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onMouseLeave={(e) => e.target.style.boxShadow = '0 4px 12px rgba(176, 216, 168, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)'}
-                      onClick={() => handleKeyboardKeyPress('ENTER')}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleKeyboardKeyPress('ENTER');
-                      }}
-                    >
-                      ↵ ENTER
-                    </button>
-                  </div>
-
-                  {/* Emoji Row */}
-                  <div
-                    className="grid grid-cols-12 gap-2.5 rounded-2xl p-4 sm:p-5"
-                    style={{
-                      background: 'linear-gradient(135deg, #5a4f48 0%, #4d4541 100%)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
-                    }}
-                  >
-                    {['😀', '😂', '😍', '😎', '👍', '❤️', '🎉', '🌟', '✨', '💯', '🔥', '⭐'].map(emoji => (
-                      <button
-                        key={emoji}
-                        className="keyboard-key rounded-lg py-3 sm:py-4 transition-all duration-150 text-lg sm:text-2xl flex items-center justify-center active:scale-95"
-                        style={{
-                          background: 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)',
-                          border: '1px solid rgba(0, 0, 0, 0.15)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = 'linear-gradient(135deg, #E8A89A 0%, #D89080 100%)';
-                          e.target.style.boxShadow = '0 6px 16px rgba(232, 168, 154, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = 'linear-gradient(135deg, #D8C8B8 0%, #C8B8A8 100%)';
-                          e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3)';
-                        }}
-                        onClick={() => handleKeyboardKeyPress(emoji)}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          handleKeyboardKeyPress(emoji);
-                        }}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          {/* Exercise Tool */}
+          {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
+            <div className="exercise-tool-container">
+              <Exercise
+                isTrainer={false}
+                onExerciseSubmit={handleExerciseSubmit}
+                onAnswerChange={handleExerciseAnswerChange}
+                initialExercise={exerciseData}
+              />
             </div>
           )}
 

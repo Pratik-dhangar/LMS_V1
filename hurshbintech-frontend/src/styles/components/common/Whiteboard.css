@@ -953,7 +953,7 @@ input[type="range"]::-webkit-slider-thumb {
 .floating-animation {
     position: absolute;
     bottom: -100px;
-    --floating-emoji-size: clamp(40px, 1vw, 80px);
+    --floating-emoji-size: clamp(60px, 2vw, 120px);
     font-size: var(--floating-emoji-size);
     animation: floatUp 10s ease-in-out forwards;
     z-index: 100;
@@ -1120,6 +1120,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* Type-specific drift and timing variations */
 .floating-animation.bubble {
     --drift: 35px;
+    --floating-emoji-size: 7rem;
     animation-duration: 9s;
     animation-timing-function: linear;
     will-change: transform, opacity;
@@ -1131,7 +1132,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .floating-animation.smiley {
     --drift: 20px;
-    --floating-emoji-size: 4rem;
+    --floating-emoji-size: 6rem;
     animation-duration: 10s;
     animation-timing-function: linear;
     will-change: transform, opacity;
@@ -1156,6 +1157,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .floating-animation.star {
     --drift: 25px;
+    --floating-emoji-size: 6rem;
     animation-duration: 10.5s;
     animation-timing-function: linear;
     will-change: transform, opacity;

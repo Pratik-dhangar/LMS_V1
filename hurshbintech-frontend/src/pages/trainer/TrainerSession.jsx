@@ -33,6 +33,7 @@ import LearningContentSidebar from './LearningContentSidebar';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 // Fill blanks exercise removed
 import Emoji from '../../components/common/Emoji';
+import Exercise from '../../components/session/Exercise';
 import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
@@ -192,7 +193,7 @@ const TrainerSession = () => {
       }
     };
   }, [webRTC, addReceivedMessage]);
-  const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
+  const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
@@ -247,9 +248,22 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [canvasItems, setCanvasItems] = useState([]);
   const [_activeTool] = useState(null);
-  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
-  const [keyboardText, setKeyboardText] = useState('');
-  const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Background music player state
+  // 🔸 How it works: trainer can play/stop background music that syncs to learner
+  // -----------------------------------------------------------
+  const [backgroundMusicPlaying, setBackgroundMusicPlaying] = useState(false); // Is music playing
+  const [selectedMusic, setSelectedMusic] = useState(null); // Currently selected music (0, 1, or 2)
+  const [musicVolume, setMusicVolume] = useState(0.5); // Music volume (0 to 1)
+  const audioRef = useRef(null); // Reference to audio element
+
+  // Music options - you can add URLs to your music files here
+  const musicOptions = [
+    { id: 0, name: '🎵 Music 1', url: '/music/background-music-1.mp3' },
+    { id: 1, name: '🎶 Music 2', url: '/music/background-music-1.mp3' },
+    { id: 2, name: '🎼 Music 3', url: '/music/background-music-1.mp3' }
+  ];
 
   // Hamburger menu state for responsive sidebars
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -288,6 +302,13 @@ const TrainerSession = () => {
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
+  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color
+  const bucketColors = [
+    { name: 'Red', hex: '#FF6B6B' },
+    { name: 'Teal', hex: '#4ECDC4' },
+    { name: 'Yellow', hex: '#FFE66D' },
+    { name: 'Mint', hex: '#95E1D3' }
+  ];
 
   // -----------------------------------------------------------
   // 🔹 Purpose: YouTube popup state
@@ -304,8 +325,7 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [learnerToolAccess, setLearnerToolAccess] = useState({
     select: false,    // Can select items on canvas
-    drag: false,      // Can drag items on canvas
-    keyboard: false   // Can use virtual keyboard
+    drag: false       // Can drag items on canvas
   });
 
   // Fill in the blanks feature removed
@@ -356,6 +376,15 @@ const TrainerSession = () => {
   }, [whiteboardService, stopwatch.elapsedTime, stopwatch.isRunning]);
 
   const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Exercise tool state
+  // 🔸 How it works: manages exercise creation, display, and learner responses
+  // -----------------------------------------------------------
+  const [showExercise, setShowExercise] = useState(false);
+  const [exerciseData, setExerciseData] = useState({
+    question: ''
+  });
 
   // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
@@ -593,10 +622,50 @@ const TrainerSession = () => {
       handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
+    // Set up callback for exercise answer updates from learner
+    whiteboardService.onExerciseAnswerUpdate = (data) => {
+      console.log('[TrainerSession] 📝 Learner answer updated:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Backward compatibility for single answer
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          learnerAnswer: data.learnerAnswer
+        }));
+      }
+    };
+
+    // Set up callback for exercise submission from learner
+    whiteboardService.onExerciseResponse = (data) => {
+      console.log('[TrainerSession] 📋 Learner submitted exercise:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Backward compatibility for single answer
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          learnerAnswer: data.learnerAnswer
+        }));
+      }
+    };
+
     return () => {
       if (whiteboardService) {
         whiteboardService.onItemSelected = null;
         whiteboardService.onAnimationPopped = null;
+        whiteboardService.onExerciseAnswerUpdate = null;
+        whiteboardService.onExerciseResponse = null;
       }
     };
   }, [whiteboardService]);
@@ -896,6 +965,70 @@ const TrainerSession = () => {
       console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
       toast.error('Unable to send freeze signal');
       setIsFrozen(!newFreezeState); // Revert state
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Exercise tool handlers
+  // 🔸 How it works: manages exercise creation, updates, and learner responses
+  // -----------------------------------------------------------
+  const handleExerciseUpdate = (exerciseInfo) => {
+    console.log('[TrainerSession] Exercise updated:', exerciseInfo);
+    setExerciseData(exerciseInfo);
+
+    // Send exercise to learner via whiteboard service
+    if (whiteboardService) {
+      whiteboardService.send('exercise_update', {
+        qaItems: exerciseInfo.qaItems,
+        question: exerciseInfo.question, // Keep for backward compatibility
+        timestamp: Date.now()
+      });
+    }
+  };
+
+  const handleExerciseAnswerChange = (answerData) => {
+    console.log('[TrainerSession] Learner answer updated:', answerData);
+    // Trainer only displays answer updates received via WebSocket
+    // Do not broadcast back - prevents feedback loops
+  };
+
+  const handleExerciseSubmit = (response) => {
+    console.log('[TrainerSession] Exercise response received:', response);
+
+    // Handle learner's answer submission
+    if (response.status === 'submitted') {
+      // Send feedback to learner or save the response
+      if (whiteboardService) {
+        whiteboardService.send('exercise_response', {
+          qaItems: response.qaItems,
+          learnerAnswer: response.learnerAnswer,
+          timestamp: Date.now()
+        });
+      }
+    } else if (response.status === 'sent_to_learner') {
+      // Send exercise to learner when "Send to Learner" is clicked
+      if (whiteboardService) {
+        whiteboardService.send('exercise_update', {
+          qaItems: response.qaItems,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+
+  const handleExerciseDelete = () => {
+    console.log('[TrainerSession] Exercise deleted');
+    setShowExercise(false);
+    setExerciseData({
+      question: ''
+    });
+
+    // Notify learner that exercise has been closed
+    if (whiteboardService) {
+      whiteboardService.send('exercise_closed', {
+        message: 'Exercise has been closed by trainer',
+        timestamp: Date.now()
+      });
     }
   };
 
@@ -1338,7 +1471,7 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Toggle learner tool access (Select, Drag, Keyboard)
+  // 🔹 Purpose: Toggle learner tool access (Select, Drag)
   // 🔸 How it works: Updates learner permissions and sends via whiteboard service
   // 🔸 When drag is activated: Auto-sets tool to 'select' to enable drag interactions
   // -----------------------------------------------------------
@@ -1376,17 +1509,70 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Trigger keyboard tool for learner
-  // 🔸 How it works: Sends keyboard trigger command to learner session
+  // 🔹 Purpose: Play/stop background music
+  // 🔸 How it works: Trainer can select and play music that syncs to learner session
   // -----------------------------------------------------------
-  const triggerLearnerKeyboard = () => {
-    if (whiteboardService) {
-      whiteboardService.send('trigger_keyboard', {
-        enabled: true,
+  const toggleBackgroundMusic = (musicId) => {
+    // If clicking the same music, toggle play/stop
+    if (selectedMusic === musicId && backgroundMusicPlaying) {
+      // Stop music
+      setBackgroundMusicPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      // Notify learner to stop music
+      if (whiteboardService) {
+        whiteboardService.send('background_music', {
+          playing: false,
+          musicId: null,
+          volume: musicVolume,
+          timestamp: Date.now()
+        });
+      }
+    } else {
+      // Start music with selected track
+      setSelectedMusic(musicId);
+      setBackgroundMusicPlaying(true);
+
+      if (audioRef.current) {
+        audioRef.current.src = musicOptions[musicId].url;
+        audioRef.current.loop = true; // Loop the music
+        audioRef.current.volume = musicVolume; // Set volume from state
+        audioRef.current.play().catch(err => console.log('Audio play error:', err));
+      }
+
+      // Notify learner to play the same music
+      if (whiteboardService) {
+        whiteboardService.send('background_music', {
+          playing: true,
+          musicId: musicId,
+          musicUrl: musicOptions[musicId].url,
+          volume: musicVolume,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Update music volume
+  // 🔸 How it works: Changes volume for both trainer and learner
+  // -----------------------------------------------------------
+  const handleMusicVolumeChange = (newVolume) => {
+    setMusicVolume(newVolume);
+
+    // Update volume in current audio player
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+
+    // Notify learner of volume change
+    if (whiteboardService && backgroundMusicPlaying) {
+      whiteboardService.send('background_music_volume', {
+        volume: newVolume,
         timestamp: Date.now()
       });
-    } else {
-      toast.error('Whiteboard service not available');
     }
   };
 
@@ -1409,6 +1595,7 @@ const TrainerSession = () => {
       width: 150,
       height: 150,
       label: 'Bucket',
+      color: bucketColor, // Use selected bucket color
       items: [] // Items inside bucket
     };
     setBuckets(prev => [...prev, newBucket]);
@@ -1686,11 +1873,6 @@ const TrainerSession = () => {
         return;
       }
 
-      // ---------------------- KEYBOARD (Trigger for Learner) ----------------------
-      case '⌨️ Keyboard': {
-        triggerLearnerKeyboard();
-        return;
-      }
       // ---------------------- FEEDBACK & EMOJIS ----------------------
       case '👍 Good Job!': {
         console.log('[TrainerSession] MATCHED Good Job case!');
@@ -1820,6 +2002,13 @@ const TrainerSession = () => {
         return;
       }
 
+      // ---------------------- EXERCISE TOOL ----------------------
+      case '💡 Exercise': {
+        console.log('[TrainerSession] Exercise tool clicked');
+        setShowExercise(true);
+        return;
+      }
+
       // ---------------------- FILL IN THE BLANKS ----------------------
       // Fill Blanks removed
 
@@ -1868,6 +2057,15 @@ const TrainerSession = () => {
 
   return (
     <div className={`session-page ${pageClassName}`}>
+      {/* Hidden audio element for background music */}
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        onEnded={() => {
+          // When music ends, it will loop automatically (loop attribute set)
+        }}
+      />
+
       {/* Navigation / Header - Auto-hide after 5s on mobile/tablet */}
       <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
         <div className="session-header-main">
@@ -1965,11 +2163,6 @@ const TrainerSession = () => {
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
                 toolAccess={learnerToolAccess}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
                 remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
@@ -1985,6 +2178,8 @@ const TrainerSession = () => {
                 setLineWidth={setLineWidth}
                 buckets={buckets}
                 setBuckets={setBuckets}
+                bucketColor={bucketColor}
+                setBucketColor={setBucketColor}
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
@@ -2008,6 +2203,39 @@ const TrainerSession = () => {
               isTrainer={true}
             />
           ))}
+
+          {/* Exercise Tool */}
+          {showExercise && (
+            <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+              {/* <button
+                onClick={() => setShowExercise(false)}
+                style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  right: '4rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  zIndex: 10
+                }}
+                title="Close Exercise Tool"
+              >
+                ✕ Close
+              </button> */}
+              <Exercise
+                isTrainer={true}
+                onExerciseSubmit={handleExerciseSubmit}
+                onExerciseUpdate={handleExerciseUpdate}
+                onExerciseDelete={handleExerciseDelete}
+                initialExercise={Object.keys(exerciseData).some(key => exerciseData[key]) ? exerciseData : null}
+              />
+            </div>
+          )}
 
           {/* Video Controls - Below Whiteboard */}
           <div className="w-full mt-4 mb-3">
@@ -2156,7 +2384,28 @@ const TrainerSession = () => {
                 />
               </div>
 
-
+              {/* Bucket Color Selector */}
+              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
+                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
+                  {bucketColors.map((bc) => (
+                    <button
+                      key={bc.hex}
+                      onClick={() => setBucketColor(bc.hex)}
+                      className="rounded border-2 transition-all"
+                      style={{
+                        backgroundColor: bc.hex,
+                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
+                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
+                        cursor: 'pointer'
+                      }}
+                      title={`Bucket Color: ${bc.name}`}
+                    />
+                  ))}
+                </div>
+              </div>
 
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                 <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
@@ -2223,22 +2472,52 @@ const TrainerSession = () => {
                   <span>Drag</span>
                 </button>
 
-                {/* Keyboard Trigger */}
+                {/* Exercise Tool Button */}
                 <button
-                  onClick={() => {
-                    // Toggle keyboard access for learner
-                    toggleLearnerToolAccess('keyboard');
-                    // If enabling, also send an immediate trigger so the keyboard appears right away
-                    if (!learnerToolAccess.keyboard) {
-                      triggerLearnerKeyboard();
-                    }
-                  }}
-                  className={`${learnerToolAccess.keyboard ? wbSmallBtnActive : wbSmallBtnBase}`}
-                  title={learnerToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
+                  onClick={() => setShowExercise(true)}
+                  className={`${showExercise ? wbSmallBtnActive : wbSmallBtnBase}`}
+                  title="Open Exercise Tool - Create Q&A exercises with keyword validation"
                 >
-                  <span>⌨️</span>
-                  <span>Keyboard</span>
+                  <span>💡</span>
+                  <span>Q & A</span>
                 </button>
+
+                {/* Background Music Control */}
+                <div className="flex gap-1 flex-wrap items-center">
+                  {musicOptions.map((music) => (
+                    <button
+                      key={music.id}
+                      onClick={() => toggleBackgroundMusic(music.id)}
+                      className={`${selectedMusic === music.id && backgroundMusicPlaying
+                        ? wbSmallBtnActive
+                        : wbSmallBtnBase
+                        }`}
+                      title={`${selectedMusic === music.id && backgroundMusicPlaying
+                        ? `Playing ${music.name} - Click to stop`
+                        : `Click to play ${music.name}`
+                        }`}
+                    >
+                      <span>{music.name}</span>
+                    </button>
+                  ))}
+
+                  {/* Volume Slider */}
+                  {backgroundMusicPlaying && (
+                    <div className="flex items-center gap-2 px-2 py-1 bg-white border-2 border-gray-300 rounded-lg">
+                      <span className="text-xs font-semibold text-gray-700">🔊</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={musicVolume * 100}
+                        onChange={(e) => handleMusicVolumeChange(e.target.value / 100)}
+                        className="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        title={`Volume: ${Math.round(musicVolume * 100)}%`}
+                      />
+                      <span className="text-xs font-semibold text-gray-700">{Math.round(musicVolume * 100)}%</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Fill Blanks tool removed */}
                 <button
@@ -2423,7 +2702,6 @@ const TrainerSession = () => {
           </button>
         </div>
       </div>
-
       {/* Fill in the Blanks feature removed */}
     </div>
   );
