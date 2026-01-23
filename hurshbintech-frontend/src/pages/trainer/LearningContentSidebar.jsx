@@ -112,8 +112,18 @@ const LearningContentSidebar = ({
           </div>
         ) : filteredLearningContent.length > 0 ? (
           filteredLearningContent.map((content) => {
+            // console.log('[LearningContentSidebar] Rendering content:', {
+            //   id: content.id,
+            //   title: content.title,
+            //   is_youtube: content.is_youtube,
+            //   youtube_video_id: content.youtube_video_id,
+            //   content_type: content.content_type,
+            //   has_thumbnail: !!content.thumbnail_url,
+            //   has_file_url: !!content.file_url
+            // });
             // Get proper icon for content type
-            const getContentIcon = (type) => {
+            const getContentIcon = (type, isYoutube) => {
+              if (isYoutube) return '▶️'; // YouTube icon
               switch (type?.toLowerCase()) {
                 case 'image': return '🖼️';
                 case 'video': return '🎥';
@@ -121,11 +131,36 @@ const LearningContentSidebar = ({
                 case 'activity': return '🎮';
                 case 'pdf': return '📄';
                 case 'document': return '📝';
+                case 'youtube': return '▶️';
                 default: return '📦';
               }
             };
 
             const renderThumbnail = () => {
+              // For YouTube content, show thumbnail from YouTube CDN
+              if (content.is_youtube && content.youtube_video_id) {
+                const youtubeThumbUrl = `https://img.youtube.com/vi/${content.youtube_video_id}/hqdefault.jpg`;
+                return (
+                  <div className="relative w-full h-12 bg-gray-100 rounded-md overflow-hidden mb-1">
+                    <img
+                      src={youtubeThumbUrl}
+                      alt={content.title}
+                      className="w-full h-full object-cover block"
+                      onError={(e) => {
+                        console.error('[TrainerSession] Failed to load YouTube thumbnail:', youtubeThumbUrl);
+                        e.target.style.display = 'none';
+                        if (e.target.nextElementSibling) {
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="hidden absolute inset-0 items-center justify-center text-xl" style={{ background: 'linear-gradient(to bottom right, #DB9D32, #9C4D0B)' }}>
+                      {getContentIcon(content.content_type, content.is_youtube)}
+                    </div>
+                  </div>
+                );
+              }
+              // For regular content with thumbnail
               if (content.content_type === 'image' || content.thumbnail_url) {
                 const imageUrl = learningContentService.getFileUrl(
                   content.content_type === 'image' ? content.file_url : content.thumbnail_url
@@ -143,19 +178,16 @@ const LearningContentSidebar = ({
                           e.target.nextElementSibling.style.display = 'flex';
                         }
                       }}
-                    // onLoad={() => {
-                    //   console.log('[TrainerSession] Image loaded successfully:', imageUrl);
-                    // }}
                     />
                     <div className="hidden absolute inset-0 items-center justify-center text-xl" style={{ background: 'linear-gradient(to bottom right, #DB9D32, #9C4D0B)' }}>
-                      {getContentIcon(content.content_type)}
+                      {getContentIcon(content.content_type, content.is_youtube)}
                     </div>
                   </div>
                 );
               }
               return (
                 <div className="w-full h-12 rounded-md flex items-center justify-center mb-1 text-xl" style={{ background: 'linear-gradient(to bottom right, #DB9D32, #9C4D0B)' }}>
-                  {getContentIcon(content.content_type)}
+                  {getContentIcon(content.content_type, content.is_youtube)}
                 </div>
               );
             };

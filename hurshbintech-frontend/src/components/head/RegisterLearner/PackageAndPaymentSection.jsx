@@ -5,6 +5,8 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
     const [packages, setPackages] = useState([]);
     const [loadingPackages, setLoadingPackages] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [showPreview, setShowPreview] = useState(false);
 
     useEffect(() => {
         fetchPackages();
@@ -46,11 +48,22 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
                 return;
             }
             setReceiptFile(file);
+            // Create preview URL
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
         }
     };
 
     const removeReceipt = () => {
         setReceiptFile(null);
+        setPreviewUrl(null);
+        setShowPreview(false);
+    };
+
+    const handleViewReceipt = () => {
+        if (previewUrl) {
+            setShowPreview(true);
+        }
     };
 
     // Store receipt file in formData (as a blob or file reference)
@@ -178,14 +191,24 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
                                 <p className="font-semibold text-gray-800">{receiptFile.name}</p>
                                 <p className="text-xs text-gray-500">{(receiptFile.size / 1024).toFixed(2)} KB</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={removeReceipt}
-                                className="file-remove-btn"
-                                title="Remove file"
-                            >
-                                ✕
-                            </button>
+                            <div className="file-action-buttons">
+                                <button
+                                    type="button"
+                                    onClick={handleViewReceipt}
+                                    className="btn-primary"
+                                    title="View receipt"
+                                >
+                                    👁️ View
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={removeReceipt}
+                                    className="file-remove-btn"
+                                    title="Remove file"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -205,6 +228,50 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
                     <p className="text-xs text-gray-600 mt-1">Upload a clear copy of your payment receipt. This will be verified by the admin and the subscription will be activated upon approval.</p>
                 </div>
             </div>
+
+            {/* Receipt Preview Modal */}
+            {showPreview && previewUrl && receiptFile && (
+                <div className="app-modal-overlay" onClick={() => setShowPreview(false)}>
+                    <div className="app-modal-container app-modal-container--md" onClick={(e) => e.stopPropagation()}>
+                        <div className="app-modal-header">
+                            <div className="app-modal-header-content">
+                                <h2 className="app-modal-title">Payment Receipt Preview</h2>
+                            </div>
+                            <button
+                                type="button"
+                                className="app-modal-close"
+                                onClick={() => setShowPreview(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="app-modal-content app-modal-content--no-padding">
+                            {receiptFile.type === 'application/pdf' ? (
+                                <div className="receipt-pdf-placeholder">
+                                    <div className="pdf-icon">📄</div>
+                                    <p className="font-semibold text-gray-700">PDF File: {receiptFile.name}</p>
+                                    <p className="text-sm text-gray-500 mt-2">Size: {(receiptFile.size / 1024).toFixed(2)} KB</p>
+                                    <a
+                                        href={previewUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="receipt-download-btn"
+                                    >
+                                        📥 Open in New Tab
+                                    </a>
+                                </div>
+                            ) : (
+                                <img
+                                    src={previewUrl}
+                                    alt="Payment Receipt"
+                                    className="receipt-preview-image"
+                                />
+                            )}
+                        </div>
+                        
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

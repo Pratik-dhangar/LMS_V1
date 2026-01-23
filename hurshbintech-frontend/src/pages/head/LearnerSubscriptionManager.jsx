@@ -9,7 +9,6 @@ import {
   Search,
   Pause,
   Play,
-  Snowflake,
   XCircle,
   DollarSign,
   Edit3,
@@ -48,7 +47,6 @@ const LearnerSubscriptionManager = () => {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
-  const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showRenewalChainModal, setShowRenewalChainModal] = useState(false);
 
   const [selectedSubscription, setSelectedSubscription] = useState(null);
@@ -84,11 +82,6 @@ const LearnerSubscriptionManager = () => {
 
   const [pauseForm, setPauseForm] = useState({
     pause_reason: "",
-    expected_resume_date: "",
-  });
-
-  const [freezeForm, setFreezeForm] = useState({
-    freeze_reason: "",
     expected_resume_date: "",
   });
 
@@ -261,21 +254,6 @@ const LearnerSubscriptionManager = () => {
     }
   };
 
-  const handleFreezeSubscription = async (e) => {
-    e.preventDefault();
-
-    try {
-      await subscriptionService.freezeSubscription(selectedSubscription.id, freezeForm.freeze_reason);
-
-      toast.success("Subscription frozen successfully!");
-      setShowFreezeModal(false);
-      setFreezeForm({ freeze_reason: "", expected_resume_date: "" });
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to freeze subscription");
-    }
-  };
-
   const handleResumeSubscription = async (subscriptionId) => {
     if (!window.confirm("Are you sure you want to resume this subscription?")) {
       return;
@@ -438,14 +416,14 @@ const LearnerSubscriptionManager = () => {
           <div className="search-section">
             <SearchBar onSearch={handleSearch} placeholder="Search by learner or package..." />
             <div className="filter-section">
-              <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
-                <Plus size={18} />
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+                <Plus size={20} />
                 Create Subscription
               </button>
               <button onClick={() => {
                 setShowBackdateModal(true);
-              }} className="btn btn-secondary">
-                <Clock size={18} />
+              }} className="btn-secondary">
+                <Clock size={20} />
                 Renewal
               </button>
             </div>
@@ -453,7 +431,7 @@ const LearnerSubscriptionManager = () => {
 
           {/* Status Filters */}
           <div className="filter-section">
-            {["ALL", "ACTIVE", "PAUSED", "FROZEN", "EXPIRED", "CANCELLED"].map((status) => (
+            {["ALL", "ACTIVE", "PAUSED", "EXPIRED", "CANCELLED"].map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}
@@ -550,20 +528,10 @@ const LearnerSubscriptionManager = () => {
                             <Pause size={16} />
                             Pause
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedSubscription(sub);
-                              setShowFreezeModal(true);
-                            }}
-                            className="btn btn-blue btn-full"
-                          >
-                            <Snowflake size={16} />
-                            Freeze
-                          </button>
                         </>
                       )}
 
-                      {(sub.status === "PAUSED" || sub.status === "FROZEN") && (
+                      {(sub.status === "PAUSED") && (
                         <button
                           onClick={() => handleResumeSubscription(sub.id)}
                           className="btn btn-success btn-full"
@@ -573,7 +541,7 @@ const LearnerSubscriptionManager = () => {
                         </button>
                       )}
 
-                      {["ACTIVE", "PAUSED", "FROZEN"].includes(sub.status) && (
+                      {["ACTIVE", "PAUSED"].includes(sub.status) && (
                         <>
                           <button
                             onClick={() => {
@@ -919,47 +887,6 @@ const LearnerSubscriptionManager = () => {
       )}
 
       {/* Freeze Modal */}
-      {showFreezeModal && (
-        <div className="modal-overlay" onClick={() => setShowFreezeModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Freeze Subscription</h2>
-              <button onClick={() => setShowFreezeModal(false)} className="modal-close">×</button>
-            </div>
-
-            <form onSubmit={handleFreezeSubscription} className="modal-body">
-              <div className="form-group">
-                <label>Reason *</label>
-                <textarea
-                  value={freezeForm.freeze_reason}
-                  onChange={(e) => setFreezeForm({ ...freezeForm, freeze_reason: e.target.value })}
-                  required
-                  rows="3"
-                  placeholder="Reason for freezing..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Expected Resume Date (Optional)</label>
-                <input
-                  type="date"
-                  value={freezeForm.expected_resume_date}
-                  onChange={(e) => setFreezeForm({ ...freezeForm, expected_resume_date: e.target.value })}
-                />
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowFreezeModal(false)} className="secondary-button">
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button">
-                  Freeze Subscription
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Adjust Sessions Modal */}
       {showAdjustModal && (

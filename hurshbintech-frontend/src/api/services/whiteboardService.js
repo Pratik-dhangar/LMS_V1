@@ -9,7 +9,6 @@ class WhiteboardService {
         this.onImage = null;
         this.onItemUpdate = null;
         this.onToolAccess = null; // New callback for tool access messages
-        this.onTriggerKeyboard = null; // New callback for keyboard trigger
         this.onItemSelected = null; // New callback for item selection
         this.onPromptUpdate = null; // New callback for prompt updates from voice input
         this.onTextAdded = null; // New callback for text added to whiteboard
@@ -29,6 +28,14 @@ class WhiteboardService {
         this.onTextBoxUpdate = null; // New callback for text box updates
         this.onTextBoxRemoved = null; // New callback for text box removed
         this.onSessionEnded = null; // New callback for session ended by coach/trainer
+        this.onYoutubePopupCreated = null; // New callback for YouTube popup created
+        this.onYoutubePopupClosed = null; // New callback for YouTube popup closed
+        this.onBackgroundMusic = null; // New callback for background music control
+        this.onBackgroundMusicVolume = null; // New callback for background music volume changes
+        this.onExerciseUpdate = null; // New callback for exercise updates from trainer
+        this.onExerciseAnswerUpdate = null; // New callback for real-time answer updates
+        this.onExerciseResponse = null; // New callback for exercise submission from learner
+        this.onExerciseClosed = null; // New callback for exercise closed by trainer
     }
 
     initialize() {
@@ -84,12 +91,6 @@ class WhiteboardService {
                 case 'tool_access':
                     if (this.onToolAccess) {
                         this.onToolAccess(message.data);
-                    }
-                    break;
-
-                case 'trigger_keyboard':
-                    if (this.onTriggerKeyboard) {
-                        this.onTriggerKeyboard(message.data);
                     }
                     break;
 
@@ -153,8 +154,12 @@ class WhiteboardService {
                     break;
 
                 case 'clear_canvas':
+                    console.log('[WhiteboardService] 📩 Received clear_canvas message from trainer:', message.data);
                     if (this.onClearCanvas) {
+                        console.log('[WhiteboardService] ✅ Calling onClearCanvas callback...');
                         this.onClearCanvas(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ WARNING: onClearCanvas callback is NOT registered!');
                     }
                     break;
 
@@ -209,6 +214,54 @@ class WhiteboardService {
                 case 'session_ended':
                     if (this.onSessionEnded) {
                         this.onSessionEnded(message.data);
+                    }
+                    break;
+
+                case 'youtube_popup_created':
+                    if (this.onYoutubePopupCreated) {
+                        this.onYoutubePopupCreated(message.data);
+                    }
+                    break;
+
+                case 'youtube_popup_closed':
+                    if (this.onYoutubePopupClosed) {
+                        this.onYoutubePopupClosed(message.data);
+                    }
+                    break;
+
+                case 'background_music':
+                    if (this.onBackgroundMusic) {
+                        this.onBackgroundMusic(message.data);
+                    }
+                    break;
+
+                case 'background_music_volume':
+                    if (this.onBackgroundMusicVolume) {
+                        this.onBackgroundMusicVolume(message.data);
+                    }
+                    break;
+
+                case 'exercise_update':
+                    if (this.onExerciseUpdate) {
+                        this.onExerciseUpdate(message.data);
+                    }
+                    break;
+
+                case 'exercise_answer_update':
+                    if (this.onExerciseAnswerUpdate) {
+                        this.onExerciseAnswerUpdate(message.data);
+                    }
+                    break;
+
+                case 'exercise_response':
+                    if (this.onExerciseResponse) {
+                        this.onExerciseResponse(message.data);
+                    }
+                    break;
+
+                case 'exercise_closed':
+                    if (this.onExerciseClosed) {
+                        this.onExerciseClosed(message.data);
                     }
                     break;
 
@@ -307,6 +360,19 @@ class WhiteboardService {
             }));
         } else {
             console.warn('[WhiteboardService] Cannot send bucket_added - WebSocket not ready');
+        }
+    }
+
+    // Send floating animations event
+    sendFloatingAnimations(data) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            console.log('[WhiteboardService] Sending floating_animations:', data);
+            this.ws.send(JSON.stringify({
+                type: 'floating_animations',
+                data: { animations: data }
+            }));
+        } else {
+            console.warn('[WhiteboardService] Cannot send floating_animations - WebSocket not ready');
         }
     }
 

@@ -98,7 +98,7 @@ class VideoConferenceService {
      */
     async initialize() {
         try {
-            console.log(`[VideoConference][${this.role}] Initializing video conference...`);
+            // console.log(`[VideoConference][${this.role}] Initializing video conference...`);
 
             // Step 1: Get local media (camera + microphone)
             this.localStream = await this.getLocalMedia();
@@ -123,7 +123,7 @@ class VideoConferenceService {
             // Step 7: Start WebSocket heartbeat
             this.startHeartbeat();
             
-            console.log(`[VideoConference][${this.role}] Initialization complete with monitoring`);
+            // console.log(`[VideoConference][${this.role}] Initialization complete with monitoring`);
 
             return this.localStream;
         } catch (error) {
@@ -141,7 +141,7 @@ class VideoConferenceService {
      */
     async getLocalMedia() {
         try {
-            console.log(`[VideoConference][${this.role}] Requesting media access...`);
+            // console.log(`[VideoConference][${this.role}] Requesting media access...`);
 
             // Check if getUserMedia is available
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -164,10 +164,10 @@ class VideoConferenceService {
 
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-            console.log(`[VideoConference][${this.role}] Media access granted:`, {
-                videoTracks: stream.getVideoTracks().length,
-                audioTracks: stream.getAudioTracks().length
-            });
+            // console.log(`[VideoConference][${this.role}] Media access granted:`, {
+            //     videoTracks: stream.getVideoTracks().length,
+            //     audioTracks: stream.getAudioTracks().length
+            // });
 
             // Trigger callback if set
             if (this.onLocalStream) {
@@ -180,7 +180,7 @@ class VideoConferenceService {
 
             // Try audio-only fallback
             if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
-                console.log(`[VideoConference][${this.role}] Attempting audio-only fallback...`);
+                // console.log(`[VideoConference][${this.role}] Attempting audio-only fallback...`);
                 try {
                     const audioStream = await navigator.mediaDevices.getUserMedia({
                         audio: {
@@ -189,7 +189,7 @@ class VideoConferenceService {
                             autoGainControl: true
                         }
                     });
-                    console.log(`[VideoConference][${this.role}] Audio-only mode activated`);
+                    // console.log(`[VideoConference][${this.role}] Audio-only mode activated`);
                     return audioStream;
                 } catch (audioError) {
                     console.error(`[VideoConference][${this.role}] Audio-only fallback failed:`, audioError);
@@ -211,12 +211,12 @@ class VideoConferenceService {
                 .replace(/^http:/, 'ws:');
 
             const wsEndpoint = `${wsUrl}/ws/rtc/${this.sessionId}`;
-            console.log(`[VideoConference][${this.role}] Connecting to WebSocket:`, wsEndpoint);
+            // console.log(`[VideoConference][${this.role}] Connecting to WebSocket:`, wsEndpoint);
 
             this.ws = new WebSocket(wsEndpoint);
 
             this.ws.onopen = () => {
-                console.log(`[VideoConference][${this.role}] WebSocket connected`);
+                // console.log(`[VideoConference][${this.role}] WebSocket connected`);
                 this.reconnectAttempts = 0;
                 resolve();
             };
@@ -231,7 +231,7 @@ class VideoConferenceService {
             };
 
             this.ws.onclose = () => {
-                console.log(`[VideoConference][${this.role}] WebSocket closed`);
+                // console.log(`[VideoConference][${this.role}] WebSocket closed`);
                 this.handleWebSocketClose();
             };
         });
@@ -242,12 +242,12 @@ class VideoConferenceService {
      */
     handleWebSocketClose() {
         if (!this.sessionActive) {
-            console.log(`[VideoConference][${this.role}] Session ended, not reconnecting`);
+            // console.log(`[VideoConference][${this.role}] Session ended, not reconnecting`);
             return;
         }
 
         if (this.reconnecting) {
-            console.log(`[VideoConference][${this.role}] Already attempting reconnection`);
+            // console.log(`[VideoConference][${this.role}] Already attempting reconnection`);
             return;
         }
 
@@ -260,14 +260,14 @@ class VideoConferenceService {
             this.maxReconnectDelay
         );
         
-        console.log(`[VideoConference][${this.role}] WebSocket closed. Reconnecting in ${Math.round(delay/1000)}s... (attempt ${this.reconnectAttempts})`);
+        // console.log(`[VideoConference][${this.role}] WebSocket closed. Reconnecting in ${Math.round(delay/1000)}s... (attempt ${this.reconnectAttempts})`);
 
         setTimeout(async () => {
             try {
                 await this.connectWebSocket();
                 this.reconnecting = false;
                 this.reconnectAttempts = 0;
-                console.log(`[VideoConference][${this.role}] WebSocket reconnected successfully`);
+                // console.log(`[VideoConference][${this.role}] WebSocket reconnected successfully`);
                 
                 // Restart heartbeat after reconnection
                 this.startHeartbeat();
@@ -287,29 +287,29 @@ class VideoConferenceService {
      * Create RTCPeerConnection
      */
     createPeerConnection() {
-        console.log(`[VideoConference][${this.role}] Creating peer connection...`);
+        // console.log(`[VideoConference][${this.role}] Creating peer connection...`);
 
         this.peerConnection = new RTCPeerConnection(RTC_CONFIG);
 
         // Handle ICE candidates
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                console.log(`[VideoConference][${this.role}] New ICE candidate:`, {
-                    type: event.candidate.type,
-                    protocol: event.candidate.protocol
-                });
+                // console.log(`[VideoConference][${this.role}] New ICE candidate:`, {
+                //     type: event.candidate.type,
+                //     protocol: event.candidate.protocol
+                // });
                 this.sendSignal({
                     type: 'ice-candidate',
                     candidate: event.candidate
                 });
             } else {
-                console.log(`[VideoConference][${this.role}] ICE gathering complete`);
+                // console.log(`[VideoConference][${this.role}] ICE gathering complete`);
             }
         };
 
         // Handle remote tracks with reliability improvements
         this.peerConnection.ontrack = (event) => {
-            console.log(`[VideoConference][${this.role}] Received remote track:`, event.track.kind);
+            // console.log(`[VideoConference][${this.role}] Received remote track:`, event.track.kind);
 
             if (event.streams && event.streams[0]) {
                 const newStream = event.streams[0];
@@ -321,7 +321,7 @@ class VideoConferenceService {
                 
                 this.remoteStream = newStream;
                 this.remoteStreamId = newStream.id;
-                console.log(`[VideoConference][${this.role}] Remote stream ${isNewStream ? 'set' : 'updated'} with ${newStream.getTracks().length} tracks (ID: ${newStream.id})`);
+                // console.log(`[VideoConference][${this.role}] Remote stream ${isNewStream ? 'set' : 'updated'} with ${newStream.getTracks().length} tracks (ID: ${newStream.id})`);
 
                 // Always trigger callback to ensure video element gets updated
                 if (this.onRemoteStream) {
@@ -333,7 +333,7 @@ class VideoConferenceService {
                     console.warn(`[VideoConference][${this.role}] Remote ${event.track.kind} track ended`);
                     // Try to restart ICE if video track ends unexpectedly
                     if (event.track.kind === 'video' && this.sessionActive) {
-                        console.log(`[VideoConference][${this.role}] Attempting ICE restart due to track end`);
+                        // console.log(`[VideoConference][${this.role}] Attempting ICE restart due to track end`);
                         setTimeout(() => this.restartIce(), 1000);
                     }
                 };
@@ -343,7 +343,7 @@ class VideoConferenceService {
                 };
                 
                 event.track.onunmute = () => {
-                    console.log(`[VideoConference][${this.role}] Remote ${event.track.kind} track unmuted`);
+                    // console.log(`[VideoConference][${this.role}] Remote ${event.track.kind} track unmuted`);
                 };
             }
         };
@@ -351,7 +351,7 @@ class VideoConferenceService {
         // Handle connection state changes with enhanced recovery
         this.peerConnection.onconnectionstatechange = () => {
             const state = this.peerConnection.connectionState;
-            console.log(`[VideoConference][${this.role}] Connection state:`, state);
+            // console.log(`[VideoConference][${this.role}] Connection state:`, state);
 
             if (this.onConnectionStateChange) {
                 this.onConnectionStateChange(state);
@@ -364,7 +364,7 @@ class VideoConferenceService {
                 // Wait 5 seconds before restarting to allow automatic recovery
                 this.disconnectTimer = setTimeout(() => {
                     if (this.peerConnection?.connectionState === 'disconnected') {
-                        console.log(`[VideoConference][${this.role}] Still disconnected after 5s, attempting ICE restart...`);
+                        // console.log(`[VideoConference][${this.role}] Still disconnected after 5s, attempting ICE restart...`);
                         this.restartIce();
                     }
                 }, 5000);
@@ -387,14 +387,14 @@ class VideoConferenceService {
                 }
                 // Reset ICE restart attempts counter on successful connection
                 this.iceRestartAttempts = 0;
-                console.log(`[VideoConference][${this.role}] Connection established successfully`);
+                // console.log(`[VideoConference][${this.role}] Connection established successfully`);
             }
         };
 
         // Handle ICE connection state changes
         this.peerConnection.oniceconnectionstatechange = () => {
             const iceState = this.peerConnection.iceConnectionState;
-            console.log(`[VideoConference][${this.role}] ICE connection state:`, iceState);
+            // console.log(`[VideoConference][${this.role}] ICE connection state:`, iceState);
 
             // Log but don't automatically restart - let connectionStateChange handle it
             if (iceState === 'failed') {
@@ -404,12 +404,12 @@ class VideoConferenceService {
 
         // Handle signaling state changes
         this.peerConnection.onsignalingstatechange = () => {
-            console.log(`[VideoConference][${this.role}] Signaling state:`, this.peerConnection.signalingState);
+            // console.log(`[VideoConference][${this.role}] Signaling state:`, this.peerConnection.signalingState);
         };
 
         // Handle ICE gathering state changes
         this.peerConnection.onicegatheringstatechange = () => {
-            console.log(`[VideoConference][${this.role}] ICE gathering state:`, this.peerConnection.iceGatheringState);
+            // console.log(`[VideoConference][${this.role}] ICE gathering state:`, this.peerConnection.iceGatheringState);
         };
     }
 
@@ -423,7 +423,7 @@ class VideoConferenceService {
         }
 
         this.localStream.getTracks().forEach(track => {
-            console.log(`[VideoConference][${this.role}] Adding local track:`, track.kind);
+            // console.log(`[VideoConference][${this.role}] Adding local track:`, track.kind);
             this.peerConnection.addTrack(track, this.localStream);
         });
     }
@@ -437,14 +437,14 @@ class VideoConferenceService {
             role: this.role,
             session_id: this.sessionId
         });
-        console.log(`[VideoConference][${this.role}] Announced presence`);
+        // console.log(`[VideoConference][${this.role}] Announced presence`);
     }
 
     /**
      * Handle incoming signaling messages
      */
     async handleSignalingMessage(message) {
-        console.log(`[VideoConference][${this.role}] Received signal:`, message.type);
+        // console.log(`[VideoConference][${this.role}] Received signal:`, message.type);
 
         try {
             switch (message.type) {
@@ -462,9 +462,9 @@ class VideoConferenceService {
 
                 case 'peer_ready':
                     // Trainer/Coach creates offer when learner/client is ready
-                    console.log(`[VideoConference][${this.role}] Peer ready signal received, role check: ${this.role === 'trainer' || this.role === 'coach'}, hasCreatedOffer: ${this.hasCreatedOffer}`);
+                    // console.log(`[VideoConference][${this.role}] Peer ready signal received, role check: ${this.role === 'trainer' || this.role === 'coach'}, hasCreatedOffer: ${this.hasCreatedOffer}`);
                     if ((this.role === 'trainer' || this.role === 'coach') && !this.hasCreatedOffer) {
-                        console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
+                        // console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
                         await this.createOffer();
                     }
                     break;
@@ -509,7 +509,7 @@ class VideoConferenceService {
                     break;
 
                 default:
-                    console.log(`[VideoConference][${this.role}] Unknown message type:`, message.type);
+                    // console.log(`[VideoConference][${this.role}] Unknown message type:`, message.type);
             }
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error handling signal:`, error);
@@ -547,7 +547,7 @@ class VideoConferenceService {
         }
 
         try {
-            console.log(`[VideoConference][${this.role}] Creating offer...`);
+            // console.log(`[VideoConference][${this.role}] Creating offer...`);
 
             const offer = await this.peerConnection.createOffer({
                 offerToReceiveAudio: true,
@@ -562,7 +562,7 @@ class VideoConferenceService {
                 offer: offer
             });
 
-            console.log(`[VideoConference][${this.role}] Offer sent`);
+            // console.log(`[VideoConference][${this.role}] Offer sent`);
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error creating offer:`, error);
             this.hasCreatedOffer = false;
@@ -579,10 +579,10 @@ class VideoConferenceService {
         }
 
         try {
-            console.log(`[VideoConference][${this.role}] Handling offer...`);
+            // console.log(`[VideoConference][${this.role}] Handling offer...`);
 
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            console.log(`[VideoConference][${this.role}] Remote description set`);
+            // console.log(`[VideoConference][${this.role}] Remote description set`);
 
             const answer = await this.peerConnection.createAnswer();
             await this.peerConnection.setLocalDescription(answer);
@@ -592,7 +592,7 @@ class VideoConferenceService {
                 answer: answer
             });
 
-            console.log(`[VideoConference][${this.role}] Answer sent`);
+            // console.log(`[VideoConference][${this.role}] Answer sent`);
 
             // Process pending ICE candidates
             await this.processPendingIceCandidates();
@@ -611,10 +611,10 @@ class VideoConferenceService {
         }
 
         try {
-            console.log(`[VideoConference][${this.role}] Handling answer...`);
+            // console.log(`[VideoConference][${this.role}] Handling answer...`);
 
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-            console.log(`[VideoConference][${this.role}] Remote answer set`);
+            // console.log(`[VideoConference][${this.role}] Remote answer set`);
 
             // Process pending ICE candidates
             await this.processPendingIceCandidates();
@@ -637,13 +637,13 @@ class VideoConferenceService {
         if (!this.peerConnection.remoteDescription) {
             // Queue candidate until remote description is set
             this.pendingIceCandidates.push(candidate);
-            console.log(`[VideoConference][${this.role}] ICE candidate queued (${this.pendingIceCandidates.length} total)`);
+            // console.log(`[VideoConference][${this.role}] ICE candidate queued (${this.pendingIceCandidates.length} total)`);
             return;
         }
 
         try {
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log(`[VideoConference][${this.role}] ICE candidate added`);
+            // console.log(`[VideoConference][${this.role}] ICE candidate added`);
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error adding ICE candidate:`, error);
         }
@@ -655,7 +655,7 @@ class VideoConferenceService {
     async processPendingIceCandidates() {
         if (this.pendingIceCandidates.length === 0) return;
 
-        console.log(`[VideoConference][${this.role}] Processing ${this.pendingIceCandidates.length} pending ICE candidates...`);
+        // console.log(`[VideoConference][${this.role}] Processing ${this.pendingIceCandidates.length} pending ICE candidates...`);
 
         for (const candidate of this.pendingIceCandidates) {
             try {
@@ -666,7 +666,7 @@ class VideoConferenceService {
         }
 
         this.pendingIceCandidates = [];
-        console.log(`[VideoConference][${this.role}] Pending ICE candidates processed`);
+        // console.log(`[VideoConference][${this.role}] Pending ICE candidates processed`);
     }
 
     /**
@@ -699,7 +699,7 @@ class VideoConferenceService {
 
         try {
             this.iceRestartAttempts++;
-            console.log(`[VideoConference][${this.role}] Restarting ICE (attempt ${this.iceRestartAttempts}/${this.maxIceRestartAttempts})...`);
+            // console.log(`[VideoConference][${this.role}] Restarting ICE (attempt ${this.iceRestartAttempts}/${this.maxIceRestartAttempts})...`);
 
             const offer = await this.peerConnection.createOffer({ iceRestart: true });
             await this.peerConnection.setLocalDescription(offer);
@@ -709,7 +709,7 @@ class VideoConferenceService {
                 offer: offer
             });
 
-            console.log(`[VideoConference][${this.role}] ICE restart offer sent successfully`);
+            // console.log(`[VideoConference][${this.role}] ICE restart offer sent successfully`);
         } catch (error) {
             console.error(`[VideoConference][${this.role}] ICE restart failed:`, error);
             // Retry after delay on failure
@@ -739,7 +739,7 @@ class VideoConferenceService {
         const audioTrack = this.localStream.getAudioTracks()[0];
         if (audioTrack) {
             audioTrack.enabled = !audioTrack.enabled;
-            console.log(`[VideoConference][${this.role}] Microphone ${audioTrack.enabled ? 'enabled' : 'disabled'}`);
+            // console.log(`[VideoConference][${this.role}] Microphone ${audioTrack.enabled ? 'enabled' : 'disabled'}`);
             return audioTrack.enabled;
         }
         return false;
@@ -754,7 +754,7 @@ class VideoConferenceService {
         const videoTrack = this.localStream.getVideoTracks()[0];
         if (videoTrack) {
             videoTrack.enabled = !videoTrack.enabled;
-            console.log(`[VideoConference][${this.role}] Camera ${videoTrack.enabled ? 'enabled' : 'disabled'}`);
+            // console.log(`[VideoConference][${this.role}] Camera ${videoTrack.enabled ? 'enabled' : 'disabled'}`);
             return videoTrack.enabled;
         }
         return false;
@@ -782,7 +782,7 @@ class VideoConferenceService {
      * Send prompt meter value to learner
      */
     sendPromptMeter(value) {
-        console.log(`[VideoConference][${this.role}] Sending prompt meter:`, value);
+        // console.log(`[VideoConference][${this.role}] Sending prompt meter:`, value);
         this.sendSignal({
             type: 'prompt_meter',
             value: value
@@ -793,7 +793,7 @@ class VideoConferenceService {
      * Send reinforcement meter value to learner
      */
     sendReinforcementMeter(value) {
-        console.log(`[VideoConference][${this.role}] Sending reinforcement meter:`, value);
+        // console.log(`[VideoConference][${this.role}] Sending reinforcement meter:`, value);
         this.sendSignal({
             type: 'reinforcement_meter',
             value: value
@@ -804,7 +804,7 @@ class VideoConferenceService {
      * Send chat message to other participant
      */
     sendMessage(message, senderRole) {
-        console.log(`[VideoConference][${this.role}] Sending message:`, message);
+        // console.log(`[VideoConference][${this.role}] Sending message:`, message);
         this.sendSignal({
             type: 'message',
             text: message,
@@ -817,7 +817,7 @@ class VideoConferenceService {
      * Send prompt text to learner (for prompter line)
      */
     sendPrompt(promptText) {
-        console.log(`[VideoConference][${this.role}] Sending prompt:`, promptText);
+        // console.log(`[VideoConference][${this.role}] Sending prompt:`, promptText);
         this.sendSignal({
             type: 'prompt_text',
             text: promptText
@@ -920,7 +920,7 @@ class VideoConferenceService {
             // Update quality if changed
             if (quality !== this.connectionQuality) {
                 this.connectionQuality = quality;
-                console.log(`[VideoConference][${this.role}] Connection quality: ${quality}`);
+                // console.log(`[VideoConference][${this.role}] Connection quality: ${quality}`);
                 
                 if (this.onConnectionQualityChange) {
                     this.onConnectionQualityChange(quality);
@@ -1010,14 +1010,14 @@ class VideoConferenceService {
         const qualityData = await this.getConnectionQualityFromStats();
         
         if (qualityData.details.packetsReceived > 0) {
-            console.log(
-                `[VideoConference][${this.role}] Stats:`,
-                `Quality=${qualityData.quality}`,
-                `Loss=${qualityData.details.packetLossRate}`,
-                `RTT=${qualityData.details.rttMs}ms`,
-                `Recv=${(qualityData.details.bytesReceived / 1024).toFixed(0)}KB`,
-                `Sent=${(qualityData.details.bytesSent / 1024).toFixed(0)}KB`
-            );
+            // console.log(
+            //     `[VideoConference][${this.role}] Stats:`,
+            //     `Quality=${qualityData.quality}`,
+            //     `Loss=${qualityData.details.packetLossRate}`,
+            //     `RTT=${qualityData.details.rttMs}ms`,
+            //     `Recv=${(qualityData.details.bytesReceived / 1024).toFixed(0)}KB`,
+            //     `Sent=${(qualityData.details.bytesSent / 1024).toFixed(0)}KB`
+            // );
         }
     }
 
@@ -1025,7 +1025,7 @@ class VideoConferenceService {
      * Cleanup and close connection
      */
     close() {
-        console.log(`[VideoConference][${this.role}] Closing video conference...`);
+        // console.log(`[VideoConference][${this.role}] Closing video conference...`);
 
         // Mark session as inactive to prevent reconnection
         this.sessionActive = false;
@@ -1044,7 +1044,7 @@ class VideoConferenceService {
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
                 track.stop();
-                console.log(`[VideoConference][${this.role}] Stopped ${track.kind} track`);
+                // console.log(`[VideoConference][${this.role}] Stopped ${track.kind} track`);
             });
             this.localStream = null;
         }
@@ -1071,7 +1071,7 @@ class VideoConferenceService {
         this.iceRestartAttempts = 0;
         this.connectionQuality = 'unknown';
 
-        console.log(`[VideoConference][${this.role}] Video conference closed`);
+        // console.log(`[VideoConference][${this.role}] Video conference closed`);
     }
 }
 

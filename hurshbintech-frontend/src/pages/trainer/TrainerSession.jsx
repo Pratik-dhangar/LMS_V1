@@ -19,6 +19,7 @@ import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
+import YouTubePopup from '../../components/common/YouTubePopup';
 import useMessages from '../../hooks/useMessages';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
@@ -32,6 +33,7 @@ import LearningContentSidebar from './LearningContentSidebar';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 // Fill blanks exercise removed
 import Emoji from '../../components/common/Emoji';
+import Exercise from '../../components/session/Exercise';
 import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
@@ -53,37 +55,37 @@ const REACTION_SVG_ASSETS = {
   balloon: [
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon.svg',
+      src: '/reactions/02_pastel_mint.svg',
       alt: 'Realistic Pink Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-red.svg',
+      src: '/reactions/03_pastel_pink.svg',
       alt: 'Realistic Red Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-blue.svg',
+      src: '/reactions/04_pastel_lavender.svg',
       alt: 'Realistic Blue Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-green.svg',
+      src: '/reactions/05_pastel_peach.svg',
       alt: 'Realistic Green Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-yellow.svg',
+      src: '/reactions/06_pastel_coral.svg',
       alt: 'Realistic Yellow Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-purple.svg',
+      src: '/reactions/07_pastel_teal.svg',
       alt: 'Realistic Purple Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-orange.svg',
+      src: '/reactions/08_pastel_yellow.svg',
       alt: 'Realistic Orange Balloon'
     }
   ],
@@ -191,7 +193,7 @@ const TrainerSession = () => {
       }
     };
   }, [webRTC, addReceivedMessage]);
-  const [textMessages, setTextMessages] = useState([]); // For keyboard text messages displayed on whiteboard
+  const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
@@ -246,9 +248,22 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [canvasItems, setCanvasItems] = useState([]);
   const [_activeTool] = useState(null);
-  const [keyboardMode] = useState(false); // Keep this defined for Whiteboard prop
-  const [keyboardText, setKeyboardText] = useState('');
-  const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Background music player state
+  // 🔸 How it works: trainer can play/stop background music that syncs to learner
+  // -----------------------------------------------------------
+  const [backgroundMusicPlaying, setBackgroundMusicPlaying] = useState(false); // Is music playing
+  const [selectedMusic, setSelectedMusic] = useState(null); // Currently selected music (0, 1, or 2)
+  const [musicVolume, setMusicVolume] = useState(0.5); // Music volume (0 to 1)
+  const audioRef = useRef(null); // Reference to audio element
+
+  // Music options - you can add URLs to your music files here
+  const musicOptions = [
+    { id: 0, name: '🎵 Music 1', url: '/music/background-music-1.mp3' },
+    { id: 1, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
+    { id: 2, name: '🎼 Music 3', url: '/music/background-music-3.mp3' }
+  ];
 
   // Hamburger menu state for responsive sidebars
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -287,6 +302,19 @@ const TrainerSession = () => {
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
+  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color
+  const bucketColors = [
+    { name: 'Red', hex: '#FF6B6B' },
+    { name: 'Teal', hex: '#4ECDC4' },
+    { name: 'Yellow', hex: '#FFE66D' },
+    { name: 'Mint', hex: '#95E1D3' }
+  ];
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: YouTube popup state
+  // 🔸 How it works: tracks open YouTube videos dragged to whiteboard
+  // -----------------------------------------------------------
+  const [youtubePopups, setYoutubePopups] = useState([]); // Array of { id, videoId, title, position }
   const [toolActive, setToolActive] = useState(false); // Track if drawing tool is active
   const [eraserActive, setEraserActive] = useState(false); // Track if eraser tool is active
   const [eraseAllActive, setEraseAllActive] = useState(false); // Track if erase all tool is active
@@ -297,8 +325,7 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [learnerToolAccess, setLearnerToolAccess] = useState({
     select: false,    // Can select items on canvas
-    drag: false,      // Can drag items on canvas
-    keyboard: false   // Can use virtual keyboard
+    drag: false       // Can drag items on canvas
   });
 
   // Fill in the blanks feature removed
@@ -351,6 +378,15 @@ const TrainerSession = () => {
   const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Exercise tool state
+  // 🔸 How it works: manages exercise creation, display, and learner responses
+  // -----------------------------------------------------------
+  const [showExercise, setShowExercise] = useState(false);
+  const [exerciseData, setExerciseData] = useState({
+    question: ''
+  });
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
   // 🔸 How it works: Map-like refs store interval IDs and metadata to pause/resume/clear.
   // -----------------------------------------------------------
@@ -390,22 +426,25 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const toggleListening = async () => {
     try {
-      // If turning on voice input and video conferencing mic is on, turn it off
+      // If turning ON voice input and video conferencing mic is currently ON, turn it OFF
       if (!listening && micEnabled && webRTC) {
-        const newState = webRTC.toggleMicrophone();
-        setMicEnabled(newState);
-
+        console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
+        webRTC.toggleMicrophone();
+        setMicEnabled(false);
+        toast.info('Video conferencing mic disabled - Voice input enabled');
       }
 
       // Toggle voice input using the new hook
       // The hook will auto-send via the onMuteMic callback when mic is muted
       await handleVoiceToggle();
 
-      // Turn video conferencing mic back on after voice input is done
+      // If turning OFF voice input and video conferencing mic is currently OFF, turn it ON
+      // Note: 'listening' is the OLD state before toggle, so we check if it WAS true (now turning OFF)
       if (listening && !micEnabled && webRTC) {
-        const newState = webRTC.toggleMicrophone();
-        setMicEnabled(newState);
-
+        console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
+        webRTC.toggleMicrophone();
+        setMicEnabled(true);
+        toast.info('Voice input disabled - Video conferencing mic enabled');
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -583,10 +622,50 @@ const TrainerSession = () => {
       handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
+    // Set up callback for exercise answer updates from learner
+    whiteboardService.onExerciseAnswerUpdate = (data) => {
+      console.log('[TrainerSession] 📝 Learner answer updated:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Backward compatibility for single answer
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          learnerAnswer: data.learnerAnswer
+        }));
+      }
+    };
+
+    // Set up callback for exercise submission from learner
+    whiteboardService.onExerciseResponse = (data) => {
+      console.log('[TrainerSession] 📋 Learner submitted exercise:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Backward compatibility for single answer
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          learnerAnswer: data.learnerAnswer
+        }));
+      }
+    };
+
     return () => {
       if (whiteboardService) {
         whiteboardService.onItemSelected = null;
         whiteboardService.onAnimationPopped = null;
+        whiteboardService.onExerciseAnswerUpdate = null;
+        whiteboardService.onExerciseResponse = null;
       }
     };
   }, [whiteboardService]);
@@ -720,7 +799,7 @@ const TrainerSession = () => {
       videoService.onRemoteStream = (stream) => {
         console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
-        
+
         // Only show toast once when learner first connects
         if (!learnerConnectedRef.current) {
           learnerConnectedRef.current = true;
@@ -740,7 +819,7 @@ const TrainerSession = () => {
           'closed': 'disconnected'
         };
         setConnectionStatus(statusMap[state] || state);
-        
+
         // Handle learner disconnect
         if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
           console.log('[TrainerSession] Learner disconnected');
@@ -781,15 +860,22 @@ const TrainerSession = () => {
   // 🔹 Purpose: Toggle microphone on/off
   // 🔸 How it works: calls webRTC.toggleMicrophone() and updates state, coordinates with voice input
   // -----------------------------------------------------------
-  const handleToggleMic = () => {
+  const handleToggleMic = async () => {
     if (webRTC) {
       const newState = webRTC.toggleMicrophone();
       setMicEnabled(newState);
 
-      // If turning on video conferencing mic, turn off voice input
+      // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
-        handleVoiceToggle(); // Stop voice input
+        console.log('[TrainerSession] Turning ON video mic, turning OFF voice input');
+        await handleVoiceToggle(); // Stop voice input
         toast.info('Voice input stopped - video conferencing mic enabled');
+      }
+      // If turning OFF video conferencing mic, don't auto-enable voice input
+      // User should manually enable voice input if they want it
+      else if (!newState && !listening) {
+        console.log('[TrainerSession] Video mic turned OFF');
+        toast.info('Video conferencing mic disabled');
       }
     }
   };
@@ -819,7 +905,7 @@ const TrainerSession = () => {
             timestamp: Date.now()
           });
         }
-        
+
         // Save notes before ending session
         if (autoSaveTimerRef.current) {
           clearTimeout(autoSaveTimerRef.current);
@@ -883,6 +969,70 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Exercise tool handlers
+  // 🔸 How it works: manages exercise creation, updates, and learner responses
+  // -----------------------------------------------------------
+  const handleExerciseUpdate = (exerciseInfo) => {
+    console.log('[TrainerSession] Exercise updated:', exerciseInfo);
+    setExerciseData(exerciseInfo);
+
+    // Send exercise to learner via whiteboard service
+    if (whiteboardService) {
+      whiteboardService.send('exercise_update', {
+        qaItems: exerciseInfo.qaItems,
+        question: exerciseInfo.question, // Keep for backward compatibility
+        timestamp: Date.now()
+      });
+    }
+  };
+
+  const handleExerciseAnswerChange = (answerData) => {
+    console.log('[TrainerSession] Learner answer updated:', answerData);
+    // Trainer only displays answer updates received via WebSocket
+    // Do not broadcast back - prevents feedback loops
+  };
+
+  const handleExerciseSubmit = (response) => {
+    console.log('[TrainerSession] Exercise response received:', response);
+
+    // Handle learner's answer submission
+    if (response.status === 'submitted') {
+      // Send feedback to learner or save the response
+      if (whiteboardService) {
+        whiteboardService.send('exercise_response', {
+          qaItems: response.qaItems,
+          learnerAnswer: response.learnerAnswer,
+          timestamp: Date.now()
+        });
+      }
+    } else if (response.status === 'sent_to_learner') {
+      // Send exercise to learner when "Send to Learner" is clicked
+      if (whiteboardService) {
+        whiteboardService.send('exercise_update', {
+          qaItems: response.qaItems,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+
+  const handleExerciseDelete = () => {
+    console.log('[TrainerSession] Exercise deleted');
+    setShowExercise(false);
+    setExerciseData({
+      question: ''
+    });
+
+    // Notify learner that exercise has been closed
+    if (whiteboardService) {
+      whiteboardService.send('exercise_closed', {
+        message: 'Exercise has been closed by trainer',
+        timestamp: Date.now()
+      });
+    }
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Auto-end session when time expires or other auto trigger
   // 🔸 How it works: calls API with reason, then cleans up and navigates away even on failure
   // -----------------------------------------------------------
@@ -927,7 +1077,7 @@ const TrainerSession = () => {
       webRTC.close();
       console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
-    
+
     // Reset initialization flag to allow re-initialization
     isInitializingRef.current = false;
     if (whiteboardService) {
@@ -956,16 +1106,66 @@ const TrainerSession = () => {
   // 🔸 How it works: sets a JSON payload into dataTransfer so drop target can parse it
   // -----------------------------------------------------------
   const onDragStartContent = (e, content) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({
+    const dragPayload = {
       id: content.id,
       title: content.title,
-      type: content.content_type,
-      url: content.file_url,
-      thumbnail: content.thumbnail_url,
+      type: content.is_youtube ? 'youtube' : content.content_type,
+      url: content.file_url || null,
+      thumbnail: content.thumbnail_url || null,
       mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
-      originalFilename: content.title
-    }));
+      originalFilename: content.title,
+      is_youtube: content.is_youtube || false,
+      youtube_url: content.youtube_url || null,
+      youtube_video_id: content.youtube_video_id || null,
+    };
+
+    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle YouTube content dropped on whiteboard
+  // 🔸 How it works: Creates a new YouTube popup entry with position and syncs to learner
+  // -----------------------------------------------------------
+  const handleYoutubeDropped = (videoData) => {
+    const newPopup = {
+      id: Date.now(),
+      videoId: videoData.videoId,
+      title: videoData.title,
+      position: videoData.position,
+    };
+
+    console.log('[TrainerSession] YouTube popup created:', newPopup);
+    setYoutubePopups(prev => [...prev, newPopup]);
+
+    // Broadcast to learner via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_created', {
+        popupId: newPopup.id,
+        videoId: newPopup.videoId,
+        title: newPopup.title,
+        position: newPopup.position,
+        timestamp: Date.now()
+      });
+      console.log('[TrainerSession] YouTube popup sync sent to learner');
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Close a YouTube popup and sync to learner
+  // 🔸 How it works: Removes popup from state array and broadcasts closure
+  // -----------------------------------------------------------
+  const handleCloseYoutubePopup = (popupId) => {
+    setYoutubePopups(prev => prev.filter(popup => popup.id !== popupId));
+
+    // Broadcast closure to learner via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_closed', {
+        popupId: popupId,
+        timestamp: Date.now()
+      });
+      console.log('[TrainerSession] YouTube popup closed, sync sent to learner');
+    }
   };
 
   // -----------------------------------------------------------
@@ -1271,7 +1471,7 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Toggle learner tool access (Select, Drag, Keyboard)
+  // 🔹 Purpose: Toggle learner tool access (Select, Drag)
   // 🔸 How it works: Updates learner permissions and sends via whiteboard service
   // 🔸 When drag is activated: Auto-sets tool to 'select' to enable drag interactions
   // -----------------------------------------------------------
@@ -1309,17 +1509,70 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Trigger keyboard tool for learner
-  // 🔸 How it works: Sends keyboard trigger command to learner session
+  // 🔹 Purpose: Play/stop background music
+  // 🔸 How it works: Trainer can select and play music that syncs to learner session
   // -----------------------------------------------------------
-  const triggerLearnerKeyboard = () => {
-    if (whiteboardService) {
-      whiteboardService.send('trigger_keyboard', {
-        enabled: true,
+  const toggleBackgroundMusic = (musicId) => {
+    // If clicking the same music, toggle play/stop
+    if (selectedMusic === musicId && backgroundMusicPlaying) {
+      // Stop music
+      setBackgroundMusicPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      // Notify learner to stop music
+      if (whiteboardService) {
+        whiteboardService.send('background_music', {
+          playing: false,
+          musicId: null,
+          volume: musicVolume,
+          timestamp: Date.now()
+        });
+      }
+    } else {
+      // Start music with selected track
+      setSelectedMusic(musicId);
+      setBackgroundMusicPlaying(true);
+
+      if (audioRef.current) {
+        audioRef.current.src = musicOptions[musicId].url;
+        audioRef.current.loop = true; // Loop the music
+        audioRef.current.volume = musicVolume; // Set volume from state
+        audioRef.current.play().catch(err => console.log('Audio play error:', err));
+      }
+
+      // Notify learner to play the same music
+      if (whiteboardService) {
+        whiteboardService.send('background_music', {
+          playing: true,
+          musicId: musicId,
+          musicUrl: musicOptions[musicId].url,
+          volume: musicVolume,
+          timestamp: Date.now()
+        });
+      }
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Update music volume
+  // 🔸 How it works: Changes volume for both trainer and learner
+  // -----------------------------------------------------------
+  const handleMusicVolumeChange = (newVolume) => {
+    setMusicVolume(newVolume);
+
+    // Update volume in current audio player
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+
+    // Notify learner of volume change
+    if (whiteboardService && backgroundMusicPlaying) {
+      whiteboardService.send('background_music_volume', {
+        volume: newVolume,
         timestamp: Date.now()
       });
-    } else {
-      toast.error('Whiteboard service not available');
     }
   };
 
@@ -1342,6 +1595,7 @@ const TrainerSession = () => {
       width: 150,
       height: 150,
       label: 'Bucket',
+      color: bucketColor, // Use selected bucket color
       items: [] // Items inside bucket
     };
     setBuckets(prev => [...prev, newBucket]);
@@ -1562,6 +1816,16 @@ const TrainerSession = () => {
     setFloatingAnimations(prev =>
       prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
     );
+
+    // Broadcast the animation pop event to learner
+    if (whiteboardService) {
+      whiteboardService.send('animation_popped', {
+        animationId,
+        poppedLeft,
+        poppedTop,
+        timestamp: Date.now()
+      });
+    }
   };
 
   // -----------------------------------------------------------
@@ -1609,11 +1873,6 @@ const TrainerSession = () => {
         return;
       }
 
-      // ---------------------- KEYBOARD (Trigger for Learner) ----------------------
-      case '⌨️ Keyboard': {
-        triggerLearnerKeyboard();
-        return;
-      }
       // ---------------------- FEEDBACK & EMOJIS ----------------------
       case '👍 Good Job!': {
         console.log('[TrainerSession] MATCHED Good Job case!');
@@ -1743,6 +2002,13 @@ const TrainerSession = () => {
         return;
       }
 
+      // ---------------------- EXERCISE TOOL ----------------------
+      case '💡 Exercise': {
+        console.log('[TrainerSession] Exercise tool clicked');
+        setShowExercise(true);
+        return;
+      }
+
       // ---------------------- FILL IN THE BLANKS ----------------------
       // Fill Blanks removed
 
@@ -1791,6 +2057,15 @@ const TrainerSession = () => {
 
   return (
     <div className={`session-page ${pageClassName}`}>
+      {/* Hidden audio element for background music */}
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        onEnded={() => {
+          // When music ends, it will loop automatically (loop attribute set)
+        }}
+      />
+
       {/* Navigation / Header - Auto-hide after 5s on mobile/tablet */}
       <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
         <div className="session-header-main">
@@ -1810,7 +2085,7 @@ const TrainerSession = () => {
             </div>
             <button
               className="btn-secondary"
-              style={{color: 'white'}}
+              style={{ color: 'white' }}
               onClick={() =>
                 window.open('/trainer/dashboard', '_blank', 'noopener,noreferrer')
               }
@@ -1888,11 +2163,6 @@ const TrainerSession = () => {
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
                 toolAccess={learnerToolAccess}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
                 remoteSelectedItemIds={remoteSelectedItemIds}
                 textMessages={textMessages}
                 setTextMessages={setTextMessages}
@@ -1908,15 +2178,64 @@ const TrainerSession = () => {
                 setLineWidth={setLineWidth}
                 buckets={buckets}
                 setBuckets={setBuckets}
+                bucketColor={bucketColor}
+                setBucketColor={setBucketColor}
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
+                onYoutubeDropped={handleYoutubeDropped}
               />
             </div>
           </div>
+
+          {/* YouTube Popups - Rendered outside whiteboard container to avoid stacking context issues */}
+          {youtubePopups.map(popup => (
+            <YouTubePopup
+              key={popup.id}
+              popupId={popup.id}
+              videoId={popup.videoId}
+              title={popup.title}
+              onClose={() => handleCloseYoutubePopup(popup.id)}
+              initialPosition={popup.position}
+              isTrainer={true}
+            />
+          ))}
+
+          {/* Exercise Tool */}
+          {showExercise && (
+            <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+              {/* <button
+                onClick={() => setShowExercise(false)}
+                style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  right: '4rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  zIndex: 10
+                }}
+                title="Close Exercise Tool"
+              >
+                ✕ Close
+              </button> */}
+              <Exercise
+                isTrainer={true}
+                onExerciseSubmit={handleExerciseSubmit}
+                onExerciseUpdate={handleExerciseUpdate}
+                onExerciseDelete={handleExerciseDelete}
+                initialExercise={Object.keys(exerciseData).some(key => exerciseData[key]) ? exerciseData : null}
+              />
+            </div>
+          )}
 
           {/* Video Controls - Below Whiteboard */}
           <div className="w-full mt-4 mb-3">
@@ -2013,14 +2332,20 @@ const TrainerSession = () => {
               {/* Clear Canvas Button */}
               <button
                 onClick={() => {
+                  console.log('[TrainerSession] 🗑️ Clear All button clicked!');
+                  console.log('[TrainerSession] whiteboardService available:', !!whiteboardService);
                   setCanvasItems([]);
                   setBuckets([]);
                   setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
                   setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
                   if (whiteboardService) {
+                    console.log('[TrainerSession] 📤 Sending clear_canvas message to learner...');
                     whiteboardService.send('clear_canvas', {
                       timestamp: Date.now()
                     });
+                    console.log('[TrainerSession] ✅ clear_canvas message sent!');
+                  } else {
+                    console.error('[TrainerSession] ❌ ERROR: whiteboardService is NULL/UNDEFINED!');
                   }
                 }}
                 className={wbBtnBase}
@@ -2059,7 +2384,28 @@ const TrainerSession = () => {
                 />
               </div>
 
-
+              {/* Bucket Color Selector */}
+              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
+                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
+                  {bucketColors.map((bc) => (
+                    <button
+                      key={bc.hex}
+                      onClick={() => setBucketColor(bc.hex)}
+                      className="rounded border-2 transition-all"
+                      style={{
+                        backgroundColor: bc.hex,
+                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
+                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
+                        cursor: 'pointer'
+                      }}
+                      title={`Bucket Color: ${bc.name}`}
+                    />
+                  ))}
+                </div>
+              </div>
 
               <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                 <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
@@ -2126,22 +2472,52 @@ const TrainerSession = () => {
                   <span>Drag</span>
                 </button>
 
-                {/* Keyboard Trigger */}
+                {/* Exercise Tool Button */}
                 <button
-                  onClick={() => {
-                    // Toggle keyboard access for learner
-                    toggleLearnerToolAccess('keyboard');
-                    // If enabling, also send an immediate trigger so the keyboard appears right away
-                    if (!learnerToolAccess.keyboard) {
-                      triggerLearnerKeyboard();
-                    }
-                  }}
-                  className={`${learnerToolAccess.keyboard ? wbSmallBtnActive : wbSmallBtnBase}`}
-                  title={learnerToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
+                  onClick={() => setShowExercise(true)}
+                  className={`${showExercise ? wbSmallBtnActive : wbSmallBtnBase}`}
+                  title="Open Exercise Tool - Create Q&A exercises with keyword validation"
                 >
-                  <span>⌨️</span>
-                  <span>Keyboard</span>
+                  <span>💡</span>
+                  <span>Q & A</span>
                 </button>
+
+                {/* Background Music Control */}
+                <div className="flex gap-1 flex-wrap items-center">
+                  {musicOptions.map((music) => (
+                    <button
+                      key={music.id}
+                      onClick={() => toggleBackgroundMusic(music.id)}
+                      className={`${selectedMusic === music.id && backgroundMusicPlaying
+                        ? wbSmallBtnActive
+                        : wbSmallBtnBase
+                        }`}
+                      title={`${selectedMusic === music.id && backgroundMusicPlaying
+                        ? `Playing ${music.name} - Click to stop`
+                        : `Click to play ${music.name}`
+                        }`}
+                    >
+                      <span>{music.name}</span>
+                    </button>
+                  ))}
+
+                  {/* Volume Slider */}
+                  {backgroundMusicPlaying && (
+                    <div className="flex items-center gap-2 px-2 py-1 bg-white border-2 border-gray-300 rounded-lg">
+                      <span className="text-xs font-semibold text-gray-700">🔊</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={musicVolume * 100}
+                        onChange={(e) => handleMusicVolumeChange(e.target.value / 100)}
+                        className="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        title={`Volume: ${Math.round(musicVolume * 100)}%`}
+                      />
+                      <span className="text-xs font-semibold text-gray-700">{Math.round(musicVolume * 100)}%</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Fill Blanks tool removed */}
                 <button
@@ -2326,7 +2702,6 @@ const TrainerSession = () => {
           </button>
         </div>
       </div>
-
       {/* Fill in the Blanks feature removed */}
     </div>
   );

@@ -4,23 +4,45 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.learning_content_model import LearningContent
+from app.models.learning_content_model import LearningContent, ContentType
 from app.schemas.learning_content import LearningContentCreate, LearningContentUpdate
+from app.utils.youtube_utils import YouTubeUtils
 
 
 async def create_learning_content(
     db: AsyncSession, content_data: LearningContentCreate, admin_id: int
 ) -> LearningContent:
-    """Create new learning content"""
-    new_content = LearningContent(
-        title=content_data.title,
-        description=content_data.description,
-        content_type=content_data.content_type,
-        file_url=content_data.file_url,
-        file_size=content_data.file_size,
-        thumbnail_url=content_data.thumbnail_url,
-        created_by_admin_id=admin_id,
-    )
+    """Create new learning content - supports both file and YouTube content"""
+    
+    # Handle YouTube content
+    if content_data.youtube_url:
+        youtube_data = YouTubeUtils.validate_and_extract(content_data.youtube_url)
+        if not youtube_data:
+            raise ValueError("Invalid YouTube URL. Please use a valid YouTube link.")
+        
+        video_id, thumbnail_url, _ = youtube_data
+        
+        new_content = LearningContent(
+            title=content_data.title,
+            description=content_data.description,
+            content_type=ContentType.YOUTUBE,
+            youtube_url=content_data.youtube_url,
+            youtube_video_id=video_id,
+            is_youtube=True,
+            thumbnail_url=thumbnail_url,
+            created_by_admin_id=admin_id,
+        )
+    else:
+        # File-based content
+        new_content = LearningContent(
+            title=content_data.title,
+            description=content_data.description,
+            content_type=content_data.content_type,
+            file_url=content_data.file_url,
+            file_size=content_data.file_size,
+            thumbnail_url=content_data.thumbnail_url,
+            created_by_admin_id=admin_id,
+        )
 
     db.add(new_content)
     await db.commit()

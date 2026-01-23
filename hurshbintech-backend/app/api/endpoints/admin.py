@@ -29,6 +29,9 @@ from app.schemas.subscription import (
     RevenueByHeadResponse,
     SessionAdjustmentCreate,
     SessionAdjustmentLogResponse,
+    SubscriptionPackageCreate,
+    SubscriptionPackageUpdate,
+    SubscriptionPackageResponse,
 )
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
@@ -1436,4 +1439,73 @@ async def diagnose_problematic_subscriptions(
         "problematic_subscriptions": problematic,
         "status": "OK" if len(problematic) == 0 else "ISSUES_FOUND"
     }
+
+
+# ============ SUBSCRIPTION PACKAGE MANAGEMENT (ADMIN) ============
+
+@router.post("/subscription-packages", response_model=SubscriptionPackageResponse, status_code=status.HTTP_201_CREATED)
+async def create_subscription_package(
+    package_data: SubscriptionPackageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Create a new subscription package (Admin)"""
+    package = await subscription_crud.create_package(db, package_data, current_admin.id)
+    return package
+
+
+@router.get("/subscription-packages", response_model=List[SubscriptionPackageResponse])
+async def get_all_subscription_packages(
+    active_only: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get all subscription packages (Admin)"""
+    packages = await subscription_crud.get_all_packages(db, active_only)
+    return packages
+
+
+@router.get("/subscription-packages/{package_id}", response_model=SubscriptionPackageResponse)
+async def get_subscription_package_details(
+    package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get subscription package details (Admin)"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    return package
+
+
+@router.patch("/subscription-packages/{package_id}", response_model=SubscriptionPackageResponse)
+async def update_subscription_package(
+    package_id: int,
+    package_data: SubscriptionPackageUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Update a subscription package (Admin)"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    updated_package = await subscription_crud.update_package(db, package_id, package_data)
+    return updated_package
+
+
+@router.delete("/subscription-packages/{package_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_subscription_package(
+    package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Delete a subscription package (Admin)"""
+    package = await subscription_crud.get_package_by_id(db, package_id)
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
+    
+    await subscription_crud.soft_delete_package(db, package_id)
+    return None
 

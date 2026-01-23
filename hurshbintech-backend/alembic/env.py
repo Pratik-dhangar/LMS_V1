@@ -23,6 +23,8 @@ from app.models.session_report_model import SessionReport
 from app.models.program_learning_content_model import ProgramLearningContent
 from app.models.program_assignment_model import ProgramAssignment
 from app.models.program_assignment_attachment_model import ProgramAssignmentAttachment
+# Chat Models
+from app.models.Chat.chat_model import Conversation, ConversationMember, Message, ReadReceipt
 
 
 # this is the Alembic Config object

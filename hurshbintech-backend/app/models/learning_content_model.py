@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Boolean
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -15,6 +15,7 @@ class ContentType(str, enum.Enum):
     VIDEO = "video"
     AUDIO = "audio"
     DOCUMENT = "document"
+    YOUTUBE = "youtube"
 
 
 class LearningContent(Base):
@@ -24,9 +25,14 @@ class LearningContent(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     content_type = Column(SQLEnum(ContentType), nullable=False)
-    file_url = Column(String(500), nullable=False)
+    file_url = Column(String(500), nullable=True)  # nullable for YouTube content
     file_size = Column(Integer, nullable=True)  # in bytes
-    thumbnail_url = Column(String(500), nullable=True)  # for videos/images
+    thumbnail_url = Column(String(500), nullable=True)  # for videos/images or YouTube
+    
+    # YouTube specific fields
+    youtube_url = Column(String(500), nullable=True)  # Full YouTube URL
+    youtube_video_id = Column(String(50), nullable=True, index=True)  # Extracted video ID
+    is_youtube = Column(Boolean, default=False)  # Quick flag for YouTube content
 
     # Metadata
     # If the creating/updating user is removed, keep the content but null the reference

@@ -19,7 +19,7 @@ from app.crud import user_crud
 from app.crud import subscription_crud
 from app.db.session import get_db
 from app.models.user_model import HeadProfile
-from app.models.subscription import SubscriptionPaymentReceipt, PaymentStatus
+from app.models.subscription import SubscriptionPaymentReceipt, PaymentStatus, LearnerSubscription
 from app.schemas.user import (
     LearnerCreate,
     LearnerResponse,
@@ -42,7 +42,6 @@ from app.schemas.subscription import (
     SessionAdjustmentCreate,
     SessionAdjustmentLogResponse,
     SubscriptionPauseRequest,
-    SubscriptionFreezeRequest,
     SubscriptionResumeRequest,
     SubscriptionCancelRequest,
     SubscriptionRefundRequest,
@@ -614,13 +613,15 @@ async def create_new_learner(
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logging.warning(f"Failed to upload file {filename_str}: {str(e)}")
     
-    # Store learner ID before attempting subscription creation (for error handling)
-    learner_id = new_learner.id
-    logging.info(f"Created learner with ID: {learner_id}")
+    # Store learner USER ID before attempting subscription creation (for error handling)
+    # IMPORTANT: subscription.learner_id refers to users.id, NOT learner_profile.id
+    learner_user_id = new_learner.user_id
+    learner_profile_id = new_learner.id
+    logging.info(f"Created learner profile with ID: {learner_profile_id}, user ID: {learner_user_id}")
     
     # Create initial subscription if package_id is provided
     if learner_create.package_id:
-        logging.info(f"Attempting to create subscription for learner {learner_id} with package {learner_create.package_id}")
+        logging.info(f"Attempting to create subscription for learner (user_id={learner_user_id}) with package {learner_create.package_id}")
         try:
             # Get the package
             package = await subscription_crud.get_package_by_id(db, learner_create.package_id)
@@ -633,7 +634,7 @@ async def create_new_learner(
             # Create subscription
             from datetime import date
             subscription_data = LearnerSubscriptionCreate(
-                learner_id=learner_id,
+                learner_id=learner_user_id,  # Use user_id, NOT profile id!
                 package_id=learner_create.package_id,
                 start_date=date.today(),
                 discount_code=learner_create.discount_code
@@ -647,7 +648,7 @@ async def create_new_learner(
                 # Rollback on subscription creation error
                 logging.error(f"Subscription creation returned error: {error}")
                 await db.rollback()
-                logging.warning(f"Failed to create subscription for learner {learner_id}: {error}")
+                logging.warning(f"Failed to create subscription for learner {learner_user_id}: {error}")
             else:
                 logging.info(f"Subscription created successfully: {subscription.id}, current_head_id: {subscription.current_head_id}")
                 # Upload payment receipt if provided
@@ -666,7 +667,7 @@ async def create_new_learner(
                 
                 # Commit the entire transaction (learner + subscription + receipt)
                 await db.commit()
-                logging.info(f"Transaction committed. Created subscription {subscription.id} for learner {learner_id}")
+                logging.info(f"Transaction committed. Created subscription {subscription.id} for learner {learner_user_id}")
         except HTTPException:
             await db.rollback()
             raise
@@ -677,7 +678,7 @@ async def create_new_learner(
         logging.info(f"No package_id provided, skipping subscription creation")
         # No subscription requested, commit just the learner creation
         await db.commit()
-        logging.info(f"Transaction committed. Learner {learner_id} created without subscription")
+        logging.info(f"Transaction committed. Learner {learner_user_id} created without subscription")
     
     # Refresh learner to load user relationship
     await db.refresh(new_learner, ['reference_data', 'user'])
@@ -688,10 +689,29 @@ async def create_new_learner(
 # get all learners
 @router.get("/learners", response_model=List[LearnerResponse])
 async def get_my_learners(
-    db: AsyncSession = Depends(get_db), current_head: HeadProfile = Depends(get_current_head)
+    db: AsyncSession = Depends(get_db), 
+    current_head: HeadProfile = Depends(get_current_head),
+    subscription_status: Optional[str] = None,
 ):
-
     learners = await user_crud.get_learners_by_head(db, current_head.id)
+    
+    # Filter by subscription status if specified (for session scheduling, only show ACTIVE subscriptions)
+    if subscription_status:
+        filtered_learners = []
+        for learner in learners:
+            # Get the learner's current subscription with specified status
+            stmt = select(LearnerSubscription).where(
+                LearnerSubscription.learner_id == learner.user_id,
+                LearnerSubscription.status == subscription_status
+            ).order_by(LearnerSubscription.id.desc()).limit(1)
+            
+            result = await db.execute(stmt)
+            subscription = result.scalar_one_or_none()
+            
+            if subscription:
+                filtered_learners.append(learner)
+        learners = filtered_learners
+    
     logger.info(f"Head {current_head.user_id} (ID: {current_head.id}) has {len(learners)} learners")
     for learner in learners:
         logger.info(f"  - Learner {learner.user.id}: {learner.user.name} (role: {learner.user.role.value})")
@@ -1126,29 +1146,22 @@ async def reveal_user_passcode(
         )
 
 
-# ============ SUBSCRIPTION PACKAGE MANAGEMENT ============
 
-@router.post("/subscription-packages", response_model=SubscriptionPackageResponse, status_code=status.HTTP_201_CREATED)
-async def create_subscription_package(
-    package_data: SubscriptionPackageCreate,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-    """Create a new subscription package"""
-    package = await subscription_crud.create_package(db, package_data, current_head.user_id)
-    return package
-
+# ============ SUBSCRIPTION PACKAGE VIEWING (HEAD) ============
 
 @router.get("/subscription-packages", response_model=List[SubscriptionPackageResponse])
-async def get_my_subscription_packages(
+async def get_active_subscription_packages(
     active_only: bool = True,
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Get all subscription packages created by current HEAD"""
-    logger.info(f"Fetching packages for HEAD user_id={current_head.user_id}, head_id={current_head.id}, active_only={active_only}")
-    packages = await subscription_crud.get_packages_by_head(db, current_head.user_id, active_only)
-    logger.info(f"Found {len(packages)} packages for HEAD {current_head.user_id}")
+    """
+    Get all active subscription packages created by ADMIN.
+    This endpoint is used by HEAD to select packages when creating learner subscriptions.
+    Only active packages are returned by default.
+    """
+    packages = await subscription_crud.get_all_packages(db, active_only)
+    logger.info(f"Head {current_head.user_id} fetched {len(packages)} subscription packages")
     return packages
 
 
@@ -1158,55 +1171,19 @@ async def get_subscription_package_details(
     db: AsyncSession = Depends(get_db),
     current_head: HeadProfile = Depends(get_current_head),
 ):
-    """Get subscription package details"""
+    """
+    Get details of a specific subscription package.
+    HEAD can view any active package to understand pricing and session details.
+    """
     package = await subscription_crud.get_package_by_id(db, package_id)
     if not package:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
-    # Verify package belongs to current head
-    if package.head_id != current_head.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this package")
+    if not package.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package is no longer active")
     
+    logger.info(f"Head {current_head.user_id} viewed package {package_id}: {package.package_name}")
     return package
-
-
-@router.patch("/subscription-packages/{package_id}", response_model=SubscriptionPackageResponse)
-async def update_subscription_package(
-    package_id: int,
-    package_data: SubscriptionPackageUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-    """Update a subscription package"""
-    package = await subscription_crud.get_package_by_id(db, package_id)
-    if not package:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
-    
-    # Verify package belongs to current head
-    if package.head_id != current_head.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this package")
-    
-    updated_package = await subscription_crud.update_package(db, package_id, package_data)
-    return updated_package
-
-
-@router.delete("/subscription-packages/{package_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_subscription_package(
-    package_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-    """Delete a subscription package (hard delete if no subscriptions, soft delete if subscriptions exist)"""
-    package = await subscription_crud.get_package_by_id(db, package_id)
-    if not package:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
-    
-    # Verify package belongs to current head
-    if package.head_id != current_head.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this package")
-    
-    await subscription_crud.soft_delete_package(db, package_id)
-    return None
 
 
 # ============ LEARNER SUBSCRIPTION MANAGEMENT ============
@@ -1415,29 +1392,6 @@ async def pause_subscription(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to pause this subscription")
     
     subscription, error = await subscription_crud.pause_subscription(db, subscription_id, pause_data.reason)
-    if error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-    
-    return subscription
-
-
-@router.post("/subscriptions/{subscription_id}/freeze", response_model=LearnerSubscriptionResponse)
-async def freeze_subscription(
-    subscription_id: int,
-    freeze_data: SubscriptionFreezeRequest,
-    db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
-):
-    """Freeze a subscription (blocks sessions, stops expiry)"""
-    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
-    if not subscription:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
-    
-    # Verify subscription belongs to current head
-    if subscription.current_head_id != current_head.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to freeze this subscription")
-    
-    subscription, error = await subscription_crud.freeze_subscription(db, subscription_id, freeze_data.reason)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     

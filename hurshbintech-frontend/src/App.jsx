@@ -19,7 +19,6 @@ import ManageLearningGoals from './pages/admin/ManageLearningGoals';
 import ManageLearningContent from './pages/admin/ManageLearningContent';
 import ManageLearningMaterials from './pages/admin/ManageLearningMaterials';
 import PaymentVerification from './pages/admin/PaymentVerification';
-import ViewLearners from './pages/admin/ViewLearners';
 import ViewTrainers from './pages/admin/ViewTrainers';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
@@ -105,7 +104,7 @@ import Checkout from './pages/store/Checkout';
 import OrderHistory from './pages/store/OrderHistory';
 
 // Subscription Pages
-import SubscriptionPackageManager from './pages/head/SubscriptionPackageManager';
+import ManageSubscriptionPackages from './pages/admin/ManageSubscriptionPackages';
 import LearnerSubscriptionManager from './pages/head/LearnerSubscriptionManager';
 import SubscriptionRecords from './pages/admin/SubscriptionRecords';
 import DiscountCodeManager from './pages/admin/DiscountCodeManager';
@@ -115,6 +114,12 @@ import DiscountCodeManager from './pages/admin/DiscountCodeManager';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import useNetworkSpeedNotifier from './hooks/useNetworkSpeedNotifier';
+
+// Chat Components
+import { ChatProvider } from './context/chat/ChatContext';
+import ChatIconWidget from './components/chat/ChatIconWidget';
+import ChatPage from './pages/chat/ChatPage';
+import ChatWindowPage from './pages/chat/ChatWindowPage';
 
 import './App.css';
 
@@ -173,6 +178,7 @@ function AppRoutes() {
 
   return (
     <MediaControlProvider>
+      <ChatIconWidget />
       <Routes>
         {/* Routes WITHOUT Navbar/Footer (Login and Session pages) */}
         <Route
@@ -264,14 +270,6 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <ManageLearningGoals />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/view-learners"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <ViewLearners />
               </ProtectedRoute>
             }
           />
@@ -414,6 +412,14 @@ function AppRoutes() {
 
           {/* Admin Subscription Routes */}
           <Route
+            path="/admin/subscriptions/packages"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ManageSubscriptionPackages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/subscriptions/discounts"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -553,14 +559,7 @@ function AppRoutes() {
           />
 
           {/* Head Subscription Routes */}
-          <Route
-            path="/head/subscriptions/packages"
-            element={
-              <ProtectedRoute allowedRoles={['head']}>
-                <SubscriptionPackageManager />
-              </ProtectedRoute>
-            }
-          />
+          
           <Route
             path="/head/subscriptions/learners"
             element={
@@ -811,6 +810,24 @@ function AppRoutes() {
             </ProtectedRoute>
           } />
 
+          {/* Chat Routes */}
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:conversationId"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+                <ChatWindowPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* 404 - Redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -823,7 +840,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ChatProvider>
+          <AppRoutes />
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   );
