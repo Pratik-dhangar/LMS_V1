@@ -24,7 +24,10 @@ const ManageLearningContent = () => {
     file_url: "",
     file_size: null,
     thumbnail_url: "",
+    youtube_url: "",
+    is_youtube: false,
   });
+  const [useYoutube, setUseYoutube] = useState(false);
 
   useEffect(() => {
     fetchContents();
@@ -73,8 +76,19 @@ const ManageLearningContent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.file_url) {
-      toast.error("Please fill in all required fields and upload a file");
+    // Validate required fields
+    if (!formData.title) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!useYoutube && !formData.file_url) {
+      toast.error("Please upload a file or provide a YouTube URL");
+      return;
+    }
+
+    if (useYoutube && !formData.youtube_url) {
+      toast.error("Please enter a YouTube URL");
       return;
     }
 
@@ -89,7 +103,20 @@ const ManageLearningContent = () => {
     }
 
     try {
-      await learningContentService.admin.create(formData);
+      const submitData = {
+        title: formData.title,
+        description: formData.description,
+      };
+
+      if (useYoutube) {
+        submitData.youtube_url = formData.youtube_url;
+      } else {
+        submitData.file_url = formData.file_url;
+        submitData.content_type = formData.content_type;
+        submitData.thumbnail_url = formData.thumbnail_url;
+      }
+
+      await learningContentService.admin.create(submitData);
       toast.success("Learning content created successfully!");
       setShowAddModal(false);
       setFormData({
@@ -99,7 +126,10 @@ const ManageLearningContent = () => {
         file_url: "",
         file_size: null,
         thumbnail_url: "",
+        youtube_url: "",
+        is_youtube: false,
       });
+      setUseYoutube(false);
       fetchContents();
     } catch (error) {
       console.error("Error creating content:", error);
@@ -160,6 +190,7 @@ const ManageLearningContent = () => {
       video: "🎥",
       audio: "🎵",
       document: "📝",
+      youtube: "🎥",
     };
     return icons[type] || "📁";
   };
@@ -185,6 +216,31 @@ const ManageLearningContent = () => {
   };
 
   const renderPreview = (content) => {
+    // Handle YouTube content
+    if (content.is_youtube && content.youtube_video_id) {
+      const thumbnailUrl = `https://img.youtube.com/vi/${content.youtube_video_id}/hqdefault.jpg`;
+      return (
+        <div className="youtube-preview">
+          <img
+            src={thumbnailUrl}
+            alt={content.title}
+            className="w-full h-32 object-cover"
+            onError={(e) => {
+              e.target.style.display = "none";
+              const fallback = e.target.nextElementSibling;
+              if (fallback) fallback.style.display = "flex";
+            }}
+          />
+          <div className="hidden items-center justify-center h-32 bg-gradient-to-br from-gray-100 to-gray-200" style={{ display: 'none' }}>
+            <div className="text-center">
+              <span className="text-4xl mb-2 block">🎥</span>
+              <span className="text-xs text-gray-600">YouTube unavailable</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const fileUrl = learningContentService.getFileUrl(content.file_url);
 
     if (content.content_type === "image") {
@@ -261,7 +317,7 @@ const ManageLearningContent = () => {
             {getContentIcon(content.content_type)}
           </span>
           <span className="text-xs text-gray-600 uppercase font-medium">
-            {content.content_type}
+            {content.content_type || 'content'}
           </span>
         </div>
       </div>
@@ -347,14 +403,14 @@ const ManageLearningContent = () => {
                   <div className="admin-content-card-header">
                     <div className="admin-content-card-header-left">
                       <span className="admin-content-icon">
-                        {getContentIcon(content.content_type)}
+                        {content.is_youtube ? "🎥" : getContentIcon(content.content_type)}
                       </span>
                       <div>
                         <p className="admin-content-type-text">
-                          {content.content_type}
+                          {content.is_youtube ? "YouTube" : content.content_type}
                         </p>
                         <p className="admin-content-size-text">
-                          {formatFileSize(content.file_size)}
+                          {content.is_youtube ? "Video" : formatFileSize(content.file_size)}
                         </p>
                       </div>
 
@@ -399,14 +455,25 @@ const ManageLearningContent = () => {
 
                     {/* Action Buttons */}
                     <div className="admin-content-actions">
-                      <a
-                        href={learningContentService.getFileUrl(content.file_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="app-modal-btn app-modal-btn--secondary btn-sm"
-                      >
-                        View
-                      </a>
+                      {content.is_youtube ? (
+                        <a
+                          href={content.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="app-modal-btn app-modal-btn--secondary btn-sm"
+                        >
+                          View
+                        </a>
+                      ) : (
+                        <a
+                          href={learningContentService.getFileUrl(content.file_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="app-modal-btn app-modal-btn--secondary btn-sm"
+                        >
+                          View
+                        </a>
+                      )}
                       <button
                         onClick={() => handleEdit(content)}
                         className="app-modal-btn app-modal-btn--primary btn-sm"
@@ -455,81 +522,135 @@ const ManageLearningContent = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="app-modal-content">
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Upload File <span className="form-required">*</span>
-                </label>
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className="app-modal-form-input"
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.ppt,.pptx"
-                  required
-                  disabled={uploading}
-                />
-                <p className="form-help-text">Max size: 100MB</p>
-                {uploading && (
-                  <div className="mt-2">
-                    <div className="animate-pulse flex space-x-2 items-center">
-                      <div className="h-2 bg-blue-400 rounded flex-1"></div>
-                      <span className="text-sm text-blue-600">
-                        Uploading...
-                      </span>
+                {/* Toggle between File and YouTube */}
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Content Type</label>
+                  <div className="content-type-toggle">
+                    <button
+                      type="button"
+                      className={`btn-primary ${!useYoutube ? 'active' : ''}`}
+                      onClick={() => {
+                        setUseYoutube(false);
+                        setFormData({ ...formData, youtube_url: "" });
+                      }}
+                    >
+                      📁 File Upload
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-primary ${useYoutube ? 'active' : ''}`}
+                      onClick={() => {
+                        setUseYoutube(true);
+                        setFormData({ ...formData, file_url: "", content_type: "", thumbnail_url: "" });
+                      }}
+                    >
+                      🎥 YouTube URL
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Upload Section */}
+                {!useYoutube && (
+                  <>
+                    <div className="app-modal-form-field">
+                      <label className="app-modal-form-label">
+                        Upload File <span className="form-required">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        onChange={handleFileUpload}
+                        className="app-modal-form-input"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.ppt,.pptx"
+                        required
+                        disabled={uploading}
+                      />
+                      <p className="form-help-text">Max size: 100MB</p>
+                      {uploading && (
+                        <div className="mt-2">
+                          <div className="animate-pulse flex space-x-2 items-center">
+                            <div className="h-2 bg-blue-400 rounded flex-1"></div>
+                            <span className="text-sm text-blue-600">
+                              Uploading...
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {formData.file_url && !uploading && (
+                        <p className="text-sm text-green-600 mt-2 flex items-center">
+                          <span className="mr-1">✓</span> File uploaded successfully
+                        </p>
+                      )}
                     </div>
+
+                    <div className="app-modal-form-field">
+                      <label className="app-modal-form-label">
+                        Thumbnail URL (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.thumbnail_url}
+                        onChange={(e) =>
+                          setFormData({ ...formData, thumbnail_url: e.target.value })
+                        }
+                        className="app-modal-form-input"
+                        placeholder="https://example.com/thumbnail.jpg"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* YouTube URL Section */}
+                {useYoutube && (
+                  <div className="app-modal-form-field">
+                    <label className="app-modal-form-label">
+                      YouTube URL <span className="form-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.youtube_url}
+                      onChange={(e) =>
+                        setFormData({ ...formData, youtube_url: e.target.value })
+                      }
+                      className="app-modal-form-input"
+                      placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                      required
+                    />
+                    <p className="form-help-text">
+                      Paste a YouTube URL. Thumbnail will be generated automatically.
+                    </p>
                   </div>
                 )}
-                {formData.file_url && !uploading && (
-                  <p className="text-sm text-green-600 mt-2 flex items-center">
-                    <span className="mr-1">✓</span> File uploaded successfully
-                  </p>
-                )}
-              </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Title <span className="form-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="app-modal-form-input"
-                  required
-                  placeholder="Enter content title"
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Title <span className="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="app-modal-form-input"
+                    required
+                    placeholder="Enter content title"
+                  />
+                </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="app-modal-form-textarea"
-                  rows="3"
-                  placeholder="Enter description (optional)"
-                />
-              </div>
-
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Thumbnail URL (optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.thumbnail_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, thumbnail_url: e.target.value })
-                  }
-                  className="app-modal-form-input"
-                  placeholder="https://example.com/thumbnail.jpg"
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className="app-modal-form-textarea"
+                    rows="3"
+                    placeholder="Enter description (optional)"
+                  />
+                </div>
 
               </div>
               <div className="app-modal-footer">
@@ -544,7 +665,10 @@ const ManageLearningContent = () => {
                       file_url: "",
                       file_size: null,
                       thumbnail_url: "",
+                      youtube_url: "",
+                      is_youtube: false,
                     });
+                    setUseYoutube(false);
                   }}
                   className="app-modal-btn app-modal-btn--secondary"
                 >
@@ -553,7 +677,7 @@ const ManageLearningContent = () => {
                 <button
                   type="submit"
                   className="app-modal-btn app-modal-btn--primary"
-                  disabled={uploading || !formData.file_url}
+                  disabled={uploading || (useYoutube ? !formData.youtube_url : !formData.file_url)}
                 >
                   Create
                 </button>
@@ -579,46 +703,46 @@ const ManageLearningContent = () => {
             </div>
             <form onSubmit={handleUpdate}>
               <div className="app-modal-content">
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="app-modal-form-input"
-                  required
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Title</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="app-modal-form-input"
+                    required
+                  />
+                </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="app-modal-form-textarea"
-                  rows="3"
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className="app-modal-form-textarea"
+                    rows="3"
+                  />
+                </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Thumbnail URL
-                </label>
-                <input
-                  type="text"
-                  value={formData.thumbnail_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, thumbnail_url: e.target.value })
-                  }
-                  className="app-modal-form-input"
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Thumbnail URL
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.thumbnail_url}
+                    onChange={(e) =>
+                      setFormData({ ...formData, thumbnail_url: e.target.value })
+                    }
+                    className="app-modal-form-input"
+                  />
+                </div>
 
               </div>
               <div className="app-modal-footer">

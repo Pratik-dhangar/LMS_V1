@@ -321,6 +321,39 @@
     gap: 0.5rem;
 }
 
+/* Content Type Toggle Styles */
+.content-type-toggle {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.toggle-button {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2px solid #d1d5db;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.toggle-button:hover {
+    border-color: #3b82f6;
+    background-color: #f0f9ff;
+    color: #1f2937;
+}
+
+.toggle-button.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border-color: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
 @media (max-width: 640px) {
     .admin-content-grid {
         grid-template-columns: 1fr;

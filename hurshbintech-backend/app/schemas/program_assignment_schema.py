@@ -92,6 +92,9 @@ class ProgramAssignmentCreate(BaseModel):
 
 class ProgramAssignmentUpdate(BaseModel):
     """Schema for updating a program assignment (Head)"""
+    assignment_title: Optional[str] = None
+    program_ids: Optional[List[int]] = None
+    extra_content_ids: Optional[List[int]] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     duration_days: Optional[int] = None
@@ -159,6 +162,7 @@ class ProgramAssignmentResponse(BaseModel):
     is_overdue: bool = False
     is_late_submission: bool = False
     content_assignments: List[ContentAssignmentInProgram] = []  # All content assignments
+    extra_content_ids: List[int] = []  # NEW: Extract content IDs from content_assignments
 
     class Config:
         from_attributes = True

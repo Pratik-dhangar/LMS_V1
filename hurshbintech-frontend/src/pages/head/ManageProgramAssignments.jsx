@@ -18,6 +18,8 @@ const ManageProgramAssignments = () => {
   const [allLearningContents, setAllLearningContents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showContentsPreviewModal, setShowContentsPreviewModal] = useState(false);
@@ -65,9 +67,7 @@ const ManageProgramAssignments = () => {
   }, []);
 
   useEffect(() => {
-    if (filterLearner || filterStatus) {
-      fetchAssignments();
-    }
+    fetchAssignments();
   }, [filterLearner, filterStatus]);
 
   // Filter learners based on search term
@@ -414,6 +414,88 @@ const ManageProgramAssignments = () => {
     }
   };
 
+  const handleEditAssignment = async (assignment) => {
+    // Load the assignment and prepare edit form
+    try {
+      const assignmentData = await programAssignmentService.getAssignmentById(assignment.id);
+      setEditingAssignment(assignmentData);
+
+      // Pre-fill the form with existing assignment data
+      // Ensure extra_content_ids are converted to integers for proper matching
+      const extraContentIds = (assignmentData.extra_content_ids || []).map(id =>
+        typeof id === 'string' ? parseInt(id) : id
+      );
+
+      setFormData({
+        learner_ids: [assignmentData.learner_id],
+        program_ids: assignmentData.program_ids || [assignmentData.program_id],
+        extra_content_ids: extraContentIds,
+        assignment_title: assignmentData.assignment_title,
+        start_date: assignmentData.start_date,
+        end_date: assignmentData.end_date,
+        duration_days: assignmentData.duration_days,
+        head_notes: assignmentData.head_notes || '',
+        manual_duration: !!assignmentData.duration_days,
+      });
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Failed to load assignment for editing:', error);
+      toast.error('Failed to load assignment details');
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.assignment_title || formData.assignment_title.trim() === '') {
+      return toast.error('Please enter an assignment title');
+    }
+
+    if (!formData.start_date || !formData.end_date) {
+      return toast.error('Please select start and end dates');
+    }
+
+    if (formData.program_ids.length === 0) {
+      return toast.error('Please select at least one program');
+    }
+
+    try {
+      const payload = {
+        assignment_title: formData.assignment_title.trim(),
+        program_ids: formData.program_ids.map(id => parseInt(id)),
+        extra_content_ids: formData.extra_content_ids && formData.extra_content_ids.length > 0 ? formData.extra_content_ids : [],
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
+        head_notes: formData.head_notes || null,
+      };
+
+      await programAssignmentService.updateAssignment(editingAssignment.id, payload);
+      toast.success('Assignment updated successfully');
+
+      // Refresh data and close modal
+      fetchInitialData();
+      setShowEditModal(false);
+      setEditingAssignment(null);
+      setFormData({
+        learner_ids: [],
+        program_ids: [],
+        assignment_title: '',
+        extra_content_ids: [],
+        start_date: '',
+        end_date: '',
+        duration_days: '',
+        head_notes: '',
+        manual_duration: false,
+      });
+      setSelectedProgram(null);
+      setSearchExtraContent('');
+    } catch (error) {
+      console.error('Failed to update assignment:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update assignment');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'COMPLETED':
@@ -565,7 +647,7 @@ const ManageProgramAssignments = () => {
   };
 
   return (
-     <div className="page-container">
+    <div className="page-container">
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -599,7 +681,7 @@ const ManageProgramAssignments = () => {
           <div className="search-section">
             <button
               onClick={() => setShowAssignModal(true)}
-              className="btn-primary"
+              className="btn-gradient  "
             >
               + Assign Program
             </button>
@@ -762,40 +844,47 @@ const ManageProgramAssignments = () => {
                         </tr>
                       </thead>
                       <tbody className="table-primary-body">
-                        {Object.entries(groupedAssignments).map(([title, titleAssignments]) => (
-                          <tr key={title} className="table-primary-row">
+                        {assignments.map((assignment, index) => (
+                          <tr key={`${assignment.id}-${index}`} className="table-primary-row">
                             <td className="table-primary-td">
-                              <div className="table-primary-cell-name">{title}</div>
+                              <div className="table-primary-cell-name">{assignment.assignment_title}</div>
                             </td>
                             <td className="table-primary-td">
-                              <div className="table-primary-cell-name">{titleAssignments[0].learner_name}</div>
+                              <div className="table-primary-cell-name">{assignment.learner_name}</div>
                             </td>
                             <td className="table-primary-td">
-                              {new Date(titleAssignments[0].start_date).toLocaleDateString()}
+                              {new Date(assignment.start_date).toLocaleDateString()}
                             </td>
                             <td className="table-primary-td">
-                              {new Date(titleAssignments[0].end_date).toLocaleDateString()}
+                              {new Date(assignment.end_date).toLocaleDateString()}
                             </td>
                             <td className="table-primary-td">
-                              {titleAssignments[0].duration_days ||
-                                calculateDuration(titleAssignments[0].start_date, titleAssignments[0].end_date)} days
+                              {assignment.duration_days ||
+                                calculateDuration(assignment.start_date, assignment.end_date)} days
                             </td>
                             <td className="table-primary-td">
-                              <span className={`mpa-status-badge ${getStatusColor(titleAssignments[0].completion_status)}`}>
-                                {getStatusLabel(titleAssignments[0].completion_status)}
+                              <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
+                                {getStatusLabel(assignment.completion_status)}
                               </span>
                             </td>
                             <td className="table-primary-td table-primary-td-center">
                               <div className="mpa-action-buttons">
                                 <button
-                                  onClick={() => handleViewTracking(titleAssignments[0], titleAssignments)}
+                                  onClick={() => handleViewTracking(assignment, [assignment])}
                                   className="mpa-btn-primary mpa-btn-sm"
                                   title="View Tracking"
                                 >
                                   Track
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteAssignmentTitle(titleAssignments)}
+                                  onClick={() => handleEditAssignment(assignment)}
+                                  className="mpa-btn-secondary mpa-btn-sm"
+                                  title="Edit"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAssignmentTitle([assignment])}
                                   className="mpa-btn-danger mpa-btn-sm"
                                   title="Delete"
                                 >
@@ -811,49 +900,55 @@ const ManageProgramAssignments = () => {
 
                   {/* Mobile Cards */}
                   <div className="mpa-mobile-cards">
-                    {Object.entries(groupedAssignments).map(([title, titleAssignments]) => (
-                      <div key={title} className="mpa-mobile-card">
+                    {assignments.map((assignment, index) => (
+                      <div key={`${assignment.id}-${index}`} className="mpa-mobile-card">
                         <div className="mpa-mobile-card-header">
-                          <h3 className="mpa-mobile-card-title">{title}</h3>
-                          <span className={`mpa-status-badge ${getStatusColor(titleAssignments[0].completion_status)}`}>
-                            {getStatusLabel(titleAssignments[0].completion_status)}
+                          <h3 className="mpa-mobile-card-title">{assignment.assignment_title}</h3>
+                          <span className={`mpa-status-badge ${getStatusColor(assignment.completion_status)}`}>
+                            {getStatusLabel(assignment.completion_status)}
                           </span>
                         </div>
 
                         <div className="mpa-mobile-card-info">
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Learner:</span>
-                            <span className="mpa-info-value">{titleAssignments[0].learner_name}</span>
+                            <span className="mpa-info-value">{assignment.learner_name}</span>
                           </div>
                           <div className="mpa-info-row">
-                            <span className="mpa-info-label">Programs:</span>
+                            <span className="mpa-info-label">Program:</span>
                             <span className="mpa-info-value">
-                              {titleAssignments.map(a => a.program_name).join(', ')}
+                              {assignment.program_name}
                             </span>
                           </div>
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Duration:</span>
                             <span className="mpa-info-value">
-                              {new Date(titleAssignments[0].start_date).toLocaleDateString()} - {new Date(titleAssignments[0].end_date).toLocaleDateString()}
+                              {new Date(assignment.start_date).toLocaleDateString()} - {new Date(assignment.end_date).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="mpa-info-row">
                             <span className="mpa-info-label">Days:</span>
                             <span className="mpa-info-value">
-                              {titleAssignments[0].duration_days || calculateDuration(titleAssignments[0].start_date, titleAssignments[0].end_date)} days
+                              {assignment.duration_days || calculateDuration(assignment.start_date, assignment.end_date)} days
                             </span>
                           </div>
                         </div>
 
                         <div className="mpa-mobile-card-actions">
                           <button
-                            onClick={() => handleViewTracking(titleAssignments[0], titleAssignments)}
+                            onClick={() => handleViewTracking(assignment, [assignment])}
                             className="mpa-btn-primary"
                           >
                             View Tracking
                           </button>
                           <button
-                            onClick={() => handleDeleteAssignmentTitle(titleAssignments)}
+                            onClick={() => handleEditAssignment(assignment)}
+                            className="mpa-btn-secondary"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssignmentTitle([assignment])}
                             className="mpa-btn-danger"
                           >
                             Delete
@@ -901,225 +996,225 @@ const ManageProgramAssignments = () => {
 
             <form onSubmit={handleSubmit}>
               <div className="app-modal-content">
-              {/* Assignment Title */}
-              <div className="mpa-form-field">
-                <label className="mpa-form-label">
-                  Assignment Title <span className="mpa-form-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter a title for this program assignment (e.g., 'Q1 Home Program', 'Advanced Learning Path')..."
-                  className="mpa-form-input"
-                  value={formData.assignment_title}
-                  onChange={(e) => setFormData({ ...formData, assignment_title: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Learner Selection */}
-              <div className="mpa-form-field">
-                <label className="mpa-form-label">
-                  Select Learners <span className="mpa-form-required">*</span>
-                  <span className="mpa-form-hint">({formData.learner_ids.length} selected)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="🔍 Search learners..."
-                  className="mpa-form-input mpa-search-input-spacing"
-                  value={searchLearner}
-                  onChange={(e) => setSearchLearner(e.target.value)}
-                />
-                <div className="mpa-checkbox-grid">
-                  {filteredLearners.length > 0 ? (
-                    filteredLearners.map(learner => (
-                      <div key={learner.user_id} className="mpa-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`learner-${learner.user_id}`}
-                          checked={formData.learner_ids.includes(learner.user_id)}
-                          onChange={() => handleLearnerSelect(learner.user_id)}
-                          className="mpa-form-checkbox"
-                        />
-                        <label htmlFor={`learner-${learner.user_id}`} className="mpa-checkbox-label">
-                          {learner.name}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
-                      No learners found matching "{searchLearner}"
-                    </div>
-                  )}
+                {/* Assignment Title */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Assignment Title <span className="mpa-form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter a title for this program assignment (e.g., 'Q1 Home Program', 'Advanced Learning Path')..."
+                    className="mpa-form-input"
+                    value={formData.assignment_title}
+                    onChange={(e) => setFormData({ ...formData, assignment_title: e.target.value })}
+                    required
+                  />
                 </div>
-              </div>
 
-              {/* Program Selection */}
-              <div className="mpa-form-field">
-                <label className="mpa-form-label">
-                  Select Programs <span className="mpa-form-required">*</span>
-                  <span className="mpa-form-hint">({formData.program_ids.length} selected)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="🔍 Search programs..."
-                  className="mpa-form-input mpa-search-input-spacing"
-                  value={searchProgram}
-                  onChange={(e) => setSearchProgram(e.target.value)}
-                />
-                <div className="mpa-checkbox-grid">
-                  {filteredPrograms.length > 0 ? (
-                    filteredPrograms.map(program => (
-                      <div key={program.id} className="mpa-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`program-${program.id}`}
-                          checked={formData.program_ids.includes(program.id)}
-                          onChange={() => handleProgramSelect(program.id)}
-                          className="mpa-form-checkbox"
-                        />
-                        <label htmlFor={`program-${program.id}`} className="mpa-checkbox-label">
-                          <div>
-                            <div className="mpa-font-semibold">{program.goal}</div>
-                            {program.goal_description && (
-                              <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{program.goal_description}</div>
-                            )}
-                          </div>
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
-                      No programs found matching "{searchProgram}"
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Learning Content Selection */}
-              <div className="mpa-form-field">
-                <label className="mpa-form-label">
-                  Assign Learning Content
-                  <span className="mpa-form-hint">({formData.extra_content_ids.length} selected)</span>
-                </label>
-                <p className="mpa-text-sm mpa-text-gray-600 mpa-mb-2">
-                  Select learning materials to assign to learners
-                </p>
-                <input
-                  type="text"
-                  placeholder="🔍 Search learning content..."
-                  className="mpa-form-input mpa-search-input-spacing"
-                  value={searchExtraContent}
-                  onChange={(e) => setSearchExtraContent(e.target.value)}
-                />
-                <div className="mpa-checkbox-grid mpa-content-checkbox-grid">
-                  {allLearningContents
-                    .filter(content =>
-                      content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
-                      (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
-                    )
-                    .map(content => (
-                      <div key={content.id} className="mpa-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`extra-content-${content.id}`}
-                          checked={formData.extra_content_ids.includes(content.id)}
-                          onChange={() => handleExtraContentSelect(content.id)}
-                          className="mpa-form-checkbox"
-                        />
-                        <label htmlFor={`extra-content-${content.id}`} className="mpa-checkbox-label">
-                          <div>
-                            <div className="mpa-font-semibold">{content.title}</div>
-                            {content.description && (
-                              <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{content.description}</div>
-                            )}
-                            <div className="mpa-text-xs mpa-text-[#9C4D0B] mpa-mt-1">
-                              📄 {content.content_type}
-                            </div>
-                          </div>
-                        </label>
-                      </div>
-                    ))}
-                  {allLearningContents.filter(content =>
-                    content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
-                    (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
-                  ).length === 0 && (
-                      <div className="text-center text-gray-500 py-4">
-                        No learning content found{searchExtraContent ? ` matching "${searchExtraContent}"` : ''}
+                {/* Learner Selection */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Select Learners <span className="mpa-form-required">*</span>
+                    <span className="mpa-form-hint">({formData.learner_ids.length} selected)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search learners..."
+                    className="mpa-form-input mpa-search-input-spacing"
+                    value={searchLearner}
+                    onChange={(e) => setSearchLearner(e.target.value)}
+                  />
+                  <div className="mpa-checkbox-grid">
+                    {filteredLearners.length > 0 ? (
+                      filteredLearners.map(learner => (
+                        <div key={learner.user_id} className="mpa-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`learner-${learner.user_id}`}
+                            checked={formData.learner_ids.includes(learner.user_id)}
+                            onChange={() => handleLearnerSelect(learner.user_id)}
+                            className="mpa-form-checkbox"
+                          />
+                          <label htmlFor={`learner-${learner.user_id}`} className="mpa-checkbox-label">
+                            {learner.name}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
+                        No learners found matching "{searchLearner}"
                       </div>
                     )}
-                </div>
-              </div>
-
-              {/* Date Range */}
-              <div className="mpa-form-row">
-                <div className="mpa-form-field">
-                  <label className="mpa-form-label">
-                    Start Date <span className="mpa-form-required">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="mpa-form-input"
-                    value={formData.start_date}
-                    onChange={(e) => handleDateChange('start_date', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="mpa-form-field">
-                  <label className="mpa-form-label">
-                    End Date <span className="mpa-form-required">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="mpa-form-input"
-                    value={formData.end_date}
-                    onChange={(e) => handleDateChange('end_date', e.target.value)}
-                    min={formData.start_date}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Duration */}
-              <div className="mpa-form-field">
-                <div className="mpa-form-group-inline">
-                  <div className="mpa-duration-field-flex">
-                    <label className="mpa-form-label">Duration (Days)</label>
-                    <input
-                      type="number"
-                      className="mpa-form-input"
-                      placeholder="Auto-calculated"
-                      value={formData.duration_days}
-                      onChange={(e) => setFormData({ ...formData, duration_days: e.target.value })}
-                      disabled={!formData.manual_duration}
-                    />
                   </div>
-                  <div className="mpa-checkbox-item mpa-manual-override-spacing">
-                    <input
-                      type="checkbox"
-                      id="manual-duration"
-                      checked={formData.manual_duration}
-                      onChange={(e) => setFormData({ ...formData, manual_duration: e.target.checked })}
-                      className="mpa-form-checkbox"
-                    />
-                    <label htmlFor="manual-duration" className="mpa-checkbox-label">
-                      Manual Override
+                </div>
+
+                {/* Program Selection */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Select Programs <span className="mpa-form-required">*</span>
+                    <span className="mpa-form-hint">({formData.program_ids.length} selected)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search programs..."
+                    className="mpa-form-input mpa-search-input-spacing"
+                    value={searchProgram}
+                    onChange={(e) => setSearchProgram(e.target.value)}
+                  />
+                  <div className="mpa-checkbox-grid">
+                    {filteredPrograms.length > 0 ? (
+                      filteredPrograms.map(program => (
+                        <div key={program.id} className="mpa-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`program-${program.id}`}
+                            checked={formData.program_ids.includes(program.id)}
+                            onChange={() => handleProgramSelect(program.id)}
+                            className="mpa-form-checkbox"
+                          />
+                          <label htmlFor={`program-${program.id}`} className="mpa-checkbox-label">
+                            <div>
+                              <div className="mpa-font-semibold">{program.goal}</div>
+                              {program.goal_description && (
+                                <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{program.goal_description}</div>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="mpa-text-center mpa-text-gray-500 mpa-py-4">
+                        No programs found matching "{searchProgram}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Learning Content Selection */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Assign Learning Content
+                    <span className="mpa-form-hint">({formData.extra_content_ids.length} selected)</span>
+                  </label>
+                  <p className="mpa-text-sm mpa-text-gray-600 mpa-mb-2">
+                    Select learning materials to assign to learners
+                  </p>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search learning content..."
+                    className="mpa-form-input mpa-search-input-spacing"
+                    value={searchExtraContent}
+                    onChange={(e) => setSearchExtraContent(e.target.value)}
+                  />
+                  <div className="mpa-checkbox-grid mpa-content-checkbox-grid">
+                    {allLearningContents
+                      .filter(content =>
+                        content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                        (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                      )
+                      .map(content => (
+                        <div key={content.id} className="mpa-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`extra-content-${content.id}`}
+                            checked={formData.extra_content_ids.includes(parseInt(content.id))}
+                            onChange={() => handleExtraContentSelect(content.id)}
+                            className="mpa-form-checkbox"
+                          />
+                          <label htmlFor={`extra-content-${content.id}`} className="mpa-checkbox-label">
+                            <div>
+                              <div className="mpa-font-semibold">{content.title}</div>
+                              {content.description && (
+                                <div className="mpa-text-xs mpa-text-gray-500 mpa-mt-1">{content.description}</div>
+                              )}
+                              <div className="mpa-text-xs mpa-text-[#9C4D0B] mpa-mt-1">
+                                📄 {content.content_type}
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      ))}
+                    {allLearningContents.filter(content =>
+                      content.title.toLowerCase().includes(searchExtraContent.toLowerCase()) ||
+                      (content.description && content.description.toLowerCase().includes(searchExtraContent.toLowerCase()))
+                    ).length === 0 && (
+                        <div className="text-center text-gray-500 py-4">
+                          No learning content found{searchExtraContent ? ` matching "${searchExtraContent}"` : ''}
+                        </div>
+                      )}
+                  </div>
+                </div>
+
+                {/* Date Range */}
+                <div className="mpa-form-row">
+                  <div className="mpa-form-field">
+                    <label className="mpa-form-label">
+                      Start Date <span className="mpa-form-required">*</span>
                     </label>
+                    <input
+                      type="date"
+                      className="mpa-form-input"
+                      value={formData.start_date}
+                      onChange={(e) => handleDateChange('start_date', e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mpa-form-field">
+                    <label className="mpa-form-label">
+                      End Date <span className="mpa-form-required">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="mpa-form-input"
+                      value={formData.end_date}
+                      onChange={(e) => handleDateChange('end_date', e.target.value)}
+                      min={formData.start_date}
+                      required
+                    />
                   </div>
                 </div>
-              </div>
 
-              {/* Head Notes */}
-              <div className="mpa-form-field">
-                <label className="mpa-form-label">Notes for Learner (Optional)</label>
-                <textarea
-                  className="mpa-form-textarea"
-                  placeholder="Add any instructions or notes for the learner..."
-                  rows="4"
-                  value={formData.head_notes}
-                  onChange={(e) => setFormData({ ...formData, head_notes: e.target.value })}
-                />
-              </div>
+                {/* Duration */}
+                <div className="mpa-form-field">
+                  <div className="mpa-form-group-inline">
+                    <div className="mpa-duration-field-flex">
+                      <label className="mpa-form-label">Duration (Days)</label>
+                      <input
+                        type="number"
+                        className="mpa-form-input"
+                        placeholder="Auto-calculated"
+                        value={formData.duration_days}
+                        onChange={(e) => setFormData({ ...formData, duration_days: e.target.value })}
+                        disabled={!formData.manual_duration}
+                      />
+                    </div>
+                    <div className="mpa-checkbox-item mpa-manual-override-spacing">
+                      <input
+                        type="checkbox"
+                        id="manual-duration"
+                        checked={formData.manual_duration}
+                        onChange={(e) => setFormData({ ...formData, manual_duration: e.target.checked })}
+                        className="mpa-form-checkbox"
+                      />
+                      <label htmlFor="manual-duration" className="mpa-checkbox-label">
+                        Manual Override
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Head Notes */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Notes for Learner (Optional)</label>
+                  <textarea
+                    className="mpa-form-textarea"
+                    placeholder="Add any instructions or notes for the learner..."
+                    rows="4"
+                    value={formData.head_notes}
+                    onChange={(e) => setFormData({ ...formData, head_notes: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="app-modal-footer">
@@ -1144,7 +1239,7 @@ const ManageProgramAssignments = () => {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                <button type="submit" className="btn-gradient">
                   Assign Program
                 </button>
               </div>
@@ -1197,6 +1292,248 @@ const ManageProgramAssignments = () => {
         </div>
       )}
 
+      {/* Edit Assignment Modal */}
+      {showEditModal && editingAssignment && (
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--lg">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Edit Assignment</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingAssignment(null);
+                  setFormData({
+                    learner_ids: [],
+                    program_ids: [],
+                    extra_content_ids: [],
+                    start_date: '',
+                    end_date: '',
+                    duration_days: '',
+                    head_notes: '',
+                    manual_duration: false,
+                    assignment_title: '',
+                  });
+                  setSelectedProgram(null);
+                  setSearchExtraContent('');
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="app-modal-content">
+                {/* Assignment Title */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">
+                    Assignment Title <span className="mpa-form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="mpa-form-input"
+                    value={formData.assignment_title}
+                    onChange={(e) => setFormData({ ...formData, assignment_title: e.target.value })}
+                    placeholder="e.g., Ass-1, Module-1, etc."
+                  />
+                </div>
+
+                {/* Learner Info (Read-only) */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Learner (Read-only)</label>
+                  <input
+                    type="text"
+                    className="mpa-form-input"
+                    value={
+                      formData.learner_ids.length > 0
+                        ? learners.find(l => l.user_id === formData.learner_ids[0])?.name || ''
+                        : ''
+                    }
+                    disabled
+                  />
+                  <small style={{ color: '#666', marginTop: '4px', display: 'block' }}>
+                    To change learner, delete this assignment and create a new one.
+                  </small>
+                </div>
+
+                {/* Programs Section */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Programs <span className="mpa-form-required">*</span></label>
+                  <div className="mpa-search-box">
+                    <input
+                      type="text"
+                      className="mpa-search-input"
+                      placeholder="Search programs..."
+                      value={searchProgram}
+                      onChange={(e) => setSearchProgram(e.target.value)}
+                    />
+                  </div>
+                  <div className="mpa-checkbox-group">
+                    {filteredPrograms.map(program => (
+                      <div key={program.id} className="mpa-checkbox-item">
+                        <input
+                          type="checkbox"
+                          id={`prog-${program.id}`}
+                          checked={formData.program_ids.includes(program.id)}
+                          onChange={() => handleProgramSelect(program.id)}
+                        />
+                        <label htmlFor={`prog-${program.id}`}>
+                          <div className="mpa-checkbox-label-text">
+                            <div className="mpa-checkbox-label-title">{program.goal}</div>
+                            {program.goal_description && (
+                              <div className="mpa-checkbox-label-description">{program.goal_description}</div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.program_ids.length > 0 && (
+                    <div className="mpa-selected-items">
+                      <small>
+                        <strong>Selected: </strong>
+                        {formData.program_ids.map(pid => programs.find(p => p.id === pid)?.goal).join(', ')}
+                      </small>
+                    </div>
+                  )}
+                </div>
+
+                {/* Extra Content */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Extra Content (Optional)</label>
+                  <div className="mpa-search-box">
+                    <input
+                      type="text"
+                      className="mpa-search-input"
+                      placeholder="Search additional content..."
+                      value={searchExtraContent}
+                      onChange={(e) => setSearchExtraContent(e.target.value)}
+                    />
+                  </div>
+                  <div className="mpa-checkbox-group">
+                    {allLearningContents
+                      .filter(content =>
+                        content.title.toLowerCase().includes(searchExtraContent.toLowerCase())
+                      )
+                      .map(content => (
+                        <div key={content.id} className="mpa-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`content-${content.id}`}
+                            checked={formData.extra_content_ids.includes(parseInt(content.id))}
+                            onChange={() => handleExtraContentSelect(content.id)}
+                          />
+                          <label htmlFor={`content-${content.id}`}>
+                            <div className="mpa-checkbox-label-text">
+                              <div className="mpa-checkbox-label-title">{content.title}</div>
+                              {content.description && (
+                                <div className="mpa-checkbox-label-description">{content.description}</div>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Dates and Duration */}
+                <div className="mpa-form-row">
+                  <div className="mpa-form-field">
+                    <label className="mpa-form-label">
+                      Start Date <span className="mpa-form-required">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="mpa-form-input"
+                      value={formData.start_date}
+                      onChange={(e) => handleDateChange('start_date', e.target.value)}
+                    />
+                  </div>
+                  <div className="mpa-form-field">
+                    <label className="mpa-form-label">
+                      End Date <span className="mpa-form-required">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="mpa-form-input"
+                      value={formData.end_date}
+                      onChange={(e) => handleDateChange('end_date', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Duration (Days)</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      className="mpa-form-input"
+                      value={formData.duration_days}
+                      onChange={(e) =>
+                        setFormData({ ...formData, duration_days: e.target.value, manual_duration: !!e.target.value })
+                      }
+                      placeholder="Auto-calculated"
+                      disabled={!formData.manual_duration}
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.manual_duration}
+                        onChange={(e) => setFormData({ ...formData, manual_duration: e.target.checked })}
+                      />
+                      <span>Manual</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Head Notes */}
+                <div className="mpa-form-field">
+                  <label className="mpa-form-label">Head Notes (Optional)</label>
+                  <textarea
+                    className="mpa-form-textarea"
+                    value={formData.head_notes}
+                    onChange={(e) => setFormData({ ...formData, head_notes: e.target.value })}
+                    placeholder="Add any notes or instructions for the learner..."
+                    rows="4"
+                  />
+                </div>
+              </div>
+
+              <div className="app-modal-footer">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingAssignment(null);
+                    setFormData({
+                      learner_ids: [],
+                      program_ids: [],
+                      extra_content_ids: [],
+                      start_date: '',
+                      end_date: '',
+                      duration_days: '',
+                      head_notes: '',
+                      manual_duration: false,
+                      assignment_title: '',
+                    });
+                    setSelectedProgram(null);
+                    setSearchExtraContent('');
+                  }}
+                  className="app-modal-btn app-modal-btn--secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Tracking Modal */}
       {showTrackingModal && selectedAssignment && (
         <div className="app-modal-overlay">
@@ -1230,170 +1567,170 @@ const ManageProgramAssignments = () => {
 
             <div className="app-modal-content">
 
-            {/* Assignment Details */}
-            <div className="mpa-assignment-details">
-              <h3 className="mpa-section-title">Program Details</h3>
-              <div className="mpa-details-grid">
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Assignment Title:</span>
-                  <span className="mpa-detail-value">
-                    {selectedAssignment?.assignment_title || 'N/A'}
-                  </span>
-                </div>
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Programs:</span>
-                  <span className="mpa-detail-value">
-                    {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
-                      ? selectedAssignment.program_names.join(', ')
-                      : 'N/A'}
-                  </span>
-                </div>
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Status:</span>
-                  <span className={`mpa-status-badge ${getStatusColor(selectedAssignment.completion_status)}`}>
-                    {getStatusLabel(selectedAssignment.completion_status)}
-                  </span>
-                </div>
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Start Date:</span>
-                  <span className="mpa-detail-value">{new Date(selectedAssignment.start_date).toLocaleDateString()}</span>
-                </div>
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">End Date:</span>
-                  <span className="mpa-detail-value">{new Date(selectedAssignment.end_date).toLocaleDateString()}</span>
-                </div>
-                <div className="mpa-detail-item">
-                  <span className="mpa-detail-label">Duration:</span>
-                  <span className="mpa-detail-value">{selectedAssignment.duration_days} days</span>
-                </div>
-                {selectedAssignment.completed_at && (
+              {/* Assignment Details */}
+              <div className="mpa-assignment-details">
+                <h3 className="mpa-section-title">Program Details</h3>
+                <div className="mpa-details-grid">
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Completed On:</span>
-                    <span className="mpa-detail-value">{new Date(selectedAssignment.completed_at).toLocaleDateString()}</span>
+                    <span className="mpa-detail-label">Assignment Title:</span>
+                    <span className="mpa-detail-value">
+                      {selectedAssignment?.assignment_title || 'N/A'}
+                    </span>
                   </div>
-                )}
-              </div>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">Programs:</span>
+                    <span className="mpa-detail-value">
+                      {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
+                        ? selectedAssignment.program_names.join(', ')
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">Status:</span>
+                    <span className={`mpa-status-badge ${getStatusColor(selectedAssignment.completion_status)}`}>
+                      {getStatusLabel(selectedAssignment.completion_status)}
+                    </span>
+                  </div>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">Start Date:</span>
+                    <span className="mpa-detail-value">{new Date(selectedAssignment.start_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">End Date:</span>
+                    <span className="mpa-detail-value">{new Date(selectedAssignment.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="mpa-detail-item">
+                    <span className="mpa-detail-label">Duration:</span>
+                    <span className="mpa-detail-value">{selectedAssignment.duration_days} days</span>
+                  </div>
+                  {selectedAssignment.completed_at && (
+                    <div className="mpa-detail-item">
+                      <span className="mpa-detail-label">Completed On:</span>
+                      <span className="mpa-detail-value">{new Date(selectedAssignment.completed_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Learning Contents - Both Auto and Manual */}
-              {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 ? (
-                <div className="mpa-contents-section">
-                  <h4 className="mpa-subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
-                  <div className="mpa-contents-list">
-                    {selectedAssignment.content_assignments.map((assignment, index) => (
-                      <div key={assignment.id} className="mpa-content-item">
-                        <span className="mpa-content-order">{index + 1}</span>
-                        {assignment.learning_content?.thumbnail_url && (
-                          <img src={assignment.learning_content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
-                        )}
-                        <div className="mpa-content-info">
-                          <div className="mpa-content-title">
-                            {assignment.learning_content?.title || 'Untitled Content'}
-                          </div>
-                          <div className="mpa-content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
-                          <div className="mpa-content-meta">
-                            {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
-                              <button
-                                onClick={() => handleOpenFeedbackModal(assignment)}
-                                className="mpa-btn-primary mpa-btn-sm mpa-btn-feedback"
-                              >
-                                💬 Add Feedback
-                              </button>
-                            ) : null}
+                {/* Learning Contents - Both Auto and Manual */}
+                {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 ? (
+                  <div className="mpa-contents-section">
+                    <h4 className="mpa-subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
+                    <div className="mpa-contents-list">
+                      {selectedAssignment.content_assignments.map((assignment, index) => (
+                        <div key={assignment.id} className="mpa-content-item">
+                          <span className="mpa-content-order">{index + 1}</span>
+                          {assignment.learning_content?.thumbnail_url && (
+                            <img src={assignment.learning_content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
+                          )}
+                          <div className="mpa-content-info">
+                            <div className="mpa-content-title">
+                              {assignment.learning_content?.title || 'Untitled Content'}
+                            </div>
+                            <div className="mpa-content-type">{assignment.learning_content?.content_type || 'N/A'}</div>
+                            <div className="mpa-content-meta">
+                              {assignment.completion_status === 'SUBMITTED' || assignment.completion_status === 'LATE_SUBMITTED' ? (
+                                <button
+                                  onClick={() => handleOpenFeedbackModal(assignment)}
+                                  className="mpa-btn-primary mpa-btn-sm mpa-btn-feedback"
+                                >
+                                  💬 Add Feedback
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mpa-contents-section">
-                  <h4 className="mpa-subsection-title">Assigned Learning Contents</h4>
-                  <div className="mpa-empty-state-sm">
-                    <p>No learning contents assigned yet</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Head Notes */}
-              {selectedAssignment.head_notes && (
-                <div className="mpa-notes-section">
-                  <h4 className="mpa-subsection-title">Your Notes</h4>
-                  <div className="mpa-notes-content">{selectedAssignment.head_notes}</div>
-                </div>
-              )}
-
-              {/* Learner Notes (Read-only for Head) */}
-              {selectedAssignment.learner_notes && (
-                <div className="mpa-notes-section">
-                  <h4 className="mpa-subsection-title">Learner's Notes</h4>
-                  <div className="mpa-notes-content">{selectedAssignment.learner_notes}</div>
-                </div>
-              )}
-
-              {/* Attachments */}
-              <div className="mpa-attachments-section">
-                <h4 className="mpa-subsection-title">Attachments</h4>
-
-                <div className="mpa-upload-section">
-                  <label className="mpa-upload-button">
-                    <input
-                      type="file"
-                      accept="image/*,video/*,.pdf"
-                      onChange={handleUploadAttachment}
-                      disabled={uploading}
-                      className="mpa-hidden-file-input"
-                    />
-                    <svg className="mpa-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    {uploading ? 'Uploading...' : 'Upload Reference Material'}
-                  </label>
-                  <span className="mpa-upload-hint">Images, Videos, PDFs (Max: 500MB for videos, 50MB for others)</span>
-                </div>
-
-                {attachments.length === 0 ? (
-                  <div className="mpa-empty-state-sm">
-                    <p>No attachments yet</p>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <div className="mpa-attachments-grid">
-                    {attachments.map((attachment) => (
-                      <div key={attachment.id} className="mpa-attachment-card">
-                        {attachment.thumbnail_url && (
-                          <img src={attachment.thumbnail_url} alt="" className="mpa-attachment-thumbnail" />
-                        )}
-                        <div className="mpa-attachment-info">
-                          <div className="mpa-attachment-name">{attachment.file_name}</div>
-                          <div className="mpa-attachment-meta">
-                            <span className="mpa-attachment-type">{attachment.file_type}</span>
-                            <span className="mpa-attachment-uploader">by {attachment.uploader_name || 'Unknown'}</span>
-                            <span className="mpa-attachment-date">
-                              {new Date(attachment.uploaded_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mpa-attachment-actions">
-                          <a
-                            href={attachment.file_path}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mpa-btn-primary mpa-btn-sm"
-                          >
-                            View
-                          </a>
-                          <button
-                            onClick={() => handleDeleteAttachment(attachment.id)}
-                            className="mpa-btn-danger mpa-btn-sm"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mpa-contents-section">
+                    <h4 className="mpa-subsection-title">Assigned Learning Contents</h4>
+                    <div className="mpa-empty-state-sm">
+                      <p>No learning contents assigned yet</p>
+                    </div>
                   </div>
                 )}
+
+                {/* Head Notes */}
+                {selectedAssignment.head_notes && (
+                  <div className="mpa-notes-section">
+                    <h4 className="mpa-subsection-title">Your Notes</h4>
+                    <div className="mpa-notes-content">{selectedAssignment.head_notes}</div>
+                  </div>
+                )}
+
+                {/* Learner Notes (Read-only for Head) */}
+                {selectedAssignment.learner_notes && (
+                  <div className="mpa-notes-section">
+                    <h4 className="mpa-subsection-title">Learner's Notes</h4>
+                    <div className="mpa-notes-content">{selectedAssignment.learner_notes}</div>
+                  </div>
+                )}
+
+                {/* Attachments */}
+                <div className="mpa-attachments-section">
+                  <h4 className="mpa-subsection-title">Attachments</h4>
+
+                  <div className="mpa-upload-section">
+                    <label className="mpa-upload-button">
+                      <input
+                        type="file"
+                        accept="image/*,video/*,.pdf"
+                        onChange={handleUploadAttachment}
+                        disabled={uploading}
+                        className="mpa-hidden-file-input"
+                      />
+                      <svg className="mpa-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      {uploading ? 'Uploading...' : 'Upload Reference Material'}
+                    </label>
+                    <span className="mpa-upload-hint">Images, Videos, PDFs (Max: 500MB for videos, 50MB for others)</span>
+                  </div>
+
+                  {attachments.length === 0 ? (
+                    <div className="mpa-empty-state-sm">
+                      <p>No attachments yet</p>
+                    </div>
+                  ) : (
+                    <div className="mpa-attachments-grid">
+                      {attachments.map((attachment) => (
+                        <div key={attachment.id} className="mpa-attachment-card">
+                          {attachment.thumbnail_url && (
+                            <img src={attachment.thumbnail_url} alt="" className="mpa-attachment-thumbnail" />
+                          )}
+                          <div className="mpa-attachment-info">
+                            <div className="mpa-attachment-name">{attachment.file_name}</div>
+                            <div className="mpa-attachment-meta">
+                              <span className="mpa-attachment-type">{attachment.file_type}</span>
+                              <span className="mpa-attachment-uploader">by {attachment.uploader_name || 'Unknown'}</span>
+                              <span className="mpa-attachment-date">
+                                {new Date(attachment.uploaded_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mpa-attachment-actions">
+                            <a
+                              href={attachment.file_path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mpa-btn-primary mpa-btn-sm"
+                            >
+                              View
+                            </a>
+                            <button
+                              onClick={() => handleDeleteAttachment(attachment.id)}
+                              className="mpa-btn-danger mpa-btn-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
             </div>
 
@@ -1492,21 +1829,21 @@ const ManageProgramAssignments = () => {
                 />
               </div>
 
-            {/* Feedback History (if exists) */}
-            {selectedContentAssignment.feedback_history && selectedContentAssignment.feedback_history.length > 0 && (
-              <div className="mpa-feedback-history-section">
-                <h4 className="mpa-subsection-title">Previous Feedback</h4>
-                {selectedContentAssignment.feedback_history.map((item, index) => (
-                  <div key={index} className="mpa-feedback-history-item">
-                    <div className="mpa-feedback-history-header">
-                      <span className="mpa-feedback-history-rating">⭐ {item.rating}/5</span>
-                      <span className="mpa-text-muted">{new Date(item.feedback_given_at).toLocaleString()}</span>
+              {/* Feedback History (if exists) */}
+              {selectedContentAssignment.feedback_history && selectedContentAssignment.feedback_history.length > 0 && (
+                <div className="mpa-feedback-history-section">
+                  <h4 className="mpa-subsection-title">Previous Feedback</h4>
+                  {selectedContentAssignment.feedback_history.map((item, index) => (
+                    <div key={index} className="mpa-feedback-history-item">
+                      <div className="mpa-feedback-history-header">
+                        <span className="mpa-feedback-history-rating">⭐ {item.rating}/5</span>
+                        <span className="mpa-text-muted">{new Date(item.feedback_given_at).toLocaleString()}</span>
+                      </div>
+                      {item.feedback_text && <p className="mpa-feedback-history-text">{item.feedback_text}</p>}
                     </div>
-                    {item.feedback_text && <p className="mpa-feedback-history-text">{item.feedback_text}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
             </div>
 

@@ -17,13 +17,6 @@ const TrainerDashboard = () => {
       onClick: () => navigate('/trainer/schedule')
     },
     {
-      id: '3',
-      title: 'Book Appointment',
-      description: 'Schedule appointments with coaches',
-      icon: Calendar,
-      onClick: () => navigate('/book-appointment')
-    },
-    {
       id: '4',
       title: 'Buy Learning Material',
       description: 'Browse and purchase learning resources',

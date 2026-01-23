@@ -697,21 +697,6 @@
     color: #3b82f6;
 }
 
-.form-file-upload {
-    position: relative;
-    border: 2px dashed #d1d5db;
-    border-radius: 0.75rem;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.form-file-upload:hover {
-    border-color: #db9d32;
-    background: #fffbf0;
-}
-
 .form-file-input {
     display: none;
 }
@@ -725,16 +710,19 @@
 }
 
 .upload-icon {
+    margin-left: 5rem;
     width: 3rem;
     height: 3rem;
-    color: #9ca3af;
+    color: #db9d32;
+    transition: all 0.3s ease;
 }
 
 .form-file-selected {
-    border: 1px solid #d1d5db;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    background: #f9fafb;
+    border: 2px solid #d1d5db;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #f1fef5 100%);
+    box-shadow: 0 1px 3px rgba(34, 197, 94, 0.1);
 }
 
 .file-selected-content {
@@ -753,6 +741,7 @@
 
 .file-selected-info {
     flex: 1;
+    min-width: 0;
 }
 
 .file-selected-info p {
@@ -762,6 +751,7 @@
 .file-selected-info .font-semibold {
     font-weight: 600;
     color: #1f2937;
+    word-break: break-word;
 }
 
 .file-remove-btn {
@@ -777,6 +767,111 @@
 
 .file-remove-btn:hover {
     background: #fee2e2;
+}
+
+/* File Action Buttons Container */
+.file-action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* View Button for Receipt */
+.file-view-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+.file-view-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.file-view-btn:active {
+    transform: translateY(0);
+}
+
+/* Receipt Preview Image and PDF Styles */
+.receipt-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    border-radius: 0.5rem;
+}
+
+.receipt-pdf-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #f1fef5 100%);
+    border: 2px dashed #d1d5db;
+    border-radius: 0.75rem;
+    text-align: center;
+    width: 100%;
+}
+
+.pdf-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    display: inline-block;
+}
+
+.receipt-download-btn {
+    display: inline-block;
+    margin-top: 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+    border: none;
+    cursor: pointer;
+}
+
+.receipt-download-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+    transform: translateY(-2px);
+}
+
+.receipt-download-btn:active {
+    transform: translateY(0);
+}
+
+/* Improved File Upload Area */
+.form-file-upload {
+    position: relative;
+    border: 2px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.form-file-upload:hover {
+    border-color: #db9d32;
+    background: linear-gradient(135deg, #fffbf0 0%, #fef3c7 100%);
+    box-shadow: 0 4px 6px rgba(219, 157, 50, 0.1);
 }
 
 .form-info-box {

@@ -12,16 +12,19 @@ import {
   Package,
   TrendingUp,
   AlertCircle,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import subscriptionService from "../../api/services/subscriptionService";
 import "../../styles/admin/index.css";
+import "../../styles/components/common/Modal.css";
 
 const LearnerDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [mySubscription, setMySubscription] = useState(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   useEffect(() => {
     fetchMySubscription();
@@ -46,16 +49,7 @@ const LearnerDashboard = () => {
     return days;
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'ACTIVE': '#10b981',
-      'PAUSED': '#f59e0b',
-      'FROZEN': '#3b82f6',
-      'EXPIRED': '#ef4444',
-      'CANCELLED': '#6b7280'
-    };
-    return colors[status] || '#6b7280';
-  };
+  
 
   const menuItems = [
     {
@@ -79,11 +73,6 @@ const LearnerDashboard = () => {
       onClick: () => navigate("/learner/learning-material"),
     },
     {
-      icon: Calendar,
-      title: "Book Appointment",
-      onClick: () => navigate("/book-appointment"),
-    },
-    {
       icon: History,
       title: "Learning Material Purchase History",
       onClick: () => navigate("/learner/profile-order-history"),
@@ -92,6 +81,11 @@ const LearnerDashboard = () => {
       icon: MessageSquare,
       title: "Communication",
       onClick: () => navigate("/learner/communication"),
+    },
+    {
+      icon: Package,
+      title: "My Subscription",
+      onClick: () => setShowSubscriptionModal(true),
     },
   ];
 
@@ -108,126 +102,6 @@ const LearnerDashboard = () => {
               Welcome, <span className="admin-dashboard-welcome-name">{user?.name || 'Learner'}</span>!
             </div>
           </div>
-
-          {/* My Subscription Card */}
-          {!loadingSubscription && (
-            <div className="subscription-info-section" style={{ marginBottom: '30px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '15px', color: '#1f2937' }}>
-                My Subscription
-              </h2>
-              {loadingSubscription ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                  <Loader2 className="spinner" size={32} />
-                </div>
-              ) : mySubscription ? (
-                <div style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-                  color: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  marginBottom: '20px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
-                        {mySubscription.package_name}
-                      </h3>
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)'
-                      }}>
-                        {mySubscription.status}
-                      </div>
-                    </div>
-                    <Package size={40} style={{ opacity: 0.8 }} />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                    {/* Sessions Remaining */}
-                    <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', padding: '16px', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <TrendingUp size={20} />
-                        <span style={{ fontSize: '14px', opacity: 0.9 }}>Sessions</span>
-                      </div>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-                        {mySubscription.sessions_remaining}/{mySubscription.sessions_count}
-                      </div>
-                      <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                        {mySubscription.sessions_completed} completed
-                      </div>
-                    </div>
-
-                    {/* Expiry Date */}
-                    <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', padding: '16px', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <Calendar size={20} />
-                        <span style={{ fontSize: '14px', opacity: 0.9 }}>Expires In</span>
-                      </div>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-                        {getDaysUntilExpiry(mySubscription.expiry_date)} days
-                      </div>
-                      <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                        {new Date(mySubscription.expiry_date).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    {/* Amount Paid */}
-                    <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', padding: '16px', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', opacity: 0.9 }}>Amount Paid</span>
-                      </div>
-                      <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-                        ₹{parseFloat(mySubscription.net_price_paid).toLocaleString('en-IN')}
-                      </div>
-                      {mySubscription.discount_code && (
-                        <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                          Code: {mySubscription.discount_code}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {getDaysUntilExpiry(mySubscription.expiry_date) <= 7 && getDaysUntilExpiry(mySubscription.expiry_date) > 0 && (
-                    <div style={{
-                      marginTop: '16px',
-                      padding: '12px',
-                      backgroundColor: 'rgba(252, 211, 77, 0.2)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <AlertCircle size={20} />
-                      <span style={{ fontSize: '14px' }}>
-                        Your subscription is expiring soon! Contact your coach for renewal.
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{
-                  padding: '40px',
-                  textAlign: 'center',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '12px',
-                  border: '2px dashed #e5e7eb'
-                }}>
-                  <Package size={48} style={{ color: '#9ca3af', margin: '0 auto 16px' }} />
-                  <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '16px' }}>
-                    You don't have an active subscription yet
-                  </p>
-                  <p style={{ fontSize: '14px', color: '#9ca3af' }}>
-                    Contact your coach to get started with a subscription package
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Menu Cards */}
           <div className="admin-dashboard-menu">
@@ -250,6 +124,181 @@ const LearnerDashboard = () => {
               })}
             </div>
           </div>
+
+          {/* Subscription Details Modal */}
+          {showSubscriptionModal && (
+            <div className="app-modal-overlay">
+              <div className="app-modal-container app-modal-container--md">
+                {/* Modal Header */}
+                <div className="app-modal-header app-modal-header--primary">
+                  <div className="app-modal-header-content">
+                    <h2 className="app-modal-title">My Subscription Details</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowSubscriptionModal(false)}
+                    className="app-modal-close"
+                    aria-label="Close modal"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="app-modal-content">
+                  {loadingSubscription ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                      <Loader2 className="spinner" size={32} />
+                    </div>
+                  ) : mySubscription ? (
+                    <div>
+                      {/* Package Name and Status */}
+                      <div style={{ marginBottom: '24px' }}>
+                        <h3 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937', marginBottom: '8px' }}>
+                          {mySubscription.package_name}
+                        </h3>
+                        <div style={{
+                          display: 'inline-block',
+                          padding: '6px 16px',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          backgroundColor: '#dbeafe',
+                          color: '#1e40af'
+                        }}>
+                          Status: {mySubscription.status}
+                        </div>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '16px',
+                        marginBottom: '24px'
+                      }}>
+                        {/* Sessions */}
+                        <div style={{
+                          padding: '16px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          backgroundColor: '#f9fafb'
+                        }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>
+                            Sessions
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+                            {mySubscription.sessions_remaining}/{mySubscription.sessions_count}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            {mySubscription.sessions_completed} completed
+                          </div>
+                        </div>
+
+                        {/* Expires In */}
+                        <div style={{
+                          padding: '16px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          backgroundColor: '#f9fafb'
+                        }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>
+                            Expires In
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+                            {getDaysUntilExpiry(mySubscription.expiry_date)} days
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            {new Date(mySubscription.expiry_date).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        {/* Amount Paid */}
+                        <div style={{
+                          padding: '16px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          backgroundColor: '#f9fafb'
+                        }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginBottom: '8px' }}>
+                            Amount Paid
+                          </div>
+                          <div style={{ fontSize: '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
+                            ₹{parseFloat(mySubscription.net_price_paid).toLocaleString('en-IN')}
+                          </div>
+                          {mySubscription.discount_code && (
+                            <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              Code: {mySubscription.discount_code}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Subscription Information Card */}
+                      {(mySubscription.package_description || mySubscription.purchase_date) && (
+                        <div style={{
+                          padding: '16px',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#1f2937', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Details
+                          </h4>
+                          <div style={{ display: 'grid', gap: '10px' }}>
+                            {mySubscription.package_description && (
+                              <div>
+                                <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Description</span>
+                                <p style={{ fontSize: '13px', color: '#374151', marginTop: '4px', margin: 0 }}>
+                                  {mySubscription.package_description}
+                                </p>
+                              </div>
+                            )}
+                            {mySubscription.purchase_date && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Purchase Date</span>
+                                <span style={{ fontSize: '13px', color: '#374151', fontWeight: '500' }}>
+                                  {new Date(mySubscription.purchase_date).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Warning Alert */}
+                      {getDaysUntilExpiry(mySubscription.expiry_date) <= 7 && getDaysUntilExpiry(mySubscription.expiry_date) > 0 && (
+                        <div style={{
+                          padding: '12px 16px',
+                          backgroundColor: '#fef3c7',
+                          border: '1px solid #fcd34d',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '12px'
+                        }}>
+                          <AlertCircle size={20} color="#d97706" style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '500' }}>
+                            Your subscription is expiring soon! Contact your coach for renewal.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                      <Package size={48} style={{ color: '#d1d5db', margin: '0 auto 16px' }} />
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                        No Active Subscription
+                      </h3>
+                      <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                        Contact your coach to get started with a subscription package
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </main>
