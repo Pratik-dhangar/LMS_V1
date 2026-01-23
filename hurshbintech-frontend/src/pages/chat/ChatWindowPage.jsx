@@ -32,6 +32,8 @@ const ChatWindowPage = () => {
     markAsRead,
     conversations,
     sendTypingStatus,
+    connectChat,
+    disconnectChat,
   } = useChat();
 
   const [messageInput, setMessageInput] = useState('');
@@ -40,6 +42,16 @@ const ChatWindowPage = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const markedAsReadRef = useRef(new Set()); // Track which messages have been marked as read
+
+  // Connect to chat when component mounts
+  useEffect(() => {
+    connectChat();
+    
+    return () => {
+      disconnectChat();
+    };
+  }, [connectChat, disconnectChat]);
 
   // Load conversation and messages
   useEffect(() => {
@@ -52,16 +64,22 @@ const ChatWindowPage = () => {
     }
   }, [conversationId, conversations, selectConversation, loadMessages]);
 
-  // Mark messages as read when viewing conversation
+  // Mark messages as read when viewing conversation (with infinite loop prevention)
   useEffect(() => {
     if (currentConversation && messages[currentConversation.id]?.length > 0) {
       // Only mark as read if there are unread messages from other users
       const unreadMessages = messages[currentConversation.id].filter(
-        msg => !msg.is_read && msg.sender_id !== currentUser?.id
+        msg => !msg.is_read && 
+               msg.sender_id !== currentUser?.id && 
+               !markedAsReadRef.current.has(msg.id)
       );
       
       if (unreadMessages.length > 0) {
         const messageIds = unreadMessages.map(msg => msg.id);
+        
+        // Mark these messages in our ref to prevent re-marking
+        messageIds.forEach(id => markedAsReadRef.current.add(id));
+        
         markAsRead(currentConversation.id, messageIds);
       }
     }

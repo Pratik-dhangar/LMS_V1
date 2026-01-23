@@ -19,8 +19,8 @@ class ChatConnectionManager:
     """
 
     def __init__(self):
-        # Active WebSocket connections: {user_id: WebSocket}
-        self.active_connections: Dict[int, WebSocket] = {}
+        # Active WebSocket connections: {user_id: List[WebSocket]} - supports multiple tabs/devices
+        self.active_connections: Dict[int, List[WebSocket]] = {}
         
         # Track last activity for heartbeat: {user_id: datetime}
         self.last_activity: Dict[int, datetime] = {}
@@ -34,66 +34,73 @@ class ChatConnectionManager:
     async def connect(self, user_id: int, websocket: WebSocket):
         """
         Connect a user to the chat system
+        Note: WebSocket should already be accepted before calling this method
+        Supports multiple simultaneous connections (e.g., phone + laptop)
         """
-        await websocket.accept()
+        # Initialize user's connection list if first connection
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
         
-        # If user already connected, disconnect old connection
-        if user_id in self.active_connections:
-            try:
-                old_ws = self.active_connections[user_id]
-                await old_ws.close()
-            except Exception as e:
-                logger.warning(f"Error closing old connection for user {user_id}: {e}")
-        
-        self.active_connections[user_id] = websocket
+        # Add new websocket to user's connections
+        self.active_connections[user_id].append(websocket)
         self.last_activity[user_id] = datetime.utcnow()
         
-        # Start heartbeat
-        self.heartbeat_tasks[user_id] = asyncio.create_task(
-            self._heartbeat(user_id)
-        )
+        # Start heartbeat only if this is the first connection
+        if user_id not in self.heartbeat_tasks:
+            self.heartbeat_tasks[user_id] = asyncio.create_task(
+                self._heartbeat(user_id)
+            )
         
-        logger.info(f"User {user_id} connected to chat. Total online: {len(self.active_connections)}")
+        logger.info(f"User {user_id} connected to chat ({len(self.active_connections[user_id])} connections). Total online: {len(self.active_connections)}")
         
-        # Broadcast user online status to all connected users
-        await self.broadcast_user_status(user_id, is_online=True)
+        # Broadcast user online status only if this is their first connection
+        if len(self.active_connections[user_id]) == 1:
+            await self.broadcast_user_status(user_id, is_online=True)
 
-    async def disconnect(self, user_id: int):
+    async def disconnect(self, user_id: int, websocket: WebSocket):
         """
-        Disconnect a user from the chat system
+        Disconnect a specific websocket for a user
+        User only goes offline when ALL their connections are closed
         """
         if user_id in self.active_connections:
-            # Cancel heartbeat task
-            if user_id in self.heartbeat_tasks:
-                self.heartbeat_tasks[user_id].cancel()
+            # Remove this specific websocket
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+                
                 try:
-                    await self.heartbeat_tasks[user_id]
-                except asyncio.CancelledError:
-                    pass
-                del self.heartbeat_tasks[user_id]
+                    await websocket.close()
+                except Exception as e:
+                    logger.warning(f"Error closing WebSocket for user {user_id}: {e}")
             
-            # Close WebSocket
-            try:
-                await self.active_connections[user_id].close()
-            except Exception as e:
-                logger.warning(f"Error closing WebSocket for user {user_id}: {e}")
-            
-            del self.active_connections[user_id]
-            
-            if user_id in self.last_activity:
-                del self.last_activity[user_id]
-            
-            # Clear typing status
-            for conversation_id in list(self.typing_status.keys()):
-                if user_id in self.typing_status[conversation_id]:
-                    del self.typing_status[conversation_id][user_id]
-                if not self.typing_status[conversation_id]:
-                    del self.typing_status[conversation_id]
-            
-            logger.info(f"User {user_id} disconnected from chat. Total online: {len(self.active_connections)}")
-            
-            # Broadcast user offline status
-            await self.broadcast_user_status(user_id, is_online=False)
+            # If user has no more connections, clean up completely
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+                
+                # Cancel heartbeat task
+                if user_id in self.heartbeat_tasks:
+                    self.heartbeat_tasks[user_id].cancel()
+                    try:
+                        await self.heartbeat_tasks[user_id]
+                    except asyncio.CancelledError:
+                        pass
+                    del self.heartbeat_tasks[user_id]
+                
+                if user_id in self.last_activity:
+                    del self.last_activity[user_id]
+                
+                # Clear typing status
+                for conversation_id in list(self.typing_status.keys()):
+                    if user_id in self.typing_status[conversation_id]:
+                        del self.typing_status[conversation_id][user_id]
+                    if not self.typing_status[conversation_id]:
+                        del self.typing_status[conversation_id]
+                
+                logger.info(f"User {user_id} fully disconnected from chat. Total online: {len(self.active_connections)}")
+                
+                # Broadcast user offline status
+                await self.broadcast_user_status(user_id, is_online=False)
+            else:
+                logger.info(f"User {user_id} closed one connection. Still has {len(self.active_connections[user_id])} active.")
 
     def is_user_online(self, user_id: int) -> bool:
         """Check if user is currently online"""
@@ -105,18 +112,28 @@ class ChatConnectionManager:
 
     async def send_personal_message(self, user_id: int, message: dict):
         """
-        Send a message to a specific user
+        Send a message to all of a user's active connections (all tabs/devices)
         """
         if user_id in self.active_connections:
-            try:
-                await self.active_connections[user_id].send_json(message)
+            sent_successfully = False
+            stale_connections = []
+            
+            for ws in self.active_connections[user_id]:
+                try:
+                    await ws.send_json(message)
+                    sent_successfully = True
+                except Exception as e:
+                    logger.error(f"Error sending message to user {user_id} connection: {e}")
+                    stale_connections.append(ws)
+            
+            # Remove stale connections
+            for ws in stale_connections:
+                await self.disconnect(user_id, ws)
+            
+            if sent_successfully:
                 self.last_activity[user_id] = datetime.utcnow()
                 return True
-            except Exception as e:
-                logger.error(f"Error sending message to user {user_id}: {e}")
-                # Connection might be broken, disconnect user
-                await self.disconnect(user_id)
-                return False
+            return False
         return False
 
     async def send_to_conversation(
@@ -202,7 +219,9 @@ class ChatConnectionManager:
         sender_id: int
     ):
         """
-        Broadcast new message to all conversation members
+        Broadcast new message to all conversation members EXCEPT sender.
+        CRITICAL FIX: Exclude the sender to prevent frontend race conditions/duplication.
+        The sender gets message confirmation via HTTP response, not WebSocket.
         """
         message = {
             "type": "new_message",
@@ -211,12 +230,14 @@ class ChatConnectionManager:
             "timestamp": datetime.utcnow().isoformat()
         }
         
-        # Send to all members
+        logger.info(f"Broadcasting message to conversation {conversation_id}, members: {member_ids}, excluding sender: {sender_id}")
+        
+        # Send to all members EXCEPT sender
         await self.send_to_conversation(
             conversation_id=conversation_id,
             member_ids=member_ids,
             message=message,
-            exclude_user_id=None  # Send to everyone including sender for confirmation
+            exclude_user_id=sender_id  # Exclude sender to prevent race conditions
         )
 
     async def broadcast_message_read(
@@ -273,21 +294,30 @@ class ChatConnectionManager:
 
     async def _heartbeat(self, user_id: int):
         """
-        Send periodic heartbeat to keep connection alive
+        Send periodic heartbeat to all of a user's connections
         """
         try:
             while user_id in self.active_connections:
                 await asyncio.sleep(30)  # Send ping every 30 seconds
                 
                 if user_id in self.active_connections:
-                    try:
-                        await self.active_connections[user_id].send_json({
-                            "type": "ping",
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-                    except Exception as e:
-                        logger.error(f"Heartbeat failed for user {user_id}: {e}")
-                        await self.disconnect(user_id)
+                    stale_connections = []
+                    for ws in self.active_connections[user_id]:
+                        try:
+                            await ws.send_json({
+                                "type": "ping",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        except Exception as e:
+                            logger.error(f"Heartbeat failed for user {user_id} connection: {e}")
+                            stale_connections.append(ws)
+                    
+                    # Clean up stale connections
+                    for ws in stale_connections:
+                        await self.disconnect(user_id, ws)
+                    
+                    # If all connections failed, break
+                    if user_id not in self.active_connections:
                         break
         except asyncio.CancelledError:
             logger.debug(f"Heartbeat task cancelled for user {user_id}")

@@ -22,6 +22,8 @@ const ChatPage = () => {
     createConversation,
     selectConversation,
     isConnected,
+    connectChat,
+    disconnectChat,
   } = useChat();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,9 +32,14 @@ const ChatPage = () => {
   const [groupName, setGroupName] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
+  // Connect to chat when component mounts
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    connectChat();
+    
+    return () => {
+      disconnectChat();
+    };
+  }, [connectChat, disconnectChat]);
 
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv => {

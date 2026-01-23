@@ -95,6 +95,8 @@ allowed_origins = (
         "http://127.0.0.1:5173",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "http://192.168.43.65:8000",             # ✅ Local network access
+        "http://192.168.43.65:5173",             # ✅ Local network frontend
         "https://hurshbin.lumesoftai.in:3001",  # ✅ PWA Frontend (Domain)
         "https://hurshbin.lumesoftai.in:8001",  # ✅ PWA Backend (Domain)
         "https://43.204.218.16:3001",            # IP Access (Backup)

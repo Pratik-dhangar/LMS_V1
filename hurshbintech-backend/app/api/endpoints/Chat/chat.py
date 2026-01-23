@@ -90,6 +90,7 @@ async def get_conversations(
 ):
     """
     Get all conversations for the current user
+    Performance optimized: fetches latest messages efficiently
     """
     conversations, total = await chat_crud.get_user_conversations(
         db=db,
@@ -98,10 +99,20 @@ async def get_conversations(
         limit=limit
     )
     
+    # Optimize: Fetch latest messages in ONE query instead of N queries
+    latest_msgs_map = await chat_crud.populate_latest_messages(db, conversations)
+    
     conversation_responses = []
     for conv in conversations:
+        # Pass the pre-fetched last message to avoid lazy loading
+        last_message_obj = latest_msgs_map.get(conv.id)
         conversation_responses.append(
-            await build_conversation_response(conv, current_user.id, db)
+            await build_conversation_response(
+                conv, 
+                current_user.id, 
+                db,
+                prefetched_last_message=last_message_obj
+            )
         )
     
     return {
@@ -145,7 +156,16 @@ async def create_conversation(
             user2_id=other_user_id
         )
         
-        return await build_conversation_response(existing_conv, current_user.id, db)
+        # Fetch last message efficiently
+        latest_msgs_map = await chat_crud.populate_latest_messages(db, [existing_conv])
+        last_message = latest_msgs_map.get(existing_conv.id)
+        
+        return await build_conversation_response(
+            existing_conv, 
+            current_user.id, 
+            db,
+            prefetched_last_message=last_message
+        )
     
     # Validate all member IDs exist
     for user_id in conversation_data.member_ids:
@@ -170,7 +190,13 @@ async def create_conversation(
     )
     
     # Notify all members via WebSocket
-    conv_response = await build_conversation_response(conversation, current_user.id, db)
+    # New conversation has no messages yet, so pass None for prefetched_last_message
+    conv_response = await build_conversation_response(
+        conversation, 
+        current_user.id, 
+        db,
+        prefetched_last_message=None
+    )
     await chat_manager.broadcast_conversation_update(
         conversation_id=conversation.id,
         member_ids=conversation_data.member_ids,
@@ -204,7 +230,16 @@ async def get_conversation(
             detail="Conversation not found"
         )
     
-    return await build_conversation_response(conversation, current_user.id, db)
+    # Fetch last message efficiently
+    latest_msgs_map = await chat_crud.populate_latest_messages(db, [conversation])
+    last_message = latest_msgs_map.get(conversation.id)
+    
+    return await build_conversation_response(
+        conversation, 
+        current_user.id, 
+        db,
+        prefetched_last_message=last_message
+    )
 
 
 @router.post("/conversations/{conversation_id}/members")
@@ -576,16 +611,20 @@ async def chat_websocket_endpoint(
             await websocket.close(code=1008)
             return
         
-        # Connect user
+        # Connect user - pass the specific websocket instance
         await chat_manager.connect(user_id, websocket)
         
         logger.info(f"User {user_id} ({user.name}) connected to chat WebSocket")
         
-        # Send connection confirmation
+        # Get list of online users
+        online_users = chat_manager.get_online_users()
+        
+        # Send connection confirmation with online users list
         await websocket.send_json({
             "type": "connected",
             "user_id": user_id,
-            "message": "Connected to chat successfully"
+            "message": "Connected to chat successfully",
+            "online_users": online_users
         })
         
         # Message loop
@@ -631,7 +670,7 @@ async def chat_websocket_endpoint(
         logger.error(f"WebSocket error: {e}")
     
     finally:
-        # Disconnect user
+        # Disconnect user - CRITICAL: pass the specific websocket instance
         if user_id:
-            await chat_manager.disconnect(user_id)
+            await chat_manager.disconnect(user_id, websocket)
             logger.info(f"User {user_id} disconnected from chat")

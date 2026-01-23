@@ -43,6 +43,9 @@ export const ChatProvider = ({ children }) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
+  const isConnectingRef = useRef(false);
+  const shouldReconnectRef = useRef(false);
+  const activeConnectionsRef = useRef(0); // Track number of active chat components
 
   // ============ CONVERSATIONS ============
 
@@ -87,15 +90,6 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  const selectConversation = useCallback(async (conversation) => {
-    setCurrentConversation(conversation);
-    
-    // Load messages if not already loaded
-    if (!messages[conversation.id]) {
-      await loadMessages(conversation.id);
-    }
-  }, [messages]);
-
   // ============ MESSAGES ============
 
   const loadMessages = useCallback(async (conversationId, beforeMessageId = null) => {
@@ -114,6 +108,15 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
+  const selectConversation = useCallback(async (conversation) => {
+    setCurrentConversation(conversation);
+    
+    // Load messages if not already loaded
+    if (!messages[conversation.id]) {
+      await loadMessages(conversation.id);
+    }
+  }, [messages, loadMessages]);
+
   const sendMessage = useCallback(async (conversationId, content, messageType = 'TEXT') => {
     try {
       const data = await chatApi.sendMessage({
@@ -122,11 +125,22 @@ export const ChatProvider = ({ children }) => {
         message_type: messageType
       });
       
-      // Add message to local state
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), data]
-      }));
+      // Backend excludes sender from WebSocket broadcast (to prevent race conditions)
+      // So we add the message locally for the sender here
+      setMessages(prev => {
+        const existingMessages = prev[conversationId] || [];
+        return {
+          ...prev,
+          [conversationId]: [...existingMessages, data]
+        };
+      });
+      
+      // Update conversation's last message
+      setConversations(prev => prev.map(conv => 
+        conv.id === conversationId
+          ? { ...conv, last_message: data, updated_at: data.created_at }
+          : conv
+      ));
       
       return data;
     } catch (err) {
@@ -139,11 +153,22 @@ export const ChatProvider = ({ children }) => {
     try {
       const data = await chatApi.sendMessageWithFile(conversationId, file, caption);
       
-      // Add message to local state
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), data]
-      }));
+      // Backend excludes sender from WebSocket broadcast (to prevent race conditions)
+      // So we add the message locally for the sender here
+      setMessages(prev => {
+        const existingMessages = prev[conversationId] || [];
+        return {
+          ...prev,
+          [conversationId]: [...existingMessages, data]
+        };
+      });
+      
+      // Update conversation's last message
+      setConversations(prev => prev.map(conv => 
+        conv.id === conversationId
+          ? { ...conv, last_message: data, updated_at: data.created_at }
+          : conv
+      ));
       
       return data;
     } catch (err) {
@@ -188,11 +213,20 @@ export const ChatProvider = ({ children }) => {
       return;
     }
     
-    // Add message to state
+    // Add message to state (check for duplicates first)
     setMessages(prev => {
+      const existingMessages = prev[conversation_id] || [];
+      
+      // Check if message already exists (by ID)
+      const messageExists = existingMessages.some(msg => msg.id === message.id);
+      if (messageExists) {
+        console.log('[ChatContext] Message already exists, skipping:', message.id);
+        return prev;
+      }
+      
       const updated = {
         ...prev,
-        [conversation_id]: [...(prev[conversation_id] || []), message]
+        [conversation_id]: [...existingMessages, message]
       };
       console.log('[ChatContext] Updated messages for conversation', conversation_id, ':', updated[conversation_id]);
       return updated;
@@ -215,10 +249,16 @@ export const ChatProvider = ({ children }) => {
   }, [currentConversation]);
 
   const handleUserOnline = useCallback((userId) => {
-    setOnlineUsers(prev => new Set([...prev, userId]));
+    console.log('[ChatWS] User online:', userId);
+    setOnlineUsers(prev => {
+      const updated = new Set(prev);
+      updated.add(userId);
+      return updated;
+    });
   }, []);
 
   const handleUserOffline = useCallback((userId) => {
+    console.log('[ChatWS] User offline:', userId);
     setOnlineUsers(prev => {
       const updated = new Set(prev);
       updated.delete(userId);
@@ -266,15 +306,19 @@ export const ChatProvider = ({ children }) => {
   // ============ WEBSOCKET ============
 
   const connectWebSocket = useCallback(() => {
-    if (!user || wsRef.current) return;
+    if (!user || wsRef.current || isConnectingRef.current) return;
 
     try {
       console.log('[ChatWS] Connecting to:', CHAT_WS_ENDPOINT);
+      isConnectingRef.current = true;
+      shouldReconnectRef.current = true;
+      
       const ws = new WebSocket(CHAT_WS_ENDPOINT);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log('[ChatWS] Connected');
+        isConnectingRef.current = false;
         setIsConnected(true);
         setReconnectAttempts(0);
 
@@ -302,37 +346,60 @@ export const ChatProvider = ({ children }) => {
       };
 
       ws.onerror = (error) => {
-        console.error('[ChatWS] WebSocket error:', error);
+        // Only log error if we're not intentionally disconnecting
+        if (shouldReconnectRef.current) {
+          console.error('[ChatWS] WebSocket error:', error);
+        }
+        isConnectingRef.current = false;
       };
 
       ws.onclose = () => {
-        console.log('[ChatWS] Disconnected');
+        // Only log if we're not intentionally disconnecting
+        if (shouldReconnectRef.current) {
+          console.log('[ChatWS] Disconnected');
+        }
+        isConnectingRef.current = false;
         setIsConnected(false);
         stopHeartbeat();
         wsRef.current = null;
 
-        // Attempt reconnect
-        scheduleReconnect();
+        // Only attempt reconnect if we should reconnect
+        if (shouldReconnectRef.current) {
+          scheduleReconnect();
+        }
       };
     } catch (error) {
       console.error('[ChatWS] Connection error:', error);
-      scheduleReconnect();
+      isConnectingRef.current = false;
+      if (shouldReconnectRef.current) {
+        scheduleReconnect();
+      }
     }
   }, [user]);
 
   const disconnectWebSocket = useCallback(() => {
-    if (wsRef.current) {
-      console.log('[ChatWS] Disconnecting...');
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
+    // Prevent auto-reconnect
+    shouldReconnectRef.current = false;
+    
+    // Clear any pending reconnect
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
 
+    // Close existing connection
+    if (wsRef.current) {
+      console.log('[ChatWS] Disconnecting...');
+      // Only close if not already closing/closed
+      if (wsRef.current.readyState === WebSocket.OPEN || 
+          wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close();
+      }
+      wsRef.current = null;
+    }
+
     stopHeartbeat();
+    isConnectingRef.current = false;
     setIsConnected(false);
   }, []);
 
@@ -374,6 +441,11 @@ export const ChatProvider = ({ children }) => {
     switch (type) {
       case 'connected':
         console.log('[ChatWS] Connection confirmed');
+        // Update online users list if provided
+        if (data.online_users && Array.isArray(data.online_users)) {
+          console.log('[ChatWS] Initial online users:', data.online_users);
+          setOnlineUsers(new Set(data.online_users));
+        }
         break;
 
       case 'new_message':
@@ -437,17 +509,35 @@ export const ChatProvider = ({ children }) => {
 
   // ============ INITIALIZATION ============
 
-  useEffect(() => {
-    if (user) {
+  // Manual connection/disconnection for chat pages
+  const connectChat = useCallback(() => {
+    activeConnectionsRef.current += 1;
+    console.log('[ChatContext] Active connections:', activeConnectionsRef.current);
+    
+    if (user && activeConnectionsRef.current === 1) {
+      // Only connect if this is the first active connection
       loadConversations();
       loadAllUsers();
       connectWebSocket();
     }
+  }, [user, loadConversations, loadAllUsers, connectWebSocket]);
 
+  const disconnectChat = useCallback(() => {
+    activeConnectionsRef.current = Math.max(0, activeConnectionsRef.current - 1);
+    console.log('[ChatContext] Active connections:', activeConnectionsRef.current);
+    
+    // Only disconnect if no more active connections
+    if (activeConnectionsRef.current === 0) {
+      disconnectWebSocket();
+    }
+  }, [disconnectWebSocket]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       disconnectWebSocket();
     };
-  }, [user, loadConversations, loadAllUsers, connectWebSocket, disconnectWebSocket]);
+  }, [disconnectWebSocket]);
 
   const value = {
     // State
@@ -475,6 +565,10 @@ export const ChatProvider = ({ children }) => {
     markAsRead,
     loadAllUsers,
     sendTypingStatus,
+    
+    // Connection management
+    connectChat,
+    disconnectChat,
     
     // WebSocket handlers
     handleNewMessage,

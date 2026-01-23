@@ -29,7 +29,7 @@ async def create_conversation(
     created_by: int,
     name: Optional[str] = None
 ) -> Conversation:
-    """Create new conversation and add members"""
+    """Create new conversation and add members with eager loading"""
     conversation = Conversation(
         type=conversation_type,
         name=name,
@@ -47,8 +47,14 @@ async def create_conversation(
         db.add(member)
 
     await db.commit()
-    await db.refresh(conversation)
-    return conversation
+    
+    # Eagerly load members and users to prevent lazy loading issues
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.id == conversation.id)
+        .options(joinedload(Conversation.members).joinedload(ConversationMember.user))
+    )
+    return result.unique().scalar_one()
 
 
 async def get_or_create_direct_conversation(
@@ -63,7 +69,7 @@ async def get_or_create_direct_conversation(
         .where(Conversation.type == ConversationType.DIRECT)
         .join(ConversationMember, ConversationMember.conversation_id == Conversation.id)
         .where(ConversationMember.user_id.in_([user1_id, user2_id]))
-        .options(joinedload(Conversation.members))
+        .options(joinedload(Conversation.members).joinedload(ConversationMember.user))
     )
     conversations = result.scalars().unique().all()
 
@@ -72,13 +78,21 @@ async def get_or_create_direct_conversation(
         if user1_id in member_ids and user2_id in member_ids:
             return conv
 
-    # Create new direct conversation
-    return await create_conversation(
+    # Create new direct conversation with eagerly loaded members
+    new_conv = await create_conversation(
         db=db,
         conversation_type=ConversationType.DIRECT,
         member_ids=[user1_id, user2_id],
         created_by=user1_id
     )
+    
+    # Eagerly load members and users for the newly created conversation
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.id == new_conv.id)
+        .options(joinedload(Conversation.members).joinedload(ConversationMember.user))
+    )
+    return result.unique().scalar_one()
 
 
 async def get_user_conversations(
@@ -101,7 +115,8 @@ async def get_user_conversations(
     )
     total = count_result.scalar()
 
-    # Get conversations
+    # Get conversations (WITHOUT loading all messages - performance fix)
+    # We only load members to get names/avatars
     result = await db.execute(
         select(Conversation)
         .join(ConversationMember, ConversationMember.conversation_id == Conversation.id)
@@ -112,9 +127,7 @@ async def get_user_conversations(
             )
         )
         .options(
-            joinedload(Conversation.members).joinedload(ConversationMember.user),
-            joinedload(Conversation.messages).joinedload(Message.sender),
-            joinedload(Conversation.messages).joinedload(Message.read_receipts).joinedload(ReadReceipt.user)
+            joinedload(Conversation.members).joinedload(ConversationMember.user)
         )
         .order_by(desc(Conversation.updated_at))
         .offset(skip)
@@ -123,6 +136,49 @@ async def get_user_conversations(
     conversations = result.scalars().unique().all()
 
     return conversations, total
+
+
+async def populate_latest_messages(db: AsyncSession, conversations: List[Conversation]) -> dict:
+    """
+    Efficiently fetch the latest message for each conversation using a window function.
+    This prevents loading entire message history just to show the last message snippet.
+    """
+    if not conversations:
+        return {}
+    
+    conv_ids = [c.id for c in conversations]
+    
+    # Window function to get the latest message ID per conversation
+    # This is much faster than loading all messages
+    from sqlalchemy import Integer
+    from sqlalchemy.sql import cast
+    
+    subquery = (
+        select(
+            Message.id,
+            Message.conversation_id,
+            func.row_number().over(
+                partition_by=Message.conversation_id,
+                order_by=desc(Message.created_at)
+            ).label("rn")
+        )
+        .where(and_(Message.conversation_id.in_(conv_ids), Message.is_deleted == False))
+        .subquery()
+    )
+
+    stmt = (
+        select(Message)
+        .join(subquery, Message.id == subquery.c.id)
+        .where(subquery.c.rn == 1)
+        .options(
+            joinedload(Message.sender),
+            joinedload(Message.read_receipts).joinedload(ReadReceipt.user)
+        )
+    )
+
+    result = await db.execute(stmt)
+    messages = result.scalars().unique().all()
+    return {m.conversation_id: m for m in messages}
 
 
 async def get_conversation_by_id(db: AsyncSession, conversation_id: int) -> Optional[Conversation]:
@@ -415,22 +471,30 @@ async def mark_conversation_as_read(
 
     msg_result = await db.execute(query)
     messages = msg_result.scalars().all()
+    
+    if not messages:
+        await db.commit()
+        return 0
 
-    # Create read receipts
-    count = 0
-    for message in messages:
-        result = await db.execute(
-            select(ReadReceipt)
-            .where(
-                and_(
-                    ReadReceipt.message_id == message.id,
-                    ReadReceipt.user_id == user_id
-                )
+    # Get message IDs
+    message_ids_list = [msg.id for msg in messages]
+    
+    # Get existing read receipts in one query
+    existing_result = await db.execute(
+        select(ReadReceipt.message_id)
+        .where(
+            and_(
+                ReadReceipt.message_id.in_(message_ids_list),
+                ReadReceipt.user_id == user_id
             )
         )
-        existing = result.scalar_one_or_none()
-
-        if not existing:
+    )
+    existing_message_ids = set(existing_result.scalars().all())
+    
+    # Bulk create read receipts for messages that don't have them
+    count = 0
+    for message in messages:
+        if message.id not in existing_message_ids:
             receipt = ReadReceipt(
                 message_id=message.id,
                 user_id=user_id
