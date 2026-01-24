@@ -1,0 +1,17 @@
+<svg width="220" height="300" viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#9CC9E8"/>
+    </radialGradient>
+  </defs>
+
+  <ellipse cx="110" cy="120" rx="80" ry="100"
+           fill="url(#g)" stroke="#6FA6C8" stroke-width="2"/>
+  <ellipse cx="85" cy="90" rx="15" ry="25"
+           fill="#FFFFFF" opacity="0.45"/>
+  <polygon points="105,220 115,220 110,235"
+           fill="#6FA6C8"/>
+  <path d="M110 235 C100 260,120 280,105 300"
+        stroke="#777" stroke-width="2" fill="none"/>
+</svg>

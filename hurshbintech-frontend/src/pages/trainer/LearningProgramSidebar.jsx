@@ -143,7 +143,7 @@ const LearningProgramSidebar = ({
           <textarea
             value={editableTranscript || transcript || ''}
             onChange={(e) => setEditableTranscript(e.target.value)}
-            placeholder="Your speech will appear here... You can also edit it manually."
+            // placeholder="Your speech will appear here... You can also edit it manually."
             style={{
               width: '100%',
               padding: '10px',

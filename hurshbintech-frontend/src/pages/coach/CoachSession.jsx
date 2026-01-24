@@ -37,37 +37,37 @@ const REACTION_SVG_ASSETS = {
   balloon: [
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon.svg',
+      src: '/reactions/02_pastel_mint.svg',
       alt: 'Realistic Pink Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-red.svg',
+      src: '/reactions/03_pastel_pink.svg',
       alt: 'Realistic Red Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-blue.svg',
+      src: '/reactions/04_pastel_lavender.svg',
       alt: 'Realistic Blue Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-green.svg',
+      src: '/reactions/05_pastel_peach.svg',
       alt: 'Realistic Green Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-yellow.svg',
+      src: '/reactions/06_pastel_coral.svg',
       alt: 'Realistic Yellow Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-purple.svg',
+      src: '/reactions/07_pastel_teal.svg',
       alt: 'Realistic Purple Balloon'
     },
     {
       type: 'svg',
-      src: '/reactions/realistic-balloon-orange.svg',
+      src: '/reactions/08_pastel_yellow.svg',
       alt: 'Realistic Orange Balloon'
     }
   ],
@@ -478,7 +478,7 @@ const CoachSession = () => {
         console.log('[CoachSession] Received remote stream from client');
         setRemoteStream(stream);
         setConnectionStatus('Connected');
-        
+
         // Only show toast once when client first connects
         if (!clientConnectedRef.current) {
           clientConnectedRef.current = true;
@@ -544,7 +544,7 @@ const CoachSession = () => {
             timestamp: Date.now()
           });
         }
-        
+
         await coachSessionService.endSession(sessionId, '');
         cleanup();
         toast.success('Session ended successfully');
@@ -655,6 +655,7 @@ const CoachSession = () => {
     setCanvasItems([]);
     setBuckets([]);
     setTextBoxes([]);
+    setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
 
     // Trigger local clear and redraw
     setErasePenTrigger(prev => prev + 1);
@@ -783,6 +784,12 @@ const CoachSession = () => {
   };
 
   const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
+    // Find the animation to get its type for sound effect
+    const animation = floatingAnimations.find(a => a.id === animationId);
+    if (animation) {
+      playPopSound(animation.type);
+    }
+
     setFloatingAnimations(prev =>
       prev.map(anim =>
         anim.id === animationId
@@ -790,6 +797,16 @@ const CoachSession = () => {
           : anim
       )
     );
+
+    // Broadcast the animation pop event to learner
+    if (whiteboardService) {
+      whiteboardService.send('animation_popped', {
+        animationId,
+        poppedLeft,
+        poppedTop,
+        timestamp: Date.now()
+      });
+    }
   };
 
   // Learning content search handler with lazy loading
@@ -1005,7 +1022,7 @@ const CoachSession = () => {
             </div>
             <button
               className="btn-secondary"
-              style={{color: 'white'}}
+              style={{ color: 'white' }}
               onClick={() => window.open('/coach/dashboard', '_blank', 'noopener,noreferrer')}
             >
               🏠 Dashboard
