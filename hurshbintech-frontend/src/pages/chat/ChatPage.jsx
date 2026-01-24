@@ -3,12 +3,14 @@
  * WhatsApp-like home page showing all conversations
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, UserPlus, Users, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, Search, Users, MessageSquarePlus } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
+import SearchBar from "../../components/common/SearchBar";
 import { useAuth } from '../../context/AuthContext';
-import { useChatWebSocket } from '../../hooks/chat/useChatWebSocket';
+import '../../styles/ManageUsersLayout.css';
+import '../../styles/chats/ChatPage.css';
 
 const ChatPage = () => {
   const navigate = useNavigate();
@@ -19,12 +21,12 @@ const ChatPage = () => {
     unreadCounts,
     allUsers,
     loading,
-    loadConversations,
     createConversation,
     selectConversation,
+    isConnected,
+    connectChat,
+    disconnectChat,
   } = useChat();
-
-  const { isConnected } = useChatWebSocket();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -32,9 +34,19 @@ const ChatPage = () => {
   const [groupName, setGroupName] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
+  // Connect to chat when component mounts
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    connectChat();
+    
+    return () => {
+      disconnectChat();
+    };
+  }, [connectChat, disconnectChat]);
+
+  // Handle search function
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
 
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv => {
@@ -50,9 +62,9 @@ const ChatPage = () => {
     const now = new Date();
     const diff = now - date;
 
-    if (diff < 86400000) { // Less than 24 hours
+    if (diff < 86400000) {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else if (diff < 604800000) { // Less than 7 days
+    } else if (diff < 604800000) {
       return date.toLocaleDateString('en-US', { weekday: 'short' });
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -109,105 +121,131 @@ const ChatPage = () => {
   // Can user create groups?
   const canCreateGroups = ['ADMIN', 'HEAD', 'TRAINER', 'COACH'].includes(user?.role?.toUpperCase());
 
-  // Filter users (exclude current user and existing conversations)
-  const availableUsers = allUsers.filter(u => u.id !== user?.id);
+  // Get dashboard route based on user role
+ const getDashboardUrl = () => {
+    if (!user || !user.role) return '/dashboard';
+    const dashboardMap = {
+      'head': '/head/dashboard',
+      'trainer': '/trainer/dashboard',
+      'coach': '/coach/dashboard',
+      'admin': '/admin/dashboard',
+      'learner': '/learner/dashboard'
+    };
+    return dashboardMap[user.role] || '/dashboard';
+  };
+
+  // Filter users - exclude current user AND users with existing conversations
+  const availableUsers = useMemo(() => {
+    const conversationUserIds = new Set();
+    conversations.forEach(conv => {
+      if (conv.type === 'DIRECT') {
+        conv.member_ids?.forEach(id => {
+          if (id !== user?.id) {
+            conversationUserIds.add(id);
+          }
+        });
+      }
+    });
+    
+    return allUsers.filter(u => 
+      u.id !== user?.id && !conversationUserIds.has(u.id)
+    );
+  }, [allUsers, conversations, user?.id]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
+          {/* Header with Back Button and Title */}
+          <div className="page-header">
             <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-blue-700 rounded-full transition"
+              onClick={() => navigate(getDashboardUrl())}
+              className="back-button"
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={20} />
+              Back to Dashboard
             </button>
-            <h1 className="text-xl font-bold">Chats</h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Connection Status */}
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
             
-            {/* New Chat Button */}
-            <button
-              onClick={() => setShowNewChatModal(true)}
-              className="p-2 hover:bg-blue-700 rounded-full transition"
-              title="New Chat"
-            >
-              <MessageSquarePlus size={24} />
-            </button>
-          </div>
-        </div>
+            <div>
+              <h1 className="page-title">Chats</h1>
+              <p className="page-description">View and manage your conversations</p>
+            </div>
 
-        {/* Search Bar */}
-        <div className="mt-3 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-full bg-blue-700 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white"
-          />
-        </div>
-      </div>
-
-      {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto bg-white">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="chat-header-actions">
+              <div className={`chat-connection-status ${isConnected ? 'connected' : 'disconnected'}`} />
+              
+              <button
+                onClick={() => setShowNewChatModal(true)}
+                className="chat-new-btn"
+                title="New Chat"
+              >
+                <MessageSquarePlus size={24} />
+              </button>
+            </div>
           </div>
-        ) : filteredConversations.length === 0 ? (
-          <div className="flex flex-col h-full">
-            {/* Empty State Message */}
-            <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-              <MessageSquarePlus size={64} className="mb-4 opacity-30" />
-              <p className="text-lg">No conversations yet</p>
-              <p className="text-sm">Select a user below or click the + button to start messaging</p>
+
+          {/* Search Bar */}
+         <div className="search-section">
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by name, passcode, contact..."
+            />
+            
+          </div>
+
+          {/* Conversations List */}
+          <div className="chat-content">
+            {loading ? (
+              <div className="loading-container">
+                <div className="chat-loading-spinner"></div>
+              </div>
+            ) : filteredConversations.length === 0 ? (
+          <div className="chat-empty-state">
+            <div className="chat-empty-message">
+              <MessageSquarePlus size={64} className="chat-empty-icon" />
+              <p className="chat-empty-title">No conversations yet</p>
+              <p className="chat-empty-subtitle">Select a user below or click the + button to start messaging</p>
             </div>
 
             {/* Available Users List */}
-            <div className="px-4 pb-4">
-              <h3 className="font-semibold text-gray-700 mb-3">Available Users</h3>
-              <div className="space-y-2">
-                {availableUsers.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">No other users available</p>
-                ) : (
-                  availableUsers.map(availUser => (
+            {availableUsers.length > 0 && (
+              <div className="chat-available-users-section">
+                <h3 className="chat-section-title">Start a New Chat</h3>
+                <div className="chat-users-list">
+                  {availableUsers.map(availUser => (
                     <div
                       key={availUser.id}
                       onClick={() => handleNewDirectChat(availUser)}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-lg cursor-pointer transition"
+                      className="chat-user-item"
                     >
-                      {/* Avatar */}
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="chat-avatar-container">
+                        <div className="chat-user-avatar">
                           {availUser.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         {onlineUsers.has(availUser.id) && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                          <div className="chat-avatar-online-indicator" />
                         )}
                       </div>
 
-                      {/* User Info */}
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{availUser.name}</p>
-                        <p className="text-xs text-gray-500">{availUser.role}</p>
+                      <div className="chat-user-info">
+                        <p className="chat-user-name">{availUser.name}</p>
+                        <p className="chat-user-role">{availUser.role}</p>
                       </div>
 
-                      {/* Online Status */}
                       {onlineUsers.has(availUser.id) && (
-                        <span className="text-xs text-green-600 font-medium">●</span>
+                        <span className="chat-user-status">●</span>
                       )}
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {availableUsers.length === 0 && (
+              <div className="chat-no-users">
+                No other users available
+              </div>
+            )}
           </div>
         ) : (
           <div>
@@ -220,42 +258,38 @@ const ChatPage = () => {
                 <div
                   key={conversation.id}
                   onClick={() => handleConversationClick(conversation)}
-                  className="flex items-center gap-3 p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition"
+                  className="chat-conversation-item"
                 >
-                  {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                  <div className="chat-avatar-container">
+                    <div className="chat-avatar">
                       {conversation.type === 'GROUP' ? (
                         <Users size={24} />
                       ) : (
                         conversation.name?.charAt(0).toUpperCase() || 'U'
                       )}
                     </div>
-                    {/* Online Indicator for Direct Chats */}
                     {conversation.type === 'DIRECT' && conversation.member_ids?.some(id => id !== user?.id && onlineUsers.has(id)) && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                      <div className="chat-avatar-online-indicator" />
                     )}
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 truncate">
+                  <div className="chat-conversation-content">
+                    <div className="chat-conversation-header">
+                      <h3 className="chat-conversation-name">
                         {conversation.name}
                       </h3>
-                      <span className="text-xs text-gray-500">
+                      <span className="chat-conversation-time">
                         {formatTime(conversation.updated_at)}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-sm text-gray-600 truncate">
+                    <div className="chat-conversation-footer">
+                      <p className="chat-conversation-message">
                         {lastMessage?.content || lastMessage?.file_name || 'No messages yet'}
                       </p>
                       
-                      {/* Unread Badge */}
                       {unreadCount > 0 && (
-                        <span className="ml-2 bg-blue-600 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[20px] text-center">
+                        <span className="chat-unread-badge">
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
                       )}
@@ -267,52 +301,50 @@ const ChatPage = () => {
 
             {/* Available Users List After Conversations */}
             {availableUsers.length > 0 && (
-              <div className="px-4 py-4 bg-gray-50 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-700 mb-3">Start a New Chat</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="chat-available-users-section">
+                <h3 className="chat-section-title">Start a New Chat</h3>
+                <div className="chat-users-list">
                   {availableUsers.map(availUser => (
                     <div
                       key={availUser.id}
                       onClick={() => handleNewDirectChat(availUser)}
-                      className="flex items-center gap-3 p-3 hover:bg-white rounded-lg cursor-pointer transition"
+                      className="chat-user-item"
                     >
-                      {/* Avatar */}
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="chat-avatar-container">
+                        <div className="chat-user-avatar">
                           {availUser.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         {onlineUsers.has(availUser.id) && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                          <div className="chat-avatar-online-indicator" />
                         )}
                       </div>
 
-                      {/* User Info */}
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm">{availUser.name}</p>
-                        <p className="text-xs text-gray-500">{availUser.role}</p>
+                      <div className="chat-user-info">
+                        <p className="chat-user-name">{availUser.name}</p>
+                        <p className="chat-user-role">{availUser.role}</p>
                       </div>
 
-                      {/* Online Status */}
                       {onlineUsers.has(availUser.id) && (
-                        <span className="text-xs text-green-600 font-medium">●</span>
+                        <span className="chat-user-status">●</span>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
+            </div>
+          )}
           </div>
-        )}
-      </div>
+        </div>
+      </main>
 
       {/* New Chat Modal */}
       {showNewChatModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">
+        <div className="chat-modal-overlay">
+          <div className="chat-modal">
+            <div className="chat-modal-header">
+              <div className="chat-modal-header-flex">
+                <h2 className="chat-modal-title">
                   {isCreatingGroup ? 'Create Group' : 'New Chat'}
                 </h2>
                 <button
@@ -322,38 +354,35 @@ const ChatPage = () => {
                     setSelectedUsers([]);
                     setGroupName('');
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="chat-modal-close-btn"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Group Creation Toggle */}
               {canCreateGroups && !isCreatingGroup && (
                 <button
                   onClick={() => setIsCreatingGroup(true)}
-                  className="mt-2 flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
+                  className="chat-modal-group-toggle"
                 >
                   <Users size={16} />
                   Create Group Chat
                 </button>
               )}
 
-              {/* Group Name Input */}
               {isCreatingGroup && (
                 <input
                   type="text"
                   placeholder="Group Name"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="chat-modal-group-input"
                 />
               )}
             </div>
 
-            {/* Users List */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {availableUsers.map(availUser => (
+            <div className="chat-modal-body">
+              {allUsers.filter(u => u.id !== user?.id).map(availUser => (
                 <div
                   key={availUser.id}
                   onClick={() => {
@@ -367,49 +396,44 @@ const ChatPage = () => {
                       handleNewDirectChat(availUser);
                     }
                   }}
-                  className="flex items-center gap-3 p-3 hover:bg-gray-100 rounded-lg cursor-pointer transition"
+                  className="chat-modal-user-item"
                 >
-                  {/* Checkbox for Group */}
                   {isCreatingGroup && (
                     <input
                       type="checkbox"
                       checked={selectedUsers.find(u => u.id === availUser.id) !== undefined}
                       onChange={() => {}}
-                      className="w-5 h-5"
+                      className="chat-modal-checkbox"
                     />
                   )}
 
-                  {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold">
+                  <div className="chat-avatar-container">
+                    <div className="chat-user-avatar">
                       {availUser.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     {onlineUsers.has(availUser.id) && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                      <div className="chat-avatar-online-indicator" />
                     )}
                   </div>
 
-                  {/* User Info */}
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{availUser.name}</p>
-                    <p className="text-sm text-gray-500">{availUser.role}</p>
+                  <div className="chat-user-info">
+                    <p className="chat-user-name">{availUser.name}</p>
+                    <p className="chat-user-role">{availUser.role}</p>
                   </div>
 
-                  {/* Online Status */}
                   {onlineUsers.has(availUser.id) && (
-                    <span className="text-xs text-green-600 font-medium">Online</span>
+                    <span className="chat-user-status">Online</span>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Group Create Button */}
             {isCreatingGroup && (
-              <div className="p-4 border-t border-gray-200">
+              <div className="chat-modal-footer">
                 <button
                   onClick={handleCreateGroup}
                   disabled={selectedUsers.length < 2 || !groupName.trim()}
-                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                  className="chat-modal-create-btn"
                 >
                   Create Group ({selectedUsers.length} members)
                 </button>
