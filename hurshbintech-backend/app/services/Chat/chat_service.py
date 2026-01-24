@@ -233,9 +233,15 @@ def build_message_response(message, current_user_id: int = None) -> dict:
     }
 
 
-async def build_conversation_response(conversation, current_user_id: int, db) -> dict:
+async def build_conversation_response(
+    conversation, 
+    current_user_id: int, 
+    db,
+    prefetched_last_message=None
+) -> dict:
     """
     Build conversation response dictionary with all details
+    Performance optimized: accepts prefetched_last_message to avoid loading all messages
     """
     from app.crud.Chat import chat_crud
     
@@ -254,13 +260,13 @@ async def build_conversation_response(conversation, current_user_id: int, db) ->
                 "last_read_at": member.last_read_at.isoformat() if member.last_read_at else None
             })
     
-    # Get last message
+    # Get last message - use prefetched if available (performance optimization)
     last_message = None
-    if conversation.messages:
-        non_deleted_messages = [m for m in conversation.messages if not m.is_deleted]
-        if non_deleted_messages:
-            latest = max(non_deleted_messages, key=lambda m: m.created_at)
-            last_message = build_message_response(latest, current_user_id)
+    if prefetched_last_message is not None:
+        # Use the efficiently fetched message
+        last_message = build_message_response(prefetched_last_message, current_user_id)
+    # Note: We removed the fallback to conversation.messages to prevent lazy loading
+    # All callers should now provide prefetched_last_message when needed
     
     # Get unread count
     unread_count = await chat_crud.get_unread_count(db, conversation.id, current_user_id)

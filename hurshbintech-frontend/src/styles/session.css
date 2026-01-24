@@ -1938,7 +1938,7 @@ canvas[data-whiteboard="true"] {
 }
 
 /* ============================================================================
-   LEARNER SESSION - LANDSCAPE MOBILE/TABLET LAYOUT (20-80 Split)
+   LEARNER SESSION - RESPONSIVE DESIGN FOR MOBILE & TABLET
    ============================================================================ */
 
 /* Hide Navbar on Mobile/Tablet for Learner Session */
@@ -1952,126 +1952,391 @@ canvas[data-whiteboard="true"] {
   }
 }
 
-/* Learner Responsive Layout - 20% Left, 80% Right on Landscape */
-@media (max-width: 1023px) and (orientation: landscape) {
+/* ============================================================================
+   MOBILE - SMALL (max-width: 640px)
+   Portrait orientation - Full width stacked layout
+   ============================================================================ */
+@media (max-width: 640px) {
   .learner-responsive-layout {
     display: flex !important;
-    flex-direction: row !important;
-    gap: 0.5rem;
+    flex-direction: column !important;
+    gap: 1rem;
     margin: 0.5rem;
-    min-height: calc(100vh - 60px) !important;
+    padding: 0.5rem;
+    min-height: calc(100vh - 70px) !important;
   }
 
-  /* Left Sidebar - 20% width */
-  .learner-responsive-sidebar-left {
-    width: 20% !important;
-    max-width: 20% !important;
-    min-width: 20% !important;
-    position: relative !important;
-    transform: none !important;
-    order: 1 !important;
-    display: flex !important;
-    flex-direction: column;
-    background: white;
-    border-right: 1px solid #e5e7eb;
-    padding: 0.5rem !important;
-    overflow-y: auto;
-    height: calc(100vh - 60px);
-  }
-
-  /* Right Area - 80% width */
+  /* Whiteboard First */
   .learner-responsive-main-area {
-    width: 80% !important;
-    max-width: 80% !important;
-    min-width: 80% !important;
-    order: 2 !important;
+    width: 100% !important;
+    order: 1 !important;
+    flex: 1;
+    min-height: 300px;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
   }
 
-  /* Hide sidebar overlay in landscape */
-  .sidebar-overlay {
-    display: none !important;
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
   }
 
-  /* Hide sidebar toggle button in landscape */
+  /* Control Sections Below */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem 0.75rem !important;
+    margin: 0;
+    overflow: visible;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  /* Trainer Video - Compact for mobile */
+  .learner-responsive-sidebar-left [style*="border: 1px solid rgba(217, 119, 6"]]:first-child {
+    max-height: 200px;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 180px;
+    width: auto;
+  }
+
+  /* Collapsible Sections - Compact */
+  .learner-responsive-sidebar-left>div {
+    margin-bottom: 0.5rem;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.875rem !important;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .learner-responsive-sidebar-left p {
+    font-size: 0.75rem !important;
+    margin: 0;
+  }
+
+  /* Buttons - Touch-friendly */
+  .learner-responsive-sidebar-left button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    min-height: 36px;
+    border-radius: 0.5rem;
+  }
+
+  /* Message and Input Areas */
+  .learner-responsive-sidebar-left textarea,
+  .learner-responsive-sidebar-left input {
+    font-size: 0.875rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .learner-responsive-sidebar-left .max-h-\[120px\] {
+    max-height: 120px !important;
+  }
+
+  /* Hide sidebar toggle button */
   .session-sidebar-toggles {
     display: none !important;
   }
 
-  /* Compact video in left sidebar */
+  /* Hide sidebar overlay */
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   MOBILE - MEDIUM (641px - 767px)
+   Portrait & Landscape - Flexible stacked layout
+   ============================================================================ */
+@media (min-width: 641px) and (max-width: 767px) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+    margin: 0.75rem;
+    padding: 0.75rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard First */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 1;
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections Below */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem !important;
+    margin: 0;
+    overflow: visible;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 200px;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.95rem !important;
+    font-weight: 600;
+  }
+
+  .learner-responsive-sidebar-left button {
+    padding: 0.6rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 38px;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   TABLET - SMALL (768px - 1023px) - PORTRAIT MODE
+   Stacked layout with better spacing
+   ============================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem;
+    margin: 1rem;
+    padding: 1rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard - Takes 60% of space */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 400px;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections - Takes 40% of space */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem !important;
+    margin: 0;
+    overflow-y: auto;
+    max-height: 40vh;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 220px;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 1rem !important;
+    font-weight: 600;
+  }
+
+  .learner-responsive-sidebar-left button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   TABLET - LARGE (768px - 1023px) - LANDSCAPE MODE
+   Optimized horizontal layout with whiteboard on top, controls below
+   ============================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+    margin: 0.75rem;
+    padding: 0.75rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard - Takes 65% height */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 0 0 65%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 350px;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections - Takes 35% height, scrollable */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 0.75rem 1rem !important;
+    margin: 0;
+    overflow-y: auto;
+    max-height: 35vh;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.5rem;
+  }
+
+  /* Trainer Video - Compact in landscape */
   .learner-responsive-sidebar-left video {
     max-height: 150px;
   }
 
-  /* Compact prompt section */
-  .learner-responsive-sidebar-left .bg-yellow-50 {
-    padding: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-
-  /* Compact meter values */
-  .learner-responsive-sidebar-left .bg-gradient-to-br {
-    padding: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-
-  /* Compact message section */
-  .learner-responsive-sidebar-left .bg-blue-50 {
-    padding: 0.5rem !important;
-    font-size: 0.75rem !important;
-  }
-
-  /* Responsive buttons in left sidebar */
-  .learner-responsive-sidebar-left button {
-    padding: 0.4rem 0.6rem !important;
-    font-size: 0.7rem !important;
-    min-height: 32px;
-  }
-
-  /* Compact text sizing */
+  /* Compact text sizing for landscape */
   .learner-responsive-sidebar-left h3 {
-    font-size: 0.8rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600;
   }
 
   .learner-responsive-sidebar-left p {
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
   }
 
-  /* Ensure whiteboard takes full width */
-  .learner-responsive-main-area .session-whiteboard-container {
-    width: 100%;
-    margin: 0;
+  /* Compact buttons */
+  .learner-responsive-sidebar-left button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.7rem !important;
+    min-height: 34px;
+  }
+
+  /* Compact sections */
+  .learner-responsive-sidebar-left>div {
+    margin-bottom: 0.25rem;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
   }
 }
 
-/* Portrait mode - keep original hamburger menu behavior */
-@media (max-width: 1023px) and (orientation: portrait) {
-  .learner-responsive-layout {
-    display: flex !important;
-    flex-direction: column !important;
-  }
+/* ============================================================================
+   SMOOTH TRANSITIONS
+   ============================================================================ */
+@media (max-width: 1023px) {
 
+  .learner-responsive-layout,
+  .learner-responsive-main-area,
   .learner-responsive-sidebar-left {
-    position: fixed !important;
-    left: 0;
-    top: 60px;
-    bottom: 0;
-    width: 85% !important;
-    max-width: 450px !important;
-    z-index: 999;
-    transform: translateX(-100%) !important;
-    transition: transform 0.3s ease-in-out;
+    transition: all 0.3s ease-in-out;
   }
 
-  /* When sidebar is open in portrait */
-  .learner-responsive-sidebar-left.translate-x-0 {
-    transform: translateX(0) !important;
+  /* Scrollbar styling for mobile */
+  .learner-responsive-sidebar-left::-webkit-scrollbar {
+    width: 4px;
   }
 
-  .learner-responsive-main-area {
-    width: 100% !important;
-    order: 1 !important;
+  .learner-responsive-sidebar-left::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .learner-responsive-sidebar-left::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
   }
 }

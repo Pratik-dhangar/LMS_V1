@@ -127,7 +127,7 @@ export const chatApi = {
   async markMessagesAsRead(conversationId, messageIds = []) {
     const response = await axiosInstance.post(`${CHAT_BASE_URL}/messages/read`, {
       conversation_id: conversationId,
-      message_ids: messageIds.length > 0 ? messageIds : null
+      message_ids: messageIds || []
     });
     return response.data;
   },

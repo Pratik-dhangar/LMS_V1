@@ -36,6 +36,8 @@ class WhiteboardService {
         this.onExerciseAnswerUpdate = null; // New callback for real-time answer updates
         this.onExerciseResponse = null; // New callback for exercise submission from learner
         this.onExerciseClosed = null; // New callback for exercise closed by trainer
+        this.onCommentUpdate = null; // New callback for comment updates
+        this.onCommentsToggle = null; // New callback for comments tool toggle
     }
 
     initialize() {
@@ -262,6 +264,18 @@ class WhiteboardService {
                 case 'exercise_closed':
                     if (this.onExerciseClosed) {
                         this.onExerciseClosed(message.data);
+                    }
+                    break;
+
+                case 'comment_update':
+                    if (this.onCommentUpdate) {
+                        this.onCommentUpdate(message.data);
+                    }
+                    break;
+
+                case 'comments_toggle':
+                    if (this.onCommentsToggle) {
+                        this.onCommentsToggle(message.data);
                     }
                     break;
 
