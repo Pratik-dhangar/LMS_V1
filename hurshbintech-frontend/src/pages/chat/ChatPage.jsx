@@ -7,6 +7,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Users, MessageSquarePlus } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
+import SearchBar from "../../components/common/SearchBar";
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/chats/ChatPage.css';
@@ -41,6 +42,11 @@ const ChatPage = () => {
       disconnectChat();
     };
   }, [connectChat, disconnectChat]);
+
+  // Handle search function
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
 
   // Filter conversations based on search
   const filteredConversations = conversations.filter(conv => {
@@ -179,17 +185,12 @@ const ChatPage = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="search-section">
-            <div className="chat-search-container">
-              <Search className="chat-search-icon" size={20} />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="chat-search-input"
-              />
-            </div>
+         <div className="search-section">
+            <SearchBar
+              onSearch={handleSearch}
+              placeholder="Search by name, passcode, contact..."
+            />
+            
           </div>
 
           {/* Conversations List */}
