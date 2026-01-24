@@ -179,7 +179,7 @@ const TrainerSession = () => {
   useEffect(() => {
     if (webRTC) {
       webRTC.onMessage = (message) => {
-        console.log('[TrainerSession] Message received:', message);
+        // console.log('[TrainerSession] Message received:', message);
         addReceivedMessage({
           sender: message.sender === 'trainer' ? 'You' : message.sender,
           text: message.text,
@@ -207,13 +207,13 @@ const TrainerSession = () => {
     const loadSessionNotes = async () => {
       if (!sessionId) return;
       try {
-        console.log('[TrainerSession] Loading session notes for sessionId:', sessionId);
+        // console.log('[TrainerSession] Loading session notes for sessionId:', sessionId);
         const notesData = await sessionNotesService.getNotes(sessionId);
         if (notesData && notesData.notes) {
-          console.log('[TrainerSession] ✅ Session notes loaded, version:', notesData.version);
+          // console.log('[TrainerSession] ✅ Session notes loaded, version:', notesData.version);
           setSessionNotes(notesData.notes);
         } else {
-          console.log('[TrainerSession] ℹ️ No existing session notes found, starting fresh');
+          // console.log('[TrainerSession] ℹ️ No existing session notes found, starting fresh');
           setSessionNotes('');
         }
       } catch (error) {
@@ -230,7 +230,7 @@ const TrainerSession = () => {
 
   // Debug: Log when feedbackMessage changes
   useEffect(() => {
-    console.log('[TrainerSession] feedbackMessage state changed to:', feedbackMessage);
+    // console.log('[TrainerSession] feedbackMessage state changed to:', feedbackMessage);
   }, [feedbackMessage]);
 
   const [additionalContentSearch, setAdditionalContentSearch] = useState('');
@@ -347,7 +347,7 @@ const TrainerSession = () => {
       mediaWasVisibleRef.current = true;
     } else if (mediaWasVisibleRef.current && !mediaControl.currentMedia.isVisible) {
       // Content just closed - auto-show stopwatch
-      console.log('[TrainerSession] Content ended - auto-showing stopwatch');
+      // console.log('[TrainerSession] Content ended - auto-showing stopwatch');
       setShowStopwatch(true);
       // Optionally auto-start the stopwatch
       // stopwatch.start();
@@ -428,7 +428,7 @@ const TrainerSession = () => {
     try {
       // If turning ON voice input and video conferencing mic is currently ON, turn it OFF
       if (!listening && micEnabled && webRTC) {
-        console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
+        // console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
         webRTC.toggleMicrophone();
         setMicEnabled(false);
         toast.info('Video conferencing mic disabled - Voice input enabled');
@@ -441,7 +441,7 @@ const TrainerSession = () => {
       // If turning OFF voice input and video conferencing mic is currently OFF, turn it ON
       // Note: 'listening' is the OLD state before toggle, so we check if it WAS true (now turning OFF)
       if (listening && !micEnabled && webRTC) {
-        console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
+        // console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
         webRTC.toggleMicrophone();
         setMicEnabled(true);
         toast.info('Voice input disabled - Video conferencing mic enabled');
@@ -456,7 +456,7 @@ const TrainerSession = () => {
   // 🔸 How it works: fetch user from localStorage, validate, then initialize session resources.
   // -----------------------------------------------------------
   useEffect(() => {
-    console.log('[TrainerSession] Component mounted, sessionId:', sessionId);
+    // console.log('[TrainerSession] Component mounted, sessionId:', sessionId);
     const userData = localStorage.getItem('user_data');
     if (!userData) {
       console.error('[TrainerSession] No user data found in localStorage');
@@ -466,13 +466,13 @@ const TrainerSession = () => {
     }
 
     const user = JSON.parse(userData);
-    console.log('[TrainerSession] User data:', { id: user.id, role: user.role, name: user.name });
+    // console.log('[TrainerSession] User data:', { id: user.id, role: user.role, name: user.name });
     initializeSession(user.id);
 
     // 🔹 Purpose: Cleanup when the component unmounts - save notes before leaving
     // 🔸 How it works: clears auto-save timer, saves final notes, then calls cleanup()
     return () => {
-      console.log('[TrainerSession] Component unmounting, saving notes and cleaning up');
+      // console.log('[TrainerSession] Component unmounting, saving notes and cleaning up');
 
       // Clear auto-save timer
       if (autoSaveTimerRef.current) {
@@ -610,7 +610,7 @@ const TrainerSession = () => {
 
     // Set up callback for item selection by learner
     whiteboardService.onItemSelected = (data) => {
-      console.log('[TrainerSession] Remote user selected items:', data);
+      // console.log('[TrainerSession] Remote user selected items:', data);
       if (data.itemIds && Array.isArray(data.itemIds)) {
         setRemoteSelectedItemIds(data.itemIds);
       }
@@ -618,13 +618,13 @@ const TrainerSession = () => {
 
     // Set up callback for animation pop events from learner
     whiteboardService.onAnimationPopped = (data) => {
-      console.log('[TrainerSession] Animation popped by learner:', data);
+      // console.log('[TrainerSession] Animation popped by learner:', data);
       handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
     // Set up callback for exercise answer updates from learner
     whiteboardService.onExerciseAnswerUpdate = (data) => {
-      console.log('[TrainerSession] 📝 Learner answer updated:', data);
+      // console.log('[TrainerSession] 📝 Learner answer updated:', data);
       if (data.qaItems) {
         // New format with multiple Q&A items
         setExerciseData(prev => ({
@@ -643,7 +643,7 @@ const TrainerSession = () => {
 
     // Set up callback for exercise submission from learner
     whiteboardService.onExerciseResponse = (data) => {
-      console.log('[TrainerSession] 📋 Learner submitted exercise:', data);
+      // console.log('[TrainerSession] 📋 Learner submitted exercise:', data);
       if (data.qaItems) {
         // New format with multiple Q&A items
         setExerciseData(prev => ({
@@ -676,41 +676,41 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const initializeSession = async (userId) => {
     try {
-      console.log('[TrainerSession] Fetching session details for sessionId:', sessionId);
+      // console.log('[TrainerSession] Fetching session details for sessionId:', sessionId);
       // Fetch session details
       const session = await sessionService.getSessionDetails(sessionId);
-      console.log('[TrainerSession] Session details received:', {
-        id: session.id,
-        session_id: session.session_id,
-        title: session.title,
-        trainer_id: session.trainer_id,
-        learner_id: session.learner_id,
-        status: session.status,
-        learning_contents: session.learning_contents?.length || 0,
-        learning_goals: session.learning_goals?.length || 0
-      });
-      console.log('[TrainerSession] Learning Contents:', session.learning_contents);
-      console.log('[TrainerSession] Learning Goals:', session.learning_goals);
+      //   console.log('[TrainerSession] Session details received:', {
+      //   id: session.id,
+      //     session_id: session.session_id,
+      //       title: session.title,
+      //         trainer_id: session.trainer_id,
+      //           learner_id: session.learner_id,
+      //             status: session.status,
+      //               learning_contents: session.learning_contents?.length || 0,
+      //                 learning_goals: session.learning_goals?.length || 0
+      // });
+      // console.log('[TrainerSession] Learning Contents:', session.learning_contents);
+      // console.log('[TrainerSession] Learning Goals:', session.learning_goals);
 
       // Log detailed content info for debugging thumbnails
       if (session.learning_contents && session.learning_contents.length > 0) {
-        console.log('[TrainerSession] First content item full structure:', JSON.stringify(session.learning_contents[0], null, 2));
+        // console.log('[TrainerSession] First content item full structure:', JSON.stringify(session.learning_contents[0], null, 2));
         session.learning_contents.forEach((content, index) => {
-          console.log(`[TrainerSession] Content ${index + 1} - All URL fields:`, {
-            id: content.id,
-            title: content.title,
-            content_type: content.content_type,
-            // All possible URL fields
-            thumbnail_url: content.thumbnail_url,
-            thumbnail: content.thumbnail,
-            image_url: content.image_url,
-            url: content.url,
-            content_url: content.content_url,
-            file_path: content.file_path,
-            file_url: content.file_url,
-            // Show all keys for debugging
-            allKeys: Object.keys(content)
-          });
+          //   console.log(`[TrainerSession] Content ${index + 1} - All URL fields:`, {
+          //   id: content.id,
+          //     title: content.title,
+          //       content_type: content.content_type,
+          //         // All possible URL fields
+          //         thumbnail_url: content.thumbnail_url,
+          //           thumbnail: content.thumbnail,
+          //             image_url: content.image_url,
+          //               url: content.url,
+          //                 content_url: content.content_url,
+          //                   file_path: content.file_path,
+          //                     file_url: content.file_url,
+          //                       // Show all keys for debugging
+          //                       allKeys: Object.keys(content)
+          // });
         });
       }
 
@@ -735,17 +735,17 @@ const TrainerSession = () => {
         // Only show alert once (prevent duplicate toasts in StrictMode)
         if (!restrictionAlertShownRef.current) {
           restrictionAlertShownRef.current = true;
-          console.warn('[TrainerSession] Session already active:', sessionCheck.message);
+          // console.warn('[TrainerSession] Session already active:', sessionCheck.message);
           toast.error(sessionCheck.message);
           navigate('/trainer/dashboard');
         }
         return;
       }
 
-      console.log('[TrainerSession] Authorization successful, initializing WebRTC');
+      // console.log('[TrainerSession] Authorization successful, initializing WebRTC');
       await initializeWebRTC(session.id);
       setLoading(false);
-      console.log('[TrainerSession] Session initialization complete');
+      // console.log('[TrainerSession] Session initialization complete');
     } catch (error) {
       console.error('[TrainerSession] Error initializing session:', error);
       console.error('[TrainerSession] Error details:', error.response?.data);
@@ -761,7 +761,7 @@ const TrainerSession = () => {
   const initializeWebRTC = async (numericSessionId) => {
     // Prevent duplicate initialization
     if (isInitializingRef.current) {
-      console.log('[TrainerSession] Already initializing, skipping duplicate call');
+      // console.log('[TrainerSession] Already initializing, skipping duplicate call');
       return;
     }
     isInitializingRef.current = true;
@@ -769,15 +769,15 @@ const TrainerSession = () => {
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'trainer');
     try {
-      console.log('[TrainerSession] Initializing whiteboard service');
+      // console.log('[TrainerSession] Initializing whiteboard service');
       wbService.initialize();
       setWhiteboardService(wbService);
-      console.log('[TrainerSession] Whiteboard service initialized');
+      // console.log('[TrainerSession] Whiteboard service initialized');
 
       // Initialize WhiteboardTools service for managing all tools
       const tbService = new WhiteboardToolsService(wbService);
       setToolsService(tbService);
-      console.log('[TrainerSession] Tools service initialized');
+      // console.log('[TrainerSession] Tools service initialized');
     } catch (error) {
       console.error('[TrainerSession] Error initializing whiteboard:', error);
       toast.error('Failed to initialize whiteboard');
@@ -787,17 +787,17 @@ const TrainerSession = () => {
     const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
 
     try {
-      console.log('[TrainerSession] Initializing Video Conference service');
+      // console.log('[TrainerSession] Initializing Video Conference service');
 
       // Set callback for local stream (trainer's camera/mic)
       videoService.onLocalStream = (stream) => {
-        console.log('[TrainerSession] Local stream received');
+        // console.log('[TrainerSession] Local stream received');
         setLocalStream(stream);
       };
 
       // Set callback for remote stream (learner's video)
       videoService.onRemoteStream = (stream) => {
-        console.log('[TrainerSession] Remote stream received from learner');
+        // console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
 
         // Only show toast once when learner first connects
@@ -809,7 +809,7 @@ const TrainerSession = () => {
 
       // Set callback for connection state changes
       videoService.onConnectionStateChange = (state) => {
-        console.log('[TrainerSession] Connection state:', state);
+        // console.log('[TrainerSession] Connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -822,7 +822,7 @@ const TrainerSession = () => {
 
         // Handle learner disconnect
         if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
-          console.log('[TrainerSession] Learner disconnected');
+          // console.log('[TrainerSession] Learner disconnected');
           toast.info(`${sessionInfo?.learner_name || 'Learner'} has left the session`);
           setRemoteStream(null);
           learnerConnectedRef.current = false;
@@ -840,7 +840,7 @@ const TrainerSession = () => {
       setWebRTC(videoService);
 
       // Initialize recording service with numeric database ID
-      console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
+      // console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
       const recService = new JanusRecordingService(videoService, numericSessionId);
       setRecordingService(recService);
 
@@ -848,8 +848,8 @@ const TrainerSession = () => {
       setMicEnabled(videoService.isMicrophoneEnabled());
       setCameraEnabled(videoService.isCameraEnabled());
 
-      console.log('[TrainerSession] Video Conference service initialized');
-      console.log('[TrainerSession] Recording service initialized');
+      // console.log('[TrainerSession] Video Conference service initialized');
+      // console.log('[TrainerSession] Recording service initialized');
     } catch (error) {
       console.error('[TrainerSession] Video Conference init error:', error);
       toast.error('Failed to initialize video conference');
@@ -867,14 +867,14 @@ const TrainerSession = () => {
 
       // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
-        console.log('[TrainerSession] Turning ON video mic, turning OFF voice input');
+        // console.log('[TrainerSession] Turning ON video mic, turning OFF voice input');
         await handleVoiceToggle(); // Stop voice input
         toast.info('Voice input stopped - video conferencing mic enabled');
       }
       // If turning OFF video conferencing mic, don't auto-enable voice input
       // User should manually enable voice input if they want it
       else if (!newState && !listening) {
-        console.log('[TrainerSession] Video mic turned OFF');
+        // console.log('[TrainerSession] Video mic turned OFF');
         toast.info('Video conferencing mic disabled');
       }
     }
@@ -915,7 +915,7 @@ const TrainerSession = () => {
         if (sessionNotes && sessionNotes.trim()) {
           try {
             await sessionNotesService.saveNotes(sessionId, sessionNotes);
-            console.log('[TrainerSession] Session notes saved before ending');
+            // console.log('[TrainerSession] Session notes saved before ending');
           } catch (error) {
             console.error('[TrainerSession] Error saving notes before ending:', error);
           }
@@ -959,7 +959,7 @@ const TrainerSession = () => {
         timestamp: new Date().toISOString()
       };
       webRTC.sendSignal(freezeSignal);
-      console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
+      // console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
       // toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
     } else {
       console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
@@ -973,7 +973,7 @@ const TrainerSession = () => {
   // 🔸 How it works: manages exercise creation, updates, and learner responses
   // -----------------------------------------------------------
   const handleExerciseUpdate = (exerciseInfo) => {
-    console.log('[TrainerSession] Exercise updated:', exerciseInfo);
+    // console.log('[TrainerSession] Exercise updated:', exerciseInfo);
     setExerciseData(exerciseInfo);
 
     // Send exercise to learner via whiteboard service
@@ -987,13 +987,13 @@ const TrainerSession = () => {
   };
 
   const handleExerciseAnswerChange = (answerData) => {
-    console.log('[TrainerSession] Learner answer updated:', answerData);
+    // console.log('[TrainerSession] Learner answer updated:', answerData);
     // Trainer only displays answer updates received via WebSocket
     // Do not broadcast back - prevents feedback loops
   };
 
   const handleExerciseSubmit = (response) => {
-    console.log('[TrainerSession] Exercise response received:', response);
+    // console.log('[TrainerSession] Exercise response received:', response);
 
     // Handle learner's answer submission
     if (response.status === 'submitted') {
@@ -1017,7 +1017,7 @@ const TrainerSession = () => {
   };
 
   const handleExerciseDelete = () => {
-    console.log('[TrainerSession] Exercise deleted');
+    // console.log('[TrainerSession] Exercise deleted');
     setShowExercise(false);
     setExerciseData({
       question: ''
@@ -1055,7 +1055,7 @@ const TrainerSession = () => {
   // 🔸 How it works: shows toast, cleans up local resources, navigates trainer away
   // -----------------------------------------------------------
   const _handleSessionEnded = (payload) => {
-    console.log('Session ended by:', payload.ended_by);
+    // console.log('Session ended by:', payload.ended_by);
     toast.info('Session has been ended');
     cleanup();
     navigate('/trainer/dashboard');
@@ -1070,12 +1070,12 @@ const TrainerSession = () => {
     if (webRTC?.localStream) {
       webRTC.localStream.getTracks().forEach(track => {
         track.stop();
-        console.log(`[TrainerSession] Stopped ${track.kind} track`);
+        // console.log(`[TrainerSession] Stopped ${track.kind} track`);
       });
     }
     if (webRTC) {
       webRTC.close();
-      console.log('[TrainerSession] WebRTC closed and media access revoked');
+      // console.log('[TrainerSession] WebRTC closed and media access revoked');
     }
 
     // Reset initialization flag to allow re-initialization
@@ -1088,7 +1088,7 @@ const TrainerSession = () => {
     }
     if (recordingService) {
       recordingService.destroy();
-      console.log('[TrainerSession] Recording service cleaned up');
+      // console.log('[TrainerSession] Recording service cleaned up');
     }
 
     // clear timers and stopwatches intervals
@@ -1135,7 +1135,7 @@ const TrainerSession = () => {
       position: videoData.position,
     };
 
-    console.log('[TrainerSession] YouTube popup created:', newPopup);
+    // console.log('[TrainerSession] YouTube popup created:', newPopup);
     setYoutubePopups(prev => [...prev, newPopup]);
 
     // Broadcast to learner via whiteboard service
@@ -1147,7 +1147,7 @@ const TrainerSession = () => {
         position: newPopup.position,
         timestamp: Date.now()
       });
-      console.log('[TrainerSession] YouTube popup sync sent to learner');
+      // console.log('[TrainerSession] YouTube popup sync sent to learner');
     }
   };
 
@@ -1164,7 +1164,7 @@ const TrainerSession = () => {
         popupId: popupId,
         timestamp: Date.now()
       });
-      console.log('[TrainerSession] YouTube popup closed, sync sent to learner');
+      // console.log('[TrainerSession] YouTube popup closed, sync sent to learner');
     }
   };
 
@@ -1182,10 +1182,10 @@ const TrainerSession = () => {
   // 🔸 How it works: captures selected program and meter values, sends to backend API
   // -----------------------------------------------------------
   const handleSaveReport = async () => {
-    console.log('[handleSaveReport] Starting - sessionInfo:', sessionInfo);
+    // console.log('[handleSaveReport] Starting - sessionInfo:', sessionInfo);
 
     if (!sessionInfo || !sessionInfo.id) {
-      console.error('[handleSaveReport] Session info not available:', sessionInfo);
+      // console.error('[handleSaveReport] Session info not available:', sessionInfo);
       toast.error('Session information not loaded');
       return;
     }
@@ -1217,9 +1217,9 @@ const TrainerSession = () => {
         reinforcement_meter: selectedReinforcementLevel
       };
 
-      console.log('[TrainerSession] Report data being sent:', JSON.stringify(reportData, null, 2));
-      console.log('[TrainerSession] session_id type:', typeof reportData.session_id, 'value:', reportData.session_id);
-      console.log('[TrainerSession] learner_id type:', typeof reportData.learner_id, 'value:', reportData.learner_id);
+      // console.log('[TrainerSession] Report data being sent:', JSON.stringify(reportData, null, 2));
+      // console.log('[TrainerSession] session_id type:', typeof reportData.session_id, 'value:', reportData.session_id);
+      // console.log('[TrainerSession] learner_id type:', typeof reportData.learner_id, 'value:', reportData.learner_id);
 
       await sessionReportService.create(reportData);
       toast.success(`Report saved: ${selectedProgram.goal}`);
@@ -1260,9 +1260,9 @@ const TrainerSession = () => {
     // Set new auto-save timer (save after 2 seconds of no typing)
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
-        console.log('[TrainerSession] 💾 Auto-saving session notes...');
+        // console.log('[TrainerSession] 💾 Auto-saving session notes...');
         await sessionNotesService.saveNotes(sessionId, newNotes);
-        console.log('[TrainerSession] ✅ Session notes auto-saved successfully');
+        // console.log('[TrainerSession] ✅ Session notes auto-saved successfully');
       } catch (error) {
         console.error('[TrainerSession] ❌ Error auto-saving notes:', error);
         // Don't show toast for auto-save errors to avoid interrupting user
@@ -1276,7 +1276,7 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const handleClearNotes = async () => {
     try {
-      console.log('[TrainerSession] Clearing session notes');
+      // console.log('[TrainerSession] Clearing session notes');
       setSessionNotes('');
       // Clear the auto-save timer if one is pending
       if (autoSaveTimerRef.current) {
@@ -1284,7 +1284,7 @@ const TrainerSession = () => {
       }
       // Immediately save the clear action to backend
       await sessionNotesService.clearNotes(sessionId);
-      console.log('[TrainerSession] ✅ Session notes cleared successfully');
+      // console.log('[TrainerSession] ✅ Session notes cleared successfully');
       toast.info('Session notes cleared');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error clearing notes:', error);
@@ -1299,9 +1299,9 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const handleForceSaveNotes = async () => {
     try {
-      console.log('[TrainerSession] Force-saving notes (disconnect recovery)');
+      // console.log('[TrainerSession] Force-saving notes (disconnect recovery)');
       await sessionNotesService.forceSaveNotes(sessionId, sessionNotes);
-      console.log('[TrainerSession] ✅ Notes force-saved successfully');
+      // console.log('[TrainerSession] ✅ Notes force-saved successfully');
       toast.info('Notes recovered and saved');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error force-saving notes:', error);
@@ -1396,7 +1396,7 @@ const TrainerSession = () => {
 
       try {
         setIsSearching(true);
-        console.log('[TrainerSession] Searching database for:', learningContentSearch);
+        // console.log('[TrainerSession] Searching database for:', learningContentSearch);
 
         // Fetch all learning content from database based on user role
         const userData = localStorage.getItem('user_data');
@@ -1422,7 +1422,7 @@ const TrainerSession = () => {
           );
         });
 
-        console.log('[TrainerSession] Database search results:', filtered.length);
+        // console.log('[TrainerSession] Database search results:', filtered.length);
         setDatabaseSearchResults(filtered);
       } catch (error) {
         console.error('[TrainerSession] Error searching database:', error);
@@ -1505,7 +1505,7 @@ const TrainerSession = () => {
         });
       }
     }
-    console.log('[TrainerSession] Learner tool access updated:', newAccess);
+    // console.log('[TrainerSession] Learner tool access updated:', newAccess);
   };
 
   // -----------------------------------------------------------
@@ -1539,7 +1539,7 @@ const TrainerSession = () => {
         audioRef.current.src = musicOptions[musicId].url;
         audioRef.current.loop = true; // Loop the music
         audioRef.current.volume = musicVolume; // Set volume from state
-        audioRef.current.play().catch(err => console.log('Audio play error:', err));
+        audioRef.current.play().catch(err => { /* console.log('Audio play error:', err); */ });
       }
 
       // Notify learner to play the same music
@@ -1798,7 +1798,7 @@ const TrainerSession = () => {
         }
       }
     } catch (error) {
-      console.log('[TrainerSession] Could not play pop sound:', error);
+      // console.log('[TrainerSession] Could not play pop sound:', error);
     }
   };
 
@@ -1833,7 +1833,7 @@ const TrainerSession = () => {
   // 🔸 How it works: depending on the tool string, creates items, starts intervals, emits via whiteboardService
   // -----------------------------------------------------------
   const handleToolClick = (tool) => {
-    console.log('[TrainerSession] Tool clicked:', tool);
+    // console.log('[TrainerSession] Tool clicked:', tool);
     const canvasEl = document.querySelector('.whiteboard canvas');
 
     const rect = canvasEl?.getBoundingClientRect();
@@ -1859,7 +1859,7 @@ const TrainerSession = () => {
 
     const _genId = () => Date.now() + Math.floor(Math.random() * 1000);
 
-    console.log('[TrainerSession] Matching tool in switch:', tool);
+    // console.log('[TrainerSession] Matching tool in switch:', tool);
     switch (tool) {
       // ---------------------- SELECT (Learner Tool Access) ----------------------
       case '✋ Select': {
@@ -1875,9 +1875,9 @@ const TrainerSession = () => {
 
       // ---------------------- FEEDBACK & EMOJIS ----------------------
       case '👍 Good Job!': {
-        console.log('[TrainerSession] MATCHED Good Job case!');
+        // console.log('[TrainerSession] MATCHED Good Job case!');
         const message = 'Good Job! 👍';
-        console.log('[TrainerSession] Setting feedback message:', message);
+        // console.log('[TrainerSession] Setting feedback message:', message);
         setFeedbackMessage(message);
         if (whiteboardService) {
           whiteboardService.send('feedback_message', {
@@ -1892,7 +1892,7 @@ const TrainerSession = () => {
       }
 
       case '🌟 Wow!': {
-        console.log('[TrainerSession] MATCHED Wow case!');
+        // console.log('[TrainerSession] MATCHED Wow case!');
         const message = 'Wow! 🌟';
         setFeedbackMessage(message);
         if (whiteboardService) {
@@ -1907,7 +1907,7 @@ const TrainerSession = () => {
       }
 
       case '💪 Doing Well': {
-        console.log('[TrainerSession] MATCHED Doing Well case!');
+        // console.log('[TrainerSession] MATCHED Doing Well case!');
         const message = 'Doing Well 💪';
         setFeedbackMessage(message);
         if (whiteboardService) {
@@ -1950,7 +1950,7 @@ const TrainerSession = () => {
       }
 
       case '😌 Relax': {
-        console.log('[TrainerSession] MATCHED Relax case!');
+        // console.log('[TrainerSession] MATCHED Relax case!');
         const message = 'Relax 😌';
         setFeedbackMessage(message);
         if (whiteboardService) {
@@ -1964,31 +1964,31 @@ const TrainerSession = () => {
       }
 
       case '🫧 Bubbles': {
-        console.log('[TrainerSession] Spawning bubble animation');
+        // console.log('[TrainerSession] Spawning bubble animation');
         spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
         return;
       }
 
       case '😊 Smileys': {
-        console.log('[TrainerSession] Spawning smileys animation');
+        // console.log('[TrainerSession] Spawning smileys animation');
         spawnFloatingAnimation('smiley', REACTION_SVG_ASSETS.smiley);
         return;
       }
 
       case '🎈 Balloons': {
-        console.log('[TrainerSession] Spawning balloons animation');
+        // console.log('[TrainerSession] Spawning balloons animation');
         spawnFloatingAnimation('balloon', REACTION_SVG_ASSETS.balloon);
         return;
       }
 
       case '⭐ Stars': {
-        console.log('[TrainerSession] Spawning stars animation');
+        // console.log('[TrainerSession] Spawning stars animation');
         spawnFloatingAnimation('star', REACTION_SVG_ASSETS.star);
         return;
       }
 
       case '⏳ Wait': {
-        console.log('[TrainerSession] Showing wait message');
+        // console.log('[TrainerSession] Showing wait message');
         const message = 'Please Wait ⏳';
         setWaitingMessage(message);
         if (whiteboardService) {
@@ -2004,7 +2004,7 @@ const TrainerSession = () => {
 
       // ---------------------- EXERCISE TOOL ----------------------
       case '💡 Exercise': {
-        console.log('[TrainerSession] Exercise tool clicked');
+        // console.log('[TrainerSession] Exercise tool clicked');
         setShowExercise(true);
         return;
       }
@@ -2014,7 +2014,7 @@ const TrainerSession = () => {
 
       // ---------------------- DEFAULT ----------------------
       default:
-        console.log('[TrainerSession] No case matched for tool:', tool);
+        // console.log('[TrainerSession] No case matched for tool:', tool);
         toast.info(`Tool ${tool} clicked`);
         return;
     }
@@ -2332,18 +2332,18 @@ const TrainerSession = () => {
               {/* Clear Canvas Button */}
               <button
                 onClick={() => {
-                  console.log('[TrainerSession] 🗑️ Clear All button clicked!');
-                  console.log('[TrainerSession] whiteboardService available:', !!whiteboardService);
+                  // console.log('[TrainerSession] 🗑️ Clear All button clicked!');
+                  // console.log('[TrainerSession] whiteboardService available:', !!whiteboardService);
                   setCanvasItems([]);
                   setBuckets([]);
                   setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
                   setClearCanvasTrigger(prev => prev + 1); // Trigger full canvas clear including pen strokes
                   if (whiteboardService) {
-                    console.log('[TrainerSession] 📤 Sending clear_canvas message to learner...');
+                    // console.log('[TrainerSession] 📤 Sending clear_canvas message to learner...');
                     whiteboardService.send('clear_canvas', {
                       timestamp: Date.now()
                     });
-                    console.log('[TrainerSession] ✅ clear_canvas message sent!');
+                    // console.log('[TrainerSession] ✅ clear_canvas message sent!');
                   } else {
                     console.error('[TrainerSession] ❌ ERROR: whiteboardService is NULL/UNDEFINED!');
                   }
@@ -2530,6 +2530,7 @@ const TrainerSession = () => {
                   <Emoji emoji="⏲️" size="base" />
                   <span className="hidden sm:inline">Stopwatch</span>
                 </button>
+
                 {[
                   { label: 'Good Job!', icon: '👍' },
                   { label: 'Wow!', icon: '🌟' },
@@ -2542,21 +2543,17 @@ const TrainerSession = () => {
                   { label: 'Balloons', icon: '🎈' },
                   { label: 'Stars', icon: '⭐' },
                   { label: 'Wait', icon: '⏳' }
-                ].map((t, i) => {
-                  // Use pastel colors for Bubbles, Smileys, Balloons, Stars - no shadow/border
-                  // Use unified button theme for feedback/tool buttons
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                      className={`${activeIcons[t.label] ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
-                      title={t.label}
-                    >
-                      <Emoji emoji={t.icon} size="base" className="inline-block" />
-                      <span className="hidden sm:inline">{t.label}</span>
-                    </button>
-                  );
-                })}
+                ].map((t, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
+                    className={`${activeIcons[t.label] ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
+                    title={t.label}
+                  >
+                    <Emoji emoji={t.icon} size="base" className="inline-block" />
+                    <span className="hidden sm:inline">{t.label}</span>
+                  </button>
+                ))}
               </div>
             </div>{/* end .all-tools-group */}
 
