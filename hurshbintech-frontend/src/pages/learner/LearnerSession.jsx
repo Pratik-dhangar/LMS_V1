@@ -15,6 +15,7 @@ import Exercise from '../../components/session/Exercise';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import useMessages from '../../hooks/useMessages';
+import useComments from '../../hooks/useComments';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
@@ -71,10 +72,48 @@ const LearnerSession = () => {
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [promptLineAnimating, setPromptLineAnimating] = useState(false);
 
   // Use messages hook
   const { messages, currentMessage, setCurrentMessage, sendMessage, handleKeyPress, addReceivedMessage } = useMessages(webRTC, 'learner');
+
+  // -----------------------------------------------------------  
+  // 🔹 Purpose: Comments using custom hook (learner can send, but panel only shows when trainer opens)
+  // 🔸 How it works: useComments hook receives comments from trainer, learner can also send
+  // -----------------------------------------------------------  
+  const {
+    trainerComments,
+    commentInput,
+    setCommentInput,
+    sendComment,
+    addReceivedComment
+  } = useComments(whiteboardService, 'learner');
+
+  // -----------------------------------------------------------  
+  // 🔹 Purpose: Set up Whiteboard comment callback
+  // 🔸 How it works: When a comment is received via Whiteboard, add it to comments
+  // -----------------------------------------------------------  
+  useEffect(() => {
+    if (whiteboardService) {
+      whiteboardService.onCommentUpdate = (data) => {
+        // console.log('[LearnerSession] Comment received:', data);
+        addReceivedComment(data);
+      };
+
+      // Handle comments tool toggle from trainer
+      whiteboardService.onCommentsToggle = (data) => {
+        console.log('[LearnerSession] Comments toggle received:', data);
+        setIsCommentsOpen(data.visible);
+      };
+    }
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onCommentUpdate = null;
+        whiteboardService.onCommentsToggle = null;
+      }
+    };
+  }, [whiteboardService, addReceivedComment, setIsCommentsOpen]);
 
   // Listen for feedback message state changes to debug
   useEffect(() => {
@@ -652,6 +691,13 @@ const LearnerSession = () => {
           }
         });
       }
+    };
+
+    // Set up callback for erase pen strokes from trainer
+    whiteboardService.onErasePen = (data) => {
+      // console.log('[LearnerSession] Erase pen received from trainer:', data);
+      setErasePenTrigger(prev => prev + 1); // Trigger canvas clear in Whiteboard component
+      setRedrawCanvasTrigger(prev => prev + 1); // Trigger redraw of canvas items after clear
     };
 
     // Set up callback for clear canvas event (also clears video, items, and buckets)
@@ -1703,6 +1749,57 @@ const LearnerSession = () => {
                     >
                       Send
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Comments Section - Appears when trainer opens it */}
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
+            background: 'linear-gradient(135deg, #f3f4f6 0%, #f5f6f8 100%)',
+            border: '1px solid rgba(59, 130, 246, 0.15)',
+            display: isCommentsOpen ? 'block' : 'none'
+          }}>
+            <div
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-blue-50/30"
+            >
+              <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800">💬 Comments</h3>
+              <span className="text-blue-600 text-lg">▼</span>
+            </div>
+            {isCommentsOpen && (
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl overflow-hidden" style={{
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(59, 130, 246, 0.12)'
+                }}>
+                  {/* Trainer Comments Section */}
+                  <div className="mb-3 p-4 sm:p-5 border-b border-gray-200">
+                    <div className="font-semibold text-gray-700 text-xs sm:text-sm mb-2">👨‍🏫 Trainer Comments</div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 min-h-[60px] max-h-[100px] overflow-y-auto text-xs sm:text-sm text-gray-700" style={{ fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}>
+                      {trainerComments || <span className="text-gray-400">Trainer comments will appear here...</span>}
+                    </div>
+                  </div>
+
+                  {/* Learner Comments Input Section */}
+                  <div className="p-4 sm:p-5">
+                    <div className="font-semibold text-gray-700 text-xs sm:text-sm mb-2">👨‍🎓 Your Comments</div>
+                    <div className="flex gap-2 w-full min-w-0">
+                      <input
+                        type="text"
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendComment()}
+                        placeholder="Type your comment..."
+                        className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+                      />
+                      <button
+                        onClick={sendComment}
+                        className="flex-shrink-0 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                      >
+                        Send
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
