@@ -194,7 +194,7 @@ class WSUserTyping(WSMessageBase):
 class MessageReadUpdate(BaseModel):
     """Mark messages as read"""
     conversation_id: int
-    message_ids: List[int] = []  # Empty means mark all in conversation
+    message_ids: Optional[List[int]] = []  # Empty or None means mark all in conversation
 
 
 class ConversationMemberAdd(BaseModel):

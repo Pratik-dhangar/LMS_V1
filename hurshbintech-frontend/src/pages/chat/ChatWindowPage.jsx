@@ -11,18 +11,15 @@ import {
   Paperclip, 
   Smile,
   MoreVertical,
-  Users,
-  Phone,
-  Video
+  Users
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useChatWebSocket } from '../../hooks/chat/useChatWebSocket';
 
 const ChatWindowPage = () => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const {
     currentConversation,
     messages,
@@ -34,9 +31,10 @@ const ChatWindowPage = () => {
     sendFileMessage,
     markAsRead,
     conversations,
+    sendTypingStatus,
+    connectChat,
+    disconnectChat,
   } = useChat();
-
-  const { sendTypingStatus } = useChatWebSocket();
 
   const [messageInput, setMessageInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -44,6 +42,16 @@ const ChatWindowPage = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const markedAsReadRef = useRef(new Set()); // Track which messages have been marked as read
+
+  // Connect to chat when component mounts
+  useEffect(() => {
+    connectChat();
+    
+    return () => {
+      disconnectChat();
+    };
+  }, [connectChat, disconnectChat]);
 
   // Load conversation and messages
   useEffect(() => {
@@ -56,12 +64,26 @@ const ChatWindowPage = () => {
     }
   }, [conversationId, conversations, selectConversation, loadMessages]);
 
-  // Mark messages as read when viewing conversation
+  // Mark messages as read when viewing conversation (with infinite loop prevention)
   useEffect(() => {
     if (currentConversation && messages[currentConversation.id]?.length > 0) {
-      markAsRead(currentConversation.id);
+      // Only mark as read if there are unread messages from other users
+      const unreadMessages = messages[currentConversation.id].filter(
+        msg => !msg.is_read && 
+               msg.sender_id !== currentUser?.id && 
+               !markedAsReadRef.current.has(msg.id)
+      );
+      
+      if (unreadMessages.length > 0) {
+        const messageIds = unreadMessages.map(msg => msg.id);
+        
+        // Mark these messages in our ref to prevent re-marking
+        messageIds.forEach(id => markedAsReadRef.current.add(id));
+        
+        markAsRead(currentConversation.id, messageIds);
+      }
     }
-  }, [currentConversation, messages, markAsRead]);
+  }, [currentConversation, messages, markAsRead, currentUser]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -156,7 +178,7 @@ const ChatWindowPage = () => {
     if (!currentConversation || !typingUsers[currentConversation.id]) return [];
     
     const typingSet = typingUsers[currentConversation.id];
-    const typingArray = Array.from(typingSet).filter(id => id !== user?.id);
+    const typingArray = Array.from(typingSet).filter(id => id !== currentUser?.id);
     
     // Get names from conversation members
     const names = currentConversation.members
@@ -171,7 +193,7 @@ const ChatWindowPage = () => {
   // Check if other user is online (for direct chats)
   const isOtherUserOnline = () => {
     if (currentConversation?.type === 'DIRECT') {
-      const otherUserId = currentConversation.member_ids?.find(id => id !== user?.id);
+      const otherUserId = currentConversation.member_ids?.find(id => id !== currentUser?.id);
       return otherUserId && onlineUsers.has(otherUserId);
     }
     return false;
@@ -230,12 +252,6 @@ const ChatWindowPage = () => {
           {/* Actions */}
           <div className="flex items-center gap-2">
             <button className="p-2 hover:bg-blue-700 rounded-full transition">
-              <Phone size={20} />
-            </button>
-            <button className="p-2 hover:bg-blue-700 rounded-full transition">
-              <Video size={20} />
-            </button>
-            <button className="p-2 hover:bg-blue-700 rounded-full transition">
               <MoreVertical size={20} />
             </button>
           </div>
@@ -245,7 +261,7 @@ const ChatWindowPage = () => {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {conversationMessages.map((message, index) => {
-          const isOwnMessage = message.sender_id === user?.id;
+          const isOwnMessage = message.sender_id === currentUser?.id;
           const showSenderName = currentConversation.type === 'GROUP' && !isOwnMessage;
 
           return (
