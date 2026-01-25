@@ -54,6 +54,7 @@ const UnifiedChatPage = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupName, setGroupName] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [filterTag, setFilterTag] = useState('ALL'); // Track active filter
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -82,7 +83,22 @@ const UnifiedChatPage = () => {
   const filteredConversations = conversations.filter(conv => {
     const name = conv.name?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
-    return name.includes(query);
+    
+    // Search filter
+    if (query && !name.includes(query)) {
+      return false;
+    }
+
+    // Tag filters
+    switch (filterTag) {
+      case 'UNREAD':
+        return (unreadCounts[conv.id] || 0) > 0;
+      case 'GROUPS':
+        return conv.type === 'GROUP';
+      case 'ALL':
+      default:
+        return true;
+    }
   });
 
   // Available users for new chat
@@ -340,9 +356,24 @@ const UnifiedChatPage = () => {
 
         {/* Filter Tags */}
         <div className="chat-filter-tags">
-          <button className="chat-filter-tag active">All</button>
-          <button className="chat-filter-tag">Unread</button>
-          <button className="chat-filter-tag">Groups</button>
+          <button 
+            className={`chat-filter-tag ${filterTag === 'ALL' ? 'active' : ''}`}
+            onClick={() => setFilterTag('ALL')}
+          >
+            All
+          </button>
+          <button 
+            className={`chat-filter-tag ${filterTag === 'UNREAD' ? 'active' : ''}`}
+            onClick={() => setFilterTag('UNREAD')}
+          >
+            Unread
+          </button>
+          <button 
+            className={`chat-filter-tag ${filterTag === 'GROUPS' ? 'active' : ''}`}
+            onClick={() => setFilterTag('GROUPS')}
+          >
+            Groups
+          </button>
         </div>
 
         {/* Chat List */}
@@ -403,6 +434,41 @@ const UnifiedChatPage = () => {
                 </div>
               );
             })
+          )}
+
+          {/* Start New Conversation Section */}
+          {availableUsers.length > 0 && filterTag === 'ALL' && (
+            <div className="chat-start-conversation-section">
+              <div className="chat-section-divider" />
+              <h3 className="chat-section-title">Start New Conversation</h3>
+              <div className="chat-available-users">
+                {availableUsers.map(user => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleNewDirectChat(user)}
+                    className="chat-available-user-item"
+                  >
+                    <div className="chat-avatar-wrapper">
+                      <div className="chat-user-avatar">
+                        {user.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      {onlineUsers.has(user.id) && (
+                        <div className="chat-online-badge" />
+                      )}
+                    </div>
+
+                    <div className="chat-user-details">
+                      <p className="chat-user-name">{user.name}</p>
+                      <p className="chat-user-role">{user.role}</p>
+                    </div>
+
+                    {onlineUsers.has(user.id) && (
+                      <span className="chat-user-online-dot">●</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

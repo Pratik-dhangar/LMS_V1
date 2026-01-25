@@ -61,7 +61,7 @@ async def get_all_chat_users(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all active users in the system for chat
+    Get all active users in the system for chat (excluding current user)
     All users are visible to all users
     """
     users = await chat_crud.get_all_active_users(db)
@@ -69,6 +69,10 @@ async def get_all_chat_users(
     
     user_responses = []
     for user in users:
+        # Exclude current user from the list
+        if user.id == current_user.id:
+            continue
+            
         user_responses.append({
             "id": user.id,
             "name": user.name,

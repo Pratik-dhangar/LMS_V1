@@ -81,8 +81,15 @@ export const ChatProvider = ({ children }) => {
         name
       });
       
-      // Add to conversations list
-      setConversations(prev => [data, ...prev]);
+      // Add to conversations list (avoid duplicates)
+      setConversations(prev => {
+        // Check if conversation already exists
+        const exists = prev.some(c => c.id === data.id);
+        if (exists) {
+          return prev; // Already exists, don't add duplicate
+        }
+        return [data, ...prev];
+      });
       return data;
     } catch (err) {
       console.error('Failed to create conversation:', err);
