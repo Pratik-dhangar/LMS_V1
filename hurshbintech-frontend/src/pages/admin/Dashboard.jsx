@@ -23,8 +23,7 @@ const AdminDashboard = () => {
     { id: '1.11', title: 'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
     { id: '3.1', title: 'Manage Subscription Packages', description: 'Create and manage subscription packages for learners', icon: Package, color: 'orange', onClick: () => navigate('/admin/subscriptions/packages') },
     { id: '3.2', title: 'Manage Discount Codes', description: 'Create and manage discount codes for subscriptions', icon: Gift, color: 'violet', onClick: () => navigate('/admin/subscriptions/discounts') },
-    { id: '3.3', title: 'Subscription Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'blue', onClick: () => navigate('/admin/subscriptions/records') },
-    { id: '2.2', title: 'Communication', description: 'Send messages and communicate with team members', icon: MessageSquare, color: 'purple', onClick: () => navigate('/admin/communication') },
+    { id: '3.3', title: 'Subscription Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'blue', onClick: () => navigate('/admin/subscriptions/records') }
   ];
 
   return (

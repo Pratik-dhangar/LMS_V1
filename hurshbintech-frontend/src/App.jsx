@@ -118,8 +118,7 @@ import useNetworkSpeedNotifier from './hooks/useNetworkSpeedNotifier';
 // Chat Components
 import { ChatProvider } from './context/chat/ChatContext';
 import ChatIconWidget from './components/chat/ChatIconWidget';
-import ChatPage from './pages/chat/ChatPage';
-import ChatWindowPage from './pages/chat/ChatWindowPage';
+import UnifiedChatPage from './pages/chat/UnifiedChatPage';
 
 import './App.css';
 
@@ -815,7 +814,7 @@ function AppRoutes() {
             path="/chat"
             element={
               <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
-                <ChatPage />
+                <UnifiedChatPage />
               </ProtectedRoute>
             }
           />
@@ -823,7 +822,7 @@ function AppRoutes() {
             path="/chat/:conversationId"
             element={
               <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
-                <ChatWindowPage />
+                <UnifiedChatPage />
               </ProtectedRoute>
             }
           />

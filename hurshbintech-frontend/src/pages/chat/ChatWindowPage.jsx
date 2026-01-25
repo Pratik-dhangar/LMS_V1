@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import '../../styles/ManageUsersLayout.css';
+import '../../styles/chats/ChatWindowPage.css';
 
 const ChatWindowPage = () => {
   const { conversationId } = useParams();
@@ -201,8 +203,12 @@ const ChatWindowPage = () => {
 
   if (!currentConversation) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="page-container">
+        <main className="page-main">
+          <div className="chat-window-loading-container">
+            <div className="chat-window-loading-spinner"></div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -210,199 +216,209 @@ const ChatWindowPage = () => {
   const conversationMessages = messages[currentConversation.id] || [];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <button
-              onClick={() => navigate('/chat')}
-              className="p-2 hover:bg-blue-700 rounded-full transition"
-            >
-              <ArrowLeft size={24} />
-            </button>
-
-            {/* Avatar & Name */}
-            <div className="flex items-center gap-3 flex-1">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center text-white font-bold">
-                  {currentConversation.type === 'GROUP' ? (
-                    <Users size={20} />
-                  ) : (
-                    currentConversation.name?.charAt(0).toUpperCase() || 'U'
-                  )}
-                </div>
-                {isOtherUserOnline() && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-600" />
-                )}
-              </div>
-
-              <div className="flex-1">
-                <h2 className="font-bold">{currentConversation.name}</h2>
-                <p className="text-xs text-blue-100">
-                  {isOtherUserOnline() ? 'Online' : 
-                   currentConversation.type === 'GROUP' ? 
-                   `${currentConversation.members?.length || 0} members` : 
-                   'Offline'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <button className="p-2 hover:bg-blue-700 rounded-full transition">
-              <MoreVertical size={20} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {conversationMessages.map((message, index) => {
-          const isOwnMessage = message.sender_id === currentUser?.id;
-          const showSenderName = currentConversation.type === 'GROUP' && !isOwnMessage;
-
-          return (
-            <div
-              key={message.id}
-              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                  isOwnMessage
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-900 shadow'
-                }`}
+    <div className="page-container">
+      <main className="page-main">
+        <div className="page-content">
+          {/* Header */}
+          <div className="chat-window-header">
+            <div className="chat-window-header-flex">
+              <button
+                onClick={() => navigate('/chat')}
+                className="chat-window-back-btn"
               >
-                {showSenderName && (
-                  <p className="text-xs font-semibold text-blue-600 mb-1">
-                    {message.sender_name}
-                  </p>
-                )}
+                <ArrowLeft size={24} />
+              </button>
 
-                {/* File Message */}
-                {message.file_url && (
-                  <div className="mb-2">
-                    {message.message_type === 'IMAGE' ? (
-                      <img
-                        src={message.file_url}
-                        alt={message.file_name}
-                        className="rounded max-w-full h-auto"
-                      />
-                    ) : message.message_type === 'VIDEO' ? (
-                      <video
-                        src={message.file_url}
-                        controls
-                        className="rounded max-w-full"
-                      />
-                    ) : message.message_type === 'AUDIO' ? (
-                      <audio src={message.file_url} controls className="w-full" />
+              {/* Avatar & Name */}
+              <div className="chat-window-info-wrapper">
+                <div className="chat-window-avatar-container">
+                  <div className="chat-window-avatar">
+                    {currentConversation.type === 'GROUP' ? (
+                      <Users size={20} />
                     ) : (
-                      <a
-                        href={message.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm underline"
-                      >
-                        <Paperclip size={16} />
-                        {message.file_name}
-                      </a>
+                      currentConversation.name?.charAt(0).toUpperCase() || 'U'
                     )}
                   </div>
-                )}
-
-                {/* Text Content */}
-                {message.content && (
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {message.content}
-                  </p>
-                )}
-
-                {/* Time & Read Receipts */}
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className={`text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {formatMessageTime(message.created_at)}
-                  </span>
-                  
-                  {isOwnMessage && message.read_receipts && message.read_receipts.length > 0 && (
-                    <span className="text-blue-100 text-xs">✓✓</span>
+                  {isOtherUserOnline() && (
+                    <div className="chat-window-online-indicator" />
                   )}
+                </div>
+
+                <div className="chat-window-info">
+                  <h2 className="chat-window-name">{currentConversation.name}</h2>
+                  <p className="chat-window-status">
+                    {isOtherUserOnline() ? 'Online' : 
+                     currentConversation.type === 'GROUP' ? 
+                     `${currentConversation.members?.length || 0} members` : 
+                     'Offline'}
+                  </p>
                 </div>
               </div>
             </div>
-          );
-        })}
 
-        {/* Typing Indicator */}
-        {typingNames.length > 0 && (
-          <div className="flex justify-start">
-            <div className="bg-gray-300 rounded-lg px-4 py-2">
-              <p className="text-sm text-gray-600">
-                {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing...
-              </p>
+            {/* Actions */}
+            <div className="chat-window-actions">
+              <button className="chat-window-menu-btn">
+                <MoreVertical size={20} />
+              </button>
             </div>
           </div>
-        )}
 
-        <div ref={messagesEndRef} />
-      </div>
+          {/* Messages Area */}
+          <div className="chat-window-messages">
+            <div className="chat-window-messages-list">
+              {conversationMessages.map((message, index) => {
+                const isOwnMessage = message.sender_id === currentUser?.id;
+                const showSenderName = currentConversation.type === 'GROUP' && !isOwnMessage;
 
-      {/* Input Area */}
-      <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-4">
-        <div className="flex items-center gap-2">
-          {/* File Upload */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingFile}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition disabled:opacity-50"
-          >
-            <Paperclip size={24} />
-          </button>
+                return (
+                  <div
+                    key={message.id}
+                    className={`chat-message ${isOwnMessage ? 'sent' : 'received'}`}
+                  >
+                    <div className="chat-message-avatar">
+                      {message.sender_name?.charAt(0).toUpperCase() || 'U'}
+                    </div>
 
-          {/* Message Input */}
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={messageInput}
-              onChange={(e) => {
-                setMessageInput(e.target.value);
-                handleTypingStart();
-              }}
-              placeholder="Type a message..."
-              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-600 hover:text-blue-600"
-            >
-              <Smile size={20} />
-            </button>
+                    <div className="chat-message-content">
+                      {showSenderName && (
+                        <p className="chat-message-sender">
+                          {message.sender_name}
+                        </p>
+                      )}
+
+                      <div className="chat-message-bubble">
+                        {/* File Message */}
+                        {message.file_url && (
+                          <div className="chat-message-file-container">
+                            {message.message_type === 'IMAGE' ? (
+                              <img
+                                src={message.file_url}
+                                alt={message.file_name}
+                                className="chat-message-image"
+                              />
+                            ) : message.message_type === 'VIDEO' ? (
+                              <video
+                                src={message.file_url}
+                                controls
+                                className="chat-message-video"
+                              />
+                            ) : message.message_type === 'AUDIO' ? (
+                              <audio src={message.file_url} controls className="chat-message-audio" />
+                            ) : (
+                              <a
+                                href={message.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="chat-message-file-link"
+                              >
+                                <Paperclip size={16} />
+                                {message.file_name}
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Text Content */}
+                        {message.content && (
+                          <p className="chat-message-text">
+                            {message.content}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Time & Read Receipts */}
+                      <div className="chat-message-footer">
+                        <span className="chat-message-time">
+                          {formatMessageTime(message.created_at)}
+                        </span>
+                        
+                        {isOwnMessage && message.read_receipts && message.read_receipts.length > 0 && (
+                          <span className="chat-message-read-receipt">✓✓</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Typing Indicator */}
+              {typingNames.length > 0 && (
+                <div className="chat-typing-indicator">
+                  <p className="chat-typing-text">
+                    {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing...
+                  </p>
+                  <div className="chat-typing-dots">
+                    <div className="chat-typing-dot"></div>
+                    <div className="chat-typing-dot"></div>
+                    <div className="chat-typing-dot"></div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
           </div>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={!messageInput.trim()}
-            className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-          >
-            <Send size={20} />
-          </button>
-        </div>
+          {/* Input Area */}
+          <form onSubmit={handleSendMessage} className="chat-input-container">
+            <div className="chat-input-wrapper">
+              {/* File Upload */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                className="chat-input-file-hidden"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingFile}
+                className="chat-input-file-btn"
+              >
+                <Paperclip size={24} />
+              </button>
 
-        {uploadingFile && (
-          <p className="text-sm text-gray-500 mt-2">Uploading file...</p>
-        )}
-      </form>
+              {/* Message Input */}
+              <div className="chat-input-field-wrapper">
+                <input
+                  type="text"
+                  value={messageInput}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value);
+                    handleTypingStart();
+                  }}
+                  placeholder="Type a message..."
+                  className="chat-input-field"
+                />
+                <button
+                  type="button"
+                  className="chat-input-emoji-btn"
+                >
+                  <Smile size={20} />
+                </button>
+              </div>
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!messageInput.trim()}
+                className="chat-input-send-btn"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+
+            {uploadingFile && (
+              <div className="chat-uploading-indicator">
+                <div className="chat-uploading-spinner"></div>
+                <span>Uploading file...</span>
+              </div>
+            )}
+          </form>
+        </div>
+      </main>
     </div>
   );
 };

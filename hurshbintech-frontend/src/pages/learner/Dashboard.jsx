@@ -78,15 +78,10 @@ const LearnerDashboard = () => {
       onClick: () => navigate("/learner/profile-order-history"),
     },
     {
-      icon: MessageSquare,
-      title: "Communication",
-      onClick: () => navigate("/learner/communication"),
-    },
-    {
       icon: Package,
       title: "My Subscription",
       onClick: () => setShowSubscriptionModal(true),
-    },
+    }
   ];
 
   return (
