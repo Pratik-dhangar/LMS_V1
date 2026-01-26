@@ -106,9 +106,9 @@ const UnifiedChatPage = () => {
     const conversationUserIds = new Set();
     conversations.forEach(conv => {
       if (conv.type === 'DIRECT') {
-        conv.member_ids?.forEach(id => {
-          if (id !== currentUser?.id) {
-            conversationUserIds.add(id);
+        conv.members?.forEach(member => {
+          if (member.user_id !== currentUser?.id) {
+            conversationUserIds.add(member.user_id);
           }
         });
       }
@@ -226,9 +226,13 @@ const UnifiedChatPage = () => {
   // Handle new direct chat
   const handleNewDirectChat = async (otherUser) => {
     try {
-      const conversation = await createConversation('DIRECT', [otherUser.id]);
       setShowNewChatModal(false);
-      handleSelectChat(conversation);
+      const conversation = await createConversation('DIRECT', [otherUser.id]);
+      // Immediately select and open the chat
+      setSelectedChat(conversation);
+      selectConversation(conversation);
+      loadMessages(conversation.id);
+      navigate(`/chat/${conversation.id}`, { replace: true });
     } catch (error) {
       console.error('Failed to create conversation:', error);
       alert('Failed to create conversation. Please try again.');
