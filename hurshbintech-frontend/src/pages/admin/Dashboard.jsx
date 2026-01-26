@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import adminService from '../../api/services/adminService';
 import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package } from 'lucide-react';
 import '../../styles/admin/index.css';
 
@@ -12,7 +11,6 @@ const AdminDashboard = () => {
   const menuItems = [
     { id: '1.1', title: 'Manage HurshBin Heads', description: 'Register and manage HurshBin Heads', icon: Users2, color: 'blue', onClick: () => navigate('/admin/manage-heads') },
     { id: '1.2', title: 'View HurshBin Trainers', description: 'View and manage HurshBin Trainers', icon: GraduationCap, color: 'green', onClick: () => navigate('/admin/view-trainers') },
-    // {id:'1.6', title: 'View Learners', description: 'View and manage HurshBin Learners ', icon: GraduationCap, color: 'pink', onClick: () => navigate('/admin/view-learners')},
     { id: '1.3', title: 'Manage Learning Content', description: 'View and manage learning content', icon: BookOpen, color: 'purple', onClick: () => navigate('/admin/learning-content') },
     { id: '1.4', title: 'Manage Learning Goals', description: 'Create and manage learning goals', icon: Target, color: 'orange', onClick: () => navigate('/admin/learning-goals') },
     { id: '1.5', title: 'Manage HurshBin Coaches', description: 'Manage HurshBin Coaches and Consultants', icon: Award, color: 'teal', onClick: () => navigate('/admin/manage-coaches') },
