@@ -418,12 +418,6 @@ const UnifiedChatPage = () => {
             All
           </button>
           <button 
-            className={`chat-filter-tag ${filterTag === 'UNREAD' ? 'active' : ''}`}
-            onClick={() => setFilterTag('UNREAD')}
-          >
-            Unread
-          </button>
-          <button 
             className={`chat-filter-tag ${filterTag === 'GROUPS' ? 'active' : ''}`}
             onClick={() => setFilterTag('GROUPS')}
           >
@@ -557,12 +551,9 @@ const UnifiedChatPage = () => {
 
                 <div className="chat-window-user-info">
                   <h2>{selectedChat.name}</h2>
-                  <p>
-                    {otherUserId && onlineUsers.has(otherUserId) ? 'Online' : 
-                     selectedChat.type === 'GROUP' ? 
-                     `${selectedChat.members?.length || 0} members` : 
-                     'Offline'}
-                  </p>
+                  {selectedChat.type === 'GROUP' && (
+                    <p>{selectedChat.members?.length || 0} members</p>
+                  )}
                 </div>
               </div>
 
@@ -739,9 +730,6 @@ const UnifiedChatPage = () => {
                           <span className="chat-message-time">
                             {formatMessageTime(message.created_at)}
                           </span>
-                          {isOwnMessage && message.read_receipts && message.read_receipts.length > 0 && (
-                            <span className="chat-message-read-receipt">✓✓</span>
-                          )}
                         </div>
                       </div>
                     </div>

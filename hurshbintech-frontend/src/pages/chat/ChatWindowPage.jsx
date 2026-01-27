@@ -285,12 +285,11 @@ const ChatWindowPage = () => {
 
                 <div className="chat-window-info">
                   <h2 className="chat-window-name">{currentConversation.name}</h2>
-                  <p className="chat-window-status">
-                    {otherUserId && onlineUsers.has(otherUserId) ? 'Online' : 
-                     currentConversation.type === 'GROUP' ? 
-                     `${currentConversation.members?.length || 0} members` : 
-                     'Offline'}
-                  </p>
+                  {currentConversation.type === 'GROUP' && (
+                    <p className="chat-window-status">
+                      {currentConversation.members?.length || 0} members
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -482,10 +481,6 @@ const ChatWindowPage = () => {
                         <span className="chat-message-time">
                           {formatMessageTime(message.created_at)}
                         </span>
-                        
-                        {isOwnMessage && message.read_receipts && message.read_receipts.length > 0 && (
-                          <span className="chat-message-read-receipt">✓✓</span>
-                        )}
                       </div>
                     </div>
                   </div>
