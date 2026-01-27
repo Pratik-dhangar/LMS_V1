@@ -47,6 +47,7 @@ const ChatWindowPage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [imageModal, setImageModal] = useState(null);
+  const [showChatInfo, setShowChatInfo] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const emojiButtonRef = useRef(null);
@@ -296,9 +297,79 @@ const ChatWindowPage = () => {
 
             {/* Actions */}
             <div className="chat-window-actions">
-              <button className="chat-window-menu-btn">
+              <button 
+                className="chat-window-menu-btn"
+                onClick={() => setShowChatInfo(!showChatInfo)}
+                title="Chat info"
+              >
                 <MoreVertical size={20} />
               </button>
+
+              {/* Chat Info Dropdown */}
+              {showChatInfo && (
+                <div className="chat-info-dropdown">
+                  <div className="chat-info-header">
+                    <h3>{currentConversation.type === 'DIRECT' ? 'Contact Info' : 'Group Info'}</h3>
+                    <button 
+                      onClick={() => setShowChatInfo(false)}
+                      className="chat-info-close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="chat-info-body">
+                    {currentConversation.type === 'DIRECT' ? (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Participants</h4>
+                          <div className="chat-info-participants">
+                            {currentConversation.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Group Participants ({currentConversation.members?.length || 0})</h4>
+                          <div className="chat-info-participants">
+                            {currentConversation.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

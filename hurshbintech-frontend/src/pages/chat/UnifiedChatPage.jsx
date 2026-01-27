@@ -61,6 +61,7 @@ const UnifiedChatPage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [imageModal, setImageModal] = useState(null);
+  const [showChatInfo, setShowChatInfo] = useState(false);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -565,9 +566,79 @@ const UnifiedChatPage = () => {
                 </div>
               </div>
 
-              <button className="chat-icon-btn">
+              <button 
+                className="chat-icon-btn"
+                onClick={() => setShowChatInfo(!showChatInfo)}
+                title="Chat info"
+              >
                 <MoreVertical size={20} />
               </button>
+
+              {/* Chat Info Dropdown */}
+              {showChatInfo && (
+                <div className="chat-info-dropdown">
+                  <div className="chat-info-header">
+                    <h3>{selectedChat.type === 'DIRECT' ? 'Contact Info' : 'Group Info'}</h3>
+                    <button 
+                      onClick={() => setShowChatInfo(false)}
+                      className="chat-info-close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="chat-info-body">
+                    {selectedChat.type === 'DIRECT' ? (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Participants</h4>
+                          <div className="chat-info-participants">
+                            {selectedChat.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Group Participants ({selectedChat.members?.length || 0})</h4>
+                          <div className="chat-info-participants">
+                            {selectedChat.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Messages Area */}
@@ -845,7 +916,7 @@ const UnifiedChatPage = () => {
                     if (isCreatingGroup) {
                       setSelectedUsers(prev => 
                         prev.find(u => u.id === availUser.id)
-                          ? prev.filter(u => u.id === availUser.id)
+                          ? prev.filter(u => u.id !== availUser.id)
                           : [...prev, availUser]
                       );
                     } else {
