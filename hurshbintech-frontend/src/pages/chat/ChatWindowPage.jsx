@@ -11,10 +11,13 @@ import {
   Paperclip, 
   Smile,
   MoreVertical,
-  Users
+  Users,
+  Download
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import EmojiPicker from '../../components/chat/EmojiPicker';
+import ImageModal from '../../components/chat/ImageModal';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/chats/ChatWindowPage.css';
 
@@ -41,10 +44,25 @@ const ChatWindowPage = () => {
   const [messageInput, setMessageInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [imageModal, setImageModal] = useState(null);
+  const [showChatInfo, setShowChatInfo] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set()); // Track which messages have been marked as read
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Connect to chat when component mounts
   useEffect(() => {
@@ -168,6 +186,31 @@ const ChatWindowPage = () => {
     }
   };
 
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji) => {
+    setMessageInput(prev => prev + emoji);
+  };
+
+  // Handle file download
+  const handleDownload = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: open in new tab
+      window.open(fileUrl, '_blank');
+    }
+  };
+
   // Format message time
   const formatMessageTime = (dateString) => {
     if (!dateString) return '';
@@ -192,14 +235,10 @@ const ChatWindowPage = () => {
 
   const typingNames = getTypingUsersNames();
 
-  // Check if other user is online (for direct chats)
-  const isOtherUserOnline = () => {
-    if (currentConversation?.type === 'DIRECT') {
-      const otherUserId = currentConversation.member_ids?.find(id => id !== currentUser?.id);
-      return otherUserId && onlineUsers.has(otherUserId);
-    }
-    return false;
-  };
+  // Get other user ID for direct chats (direct approach like in modal)
+  const otherUserId = currentConversation?.type === 'DIRECT'
+    ? currentConversation.member_ids?.find(id => id !== currentUser?.id)
+    : null;
 
   if (!currentConversation) {
     return (
@@ -239,28 +278,97 @@ const ChatWindowPage = () => {
                       currentConversation.name?.charAt(0).toUpperCase() || 'U'
                     )}
                   </div>
-                  {isOtherUserOnline() && (
+                  {otherUserId && onlineUsers.has(otherUserId) && (
                     <div className="chat-window-online-indicator" />
                   )}
                 </div>
 
                 <div className="chat-window-info">
                   <h2 className="chat-window-name">{currentConversation.name}</h2>
-                  <p className="chat-window-status">
-                    {isOtherUserOnline() ? 'Online' : 
-                     currentConversation.type === 'GROUP' ? 
-                     `${currentConversation.members?.length || 0} members` : 
-                     'Offline'}
-                  </p>
+                  {currentConversation.type === 'GROUP' && (
+                    <p className="chat-window-status">
+                      {currentConversation.members?.length || 0} members
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Actions */}
             <div className="chat-window-actions">
-              <button className="chat-window-menu-btn">
+              <button 
+                className="chat-window-menu-btn"
+                onClick={() => setShowChatInfo(!showChatInfo)}
+                title="Chat info"
+              >
                 <MoreVertical size={20} />
               </button>
+
+              {/* Chat Info Dropdown */}
+              {showChatInfo && (
+                <div className="chat-info-dropdown">
+                  <div className="chat-info-header">
+                    <h3>{currentConversation.type === 'DIRECT' ? 'Contact Info' : 'Group Info'}</h3>
+                    <button 
+                      onClick={() => setShowChatInfo(false)}
+                      className="chat-info-close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="chat-info-body">
+                    {currentConversation.type === 'DIRECT' ? (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Participants</h4>
+                          <div className="chat-info-participants">
+                            {currentConversation.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="chat-info-section">
+                          <h4>Group Participants ({currentConversation.members?.length || 0})</h4>
+                          <div className="chat-info-participants">
+                            {currentConversation.members?.map(member => (
+                              <div key={member.user_id} className="chat-info-participant">
+                                <div className="chat-avatar-wrapper">
+                                  <div className="chat-user-avatar">
+                                    {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  {onlineUsers.has(member.user_id) && (
+                                    <div className="chat-online-badge" />
+                                  )}
+                                </div>
+                                <div className="chat-participant-details">
+                                  <p className="chat-participant-name">{member.user_name}</p>
+                                  <p className="chat-participant-role">{member.user_role}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,29 +400,70 @@ const ChatWindowPage = () => {
                         {message.file_url && (
                           <div className="chat-message-file-container">
                             {message.message_type === 'IMAGE' ? (
-                              <img
-                                src={message.file_url}
-                                alt={message.file_name}
-                                className="chat-message-image"
-                              />
+                              <div className="chat-file-media">
+                                <img
+                                  src={message.file_url}
+                                  alt={message.file_name}
+                                  className="chat-message-thumbnail"
+                                  onClick={() => setImageModal({ url: message.file_url, name: message.file_name })}
+                                  title="Click to view full size"
+                                />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(message.file_url, message.file_name);
+                                  }}
+                                  title="Download image"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : message.message_type === 'VIDEO' ? (
-                              <video
-                                src={message.file_url}
-                                controls
-                                className="chat-message-video"
-                              />
+                              <div className="chat-file-media">
+                                <video
+                                  src={message.file_url}
+                                  controls
+                                  className="chat-message-video"
+                                />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download video"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : message.message_type === 'AUDIO' ? (
-                              <audio src={message.file_url} controls className="chat-message-audio" />
+                              <div className="chat-file-media">
+                                <audio src={message.file_url} controls className="chat-message-audio" />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download audio"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : (
-                              <a
-                                href={message.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="chat-message-file-link"
-                              >
-                                <Paperclip size={16} />
-                                {message.file_name}
-                              </a>
+                              <div className="chat-file-document">
+                                <a
+                                  href={message.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="chat-message-file-link"
+                                >
+                                  <Paperclip size={16} />
+                                  {message.file_name}
+                                </a>
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download file"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -332,10 +481,6 @@ const ChatWindowPage = () => {
                         <span className="chat-message-time">
                           {formatMessageTime(message.created_at)}
                         </span>
-                        
-                        {isOwnMessage && message.read_receipts && message.read_receipts.length > 0 && (
-                          <span className="chat-message-read-receipt">✓✓</span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -393,8 +538,19 @@ const ChatWindowPage = () => {
                   className="chat-input-field"
                 />
                 <button
+                  ref={emojiButtonRef}
                   type="button"
                   className="chat-input-emoji-btn"
+                  onClick={() => {
+                    if (isMobile) {
+                      // On mobile, focus input and let native emoji keyboard open
+                      document.querySelector('.chat-input-field')?.focus();
+                    } else {
+                      // On desktop/tablet, toggle emoji picker
+                      setShowEmojiPicker(!showEmojiPicker);
+                    }
+                  }}
+                  title="Emoji"
                 >
                   <Smile size={20} />
                 </button>
@@ -405,6 +561,7 @@ const ChatWindowPage = () => {
                 type="submit"
                 disabled={!messageInput.trim()}
                 className="chat-input-send-btn"
+                title="Send message"
               >
                 <Send size={20} />
               </button>
@@ -416,9 +573,27 @@ const ChatWindowPage = () => {
                 <span>Uploading file...</span>
               </div>
             )}
+
+            {/* Emoji Picker - Desktop/Tablet Only */}
+            {!isMobile && showEmojiPicker && (
+              <EmojiPicker
+                onEmojiSelect={handleEmojiSelect}
+                onClose={() => setShowEmojiPicker(false)}
+                buttonRef={emojiButtonRef}
+              />
+            )}
           </form>
         </div>
       </main>
+
+      {/* Image Modal */}
+      {imageModal && (
+        <ImageModal
+          imageUrl={imageModal.url}
+          fileName={imageModal.name}
+          onClose={() => setImageModal(null)}
+        />
+      )}
     </div>
   );
 };

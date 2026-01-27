@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Query,
     UploadFile,
@@ -458,9 +459,9 @@ async def send_message(
 
 @router.post("/messages/upload")
 async def send_message_with_file(
-    conversation_id: int,
+    conversation_id: int = Form(...),
     file: UploadFile = File(...),
-    content: Optional[str] = None,
+    content: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):

@@ -64,11 +64,11 @@ const ChatIconWidget = () => {
         <MessageCircle size={30} />
         
         {/* Unread Badge */}
-        {totalUnread > 0 && (
+        {/* {totalUnread > 0 && (
           <span className="chat-widget-badge">
             {totalUnread > 99 ? '99+' : totalUnread}
           </span>
-        )}
+        )} */}
       </button>
     </div>
   );
