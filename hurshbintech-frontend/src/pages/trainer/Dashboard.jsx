@@ -29,14 +29,7 @@ const TrainerDashboard = () => {
       description: 'View your profile and manage orders',
       icon: User,
       onClick: () => navigate('/trainer/profile-order-history')
-    },
-    {
-      id: '2',
-      title: 'Communication',
-      description: 'Send messages and communicate with team',
-      icon: MessageSquare,
-      onClick: () => navigate('/trainer/communication')
-    },
+    }
   ];
 
   return (
