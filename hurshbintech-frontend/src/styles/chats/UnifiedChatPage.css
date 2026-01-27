@@ -4,7 +4,7 @@
 /* Main Container */
 .unified-chat-container {
     display: flex;
-    height: 100vh;
+    height: 85vh;
     background: #f0f2f5;
     padding: .8rem;
     

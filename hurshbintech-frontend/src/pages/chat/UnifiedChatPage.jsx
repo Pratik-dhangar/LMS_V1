@@ -347,18 +347,26 @@ const UnifiedChatPage = () => {
     return names;
   };
 
-  // Check if other user is online
-  const isOtherUserOnline = () => {
-    if (selectedChat?.type === 'DIRECT') {
-      const otherUserId = selectedChat.member_ids?.find(id => id !== currentUser?.id);
-      return otherUserId && onlineUsers.has(otherUserId);
-    }
-    return false;
-  };
-
   const canCreateGroups = ['ADMIN', 'HEAD', 'TRAINER', 'COACH'].includes(currentUser?.role?.toUpperCase());
   const conversationMessages = selectedChat ? (messages[selectedChat.id] || []) : [];
   const typingNames = getTypingUsersNames();
+  
+  // Get other user ID for direct chats (direct approach like in modal)
+  const otherUserId = selectedChat?.type === 'DIRECT' 
+    ? selectedChat.member_ids?.find(id => id !== currentUser?.id)
+    : null;
+  
+  // Debug logging
+  if (selectedChat?.type === 'DIRECT') {
+    console.log('[OnlineStatus Debug]', {
+      selectedChatName: selectedChat.name,
+      memberIds: selectedChat.member_ids,
+      currentUserId: currentUser?.id,
+      otherUserId,
+      onlineUsersArray: Array.from(onlineUsers),
+      isOnline: otherUserId && onlineUsers.has(otherUserId)
+    });
+  }
 
   return (
     <div className="unified-chat-container">
@@ -541,7 +549,7 @@ const UnifiedChatPage = () => {
                       selectedChat.name?.charAt(0).toUpperCase() || 'U'
                     )}
                   </div>
-                  {isOtherUserOnline() && (
+                  {otherUserId && onlineUsers.has(otherUserId) && (
                     <div className="chat-online-badge" />
                   )}
                 </div>
@@ -549,7 +557,7 @@ const UnifiedChatPage = () => {
                 <div className="chat-window-user-info">
                   <h2>{selectedChat.name}</h2>
                   <p>
-                    {isOtherUserOnline() ? 'Online' : 
+                    {otherUserId && onlineUsers.has(otherUserId) ? 'Online' : 
                      selectedChat.type === 'GROUP' ? 
                      `${selectedChat.members?.length || 0} members` : 
                      'Offline'}

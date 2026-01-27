@@ -234,14 +234,10 @@ const ChatWindowPage = () => {
 
   const typingNames = getTypingUsersNames();
 
-  // Check if other user is online (for direct chats)
-  const isOtherUserOnline = () => {
-    if (currentConversation?.type === 'DIRECT') {
-      const otherUserId = currentConversation.member_ids?.find(id => id !== currentUser?.id);
-      return otherUserId && onlineUsers.has(otherUserId);
-    }
-    return false;
-  };
+  // Get other user ID for direct chats (direct approach like in modal)
+  const otherUserId = currentConversation?.type === 'DIRECT'
+    ? currentConversation.member_ids?.find(id => id !== currentUser?.id)
+    : null;
 
   if (!currentConversation) {
     return (
@@ -281,7 +277,7 @@ const ChatWindowPage = () => {
                       currentConversation.name?.charAt(0).toUpperCase() || 'U'
                     )}
                   </div>
-                  {isOtherUserOnline() && (
+                  {otherUserId && onlineUsers.has(otherUserId) && (
                     <div className="chat-window-online-indicator" />
                   )}
                 </div>
@@ -289,7 +285,7 @@ const ChatWindowPage = () => {
                 <div className="chat-window-info">
                   <h2 className="chat-window-name">{currentConversation.name}</h2>
                   <p className="chat-window-status">
-                    {isOtherUserOnline() ? 'Online' : 
+                    {otherUserId && onlineUsers.has(otherUserId) ? 'Online' : 
                      currentConversation.type === 'GROUP' ? 
                      `${currentConversation.members?.length || 0} members` : 
                      'Offline'}
