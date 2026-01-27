@@ -142,12 +142,16 @@ export const ChatProvider = ({ children }) => {
         };
       });
       
-      // Update conversation's last message
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId
-          ? { ...conv, last_message: data, updated_at: data.created_at }
-          : conv
-      ));
+      // Update conversation's last message and move to top
+      setConversations(prev => {
+        const updated = prev.map(conv => 
+          conv.id === conversationId
+            ? { ...conv, last_message: data, updated_at: data.created_at }
+            : conv
+        );
+        // Sort by updated_at descending (newest first)
+        return updated.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      });
       
       return data;
     } catch (err) {
@@ -170,12 +174,16 @@ export const ChatProvider = ({ children }) => {
         };
       });
       
-      // Update conversation's last message
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId
-          ? { ...conv, last_message: data, updated_at: data.created_at }
-          : conv
-      ));
+      // Update conversation's last message and move to top
+      setConversations(prev => {
+        const updated = prev.map(conv => 
+          conv.id === conversationId
+            ? { ...conv, last_message: data, updated_at: data.created_at }
+            : conv
+        );
+        // Sort by updated_at descending (newest first)
+        return updated.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      });
       
       return data;
     } catch (err) {
@@ -239,12 +247,16 @@ export const ChatProvider = ({ children }) => {
       return updated;
     });
     
-    // Update conversation's last message
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversation_id
-        ? { ...conv, last_message: message, updated_at: message.created_at }
-        : conv
-    ));
+    // Update conversation's last message and move to top
+    setConversations(prev => {
+      const updated = prev.map(conv => 
+        conv.id === conversation_id
+          ? { ...conv, last_message: message, updated_at: message.created_at }
+          : conv
+      );
+      // Sort by updated_at descending (newest first)
+      return updated.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    });
     
     // Increment unread count if not current conversation
     if (!currentConversation || currentConversation.id !== conversation_id) {

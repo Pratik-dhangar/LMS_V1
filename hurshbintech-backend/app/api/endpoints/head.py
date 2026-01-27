@@ -12,13 +12,13 @@ from datetime import datetime, date
 from pathlib import Path
 import logging
 
-from app.core.deps import get_current_head
+from app.core.deps import get_current_head, get_current_admin
 from app.core.security import decrypt_passcode
 from app.core.config import settings
 from app.crud import user_crud
 from app.crud import subscription_crud
 from app.db.session import get_db
-from app.models.user_model import HeadProfile
+from app.models.user_model import HeadProfile, User
 from app.models.subscription import SubscriptionPaymentReceipt, PaymentStatus, LearnerSubscription
 from app.schemas.user import (
     LearnerCreate,
@@ -482,7 +482,7 @@ async def get_coach_details(
 async def delete_coach_account(
     coach_id: int,
     db: AsyncSession = Depends(get_db),
-    current_head: HeadProfile = Depends(get_current_head),
+    current_admin: User = Depends(get_current_admin),
 ):
 
     coach = await user_crud.get_coach_by_id(db, coach_id)

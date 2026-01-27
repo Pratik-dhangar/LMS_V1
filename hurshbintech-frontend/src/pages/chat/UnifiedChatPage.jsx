@@ -23,7 +23,7 @@ import ImageModal from '../../components/chat/ImageModal';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/chats/UnifiedChatPage.css';
 
-const UnifiedChatPage = () => {
+const UnifiedChatPage = ({ isModal = false }) => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -142,13 +142,17 @@ const UnifiedChatPage = () => {
     setSelectedChat(conversation);
     selectConversation(conversation);
     loadMessages(conversation.id);
-    navigate(`/chat/${conversation.id}`, { replace: true });
+    if (!isModal) {
+      navigate(`/chat/${conversation.id}`, { replace: true });
+    }
   };
 
   // Handle back to list on mobile
   const handleBackToList = () => {
     setSelectedChat(null);
-    navigate('/chat', { replace: true });
+    if (!isModal) {
+      navigate('/chat', { replace: true });
+    }
   };
 
   // Mark messages as read

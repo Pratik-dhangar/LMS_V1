@@ -66,6 +66,16 @@ app = FastAPI(
     description="User management system with role-based authentication",
 )
 
+# ✅ Background Task Scheduler for Auto-Cleanup Jobs
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.workers.chat_message_cleanup import cleanup_old_messages
+
+scheduler = AsyncIOScheduler()
+# Schedule chat message cleanup daily at 3 AM
+scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup')
+scheduler.start()
+logger.info("Background scheduler started - Chat message cleanup scheduled for 3 AM daily")
+
 # Add rate limiter to app state only if not in testing mode
 app.state.limiter = limiter
 if not os.getenv("TESTING"):
