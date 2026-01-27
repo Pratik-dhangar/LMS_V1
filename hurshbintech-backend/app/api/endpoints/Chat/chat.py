@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Query,
     UploadFile,
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_admin
 from app.crud.Chat import chat_crud
 from app.db.session import get_db
 from app.models.Chat.chat_model import ConversationType, MessageType
@@ -61,7 +62,7 @@ async def get_all_chat_users(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all active users in the system for chat
+    Get all active users in the system for chat (excluding current user)
     All users are visible to all users
     """
     users = await chat_crud.get_all_active_users(db)
@@ -69,6 +70,10 @@ async def get_all_chat_users(
     
     user_responses = []
     for user in users:
+        # Exclude current user from the list
+        if user.id == current_user.id:
+            continue
+            
         user_responses.append({
             "id": user.id,
             "name": user.name,
@@ -454,9 +459,9 @@ async def send_message(
 
 @router.post("/messages/upload")
 async def send_message_with_file(
-    conversation_id: int,
+    conversation_id: int = Form(...),
     file: UploadFile = File(...),
-    content: Optional[str] = None,
+    content: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -674,3 +679,23 @@ async def chat_websocket_endpoint(
         if user_id:
             await chat_manager.disconnect(user_id, websocket)
             logger.info(f"User {user_id} disconnected from chat")
+
+
+# ============ ADMIN ENDPOINTS ============
+
+@router.post("/admin/cleanup-old-messages", tags=["Chat Admin"])
+async def trigger_message_cleanup(
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Manually trigger cleanup of messages older than 7 days.
+    Only accessible by admin users.
+    
+    This endpoint allows manual testing of the auto-cleanup functionality.
+    In production, this runs automatically daily at 3 AM via scheduler.
+    """
+    from app.workers.chat_message_cleanup import cleanup_old_messages
+    
+    result = await cleanup_old_messages()
+    return result

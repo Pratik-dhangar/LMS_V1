@@ -4,16 +4,18 @@
  * Visible on all pages except session pages and login
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, X, Minimize2 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
+import UnifiedChatPage from '../../pages/chat/UnifiedChatPage';
 import '../../styles/components/chat/chatWidget.css';
 
 const ChatIconWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCounts } = useChat();
+  const [showChatModal, setShowChatModal] = useState(false);
 
   // Pages where chat icon should NOT be shown
   const hiddenPages = [
@@ -50,27 +52,54 @@ const ChatIconWidget = () => {
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
   const handleClick = () => {
-    navigate('/chat');
+    setShowChatModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowChatModal(false);
   };
 
   return (
-    <div className="chat-widget-container">
-      <button
-        onClick={handleClick}
-        className="chat-widget-button"
-        aria-label="Open Chat"
-        title="Chat"
-      >
-        <MessageCircle size={30} />
-        
-        {/* Unread Badge */}
-        {totalUnread > 0 && (
-          <span className="chat-widget-badge">
-            {totalUnread > 99 ? '99+' : totalUnread}
-          </span>
-        )}
-      </button>
-    </div>
+    <>
+      <div className="chat-widget-container">
+        <button
+          onClick={handleClick}
+          className="chat-widget-button"
+          aria-label="Open Chat"
+          title="Chat"
+        >
+          <MessageCircle size={30} />
+          
+          {/* Unread Badge */}
+          {totalUnread > 0 && (
+            <span className="chat-widget-badge">
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Chat Modal */}
+      {showChatModal && (
+        <div className="chat-modal-overlay-fullscreen">
+          <div className="chat-modal-container">
+            <div className="chat-modal-header-bar">
+              <h3 className="chat-modal-title">Chat</h3>
+              <button
+                onClick={handleCloseModal}
+                className="chat-modal-minimize-btn"
+                title="Minimize chat"
+              >
+                <Minimize2 size={20} />
+              </button>
+            </div>
+            <div className="chat-modal-content">
+              <UnifiedChatPage isModal={true} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

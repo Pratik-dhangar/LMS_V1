@@ -1,0 +1,107 @@
+/* Emoji Picker Styles */
+.emoji-picker {
+  position: fixed;
+  width: 450px;
+  max-width: calc(100vw - 20px);
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.emoji-picker-header {
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 8px;
+}
+
+.emoji-picker-categories {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.emoji-picker-categories::-webkit-scrollbar {
+  display: none;
+}
+
+.emoji-category-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.emoji-category-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.emoji-category-btn.active {
+  background: #25d366;
+  transform: scale(1.15);
+}
+
+.emoji-picker-content {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  padding: 1px;
+  max-height: 250px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+}
+
+.emoji-picker-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emoji-picker-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emoji-picker-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.emoji-picker-content::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.emoji-btn {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.emoji-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: scale(1.3);
+}
+
+.emoji-btn:active {
+  transform: scale(1.15);
+}
+
+/* Mobile - Hide emoji picker, use native keyboard instead */
+@media (max-width: 768px) {
+  .emoji-picker {
+    display: none !important;
+  }
+}
