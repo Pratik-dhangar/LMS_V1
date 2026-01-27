@@ -119,8 +119,8 @@ class ChatFileService:
 
         # Upload file
         if settings.USE_S3 and s3_manager:
-            # Upload to S3
-            s3_key = f"chat_files/{conversation_id}/{safe_filename}"
+            # Upload to S3 - Production
+            s3_key = f"uploads/chats/{conversation_id}/{safe_filename}"
             try:
                 file_url = s3_manager.upload_file(
                     file_content=content,
@@ -132,15 +132,15 @@ class ChatFileService:
                 logger.error(f"Error uploading file to S3: {e}")
                 raise HTTPException(status_code=500, detail="File upload failed")
         else:
-            # Upload to local storage
-            upload_dir = Path(settings.UPLOAD_DIR) / "chat_files" / str(conversation_id)
+            # Upload to local storage - Development
+            upload_dir = Path("uploads") / "chats" / str(conversation_id)
             upload_dir.mkdir(parents=True, exist_ok=True)
             
             file_path = upload_dir / safe_filename
             with open(file_path, "wb") as f:
                 f.write(content)
             
-            file_url = f"/uploads/chat_files/{conversation_id}/{safe_filename}"
+            file_url = f"/uploads/chats/{conversation_id}/{safe_filename}"
             logger.info(f"Uploaded chat file locally: {file_path}")
 
         return file_url, file.filename, file_size, message_type

@@ -80,9 +80,11 @@ const ChatPage = () => {
   // Handle new direct chat
   const handleNewDirectChat = async (otherUser) => {
     try {
-      const conversation = await createConversation('DIRECT', [otherUser.id]);
       setShowNewChatModal(false);
-      handleConversationClick(conversation);
+      const conversation = await createConversation('DIRECT', [otherUser.id]);
+      // Select conversation and navigate to chat window
+      selectConversation(conversation);
+      navigate(`/chat/${conversation.id}`);
     } catch (error) {
       console.error('Failed to create conversation:', error);
       alert('Failed to create conversation. Please try again.');
@@ -139,9 +141,9 @@ const ChatPage = () => {
     const conversationUserIds = new Set();
     conversations.forEach(conv => {
       if (conv.type === 'DIRECT') {
-        conv.member_ids?.forEach(id => {
-          if (id !== user?.id) {
-            conversationUserIds.add(id);
+        conv.members?.forEach(member => {
+          if (member.user_id !== user?.id) {
+            conversationUserIds.add(member.user_id);
           }
         });
       }
