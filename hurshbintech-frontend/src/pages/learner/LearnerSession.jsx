@@ -15,6 +15,7 @@ import Exercise from '../../components/session/Exercise';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
 import useMessages from '../../hooks/useMessages';
+import useComments from '../../hooks/useComments';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
@@ -71,28 +72,66 @@ const LearnerSession = () => {
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [promptLineAnimating, setPromptLineAnimating] = useState(false);
 
   // Use messages hook
   const { messages, currentMessage, setCurrentMessage, sendMessage, handleKeyPress, addReceivedMessage } = useMessages(webRTC, 'learner');
 
+  // -----------------------------------------------------------  
+  // 🔹 Purpose: Comments using custom hook (learner can send, but panel only shows when trainer opens)
+  // 🔸 How it works: useComments hook receives comments from trainer, learner can also send
+  // -----------------------------------------------------------  
+  const {
+    trainerComments,
+    commentInput,
+    setCommentInput,
+    sendComment,
+    addReceivedComment
+  } = useComments(whiteboardService, 'learner');
+
+  // -----------------------------------------------------------  
+  // 🔹 Purpose: Set up Whiteboard comment callback
+  // 🔸 How it works: When a comment is received via Whiteboard, add it to comments
+  // -----------------------------------------------------------  
+  useEffect(() => {
+    if (whiteboardService) {
+      whiteboardService.onCommentUpdate = (data) => {
+        // console.log('[LearnerSession] Comment received:', data);
+        addReceivedComment(data);
+      };
+
+      // Handle comments tool toggle from trainer
+      whiteboardService.onCommentsToggle = (data) => {
+        console.log('[LearnerSession] Comments toggle received:', data);
+        setIsCommentsOpen(data.visible);
+      };
+    }
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onCommentUpdate = null;
+        whiteboardService.onCommentsToggle = null;
+      }
+    };
+  }, [whiteboardService, addReceivedComment, setIsCommentsOpen]);
+
   // Listen for feedback message state changes to debug
   useEffect(() => {
     if (!feedbackMessage) return;
-    console.log('[LearnerSession] feedbackMessage state changed to:', feedbackMessage);
+    // console.log('[LearnerSession] feedbackMessage state changed to:', feedbackMessage);
   }, [feedbackMessage]);
 
   // Set up WebRTC message callback
   useEffect(() => {
     if (webRTC) {
       webRTC.onMessage = (message) => {
-        console.log('[LearnerSession] Message received:', message);
+        // console.log('[LearnerSession] Message received:', message);
         addReceivedMessage(message);
       };
 
       // Set up prompt text handler
       webRTC.onPromptText = (data) => {
-        console.log('[LearnerSession] Prompt text received from trainer:', data);
+        // console.log('[LearnerSession] Prompt text received from trainer:', data);
         setPromptText(data.text);
 
         // Auto-open Prompt Line div when new prompt is received
@@ -124,7 +163,7 @@ const LearnerSession = () => {
     if (!whiteboardService) return;
 
     whiteboardService.onSessionEnded = (data) => {
-      console.log('[LearnerSession] Session ended by trainer:', data);
+      // console.log('[LearnerSession] Session ended by trainer:', data);
       toast.info('Session has been ended by the trainer');
 
       // Clean up and redirect after a short delay
@@ -342,7 +381,7 @@ const LearnerSession = () => {
         }
       }
     } catch (error) {
-      console.log('[LearnerSession] Could not play pop sound:', error);
+      // console.log('[LearnerSession] Could not play pop sound:', error);
     }
   };
 
@@ -385,7 +424,7 @@ const LearnerSession = () => {
   // 🔸 How it works: sends learner's answer to trainer for evaluation
   // -----------------------------------------------------------
   const handleExerciseSubmit = (response) => {
-    console.log('[LearnerSession] Exercise response:', response);
+    // console.log('[LearnerSession] Exercise response:', response);
 
     if (whiteboardService) {
       if (response.qaItems) {
@@ -409,7 +448,7 @@ const LearnerSession = () => {
   };
 
   const handleExerciseAnswerChange = (answerData) => {
-    console.log('[LearnerSession] Answer changed:', answerData);
+    // console.log('[LearnerSession] Answer changed:', answerData);
 
     // Update local state with the answer
     if (answerData.qaItems) {
@@ -444,7 +483,7 @@ const LearnerSession = () => {
   };
 
   const handleExerciseKeywordMatched = (matchData) => {
-    console.log('[LearnerSession] Keyword matched:', matchData);
+    // console.log('[LearnerSession] Keyword matched:', matchData);
     toast.success('Keyword found! ✓');
   };
 
@@ -501,9 +540,9 @@ const LearnerSession = () => {
     const justFinished = timeJustHitZero || timerJustStopped || timeAlmostZero;
 
     if (justFinished && !hasPlayedCelebrationRef.current) {
-      console.log('🎉 Learner: Countdown finished! Playing celebration...', {
-        prevTime, syncedElapsedTime, wasRunning, syncedIsRunning
-      });
+      // console.log('🎉 Learner: Countdown finished! Playing celebration...', {
+      //   prevTime, syncedElapsedTime, wasRunning, syncedIsRunning
+      // });
       hasPlayedCelebrationRef.current = true;
       playCelebrationSound();
     }
@@ -542,7 +581,7 @@ const LearnerSession = () => {
 
     // Set up callback for tool access messages
     whiteboardService.onToolAccess = (data) => {
-      console.log('[LearnerSession] Tool access update:', data);
+      // console.log('[LearnerSession] Tool access update:', data);
       setToolAccess(prevAccess => ({
         ...prevAccess,
         [data.toolName]: data.enabled
@@ -562,7 +601,7 @@ const LearnerSession = () => {
 
     // Set up callback for feedback messages from trainer
     whiteboardService.onFeedbackMessage = (data) => {
-      console.log('[LearnerSession] Feedback message received from trainer:', data);
+      // console.log('[LearnerSession] Feedback message received from trainer:', data);
       setFeedbackMessage(data.message);
 
       // Auto-hide after 3 seconds
@@ -573,7 +612,7 @@ const LearnerSession = () => {
 
     // Set up callback for waiting messages from trainer
     whiteboardService.onWaitingMessage = (data) => {
-      console.log('[LearnerSession] Waiting message received from trainer:', data);
+      // console.log('[LearnerSession] Waiting message received from trainer:', data);
       setWaitingMessage(data.message);
 
       // Auto-hide after 3 seconds
@@ -584,7 +623,7 @@ const LearnerSession = () => {
 
     // Set up callback for floating animations from trainer
     whiteboardService.onFloatingAnimations = (data) => {
-      console.log('[LearnerSession] Floating animations received from trainer:', data);
+      // console.log('[LearnerSession] Floating animations received from trainer:', data);
       setFloatingAnimations(prev => [...prev, ...data.animations]);
 
       // Auto-remove after 13 seconds (same as trainer)
@@ -597,7 +636,7 @@ const LearnerSession = () => {
 
     // Set up callback for animation pop events from other learners/trainer
     whiteboardService.onAnimationPopped = (data) => {
-      console.log('[LearnerSession] Animation popped by another user:', data);
+      // console.log('[LearnerSession] Animation popped by another user:', data);
       updateAnimationPopped(data.animationId, data.poppedLeft, data.poppedTop);
     };
 
@@ -607,7 +646,7 @@ const LearnerSession = () => {
 
     // Set up callback for item removal from trainer
     whiteboardService.onItemRemove = (data) => {
-      console.log('[LearnerSession] Item remove received:', data);
+      // console.log('[LearnerSession] Item remove received:', data);
       if (data?.id) {
         setCanvasItems(prev => prev.filter(item => item.id !== data.id));
       }
@@ -615,7 +654,7 @@ const LearnerSession = () => {
 
     // Set up callback for item updates from trainer (including new exercises)
     whiteboardService.onItemUpdate = (data) => {
-      console.log('[LearnerSession] Item update received:', data);
+      // console.log('[LearnerSession] Item update received:', data);
       if (data?.id && data?.type) {
         // If the item has a `targetLearnerId`, only show it to that learner
         if (data.targetLearnerId) {
@@ -623,20 +662,20 @@ const LearnerSession = () => {
           const targetId = String(data.targetLearnerId);
           const myId = String(sessionInfo?.learner_id || '');
 
-          console.log('[LearnerSession] Targeted item check:', {
-            itemId: data.id,
-            targetLearnerId: targetId,
-            myLearnerId: myId,
-            sessionInfoLoaded: !!sessionInfo,
-            match: targetId === myId
-          });
+          // console.log('[LearnerSession] Targeted item check:', {
+          //   itemId: data.id,
+          //   targetLearnerId: targetId,
+          //   myLearnerId: myId,
+          //   sessionInfoLoaded: !!sessionInfo,
+          //   match: targetId === myId
+          // });
 
           if (myId && targetId !== myId) {
-            console.log('[LearnerSession] Item not for this learner, ignoring');
+            // console.log('[LearnerSession] Item not for this learner, ignoring');
             return; // Don't add this item
           }
 
-          console.log('[LearnerSession] Item is for this learner, adding to canvas');
+          // console.log('[LearnerSession] Item is for this learner, adding to canvas');
         }
 
         setCanvasItems(prev => {
@@ -654,35 +693,35 @@ const LearnerSession = () => {
       }
     };
 
-    // Set up callback for erase pen event from trainer
-    whiteboardService.onErasePen = () => {
-      console.log('[LearnerSession] Received erase pen event from trainer');
-      setErasePenTrigger(prev => prev + 1);
-      setRedrawCanvasTrigger(prev => prev + 1);
+    // Set up callback for erase pen strokes from trainer
+    whiteboardService.onErasePen = (data) => {
+      // console.log('[LearnerSession] Erase pen received from trainer:', data);
+      setErasePenTrigger(prev => prev + 1); // Trigger canvas clear in Whiteboard component
+      setRedrawCanvasTrigger(prev => prev + 1); // Trigger redraw of canvas items after clear
     };
 
     // Set up callback for clear canvas event (also clears video, items, and buckets)
     whiteboardService.onClearCanvas = () => {
-      console.log('[LearnerSession] Received clear canvas event from trainer');
-      console.log('[LearnerSession] 🗑️ CLEARING CANVAS NOW:');
-      console.log('[LearnerSession] Current floatingAnimations count:', floatingAnimations.length);
+      // console.log('[LearnerSession] Received clear canvas event from trainer');
+      // console.log('[LearnerSession] 🗑️ CLEARING CANVAS NOW:');
+      // console.log('[LearnerSession] Current floatingAnimations count:', floatingAnimations.length);
 
       setClearCanvasTrigger(prev => prev + 1);
-      console.log('[LearnerSession] ✅ setClearCanvasTrigger called');
+      // console.log('[LearnerSession] ✅ setClearCanvasTrigger called');
 
       setCanvasItems([]);
-      console.log('[LearnerSession] ✅ setCanvasItems([]) called');
+      // console.log('[LearnerSession] ✅ setCanvasItems([]) called');
 
       setBuckets([]);
-      console.log('[LearnerSession] ✅ setBuckets([]) called');
+      // console.log('[LearnerSession] ✅ setBuckets([]) called');
 
       setFloatingAnimations([]);
-      console.log('[LearnerSession] ✅ setFloatingAnimations([]) called - SHOULD CLEAR ALL ANIMATIONS!');
+      // console.log('[LearnerSession] ✅ setFloatingAnimations([]) called - SHOULD CLEAR ALL ANIMATIONS!');
     };
 
     // Set up callback for bucket added/updated
     whiteboardService.onBucketAdded = (data) => {
-      console.log('[LearnerSession] Bucket added:', data);
+      // console.log('[LearnerSession] Bucket added:', data);
       setBuckets(prev => {
         const exists = prev.find(bucket => bucket.id === data.id);
         if (!exists) {
@@ -693,7 +732,7 @@ const LearnerSession = () => {
     };
 
     whiteboardService.onBucketUpdate = (data) => {
-      console.log('[LearnerSession] Bucket updated:', data);
+      // console.log('[LearnerSession] Bucket updated:', data);
       if (data.removed) {
         setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
       } else {
@@ -705,7 +744,7 @@ const LearnerSession = () => {
 
     // YouTube popup event listeners
     whiteboardService.onYoutubePopupCreated = (data) => {
-      console.log('[LearnerSession] YouTube popup received from trainer:', data);
+      // console.log('[LearnerSession] YouTube popup received from trainer:', data);
       const newPopup = {
         id: data.popupId,
         videoId: data.videoId,
@@ -716,13 +755,13 @@ const LearnerSession = () => {
     };
 
     whiteboardService.onYoutubePopupClosed = (data) => {
-      console.log('[LearnerSession] YouTube popup closed from trainer:', data.popupId);
+      // console.log('[LearnerSession] YouTube popup closed from trainer:', data.popupId);
       setYoutubePopups(prev => prev.filter(popup => popup.id !== data.popupId));
     };
 
     // Set up callback for background music from trainer
     whiteboardService.onBackgroundMusic = (data) => {
-      console.log('[LearnerSession] Background music command from trainer:', data);
+      // console.log('[LearnerSession] Background music command from trainer:', data);
       if (data.playing) {
         // Start playing music
         setBackgroundMusicPlaying(true);
@@ -730,7 +769,7 @@ const LearnerSession = () => {
           learnerAudioRef.current.src = data.musicUrl;
           learnerAudioRef.current.loop = true;
           learnerAudioRef.current.volume = data.volume || 0.5; // Use trainer's volume
-          learnerAudioRef.current.play().catch(err => console.log('Audio play error:', err));
+          learnerAudioRef.current.play().catch(err => { /* console.log('Audio play error:', err); */ });
         }
       } else {
         // Stop playing music
@@ -743,7 +782,7 @@ const LearnerSession = () => {
 
     // Set up callback for background music volume changes
     whiteboardService.onBackgroundMusicVolume = (data) => {
-      console.log('[LearnerSession] Background music volume changed:', data.volume);
+      // console.log('[LearnerSession] Background music volume changed:', data.volume);
       if (learnerAudioRef.current) {
         learnerAudioRef.current.volume = data.volume;
       }
@@ -751,16 +790,16 @@ const LearnerSession = () => {
 
     // Set up callback for exercise updates from trainer
     whiteboardService.onExerciseUpdate = (data) => {
-      console.log('[LearnerSession] 📋 Exercise update received from trainer:', data);
+      // console.log('[LearnerSession] 📋 Exercise update received from trainer:', data);
 
       // Handle both new qaItems format and old question format for backward compatibility
       if (data.qaItems && Array.isArray(data.qaItems)) {
-        console.log('[LearnerSession] Setting exerciseData with qaItems:', data.qaItems);
+        // console.log('[LearnerSession] Setting exerciseData with qaItems:', data.qaItems);
         setExerciseData({
           qaItems: data.qaItems
         });
       } else if (data.question) {
-        console.log('[LearnerSession] Setting exerciseData with question:', data.question);
+        // console.log('[LearnerSession] Setting exerciseData with question:', data.question);
         setExerciseData({
           question: data.question
         });
@@ -769,7 +808,7 @@ const LearnerSession = () => {
 
     // Set up callback for real-time answer updates from trainer's display
     whiteboardService.onExerciseAnswerUpdate = (data) => {
-      console.log('[LearnerSession] Exercise answer update received:', data);
+      // console.log('[LearnerSession] Exercise answer update received:', data);
       if (data.qaItems) {
         setExerciseData(prev => ({
           ...prev,
@@ -786,7 +825,7 @@ const LearnerSession = () => {
 
     // Set up callback for exercise closed from trainer
     whiteboardService.onExerciseClosed = (data) => {
-      console.log('[LearnerSession] Exercise closed by trainer:', data);
+      // console.log('[LearnerSession] Exercise closed by trainer:', data);
       setExerciseData({
         qaItems: [],
         question: ''
@@ -919,7 +958,7 @@ const LearnerSession = () => {
 
       // Listen for item selections from remote user (trainer)
       wbService.onItemSelected = (data) => {
-        console.log('[LearnerSession] Remote user selected items:', data);
+        // console.log('[LearnerSession] Remote user selected items:', data);
         if (data.itemIds && Array.isArray(data.itemIds)) {
           setRemoteSelectedItemIds(data.itemIds);
         }
@@ -932,24 +971,24 @@ const LearnerSession = () => {
     const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'learner');
 
     try {
-      console.log('[LearnerSession] Initializing Video Conference service');
+      // console.log('[LearnerSession] Initializing Video Conference service');
 
       // Set callback for local stream (learner's camera/mic)
       videoService.onLocalStream = (stream) => {
-        console.log('[LearnerSession] Local stream received');
+        // console.log('[LearnerSession] Local stream received');
         // Learner doesn't display their own video to minimize distraction
       };
 
       // Set callback for remote stream (trainer's video)
       videoService.onRemoteStream = (stream) => {
-        console.log('[LearnerSession] Remote stream received from trainer');
+        // console.log('[LearnerSession] Remote stream received from trainer');
         setRemoteStream(stream);
         setTrainerJoined(true); // Trainer has joined
       };
 
       // Set callback for connection state changes
       videoService.onConnectionStateChange = (state) => {
-        console.log('[LearnerSession] Connection state:', state);
+        // console.log('[LearnerSession] Connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -975,33 +1014,33 @@ const LearnerSession = () => {
 
       // Set callback for prompt meter updates from trainer
       videoService.onPromptMeterUpdate = (value) => {
-        console.log('[LearnerSession] Prompt meter update received:', value);
+        // console.log('[LearnerSession] Prompt meter update received:', value);
         setPromptMeter(value);
       };
 
       // Set callback for reinforcement meter updates from trainer
       videoService.onReinforcementMeterUpdate = (value) => {
-        console.log('[LearnerSession] Reinforcement meter update received:', value);
+        // console.log('[LearnerSession] Reinforcement meter update received:', value);
         setReinforcementMeter(value);
       };
 
       // Set callback for freeze signal from trainer
       videoService.onFreeze = async (message) => {
-        console.log('[LearnerSession] Freeze signal received:', message);
+        // console.log('[LearnerSession] Freeze signal received:', message);
         setIsFrozen(message.frozen);
         if (message.frozen) {
           // Show prompt for user to click - fullscreen MUST be triggered by user gesture
           setShowFullscreenPrompt(true);
-          console.log('[LearnerSession] Waiting for user interaction to trigger fullscreen');
+          // console.log('[LearnerSession] Waiting for user interaction to trigger fullscreen');
 
           // Listen for first user interaction to trigger fullscreen
           const triggerFullscreenOnInteraction = async (event) => {
-            console.log('[LearnerSession] User interaction detected, triggering fullscreen...');
+            // console.log('[LearnerSession] User interaction detected, triggering fullscreen...');
             try {
               await enterKioskMode();
-              console.log('[LearnerSession] Successfully entered fullscreen mode');
+              // console.log('[LearnerSession] Successfully entered fullscreen mode');
             } catch (err) {
-              console.log('[LearnerSession] Fullscreen entry failed, will retry on next interaction');
+              // console.log('[LearnerSession] Fullscreen entry failed, will retry on next interaction');
               return; // Don't remove listener, keep trying
             }
             // Remove listeners once fullscreen is successful
@@ -1035,7 +1074,7 @@ const LearnerSession = () => {
       await videoService.initialize();
       setWebRTC(videoService);
 
-      console.log('[LearnerSession] Video Conference service initialized');
+      // console.log('[LearnerSession] Video Conference service initialized');
     } catch (error) {
       console.error('[LearnerSession] Video Conference init error:', error);
       toast.error('Failed to initialize video connection: ' + error.message);
@@ -1054,44 +1093,44 @@ const LearnerSession = () => {
   // -----------------------------------------------------------
   const enterKioskMode = async () => {
     try {
-      console.log('[LearnerSession] Entering kiosk mode');
+      // console.log('[LearnerSession] Entering kiosk mode');
 
       // Request fullscreen AGGRESSIVELY - must be triggered by user gesture
       const elem = document.documentElement;
       let fullscreenSuccess = false;
 
-      console.log('[LearnerSession] Requesting fullscreen...');
-      console.log('[LearnerSession] Current fullscreen element:', document.fullscreenElement);
+      // console.log('[LearnerSession] Requesting fullscreen...');
+      // console.log('[LearnerSession] Current fullscreen element:', document.fullscreenElement);
 
       try {
         if (elem.requestFullscreen) {
-          console.log('[LearnerSession] Using requestFullscreen');
+          // console.log('[LearnerSession] Using requestFullscreen');
           await elem.requestFullscreen({ navigationUI: 'hide' });
           fullscreenSuccess = true;
         } else if (elem.webkitRequestFullscreen) {
-          console.log('[LearnerSession] Using webkitRequestFullscreen');
+          // console.log('[LearnerSession] Using webkitRequestFullscreen');
           await elem.webkitRequestFullscreen();
           fullscreenSuccess = true;
         } else if (elem.msRequestFullscreen) {
-          console.log('[LearnerSession] Using msRequestFullscreen');
+          // console.log('[LearnerSession] Using msRequestFullscreen');
           await elem.msRequestFullscreen();
           fullscreenSuccess = true;
         } else if (elem.mozRequestFullScreen) {
-          console.log('[LearnerSession] Using mozRequestFullScreen');
+          // console.log('[LearnerSession] Using mozRequestFullScreen');
           await elem.mozRequestFullScreen();
           fullscreenSuccess = true;
         } else {
-          console.warn('[LearnerSession] No fullscreen API available');
+          // console.warn('[LearnerSession] No fullscreen API available');
           // Silently fail - user will see the prompt to retry
           throw new Error('Fullscreen API not available');
         }
 
         if (fullscreenSuccess) {
-          console.log('[LearnerSession] Fullscreen activated successfully');
+          // console.log('[LearnerSession] Fullscreen activated successfully');
           setShowFullscreenPrompt(false);
         }
       } catch (err) {
-        console.warn('[LearnerSession] Fullscreen request failed (this is normal on first try):', err.message);
+        // console.warn('[LearnerSession] Fullscreen request failed (this is normal on first try):', err.message);
         // Don't show error toast - user already sees the prompt to click
         // Keep the prompt visible for retry
         throw err;
@@ -1150,7 +1189,7 @@ const LearnerSession = () => {
           // Try portrait if landscape fails
           return screen.orientation.lock('portrait');
         }).catch(err => {
-          console.log('[LearnerSession] Could not lock orientation:', err);
+          // console.log('[LearnerSession] Could not lock orientation:', err);
         });
       }
 
@@ -1170,7 +1209,7 @@ const LearnerSession = () => {
       }
       window.freezeFullscreenInterval = setInterval(() => {
         if (isFrozen && !document.fullscreenElement && !document.webkitFullscreenElement) {
-          console.log('[LearnerSession] Fullscreen exited, re-entering...');
+          // console.log('[LearnerSession] Fullscreen exited, re-entering...');
           const elem = document.documentElement;
           if (elem.requestFullscreen) {
             elem.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
@@ -1183,7 +1222,7 @@ const LearnerSession = () => {
         }
       }, 300);
 
-      console.log('[LearnerSession] Kiosk mode activated');
+      // console.log('[LearnerSession] Kiosk mode activated');
     } catch (error) {
       console.warn('[LearnerSession] Kiosk mode setup incomplete (waiting for user interaction):', error.message);
     }
@@ -1195,7 +1234,7 @@ const LearnerSession = () => {
   // -----------------------------------------------------------
   const exitKioskMode = () => {
     try {
-      console.log('[LearnerSession] Exiting kiosk mode');
+      // console.log('[LearnerSession] Exiting kiosk mode');
 
       // Clear refocus interval
       if (window.freezeRefocusInterval) {
@@ -1252,11 +1291,11 @@ const LearnerSession = () => {
         try {
           screen.orientation.unlock();
         } catch (err) {
-          console.log('[LearnerSession] Could not unlock orientation:', err);
+          // console.log('[LearnerSession] Could not unlock orientation:', err);
         }
       }
 
-      console.log('[LearnerSession] Kiosk mode deactivated');
+      // console.log('[LearnerSession] Kiosk mode deactivated');
     } catch (error) {
       console.warn('[LearnerSession] Kiosk mode cleanup error:', error.message);
     }
@@ -1383,11 +1422,11 @@ const LearnerSession = () => {
       if (webRTC?.localStream) {
         webRTC.localStream.getTracks().forEach(track => {
           track.stop();
-          console.log(`[LearnerSession] Stopped ${track.kind} track`);
+          // console.log(`[LearnerSession] Stopped ${track.kind} track`);
         });
       }
       webRTC?.close();
-      console.log('[LearnerSession] WebRTC closed and media access revoked');
+      // console.log('[LearnerSession] WebRTC closed and media access revoked');
     } catch (error) {
       console.error('[LearnerSession] Error closing WebRTC:', error);
     }
@@ -1710,6 +1749,57 @@ const LearnerSession = () => {
                     >
                       Send
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Comments Section - Appears when trainer opens it */}
+          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
+            background: 'linear-gradient(135deg, #f3f4f6 0%, #f5f6f8 100%)',
+            border: '1px solid rgba(59, 130, 246, 0.15)',
+            display: isCommentsOpen ? 'block' : 'none'
+          }}>
+            <div
+              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-blue-50/30"
+            >
+              <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800">💬 Comments</h3>
+              <span className="text-blue-600 text-lg">▼</span>
+            </div>
+            {isCommentsOpen && (
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                <div className="bg-white rounded-xl overflow-hidden" style={{
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
+                  border: '1px solid rgba(59, 130, 246, 0.12)'
+                }}>
+                  {/* Trainer Comments Section */}
+                  <div className="mb-3 p-4 sm:p-5 border-b border-gray-200">
+                    <div className="font-semibold text-gray-700 text-xs sm:text-sm mb-2">👨‍🏫 Trainer Comments</div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 min-h-[60px] max-h-[100px] overflow-y-auto text-xs sm:text-sm text-gray-700" style={{ fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}>
+                      {trainerComments || <span className="text-gray-400">Trainer comments will appear here...</span>}
+                    </div>
+                  </div>
+
+                  {/* Learner Comments Input Section */}
+                  <div className="p-4 sm:p-5">
+                    <div className="font-semibold text-gray-700 text-xs sm:text-sm mb-2">👨‍🎓 Your Comments</div>
+                    <div className="flex gap-2 w-full min-w-0">
+                      <input
+                        type="text"
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendComment()}
+                        placeholder="Type your comment..."
+                        className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+                      />
+                      <button
+                        onClick={sendComment}
+                        className="flex-shrink-0 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                      >
+                        Send
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
