@@ -13,10 +13,13 @@ import {
   MoreVertical,
   Users,
   MessageSquarePlus,
-  Smile
+  Smile,
+  Download
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import EmojiPicker from '../../components/chat/EmojiPicker';
+import ImageModal from '../../components/chat/ImageModal';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/chats/UnifiedChatPage.css';
 
@@ -55,11 +58,25 @@ const UnifiedChatPage = () => {
   const [groupName, setGroupName] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [filterTag, setFilterTag] = useState('ALL'); // Track active filter
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [imageModal, setImageModal] = useState(null);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set());
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Connect to chat when component mounts
   useEffect(() => {
@@ -220,6 +237,31 @@ const UnifiedChatPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji) => {
+    setMessageInput(prev => prev + emoji);
+  };
+
+  // Handle file download
+  const handleDownload = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: open in new tab
+      window.open(fileUrl, '_blank');
     }
   };
 
@@ -543,23 +585,65 @@ const UnifiedChatPage = () => {
                         {message.file_url && (
                           <div className="chat-message-file">
                             {message.message_type === 'IMAGE' ? (
-                              <img
-                                src={message.file_url}
-                                alt={message.file_name}
-                              />
+                              <div className="chat-file-media">
+                                <img
+                                  src={message.file_url}
+                                  alt={message.file_name}
+                                  className="chat-message-thumbnail"
+                                  onClick={() => setImageModal({ url: message.file_url, name: message.file_name })}
+                                  title="Click to view full size"
+                                />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(message.file_url, message.file_name);
+                                  }}
+                                  title="Download image"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : message.message_type === 'VIDEO' ? (
-                              <video src={message.file_url} controls />
+                              <div className="chat-file-media">
+                                <video src={message.file_url} controls />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download video"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : message.message_type === 'AUDIO' ? (
-                              <audio src={message.file_url} controls />
+                              <div className="chat-file-media">
+                                <audio src={message.file_url} controls />
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download audio"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             ) : (
-                              <a
-                                href={message.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Paperclip size={14} />
-                                {message.file_name}
-                              </a>
+                              <div className="chat-file-document">
+                                <a
+                                  href={message.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <Paperclip size={14} />
+                                  {message.file_name}
+                                </a>
+                                <button
+                                  className="chat-file-download-btn"
+                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  title="Download file"
+                                >
+                                  <Download size={16} />
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -609,8 +693,19 @@ const UnifiedChatPage = () => {
             <div className="chat-input-area">
               <form onSubmit={handleSendMessage} className="chat-input-form">
                 <button
+                  ref={emojiButtonRef}
                   type="button"
                   className="chat-icon-btn"
+                  onClick={() => {
+                    if (isMobile) {
+                      // On mobile, focus input and let native emoji keyboard open
+                      document.querySelector('.chat-input')?.focus();
+                    } else {
+                      // On desktop/tablet, toggle emoji picker
+                      setShowEmojiPicker(!showEmojiPicker);
+                    }
+                  }}
+                  title="Emoji"
                 >
                   <Smile size={24} />
                 </button>
@@ -627,6 +722,7 @@ const UnifiedChatPage = () => {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingFile}
                   className="chat-icon-btn"
+                  title="Attach file"
                 >
                   <Paperclip size={24} />
                 </button>
@@ -646,6 +742,7 @@ const UnifiedChatPage = () => {
                   type="submit"
                   disabled={!messageInput.trim()}
                   className="chat-send-btn"
+                  title="Send message"
                 >
                   <Send size={20} />
                 </button>
@@ -653,6 +750,15 @@ const UnifiedChatPage = () => {
 
               {uploadingFile && (
                 <p className="chat-uploading-text">Uploading file...</p>
+              )}
+
+              {/* Emoji Picker - Desktop/Tablet Only */}
+              {!isMobile && showEmojiPicker && (
+                <EmojiPicker
+                  onEmojiSelect={handleEmojiSelect}
+                  onClose={() => setShowEmojiPicker(false)}
+                  buttonRef={emojiButtonRef}
+                />
               )}
             </div>
           </>
@@ -783,6 +889,15 @@ const UnifiedChatPage = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Image Modal */}
+      {imageModal && (
+        <ImageModal
+          imageUrl={imageModal.url}
+          fileName={imageModal.name}
+          onClose={() => setImageModal(null)}
+        />
       )}
     </div>
   );
