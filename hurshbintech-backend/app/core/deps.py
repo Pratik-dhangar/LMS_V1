@@ -375,3 +375,52 @@ async def get_current_coach(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
         )
+
+
+async def get_current_admin_or_head(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """
+    Get current authenticated user if they are admin or head
+    Used in routes that should be accessible by both admin and head roles
+    """
+    try:
+        # Decode JWT token
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+
+        # Verify role is admin or head
+        if role not in ["admin", "head"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized. Admin or Head role required."
+            )
+
+        # Get user from database
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        # Verify the user's role matches
+        if user.role.value not in ["admin", "head"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized. Admin or Head role required."
+            )
+
+        return user
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+        )
