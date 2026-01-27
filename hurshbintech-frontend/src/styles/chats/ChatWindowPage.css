@@ -595,7 +595,7 @@
 /* Chat Info Dropdown (same as UnifiedChatPage) */
 .chat-info-dropdown {
     position: absolute;
-    top: 12rem;
+    top: 2rem;
     right: 1rem;
     width: 20rem;
     max-height: 30rem;
