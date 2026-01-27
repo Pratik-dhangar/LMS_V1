@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_admin
 from app.crud.Chat import chat_crud
 from app.db.session import get_db
 from app.models.Chat.chat_model import ConversationType, MessageType
@@ -679,3 +679,23 @@ async def chat_websocket_endpoint(
         if user_id:
             await chat_manager.disconnect(user_id, websocket)
             logger.info(f"User {user_id} disconnected from chat")
+
+
+# ============ ADMIN ENDPOINTS ============
+
+@router.post("/admin/cleanup-old-messages", tags=["Chat Admin"])
+async def trigger_message_cleanup(
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Manually trigger cleanup of messages older than 7 days.
+    Only accessible by admin users.
+    
+    This endpoint allows manual testing of the auto-cleanup functionality.
+    In production, this runs automatically daily at 3 AM via scheduler.
+    """
+    from app.workers.chat_message_cleanup import cleanup_old_messages
+    
+    result = await cleanup_old_messages()
+    return result
