@@ -1,6 +1,7 @@
 /**
  * Chat Icon Widget
- * Floating chat button in bottom-right corner
+ * Floating chat button in bottom-right corner for mobile
+ * LinkedIn-style popup for desktop/tablet
  * Visible on all pages except session pages and login
  */
 
@@ -9,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import UnifiedChatPage from '../../pages/chat/UnifiedChatPage';
+import MessagingWidget from './MessagingWidget';
 import '../../styles/components/chat/chatWidget.css';
 
 const ChatIconWidget = () => {
@@ -61,7 +63,8 @@ const ChatIconWidget = () => {
 
   return (
     <>
-      <div className="chat-widget-container">
+      {/* Mobile: Chat button with modal */}
+      <div className="chat-widget-container chat-widget-mobile-only">
         <button
           onClick={handleClick}
           className="chat-widget-button"
@@ -79,7 +82,7 @@ const ChatIconWidget = () => {
         </button>
       </div>
 
-      {/* Chat Modal */}
+      {/* Chat Modal (Mobile only) */}
       {showChatModal && (
         <div className="chat-modal-overlay-fullscreen">
           <div className="chat-modal-container">
@@ -99,6 +102,11 @@ const ChatIconWidget = () => {
           </div>
         </div>
       )}
+
+      {/* Desktop/Tablet: LinkedIn-style popup widget */}
+      <div className="messaging-widget-desktop-only">
+        <MessagingWidget />
+      </div>
     </>
   );
 };

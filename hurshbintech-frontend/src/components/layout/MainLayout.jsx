@@ -2,6 +2,8 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import MessagingWidget from '../chat/MessagingWidget';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * MainLayout Component
@@ -13,11 +15,15 @@ import Footer from './Footer';
  * repeating Navbar and Footer imports in every page component.
  */
 const MainLayout = () => {
+  const { user } = useAuth();
+
   return (
     <>
       <Navbar />
       <Outlet />
       <Footer />
+      {/* LinkedIn-style messaging widget - only shown for authenticated users */}
+      {user && <MessagingWidget />}
     </>
   );
 };
