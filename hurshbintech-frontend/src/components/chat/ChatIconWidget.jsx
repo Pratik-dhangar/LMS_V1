@@ -21,11 +21,6 @@ const ChatIconWidget = () => {
 
   // Pages where chat icon should NOT be shown
   const hiddenPages = [
-    '/learner-session',
-    '/trainer-session',
-    '/coach-session',
-    '/client-session',
-    '/guest-session',
     '/login',
     '/chat',
     '/chat/',
@@ -43,8 +38,9 @@ const ChatIconWidget = () => {
     '/register-learner/'
   ];
 
-  // Check if current page is in hidden pages list
-  const shouldHide = hiddenPages.some(page => location.pathname.includes(page));
+  // Check if current page is a session page or in hidden pages list
+  const isSessionPage = location.pathname.includes('/session/') || location.pathname.includes('/guest-session/');
+  const shouldHide = isSessionPage || hiddenPages.some(page => location.pathname.includes(page));
 
   if (shouldHide) {
     return null;

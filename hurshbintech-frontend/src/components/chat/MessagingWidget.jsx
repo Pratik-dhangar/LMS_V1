@@ -52,6 +52,8 @@ const MessagingWidget = () => {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [filterTag, setFilterTag] = useState('ALL'); // 'ALL' or 'GROUPS'
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showChatDetails, setShowChatDetails] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -141,6 +143,10 @@ const MessagingWidget = () => {
 
   // Open conversation
   const handleOpenConversation = (conversation) => {
+    if (!conversation || !conversation.id) {
+      console.error('Invalid conversation:', conversation);
+      return;
+    }
     setSelectedConversation(conversation);
     selectConversation(conversation.id);
     loadMessages(conversation.id);
@@ -156,7 +162,7 @@ const MessagingWidget = () => {
   // Start new conversation with user
   const handleStartNewChat = async (user) => {
     try {
-      const newConv = await createConversation([user.id], false);
+      const newConv = await createConversation('DIRECT', [user.id]);
       if (newConv) {
         setSelectedConversation(newConv);
         selectConversation(newConv.id);
@@ -171,14 +177,21 @@ const MessagingWidget = () => {
   // Send message
   const handleSendMessage = async (e) => {
     e?.preventDefault();
-    if (!messageInput.trim() || !selectedConversation) return;
+    if (!messageInput.trim() || !selectedConversation || isSubmitting) return;
+
+    const messageToSend = messageInput.trim();
+    setMessageInput('');
+    setIsTyping(false);
+    setIsSubmitting(true);
 
     try {
-      await sendMessage(selectedConversation.id, messageInput.trim());
-      setMessageInput('');
-      setIsTyping(false);
+      await sendMessage(selectedConversation.id, messageToSend);
     } catch (error) {
       console.error('Failed to send message:', error);
+      // Restore message on error
+      setMessageInput(messageToSend);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -292,7 +305,7 @@ const MessagingWidget = () => {
 
     try {
       const memberIds = selectedUsers.map(u => u.id);
-      const conversation = await createConversation(memberIds, true, groupName.trim());
+      const conversation = await createConversation('GROUP', memberIds, groupName.trim());
       setShowNewChatModal(false);
       setSelectedUsers([]);
       setGroupName('');
@@ -357,7 +370,7 @@ const MessagingWidget = () => {
             </div>
 
             {/* Search */}
-            <div className="messaging-search">
+            <div className="messaging-search" style={{ position: 'relative' }}>
               <Search size={16} className="messaging-search-icon" />
               <input
                 type="text"
@@ -366,36 +379,34 @@ const MessagingWidget = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="messaging-search-input"
               />
-              <div style={{ position: 'relative' }}>
-                <Settings 
-                  size={16} 
-                  className="messaging-search-settings" 
-                  onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  style={{ cursor: 'pointer' }}
-                />
-                {showFilterMenu && (
-                  <div className="messaging-filter-menu">
-                    <button
-                      className={`messaging-filter-option ${filterTag === 'ALL' ? 'active' : ''}`}
-                      onClick={() => {
-                        setFilterTag('ALL');
-                        setShowFilterMenu(false);
-                      }}
-                    >
-                      All Chats
-                    </button>
-                    <button
-                      className={`messaging-filter-option ${filterTag === 'GROUPS' ? 'active' : ''}`}
-                      onClick={() => {
-                        setFilterTag('GROUPS');
-                        setShowFilterMenu(false);
-                      }}
-                    >
-                      Groups Only
-                    </button>
-                  </div>
-                )}
-              </div>
+              <Settings 
+                size={16} 
+                className="messaging-search-settings" 
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                style={{ cursor: 'pointer' }}
+              />
+              {showFilterMenu && (
+                <div className="messaging-filter-menu">
+                  <button
+                    className={`messaging-filter-option ${filterTag === 'ALL' ? 'active' : ''}`}
+                    onClick={() => {
+                      setFilterTag('ALL');
+                      setShowFilterMenu(false);
+                    }}
+                  >
+                    All Chats
+                  </button>
+                  <button
+                    className={`messaging-filter-option ${filterTag === 'GROUPS' ? 'active' : ''}`}
+                    onClick={() => {
+                      setFilterTag('GROUPS');
+                      setShowFilterMenu(false);
+                    }}
+                  >
+                    Groups Only
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Tabs */}
@@ -424,38 +435,43 @@ const MessagingWidget = () => {
                     <p>No conversations yet</p>
                   </div>
                 ) : (
-                  filteredConversations.map((conv) => {
-                    const otherUser = conv.type === 'DIRECT' 
-                      ? conv.member_ids?.find(id => id !== currentUser?.id)
-                      : null;
-                    const isOnline = otherUser && onlineUsers.has(otherUser);
-                    const unreadCount = unreadCounts[conv.id] || 0;
-                    const lastMessage = messages[conv.id]?.[messages[conv.id].length - 1];
+                  filteredConversations.map((conversation) => {
+                    const unreadCount = unreadCounts[conversation.id] || 0;
+                    const lastMessage = conversation.last_message;
 
                     return (
                       <div
-                        key={conv.id}
+                        key={conversation.id}
                         className="messaging-conversation-item"
-                        onClick={() => handleOpenConversation(conv)}
+                        onClick={() => handleOpenConversation(conversation)}
                       >
                         <div className="messaging-conv-avatar-wrapper">
-                          <div className={`messaging-conv-avatar ${isOnline ? 'online' : ''}`}>
-                            {conv.name?.charAt(0).toUpperCase() || 'U'}
+                          <div className="messaging-conv-avatar">
+                            {conversation.type === 'GROUP' ? (
+                              <Users size={16} />
+                            ) : (
+                              conversation.name?.charAt(0).toUpperCase() || 'U'
+                            )}
                           </div>
+                          {conversation.type === 'DIRECT' && conversation.member_ids?.some(id => id !== currentUser?.id && onlineUsers.has(id)) && (
+                            <div className="messaging-online-badge" />
+                          )}
                         </div>
                         <div className="messaging-conv-content">
                           <div className="messaging-conv-header">
-                            <span className="messaging-conv-name">{conv.name}</span>
+                            <span className="messaging-conv-name">{conversation.name}</span>
                             <span className="messaging-conv-time">
-                              {formatTime(lastMessage?.created_at || conv.updated_at)}
+                              {formatTime(conversation.updated_at)}
                             </span>
                           </div>
                           <div className="messaging-conv-footer">
                             <p className="messaging-conv-message">
-                              {lastMessage?.content || 'No messages yet'}
+                              {lastMessage?.content || lastMessage?.file_name || 'No messages yet'}
                             </p>
                             {unreadCount > 0 && (
-                              <span className="messaging-conv-unread">{unreadCount}</span>
+                              <span className="messaging-conv-unread">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -477,20 +493,24 @@ const MessagingWidget = () => {
                     return (
                       <div
                         key={user.id}
-                        className="messaging-conversation-item"
                         onClick={() => handleStartNewChat(user)}
+                        className="messaging-conversation-item"
                       >
                         <div className="messaging-conv-avatar-wrapper">
-                          <div className={`messaging-conv-avatar ${isOnline ? 'online' : ''}`}>
+                          <div className="messaging-conv-avatar">
                             {user.name?.charAt(0).toUpperCase() || 'U'}
                           </div>
+                          {isOnline && (
+                            <div className="messaging-online-badge" />
+                          )}
                         </div>
+
                         <div className="messaging-conv-content">
                           <div className="messaging-conv-header">
                             <span className="messaging-conv-name">{user.name}</span>
                           </div>
                           <div className="messaging-conv-footer">
-                            <p className="messaging-conv-message" style={{ color: '#999' }}>
+                            <p className="messaging-conv-message" style={{ color: '#666' }}>
                               {user.role}
                             </p>
                           </div>
@@ -525,19 +545,90 @@ const MessagingWidget = () => {
                   )}
                 </div>
               </div>
-              <button className="messaging-icon-btn">
+              <button 
+                className="messaging-icon-btn"
+                onClick={() => setShowChatDetails(!showChatDetails)}
+                title="Chat details"
+              >
                 <MoreHorizontal size={20} />
               </button>
             </div>
 
+            {/* Chat Details Sidebar */}
+            {showChatDetails && (
+              <div className="messaging-chat-details-panel">
+                <div className="messaging-details-header">
+                  <h4>Chat Details</h4>
+                  <button 
+                    className="messaging-details-close"
+                    onClick={() => setShowChatDetails(false)}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="messaging-details-content">
+                  {/* Chat Info */}
+                  <div className="messaging-details-section">
+                    <div className="messaging-details-avatar-large">
+                      {selectedConversation.type === 'GROUP' ? (
+                        <Users size={32} />
+                      ) : (
+                        selectedConversation.name?.charAt(0).toUpperCase() || 'U'
+                      )}
+                    </div>
+                    <h3 className="messaging-details-name">{selectedConversation.name}</h3>
+                    <p className="messaging-details-type">
+                      {selectedConversation.type === 'GROUP' ? 'Group Chat' : 'Direct Message'}
+                    </p>
+                  </div>
+
+                  {/* Members List */}
+                  <div className="messaging-details-section">
+                    <h4 className="messaging-details-section-title">
+                      Members ({selectedConversation.members?.length || 0})
+                    </h4>
+                    <div className="messaging-details-members">
+                      {selectedConversation.members?.map((member) => {
+                        const isOnline = onlineUsers.has(member.user_id);
+                        return (
+                          <div key={member.user_id} className="messaging-details-member">
+                            <div className="messaging-member-avatar-wrapper">
+                              <div className="messaging-member-avatar">
+                                {member.user_name?.charAt(0).toUpperCase() || 'U'}
+                              </div>
+                              {isOnline && <div className="messaging-member-online-badge" />}
+                            </div>
+                            <div className="messaging-member-info">
+                              <p className="messaging-member-name">{member.user_name}</p>
+                              {isOnline && <span className="messaging-member-status">Online</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  {selectedConversation.type === 'GROUP' && (
+                    <div className="messaging-details-section">
+                      <button className="messaging-details-action-btn messaging-details-danger">
+                        Leave Group
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
             <div className="messaging-chat-messages">
-              {conversationMessages.map((message, index) => {
+              {conversationMessages.map((message) => {
                 const isSent = message.sender_id === currentUser?.id;
                 const sender = selectedConversation.members?.find(m => m.user_id === message.sender_id);
 
                 return (
-                  <div key={message.id} className={`messaging-message ${isSent ? 'sent' : 'received'}`}>
+                  <div key={`msg-${message.id}-${message.created_at}`} className={`messaging-message ${isSent ? 'sent' : 'received'}`}>
                     {!isSent && (
                       <div className="messaging-message-avatar">
                         {sender?.user_name?.charAt(0).toUpperCase() || 'U'}
@@ -620,11 +711,6 @@ const MessagingWidget = () => {
                           <span className="messaging-message-time">
                             {formatMessageTime(message.created_at)}
                           </span>
-                          {isSent && (
-                            <span className="messaging-message-status">
-                              {message.is_read ? <CheckCheck size={14} /> : <Check size={14} />}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -690,7 +776,7 @@ const MessagingWidget = () => {
               />
               <button
                 type="submit"
-                disabled={!messageInput.trim()}
+                disabled={!messageInput.trim() || isSubmitting}
                 className="messaging-send-btn"
               >
                 <Send size={18} />

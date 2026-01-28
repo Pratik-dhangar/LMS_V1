@@ -332,6 +332,8 @@
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .chat-modal-header-bar {
