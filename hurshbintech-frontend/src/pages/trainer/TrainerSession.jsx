@@ -21,7 +21,6 @@ import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import YouTubePopup from '../../components/common/YouTubePopup';
 import useMessages from '../../hooks/useMessages';
-import useComments from '../../hooks/useComments';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
 import { useMediaControl } from '../../context/MediaControlContext';
@@ -172,38 +171,6 @@ const TrainerSession = () => {
     handleKeyPress: _handleKeyPress,
     addReceivedMessage
   } = useMessages(webRTC, 'trainer');
-
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Comments using custom hook (separate from messages)
-  // 🔸 How it works: useComments hook manages comments visible to both trainer and learner
-  // -----------------------------------------------------------  
-  const {
-    trainerComments,
-    learnerComments,
-    commentInput,
-    setCommentInput,
-    sendComment,
-    handleKeyPress: _handleCommentKeyPress,
-    addReceivedComment
-  } = useComments(whiteboardService, 'trainer');
-
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Set up Whiteboard comment callback
-  // 🔸 How it works: When a comment is received via Whiteboard, add it to comments
-  // -----------------------------------------------------------  
-  useEffect(() => {
-    if (whiteboardService) {
-      whiteboardService.onCommentUpdate = (data) => {
-        // console.log('[TrainerSession] Comment received:', data);
-        addReceivedComment(data);
-      };
-    }
-    return () => {
-      if (whiteboardService) {
-        whiteboardService.onCommentUpdate = null;
-      }
-    };
-  }, [whiteboardService, addReceivedComment]);
 
   // -----------------------------------------------------------  
   // 🔹 Purpose: Set up WebRTC message callback
@@ -416,14 +383,11 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [showExercise, setShowExercise] = useState(false);
   const [exerciseData, setExerciseData] = useState({
-    question: ''
+    question: '',
+    answer: ''
   });
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Comments tool state
-  // 🔸 How it works: manages comments display for both trainer and learner
-  // -----------------------------------------------------------
-  const [showComments, setShowComments] = useState(false);
+
 
   // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
@@ -671,11 +635,11 @@ const TrainerSession = () => {
           qaItems: data.qaItems
         }));
       } else {
-        // Backward compatibility for single answer
+        // Single answer format
         setExerciseData(prev => ({
           ...prev,
-          question: data.question,
-          learnerAnswer: data.learnerAnswer
+          question: data.question || prev.question,
+          answer: data.answer || ''
         }));
       }
     };
@@ -1018,8 +982,8 @@ const TrainerSession = () => {
     // Send exercise to learner via whiteboard service
     if (whiteboardService) {
       whiteboardService.send('exercise_update', {
-        qaItems: exerciseInfo.qaItems,
-        question: exerciseInfo.question, // Keep for backward compatibility
+        question: exerciseInfo.question,
+        answer: exerciseInfo.answer || '',
         timestamp: Date.now()
       });
     }
@@ -1027,8 +991,11 @@ const TrainerSession = () => {
 
   const handleExerciseAnswerChange = (answerData) => {
     // console.log('[TrainerSession] Learner answer updated:', answerData);
-    // Trainer only displays answer updates received via WebSocket
-    // Do not broadcast back - prevents feedback loops
+    // Update the answer in exerciseData
+    setExerciseData(prev => ({
+      ...prev,
+      answer: answerData.answer || ''
+    }));
   };
 
   const handleExerciseSubmit = (response) => {
@@ -1039,8 +1006,8 @@ const TrainerSession = () => {
       // Send feedback to learner or save the response
       if (whiteboardService) {
         whiteboardService.send('exercise_response', {
-          qaItems: response.qaItems,
-          learnerAnswer: response.learnerAnswer,
+          question: response.question,
+          answer: response.answer,
           timestamp: Date.now()
         });
       }
@@ -1048,7 +1015,8 @@ const TrainerSession = () => {
       // Send exercise to learner when "Send to Learner" is clicked
       if (whiteboardService) {
         whiteboardService.send('exercise_update', {
-          qaItems: response.qaItems,
+          question: response.question,
+          answer: '',
           timestamp: Date.now()
         });
       }
@@ -1059,7 +1027,8 @@ const TrainerSession = () => {
     // console.log('[TrainerSession] Exercise deleted');
     setShowExercise(false);
     setExerciseData({
-      question: ''
+      question: '',
+      answer: ''
     });
 
     // Notify learner that exercise has been closed
@@ -2271,7 +2240,9 @@ const TrainerSession = () => {
                 onExerciseSubmit={handleExerciseSubmit}
                 onExerciseUpdate={handleExerciseUpdate}
                 onExerciseDelete={handleExerciseDelete}
-                initialExercise={Object.keys(exerciseData).some(key => exerciseData[key]) ? exerciseData : null}
+                onAnswerChange={handleExerciseAnswerChange}
+                whiteboardService={whiteboardService}
+                initialExercise={exerciseData.question ? exerciseData : null}
               />
             </div>
           )}
@@ -2521,24 +2492,7 @@ const TrainerSession = () => {
                   <span>Q & A</span>
                 </button>
 
-                {/* Comments Tool Button */}
-                <button
-                  onClick={() => {
-                    const newState = !showComments;
-                    setShowComments(newState);
-                    if (whiteboardService) {
-                      whiteboardService.send('comments_toggle', {
-                        visible: newState,
-                        timestamp: Date.now()
-                      });
-                    }
-                  }}
-                  className={`${showComments ? wbSmallBtnActive : wbSmallBtnBase}`}
-                  title="Open Comments Tool - Share notes with learner"
-                >
-                  <span>💬</span>
-                  <span>Comments</span>
-                </button>
+
 
                 {/* Background Music Control */}
                 <div className="flex gap-1 flex-wrap items-center">
@@ -2669,65 +2623,6 @@ const TrainerSession = () => {
                 </button>
               </div>
             </div>
-
-            {/* Comments Tool */}
-            {showComments && (
-              <div className="session-comments-section border-2 border-gray-300 mt-2 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Comments</div>
-                  <button
-                    onClick={() => {
-                      setShowComments(false);
-                      if (whiteboardService) {
-                        whiteboardService.send('comments_toggle', {
-                          visible: false,
-                          timestamp: Date.now()
-                        });
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700 font-bold"
-                    title="Close Comments Tool"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Trainer Comments Section */}
-                <div className="mb-3" style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.75rem' }}>
-                  <div className="font-semibold text-slate-700" style={{ fontSize: 'clamp(0.65rem, 1.6vw, 0.875rem)', marginBottom: '0.5rem' }}>👨‍🏫 Trainer Comments</div>
-                  <div className="bg-white border border-gray-300 rounded p-2 mb-2" style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto' }}>
-                    {trainerComments || <span className="text-gray-400">Your comments will appear here...</span>}
-                  </div>
-                  <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
-                    <input
-                      type="text"
-                      value={commentInput}
-                      onChange={(e) => setCommentInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendComment()}
-                      placeholder="Type your comment..."
-                      className="flex-1 border border-gray-300 rounded"
-                      style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
-                    />
-                    <button
-                      onClick={sendComment}
-                      className="bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold"
-                      style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
-                      title="Send Comment"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-
-                {/* Learner Comments Section */}
-                <div>
-                  <div className="font-semibold text-slate-700" style={{ fontSize: 'clamp(0.65rem, 1.6vw, 0.875rem)', marginBottom: '0.5rem' }}>👨‍🎓 Learner Comments</div>
-                  <div className="bg-blue-50 border border-blue-300 rounded p-2" style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto' }}>
-                    {learnerComments || <span className="text-gray-400">Learner comments will appear here...</span>}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

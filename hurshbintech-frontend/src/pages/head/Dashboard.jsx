@@ -19,7 +19,6 @@ const HeadDashboard = () => {
     { id: '5', title: 'Manage Home Program', description: 'Assign and manage learning programs for learners', icon: BookOpen, onClick: () => navigate('/head/manage-program-assignments') },
     { id: '6', title: 'Session Reports', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
     { id: '7', title: 'Book Appointment with Coach', description: 'Schedule appointments with HurshBin Coaches/Consultants', icon: Calendar, onClick: () => navigate('/book-appointment') },
-    { id: '8', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: BookOpen, onClick: () => navigate('/head/profile-order-history') }
   ];
 
   return (

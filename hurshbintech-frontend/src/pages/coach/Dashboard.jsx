@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Calendar, Clock, Settings, MessageSquare } from 'lucide-react';
 import '../../styles/admin/index.css';
+import '../../styles/coach/dashboard.css';
 
 const CoachDashboard = () => {
   const { user } = useAuth();
@@ -12,7 +13,6 @@ const CoachDashboard = () => {
     { id: '1', title: 'My Appointments', description: 'View and manage appointments scheduled by clients', icon: Calendar, onClick: () => navigate('/coach/appointments') },
     { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, onClick: () => navigate('/coach/sessions') },
     { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, onClick: () => navigate('/coach/availability') },
-    { id: '4', title: 'Learning Material Purchase History', description: 'View your learning material purchase history', icon: Calendar, onClick: () => navigate('/coach/profile-order-history') }
   ];
 
 
@@ -32,26 +32,23 @@ const CoachDashboard = () => {
           </div>
 
           {/* Coach Menu */}
-          <div className="admin-dashboard-menu">
-            
-
-            <div className="admin-menu-grid">
+          <div className="coach-dashboard-menu-wrapper">
+            <div className="coach-menu-grid">
               {menuItems.map((item, index) => {
                 const IconComponent = item.icon;
                 return (
                   <div
                     key={item.id}
                     onClick={item.onClick}
-                    className="admin-menu-card"
-                    style={{ '--i': index }}
+                    className="coach-menu-card"
                   >
-                    <div className="admin-menu-card-icon">
-                      <IconComponent size={48} />
+                    <div className="coach-menu-card-icon">
+                      <IconComponent size={56} strokeWidth={1.5} />
                     </div>
-                    <h3 className="admin-menu-card-title">
+                    <h3 className="coach-menu-card-title">
                       {item.title}
                     </h3>
-                    <p className="admin-menu-card-description">
+                    <p className="coach-menu-card-description">
                       {item.description}
                     </p>
                   </div>
