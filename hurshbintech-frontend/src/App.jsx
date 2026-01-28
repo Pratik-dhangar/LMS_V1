@@ -101,7 +101,6 @@ import StoreCatalog from './pages/store/StoreCatalog';
 import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
-import OrderHistory from './pages/store/OrderHistory';
 
 // Subscription Pages
 import ManageSubscriptionPackages from './pages/admin/ManageSubscriptionPackages';
@@ -558,7 +557,7 @@ function AppRoutes() {
           />
 
           {/* Head Subscription Routes */}
-          
+
           <Route
             path="/head/subscriptions/learners"
             element={
@@ -803,11 +802,7 @@ function AppRoutes() {
               <Checkout />
             </ProtectedRoute>
           } />
-          <Route path="/store/orders" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <OrderHistory />
-            </ProtectedRoute>
-          } />
+
 
           {/* Chat Routes */}
           <Route
