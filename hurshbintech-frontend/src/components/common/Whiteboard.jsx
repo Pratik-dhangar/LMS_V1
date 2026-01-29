@@ -14,7 +14,10 @@ import {
     denormalizeStroke,
     replayPaths,
     addSegmentToPath,
-    createNormalizedPath
+    createNormalizedPath,
+    normalizeItem,
+    denormalizeItem,
+    recalculateItemBoundsOnResize
 } from '../../utils/drawingSync';
 // Fill-in-the-blanks removed
 
@@ -700,13 +703,15 @@ const Whiteboard = ({
 
             setCanvasItems(prev => [...prev, newItem]);
 
+            // Normalize item bounds for device-independent positioning
+            const normalizedBounds = normalizeItem(newItem, canvasRef.current);
             whiteboardService?.sendImage({
                 id: newItem.id,
                 src: newItem.src,
-                x: newItem.x,
-                y: newItem.y,
-                width: newItem.width,
-                height: newItem.height,
+                x: normalizedBounds.x,
+                y: normalizedBounds.y,
+                width: normalizedBounds.width,
+                height: normalizedBounds.height,
                 title: newItem.title,
                 type: newItem.type,
                 fileUrl: newItem.fileUrl,
@@ -751,10 +756,12 @@ const Whiteboard = ({
             // Throttled network update
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize bounds for network transmission
+                const normalizedItem = normalizeItem({ ...item, width: newWidth, height: newHeight }, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: item.id,
-                    width: newWidth,
-                    height: newHeight
+                    width: normalizedItem.width,
+                    height: normalizedItem.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -970,13 +977,17 @@ const Whiteboard = ({
                 setCanvasItems(prev => {
                     const exists = prev.find(item => item.id === data.id);
                     if (!exists) {
+                        // Denormalize item bounds if they're normalized (0..1 range)
+                        const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                        const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+
                         const newItem = {
                             id: data.id,
                             src: data.src,
-                            x: data.x,
-                            y: data.y,
-                            width: data.width,
-                            height: data.height,
+                            x: bounds.x,
+                            y: bounds.y,
+                            width: bounds.width,
+                            height: bounds.height,
                             title: data.title,
                             type: data.type,
                             // Preserve canonical file metadata for learning content API
@@ -1029,10 +1040,11 @@ const Whiteboard = ({
                     item.id === data.id
                         ? {
                             ...item,
-                            x: data.x !== undefined ? data.x : item.x,
-                            y: data.y !== undefined ? data.y : item.y,
-                            width: data.width !== undefined ? data.width : item.width,
-                            height: data.height !== undefined ? data.height : item.height,
+                            // Denormalize coordinates if normalized (0..1 range)
+                            x: data.x !== undefined ? (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x) : item.x,
+                            y: data.y !== undefined ? (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y) : item.y,
+                            width: data.width !== undefined ? (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width) : item.width,
+                            height: data.height !== undefined ? (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height) : item.height,
                             inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
                             answers: data.answers !== undefined ? data.answers : item.answers
                         }
@@ -1049,6 +1061,8 @@ const Whiteboard = ({
 
             whiteboardService.onBucketAdded = (data) => {
                 // console.log('[Whiteboard] Bucket added:', data);
+                // Add bucket directly - no normalization/denormalization needed
+                // Buckets use absolute pixel positioning as overlay elements
                 setBuckets(prev => {
                     const exists = prev.find(bucket => bucket.id === data.id);
                     if (!exists) {
@@ -1064,7 +1078,8 @@ const Whiteboard = ({
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
-                    // Update bucket
+                    // Update bucket directly - no normalization/denormalization needed
+                    // Buckets use absolute pixel positioning as overlay elements
                     setBuckets(prev => prev.map(bucket =>
                         bucket.id === data.id ? { ...bucket, ...data } : bucket
                     ));
@@ -1786,12 +1801,14 @@ const Whiteboard = ({
 
             // Throttle network updates to every 50ms
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedVideo = normalizeItem(updatedVideo, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: resizingVideo.id,
-                    x: updatedVideo.x,
-                    y: updatedVideo.y,
-                    width: updatedVideo.width,
-                    height: updatedVideo.height
+                    x: normalizedVideo.x,
+                    y: normalizedVideo.y,
+                    width: normalizedVideo.width,
+                    height: normalizedVideo.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -1838,15 +1855,18 @@ const Whiteboard = ({
 
             // Throttle network updates to every 50ms
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Send bucket with pixel coordinates (no normalization needed for overlay elements)
                 whiteboardService?.send('bucket_update', updatedBucket);
                 updatedItems.forEach(item => {
                     if (item.inBucket === selectedItem.id) {
+                        // Normalize item bounds for network transmission
+                        const normalizedItem = normalizeItem(item, canvasRef.current);
                         whiteboardService?.sendItemUpdate({
                             id: item.id,
-                            x: item.x,
-                            y: item.y,
-                            width: item.width,
-                            height: item.height
+                            x: normalizedItem.x,
+                            y: normalizedItem.y,
+                            width: normalizedItem.width,
+                            height: normalizedItem.height
                         });
                     }
                 });
@@ -1950,12 +1970,14 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms for smooth performance
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: selectedItem.id,
-                    x: updatedItem.x,
-                    y: updatedItem.y,
-                    width: updatedItem.width,
-                    height: updatedItem.height,
+                    x: normalizedItem.x,
+                    y: normalizedItem.y,
+                    width: normalizedItem.width,
+                    height: normalizedItem.height,
                     inBucket: updatedItem.inBucket || null
                 });
                 lastNetworkUpdateRef.current = now;
@@ -1991,6 +2013,7 @@ const Whiteboard = ({
 
                 // Throttle network updates to every 50ms
                 if (now - lastNetworkUpdateRef.current > 50) {
+                    // Send bucket with pixel coordinates (no normalization needed for overlay elements)
                     whiteboardService?.send('bucket_update', updatedBucket);
                     lastNetworkUpdateRef.current = now;
                 }
@@ -2021,12 +2044,14 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: selectedItem.id,
-                    x: updatedItem.x,
-                    y: updatedItem.y,
-                    width: updatedItem.width,
-                    height: updatedItem.height
+                    x: normalizedItem.x,
+                    y: normalizedItem.y,
+                    width: normalizedItem.width,
+                    height: normalizedItem.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -3050,10 +3075,10 @@ const Whiteboard = ({
                                             strokeLinejoin="round"
                                         />
 
-                                        {/* Bucket rim - top white line */}
+                                        {/* Bucket rim - same color as bucket */}
                                         <path
                                             d="M110 200 Q250 230 390 200 Q390 175 250 175 Q110 175 110 200 Z"
-                                            fill="#FFFFFF"
+                                            fill={bucket.color || bucketColor}
                                             stroke="#000000"
                                             strokeWidth="8"
                                             strokeLinejoin="round"

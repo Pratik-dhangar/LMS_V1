@@ -309,9 +309,13 @@ const Exercise = ({
                             <div style={{ position: 'relative' }}>
                                 {/* Learner Comments Section (small responsive top padding) */}
                                 <div style={{ paddingTop: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
-                                    <div className="bg-blue-50 border border-blue-300 rounded p-2" style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto' }}>
-                                        {learnerComments || <span className="text-gray-400">Learner comments will appear here...</span>}
-                                    </div>
+                                    <textarea
+                                        value={commentInput || ''}
+                                        onChange={(e) => setCommentInput(e.target.value)}
+                                        placeholder="Learner comments will appear here..."
+                                        className="bg-blue-50 border border-blue-300 rounded p-2 w-full text-gray-700"
+                                        style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto', resize: 'none' }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -440,7 +444,7 @@ const Exercise = ({
                                 className="answer-input"
                                 style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
                             />
-                            
+
                         </div>
                     </div>
                 </div>

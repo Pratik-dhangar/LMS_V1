@@ -5,6 +5,7 @@ import './index.css'
 import './styles/session.css'
 import 'react-toastify/dist/ReactToastify.css'
 import App from './App.jsx'
+import { OrientationProvider } from './context/OrientationContext'
 
 if (process.env.NODE_ENV === 'production') {
   console.log = () => { };
@@ -28,7 +29,9 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <OrientationProvider>
+      <App />
+    </OrientationProvider>
     <ToastContainer
       position="top-center"
       autoClose={3000}

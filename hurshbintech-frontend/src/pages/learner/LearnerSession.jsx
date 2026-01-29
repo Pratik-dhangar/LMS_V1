@@ -20,6 +20,7 @@ import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
+import { denormalizeItem } from '../../utils/drawingSync';
 import '../../styles/components/common/sessionHeader.css';
 
 
@@ -39,9 +40,12 @@ const LearnerSession = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const remoteVideoRef = useRef(null);
 
-  // Video position and size for moveable video feed
+  // Video position and size for moveable video feed (trainer's video overlay on whiteboard)
   const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
   const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
+
+  // Canvas ref for denormalization
+  const whiteboardCanvasRef = useRef(null);
 
   // UI and session state
   const [sessionInfo, setSessionInfo] = useState(null);
@@ -67,7 +71,6 @@ const LearnerSession = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Collapsible section states
-  const [isTrainerVideoOpen, setIsTrainerVideoOpen] = useState(true);
   const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
@@ -276,7 +279,7 @@ const LearnerSession = () => {
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
-  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color (synced from trainer)
+  const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown - synced from trainer)
   const [_isPaused] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
@@ -779,6 +782,8 @@ const LearnerSession = () => {
       if (data.removed) {
         setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
       } else {
+        // Update bucket directly - no normalization/denormalization needed
+        // Buckets use absolute pixel positioning as overlay elements
         setBuckets(prev => prev.map(bucket =>
           bucket.id === data.id ? { ...bucket, ...data } : bucket
         ));
@@ -1498,8 +1503,8 @@ const LearnerSession = () => {
   if (!loading && !trainerJoined && sessionInfo?.status === 'scheduled') {
     return (
       <div className={`learner-session-page ${pageClassName}`}>
-        {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
-        <div className={`session-header ${navbarClassName}`}>
+        {/* Navigation / Header - Hidden completely */}
+        <div className={`session-header ${navbarClassName}`} style={{ display: 'none' }}>
           <div className="session-header-main">
             <div>
               <div className="session-header-title">HurshBin Learner</div>
@@ -1564,7 +1569,7 @@ const LearnerSession = () => {
         crossOrigin="anonymous"
       />
 
-      {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+      {/* Navigation / Header - Auto-hide on mobile */}
       <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
@@ -1617,45 +1622,7 @@ const LearnerSession = () => {
       {/* Main Container - Responsive 3-column layout */}
       <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
         <div className={`w-full bg-white p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
-          {/* Trainer Video Feed - Collapsible */}
-          {remoteStream && (
-            <div className="mb-4 md:mb-5">
-              <div className="rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-500"
-                style={{
-                  background: 'linear-gradient(135deg, #fffbf7 0%, #fffef9 100%)',
-                  border: '1px solid rgba(217, 119, 6, 0.2)'
-                }}>
-                <div
-                  onClick={() => setIsTrainerVideoOpen(!isTrainerVideoOpen)}
-                  className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-amber-50/50"
-                >
-                  <div className="flex items-center gap-2">
-
-                    <h3 className="font-bold text-sm md:text-base text-gray-800">Trainer Video</h3>
-                  </div>
-                  <span className="text-amber-600 text-lg transition-transform duration-300" style={{
-                    transform: isTrainerVideoOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                  }}>{isTrainerVideoOpen ? '▼' : '▶'}</span>
-                </div>
-                <div className={isTrainerVideoOpen ? "relative" : "hidden"} style={isTrainerVideoOpen ? { paddingBottom: '56.25%' } : {}}>
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className="absolute top-0 left-0 w-full h-full object-cover"
-                  />
-                  <div className={`absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
-                    Trainer
-                  </div>
-                  <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
-                    {connectionStatus}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Video Conferencing - Now on whiteboard */}
+          {/* Prompt Line Section */}
           <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-all duration-500"
             style={{
               background: 'linear-gradient(135deg, #fffbf7 0%, #fffef9 100%)',
@@ -1830,7 +1797,7 @@ const LearnerSession = () => {
                       className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 focus:bg-white transition-all resize-none"
                       style={{ minHeight: '80px' }}
                     />
-                    
+
                   </div>
                 </div>
               </div>
@@ -1840,6 +1807,22 @@ const LearnerSession = () => {
         {/* Whiteboard Area - Scrollable Container */}
         <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
           <div className="session-whiteboard-container">
+            {/* Moveable Video Feed Overlay - Trainer's Video */}
+            {remoteStream && (
+              <MoveableVideoFeed
+                videoStream={remoteStream}
+                label="Trainer"
+                position={videoPosition}
+                size={videoSize}
+                onPositionChange={setVideoPosition}
+                onSizeChange={setVideoSize}
+                isDraggable={true}
+                isResizable={true}
+                connectionStatus={connectionStatus}
+                zIndex={100}
+              />
+            )}
+
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
