@@ -302,12 +302,14 @@ const TrainerSession = () => {
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
-  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color
+  const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown)
   const bucketColors = [
-    { name: 'Red', hex: '#FF6B6B' },
-    { name: 'Teal', hex: '#4ECDC4' },
-    { name: 'Yellow', hex: '#FFE66D' },
-    { name: 'Mint', hex: '#95E1D3' }
+    { name: 'Brown', hex: '#8B6F47' },
+    { name: 'Red', hex: '#E8744C' },
+    { name: 'Blue', hex: '#5B7B9F' },
+    { name: 'Yellow', hex: '#F4D394' },
+    { name: 'Pink', hex: '#E8A8C7' },
+    { name: 'Orange', hex: '#E8944C' }
   ];
 
   // -----------------------------------------------------------
@@ -1591,17 +1593,38 @@ const TrainerSession = () => {
   // 🔸 How it works: creates a new bucket positioned next to the previous one, updates state and notifies via whiteboardService
   // -----------------------------------------------------------
   const addBucket = () => {
-    // Calculate position for new bucket (place next to previous one)
-    const lastBucket = buckets[buckets.length - 1];
-    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
-    const newY = lastBucket ? lastBucket.y : 100;
+    // Calculate position for new bucket with wrapping support
+    const bucketWidth = 100;
+    const bucketHeight = 100;
+    const bucketSpacing = 10;
+    const containerPadding = 50;
+    const whiteboardWidth = window.innerWidth * 0.65; // Approximate whiteboard width (adjust based on layout)
+
+    let newX, newY;
+
+    if (buckets.length === 0) {
+      newX = containerPadding;
+      newY = containerPadding;
+    } else {
+      const lastBucket = buckets[buckets.length - 1];
+      const nextX = lastBucket.x + bucketWidth + bucketSpacing;
+
+      // Check if next bucket would overflow, if so wrap to next line
+      if (nextX + bucketWidth > whiteboardWidth) {
+        newX = containerPadding;
+        newY = lastBucket.y + bucketHeight + bucketSpacing;
+      } else {
+        newX = nextX;
+        newY = lastBucket.y;
+      }
+    }
 
     const newBucket = {
       id: Date.now(),
       x: newX,
       y: newY,
-      width: 150,
-      height: 150,
+      width: bucketWidth,
+      height: bucketHeight,
       label: 'Bucket',
       color: bucketColor, // Use selected bucket color
       items: [] // Items inside bucket
@@ -2215,26 +2238,6 @@ const TrainerSession = () => {
           {/* Exercise Tool */}
           {showExercise && (
             <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
-              {/* <button
-                onClick={() => setShowExercise(false)}
-                style={{
-                  position: 'absolute',
-                  top: '1rem',
-                  right: '4rem',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  zIndex: 10
-                }}
-                title="Close Exercise Tool"
-              >
-                ✕ Close
-              </button> */}
               <Exercise
                 isTrainer={true}
                 onExerciseSubmit={handleExerciseSubmit}
@@ -2392,34 +2395,9 @@ const TrainerSession = () => {
                   style={{ width: 'clamp(1.25rem, 3vw, 1.75rem)', height: 'clamp(1.25rem, 3vw, 1.75rem)' }}
                   title="Pen Color"
                 />
-              </div>
-
-              {/* Bucket Color Selector */}
-              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
-                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
-                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
-                  {bucketColors.map((bc) => (
-                    <button
-                      key={bc.hex}
-                      onClick={() => setBucketColor(bc.hex)}
-                      className="rounded border-2 transition-all"
-                      style={{
-                        backgroundColor: bc.hex,
-                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
-                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
-                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
-                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
-                        cursor: 'pointer'
-                      }}
-                      title={`Bucket Color: ${bc.name}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                 <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
-                  <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Brush Size:</label>
+                  <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Pen Size:</label>
 
                   {/* Slider: make slightly larger than before */}
                   <input
@@ -2429,8 +2407,8 @@ const TrainerSession = () => {
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseInt(e.target.value))}
                     className="brush-size-slider"
-                    title="Brush Size"
-                    aria-label="Brush size slider"
+                    title="Pen Size"
+                    aria-label="Pen size slider"
                     style={{
                       width: 'clamp(5rem, 12vw, 10rem)',
                       // set CSS variable used by stylesheet to drive the filled track
@@ -2456,6 +2434,32 @@ const TrainerSession = () => {
                   <div className="text-slate-600" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>{lineWidth}</div>
                 </div>
               </div>
+              </div>
+
+              {/* Bucket Color Selector */}
+              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
+                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
+                  {bucketColors.map((bc) => (
+                    <button
+                      key={bc.hex}
+                      onClick={() => setBucketColor(bc.hex)}
+                      className="rounded border-2 transition-all"
+                      style={{
+                        backgroundColor: bc.hex,
+                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
+                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
+                        cursor: 'pointer'
+                      }}
+                      title={`Bucket Color: ${bc.name}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              
             </div>
 
             {/* All tools group - learner access + trainer interactive buttons */}
@@ -2484,7 +2488,7 @@ const TrainerSession = () => {
 
                 {/* Exercise Tool Button */}
                 <button
-                  onClick={() => setShowExercise(true)}
+                  onClick={() => setShowExercise(!showExercise)}
                   className={`${showExercise ? wbSmallBtnActive : wbSmallBtnBase}`}
                   title="Open Exercise Tool - Create Q&A exercises with keyword validation"
                 >
@@ -2579,7 +2583,7 @@ const TrainerSession = () => {
                   style={{ padding: 'clamp(0.25rem, 0.8vw, 0.375rem) clamp(0.5rem, 1.2vw, 0.75rem)', fontSize: 'clamp(0.5rem, 1.2vw, 0.625rem)' }}
                   title="Clear all notes"
                 >
-                  <Emoji emoji="🗑️" size="base" /> <span className="hidden sm:inline">Clear</span>
+                <span className="hidden sm:inline">Clear</span>
                 </button>
               </div>
               <textarea

@@ -121,13 +121,22 @@ class WhiteboardService {
                     break;
 
                 case 'bucket_update':
+                    // console.log('[WhiteboardService] Received bucket_update:', message.data);
                     if (this.onBucketUpdate) {
-                        // Handle bucket removal
-                        if (message.data.removed) {
-                            this.onBucketUpdate({ id: message.data.id, removed: true });
-                        } else {
-                            this.onBucketUpdate(message.data);
+                        // console.log('[WhiteboardService] Calling onBucketUpdate callback');
+                        try {
+                            // Handle bucket removal
+                            if (message.data.removed) {
+                                this.onBucketUpdate({ id: message.data.id, removed: true });
+                            } else {
+                                this.onBucketUpdate(message.data);
+                            }
+                            // console.log('[WhiteboardService] ✓ onBucketUpdate callback executed successfully');
+                        } catch (error) {
+                            console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
                         }
+                    } else {
+                        // console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
                     }
                     break;
 
@@ -156,12 +165,12 @@ class WhiteboardService {
                     break;
 
                 case 'clear_canvas':
-                    console.log('[WhiteboardService] 📩 Received clear_canvas message from trainer:', message.data);
+                    // console.log('[WhiteboardService] 📩 Received clear_canvas message from trainer:', message.data);
                     if (this.onClearCanvas) {
-                        console.log('[WhiteboardService] ✅ Calling onClearCanvas callback...');
+                        // console.log('[WhiteboardService] ✅ Calling onClearCanvas callback...');
                         this.onClearCanvas(message.data);
                     } else {
-                        console.warn('[WhiteboardService] ⚠️ WARNING: onClearCanvas callback is NOT registered!');
+                        // console.warn('[WhiteboardService] ⚠️ WARNING: onClearCanvas callback is NOT registered!');
                     }
                     break;
 
@@ -299,7 +308,7 @@ class WhiteboardService {
         };
 
         this.ws.onclose = (event) => {
-            console.log('[WhiteboardService] Whiteboard WebSocket closed - Code:', event.code, 'Reason:', event.reason);
+            // console.log('[WhiteboardService] Whiteboard WebSocket closed - Code:', event.code, 'Reason:', event.reason);
         };
     }
 
@@ -341,7 +350,7 @@ class WhiteboardService {
     // Send video state synchronization
     sendVideoState(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            console.log('[WhiteboardService] Sending video state:', data);
+            // console.log('[WhiteboardService] Sending video state:', data);
             this.ws.send(JSON.stringify({
                 type: 'video_state',
                 data: data
@@ -367,31 +376,35 @@ class WhiteboardService {
     // Send bucket added event
     sendBucketAdded(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            console.log('[WhiteboardService] Sending bucket_added:', data);
+            // console.log('[WhiteboardService] Sending bucket_added:', data);
             this.ws.send(JSON.stringify({
                 type: 'bucket_added',
                 data: data
             }));
         } else {
-            console.warn('[WhiteboardService] Cannot send bucket_added - WebSocket not ready');
+            // console.warn('[WhiteboardService] Cannot send bucket_added - WebSocket not ready');
         }
     }
 
     // Send floating animations event
     sendFloatingAnimations(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            console.log('[WhiteboardService] Sending floating_animations:', data);
+            // console.log('[WhiteboardService] Sending floating_animations:', data);
             this.ws.send(JSON.stringify({
                 type: 'floating_animations',
                 data: { animations: data }
             }));
         } else {
-            console.warn('[WhiteboardService] Cannot send floating_animations - WebSocket not ready');
+            // console.warn('[WhiteboardService] Cannot send floating_animations - WebSocket not ready');
         }
     }
 
     // Generic send method for custom message types
     send(type, data) {
+        // console.log(`[WhiteboardService.send] Called with type: ${type}`);
+        // console.log(`[WhiteboardService.send] WebSocket exists: ${!!this.ws}, ReadyState: ${this.ws?.readyState}`);
+        // console.log(`[WhiteboardService.send] WebSocket.OPEN constant: ${WebSocket.OPEN}`);
+
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             // console.log(`[WhiteboardService] Sending ${type} message:`, data);
             this.ws.send(JSON.stringify({
@@ -399,7 +412,7 @@ class WhiteboardService {
                 data: data
             }));
         } else {
-            console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready`);
+            // console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
         }
     }
 

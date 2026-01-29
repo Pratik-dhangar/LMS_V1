@@ -1,60 +1,111 @@
 /* Admin Header Styles */
 .admin-dashboard-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 3px solid #DB9D32;
 }
 
 .admin-dashboard-title {
-    font-size: 2rem;
+    font-size: 1.25rem;
     margin: 0;
     font-weight: 700;
     color: #000000;
     letter-spacing: 0.5px;
 }
 
-.admin-dashboard-header-flex {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 3px solid #f59e0b;
-}
-
-.admin-dashboard-welcome {
-    font-size: 1rem;
-    color: #4b5563;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.admin-dashboard-welcome-name {
-    font-weight: 700;
-    color: #1f2937;
-}
-
-@media (max-width: 768px) {
+/* Mobile - 375px+ */
+@media (min-width: 375px) {
     .admin-dashboard-header {
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: flex-start;
+        margin-bottom: 1.5rem;
     }
 
     .admin-dashboard-title {
         font-size: 1.5rem;
     }
+}
 
-    .admin-dashboard-welcome {
-        font-size: 0.875rem;
-    }
-
-    .admin-dashboard-header-flex {
-        flex-direction: column;
+/* Tablet - 640px+ */
+@media (min-width: 640px) {
+    .admin-dashboard-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
         gap: 1rem;
-        align-items: flex-start;
+        margin-bottom: 2rem;
     }
+
+    .admin-dashboard-title {
+        font-size: 1.75rem;
+    }
+}
+
+/* Desktop - 1024px+ */
+@media (min-width: 1024px) {
+    .admin-dashboard-header {
+        margin-bottom: 2rem;
+    }
+
+    .admin-dashboard-title {
+        font-size: 2rem;
+    }
+}
+
+.admin-dashboard-header-flex {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #f59e0b;
+}
+
+/* Mobile - 375px+ */
+@media (min-width: 375px) {
+    .admin-dashboard-header-flex {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Tablet - 640px+ */
+@media (min-width: 640px) {
+    .admin-dashboard-header-flex {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+}
+
+.admin-dashboard-welcome {
+    font-size: 0.875rem;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+/* Mobile - 375px+ */
+@media (min-width: 375px) {
+    .admin-dashboard-welcome {
+        font-size: 0.9rem;
+    }
+}
+
+/* Tablet - 640px+ */
+@media (min-width: 640px) {
+    .admin-dashboard-welcome {
+        font-size: 1rem;
+        white-space: nowrap;
+    }
+}
+
+.admin-dashboard-welcome-name {
+    font-weight: 700;
+    color: #1f2937;
 }

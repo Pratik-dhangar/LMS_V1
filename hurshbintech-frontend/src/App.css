@@ -147,3 +147,81 @@ code {
     display: block;
   }
 }
+
+/* ============================================================================
+   ORIENTATION-SPECIFIC ADJUSTMENTS
+   Portrait vs Landscape responsive design
+   ============================================================================ */
+
+/* Mobile Landscape Orientation */
+@media (max-width: 812px) and (orientation: landscape) {
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  #root {
+    min-height: auto;
+  }
+
+  .app-layout {
+    min-height: 100vh;
+    grid-template-rows: var(--navbar-height) 1fr;
+  }
+
+  .app-layout__navbar {
+    height: var(--navbar-height);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-sm);
+    height: calc(100vh - var(--navbar-height));
+    overflow-y: auto;
+  }
+}
+
+/* Tablet Landscape Orientation */
+@media (min-width: 813px) and (max-width: 1366px) and (orientation: landscape) {
+  .app-layout {
+    grid-template-rows: var(--navbar-height) 1fr;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-lg);
+    height: calc(100vh - var(--navbar-height));
+    overflow-y: auto;
+  }
+}
+
+/* Mobile Portrait Orientation */
+@media (max-width: 812px) and (orientation: portrait) {
+  #root {
+    min-height: 100vh;
+  }
+
+  .app-layout {
+    min-height: 100vh;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-md);
+    min-height: calc(100vh - var(--navbar-height));
+  }
+}
+
+/* Tablet Portrait Orientation */
+@media (min-width: 813px) and (max-width: 1366px) and (orientation: portrait) {
+  .app-layout {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-lg);
+    height: auto;
+    min-height: calc(100vh - var(--navbar-height));
+  }
+}

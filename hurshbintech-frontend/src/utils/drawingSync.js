@@ -45,12 +45,95 @@ export const denormalizePoint = (normPoint, canvas) => {
 };
 
 /**
- * Normalize stroke width to 0..1 range relative to canvas diagonal
- * This ensures a stroke looks proportionally similar across devices
- * @param {number} strokePx - Stroke width in pixels
+ * Normalize an item's bounding box (x, y, width, height) to 0..1 range
+ * @param {Object} item - {x, y, width, height} in canvas pixels
  * @param {Object} canvas - HTML5 Canvas element
- * @returns {number} Normalized stroke width (0..1)
+ * @returns {Object} Normalized item {x: 0..1, y: 0..1, width: 0..1, height: 0..1}
  */
+export const normalizeItemBounds = (item, canvas) => {
+    if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const canvasWidth = canvas.width / dpr;
+    const canvasHeight = canvas.height / dpr;
+
+    return {
+        x: Math.max(0, Math.min(1, item.x / canvasWidth)),
+        y: Math.max(0, Math.min(1, item.y / canvasHeight)),
+        width: Math.max(0, Math.min(1, item.width / canvasWidth)),
+        height: Math.max(0, Math.min(1, item.height / canvasHeight))
+    };
+};
+
+/**
+ * Denormalize item bounds from 0..1 range back to canvas pixels
+ * @param {Object} normItem - {x: 0..1, y: 0..1, width: 0..1, height: 0..1}
+ * @param {Object} canvas - HTML5 Canvas element
+ * @returns {Object} Item bounds in canvas pixels {x, y, width, height}
+ */
+export const denormalizeItemBounds = (normItem, canvas) => {
+    if (!canvas) {
+        return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const canvasWidth = canvas.width / dpr;
+    const canvasHeight = canvas.height / dpr;
+
+    return {
+        x: Math.round(normItem.x * canvasWidth),
+        y: Math.round(normItem.y * canvasHeight),
+        width: Math.round(normItem.width * canvasWidth),
+        height: Math.round(normItem.height * canvasHeight)
+    };
+};
+
+/**
+ * Normalize an entire item with all properties
+ * @param {Object} item - Canvas item with x, y, width, height properties
+ * @param {Object} canvas - HTML5 Canvas element
+ * @returns {Object} Normalized item
+ */
+export const normalizeItem = (item, canvas) => {
+    const bounds = normalizeItemBounds(item, canvas);
+    return {
+        ...item,
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
+    };
+};
+
+/**
+ * Denormalize an entire item
+ * @param {Object} normItem - Normalized item
+ * @param {Object} canvas - HTML5 Canvas element
+ * @returns {Object} Item with pixel coordinates
+ */
+export const denormalizeItem = (normItem, canvas) => {
+    const bounds = denormalizeItemBounds(normItem, canvas);
+    return {
+        ...normItem,
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
+    };
+};
+
+/**
+ * Recalculate item position/size when canvas is resized
+ * Denormalize normalized coords with new canvas size
+ * @param {Object} normItem - Stored normalized item
+ * @param {Object} newCanvas - Canvas with new size
+ * @returns {Object} Item with new pixel coordinates
+ */
+export const recalculateItemBoundsOnResize = (normItem, newCanvas) => {
+    return denormalizeItem(normItem, newCanvas);
+};
+
+
 export const normalizeStroke = (strokePx, canvas) => {
     if (!canvas || strokePx <= 0) return 0;
 
@@ -255,10 +338,10 @@ export default {
     denormalizePoint,
     normalizeStroke,
     denormalizeStroke,
-    replayPaths,
-    createNormalizedPath,
-    addSegmentToPath,
-    optimizePaths,
-    getDeviceAspectRatio,
+    normalizeItemBounds,
+    denormalizeItemBounds,
+    normalizeItem,
+    denormalizeItem,
+    recalculateItemBoundsOnResize,
     calculateCanvasSizeForDeviceRatio
 };
