@@ -38,6 +38,7 @@ import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
+import MessagingWidget from '../../components/chat/MessagingWidget';
 import '../../styles/session.css';
 
 
@@ -121,13 +122,15 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Hold instances of WebRTC and Whiteboard services
-  // 🔸 How it works: useState stores service instances for use across component.
+  // 🔸 How it works: Dual VideoConferenceService instances for mesh P2P (Learner + Observer)
   // -----------------------------------------------------------
-  const [webRTC, setWebRTC] = useState(null);
+  const [learnerRTC, setLearnerRTC] = useState(null); // Primary connection for Learner
+  const [observerRTC, setObserverRTC] = useState(null); // Secondary connection for Observer
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
   const [recordingService, setRecordingService] = useState(null);
   const isInitializingRef = useRef(false); // Prevent duplicate initialization
+  const observerInitializedRef = useRef(false); // Prevent duplicate observer initialization
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Media streams for video conferencing
@@ -170,29 +173,31 @@ const TrainerSession = () => {
     sendMessage,
     handleKeyPress: _handleKeyPress,
     addReceivedMessage
-  } = useMessages(webRTC, 'trainer');
+  } = useMessages(learnerRTC, 'trainer');
 
   // -----------------------------------------------------------  
-  // 🔹 Purpose: Set up WebRTC message callback
-  // 🔸 How it works: When a message is received via WebRTC, add it to messages
+  // 🔹 Purpose: Set up Learner WebRTC callbacks for chat messages
+  // 🔸 How it works: Handle chat messages via learner connection
+  // NOTE: Observer join/leave events are handled inside initializeWebRTC
   // -----------------------------------------------------------  
   useEffect(() => {
-    if (webRTC) {
-      webRTC.onMessage = (message) => {
-        // console.log('[TrainerSession] Message received:', message);
-        addReceivedMessage({
-          sender: message.sender === 'trainer' ? 'You' : message.sender,
-          text: message.text,
-          timestamp: message.timestamp
-        });
-      };
-    }
+    if (!learnerRTC) return;
+    
+    // Handle chat messages
+    learnerRTC.onMessage = (message) => {
+      addReceivedMessage({
+        sender: message.sender === 'trainer' ? 'You' : message.sender,
+        text: message.text,
+        timestamp: message.timestamp
+      });
+    };
+    
     return () => {
-      if (webRTC) {
-        webRTC.onMessage = null;
+      if (learnerRTC) {
+        learnerRTC.onMessage = null;
       }
     };
-  }, [webRTC, addReceivedMessage]);
+  }, [learnerRTC, addReceivedMessage]);
   const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
@@ -241,6 +246,13 @@ const TrainerSession = () => {
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
   const [selectedProgramId, setSelectedProgramId] = useState(null); // Track which program is checked
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Observer modal state
+  // 🔸 How it works: Show modal when observer (head) joins to prompt screen share
+  // -----------------------------------------------------------
+  const [showObserverModal, setShowObserverModal] = useState(false);
+  const [observerData, setObserverData] = useState(null);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Whiteboard state and interactive modes
@@ -430,9 +442,9 @@ const TrainerSession = () => {
   const toggleListening = async () => {
     try {
       // If turning ON voice input and video conferencing mic is currently ON, turn it OFF
-      if (!listening && micEnabled && webRTC) {
+      if (!listening && micEnabled && learnerRTC) {
         // console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
-        webRTC.toggleMicrophone();
+        learnerRTC.toggleMicrophone();
         setMicEnabled(false);
         toast.info('Video conferencing mic disabled - Voice input enabled');
       }
@@ -443,9 +455,9 @@ const TrainerSession = () => {
 
       // If turning OFF voice input and video conferencing mic is currently OFF, turn it ON
       // Note: 'listening' is the OLD state before toggle, so we check if it WAS true (now turning OFF)
-      if (listening && !micEnabled && webRTC) {
+      if (listening && !micEnabled && learnerRTC) {
         // console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
-        webRTC.toggleMicrophone();
+        learnerRTC.toggleMicrophone();
         setMicEnabled(true);
         toast.info('Voice input disabled - Video conferencing mic enabled');
       }
@@ -758,8 +770,8 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Initialize WebRTCService and WhiteboardService
-  // 🔸 How it works: creates service instances, sets event handlers, obtains local media, and connects
+  // 🔹 Purpose: Initialize WebRTCService and WhiteboardService for LEARNER
+  // 🔸 How it works: creates primary service instance for Trainer-Learner connection
   // -----------------------------------------------------------
   const initializeWebRTC = async (numericSessionId) => {
     // Prevent duplicate initialization
@@ -786,21 +798,21 @@ const TrainerSession = () => {
       toast.error('Failed to initialize whiteboard');
     }
 
-    // Initialize Video Conference Service
-    const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
+    // Initialize PRIMARY Video Conference Service (for Learner)
+    const learnerVideoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
 
     try {
-      // console.log('[TrainerSession] Initializing Video Conference service');
+      console.log('[TrainerSession] Initializing LEARNER Video Conference service');
 
       // Set callback for local stream (trainer's camera/mic)
-      videoService.onLocalStream = (stream) => {
-        // console.log('[TrainerSession] Local stream received');
+      learnerVideoService.onLocalStream = (stream) => {
+        console.log('[TrainerSession] Local stream received (Learner connection)');
         setLocalStream(stream);
       };
 
       // Set callback for remote stream (learner's video)
-      videoService.onRemoteStream = (stream) => {
-        // console.log('[TrainerSession] Remote stream received from learner');
+      learnerVideoService.onRemoteStream = (stream) => {
+        console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
 
         // Only show toast once when learner first connects
@@ -811,8 +823,8 @@ const TrainerSession = () => {
       };
 
       // Set callback for connection state changes
-      videoService.onConnectionStateChange = (state) => {
-        // console.log('[TrainerSession] Connection state:', state);
+      learnerVideoService.onConnectionStateChange = (state) => {
+        console.log('[TrainerSession] LEARNER connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -825,7 +837,7 @@ const TrainerSession = () => {
 
         // Handle learner disconnect
         if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
-          // console.log('[TrainerSession] Learner disconnected');
+          console.log('[TrainerSession] Learner disconnected');
           toast.info(`${sessionInfo?.learner_name || 'Learner'} has left the session`);
           setRemoteStream(null);
           learnerConnectedRef.current = false;
@@ -833,40 +845,152 @@ const TrainerSession = () => {
       };
 
       // Set error callback
-      videoService.onError = (error) => {
-        console.error('[TrainerSession] Video conference error:', error);
+      learnerVideoService.onError = (error) => {
+        console.error('[TrainerSession] LEARNER video conference error:', error);
         toast.error(`Video error: ${error.message}`);
       };
 
+      // ---------------------------------------------------------
+      // ✅ CRITICAL: Hook Observer Events to Learner Connection
+      // ---------------------------------------------------------
+      learnerVideoService.onObserverJoined = (observerUserData) => {
+        console.log('[TrainerSession] 🔔 Observer joined event received!', observerUserData);
+        console.log('[TrainerSession] Setting observer data and showing modal...');
+        
+        // Store observer data and show modal
+        setObserverData(observerUserData);
+        setShowObserverModal(true);
+        
+        console.log('[TrainerSession] Modal should now be visible');
+      };
+
+      learnerVideoService.onObserverLeft = () => {
+        console.log('[TrainerSession] 🔕 Observer left event received');
+        toast.info('Observer left the session', { autoClose: 2000, position: 'top-center' });
+        
+        // Cleanup only the observer connection
+        if (observerRTC) {
+          observerRTC.close();
+          setObserverRTC(null);
+          observerInitializedRef.current = false; // Reset flag
+        }
+      };
+      // ---------------------------------------------------------
+
       // Initialize video conference (gets local media and sets up connection)
-      await videoService.initialize();
-      setWebRTC(videoService);
+      await learnerVideoService.initialize();
+      setLearnerRTC(learnerVideoService);
 
       // Initialize recording service with numeric database ID
-      // console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
-      const recService = new JanusRecordingService(videoService, numericSessionId);
+      console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
+      const recService = new JanusRecordingService(learnerVideoService, numericSessionId);
       setRecordingService(recService);
 
       // Update media control states
-      setMicEnabled(videoService.isMicrophoneEnabled());
-      setCameraEnabled(videoService.isCameraEnabled());
+      setMicEnabled(learnerVideoService.isMicrophoneEnabled());
+      setCameraEnabled(learnerVideoService.isCameraEnabled());
 
-      // console.log('[TrainerSession] Video Conference service initialized');
-      // console.log('[TrainerSession] Recording service initialized');
+      console.log('[TrainerSession] LEARNER Video Conference service initialized');
+      console.log('[TrainerSession] Recording service initialized');
     } catch (error) {
-      console.error('[TrainerSession] Video Conference init error:', error);
+      console.error('[TrainerSession] LEARNER Video Conference init error:', error);
       toast.error('Failed to initialize video conference');
     }
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Initialize SECONDARY connection for Observer
+  // 🔸 How it works: Creates separate VideoConferenceService instance for Observer screen sharing
+  // -----------------------------------------------------------
+  const initializeObserverConnection = async () => {
+    // ✅ FIX: Prevent duplicate initialization
+    if (observerInitializedRef.current) {
+      console.log('[TrainerSession] Observer connection already initializing/active');
+      return;
+    }
+    observerInitializedRef.current = true;
+
+    try {
+      console.log('[TrainerSession] Initializing OBSERVER Video Conference service');
+
+      // Create NEW instance specifically for Observer connection
+      // Pass targetRole='observer' so all signaling goes only to observer, not learner
+      const observerVideoService = new VideoConferenceService(
+        WS_BASE_URL, 
+        sessionId, 
+        'trainer', 
+        false, // not isObserver (trainer is sender)
+        'observer' // targetRole - routes signaling only to observer
+      );
+
+      // We don't need callbacks for observer (they are passive viewers)
+      // But we handle errors
+      observerVideoService.onError = (error) => {
+        console.error('[TrainerSession] OBSERVER video conference error:', error);
+        toast.error(`Observer connection error: ${error.message}`);
+      };
+
+      observerVideoService.onConnectionStateChange = (state) => {
+        console.log('[TrainerSession] OBSERVER connection state:', state);
+      };
+
+      // Initialize observer connection (reuses local media from learnerRTC)
+      await observerVideoService.initialize();
+      setObserverRTC(observerVideoService);
+
+      console.log('[TrainerSession] OBSERVER Video Conference service initialized');
+
+      // Wait for connection to stabilize, then start screen share
+      setTimeout(async () => {
+        try {
+          console.log('[TrainerSession] Starting screen share for observer');
+          await observerVideoService.startScreenShare('observer');
+          toast.success('Screen sharing started for observer', { autoClose: 2000 });
+        } catch (error) {
+          if (error.name === 'NotAllowedError') {
+            toast.warning('Screen sharing cancelled', { autoClose: 3000 });
+          } else {
+            console.error('[TrainerSession] Error starting screen share:', error);
+            toast.error('Failed to start screen sharing');
+          }
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('[TrainerSession] OBSERVER Video Conference init error:', error);
+      toast.error('Failed to initialize observer connection');
+      observerInitializedRef.current = false;
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle observer modal OK button click
+  // 🔸 How it works: Close modal and trigger observer connection with screen share
+  // -----------------------------------------------------------
+  const handleObserverModalOk = async () => {
+    setShowObserverModal(false);
+    // Initialize the SECONDARY connection for Observer
+    await initializeObserverConnection();
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Toggle microphone on/off
-  // 🔸 How it works: calls webRTC.toggleMicrophone() and updates state, coordinates with voice input
+  // 🔸 How it works: calls learnerRTC.toggleMicrophone() and updates state, coordinates with voice input
+  // Also syncs mic state with observer connection (observer should never hear trainer mic)
   // -----------------------------------------------------------
   const handleToggleMic = async () => {
-    if (webRTC) {
-      const newState = webRTC.toggleMicrophone();
+    if (learnerRTC) {
+      const newState = learnerRTC.toggleMicrophone();
       setMicEnabled(newState);
+
+      // Ensure observer connection audio is always muted (they should only see screen)
+      if (observerRTC) {
+        const observerAudioSenders = observerRTC.peerConnection?.getSenders().filter(s => s.track?.kind === 'audio');
+        observerAudioSenders?.forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = false; // Always keep observer audio muted
+          }
+        });
+      }
 
       // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
@@ -885,11 +1009,11 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle camera on/off
-  // 🔸 How it works: calls webRTC.toggleCamera() and updates state
+  // 🔸 How it works: calls learnerRTC.toggleCamera() and updates state
   // -----------------------------------------------------------
   const handleToggleCamera = () => {
-    if (webRTC) {
-      const newState = webRTC.toggleCamera();
+    if (learnerRTC) {
+      const newState = learnerRTC.toggleCamera();
       setCameraEnabled(newState);
     }
   };
@@ -955,17 +1079,17 @@ const TrainerSession = () => {
     const newFreezeState = !isFrozen;
     setIsFrozen(newFreezeState);
 
-    if (webRTC) {
+    if (learnerRTC) {
       const freezeSignal = {
         type: 'freeze',
         frozen: newFreezeState,
         timestamp: new Date().toISOString()
       };
-      webRTC.sendSignal(freezeSignal);
+      learnerRTC.sendSignal(freezeSignal);
       // console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
       // toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
     } else {
-      console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
+      console.error('[TrainerSession] Cannot send freeze signal - Learner RTC not initialized');
       toast.error('Unable to send freeze signal');
       setIsFrozen(!newFreezeState); // Revert state
     }
@@ -1071,23 +1195,32 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Cleanup function to close WebRTC and Whiteboard services
-  // 🔸 How it works: calls service-specific teardown methods to release media and sockets
+  // 🔸 How it works: calls service-specific teardown methods to release media and sockets for BOTH connections
   // -----------------------------------------------------------
   const cleanup = () => {
-    // Stop all media tracks (camera and microphone) - revoke media access
-    if (webRTC?.localStream) {
-      webRTC.localStream.getTracks().forEach(track => {
+    // Stop all media tracks from learner connection (camera and microphone) - revoke media access
+    if (learnerRTC?.localStream) {
+      learnerRTC.localStream.getTracks().forEach(track => {
         track.stop();
-        // console.log(`[TrainerSession] Stopped ${track.kind} track`);
+        console.log(`[TrainerSession] Stopped ${track.kind} track (Learner connection)`);
       });
     }
-    if (webRTC) {
-      webRTC.close();
-      // console.log('[TrainerSession] WebRTC closed and media access revoked');
+    if (learnerRTC) {
+      learnerRTC.close();
+      console.log('[TrainerSession] Learner RTC closed and media access revoked');
     }
 
-    // Reset initialization flag to allow re-initialization
+    // Close observer connection if it exists
+    if (observerRTC) {
+      observerRTC.close();
+      setObserverRTC(null); // Clear state
+      console.log('[TrainerSession] Observer RTC closed');
+    }
+
+    // ✅ FIX: Ensure both initialization flags are reset
     isInitializingRef.current = false;
+    observerInitializedRef.current = false;
+    
     if (whiteboardService) {
       whiteboardService.close();
     }
@@ -1238,9 +1371,9 @@ const TrainerSession = () => {
       setSelectedReinforcementLevel(null);
 
       // Send reset values to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     } catch (error) {
       console.error('[TrainerSession] Error saving report:', error);
@@ -1351,9 +1484,9 @@ const TrainerSession = () => {
       setSelectedPromptLevel(null);
       setSelectedReinforcementLevel(null);
       // Send reset values (0) to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     } else {
       // If a different program is checked, select the new one and reset meters to 0
@@ -1361,9 +1494,9 @@ const TrainerSession = () => {
       setSelectedPromptLevel(null);
       setSelectedReinforcementLevel(null);
       // Send reset values (0) to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     }
   };
@@ -2133,7 +2266,7 @@ const TrainerSession = () => {
             setSelectedReinforcementLevel={setSelectedReinforcementLevel}
             selectedProgramId={selectedProgramId}
             handleProgramCheck={handleProgramCheck}
-            webRTC={webRTC}
+            webRTC={learnerRTC}
             toggleListening={toggleListening}
             listening={listening}
             transcript={transcript}
@@ -2677,7 +2810,7 @@ const TrainerSession = () => {
                 setSelectedReinforcementLevel={setSelectedReinforcementLevel}
                 selectedProgramId={selectedProgramId}
                 handleProgramCheck={handleProgramCheck}
-                webRTC={webRTC}
+                webRTC={learnerRTC}
                 toggleListening={toggleListening}
                 listening={listening}
                 transcript={transcript}
@@ -2690,10 +2823,7 @@ const TrainerSession = () => {
       </div>
 
       {/* Session Info Bar - fixed to bottom with no surrounding margin */}
-      <div className="session-info-bar session-control-buttons">
-        <div className="session-info-text">
-          <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
-        </div>
+      <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
         <div className="session-info-actions">
           <button
             className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
@@ -2712,6 +2842,38 @@ const TrainerSession = () => {
         </div>
       </div>
       {/* Fill in the Blanks feature removed */}
+
+      {/* Observer Joined Modal */}
+      {showObserverModal && observerData && (
+        <div className="app-modal-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Observer Joined</h2>
+            </div>
+
+            {/* Modal Body */}
+            <div className="app-modal-content">
+              <p className="app-modal-text">
+                <strong>{observerData.name}</strong> has joined as an observer. Please share your screen!
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="app-modal-footer">
+              <button
+                onClick={handleObserverModalOk}
+                className="app-modal-btn app-modal-btn--primary"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messaging Widget */}
+      <MessagingWidget />
     </div>
   );
 };

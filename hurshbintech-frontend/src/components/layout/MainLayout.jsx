@@ -19,7 +19,9 @@ const MainLayout = () => {
   const location = useLocation();
 
   // Hide messaging widget on session pages
-  const isSessionPage = location.pathname.includes('/session/') || location.pathname.includes('/guest-session/');
+  const isSessionPage = location.pathname.includes('/session/') || 
+                        location.pathname.includes('/guest-session/') || 
+                        location.pathname.includes('/observer-session/');
 
   return (
     <>

@@ -60,11 +60,13 @@ const MessagingWidget = () => {
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set());
 
-  // Connect to chat on mount
+  // Connect to chat only when widget is expanded (not collapsed)
   useEffect(() => {
-    connectChat();
-    return () => disconnectChat();
-  }, [connectChat, disconnectChat]);
+    if (widgetState !== 'collapsed') {
+      connectChat();
+      return () => disconnectChat();
+    }
+  }, [widgetState, connectChat, disconnectChat]);
 
   // Auto-scroll to bottom in chat view
   useEffect(() => {
@@ -469,9 +471,7 @@ const MessagingWidget = () => {
                               {lastMessage?.content || lastMessage?.file_name || 'No messages yet'}
                             </p>
                             {unreadCount > 0 && (
-                              <span className="messaging-conv-unread">
-                                {unreadCount > 99 ? '99+' : unreadCount}
-                              </span>
+                              <span className="messaging-conv-unread-dot"></span>
                             )}
                           </div>
                         </div>

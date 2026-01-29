@@ -5,7 +5,7 @@
  * Visible on all pages except session pages and login
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
@@ -16,8 +16,16 @@ import '../../styles/components/chat/chatWidget.css';
 const ChatIconWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCounts } = useChat();
+  const { unreadCounts, connectChat, disconnectChat } = useChat();
   const [showChatModal, setShowChatModal] = useState(false);
+
+  // Connect/disconnect chat when modal is shown/hidden (mobile only)
+  useEffect(() => {
+    if (showChatModal) {
+      connectChat();
+      return () => disconnectChat();
+    }
+  }, [showChatModal, connectChat, disconnectChat]);
 
   // Pages where chat icon should NOT be shown
   const hiddenPages = [

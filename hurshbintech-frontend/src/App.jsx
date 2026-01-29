@@ -41,6 +41,7 @@ import EditLearner from './pages/head/EditLearner';
 import RegisterLearner from './pages/head/RegisterLearner';
 import ScheduleSession from './pages/head/ScheduleSession';
 import ManageSessions from './pages/head/ManageSessions';
+import ObserverSession from './pages/head/ObserverSession';
 import ViewVlogs from './pages/head/ViewVlogs';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
 import ReportCard from './pages/head/ReportCard';
@@ -504,6 +505,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['head']}>
                 <ManageSessions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/observer-session/:sessionId"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <ObserverSession />
               </ProtectedRoute>
             }
           />
