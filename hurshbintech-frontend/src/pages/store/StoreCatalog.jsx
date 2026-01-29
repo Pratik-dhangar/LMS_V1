@@ -50,6 +50,26 @@ const StoreCatalog = () => {
     }
   };
 
+  // Helper function to get role-based order history URL
+  const getOrderHistoryUrl = () => {
+    try {
+      const userData = localStorage.getItem('user_data');
+      const user = userData ? JSON.parse(userData) : null;
+      if (!user || !user.role) return '/learner/profile-order-history';
+      const orderHistoryMap = {
+        'head': '/head/profile-order-history',
+        'trainer': '/trainer/profile-order-history',
+        'coach': '/coach/profile-order-history',
+        'admin': '/admin/profile-order-history',
+        'learner': '/learner/profile-order-history'
+      };
+      return orderHistoryMap[user.role] || '/learner/profile-order-history';
+    } catch (error) {
+      console.error('Error getting order history URL:', error);
+      return '/learner/profile-order-history';
+    }
+  };
+
 
   useEffect(() => {
     loadMetadata();
@@ -168,31 +188,51 @@ const StoreCatalog = () => {
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
-          <div className="page-header">
-            <button
-              onClick={() => navigate(getDashboardUrl())}
-              className="back-button"
-            >
-              <svg
-                className="icon-sm"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <button
+                onClick={() => navigate(getDashboardUrl())}
+                className="back-button"
               >
-                <path d="M15 19l-7-7 7-7"></path>
-              </svg>
-              Back to Dashboard
-            </button>
-            <div>
+                <svg
+                  className="icon-sm"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Dashboard
+              </button>
               <h1 className="page-title">Learning Materials Store</h1>
               <p className="page-description">
                 Customized toys, board games, and books for your learning
                 journey
               </p>
             </div>
+            <button
+              onClick={() => navigate(getOrderHistoryUrl())}
+              style={{
+                padding: '0.6rem 1rem',
+                background: '#DB9D32',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#c4860f'}
+              onMouseLeave={(e) => e.target.style.background = '#DB9D32'}
+              title="View purchase history"
+            >
+              📋 Purchase History
+            </button>
           </div>
           {/* Content */}
 
@@ -663,7 +703,7 @@ const StoreCatalog = () => {
                             }}
                           >
                             {product.description &&
-                            product.description.toString().trim()
+                              product.description.toString().trim()
                               ? product.description
                               : "No description available"}
                           </div>

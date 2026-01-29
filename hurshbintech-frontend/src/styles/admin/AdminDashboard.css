@@ -8,8 +8,29 @@
 
 .admin-dashboard-main {
     flex: 1;
-    padding: 2rem 1.5rem;
+    padding: 1rem;
     background: transparent;
+}
+
+/* Mobile - 375px+ */
+@media (min-width: 375px) {
+    .admin-dashboard-main {
+        padding: 1.25rem;
+    }
+}
+
+/* Tablet - 640px+ */
+@media (min-width: 640px) {
+    .admin-dashboard-main {
+        padding: 1.5rem;
+    }
+}
+
+/* Desktop - 1024px+ */
+@media (min-width: 1024px) {
+    .admin-dashboard-main {
+        padding: 2rem 1.5rem;
+    }
 }
 
 .admin-dashboard-content-wrapper {

@@ -56,10 +56,11 @@ MAX_RECONNECT_ATTEMPTS = 3  # Max reconnection attempts tracked
 class ConnectionInfo:
     """Track WebSocket connection state"""
 
-    def __init__(self, websocket: WebSocket, role: str, session_id: str):
+    def __init__(self, websocket: WebSocket, role: str, session_id: str, user_data: Optional[dict] = None):
         self.websocket = websocket
         self.role = role
         self.session_id = session_id
+        self.user_data = user_data  # Store user data (for observer)
         self.last_heartbeat = datetime.utcnow()
         self.is_alive = True
         self.heartbeat_task: Optional[asyncio.Task] = None
@@ -175,9 +176,10 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             return
 
         role = join_msg.get("role")
+        user_data = join_msg.get("user_data")  # Extract user data (for observer)
         
-        # Support both training session roles (trainer/learner) and coach session roles (coach/client/guest)
-        valid_roles = ["trainer", "learner", "coach", "client", "guest"]
+        # Support both training session roles (trainer/learner), coach session roles (coach/client/guest), and observer role (head)
+        valid_roles = ["trainer", "learner", "coach", "client", "guest", "observer"]
         if role not in valid_roles:
             logger.error(f"Invalid role: {role}")
             await websocket.close()
@@ -188,7 +190,7 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             rtc_connections[session_id] = {}
 
         # Create connection info and start heartbeat
-        conn_info = ConnectionInfo(websocket, role, session_id)
+        conn_info = ConnectionInfo(websocket, role, session_id, user_data)
         rtc_connections[session_id][role] = conn_info
         conn_info.heartbeat_task = asyncio.create_task(send_heartbeat(conn_info))
 
@@ -206,25 +208,38 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             }
         )
 
-        # Notify initiator to create offer when both participants are connected
-        if len(rtc_connections[session_id]) == 2:
-            # Determine who initiates based on session type
+        # SIMPLE: If observer joins, notify trainer with observer user data
+        if role == "observer" and "trainer" in rtc_connections[session_id]:
+            logger.info(f"Observer joined session {session_id}, notifying trainer")
+            observer_message = {"type": "observer_joined"}
+            if user_data:
+                observer_message["observer_data"] = user_data
+            await rtc_connections[session_id]["trainer"].websocket.send_json(observer_message)
+
+        # Normal peer connection setup for trainer/learner or coach/client
+        if len(rtc_connections[session_id]) == 2 and role != "observer":
             initiator_role = "trainer" if "trainer" in rtc_connections[session_id] else "coach"
-            
-            logger.info(
-                f"Both participants connected to session {session_id} - signaling {initiator_role} to initiate offer"
-            )
-            try:
-                if initiator_role in rtc_connections[session_id]:
-                    await rtc_connections[session_id][initiator_role].websocket.send_json(
-                        {"type": "peer_ready", "role": "both_connected"}
-                    )
-            except Exception as e:
-                logger.error(f"Failed to send peer_ready to {initiator_role}: {e}")
+            logger.info(f"Both participants connected - signaling {initiator_role} to initiate offer")
+            if initiator_role in rtc_connections[session_id]:
+                await rtc_connections[session_id][initiator_role].websocket.send_json(
+                    {"type": "peer_ready", "role": "both_connected"}
+                )
 
         try:
             while conn_info.is_alive:
                 message = await websocket.receive_json()
+
+                # --- FIX 1: Handle Client Pings to prevent Disconnect Loop ---
+                if message.get("type") == "ping":
+                    # Reply to the client's ping so it doesn't timeout
+                    await websocket.send_json({
+                        "type": "pong",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                    # Update heartbeat since we heard from them
+                    conn_info.last_heartbeat = datetime.utcnow()
+                    continue
+                # -----------------------------------------------------------
 
                 # Handle pong response
                 if message.get("type") == "pong":
@@ -234,14 +249,60 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
 
                 logger.info(f"Received WebRTC message from {role}: {message.get('type')}")
 
+                # --- FIX 2: Targeted Signaling to prevent Delay ---
+                # Check if the message has a specific target (e.g., trainer -> observer)
+                target_role = message.get("target")
+                
+                if target_role:
+                    # Send ONLY to the specific target
+                    if target_role in rtc_connections[session_id]:
+                        target_conn = rtc_connections[session_id][target_role]
+                        if target_conn.is_alive:
+                            await target_conn.websocket.send_json(message)
+                            logger.info(f"Direct message from {role} to {target_role}: {message.get('type')}")
+                    else:
+                        logger.warning(f"Target {target_role} not found in session {session_id}")
+                    continue  # Skip the broadcast logic below
+                # --------------------------------------------------
+
                 # Forward messages to the other participant(s)
-                # Map roles to their counterparts (coach can have both client and guest)
+                # Map roles to their counterparts (coach can have both client and guest, trainer can have learner and observer)
+                # IMPORTANT: WebRTC signaling messages (offer, answer, ice-candidate) should be targeted
+                # to avoid mixing up connections between trainer-learner and trainer-observer
+                message_type = message.get('type')
+                
+                # For WebRTC signaling messages, we need to be smart about routing
+                # If trainer is sending to both learner AND observer, use simple heuristic:
+                # - offer/answer/ice-candidate without explicit target go to learner (primary connection)
+                # - observer connection must explicitly set target="observer"
+                if role == "trainer" and message_type in ["offer", "answer", "ice-candidate"]:
+                    # Default to learner for backward compatibility
+                    # Observer connection will use target="observer"
+                    default_role = "learner"
+                    if default_role in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id][default_role]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from {role} to {default_role} (default)")
+                            await other_conn.websocket.send_json(message)
+                    continue  # Skip the generic broadcast below
+                
+                # Learner signaling messages always go to trainer (not observer)
+                elif role == "learner" and message_type in ["offer", "answer", "ice-candidate"]:
+                    if "trainer" in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id]["trainer"]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from learner to trainer")
+                            await other_conn.websocket.send_json(message)
+                    continue  # Skip the generic broadcast below
+                
+                # For all other messages, use role mapping
                 role_mapping = {
-                    "trainer": ["learner"],
+                    "trainer": ["learner", "observer"],
                     "learner": ["trainer"],
                     "coach": ["client", "guest"],
                     "client": ["coach"],
-                    "guest": ["coach"]
+                    "guest": ["coach"],
+                    "observer": ["trainer"]  # Observer only communicates with trainer
                 }
                 
                 other_roles = role_mapping.get(role, [])
@@ -274,27 +335,41 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
     finally:
         # Cleanup connection
         await cleanup_connection(rtc_connections, session_id, role)
-
+        
         # Notify other participant(s) about disconnection
         if session_id in rtc_connections:
             try:
-                # Map roles to their counterparts
-                role_mapping = {
-                    "trainer": ["learner"],
-                    "learner": ["trainer"],
-                    "coach": ["client", "guest"],
-                    "client": ["coach"],
-                    "guest": ["coach"]
-                }
-                other_roles = role_mapping.get(role, [])
-                for other_role in other_roles:
-                    if other_role in rtc_connections[session_id]:
-                        try:
+                # Notify trainer if observer leaves
+                if role == "observer" and "trainer" in rtc_connections[session_id]:
+                    await rtc_connections[session_id]["trainer"].websocket.send_json(
+                        {"type": "observer_left"}
+                    )
+                # Notify observer if trainer leaves (observer should disconnect)
+                elif role == "trainer" and "observer" in rtc_connections[session_id]:
+                    logger.info(f"Trainer left, notifying observer to disconnect")
+                    await rtc_connections[session_id]["observer"].websocket.send_json(
+                        {"type": "trainer_disconnected"}
+                    )
+                    # Also notify learner about trainer disconnection
+                    if "learner" in rtc_connections[session_id]:
+                        await rtc_connections[session_id]["learner"].websocket.send_json(
+                            {"type": "peer_disconnected", "role": role}
+                        )
+                # Normal peer disconnection (but DON'T notify observers about learner/trainer disconnections)
+                else:
+                    role_mapping = {
+                        "trainer": ["learner"],  # Only notify learner, not observer
+                        "learner": ["trainer"],  # Only notify trainer, not observer
+                        "coach": ["client", "guest"],
+                        "client": ["coach"],
+                        "guest": ["coach"]
+                    }
+                    other_roles = role_mapping.get(role, [])
+                    for other_role in other_roles:
+                        if other_role in rtc_connections[session_id]:
                             await rtc_connections[session_id][other_role].websocket.send_json(
                                 {"type": "peer_disconnected", "role": role}
                             )
-                        except Exception as e:
-                            logger.error(f"Error notifying {other_role} about {role} disconnect: {e}")
             except Exception as e:
                 logger.error(f"Error notifying peer about disconnection: {e}")
 
@@ -327,8 +402,8 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         role = join_msg.get("role")
         print(f"[WHITEBOARD] Role: {role} for session: {session_id}")
 
-        # Support both training session roles (trainer/learner) and coach session roles (coach/client/guest)
-        valid_roles = ["trainer", "learner", "coach", "client", "guest"]
+        # Support both training session roles (trainer/learner), coach session roles (coach/client/guest), and observer role (head)
+        valid_roles = ["trainer", "learner", "coach", "client", "guest", "observer"]
         if role not in valid_roles:
             print(f"[WHITEBOARD] Invalid role: {role}, closing connection")
             await websocket.close()
@@ -392,13 +467,14 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                     await handle_media_control(message, session_id, role, websocket)
                 else:
                     # Forward draw/clear/item_update messages to the other participant(s)
-                    # Map roles to their counterparts (coach can have both client and guest)
+                    # Map roles to their counterparts (coach can have both client and guest, trainer broadcasts to learner and observer)
                     role_mapping = {
-                        "trainer": ["learner"],
+                        "trainer": ["learner", "observer"],
                         "learner": ["trainer"],
                         "coach": ["client", "guest"],
                         "client": ["coach"],
-                        "guest": ["coach"]
+                        "guest": ["coach"],
+                        "observer": []  # Observer is read-only, doesn't send whiteboard updates
                     }
                     
                     other_roles = role_mapping.get(role, [])

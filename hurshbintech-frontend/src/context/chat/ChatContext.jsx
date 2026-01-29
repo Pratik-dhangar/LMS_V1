@@ -100,6 +100,11 @@ export const ChatProvider = ({ children }) => {
   // ============ MESSAGES ============
 
   const loadMessages = useCallback(async (conversationId, beforeMessageId = null) => {
+    if (!conversationId) {
+      console.error('Cannot load messages: Invalid conversation ID:', conversationId);
+      return { messages: [] };
+    }
+    
     try {
       const data = await chatApi.getMessages(conversationId, 0, 50, beforeMessageId);
       
@@ -116,13 +121,20 @@ export const ChatProvider = ({ children }) => {
   }, []);
 
   const selectConversation = useCallback(async (conversation) => {
-    setCurrentConversation(conversation);
+    // Handle both conversation object and conversation ID
+    const conv = typeof conversation === 'object' ? conversation : conversations.find(c => c.id === conversation);
+    if (!conv || !conv.id) {
+      console.error('Invalid conversation:', conversation);
+      return;
+    }
+    
+    setCurrentConversation(conv);
     
     // Load messages if not already loaded
-    if (!messages[conversation.id]) {
-      await loadMessages(conversation.id);
+    if (!messages[conv.id]) {
+      await loadMessages(conv.id);
     }
-  }, [messages, loadMessages]);
+  }, [messages, loadMessages, conversations]);
 
   const sendMessage = useCallback(async (conversationId, content, messageType = 'TEXT') => {
     try {

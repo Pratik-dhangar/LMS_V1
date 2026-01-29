@@ -6,7 +6,7 @@
     display: flex;
     height: 85vh;
     background: #f0f2f5;
-    padding: .8rem;
+    /* padding: .8rem; */
     
 }
 
@@ -1007,7 +1007,7 @@
 /* Chat Info Dropdown */
 .chat-info-dropdown {
     position: absolute;
-    top: 11rem;
+    top: 4rem;
     right: 2rem;
     width: 15rem;
     max-height: 25rem;

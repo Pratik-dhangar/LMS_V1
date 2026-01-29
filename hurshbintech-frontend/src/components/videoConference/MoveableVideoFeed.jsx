@@ -65,7 +65,7 @@ const MoveableVideoFeed = ({
         }
     }, [videoStream]);
 
-    // Handle drag start
+    // Handle drag start (mouse)
     const handleMouseDown = (e) => {
         if (!isDraggable || isResizing) return;
         e.preventDefault();
@@ -79,6 +79,20 @@ const MoveableVideoFeed = ({
         setIsDragging(true);
     };
 
+    // Handle drag start (touch)
+    const handleTouchStart = (e) => {
+        if (!isDraggable || isResizing) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const touch = e.touches[0];
+        setDragOffset({
+            x: touch.clientX - currentPos.x,
+            y: touch.clientY - currentPos.y
+        });
+        setIsDragging(true);
+    };
+
     // Handle resize start
     const handleResizeStart = (e) => {
         if (!isResizable) return;
@@ -87,7 +101,15 @@ const MoveableVideoFeed = ({
         setIsResizing(true);
     };
 
-    // Handle mouse move
+    // Handle resize start (touch)
+    const handleResizeTouchStart = (e) => {
+        if (!isResizable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsResizing(true);
+    };
+
+    // Handle mouse/touch move and up
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (isDragging) {
@@ -108,7 +130,37 @@ const MoveableVideoFeed = ({
             }
         };
 
+        const handleTouchMove = (e) => {
+            if ((isDragging || isResizing) && e.cancelable) {
+                e.preventDefault();
+            }
+
+            if (isDragging && e.touches.length > 0) {
+                const touch = e.touches[0];
+                const newX = touch.clientX - dragOffset.x;
+                const newY = touch.clientY - dragOffset.y;
+                setCurrentPos({ x: newX, y: newY });
+                if (onPositionChange) {
+                    onPositionChange({ x: newX, y: newY });
+                }
+            } else if (isResizing && e.touches.length > 0) {
+                const touch = e.touches[0];
+                const rect = containerRef.current.getBoundingClientRect();
+                const newWidth = Math.max(200, touch.clientX - rect.left);
+                const newHeight = Math.max(150, touch.clientY - rect.top);
+                setCurrentSize({ width: newWidth, height: newHeight });
+                if (onSizeChange) {
+                    onSizeChange({ width: newWidth, height: newHeight });
+                }
+            }
+        };
+
         const handleMouseUp = () => {
+            setIsDragging(false);
+            setIsResizing(false);
+        };
+
+        const handleTouchEnd = () => {
             setIsDragging(false);
             setIsResizing(false);
         };
@@ -116,9 +168,13 @@ const MoveableVideoFeed = ({
         if (isDragging || isResizing) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
             return () => {
                 document.removeEventListener('mousemove', handleMouseMove);
                 document.removeEventListener('mouseup', handleMouseUp);
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
             };
         }
     }, [isDragging, isResizing, dragOffset, onPositionChange, onSizeChange]);
@@ -146,13 +202,15 @@ const MoveableVideoFeed = ({
                 height: isMinimized ? '40px' : `${currentSize.height}px`,
                 zIndex: zIndex,
                 cursor: isDragging ? 'grabbing' : 'grab',
-                transition: isMinimized ? 'all 0.3s ease' : 'none'
+                transition: isMinimized ? 'all 0.3s ease' : 'none',
+                touchAction: 'none'
             }}
         >
             {/* Video Header */}
             <div
                 className="moveable-video-header"
                 onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
             >
                 <div className="moveable-video-label">
                     {/* <span className="video-icon">📹</span> */}
@@ -197,6 +255,7 @@ const MoveableVideoFeed = ({
                 <div
                     className="video-resize-handle"
                     onMouseDown={handleResizeStart}
+                    onTouchStart={handleResizeTouchStart}
                     title="Drag to resize"
                 >
                     ⇲

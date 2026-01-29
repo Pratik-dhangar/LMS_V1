@@ -276,10 +276,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
       setShowNewChatModal(false);
       const conversation = await createConversation('DIRECT', [otherUser.id]);
       // Immediately select and open the chat
-      setSelectedChat(conversation);
-      selectConversation(conversation);
-      loadMessages(conversation.id);
-      navigate(`/chat/${conversation.id}`, { replace: true });
+      handleSelectChat(conversation);
     } catch (error) {
       console.error('Failed to create conversation:', error);
       alert('Failed to create conversation. Please try again.');

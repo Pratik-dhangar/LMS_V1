@@ -41,6 +41,7 @@ import EditLearner from './pages/head/EditLearner';
 import RegisterLearner from './pages/head/RegisterLearner';
 import ScheduleSession from './pages/head/ScheduleSession';
 import ManageSessions from './pages/head/ManageSessions';
+import ObserverSession from './pages/head/ObserverSession';
 import ViewVlogs from './pages/head/ViewVlogs';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
 import ReportCard from './pages/head/ReportCard';
@@ -101,7 +102,6 @@ import StoreCatalog from './pages/store/StoreCatalog';
 import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
-import OrderHistory from './pages/store/OrderHistory';
 
 // Subscription Pages
 import ManageSubscriptionPackages from './pages/admin/ManageSubscriptionPackages';
@@ -509,6 +509,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/head/observer-session/:sessionId"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <ObserverSession />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/head/vlogs"
             element={
               <ProtectedRoute allowedRoles={['head']}>
@@ -558,7 +566,7 @@ function AppRoutes() {
           />
 
           {/* Head Subscription Routes */}
-          
+
           <Route
             path="/head/subscriptions/learners"
             element={
@@ -803,11 +811,7 @@ function AppRoutes() {
               <Checkout />
             </ProtectedRoute>
           } />
-          <Route path="/store/orders" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <OrderHistory />
-            </ProtectedRoute>
-          } />
+
 
           {/* Chat Routes */}
           <Route

@@ -21,7 +21,6 @@ import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import YouTubePopup from '../../components/common/YouTubePopup';
 import useMessages from '../../hooks/useMessages';
-import useComments from '../../hooks/useComments';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
 import { useMediaControl } from '../../context/MediaControlContext';
@@ -39,6 +38,7 @@ import RecordingControls from '../../components/session/RecordingControls';
 import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
+import MessagingWidget from '../../components/chat/MessagingWidget';
 import '../../styles/session.css';
 
 
@@ -122,13 +122,15 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Hold instances of WebRTC and Whiteboard services
-  // 🔸 How it works: useState stores service instances for use across component.
+  // 🔸 How it works: Dual VideoConferenceService instances for mesh P2P (Learner + Observer)
   // -----------------------------------------------------------
-  const [webRTC, setWebRTC] = useState(null);
+  const [learnerRTC, setLearnerRTC] = useState(null); // Primary connection for Learner
+  const [observerRTC, setObserverRTC] = useState(null); // Secondary connection for Observer
   const [whiteboardService, setWhiteboardService] = useState(null);
   const [toolsService, setToolsService] = useState(null);
   const [recordingService, setRecordingService] = useState(null);
   const isInitializingRef = useRef(false); // Prevent duplicate initialization
+  const observerInitializedRef = useRef(false); // Prevent duplicate observer initialization
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Media streams for video conferencing
@@ -171,61 +173,31 @@ const TrainerSession = () => {
     sendMessage,
     handleKeyPress: _handleKeyPress,
     addReceivedMessage
-  } = useMessages(webRTC, 'trainer');
+  } = useMessages(learnerRTC, 'trainer');
 
   // -----------------------------------------------------------  
-  // 🔹 Purpose: Comments using custom hook (separate from messages)
-  // 🔸 How it works: useComments hook manages comments visible to both trainer and learner
-  // -----------------------------------------------------------  
-  const {
-    trainerComments,
-    learnerComments,
-    commentInput,
-    setCommentInput,
-    sendComment,
-    handleKeyPress: _handleCommentKeyPress,
-    addReceivedComment
-  } = useComments(whiteboardService, 'trainer');
-
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Set up Whiteboard comment callback
-  // 🔸 How it works: When a comment is received via Whiteboard, add it to comments
+  // 🔹 Purpose: Set up Learner WebRTC callbacks for chat messages
+  // 🔸 How it works: Handle chat messages via learner connection
+  // NOTE: Observer join/leave events are handled inside initializeWebRTC
   // -----------------------------------------------------------  
   useEffect(() => {
-    if (whiteboardService) {
-      whiteboardService.onCommentUpdate = (data) => {
-        // console.log('[TrainerSession] Comment received:', data);
-        addReceivedComment(data);
-      };
-    }
+    if (!learnerRTC) return;
+    
+    // Handle chat messages
+    learnerRTC.onMessage = (message) => {
+      addReceivedMessage({
+        sender: message.sender === 'trainer' ? 'You' : message.sender,
+        text: message.text,
+        timestamp: message.timestamp
+      });
+    };
+    
     return () => {
-      if (whiteboardService) {
-        whiteboardService.onCommentUpdate = null;
+      if (learnerRTC) {
+        learnerRTC.onMessage = null;
       }
     };
-  }, [whiteboardService, addReceivedComment]);
-
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Set up WebRTC message callback
-  // 🔸 How it works: When a message is received via WebRTC, add it to messages
-  // -----------------------------------------------------------  
-  useEffect(() => {
-    if (webRTC) {
-      webRTC.onMessage = (message) => {
-        // console.log('[TrainerSession] Message received:', message);
-        addReceivedMessage({
-          sender: message.sender === 'trainer' ? 'You' : message.sender,
-          text: message.text,
-          timestamp: message.timestamp
-        });
-      };
-    }
-    return () => {
-      if (webRTC) {
-        webRTC.onMessage = null;
-      }
-    };
-  }, [webRTC, addReceivedMessage]);
+  }, [learnerRTC, addReceivedMessage]);
   const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [sessionNotes, setSessionNotes] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
@@ -274,6 +246,13 @@ const TrainerSession = () => {
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
   const [selectedProgramId, setSelectedProgramId] = useState(null); // Track which program is checked
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Observer modal state
+  // 🔸 How it works: Show modal when observer (head) joins to prompt screen share
+  // -----------------------------------------------------------
+  const [showObserverModal, setShowObserverModal] = useState(false);
+  const [observerData, setObserverData] = useState(null);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Whiteboard state and interactive modes
@@ -335,12 +314,14 @@ const TrainerSession = () => {
   const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
   const [buckets, setBuckets] = useState([]);
-  const [bucketColor, setBucketColor] = useState('#FF6B6B'); // Default bucket color
+  const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown)
   const bucketColors = [
-    { name: 'Red', hex: '#FF6B6B' },
-    { name: 'Teal', hex: '#4ECDC4' },
-    { name: 'Yellow', hex: '#FFE66D' },
-    { name: 'Mint', hex: '#95E1D3' }
+    { name: 'Brown', hex: '#8B6F47' },
+    { name: 'Red', hex: '#E8744C' },
+    { name: 'Blue', hex: '#5B7B9F' },
+    { name: 'Yellow', hex: '#F4D394' },
+    { name: 'Pink', hex: '#E8A8C7' },
+    { name: 'Orange', hex: '#E8944C' }
   ];
 
   // -----------------------------------------------------------
@@ -416,14 +397,11 @@ const TrainerSession = () => {
   // -----------------------------------------------------------
   const [showExercise, setShowExercise] = useState(false);
   const [exerciseData, setExerciseData] = useState({
-    question: ''
+    question: '',
+    answer: ''
   });
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Comments tool state
-  // 🔸 How it works: manages comments display for both trainer and learner
-  // -----------------------------------------------------------
-  const [showComments, setShowComments] = useState(false);
+
 
   // -----------------------------------------------------------
   // 🔹 Purpose: refs to manage timers and stopwatches on the whiteboard
@@ -466,9 +444,9 @@ const TrainerSession = () => {
   const toggleListening = async () => {
     try {
       // If turning ON voice input and video conferencing mic is currently ON, turn it OFF
-      if (!listening && micEnabled && webRTC) {
+      if (!listening && micEnabled && learnerRTC) {
         // console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
-        webRTC.toggleMicrophone();
+        learnerRTC.toggleMicrophone();
         setMicEnabled(false);
         toast.info('Video conferencing mic disabled - Voice input enabled');
       }
@@ -479,9 +457,9 @@ const TrainerSession = () => {
 
       // If turning OFF voice input and video conferencing mic is currently OFF, turn it ON
       // Note: 'listening' is the OLD state before toggle, so we check if it WAS true (now turning OFF)
-      if (listening && !micEnabled && webRTC) {
+      if (listening && !micEnabled && learnerRTC) {
         // console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
-        webRTC.toggleMicrophone();
+        learnerRTC.toggleMicrophone();
         setMicEnabled(true);
         toast.info('Voice input disabled - Video conferencing mic enabled');
       }
@@ -671,11 +649,11 @@ const TrainerSession = () => {
           qaItems: data.qaItems
         }));
       } else {
-        // Backward compatibility for single answer
+        // Single answer format
         setExerciseData(prev => ({
           ...prev,
-          question: data.question,
-          learnerAnswer: data.learnerAnswer
+          question: data.question || prev.question,
+          answer: data.answer || ''
         }));
       }
     };
@@ -794,8 +772,8 @@ const TrainerSession = () => {
   };
 
   // -----------------------------------------------------------
-  // 🔹 Purpose: Initialize WebRTCService and WhiteboardService
-  // 🔸 How it works: creates service instances, sets event handlers, obtains local media, and connects
+  // 🔹 Purpose: Initialize WebRTCService and WhiteboardService for LEARNER
+  // 🔸 How it works: creates primary service instance for Trainer-Learner connection
   // -----------------------------------------------------------
   const initializeWebRTC = async (numericSessionId) => {
     // Prevent duplicate initialization
@@ -822,21 +800,21 @@ const TrainerSession = () => {
       toast.error('Failed to initialize whiteboard');
     }
 
-    // Initialize Video Conference Service
-    const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
+    // Initialize PRIMARY Video Conference Service (for Learner)
+    const learnerVideoService = new VideoConferenceService(WS_BASE_URL, sessionId, 'trainer');
 
     try {
-      // console.log('[TrainerSession] Initializing Video Conference service');
+      console.log('[TrainerSession] Initializing LEARNER Video Conference service');
 
       // Set callback for local stream (trainer's camera/mic)
-      videoService.onLocalStream = (stream) => {
-        // console.log('[TrainerSession] Local stream received');
+      learnerVideoService.onLocalStream = (stream) => {
+        console.log('[TrainerSession] Local stream received (Learner connection)');
         setLocalStream(stream);
       };
 
       // Set callback for remote stream (learner's video)
-      videoService.onRemoteStream = (stream) => {
-        // console.log('[TrainerSession] Remote stream received from learner');
+      learnerVideoService.onRemoteStream = (stream) => {
+        console.log('[TrainerSession] Remote stream received from learner');
         setRemoteStream(stream);
 
         // Only show toast once when learner first connects
@@ -847,8 +825,8 @@ const TrainerSession = () => {
       };
 
       // Set callback for connection state changes
-      videoService.onConnectionStateChange = (state) => {
-        // console.log('[TrainerSession] Connection state:', state);
+      learnerVideoService.onConnectionStateChange = (state) => {
+        console.log('[TrainerSession] LEARNER connection state:', state);
         const statusMap = {
           'new': 'connecting',
           'connecting': 'connecting',
@@ -861,7 +839,7 @@ const TrainerSession = () => {
 
         // Handle learner disconnect
         if ((state === 'disconnected' || state === 'closed') && learnerConnectedRef.current) {
-          // console.log('[TrainerSession] Learner disconnected');
+          console.log('[TrainerSession] Learner disconnected');
           toast.info(`${sessionInfo?.learner_name || 'Learner'} has left the session`);
           setRemoteStream(null);
           learnerConnectedRef.current = false;
@@ -869,40 +847,152 @@ const TrainerSession = () => {
       };
 
       // Set error callback
-      videoService.onError = (error) => {
-        console.error('[TrainerSession] Video conference error:', error);
+      learnerVideoService.onError = (error) => {
+        console.error('[TrainerSession] LEARNER video conference error:', error);
         toast.error(`Video error: ${error.message}`);
       };
 
+      // ---------------------------------------------------------
+      // ✅ CRITICAL: Hook Observer Events to Learner Connection
+      // ---------------------------------------------------------
+      learnerVideoService.onObserverJoined = (observerUserData) => {
+        console.log('[TrainerSession] 🔔 Observer joined event received!', observerUserData);
+        console.log('[TrainerSession] Setting observer data and showing modal...');
+        
+        // Store observer data and show modal
+        setObserverData(observerUserData);
+        setShowObserverModal(true);
+        
+        console.log('[TrainerSession] Modal should now be visible');
+      };
+
+      learnerVideoService.onObserverLeft = () => {
+        console.log('[TrainerSession] 🔕 Observer left event received');
+        toast.info('Observer left the session', { autoClose: 2000, position: 'top-center' });
+        
+        // Cleanup only the observer connection
+        if (observerRTC) {
+          observerRTC.close();
+          setObserverRTC(null);
+          observerInitializedRef.current = false; // Reset flag
+        }
+      };
+      // ---------------------------------------------------------
+
       // Initialize video conference (gets local media and sets up connection)
-      await videoService.initialize();
-      setWebRTC(videoService);
+      await learnerVideoService.initialize();
+      setLearnerRTC(learnerVideoService);
 
       // Initialize recording service with numeric database ID
-      // console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
-      const recService = new JanusRecordingService(videoService, numericSessionId);
+      console.log('[TrainerSession] Initializing recording service with numeric session ID:', numericSessionId);
+      const recService = new JanusRecordingService(learnerVideoService, numericSessionId);
       setRecordingService(recService);
 
       // Update media control states
-      setMicEnabled(videoService.isMicrophoneEnabled());
-      setCameraEnabled(videoService.isCameraEnabled());
+      setMicEnabled(learnerVideoService.isMicrophoneEnabled());
+      setCameraEnabled(learnerVideoService.isCameraEnabled());
 
-      // console.log('[TrainerSession] Video Conference service initialized');
-      // console.log('[TrainerSession] Recording service initialized');
+      console.log('[TrainerSession] LEARNER Video Conference service initialized');
+      console.log('[TrainerSession] Recording service initialized');
     } catch (error) {
-      console.error('[TrainerSession] Video Conference init error:', error);
+      console.error('[TrainerSession] LEARNER Video Conference init error:', error);
       toast.error('Failed to initialize video conference');
     }
   };
 
   // -----------------------------------------------------------
+  // 🔹 Purpose: Initialize SECONDARY connection for Observer
+  // 🔸 How it works: Creates separate VideoConferenceService instance for Observer screen sharing
+  // -----------------------------------------------------------
+  const initializeObserverConnection = async () => {
+    // ✅ FIX: Prevent duplicate initialization
+    if (observerInitializedRef.current) {
+      console.log('[TrainerSession] Observer connection already initializing/active');
+      return;
+    }
+    observerInitializedRef.current = true;
+
+    try {
+      console.log('[TrainerSession] Initializing OBSERVER Video Conference service');
+
+      // Create NEW instance specifically for Observer connection
+      // Pass targetRole='observer' so all signaling goes only to observer, not learner
+      const observerVideoService = new VideoConferenceService(
+        WS_BASE_URL, 
+        sessionId, 
+        'trainer', 
+        false, // not isObserver (trainer is sender)
+        'observer' // targetRole - routes signaling only to observer
+      );
+
+      // We don't need callbacks for observer (they are passive viewers)
+      // But we handle errors
+      observerVideoService.onError = (error) => {
+        console.error('[TrainerSession] OBSERVER video conference error:', error);
+        toast.error(`Observer connection error: ${error.message}`);
+      };
+
+      observerVideoService.onConnectionStateChange = (state) => {
+        console.log('[TrainerSession] OBSERVER connection state:', state);
+      };
+
+      // Initialize observer connection (reuses local media from learnerRTC)
+      await observerVideoService.initialize();
+      setObserverRTC(observerVideoService);
+
+      console.log('[TrainerSession] OBSERVER Video Conference service initialized');
+
+      // Wait for connection to stabilize, then start screen share
+      setTimeout(async () => {
+        try {
+          console.log('[TrainerSession] Starting screen share for observer');
+          await observerVideoService.startScreenShare('observer');
+          toast.success('Screen sharing started for observer', { autoClose: 2000 });
+        } catch (error) {
+          if (error.name === 'NotAllowedError') {
+            toast.warning('Screen sharing cancelled', { autoClose: 3000 });
+          } else {
+            console.error('[TrainerSession] Error starting screen share:', error);
+            toast.error('Failed to start screen sharing');
+          }
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('[TrainerSession] OBSERVER Video Conference init error:', error);
+      toast.error('Failed to initialize observer connection');
+      observerInitializedRef.current = false;
+    }
+  };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Handle observer modal OK button click
+  // 🔸 How it works: Close modal and trigger observer connection with screen share
+  // -----------------------------------------------------------
+  const handleObserverModalOk = async () => {
+    setShowObserverModal(false);
+    // Initialize the SECONDARY connection for Observer
+    await initializeObserverConnection();
+  };
+
+  // -----------------------------------------------------------
   // 🔹 Purpose: Toggle microphone on/off
-  // 🔸 How it works: calls webRTC.toggleMicrophone() and updates state, coordinates with voice input
+  // 🔸 How it works: calls learnerRTC.toggleMicrophone() and updates state, coordinates with voice input
+  // Also syncs mic state with observer connection (observer should never hear trainer mic)
   // -----------------------------------------------------------
   const handleToggleMic = async () => {
-    if (webRTC) {
-      const newState = webRTC.toggleMicrophone();
+    if (learnerRTC) {
+      const newState = learnerRTC.toggleMicrophone();
       setMicEnabled(newState);
+
+      // Ensure observer connection audio is always muted (they should only see screen)
+      if (observerRTC) {
+        const observerAudioSenders = observerRTC.peerConnection?.getSenders().filter(s => s.track?.kind === 'audio');
+        observerAudioSenders?.forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = false; // Always keep observer audio muted
+          }
+        });
+      }
 
       // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
@@ -921,11 +1011,11 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Toggle camera on/off
-  // 🔸 How it works: calls webRTC.toggleCamera() and updates state
+  // 🔸 How it works: calls learnerRTC.toggleCamera() and updates state
   // -----------------------------------------------------------
   const handleToggleCamera = () => {
-    if (webRTC) {
-      const newState = webRTC.toggleCamera();
+    if (learnerRTC) {
+      const newState = learnerRTC.toggleCamera();
       setCameraEnabled(newState);
     }
   };
@@ -991,17 +1081,17 @@ const TrainerSession = () => {
     const newFreezeState = !isFrozen;
     setIsFrozen(newFreezeState);
 
-    if (webRTC) {
+    if (learnerRTC) {
       const freezeSignal = {
         type: 'freeze',
         frozen: newFreezeState,
         timestamp: new Date().toISOString()
       };
-      webRTC.sendSignal(freezeSignal);
+      learnerRTC.sendSignal(freezeSignal);
       // console.log('[TrainerSession] Freeze signal sent:', freezeSignal);
       // toast.info(newFreezeState ? 'Learner window frozen' : 'Learner window unfrozen');
     } else {
-      console.error('[TrainerSession] Cannot send freeze signal - WebRTC not initialized');
+      console.error('[TrainerSession] Cannot send freeze signal - Learner RTC not initialized');
       toast.error('Unable to send freeze signal');
       setIsFrozen(!newFreezeState); // Revert state
     }
@@ -1018,8 +1108,8 @@ const TrainerSession = () => {
     // Send exercise to learner via whiteboard service
     if (whiteboardService) {
       whiteboardService.send('exercise_update', {
-        qaItems: exerciseInfo.qaItems,
-        question: exerciseInfo.question, // Keep for backward compatibility
+        question: exerciseInfo.question,
+        answer: exerciseInfo.answer || '',
         timestamp: Date.now()
       });
     }
@@ -1027,8 +1117,11 @@ const TrainerSession = () => {
 
   const handleExerciseAnswerChange = (answerData) => {
     // console.log('[TrainerSession] Learner answer updated:', answerData);
-    // Trainer only displays answer updates received via WebSocket
-    // Do not broadcast back - prevents feedback loops
+    // Update the answer in exerciseData
+    setExerciseData(prev => ({
+      ...prev,
+      answer: answerData.answer || ''
+    }));
   };
 
   const handleExerciseSubmit = (response) => {
@@ -1039,8 +1132,8 @@ const TrainerSession = () => {
       // Send feedback to learner or save the response
       if (whiteboardService) {
         whiteboardService.send('exercise_response', {
-          qaItems: response.qaItems,
-          learnerAnswer: response.learnerAnswer,
+          question: response.question,
+          answer: response.answer,
           timestamp: Date.now()
         });
       }
@@ -1048,7 +1141,8 @@ const TrainerSession = () => {
       // Send exercise to learner when "Send to Learner" is clicked
       if (whiteboardService) {
         whiteboardService.send('exercise_update', {
-          qaItems: response.qaItems,
+          question: response.question,
+          answer: '',
           timestamp: Date.now()
         });
       }
@@ -1059,7 +1153,8 @@ const TrainerSession = () => {
     // console.log('[TrainerSession] Exercise deleted');
     setShowExercise(false);
     setExerciseData({
-      question: ''
+      question: '',
+      answer: ''
     });
 
     // Notify learner that exercise has been closed
@@ -1102,23 +1197,32 @@ const TrainerSession = () => {
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Cleanup function to close WebRTC and Whiteboard services
-  // 🔸 How it works: calls service-specific teardown methods to release media and sockets
+  // 🔸 How it works: calls service-specific teardown methods to release media and sockets for BOTH connections
   // -----------------------------------------------------------
   const cleanup = () => {
-    // Stop all media tracks (camera and microphone) - revoke media access
-    if (webRTC?.localStream) {
-      webRTC.localStream.getTracks().forEach(track => {
+    // Stop all media tracks from learner connection (camera and microphone) - revoke media access
+    if (learnerRTC?.localStream) {
+      learnerRTC.localStream.getTracks().forEach(track => {
         track.stop();
-        // console.log(`[TrainerSession] Stopped ${track.kind} track`);
+        console.log(`[TrainerSession] Stopped ${track.kind} track (Learner connection)`);
       });
     }
-    if (webRTC) {
-      webRTC.close();
-      // console.log('[TrainerSession] WebRTC closed and media access revoked');
+    if (learnerRTC) {
+      learnerRTC.close();
+      console.log('[TrainerSession] Learner RTC closed and media access revoked');
     }
 
-    // Reset initialization flag to allow re-initialization
+    // Close observer connection if it exists
+    if (observerRTC) {
+      observerRTC.close();
+      setObserverRTC(null); // Clear state
+      console.log('[TrainerSession] Observer RTC closed');
+    }
+
+    // ✅ FIX: Ensure both initialization flags are reset
     isInitializingRef.current = false;
+    observerInitializedRef.current = false;
+    
     if (whiteboardService) {
       whiteboardService.close();
     }
@@ -1269,9 +1373,9 @@ const TrainerSession = () => {
       setSelectedReinforcementLevel(null);
 
       // Send reset values to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     } catch (error) {
       console.error('[TrainerSession] Error saving report:', error);
@@ -1382,9 +1486,9 @@ const TrainerSession = () => {
       setSelectedPromptLevel(null);
       setSelectedReinforcementLevel(null);
       // Send reset values (0) to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     } else {
       // If a different program is checked, select the new one and reset meters to 0
@@ -1392,9 +1496,9 @@ const TrainerSession = () => {
       setSelectedPromptLevel(null);
       setSelectedReinforcementLevel(null);
       // Send reset values (0) to learner
-      if (webRTC) {
-        webRTC.sendPromptMeter(0);
-        webRTC.sendReinforcementMeter(0);
+      if (learnerRTC) {
+        learnerRTC.sendPromptMeter(0);
+        learnerRTC.sendReinforcementMeter(0);
       }
     }
   };
@@ -1622,17 +1726,38 @@ const TrainerSession = () => {
   // 🔸 How it works: creates a new bucket positioned next to the previous one, updates state and notifies via whiteboardService
   // -----------------------------------------------------------
   const addBucket = () => {
-    // Calculate position for new bucket (place next to previous one)
-    const lastBucket = buckets[buckets.length - 1];
-    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
-    const newY = lastBucket ? lastBucket.y : 100;
+    // Calculate position for new bucket with wrapping support
+    const bucketWidth = 100;
+    const bucketHeight = 100;
+    const bucketSpacing = 10;
+    const containerPadding = 50;
+    const whiteboardWidth = window.innerWidth * 0.65; // Approximate whiteboard width (adjust based on layout)
+
+    let newX, newY;
+
+    if (buckets.length === 0) {
+      newX = containerPadding;
+      newY = containerPadding;
+    } else {
+      const lastBucket = buckets[buckets.length - 1];
+      const nextX = lastBucket.x + bucketWidth + bucketSpacing;
+
+      // Check if next bucket would overflow, if so wrap to next line
+      if (nextX + bucketWidth > whiteboardWidth) {
+        newX = containerPadding;
+        newY = lastBucket.y + bucketHeight + bucketSpacing;
+      } else {
+        newX = nextX;
+        newY = lastBucket.y;
+      }
+    }
 
     const newBucket = {
       id: Date.now(),
       x: newX,
       y: newY,
-      width: 150,
-      height: 150,
+      width: bucketWidth,
+      height: bucketHeight,
       label: 'Bucket',
       color: bucketColor, // Use selected bucket color
       items: [] // Items inside bucket
@@ -2164,7 +2289,7 @@ const TrainerSession = () => {
             setSelectedReinforcementLevel={setSelectedReinforcementLevel}
             selectedProgramId={selectedProgramId}
             handleProgramCheck={handleProgramCheck}
-            webRTC={webRTC}
+            webRTC={learnerRTC}
             toggleListening={toggleListening}
             listening={listening}
             transcript={transcript}
@@ -2246,32 +2371,14 @@ const TrainerSession = () => {
           {/* Exercise Tool */}
           {showExercise && (
             <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
-              {/* <button
-                onClick={() => setShowExercise(false)}
-                style={{
-                  position: 'absolute',
-                  top: '1rem',
-                  right: '4rem',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  zIndex: 10
-                }}
-                title="Close Exercise Tool"
-              >
-                ✕ Close
-              </button> */}
               <Exercise
                 isTrainer={true}
                 onExerciseSubmit={handleExerciseSubmit}
                 onExerciseUpdate={handleExerciseUpdate}
                 onExerciseDelete={handleExerciseDelete}
-                initialExercise={Object.keys(exerciseData).some(key => exerciseData[key]) ? exerciseData : null}
+                onAnswerChange={handleExerciseAnswerChange}
+                whiteboardService={whiteboardService}
+                initialExercise={exerciseData.question ? exerciseData : null}
               />
             </div>
           )}
@@ -2421,34 +2528,9 @@ const TrainerSession = () => {
                   style={{ width: 'clamp(1.25rem, 3vw, 1.75rem)', height: 'clamp(1.25rem, 3vw, 1.75rem)' }}
                   title="Pen Color"
                 />
-              </div>
-
-              {/* Bucket Color Selector */}
-              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
-                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
-                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
-                  {bucketColors.map((bc) => (
-                    <button
-                      key={bc.hex}
-                      onClick={() => setBucketColor(bc.hex)}
-                      className="rounded border-2 transition-all"
-                      style={{
-                        backgroundColor: bc.hex,
-                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
-                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
-                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
-                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
-                        cursor: 'pointer'
-                      }}
-                      title={`Bucket Color: ${bc.name}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                 <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
-                  <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Brush Size:</label>
+                  <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Pen Size:</label>
 
                   {/* Slider: make slightly larger than before */}
                   <input
@@ -2458,8 +2540,8 @@ const TrainerSession = () => {
                     value={lineWidth}
                     onChange={(e) => setLineWidth(parseInt(e.target.value))}
                     className="brush-size-slider"
-                    title="Brush Size"
-                    aria-label="Brush size slider"
+                    title="Pen Size"
+                    aria-label="Pen size slider"
                     style={{
                       width: 'clamp(5rem, 12vw, 10rem)',
                       // set CSS variable used by stylesheet to drive the filled track
@@ -2485,6 +2567,32 @@ const TrainerSession = () => {
                   <div className="text-slate-600" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>{lineWidth}</div>
                 </div>
               </div>
+              </div>
+
+              {/* Bucket Color Selector */}
+              <div className="flex items-center flex-wrap" style={{ gap: 'clamp(0.25rem, 0.5vw, 0.5rem)' }}>
+                <label className="font-semibold text-slate-700 hidden sm:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Bucket Color:</label>
+                <div className="flex flex-wrap gap-1" style={{ gap: 'clamp(0.125rem, 0.3vw, 0.25rem)' }}>
+                  {bucketColors.map((bc) => (
+                    <button
+                      key={bc.hex}
+                      onClick={() => setBucketColor(bc.hex)}
+                      className="rounded border-2 transition-all"
+                      style={{
+                        backgroundColor: bc.hex,
+                        width: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        height: 'clamp(1.25rem, 3vw, 1.75rem)',
+                        borderColor: bucketColor === bc.hex ? '#000000' : '#ccc',
+                        borderWidth: bucketColor === bc.hex ? '3px' : '2px',
+                        cursor: 'pointer'
+                      }}
+                      title={`Bucket Color: ${bc.name}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              
             </div>
 
             {/* All tools group - learner access + trainer interactive buttons */}
@@ -2513,7 +2621,7 @@ const TrainerSession = () => {
 
                 {/* Exercise Tool Button */}
                 <button
-                  onClick={() => setShowExercise(true)}
+                  onClick={() => setShowExercise(!showExercise)}
                   className={`${showExercise ? wbSmallBtnActive : wbSmallBtnBase}`}
                   title="Open Exercise Tool - Create Q&A exercises with keyword validation"
                 >
@@ -2521,24 +2629,7 @@ const TrainerSession = () => {
                   <span>Q & A</span>
                 </button>
 
-                {/* Comments Tool Button */}
-                <button
-                  onClick={() => {
-                    const newState = !showComments;
-                    setShowComments(newState);
-                    if (whiteboardService) {
-                      whiteboardService.send('comments_toggle', {
-                        visible: newState,
-                        timestamp: Date.now()
-                      });
-                    }
-                  }}
-                  className={`${showComments ? wbSmallBtnActive : wbSmallBtnBase}`}
-                  title="Open Comments Tool - Share notes with learner"
-                >
-                  <span>💬</span>
-                  <span>Comments</span>
-                </button>
+
 
                 {/* Background Music Control */}
                 <div className="flex gap-1 flex-wrap items-center">
@@ -2625,7 +2716,7 @@ const TrainerSession = () => {
                   style={{ padding: 'clamp(0.25rem, 0.8vw, 0.375rem) clamp(0.5rem, 1.2vw, 0.75rem)', fontSize: 'clamp(0.5rem, 1.2vw, 0.625rem)' }}
                   title="Clear all notes"
                 >
-                  <Emoji emoji="🗑️" size="base" /> <span className="hidden sm:inline">Clear</span>
+                <span className="hidden sm:inline">Clear</span>
                 </button>
               </div>
               <textarea
@@ -2669,65 +2760,6 @@ const TrainerSession = () => {
                 </button>
               </div>
             </div>
-
-            {/* Comments Tool */}
-            {showComments && (
-              <div className="session-comments-section border-2 border-gray-300 mt-2 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Comments</div>
-                  <button
-                    onClick={() => {
-                      setShowComments(false);
-                      if (whiteboardService) {
-                        whiteboardService.send('comments_toggle', {
-                          visible: false,
-                          timestamp: Date.now()
-                        });
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700 font-bold"
-                    title="Close Comments Tool"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Trainer Comments Section */}
-                <div className="mb-3" style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.75rem' }}>
-                  <div className="font-semibold text-slate-700" style={{ fontSize: 'clamp(0.65rem, 1.6vw, 0.875rem)', marginBottom: '0.5rem' }}>👨‍🏫 Trainer Comments</div>
-                  <div className="bg-white border border-gray-300 rounded p-2 mb-2" style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto' }}>
-                    {trainerComments || <span className="text-gray-400">Your comments will appear here...</span>}
-                  </div>
-                  <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
-                    <input
-                      type="text"
-                      value={commentInput}
-                      onChange={(e) => setCommentInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendComment()}
-                      placeholder="Type your comment..."
-                      className="flex-1 border border-gray-300 rounded"
-                      style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
-                    />
-                    <button
-                      onClick={sendComment}
-                      className="bg-blue-500 hover:bg-blue-600 text-white rounded font-semibold"
-                      style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)' }}
-                      title="Send Comment"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-
-                {/* Learner Comments Section */}
-                <div>
-                  <div className="font-semibold text-slate-700" style={{ fontSize: 'clamp(0.65rem, 1.6vw, 0.875rem)', marginBottom: '0.5rem' }}>👨‍🎓 Learner Comments</div>
-                  <div className="bg-blue-50 border border-blue-300 rounded p-2" style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto' }}>
-                    {learnerComments || <span className="text-gray-400">Learner comments will appear here...</span>}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -2782,7 +2814,7 @@ const TrainerSession = () => {
                 setSelectedReinforcementLevel={setSelectedReinforcementLevel}
                 selectedProgramId={selectedProgramId}
                 handleProgramCheck={handleProgramCheck}
-                webRTC={webRTC}
+                webRTC={learnerRTC}
                 toggleListening={toggleListening}
                 listening={listening}
                 transcript={transcript}
@@ -2795,10 +2827,7 @@ const TrainerSession = () => {
       </div>
 
       {/* Session Info Bar - fixed to bottom with no surrounding margin */}
-      <div className="session-info-bar session-control-buttons">
-        <div className="session-info-text">
-          <strong>Session Info:</strong> {sessionInfo?.learner_name ?? '—'} | {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleDateString() : '--'} | Started: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--'} | Duration: {sessionInfo?.duration ? `${sessionInfo.duration} min` : '--'}
-        </div>
+      <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
         <div className="session-info-actions">
           <button
             className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
@@ -2817,6 +2846,38 @@ const TrainerSession = () => {
         </div>
       </div>
       {/* Fill in the Blanks feature removed */}
+
+      {/* Observer Joined Modal */}
+      {showObserverModal && observerData && (
+        <div className="app-modal-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Observer Joined</h2>
+            </div>
+
+            {/* Modal Body */}
+            <div className="app-modal-content">
+              <p className="app-modal-text">
+                <strong>{observerData.name}</strong> has joined as an observer. Please share your screen!
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="app-modal-footer">
+              <button
+                onClick={handleObserverModalOk}
+                className="app-modal-btn app-modal-btn--primary"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messaging Widget */}
+      <MessagingWidget />
     </div>
   );
 };

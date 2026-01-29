@@ -787,19 +787,19 @@ input[type="range"]::-webkit-slider-thumb {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #FFFDF5 0%, #F4FFF6 50%, #F9F6FF 100%);
-    /* soft cream -> mint -> lavender */
-    color: #2D2A44;
-    /* soft darker color for readability */
+    background: linear-gradient(135deg, #2D2A44 0%, #3D4A5C 50%, #1A1F2E 100%);
+    /* dark charcoal -> slate gray -> dark navy */
+    color: #FFFFFF;
+    /* white text for readability on dark background */
     padding: 28px 40px;
     border-radius: 22px;
     font-size: 38px;
     font-weight: 900;
     z-index: 9999;
     pointer-events: none;
-    box-shadow: 0 10px 30px rgba(180, 170, 240, 0.3), inset 0 -4px 10px rgba(255, 255, 255, 0.7);
-    animation: fadeInOut 3s ease-in-out, bounce 0.45s cubic-bezier(.36, .07, .19, .97);
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 30px rgba(45, 42, 68, 0.6), inset 0 -4px 10px rgba(0, 0, 0, 0.3);
+    animation: fadeInOut 3s ease-in-out;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     text-align: center;
     white-space: nowrap;
     font-family: 'Comic Sans MS', 'Baloo 2', 'Poppins', cursive, sans-serif;
@@ -808,9 +808,9 @@ input[type="range"]::-webkit-slider-thumb {
 .feedback-bubble .feedback-text {
     display: inline-block;
     transform: translateZ(0);
-    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.9);
-    color: #4b3c6b;
-    /* friendly darker pastel for contrast */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    color: #FFFFFF;
+    /* white text for high contrast on dark background */
     padding: 0 4px;
 }
 
@@ -2009,6 +2009,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* Bucket label */
 .bucket-label {
     position: absolute;
+    top: 1px;
     left: 50%;
     transform: translateX(-50%);
     color: white;

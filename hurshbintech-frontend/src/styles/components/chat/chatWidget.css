@@ -1,5 +1,24 @@
 /* Chat Widget Styles */
 
+/* Responsive visibility controls */
+.chat-widget-mobile-only {
+  display: none !important;
+}
+
+.messaging-widget-desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 768px) {
+  .chat-widget-mobile-only {
+    display: block !important;
+  }
+  
+  .messaging-widget-desktop-only {
+    display: none !important;
+  }
+}
+
 .chat-widget-container {
   position: fixed;
   bottom: 4rem;
@@ -313,6 +332,8 @@
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .chat-modal-header-bar {

@@ -155,243 +155,229 @@ const TodaysSchedule = () => {
 
   return (
     <div className="page-container">
-      <main className="page-main">
-        <div className="page-content">
-        {/* Page Header */}
-        <div className="page-header">
-          <button onClick={() => navigate('/trainer/dashboard')} className="back-button">
-            <ArrowLeft size={20} />
-            Back to Dashboard
-          </button>
-          <h1 className="page-title">
-            Today's Schedule
-          </h1>
+
+      {/* Schedule Section */}
+      <div className="trainer-schedule-section">
+        <div className="trainer-schedule-header">
+          <div className="trainer-schedule-title">
+            📅 Schedule - {todaysDateString}
+          </div>
+          <div className="trainer-schedule-controls">
+            <div className="trainer-schedule-count">
+              {sessions.length} total items
+            </div>
+            <div className="trainer-pagination-controls">
+              <label
+                htmlFor="pagination"
+                className="trainer-pagination-label"
+              >
+                Show:
+              </label>
+              <select
+                id="pagination"
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="trainer-pagination-select"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-          {/* Schedule Section */}
-          <div className="trainer-schedule-section">
-            <div className="trainer-schedule-header">
-              <div className="trainer-schedule-title">
-                📅 Schedule - {todaysDateString}
-              </div>
-              <div className="trainer-schedule-controls">
-                <div className="trainer-schedule-count">
-                  {sessions.length} total items
-                </div>
-                <div className="trainer-pagination-controls">
-                  <label
-                    htmlFor="pagination"
-                    className="trainer-pagination-label"
-                  >
-                    Show:
-                  </label>
-                  <select
-                    id="pagination"
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="trainer-pagination-select"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={15}>15</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
+        <div className="trainer-sessions-list">
+          {loading ? (
+            <div className="trainer-loading-container">
+              <div className="trainer-loader"></div>
             </div>
+          ) : sessions.length === 0 ? (
+            <div className="trainer-no-sessions">
+              No sessions scheduled yet.
+            </div>
+          ) : (
+            <>
+              {sessions
+                .sort(
+                  (a, b) =>
+                    new Date(b.scheduled_date || 0) -
+                    new Date(a.scheduled_date || 0)
+                )
+                .slice(0, itemsPerPage)
+                .map((session) => {
+                  const scheduledDate = session.scheduled_date
+                    ? new Date(session.scheduled_date)
+                    : null;
+                  const timeLabel = scheduledDate
+                    ? scheduledDate.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    : "—";
+                  const ampm = scheduledDate
+                    ? scheduledDate
+                      .toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })
+                      .split(" ")[1]
+                    : "";
+                  const borderColor =
+                    (() => {
+                      const actualStatus = getSessionStatus(session);
+                      if (actualStatus === "active") return "trainer-session-card-green";
+                      if (actualStatus === "scheduled") return "trainer-session-card-amber";
+                      if (actualStatus === "cancelled") return "trainer-session-card-red";
+                      if (actualStatus === "expired") return "trainer-session-card-orange";
+                      return "trainer-session-card-orange";
+                    })();
 
-            <div className="trainer-sessions-list">
-              {loading ? (
-                <div className="trainer-loading-container">
-                  <div className="trainer-loader"></div>
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="trainer-no-sessions">
-                  No sessions scheduled yet.
-                </div>
-              ) : (
-                <>
-                  {sessions
-                    .sort(
-                      (a, b) =>
-                        new Date(b.scheduled_date || 0) -
-                        new Date(a.scheduled_date || 0)
-                    )
-                    .slice(0, itemsPerPage)
-                    .map((session) => {
-                      const scheduledDate = session.scheduled_date
-                        ? new Date(session.scheduled_date)
-                        : null;
-                      const timeLabel = scheduledDate
-                        ? scheduledDate.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                        : "—";
-                      const ampm = scheduledDate
-                        ? scheduledDate
-                          .toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          })
-                          .split(" ")[1]
-                        : "";
-                      const borderColor =
-                        (() => {
-                          const actualStatus = getSessionStatus(session);
-                          if (actualStatus === "active") return "trainer-session-card-green";
-                          if (actualStatus === "scheduled") return "trainer-session-card-amber";
-                          if (actualStatus === "cancelled") return "trainer-session-card-red";
-                          if (actualStatus === "expired") return "trainer-session-card-orange";
-                          return "trainer-session-card-orange";
-                        })();
+                  const cardBackgroundColor =
+                    (() => {
+                      const actualStatus = getSessionStatus(session);
+                      if (actualStatus === "cancelled") return "#fee2e2";
+                      return "#ffffff";
+                    })();
 
-                      const cardBackgroundColor =
-                        (() => {
-                          const actualStatus = getSessionStatus(session);
-                          if (actualStatus === "cancelled") return "#fee2e2";
-                          return "#ffffff";
-                        })();
-
-                      return (
-                        <div
-                          key={session.id || session.session_id}
-                          className={`trainer-session-card ${borderColor}`}
-                          style={{ backgroundColor: cardBackgroundColor }}
-                        >
-                          <div className="trainer-session-content">
-                            <div className="trainer-session-left">
-                              <div className="trainer-session-time-box">
-                                <div className="trainer-session-time">
-                                  {timeLabel}
-                                </div>
-                                <div className="trainer-session-ampm">
-                                  {ampm}
-                                </div>
-                              </div>
-
-                              <div className="trainer-session-details">
-                                <div className="trainer-session-header">
-                                  <div className="trainer-session-title">
-                                    {session.title ||
-                                      `Session with ${session.learner?.name ||
-                                      session.learner_name ||
-                                      "Learner"
-                                      }`}
-                                  </div>
-                                </div>
-
-                                <div className="trainer-session-meta">
-                                  Duration: {session.duration ?? "—"} minutes{" "}
-                                  {session.program
-                                    ? ` | IIP: ${session.program}`
-                                    : ""}
-                                </div>
-
-                                {session.description && (
-                                  <div className="trainer-session-description">
-                                    {session.description}
-                                  </div>
-                                )}
-                                {session.scheduled_date && (
-                                  <div className="trainer-session-scheduled">
-                                    Scheduled:{" "}
-                                    {new Date(
-                                      session.scheduled_date
-                                    ).toLocaleString()}
-                                  </div>
-                                )}
-                              </div>
+                  return (
+                    <div
+                      key={session.id || session.session_id}
+                      className={`trainer-session-card ${borderColor}`}
+                      style={{ backgroundColor: cardBackgroundColor }}
+                    >
+                      <div className="trainer-session-content">
+                        <div className="trainer-session-left">
+                          <div className="trainer-session-time-box">
+                            <div className="trainer-session-time">
+                              {timeLabel}
                             </div>
-
-                            <div className="trainer-session-actions">
-                              {getSessionStatus(session) === "scheduled" && (
-                                <button
-                                  onClick={() =>
-                                    handleStartSession(session.session_id)
-                                  }
-                                  className="trainer-btn-start"
-                                >
-                                  Start Session
-                                </button>
-                              )}
-                              {getSessionStatus(session) === "active" && (
-                                <button
-                                  onClick={() =>
-                                    handleResumeSession(session.session_id)
-                                  }
-                                  className="trainer-btn-resume"
-                                >
-                                  Resume Session
-                                </button>
-                              )}
-                              <span
-                                className={getStatusBadge(getSessionStatus(session))}
-                              >
-                                {getSessionStatus(session)
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                  getSessionStatus(session).slice(1)}
-                              </span>
-                              <div className="trainer-session-buttons">
-                                {session.recording_url &&
-                                  session.recording_status === "completed" && (
-                                    <button
-                                      onClick={() =>
-                                        handleViewRecording(session)
-                                      }
-                                      className="trainer-btn-watch"
-                                      title="Watch recording"
-                                    >
-                                      ▶️ Watch
-                                    </button>
-                                  )}
-                                {session.recording_status === "processing" && (
-                                  <span
-                                    className="trainer-recording-processing"
-                                    title="Recording is being processed"
-                                  >
-                                    ⏳ Processing...
-                                  </span>
-                                )}
-                                {session.recording_status === "failed" && (
-                                  <span
-                                    className="trainer-recording-failed"
-                                    title="Recording failed"
-                                  >
-                                    ❌ Failed
-                                  </span>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setSelectedSession(session);
-                                    setShowSessionDetailsModal(true);
-                                  }}
-                                  className="trainer-btn-details"
-                                >
-                                  View Details
-                                </button>
-                              </div>
+                            <div className="trainer-session-ampm">
+                              {ampm}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
 
-                  {/* Pagination Info */}
-                  {sessions.length > itemsPerPage && (
-                    <div className="trainer-pagination-info">
-                      Showing {itemsPerPage} of {sessions.length} sessions
+                          <div className="trainer-session-details">
+                            <div className="trainer-session-header">
+                              <div className="trainer-session-title">
+                                {session.title ||
+                                  `Session with ${session.learner?.name ||
+                                  session.learner_name ||
+                                  "Learner"
+                                  }`}
+                              </div>
+                            </div>
+
+                            <div className="trainer-session-meta">
+                              Duration: {session.duration ?? "—"} minutes{" "}
+                              {session.program
+                                ? ` | IIP: ${session.program}`
+                                : ""}
+                            </div>
+
+                            {session.description && (
+                              <div className="trainer-session-description">
+                                {session.description}
+                              </div>
+                            )}
+                            {session.scheduled_date && (
+                              <div className="trainer-session-scheduled">
+                                Scheduled:{" "}
+                                {new Date(
+                                  session.scheduled_date
+                                ).toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="trainer-session-actions">
+                          {getSessionStatus(session) === "scheduled" && (
+                            <button
+                              onClick={() =>
+                                handleStartSession(session.session_id)
+                              }
+                              className="trainer-btn-start"
+                            >
+                              Start Session
+                            </button>
+                          )}
+                          {getSessionStatus(session) === "active" && (
+                            <button
+                              onClick={() =>
+                                handleResumeSession(session.session_id)
+                              }
+                              className="trainer-btn-resume"
+                            >
+                              Resume Session
+                            </button>
+                          )}
+                          <span
+                            className={getStatusBadge(getSessionStatus(session))}
+                          >
+                            {getSessionStatus(session)
+                              .charAt(0)
+                              .toUpperCase() +
+                              getSessionStatus(session).slice(1)}
+                          </span>
+                          <div className="trainer-session-buttons">
+                            {session.recording_url &&
+                              session.recording_status === "completed" && (
+                                <button
+                                  onClick={() =>
+                                    handleViewRecording(session)
+                                  }
+                                  className="trainer-btn-watch"
+                                  title="Watch recording"
+                                >
+                                  ▶️ Watch
+                                </button>
+                              )}
+                            {session.recording_status === "processing" && (
+                              <span
+                                className="trainer-recording-processing"
+                                title="Recording is being processed"
+                              >
+                                ⏳ Processing...
+                              </span>
+                            )}
+                            {session.recording_status === "failed" && (
+                              <span
+                                className="trainer-recording-failed"
+                                title="Recording failed"
+                              >
+                                ❌ Failed
+                              </span>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedSession(session);
+                                setShowSessionDetailsModal(true);
+                              }}
+                              className="trainer-btn-details"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </>
+                  );
+                })}
+
+              {/* Pagination Info */}
+              {sessions.length > itemsPerPage && (
+                <div className="trainer-pagination-info">
+                  Showing {itemsPerPage} of {sessions.length} sessions
+                </div>
               )}
-            </div>
-          </div>
-          </div>
-      </main>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Session Details Modal */}
       {showSessionDetailsModal && selectedSession && (
@@ -552,7 +538,7 @@ const TodaysSchedule = () => {
             </div>
           </div>
         </div>
-      )}  
+      )}
 
     </div>
   );
