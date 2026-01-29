@@ -87,9 +87,9 @@ if not os.getenv("TESTING"):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     """Custom handler for validation errors to provide detailed debugging info"""
-    print(f"Validation Error on {request.url}")
-    print(f"Errors: {exc.errors()}")
-    print(f"Body: {exc.body}")
+    logger.error(f"Validation Error on {request.url}")
+    logger.error(f"Errors: {exc.errors()}")
+    logger.error(f"Body: {exc.body}")
     return JSONResponse(status_code=422, content={"detail": exc.errors(), "body": str(exc.body)})
 
 
