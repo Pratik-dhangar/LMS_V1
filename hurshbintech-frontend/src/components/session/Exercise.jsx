@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaEdit, FaCheck, FaTimes, FaTrash, FaPlus } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FaEdit, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaComments } from 'react-icons/fa';
+import useComments from '../../hooks/useComments';
 import '../../styles/session/exercise.css';
 
 const Exercise = ({
@@ -8,115 +10,139 @@ const Exercise = ({
     onExerciseUpdate = null,
     onExerciseDelete = null,
     onAnswerChange = null,
-    onCursorMove = null,
+    whiteboardService = null,
     initialExercise = null
 }) => {
-    const answerTextareaRefs = useRef({});
+    const answerTextareaRef = useRef(null);
     const [mode, setMode] = useState(isTrainer && !initialExercise ? 'create' : 'view'); // 'create', 'edit', 'view', 'sent'
-    const [qaItems, setQaItems] = useState([]); // Array of {id, question, answer}
-    const [editingQaItems, setEditingQaItems] = useState([]); // For edit mode
-    const [cursorPosition, setCursorPosition] = useState(0);
+    const [question, setQuestion] = useState('');
+    const [answer, setAnswer] = useState('');
+    const [editingQuestion, setEditingQuestion] = useState('');
     const [exerciseCreated, setExerciseCreated] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [editingId, setEditingId] = useState(null);
+    const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+    const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+
 
     // Initialize with existing exercise
     useEffect(() => {
         if (initialExercise) {
-            // Handle both single question format and multiple Q&A format
-            if (initialExercise.qaItems && Array.isArray(initialExercise.qaItems)) {
-                setQaItems(initialExercise.qaItems);
-                setExerciseCreated(true);
-            } else if (initialExercise.question) {
-                // Convert old format to new format
-                setQaItems([{
-                    id: '1',
-                    question: initialExercise.question,
-                    answer: initialExercise.learnerAnswer || ''
-                }]);
+            // Handle single question format
+            if (initialExercise.question) {
+                setQuestion(initialExercise.question);
+                // For trainer: sync answer from parent
+                // For learner: only set initial answer if it's a new exercise
+                if (isTrainer) {
+                    setAnswer(initialExercise.answer || '');
+                } else if (!exerciseCreated) {
+                    // Only set answer on first load for learner
+                    setAnswer(initialExercise.answer || '');
+                }
                 setExerciseCreated(true);
             }
 
             if (isTrainer) {
                 setMode(prevMode => prevMode === 'sent' ? 'sent' : 'view');
             } else {
-                setMode(prevMode => prevMode === 'submitted' ? 'submitted' : 'waiting');
+                setMode('waiting');
             }
         }
-    }, [initialExercise, isTrainer]);
+    }, [initialExercise?.question, isTrainer]);
 
-    // Update learner answers when they change from parent (real-time sync)
+    // Sync trainer's view with learner's answer (trainer only, when in "sent" mode)
     useEffect(() => {
-        if (initialExercise && initialExercise.qaItems && Array.isArray(initialExercise.qaItems)) {
-            setQaItems(initialExercise.qaItems);
+        if (isTrainer && mode === 'sent' && initialExercise?.answer !== undefined) {
+            setAnswer(initialExercise.answer || '');
         }
-    }, [initialExercise?.qaItems]);
+    }, [initialExercise?.answer, isTrainer, mode]);
+
+
+    // -----------------------------------------------------------
+    // 🔹 Purpose: Comments tool state
+    // 🔸 How it works: manages comments display for both trainer and learner
+    // -----------------------------------------------------------
+    const [showComments, setShowComments] = useState(false);
+
+    // -----------------------------------------------------------  
+    // 🔹 Purpose: Comments using custom hook (separate from messages)
+    // 🔸 How it works: useComments hook manages comments visible to both trainer and learner
+    // -----------------------------------------------------------  
+    const {
+        trainerComments,
+        learnerComments,
+        commentInput,
+        setCommentInput,
+        sendComment,
+        handleKeyPress: _handleCommentKeyPress,
+        addReceivedComment
+    } = useComments(whiteboardService, 'trainer');
+
+    // Setup WebSocket handler for real-time comment updates
+    useEffect(() => {
+        if (!whiteboardService) return;
+
+        whiteboardService.onCommentUpdate = (data) => {
+            // normalize incoming comment shape to what useComments expects
+            const incoming = {
+                text: data.message || data.text || '',
+                type: data.type || 'learner',
+                timestamp: data.timestamp || Date.now()
+            };
+            addReceivedComment(incoming);
+        };
+
+        return () => {
+            if (whiteboardService) {
+                whiteboardService.onCommentUpdate = null;
+            }
+        };
+    }, [whiteboardService, addReceivedComment]);
 
     // ============================================
     // TRAINER ACTIONS
     // ============================================
 
-    const addNewQaItem = () => {
-        const newId = Date.now().toString();
-        setQaItems([...qaItems, { id: newId, question: '', answer: '' }]);
-    };
-
-    const updateQaItem = (id, field, value) => {
-        setQaItems(qaItems.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-        ));
-    };
-
-    const deleteQaItem = (id) => {
-        if (qaItems.length === 1) {
-            setFeedbackMessage('You must have at least one Q&A pair');
-            setTimeout(() => setFeedbackMessage(''), 3000);
-            return;
-        }
-        setQaItems(qaItems.filter(item => item.id !== id));
-    };
-
     const handleCreateExercise = () => {
-        if (qaItems.length === 0 || qaItems.some(item => !item.question.trim())) {
-            setFeedbackMessage('All questions must be filled');
+        if (!question.trim()) {
+            setFeedbackMessage('Question cannot be empty');
+            setTimeout(() => setFeedbackMessage(''), 3000);
             return;
         }
 
         setExerciseCreated(true);
         setMode('view');
 
-        if (onExerciseUpdate) {
-            onExerciseUpdate({ qaItems });
-        }
+        // Do not auto-send the question to learners here.
+        // The trainer must explicitly "Send to Learner" via the Send button (handleGiveCursor).
 
         setTimeout(() => setFeedbackMessage(''), 3000);
     };
 
     const handleEditExercise = () => {
-        setEditingQaItems(JSON.parse(JSON.stringify(qaItems)));
+        setEditingQuestion(question);
         setMode('edit');
         setFeedbackMessage('');
     };
 
     const handleSaveEdit = () => {
-        if (editingQaItems.length === 0 || editingQaItems.some(item => !item.question.trim())) {
-            setFeedbackMessage('All questions must be filled');
+        if (!editingQuestion.trim()) {
+            setFeedbackMessage('Question cannot be empty');
             return;
         }
 
-        setQaItems(editingQaItems);
+        setQuestion(editingQuestion);
         setMode('view');
-        setFeedbackMessage('Exercise updated successfully!');
+        setFeedbackMessage('Question updated successfully!');
 
         if (onExerciseUpdate) {
-            onExerciseUpdate({ qaItems: editingQaItems });
+            onExerciseUpdate({ question: editingQuestion });
         }
 
         setTimeout(() => setFeedbackMessage(''), 3000);
     };
 
     const handleCancelEdit = () => {
-        setEditingQaItems([]);
+        setEditingQuestion('');
         setMode('view');
         setFeedbackMessage('');
     };
@@ -124,7 +150,8 @@ const Exercise = ({
     const handleDeleteExercise = () => {
         if (window.confirm('Are you sure you want to delete this exercise?')) {
             setExerciseCreated(false);
-            setQaItems([{ id: '1', question: '', answer: '' }]);
+            setQuestion('');
+            setAnswer('');
             setMode('create');
             setFeedbackMessage('Exercise deleted');
 
@@ -138,12 +165,13 @@ const Exercise = ({
 
     const handleGiveCursor = () => {
         setMode('sent');
-        // Reset answers
-        setQaItems(qaItems.map(item => ({ ...item, answer: '' })));
+        // Reset answer
+        setAnswer('');
 
         if (onExerciseSubmit) {
             onExerciseSubmit({
-                qaItems,
+                question,
+                answer: '',
                 status: 'sent_to_learner'
             });
         }
@@ -153,44 +181,77 @@ const Exercise = ({
     // LEARNER ACTIONS
     // ============================================
 
-    const handleAnswerChange = (id, value) => {
-        const updatedQaItems = qaItems.map(item =>
-            item.id === id ? { ...item, answer: value } : item
-        );
-        setQaItems(updatedQaItems);
+    // Debounce timer for sending answer updates to trainer
+    const answerDebounceTimer = useRef(null);
 
-        // Send answers update to session
-        if (onAnswerChange) {
-            onAnswerChange({
-                qaItems: updatedQaItems,
+    const debouncedSendAnswer = useCallback((answerValue) => {
+        const DELAY = 300; // ms
+        if (answerDebounceTimer.current) {
+            clearTimeout(answerDebounceTimer.current);
+        }
+        answerDebounceTimer.current = setTimeout(() => {
+            if (whiteboardService) {
+                whiteboardService.send('exercise_answer_update', {
+                    question,
+                    answer: answerValue,
+                    timestamp: Date.now()
+                });
+            }
+            answerDebounceTimer.current = null;
+        }, DELAY);
+    }, [whiteboardService, question]);
+
+    const flushSendAnswer = useCallback((answerValue) => {
+        if (answerDebounceTimer.current) {
+            clearTimeout(answerDebounceTimer.current);
+            answerDebounceTimer.current = null;
+        }
+        if (whiteboardService) {
+            whiteboardService.send('exercise_answer_update', {
+                question,
+                answer: answerValue,
                 timestamp: Date.now()
             });
         }
-    };
+    }, [whiteboardService, question]);
 
-    const handleCursorMove = (direction) => {
-        // Cursor movement will be handled at the parent level
-        if (onCursorMove) {
-            window.exerciseCursorMove = () => { };
-        }
-    };
-
-    // Expose cursor movement to parent component
     useEffect(() => {
-        if (onCursorMove) {
-            window.exerciseCursorMove = handleCursorMove;
-        }
-    }, [onCursorMove]);
+        return () => {
+            if (answerDebounceTimer.current) {
+                clearTimeout(answerDebounceTimer.current);
+                answerDebounceTimer.current = null;
+            }
+        };
+    }, []);
 
-    const handleSubmitAnswers = () => {
-        if (qaItems.some(item => !item.answer.trim())) {
-            setFeedbackMessage('Please answer all questions');
+    const handleAnswerChange = (value) => {
+        setAnswer(value);
+
+        // Notify parent immediately (local state update)
+        if (onAnswerChange) {
+            onAnswerChange({
+                question,
+                answer: value,
+                timestamp: Date.now()
+            });
+        }
+
+        // Debounced send to trainer via WebSocket to avoid per-keystroke sends
+        if (!isTrainer) {
+            debouncedSendAnswer(value);
+        }
+    };
+
+    const handleSubmitAnswer = () => {
+        if (!answer.trim()) {
+            setFeedbackMessage('Please answer the question');
             return;
         }
 
         if (onExerciseSubmit) {
             onExerciseSubmit({
-                qaItems,
+                question,
+                answer,
                 status: 'submitted'
             });
         }
@@ -204,42 +265,61 @@ const Exercise = ({
         if (mode === 'create') {
             return (
                 <div className="exercise-container trainer-create">
-                    <h3>Create Q & A</h3>
+                    {/* <h3>Create Q & A</h3> */}
                     <div className="exercise-form">
-                        {qaItems.map((item, index) => (
-                            <div key={item.id} className="qa-item">
-                                <div className="qa-header">
-                                    <h4>Question {index + 1}</h4>
-                                    {qaItems.length > 1 && (
-                                        <button
-                                            onClick={() => deleteQaItem(item.id)}
-                                            className="rm-btn"
-                                        >
-                                            <FaTrash /> Remove
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="form-group">
-                                    <label>Question:</label>
-                                    <textarea
-                                        value={item.question}
-                                        onChange={(e) => updateQaItem(item.id, 'question', e.target.value)}
-                                        placeholder="Enter the question for the learner"
-                                        className="form-textarea"
-                                    />
-                                </div>
+                        <div className="qa-item">
+                            <div className="form-group">
+                                <label>Question:</label>
+                                <textarea
+                                    value={question}
+                                    onChange={(e) => setQuestion(e.target.value)}
+                                    placeholder="Enter the question for the learner"
+                                    className="form-textarea"
+                                />
                             </div>
-                        ))}
+                        </div>
 
                         <div className="button-group">
-                            <button onClick={addNewQaItem} className="btn btn-secondary">
-                                <FaPlus /> Add Question
-                            </button>
                             <button onClick={handleCreateExercise} className="btn btn-primary">
                                 <FaCheck /> Create Q & A
                             </button>
+                            {/* Comments Tool Button */}
+                            <button
+                                onClick={() => {
+                                    const newState = !showComments;
+                                    setShowComments(newState);
+                                    if (whiteboardService) {
+                                        whiteboardService.send('comments_toggle', {
+                                            visible: newState,
+                                            timestamp: Date.now()
+                                        });
+                                    }
+                                }}
+                                className={`${showComments ? wbSmallBtnActive : wbSmallBtnBase}`}
+                                title="Open Comments Tool - Share notes with learner"
+                            >
+                                <span>💬</span>
+                                <span>Comments</span>
+                            </button>
                         </div>
                     </div>
+                    {/* Comments Tool */}
+                    {showComments && (
+                        <div className="session-comments-section border-2 border-gray-300 mt-2 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                            <div style={{ position: 'relative' }}>
+                                {/* Learner Comments Section (small responsive top padding) */}
+                                <div style={{ paddingTop: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
+                                    <textarea
+                                        value={commentInput || ''}
+                                        onChange={(e) => setCommentInput(e.target.value)}
+                                        placeholder="Learner comments will appear here..."
+                                        className="bg-blue-50 border border-blue-300 rounded p-2 w-full text-gray-700"
+                                        style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto', resize: 'none' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -247,38 +327,20 @@ const Exercise = ({
         if (mode === 'edit') {
             return (
                 <div className="exercise-container trainer-edit">
-                    <h3>Edit Exercise</h3>
+                    <h3>Edit Question</h3>
                     <div className="exercise-form">
-                        {editingQaItems.map((item, index) => (
-                            <div key={item.id} className="qa-item">
-                                <div className="qa-header">
-                                    <h4>Question {index + 1}</h4>
-                                    {editingQaItems.length > 1 && (
-                                        <button
-                                            onClick={() => setEditingQaItems(editingQaItems.filter(i => i.id !== item.id))}
-                                            className="rm-btn"
-                                        >
-                                            <FaTrash /> Remove
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="form-group">
-                                    <label>Question:</label>
-                                    <textarea
-                                        value={item.question}
-                                        onChange={(e) => setEditingQaItems(editingQaItems.map(i =>
-                                            i.id === item.id ? { ...i, question: e.target.value } : i
-                                        ))}
-                                        className="form-textarea"
-                                    />
-                                </div>
+                        <div className="qa-item">
+                            <div className="form-group">
+                                <label>Question:</label>
+                                <textarea
+                                    value={editingQuestion}
+                                    onChange={(e) => setEditingQuestion(e.target.value)}
+                                    className="form-textarea"
+                                />
                             </div>
-                        ))}
+                        </div>
 
                         <div className="button-group">
-                            <button onClick={() => setEditingQaItems([...editingQaItems, { id: Date.now().toString(), question: '', answer: '' }])} className="btn btn-secondary">
-                                <FaPlus /> Add Question
-                            </button>
                             <button onClick={handleSaveEdit} className="btn btn-success">
                                 <FaCheck /> Save Changes
                             </button>
@@ -294,14 +356,12 @@ const Exercise = ({
         if (mode === 'view' && exerciseCreated) {
             return (
                 <div className="exercise-container trainer-view">
-                    <h3>Exercise</h3>
+                    {/* <h3>Exercise</h3> */}
                     <div className="exercise-display">
-                        {qaItems.map((item, index) => (
-                            <div key={item.id} className="exercise-section">
-                                <h4>Question {index + 1}:</h4>
-                                <div className="exercise-content">{item.question}</div>
-                            </div>
-                        ))}
+                        <div className="exercise-section">
+                            <h4>Question:</h4>
+                            <div className="exercise-content">{question}</div>
+                        </div>
 
                         <div className="button-group">
                             <button onClick={handleGiveCursor} className="btn btn-primary">
@@ -322,36 +382,25 @@ const Exercise = ({
         if (mode === 'sent') {
             return (
                 <div className="exercise-container trainer-viewing">
-                    <h3>Exercise Sent to Learner</h3>
+                    {/* <h3>Exercise Sent to Learner</h3> */}
                     <div className="exercise-display">
-                        {qaItems.map((item, index) => (
-                            <div key={item.id} className="qa-pair-section">
-                                <div className="exercise-section">
-                                    <h4>Question {index + 1}:</h4>
-                                    <div className="exercise-content">{item.question}</div>
-                                </div>
+                        <div className="exercise-section">
+                            <h4>Question:</h4>
+                            <div className="exercise-content">{question}</div>
+                        </div>
 
-                                <div className="exercise-section answer-input-section">
-                                    <h4>Learner's Answer {index + 1}:</h4>
-                                    <textarea
-                                        ref={(el) => answerTextareaRefs.current[item.id] = el}
-                                        value={item.answer || ''}
-                                        onChange={(e) => {
-                                            const newAnswer = e.target.value;
-                                            setQaItems(qaItems.map(i =>
-                                                i.id === item.id ? { ...i, answer: newAnswer } : i
-                                            ));
-                                        }}
-                                        placeholder="Learner's answer will appear here..."
-                                        className="answer-input"
-                                        style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
-                                    />
-                                    <div style={{ marginTop: '4px', fontSize: '0.8em', color: '#666' }}>
-                                        {item.answer ? item.answer.length : 0} characters
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                        <div className="exercise-section answer-input-section">
+                            <h4>Learner's Answer:</h4>
+                            <textarea
+                                ref={answerTextareaRef}
+                                value={answer || ''}
+                                onChange={(e) => setAnswer(e.target.value)}
+                                placeholder="Learner's answer will appear here..."
+                                className="answer-input"
+                                style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
+                                disabled={false}
+                            />
+                        </div>
 
                         <div className="button-group">
                             <button onClick={handleEditExercise} className="btn btn-secondary">
@@ -377,39 +426,26 @@ const Exercise = ({
         if (mode === 'waiting' && exerciseCreated) {
             return (
                 <div className="exercise-container learner-view">
-                    <h3>Exercise</h3>
+                    {/* <h3>Exercise</h3> */}
                     <div className="exercise-display">
-                        {qaItems.map((item, index) => (
-                            <div key={item.id} className="qa-pair-section">
-                                <div className="exercise-section">
-                                    <h4>Question {index + 1}:</h4>
-                                    <div className="exercise-content">{item.question}</div>
-                                </div>
+                        <div className="exercise-section">
+                            <h4>Question:</h4>
+                            <div className="exercise-content">{question}</div>
+                        </div>
 
-                                <div className="exercise-section answer-input-section">
-                                    <h4>Your Answer {index + 1}:</h4>
-                                    <textarea
-                                        ref={(el) => answerTextareaRefs.current[item.id] = el}
-                                        value={item.answer || ''}
-                                        onChange={(e) => handleAnswerChange(item.id, e.target.value)}
-                                        placeholder="Click to focus or start typing..."
-                                        className="answer-input"
-                                        style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
-                                    />
-                                    <div style={{ marginTop: '4px', fontSize: '0.8em', color: '#666' }}>
-                                        {item.answer ? item.answer.length : 0} characters
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                        <div className="exercise-section answer-input-section">
+                            <h4>Your Answer:</h4>
+                            <textarea
+                                ref={answerTextareaRef}
+                                value={answer || ''}
+                                onChange={(e) => handleAnswerChange(e.target.value)}
+                                onBlur={(e) => flushSendAnswer(e.target.value)}
+                                placeholder="Click to focus or start typing..."
+                                className="answer-input"
+                                style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
+                            />
 
-                        <button
-                            onClick={handleSubmitAnswers}
-                            disabled={qaItems.some(item => !item.answer.trim())}
-                            className="btn btn-primary submit-btn"
-                        >
-                            <FaCheck /> Submit All Answers
-                        </button>
+                        </div>
                     </div>
                 </div>
             );

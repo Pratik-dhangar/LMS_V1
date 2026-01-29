@@ -68,16 +68,6 @@ const LearnerDashboard = () => {
       onClick: () => navigate("/learner/learning-content"),
     },
     {
-      icon: ShoppingCart,
-      title: "Buy Learning Material",
-      onClick: () => navigate("/learner/learning-material"),
-    },
-    {
-      icon: History,
-      title: "Learning Material Purchase History",
-      onClick: () => navigate("/learner/profile-order-history"),
-    },
-    {
       icon: Package,
       title: "My Subscription",
       onClick: () => setShowSubscriptionModal(true),

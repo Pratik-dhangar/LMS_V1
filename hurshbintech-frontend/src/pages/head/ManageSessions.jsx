@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Edit2, X, Eye, FileText } from 'lucide-react';
+import { Edit2, X, Eye, FileText, Video } from 'lucide-react';
 import sessionService from '../../api/services/sessionService';
 // import headSessionNotesService from '../../api/services/headSessionNotesService';
 import { useAuth } from '../../context/AuthContext';
@@ -70,6 +70,17 @@ const ManageSessions = () => {
 
   const handleViewSession = (session) => {
     setViewingSession(session);
+  };
+
+  const handleObserveSession = (session) => {
+    // Validate session is active
+    if (session.status !== 'active') {
+      toast.error('Session is not currently active. Only active sessions can be observed.');
+      return;
+    }
+
+    // Navigate to observer session page
+    navigate(`/head/observer-session/${session.session_id}`);
   };
 
   const handleEditSuccess = async () => {
@@ -394,6 +405,17 @@ const ManageSessions = () => {
                           </td>
                           <td className="table-primary-td">
                             <div className="actions-container" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {/* Observe button - only show for active sessions */}
+                              {getSessionStatus(session) === 'active' && (
+                                <button
+                                  onClick={() => handleObserveSession(session)}
+                                  className="btn-icon app-modal-btn app-modal-btn--success"
+                                  title="Observe this live session"
+                                >
+                                  <Video size={14} />
+                                </button>
+                              )}
+                              
                               {session.status === 'scheduled' && getSessionStatus(session) !== 'expired' && (
                                 <>
                                   <button

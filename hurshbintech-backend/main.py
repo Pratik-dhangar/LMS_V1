@@ -94,36 +94,52 @@ async def validation_exception_handler(request, exc):
 
 
 # ✅ CORS Configuration
-# If BACKEND_CORS_ORIGINS is empty, use sensible defaults for development & PWA
-allowed_origins = (
-    settings.BACKEND_CORS_ORIGINS
-    if settings.BACKEND_CORS_ORIGINS
-    else [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://192.168.43.65:8000",             # ✅ Local network access
-        "http://192.168.43.65:5173",             # ✅ Local network frontend
-        "https://hurshbin.lumesoftai.in:3001",  # ✅ PWA Frontend (Domain)
-        "https://hurshbin.lumesoftai.in:8001",  # ✅ PWA Backend (Domain)
-        "https://43.204.218.16:3001",            # IP Access (Backup)
-        "https://43.204.218.16:8001",            # IP Access (Backup)
-    ]
-)
+# For development: accept all origins with wildcard
+# For production: use specific BACKEND_CORS_ORIGINS from settings
+import re
 
-logger.info(f"CORS allowed origins: {allowed_origins}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+if settings.BACKEND_CORS_ORIGINS:
+    allowed_origins = settings.BACKEND_CORS_ORIGINS
+    logger.info(f"CORS allowed origins (from settings): {allowed_origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+else:
+    # Development mode: accept all origins for local network and known domains
+    logger.info("CORS: Development mode - allowing all origins with regex pattern")
+    
+    from starlette.middleware.cors import CORSMiddleware as StarletteCorS
+    
+    class CustomCORSMiddleware(StarletteCorS):
+        def is_allowed_origin(self, origin: str) -> bool:
+            # Allow localhost and 127.0.0.1
+            if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+                return True
+            # Allow all local network IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            if re.match(r"^https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
+                return True
+            if re.match(r"^https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
+                return True
+            if re.match(r"^https?://172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
+                return True
+            # Allow production domains
+            if "hurshbin.lumesoftai.in" in origin or "43.204.218.16" in origin:
+                return True
+            return False
+    
+    app.add_middleware(
+        CustomCORSMiddleware,
+        allow_origins=["*"],  # Will be filtered by is_allowed_origin
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 # ✅ REQUEST LOGGING
 # Log all requests with timing and correlation IDs
 app.add_middleware(RequestLoggingMiddleware)

@@ -44,10 +44,12 @@ const RTC_CONFIG = {
 };
 
 class VideoConferenceService {
-    constructor(wsUrl, sessionId, role) {
+    constructor(wsUrl, sessionId, role, isObserver = false, targetRole = null) {
         this.wsUrl = wsUrl;
         this.sessionId = sessionId;
-        this.role = role; // 'trainer' or 'learner'
+        this.role = role; // 'trainer', 'learner', or 'observer'
+        this.isObserver = isObserver; // Flag to indicate observer mode
+        this.targetRole = targetRole; // Specific target for signaling (e.g., 'observer' for trainer's second connection)
 
         // WebRTC Components
         this.peerConnection = null;
@@ -94,14 +96,18 @@ class VideoConferenceService {
 
     /**
      * Initialize the video conference
-     * @returns {Promise<MediaStream>} Local media stream
+     * @returns {Promise<MediaStream>} Local media stream (null for observers)
      */
-    async initialize() {
+    async initialize(userData = null) {
         try {
             // console.log(`[VideoConference][${this.role}] Initializing video conference...`);
 
-            // Step 1: Get local media (camera + microphone)
-            this.localStream = await this.getLocalMedia();
+            // Step 1: Get local media (camera + microphone) - skip for observers
+            if (!this.isObserver) {
+                this.localStream = await this.getLocalMedia();
+            } else {
+                console.log(`[VideoConference][${this.role}] Observer mode - skipping local media`);
+            }
 
             // Step 2: Set up WebSocket for signaling
             await this.connectWebSocket();
@@ -109,11 +115,13 @@ class VideoConferenceService {
             // Step 3: Create peer connection
             this.createPeerConnection();
 
-            // Step 4: Add local tracks to peer connection
-            this.addLocalTracksToConnection();
+            // Step 4: Add local tracks to peer connection (skip for observers)
+            if (!this.isObserver) {
+                this.addLocalTracksToConnection();
+            }
 
-            // Step 5: Announce presence
-            this.announcePresence();
+            // Step 5: Announce presence (with user data if provided)
+            this.announcePresence(userData);
 
             this.isInitialized = true;
             
@@ -197,6 +205,102 @@ class VideoConferenceService {
             }
 
             throw new Error(`Media access denied: ${error.message}`);
+        }
+    }
+
+    /**
+     * Start screen sharing (for observer mode)
+     * @param {string} targetRole - Optional target role to send offer to (e.g., 'observer')
+     * @returns {Promise<MediaStream>}
+     */
+    async startScreenShare(targetRole = null) {
+        try {
+            console.log(`[VideoConference][${this.role}] Starting screen share for observer...`);
+
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    cursor: 'always',
+                    displaySurface: 'monitor'
+                },
+                audio: false
+            });
+
+            console.log(`[VideoConference][${this.role}] Screen share started`);
+
+            // Replace video tracks in peer connection
+            if (this.peerConnection) {
+                const videoTrack = screenStream.getVideoTracks()[0];
+                const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+                
+                if (sender) {
+                    await sender.replaceTrack(videoTrack);
+                    console.log(`[VideoConference][${this.role}] Video track replaced with screen share`);
+                } else {
+                    this.peerConnection.addTrack(videoTrack, screenStream);
+                    console.log(`[VideoConference][${this.role}] Screen share track added`);
+                }
+
+                // Mute audio track for observer (they should only see screen, not hear trainer)
+                if (targetRole === 'observer') {
+                    const audioSenders = this.peerConnection.getSenders().filter(s => s.track?.kind === 'audio');
+                    audioSenders.forEach(sender => {
+                        if (sender.track) {
+                            sender.track.enabled = false;
+                            console.log(`[VideoConference][${this.role}] Muted audio track for observer`);
+                        }
+                    });
+                }
+
+                // Handle screen share stop
+                videoTrack.onended = () => {
+                    console.log(`[VideoConference][${this.role}] Screen share stopped by user`);
+                    this.stopScreenShare();
+                };
+
+                // CRITICAL: After adding track, we must renegotiate.
+                // If a specific target (Observer) is waiting, force an offer to THEM only.
+                if (targetRole) {
+                    // Slight delay to ensure tracks are attached
+                    setTimeout(() => this.createOffer(targetRole), 500);
+                }
+            }
+
+            return screenStream;
+        } catch (error) {
+            console.error(`[VideoConference][${this.role}] Screen share failed:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Stop screen sharing and restore camera
+     */
+    async stopScreenShare() {
+        try {
+            console.log(`[VideoConference][${this.role}] Stopping screen share...`);
+            
+            // Notify observers that screen share has stopped
+            if (this.role === 'trainer' && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'screen_share_stopped',
+                    sender: this.role
+                }));
+                console.log(`[VideoConference][${this.role}] Notified observers that screen share stopped`);
+            }
+            
+            // Restore original camera track if available
+            if (this.localStream && this.peerConnection) {
+                const videoTrack = this.localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) {
+                        await sender.replaceTrack(videoTrack);
+                        console.log(`[VideoConference][${this.role}] Restored camera track`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`[VideoConference][${this.role}] Error stopping screen share:`, error);
         }
     }
 
@@ -431,12 +535,19 @@ class VideoConferenceService {
     /**
      * Announce presence to signaling server
      */
-    announcePresence() {
-        this.sendSignal({
+    announcePresence(userData = null) {
+        const joinMessage = {
             type: 'join',
             role: this.role,
             session_id: this.sessionId
-        });
+        };
+        
+        // Include user data if provided (for observer)
+        if (userData) {
+            joinMessage.user_data = userData;
+        }
+        
+        this.sendSignal(joinMessage);
         // console.log(`[VideoConference][${this.role}] Announced presence`);
     }
 
@@ -466,6 +577,52 @@ class VideoConferenceService {
                     if ((this.role === 'trainer' || this.role === 'coach') && !this.hasCreatedOffer) {
                         // console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
                         await this.createOffer();
+                    }
+                    break;
+
+                case 'observer_joined':
+                    // Observer joined - notify trainer with observer data
+                    console.log(`[VideoConference][${this.role}] Observer joined message received:`, message);
+                    if (this.onObserverJoined) {
+                        console.log(`[VideoConference][${this.role}] Calling onObserverJoined callback with data:`, message.observer_data);
+                        this.onObserverJoined(message.observer_data || null);
+                    } else {
+                        console.warn(`[VideoConference][${this.role}] onObserverJoined callback not set!`);
+                    }
+                    break;
+
+                case 'observer_left':
+                    // Observer left - notify trainer
+                    if (this.onObserverLeft) {
+                        this.onObserverLeft();
+                    }
+                    break;
+
+                case 'screen_share_stopped':
+                    // Trainer stopped screen share - notify observer to disconnect
+                    if (this.role === 'observer' && this.onScreenShareStopped) {
+                        this.onScreenShareStopped();
+                    }
+                    break;
+
+                case 'trainer_disconnected':
+                    // Trainer disconnected - notify observer to disconnect
+                    if (this.role === 'observer' && this.onScreenShareStopped) {
+                        console.log('[VideoConference][observer] Trainer disconnected, closing observer session');
+                        this.onScreenShareStopped(); // Reuse same callback
+                    }
+                    break;
+
+                case 'peer_disconnected':
+                    // Peer disconnected - observers should ignore this
+                    if (this.role === 'observer') {
+                        console.log('[VideoConference][observer] Peer disconnected, but observer continues watching');
+                        // Don't close connection for observers
+                        break;
+                    }
+                    // For non-observers, handle peer disconnection
+                    if (this.onPeerDisconnected) {
+                        this.onPeerDisconnected(message.role);
                     }
                     break;
 
@@ -518,8 +675,10 @@ class VideoConferenceService {
 
     /**
      * Create and send offer (Trainer initiates)
+     * UPDATED to support targeted offers
+     * @param {string} targetRole - Optional target role to send offer to (e.g., 'observer')
      */
-    async createOffer() {
+    async createOffer(targetRole = null) {
         if (!this.peerConnection) {
             console.error(`[VideoConference][${this.role}] Cannot create offer: peer connection not initialized`);
             return;
@@ -535,34 +694,39 @@ class VideoConferenceService {
             const checkStateInterval = setInterval(() => {
                 if (this.peerConnection && this.peerConnection.signalingState === 'stable') {
                     clearInterval(checkStateInterval);
-                    this.createOffer();
+                    this.createOffer(targetRole);
                 }
             }, 500);
             return;
         }
 
-        if (this.hasCreatedOffer) {
+        if (this.hasCreatedOffer && !targetRole) {
             console.warn(`[VideoConference][${this.role}] Offer already created, skipping`);
             return;
         }
 
         try {
-            // console.log(`[VideoConference][${this.role}] Creating offer...`);
+            console.log(`[VideoConference][${this.role}] Creating offer${targetRole ? ' for ' + targetRole : ''}...`);
 
             const offer = await this.peerConnection.createOffer({
                 offerToReceiveAudio: true,
-                offerToReceiveVideo: true
+                offerToReceiveVideo: true,
+                iceRestart: targetRole ? true : false  // Force fresh ICE candidates for new participant
             });
 
             await this.peerConnection.setLocalDescription(offer);
-            this.hasCreatedOffer = true;
+            if (!targetRole) {
+                this.hasCreatedOffer = true;
+            }
 
+            // Send offer with specific target if provided
             this.sendSignal({
                 type: 'offer',
-                offer: offer
+                offer: offer,
+                ...(targetRole && { target: targetRole })  // Add target only if specified
             });
 
-            // console.log(`[VideoConference][${this.role}] Offer sent`);
+            console.log(`[VideoConference][${this.role}] Offer sent${targetRole ? ' to ' + targetRole : ''}`);
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error creating offer:`, error);
             this.hasCreatedOffer = false;
@@ -570,7 +734,7 @@ class VideoConferenceService {
     }
 
     /**
-     * Handle incoming offer (Learner receives)
+     * Handle incoming offer (Learner/Observer receives)
      */
     async handleOffer(offer) {
         if (this.peerConnection.signalingState !== 'stable' && this.peerConnection.signalingState !== 'have-local-offer') {
@@ -583,6 +747,16 @@ class VideoConferenceService {
 
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
             // console.log(`[VideoConference][${this.role}] Remote description set`);
+
+            // If observer, set transceivers to recvonly (no sending)
+            if (this.isObserver) {
+                console.log(`[VideoConference][${this.role}] Setting transceivers to recvonly for observer`);
+                this.peerConnection.getTransceivers().forEach(transceiver => {
+                    if (transceiver.direction !== 'recvonly') {
+                        transceiver.direction = 'recvonly';
+                    }
+                });
+            }
 
             const answer = await this.peerConnection.createAnswer();
             await this.peerConnection.setLocalDescription(answer);
@@ -724,6 +898,10 @@ class VideoConferenceService {
      */
     sendSignal(message) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // Add target field if specified (for routing to specific peer)
+            if (this.targetRole) {
+                message.target = this.targetRole;
+            }
             this.ws.send(JSON.stringify(message));
         } else {
             console.warn(`[VideoConference][${this.role}] WebSocket not ready, cannot send:`, message.type);

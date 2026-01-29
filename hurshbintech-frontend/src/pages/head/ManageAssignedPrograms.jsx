@@ -26,12 +26,22 @@ const ManageAssignedPrograms = () => {
   const loadInitialData = async () => {
     setLoading(true);
 
-    const learnersList = await headService.getAllLearners();
-    const programsList = await learningProgramsService.getAllPrograms();
+    try {
+      const learnersList = await headService.getAllLearners();
+      const programsList = await learningProgramsService.getAllPrograms();
 
-    setLearners(learnersList);
-    setPrograms(programsList);
-    setLoading(false);
+      console.log('Fetched learners:', learnersList);
+      console.log('Learners count:', learnersList.length);
+      console.log('Fetched programs:', programsList);
+      
+      setLearners(learnersList);
+      setPrograms(programsList);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadAssignedPrograms = async (learnerId) => {
@@ -82,20 +92,27 @@ const ManageAssignedPrograms = () => {
             {/* Select Learner */}
             <div className="form-container">
               <label className="app-modal-form-label">Select Learner</label>
-              <select
-                className="app-modal-form-select"
-                onChange={(e) => {
-                  setSelectedLearner(e.target.value);
-                  loadAssignedPrograms(e.target.value);
-                }}
-              >
-                <option value="">-- Select learner --</option>
-                {learners.map((l) => (
-                  <option key={l.id} value={l.user_id}>
-                    ({l.user_id}) {l.name}
-                  </option>
-                ))}
-              </select>
+              {learners.length === 0 ? (
+                <div style={{ padding: '1rem', color: '#666', fontSize: '0.875rem' }}>
+                  No learners found. Please create a learner first.
+                </div>
+              ) : (
+                <select
+                  className="app-modal-form-select"
+                  value={selectedLearner}
+                  onChange={(e) => {
+                    setSelectedLearner(e.target.value);
+                    loadAssignedPrograms(e.target.value);
+                  }}
+                >
+                  <option value="">-- Select learner --</option>
+                  {learners.map((l) => (
+                    <option key={l.id} value={l.user_id}>
+                      ({l.user_id}) {l.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Learning Programs List with Search */}

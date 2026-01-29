@@ -1,29 +1,34 @@
 /**
  * Chat Icon Widget
- * Floating chat button in bottom-right corner
+ * Floating chat button in bottom-right corner for mobile
+ * LinkedIn-style popup for desktop/tablet
  * Visible on all pages except session pages and login
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import UnifiedChatPage from '../../pages/chat/UnifiedChatPage';
+import MessagingWidget from './MessagingWidget';
 import '../../styles/components/chat/chatWidget.css';
 
 const ChatIconWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCounts } = useChat();
+  const { unreadCounts, connectChat, disconnectChat } = useChat();
   const [showChatModal, setShowChatModal] = useState(false);
+
+  // Connect/disconnect chat when modal is shown/hidden (mobile only)
+  useEffect(() => {
+    if (showChatModal) {
+      connectChat();
+      return () => disconnectChat();
+    }
+  }, [showChatModal, connectChat, disconnectChat]);
 
   // Pages where chat icon should NOT be shown
   const hiddenPages = [
-    '/learner-session',
-    '/trainer-session',
-    '/coach-session',
-    '/client-session',
-    '/guest-session',
     '/login',
     '/chat',
     '/chat/',
@@ -41,8 +46,9 @@ const ChatIconWidget = () => {
     '/register-learner/'
   ];
 
-  // Check if current page is in hidden pages list
-  const shouldHide = hiddenPages.some(page => location.pathname.includes(page));
+  // Check if current page is a session page or in hidden pages list
+  const isSessionPage = location.pathname.includes('/session/') || location.pathname.includes('/guest-session/');
+  const shouldHide = isSessionPage || hiddenPages.some(page => location.pathname.includes(page));
 
   if (shouldHide) {
     return null;
@@ -61,7 +67,8 @@ const ChatIconWidget = () => {
 
   return (
     <>
-      <div className="chat-widget-container">
+      {/* Mobile: Chat button with modal */}
+      <div className="chat-widget-container chat-widget-mobile-only">
         <button
           onClick={handleClick}
           className="chat-widget-button"
@@ -79,7 +86,7 @@ const ChatIconWidget = () => {
         </button>
       </div>
 
-      {/* Chat Modal */}
+      {/* Chat Modal (Mobile only) */}
       {showChatModal && (
         <div className="chat-modal-overlay-fullscreen">
           <div className="chat-modal-container">
@@ -99,6 +106,11 @@ const ChatIconWidget = () => {
           </div>
         </div>
       )}
+
+      {/* Desktop/Tablet: LinkedIn-style popup widget */}
+      <div className="messaging-widget-desktop-only">
+        <MessagingWidget />
+      </div>
     </>
   );
 };

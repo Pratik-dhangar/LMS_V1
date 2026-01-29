@@ -2005,7 +2005,7 @@ canvas[data-whiteboard="true"] {
   }
 
   /* Trainer Video - Compact for mobile */
-  .learner-responsive-sidebar-left [style*="border: 1px solid rgba(217, 119, 6"]]:first-child {
+  .learner-responsive-sidebar-left [style*="border: 1px solid rgba(217, 119, 6"]:first-child {
     max-height: 200px;
   }
 

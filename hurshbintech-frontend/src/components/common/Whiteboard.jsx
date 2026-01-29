@@ -7,6 +7,18 @@ import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
 import MediaPopup from './MediaPopup';
 import { useMediaControl } from '../../context/MediaControlContext';
+import {
+    normalizePoint,
+    denormalizePoint,
+    normalizeStroke,
+    denormalizeStroke,
+    replayPaths,
+    addSegmentToPath,
+    createNormalizedPath,
+    normalizeItem,
+    denormalizeItem,
+    recalculateItemBoundsOnResize
+} from '../../utils/drawingSync';
 // Fill-in-the-blanks removed
 
 // Memoized Video Overlay Component
@@ -447,6 +459,10 @@ const Whiteboard = ({
     const dragOffsetRef = useRef({ x: 0, y: 0 }); // Store click offset within dragged item
     const dragStateUpdateTimeRef = useRef(0); // For throttling state updates during drag
 
+    // Normalized drawing sync - stores all drawing strokes as normalized paths for replay on resize
+    const normalizedPathsRef = useRef([]);
+    const currentPathRef = useRef(null); // Current path being drawn
+
     // Touch drag-back state
     const [touchDragBackActive, setTouchDragBackActive] = useState(false);
     const touchDragGhostRef = useRef(null);
@@ -687,13 +703,15 @@ const Whiteboard = ({
 
             setCanvasItems(prev => [...prev, newItem]);
 
+            // Normalize item bounds for device-independent positioning
+            const normalizedBounds = normalizeItem(newItem, canvasRef.current);
             whiteboardService?.sendImage({
                 id: newItem.id,
                 src: newItem.src,
-                x: newItem.x,
-                y: newItem.y,
-                width: newItem.width,
-                height: newItem.height,
+                x: normalizedBounds.x,
+                y: normalizedBounds.y,
+                width: normalizedBounds.width,
+                height: normalizedBounds.height,
                 title: newItem.title,
                 type: newItem.type,
                 fileUrl: newItem.fileUrl,
@@ -738,10 +756,12 @@ const Whiteboard = ({
             // Throttled network update
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize bounds for network transmission
+                const normalizedItem = normalizeItem({ ...item, width: newWidth, height: newHeight }, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: item.id,
-                    width: newWidth,
-                    height: newHeight
+                    width: normalizedItem.width,
+                    height: normalizedItem.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -900,6 +920,41 @@ const Whiteboard = ({
         if (whiteboardService) {
             whiteboardService.onDraw = (data) => {
                 drawOnCanvas(data);
+
+                // Store normalized path for resize replay
+                // If data has normalized coordinates, store as-is; otherwise normalize them
+                if (canvasRef.current) {
+                    const isNormalized = data.prevX >= 0 && data.prevX <= 1 && data.prevY >= 0 && data.prevY <= 1;
+
+                    if (isNormalized) {
+                        // Data already normalized, store directly
+                        const normalizedPath = {
+                            segments: [{
+                                prev: { x: data.prevX, y: data.prevY },
+                                curr: { x: data.currX, y: data.currY }
+                            }],
+                            strokeNorm: data.lineWidth || data.strokeNorm || 0,
+                            color: data.color,
+                            tool: data.tool || 'pen',
+                            timestamp: Date.now()
+                        };
+                        normalizedPathsRef.current.push(normalizedPath);
+                    } else {
+                        // Normalize raw pixel coordinates
+                        const prevNorm = normalizePoint({ x: data.prevX, y: data.prevY }, canvasRef.current);
+                        const currNorm = normalizePoint({ x: data.currX, y: data.currY }, canvasRef.current);
+                        const strokeNorm = normalizeStroke(data.lineWidth || 2, canvasRef.current);
+
+                        const normalizedPath = {
+                            segments: [{ prev: prevNorm, curr: currNorm }],
+                            strokeNorm,
+                            color: data.color,
+                            tool: data.tool || 'pen',
+                            timestamp: Date.now()
+                        };
+                        normalizedPathsRef.current.push(normalizedPath);
+                    }
+                }
             };
 
             whiteboardService.onClear = () => {
@@ -922,13 +977,17 @@ const Whiteboard = ({
                 setCanvasItems(prev => {
                     const exists = prev.find(item => item.id === data.id);
                     if (!exists) {
+                        // Denormalize item bounds if they're normalized (0..1 range)
+                        const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                        const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+
                         const newItem = {
                             id: data.id,
                             src: data.src,
-                            x: data.x,
-                            y: data.y,
-                            width: data.width,
-                            height: data.height,
+                            x: bounds.x,
+                            y: bounds.y,
+                            width: bounds.width,
+                            height: bounds.height,
                             title: data.title,
                             type: data.type,
                             // Preserve canonical file metadata for learning content API
@@ -981,10 +1040,11 @@ const Whiteboard = ({
                     item.id === data.id
                         ? {
                             ...item,
-                            x: data.x !== undefined ? data.x : item.x,
-                            y: data.y !== undefined ? data.y : item.y,
-                            width: data.width !== undefined ? data.width : item.width,
-                            height: data.height !== undefined ? data.height : item.height,
+                            // Denormalize coordinates if normalized (0..1 range)
+                            x: data.x !== undefined ? (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x) : item.x,
+                            y: data.y !== undefined ? (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y) : item.y,
+                            width: data.width !== undefined ? (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width) : item.width,
+                            height: data.height !== undefined ? (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height) : item.height,
                             inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
                             answers: data.answers !== undefined ? data.answers : item.answers
                         }
@@ -1001,6 +1061,8 @@ const Whiteboard = ({
 
             whiteboardService.onBucketAdded = (data) => {
                 // console.log('[Whiteboard] Bucket added:', data);
+                // Add bucket directly - no normalization/denormalization needed
+                // Buckets use absolute pixel positioning as overlay elements
                 setBuckets(prev => {
                     const exists = prev.find(bucket => bucket.id === data.id);
                     if (!exists) {
@@ -1016,7 +1078,8 @@ const Whiteboard = ({
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
-                    // Update bucket
+                    // Update bucket directly - no normalization/denormalization needed
+                    // Buckets use absolute pixel positioning as overlay elements
                     setBuckets(prev => prev.map(bucket =>
                         bucket.id === data.id ? { ...bucket, ...data } : bucket
                     ));
@@ -1093,22 +1156,37 @@ const Whiteboard = ({
             };
         }
 
-        // Handle window resize
+        // Handle window resize - replay normalized paths to preserve drawings
         const handleResize = () => {
             try {
-                // Try to preserve image data, but catch cross-origin errors
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const dpr = window.devicePixelRatio || 1;
+
+                // Resize canvas
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
                 ctx.scale(dpr, dpr);
-                ctx.putImageData(imageData, 0, 0);
+
+                // Replay all normalized paths on the resized canvas
+                if (normalizedPathsRef.current.length > 0) {
+                    replayPaths(normalizedPathsRef.current, ctx, canvas);
+                }
+
+                // Fallback: try to preserve other canvas content (non-drawing items)
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    ctx.putImageData(imageData, 0, 0);
+                } catch (e) {
+                    // Cross-origin error - ignore, paths already replayed above
+                }
+
+                // Redraw canvas items (images, PDFs, text boxes, etc.)
+                redrawCanvas();
             } catch (error) {
-                // If cross-origin error, just resize without preserving data
-                // console.warn('[Whiteboard] Could not preserve canvas data during resize:', error.message);
+                // If critical error, resize without preservation
+                console.warn('[Whiteboard] Error during resize:', error.message);
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
                 ctx.scale(dpr, dpr);
-                // Redraw canvas items instead
                 redrawCanvas();
             }
         };
@@ -1310,19 +1388,44 @@ const Whiteboard = ({
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
+        // Denormalize coordinates if they're normalized (0..1 range)
+        const isNormalized = data.prevX >= 0 && data.prevX <= 1 && data.prevY >= 0 && data.prevY <= 1 &&
+            data.currX >= 0 && data.currX <= 1 && data.currY >= 0 && data.currY <= 1;
+
+        let prevX, prevY, currX, currY, lineWidth;
+
+        if (isNormalized) {
+            // Denormalize coordinates from 0..1 to canvas pixels
+            const prevPt = denormalizePoint({ x: data.prevX, y: data.prevY }, canvas);
+            const currPt = denormalizePoint({ x: data.currX, y: data.currY }, canvas);
+            prevX = prevPt.x;
+            prevY = prevPt.y;
+            currX = currPt.x;
+            currY = currPt.y;
+            // Denormalize stroke width
+            lineWidth = denormalizeStroke(data.lineWidth || data.strokeNorm || 0, canvas);
+        } else {
+            // Use raw pixel coordinates (backward compatibility)
+            prevX = data.prevX;
+            prevY = data.prevY;
+            currX = data.currX;
+            currY = data.currY;
+            lineWidth = data.lineWidth;
+        }
+
         ctx.beginPath();
-        ctx.moveTo(data.prevX, data.prevY);
-        ctx.lineTo(data.currX, data.currY);
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(currX, currY);
 
         // Handle eraser tool with proper erasing instead of white drawing
         if (data.tool === 'eraser') {
             ctx.globalCompositeOperation = 'destination-out';
             ctx.strokeStyle = 'rgba(0,0,0,1)'; // Any color works for destination-out
-            ctx.lineWidth = data.lineWidth || 20;
+            ctx.lineWidth = lineWidth || 20;
         } else {
             ctx.globalCompositeOperation = 'source-over'; // Default drawing mode
             ctx.strokeStyle = data.color;
-            ctx.lineWidth = data.lineWidth;
+            ctx.lineWidth = lineWidth;
         }
 
         ctx.lineCap = 'round';
@@ -1354,6 +1457,9 @@ const Whiteboard = ({
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Also clear normalized paths when canvas is cleared
+        normalizedPathsRef.current = [];
+        currentPathRef.current = null;
     };
 
     // Bucket functions
@@ -1695,12 +1801,14 @@ const Whiteboard = ({
 
             // Throttle network updates to every 50ms
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedVideo = normalizeItem(updatedVideo, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: resizingVideo.id,
-                    x: updatedVideo.x,
-                    y: updatedVideo.y,
-                    width: updatedVideo.width,
-                    height: updatedVideo.height
+                    x: normalizedVideo.x,
+                    y: normalizedVideo.y,
+                    width: normalizedVideo.width,
+                    height: normalizedVideo.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -1747,15 +1855,18 @@ const Whiteboard = ({
 
             // Throttle network updates to every 50ms
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Send bucket with pixel coordinates (no normalization needed for overlay elements)
                 whiteboardService?.send('bucket_update', updatedBucket);
                 updatedItems.forEach(item => {
                     if (item.inBucket === selectedItem.id) {
+                        // Normalize item bounds for network transmission
+                        const normalizedItem = normalizeItem(item, canvasRef.current);
                         whiteboardService?.sendItemUpdate({
                             id: item.id,
-                            x: item.x,
-                            y: item.y,
-                            width: item.width,
-                            height: item.height
+                            x: normalizedItem.x,
+                            y: normalizedItem.y,
+                            width: normalizedItem.width,
+                            height: normalizedItem.height
                         });
                     }
                 });
@@ -1859,12 +1970,14 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms for smooth performance
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: selectedItem.id,
-                    x: updatedItem.x,
-                    y: updatedItem.y,
-                    width: updatedItem.width,
-                    height: updatedItem.height,
+                    x: normalizedItem.x,
+                    y: normalizedItem.y,
+                    width: normalizedItem.width,
+                    height: normalizedItem.height,
                     inBucket: updatedItem.inBucket || null
                 });
                 lastNetworkUpdateRef.current = now;
@@ -1900,6 +2013,7 @@ const Whiteboard = ({
 
                 // Throttle network updates to every 50ms
                 if (now - lastNetworkUpdateRef.current > 50) {
+                    // Send bucket with pixel coordinates (no normalization needed for overlay elements)
                     whiteboardService?.send('bucket_update', updatedBucket);
                     lastNetworkUpdateRef.current = now;
                 }
@@ -1930,12 +2044,14 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
+                // Normalize item bounds for network transmission
+                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
                 whiteboardService?.sendItemUpdate({
                     id: selectedItem.id,
-                    x: updatedItem.x,
-                    y: updatedItem.y,
-                    width: updatedItem.width,
-                    height: updatedItem.height
+                    x: normalizedItem.x,
+                    y: normalizedItem.y,
+                    width: normalizedItem.width,
+                    height: normalizedItem.height
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -1949,17 +2065,52 @@ const Whiteboard = ({
         // Check if drawing is active
         if (!isDrawing) return;
 
+        // Normalize coordinates for network transmission (device-independent)
+        const prevNorm = normalizePoint({ x: prevPosRef.current.x, y: prevPosRef.current.y }, canvas);
+        const currNorm = normalizePoint({ x: currX, y: currY }, canvas);
+        const strokeWidth = tool === 'eraser' ? 20 : lineWidth;
+        const strokeNorm = normalizeStroke(strokeWidth, canvas);
+
+        // Create normalized draw data to send over network
         const drawData = {
+            prevX: prevNorm.x,
+            prevY: prevNorm.y,
+            currX: currNorm.x,
+            currY: currNorm.y,
+            color: tool === 'eraser' ? '#ffffff' : color,
+            lineWidth: strokeNorm, // Send normalized stroke width
+            strokeNorm: strokeNorm, // Also include for clarity
+            tool: tool // Add tool information for proper erasing
+        };
+
+        // Draw on local canvas using denormalized coordinates
+        const drawDataLocal = {
             prevX: prevPosRef.current.x,
             prevY: prevPosRef.current.y,
             currX,
             currY,
             color: tool === 'eraser' ? '#ffffff' : color,
-            lineWidth: tool === 'eraser' ? 20 : lineWidth,
-            tool: tool // Add tool information for proper erasing
+            lineWidth: strokeWidth,
+            tool: tool
         };
+        drawOnCanvas(drawDataLocal);
 
-        drawOnCanvas(drawData);
+        // Store normalized path for resize replay
+        if (currentPathRef.current &&
+            currentPathRef.current.color === drawData.color &&
+            currentPathRef.current.tool === drawData.tool &&
+            currentPathRef.current.strokeNorm === drawData.strokeNorm) {
+            // Continue existing path
+            currentPathRef.current = addSegmentToPath(currentPathRef.current, prevNorm, currNorm);
+        } else {
+            // Start new path
+            if (currentPathRef.current) {
+                normalizedPathsRef.current.push(currentPathRef.current);
+            }
+            currentPathRef.current = createNormalizedPath(prevNorm, currNorm, strokeNorm, drawData.color, tool);
+        }
+
+        // Send normalized draw data to other clients
         whiteboardService?.sendDrawData(drawData);
 
         prevPosRef.current = { x: currX, y: currY };
@@ -1970,6 +2121,12 @@ const Whiteboard = ({
         if (rafIdRef.current) {
             cancelAnimationFrame(rafIdRef.current);
             rafIdRef.current = null;
+        }
+
+        // Finalize and store current path when drawing stops
+        if (currentPathRef.current && currentPathRef.current.segments.length > 0) {
+            normalizedPathsRef.current.push(currentPathRef.current);
+            currentPathRef.current = null;
         }
 
         // No need to check bucket on stop - it's handled in draw() in real-time
@@ -2918,10 +3075,10 @@ const Whiteboard = ({
                                             strokeLinejoin="round"
                                         />
 
-                                        {/* Bucket rim - top white line */}
+                                        {/* Bucket rim - same color as bucket */}
                                         <path
                                             d="M110 200 Q250 230 390 200 Q390 175 250 175 Q110 175 110 200 Z"
-                                            fill="#FFFFFF"
+                                            fill={bucket.color || bucketColor}
                                             stroke="#000000"
                                             strokeWidth="8"
                                             strokeLinejoin="round"
