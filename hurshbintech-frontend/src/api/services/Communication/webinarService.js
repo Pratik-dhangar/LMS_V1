@@ -20,7 +20,9 @@ const webinarService = {
     } catch (error) {
       logger.error('webinarService create error:', {
         message: error.message,
-        response: error.response?.data
+        status: error.response?.status,
+        data: error.response?.data,
+        fullError: error
       });
       throw error;
     }

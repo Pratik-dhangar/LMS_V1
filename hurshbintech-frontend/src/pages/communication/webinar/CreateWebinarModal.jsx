@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import webinarService from '../../../api/services/Communication/webinarService';
-import '../../../styles/common/communication.css';
+import '../../../styles/components/common/Modal.css';
 
 const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) => {
   const [formData, setFormData] = useState({
@@ -177,13 +177,17 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
         };
         await webinarService.updateWebinar(editWebinar.id, updateData);
         toast.success('Webinar updated successfully!');
+        onSuccess();
       } else {
-        // Create new webinar
-        await webinarService.createWebinar(webinarData);
-        toast.success('Webinar created and invitations sent!');
+        // Create new webinar - response returns immediately while emails send in background
+        const response = await webinarService.createWebinar(webinarData);
+        toast.success('Webinar created successfully!');
+        
+        // Pass the created webinar to parent for immediate display
+        // Emails are being sent in the background
+        onSuccess(response);
       }
       
-      onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save webinar:', error);
@@ -197,22 +201,27 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{editWebinar ? 'Edit Webinar' : 'Create New Webinar'}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+    <div className="app-modal-overlay" onClick={onClose}>
+      <div className="app-modal-container app-modal-container--lg" onClick={(e) => e.stopPropagation()}>
+        <div className="app-modal-header app-modal-header--primary">
+          <div className="app-modal-header-content">
+            <h2 className="app-modal-title">{editWebinar ? 'Edit Webinar' : 'Create New Webinar'}</h2>
+            <p className="app-modal-subtitle">Configure your group meeting details</p>
+          </div>
+          <button className="app-modal-close" onClick={onClose}>&times;</button>
         </div>
         
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+          <div className="app-modal-content">
             {/* Title */}
-            <div className="form-group">
-              <label className="form-label required">Webinar Title</label>
+            <div className="app-modal-form-field">
+              <label className="app-modal-form-label">
+                Webinar Title <span className="app-modal-text-required">*</span>
+              </label>
               <input
                 type="text"
                 name="title"
-                className="form-input"
+                className="app-modal-form-input"
                 value={formData.title}
                 onChange={handleInputChange}
                 placeholder="Enter webinar topic/heading"
@@ -221,11 +230,11 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
             </div>
 
             {/* Description */}
-            <div className="form-group">
-              <label className="form-label">Description</label>
+            <div className="app-modal-form-field">
+              <label className="app-modal-form-label">Description</label>
               <textarea
                 name="description"
-                className="form-textarea"
+                className="app-modal-form-textarea"
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Enter webinar description (optional)"
@@ -234,30 +243,30 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
             </div>
 
             {/* Meeting Link */}
-            <div className="form-group">
-              <label className="form-label required">Meeting Link</label>
+            <div className="app-modal-form-field">
+              <label className="app-modal-form-label required">Meeting Link</label>
               <input
                 type="url"
                 name="meeting_link"
-                className="form-input"
+                className="app-modal-form-input"
                 value={formData.meeting_link}
                 onChange={handleInputChange}
                 placeholder="https://zoom.us/j/... or https://meet.google.com/..."
                 required
               />
-              <p className="form-help">
+              <p className="app-modal-form-helper">
                 Paste the meeting link from Zoom, Google Meet, Microsoft Teams, or any other platform
               </p>
             </div>
 
             {/* Date and Time */}
-            <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="app-modal-form-field" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label className="form-label required">Date</label>
+                <label className="app-modal-form-label required">Date</label>
                 <input
                   type="date"
                   name="scheduled_date"
-                  className="form-input"
+                  className="app-modal-form-input"
                   value={formData.scheduled_date}
                   onChange={handleInputChange}
                   min={new Date().toISOString().split('T')[0]}
@@ -265,11 +274,11 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                 />
               </div>
               <div>
-                <label className="form-label required">Time</label>
+                <label className="app-modal-form-label required">Time</label>
                 <input
                   type="time"
                   name="scheduled_time"
-                  className="form-input"
+                  className="app-modal-form-input"
                   value={formData.scheduled_time}
                   onChange={handleInputChange}
                   required
@@ -281,14 +290,14 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
             {!editWebinar && (
               <>
                 {/* Registered Users */}
-                <div className="form-group">
-                  <label className="form-label">Add Registered Participants</label>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Add Registered Participants</label>
                   {loadingUsers ? (
-                    <p className="form-help">Loading users...</p>
+                    <p className="app-modal-form-helper">Loading users...</p>
                   ) : (
                     <>
                       <select
-                        className="form-select"
+                        className="app-modal-form-select"
                         onChange={handleUserSelect}
                         value=""
                       >
@@ -304,13 +313,13 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                       </select>
                       
                       {selectedUsers.length > 0 && (
-                        <div className="select-chips-container">
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                           {selectedUsers.map(user => (
-                            <div key={user.id} className="chip">
+                            <div key={user.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', background: '#e0e7ff', color: '#3730a3', borderRadius: '16px', fontSize: '0.875rem' }}>
                               {user.name}
                               <button
                                 type="button"
-                                className="chip-remove"
+                                style={{ background: 'transparent', border: 'none', color: '#3730a3', cursor: 'pointer', padding: 0, fontSize: '1.125rem', lineHeight: 1 }}
                                 onClick={() => removeSelectedUser(user.id)}
                               >
                                 ×
@@ -324,12 +333,12 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                 </div>
 
                 {/* Unregistered Emails */}
-                <div className="form-group">
-                  <label className="form-label">Add Unregistered Participants (Email)</label>
-                  <div className="email-input-group">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Add Unregistered Participants (Email)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input
                       type="email"
-                      className="form-input"
+                      className="app-modal-form-input"
                       value={currentEmail}
                       onChange={(e) => setCurrentEmail(e.target.value)}
                       placeholder="Enter email address"
@@ -339,10 +348,11 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                           handleAddEmail();
                         }
                       }}
+                      style={{ flex: 1 }}
                     />
                     <button
                       type="button"
-                      className="btn-add-email"
+                      className="app-modal-btn app-modal-btn--primary"
                       onClick={handleAddEmail}
                     >
                       Add Email
@@ -350,13 +360,13 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                   </div>
                   
                   {unregisteredEmails.length > 0 && (
-                    <div className="select-chips-container">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                       {unregisteredEmails.map((email, index) => (
-                        <div key={index} className="chip">
+                        <div key={index} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', background: '#e0e7ff', color: '#3730a3', borderRadius: '16px', fontSize: '0.875rem' }}>
                           {email}
                           <button
                             type="button"
-                            className="chip-remove"
+                            style={{ background: 'transparent', border: 'none', color: '#3730a3', cursor: 'pointer', padding: 0, fontSize: '1.125rem', lineHeight: 1 }}
                             onClick={() => removeEmail(email)}
                           >
                             ×
@@ -368,17 +378,17 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                 </div>
 
                 {/* Participant Count */}
-                <div className="form-help" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                <div className="app-modal-form-helper" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
                   Total participants: {selectedUsers.length + unregisteredEmails.length}
                 </div>
               </>
             )}
           </div>
 
-          <div className="modal-footer">
+          <div className="app-modal-footer">
             <button
               type="button"
-              className="btn-cancel"
+              className="app-modal-btn app-modal-btn--secondary"
               onClick={onClose}
               disabled={loading}
             >
@@ -386,7 +396,7 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
             </button>
             <button
               type="submit"
-              className="btn-submit"
+              className="app-modal-btn app-modal-btn--primary"
               disabled={loading}
             >
               {loading ? (editWebinar ? 'Updating...' : 'Creating...') : (editWebinar ? 'Update Webinar' : 'Create & Send Invitations')}

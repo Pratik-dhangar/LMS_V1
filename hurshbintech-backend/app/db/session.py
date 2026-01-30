@@ -40,3 +40,9 @@ Base = declarative_base()
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def get_db_session():
+    """Get database session for background tasks (same as get_db but for direct use)"""
+    async with AsyncSessionLocal() as session:
+        yield session

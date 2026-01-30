@@ -93,6 +93,8 @@ class WebinarResponse(BaseModel):
     title: str
     description: Optional[str] = None
     meeting_link: str
+    platform: Optional[str] = None  # Auto-detected platform (zoom, google_meet, etc.)
+    platform_display_name: Optional[str] = None  # User-friendly name
     scheduled_date: date
     scheduled_time: time
     created_by_user_id: Optional[int] = None
@@ -113,6 +115,8 @@ class WebinarListResponse(BaseModel):
     title: str
     description: Optional[str] = None
     meeting_link: str
+    platform: Optional[str] = None  # Auto-detected platform (zoom, google_meet, etc.)
+    platform_display_name: Optional[str] = None  # User-friendly name
     scheduled_date: date
     scheduled_time: time
     created_by_user_id: Optional[int] = None

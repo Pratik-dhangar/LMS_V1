@@ -2393,7 +2393,7 @@ class EmailService:
                         background-color: #f0f4ff;
                     }}
                     .header {{
-                        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                        background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%);
                         padding: 25px;
                         border-radius: 8px 8px 0 0;
                         color: white;
@@ -2410,7 +2410,7 @@ class EmailService:
                         padding: 20px;
                         border-radius: 6px;
                         margin: 20px 0;
-                        border-left: 4px solid #6366f1;
+                        border-left: 4px solid #db9d32;
                     }}
                     .info-row {{
                         display: flex;
@@ -2432,8 +2432,8 @@ class EmailService:
                     .btn {{
                         display: inline-block;
                         padding: 14px 32px;
-                        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                        color: white;
+                        background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%);
+                        color: white !important;
                         text-decoration: none;
                         border-radius: 6px;
                         font-weight: 600;
@@ -2441,7 +2441,7 @@ class EmailService:
                         text-align: center;
                     }}
                     .btn:hover {{
-                        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                        background: linear-gradient(135deg, #c98d1e 0%, #b87d0f 100%);
                     }}
                     .footer {{
                         text-align: center;
@@ -2456,18 +2456,19 @@ class EmailService:
                         margin: 0 0 15px 0;
                     }}
                     .highlight {{
-                        background-color: #fef3c7;
-                        padding: 12px;
+                        background-color: #fff8e1;
+                        padding: 15px;
                         border-radius: 6px;
                         margin: 15px 0;
-                        border-left: 3px solid #f59e0b;
+                        border-left: 4px solid #db9d32;
+                        color: #7f5f01;
                     }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 28px;">📹 Webinar Invitation</h1>
+                        <h1 style="margin: 0; font-size: 28px;">Webinar Invitation</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">{webinar_title}</p>
                     </div>
                     <div class="content">
@@ -2480,30 +2481,30 @@ class EmailService:
                         
                         <div class="info-box">
                             <div class="info-row">
-                                <span class="info-label">📅 Date:</span>
+                                <span class="info-label">Date:</span>
                                 <span class="info-value">{date_str}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">🕐 Time:</span>
+                                <span class="info-label">Time:</span>
                                 <span class="info-value">{time_str}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">👤 Host:</span>
+                                <span class="info-label">Host:</span>
                                 <span class="info-value">{host_name} ({host_role})</span>
                             </div>
                         </div>
                         
                         <div class="highlight">
-                            <strong>📌 Important:</strong> Please join the meeting at the scheduled time using the link below.
+                            <strong>Important:</strong> Please join the meeting at the scheduled time using the link below.
                         </div>
                         
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="{meeting_link}" class="btn">🎥 Join Meeting</a>
+                            <a href="{meeting_link}" class="btn">Join Meeting</a>
                         </div>
                         
                         <p style="color: #666; font-size: 14px; margin-top: 25px;">
                             <strong>Meeting Link:</strong><br>
-                            <a href="{meeting_link}" style="color: #6366f1; word-break: break-all;">{meeting_link}</a>
+                            <a href="{meeting_link}" style="color: #db9d32; word-break: break-all;">{meeting_link}</a>
                         </p>
                         
                         <p style="color: #666; font-size: 14px; margin-top: 20px;">

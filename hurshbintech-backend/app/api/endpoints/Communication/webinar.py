@@ -7,7 +7,7 @@ import logging
 from typing import List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -23,6 +23,7 @@ from app.schemas.Communication.webinar import (
     AddParticipantsRequest
 )
 from app.services.email_service import EmailService
+from app.utils.meeting_platform_detector import detect_meeting_platform, get_platform_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -95,34 +96,41 @@ async def send_invitations_to_participants(db: AsyncSession, webinar, participan
     return sent_count
 
 
-# ============ WEBINAR ENDPOINTS ============
+async def send_invitations_in_background(webinar_id: int, participant_count: int):
+    """Background task to send email invitations after webinar creation"""
+    from app.db.session import get_db_session
+    
+    try:
+        logger.info(f"Starting background email sending for webinar ID: {webinar_id}")
+        
+        # Get a new database session for the background task
+        async for db in get_db_session():
+            # Fetch webinar with participants
+            webinar = await webinar_crud.get_webinar_by_id(db, webinar_id)
+            
+            if not webinar or not webinar.participants:
+                logger.warning(f"No webinar or participants found for ID: {webinar_id}")
+                return
+            
+            # Send invitations
+            sent_count = await send_invitations_to_participants(db, webinar, webinar.participants)
+            logger.info(f"Background task completed: Sent {sent_count}/{participant_count} invitation emails for webinar ID: {webinar_id}")
+            break  # Exit after first iteration
+            
+    except Exception as e:
+        logger.error(f"Error in background email sending for webinar {webinar_id}: {str(e)}", exc_info=True)
 
-@router.post("/webinars", response_model=WebinarResponse, status_code=status.HTTP_201_CREATED)
-async def create_webinar(
-    webinar_data: WebinarCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Create a new webinar (Admin, Coach, Head only)"""
-    check_webinar_access(current_user)
-    
-    # Create webinar
-    webinar = await webinar_crud.create_webinar(db, webinar_data, current_user.id)
-    
-    # Reload with all relationships
-    webinar = await webinar_crud.get_webinar_by_id(db, webinar.id)
-    
-    # Send invitation emails
-    if webinar.participants:
-        sent_count = await send_invitations_to_participants(db, webinar, webinar.participants)
-        logger.info(f"Sent {sent_count} invitation emails for webinar ID: {webinar.id}")
-    
-    # Build response
+
+def build_webinar_response(webinar) -> WebinarResponse:
+    """Helper to build WebinarResponse with platform detection"""
+    platform = detect_meeting_platform(webinar.meeting_link)
     return WebinarResponse(
         id=webinar.id,
         title=webinar.title,
         description=webinar.description,
         meeting_link=webinar.meeting_link,
+        platform=platform,
+        platform_display_name=get_platform_display_name(platform),
         scheduled_date=webinar.scheduled_date,
         scheduled_time=webinar.scheduled_time,
         created_by_user_id=webinar.created_by_user_id,
@@ -147,6 +155,57 @@ async def create_webinar(
     )
 
 
+def build_webinar_list_response(webinar) -> WebinarListResponse:
+    """Helper to build WebinarListResponse with platform detection"""
+    platform = detect_meeting_platform(webinar.meeting_link)
+    return WebinarListResponse(
+        id=webinar.id,
+        title=webinar.title,
+        description=webinar.description,
+        meeting_link=webinar.meeting_link,
+        platform=platform,
+        platform_display_name=get_platform_display_name(platform),
+        scheduled_date=webinar.scheduled_date,
+        scheduled_time=webinar.scheduled_time,
+        created_by_user_id=webinar.created_by_user_id,
+        created_by_name=webinar.created_by_user.name if webinar.created_by_user else None,
+        created_by_role=webinar.created_by_user.role.value if webinar.created_by_user else None,
+        created_at=webinar.created_at,
+        participant_count=len(webinar.participants)
+    )
+
+
+# ============ WEBINAR ENDPOINTS ============
+
+@router.post("/webinars", response_model=WebinarResponse, status_code=status.HTTP_201_CREATED)
+async def create_webinar(
+    webinar_data: WebinarCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new webinar (Admin, Coach, Head only) - emails sent in background"""
+    check_webinar_access(current_user)
+    
+    # Create webinar immediately
+    webinar = await webinar_crud.create_webinar(db, webinar_data, current_user.id)
+    
+    # Reload with all relationships
+    webinar = await webinar_crud.get_webinar_by_id(db, webinar.id)
+    
+    # Schedule email sending in background (non-blocking)
+    if webinar.participants:
+        background_tasks.add_task(
+            send_invitations_in_background,
+            webinar.id,
+            len(webinar.participants)
+        )
+        logger.info(f"Scheduled background email sending for webinar ID: {webinar.id} ({len(webinar.participants)} participants)")
+    
+    # Return response immediately without waiting for emails
+    return build_webinar_response(webinar)
+
+
 @router.get("/webinars", response_model=List[WebinarListResponse])
 async def get_all_webinars(
     skip: int = 0,
@@ -156,23 +215,7 @@ async def get_all_webinars(
 ):
     """Get all webinars (accessible to all authenticated users)"""
     webinars = await webinar_crud.get_all_webinars(db, skip, limit)
-    
-    return [
-        WebinarListResponse(
-            id=w.id,
-            title=w.title,
-            description=w.description,
-            meeting_link=w.meeting_link,
-            scheduled_date=w.scheduled_date,
-            scheduled_time=w.scheduled_time,
-            created_by_user_id=w.created_by_user_id,
-            created_by_name=w.created_by_user.name if w.created_by_user else None,
-            created_by_role=w.created_by_user.role.value if w.created_by_user else None,
-            created_at=w.created_at,
-            participant_count=len(w.participants)
-        )
-        for w in webinars
-    ]
+    return [build_webinar_list_response(w) for w in webinars]
 
 
 @router.get("/webinars/my-webinars", response_model=List[WebinarListResponse])
@@ -186,23 +229,7 @@ async def get_my_webinars(
     check_webinar_access(current_user)
     
     webinars = await webinar_crud.get_webinars_by_creator(db, current_user.id, skip, limit)
-    
-    return [
-        WebinarListResponse(
-            id=w.id,
-            title=w.title,
-            description=w.description,
-            meeting_link=w.meeting_link,
-            scheduled_date=w.scheduled_date,
-            scheduled_time=w.scheduled_time,
-            created_by_user_id=w.created_by_user_id,
-            created_by_name=w.created_by_user.name if w.created_by_user else None,
-            created_by_role=w.created_by_user.role.value if w.created_by_user else None,
-            created_at=w.created_at,
-            participant_count=len(w.participants)
-        )
-        for w in webinars
-    ]
+    return [build_webinar_list_response(w) for w in webinars]
 
 
 @router.get("/webinars/{webinar_id}", response_model=WebinarResponse)
@@ -220,33 +247,7 @@ async def get_webinar(
             detail="Webinar not found"
         )
     
-    return WebinarResponse(
-        id=webinar.id,
-        title=webinar.title,
-        description=webinar.description,
-        meeting_link=webinar.meeting_link,
-        scheduled_date=webinar.scheduled_date,
-        scheduled_time=webinar.scheduled_time,
-        created_by_user_id=webinar.created_by_user_id,
-        created_by_name=webinar.created_by_user.name if webinar.created_by_user else None,
-        created_by_role=webinar.created_by_user.role.value if webinar.created_by_user else None,
-        created_at=webinar.created_at,
-        updated_at=webinar.updated_at,
-        participants=[
-            ParticipantResponse(
-                id=p.id,
-                user_id=p.user_id,
-                user_name=p.user.name if p.user else None,
-                user_email=p.user.email if p.user else None,
-                unregistered_email=p.unregistered_email,
-                invitation_sent=p.invitation_sent,
-                invitation_sent_at=p.invitation_sent_at,
-                invited_at=p.invited_at
-            )
-            for p in webinar.participants
-        ],
-        participant_count=len(webinar.participants)
-    )
+    return build_webinar_response(webinar)
 
 
 @router.patch("/webinars/{webinar_id}", response_model=WebinarResponse)
@@ -273,33 +274,7 @@ async def update_webinar(
     # Update webinar
     updated_webinar = await webinar_crud.update_webinar(db, webinar_id, webinar_data)
     
-    return WebinarResponse(
-        id=updated_webinar.id,
-        title=updated_webinar.title,
-        description=updated_webinar.description,
-        meeting_link=updated_webinar.meeting_link,
-        scheduled_date=updated_webinar.scheduled_date,
-        scheduled_time=updated_webinar.scheduled_time,
-        created_by_user_id=updated_webinar.created_by_user_id,
-        created_by_name=updated_webinar.created_by_user.name if updated_webinar.created_by_user else None,
-        created_by_role=updated_webinar.created_by_user.role.value if updated_webinar.created_by_user else None,
-        created_at=updated_webinar.created_at,
-        updated_at=updated_webinar.updated_at,
-        participants=[
-            ParticipantResponse(
-                id=p.id,
-                user_id=p.user_id,
-                user_name=p.user.name if p.user else None,
-                user_email=p.user.email if p.user else None,
-                unregistered_email=p.unregistered_email,
-                invitation_sent=p.invitation_sent,
-                invitation_sent_at=p.invitation_sent_at,
-                invited_at=p.invited_at
-            )
-            for p in updated_webinar.participants
-        ],
-        participant_count=len(updated_webinar.participants)
-    )
+    return build_webinar_response(updated_webinar)
 
 
 @router.delete("/webinars/{webinar_id}", status_code=status.HTTP_204_NO_CONTENT)
