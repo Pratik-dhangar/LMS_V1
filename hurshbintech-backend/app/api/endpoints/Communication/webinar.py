@@ -14,7 +14,7 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.crud.Communication import webinar_crud
 from app.models.user_model import User, UserRole
-from app.schemas.webinar import (
+from app.schemas.Communication.webinar import (
     WebinarCreate,
     WebinarUpdate,
     WebinarResponse,

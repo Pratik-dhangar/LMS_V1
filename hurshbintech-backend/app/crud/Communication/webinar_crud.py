@@ -10,9 +10,9 @@ from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.webinar_model import Webinar, WebinarParticipant
+from app.models.Communication.webinar_model import Webinar, WebinarParticipant
 from app.models.user_model import User
-from app.schemas.webinar import WebinarCreate, WebinarUpdate
+from app.schemas.Communication.webinar import WebinarCreate, WebinarUpdate
 
 logger = logging.getLogger(__name__)
 
