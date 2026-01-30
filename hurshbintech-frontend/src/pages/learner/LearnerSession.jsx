@@ -100,8 +100,13 @@ const LearnerSession = () => {
   useEffect(() => {
     if (whiteboardService) {
       whiteboardService.onCommentUpdate = (data) => {
-        // console.log('[LearnerSession] Comment received:', data);
-        addReceivedComment(data);
+        // Normalize incoming comment data
+        const normalized = {
+          text: data.text || data.message || '',
+          type: data.type || 'trainer',
+          timestamp: data.timestamp || new Date().toISOString()
+        };
+        addReceivedComment(normalized);
       };
 
       // Handle comments tool toggle from trainer
@@ -129,9 +134,9 @@ const LearnerSession = () => {
     commentDebounceTimer.current = setTimeout(() => {
       if (whiteboardService) {
         whiteboardService.send('comment_update', {
-          message,
+          text: message,
           type: 'learner',
-          timestamp: Date.now()
+          timestamp: new Date().toISOString()
         });
       }
       commentDebounceTimer.current = null;
@@ -145,9 +150,9 @@ const LearnerSession = () => {
     }
     if (whiteboardService) {
       whiteboardService.send('comment_update', {
-        message,
+        text: message,
         type: 'learner',
-        timestamp: Date.now()
+        timestamp: new Date().toISOString()
       });
     }
   }, [whiteboardService]);
