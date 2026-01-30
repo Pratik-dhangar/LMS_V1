@@ -1002,6 +1002,11 @@ const LearnerSession = () => {
     }
   };
 
+
+  // --------------------------
+  // WebRTC Initialization
+  // --------------------------
+  
   const initializeWebRTC = async () => {
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'learner');

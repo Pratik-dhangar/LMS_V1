@@ -1,0 +1,108 @@
+/* Communication System Styles - Webinar-Specific Only */
+
+/* ============================================
+   WEBINAR-SPECIFIC COMPONENTS
+   ============================================ */
+
+/* Webinar Sending Status Badge */
+.webinar-sending-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #fef3c7;
+  color: #92400e;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.webinar-sending-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #fcd34d;
+  border-top-color: #92400e;
+  border-radius: 50%;
+  animation: webinar-spin 1s linear infinite;
+}
+
+@keyframes webinar-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Platform Badge Color Variants */
+.platform-badge-zoom {
+  background-color: #e0f2fe;
+  border-color: #0ea5e9;
+  color: #075985;
+}
+
+.platform-badge-meet {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+.platform-badge-teams {
+  background-color: #ede9fe;
+  border-color: #8b5cf6;
+  color: #6d28d9;
+}
+
+.platform-badge-webex {
+  background-color: #fef3c7;
+  border-color: #facc15;
+  color: #854d0e;
+}
+
+.platform-badge-default {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+/* Webinar-specific button variants */
+.webinar-btn-join {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.webinar-btn-join:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.webinar-btn-delete {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.webinar-btn-delete:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Webinar chip (for email/user selection) */
+.webinar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-radius: 16px;
+  font-size: 0.875rem;
+}
+
+.webinar-chip-remove {
+  background: transparent;
+  border: none;
+  color: #3730a3;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.webinar-chip-remove:hover {
+  color: #1e1b4b;
+}
