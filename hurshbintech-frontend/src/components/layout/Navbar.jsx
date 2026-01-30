@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogOut, LogIn, Menu, X, Home } from "lucide-react";
+import { LogOut, LogIn, Menu, X, Home, Video } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
@@ -112,6 +112,17 @@ const Navbar = () => {
               </button>
             )}
 
+            {/* Communication - for admin, coach, head */}
+            {user && ['admin', 'coach', 'head'].includes(user.role) && (
+              <button
+                className={`navbar-btn ${location.pathname.includes("/communication") ? "active" : ""}`}
+                onClick={() => handleNavigate("/communication/webinar")}
+              >
+                <Video className="w-4 h-4" />
+                Communication
+              </button>
+            )}
+
             {/* Buy Learning Material - Hidden for admins */}
             {(!user || user.role !== 'admin') && (
               <button
@@ -196,6 +207,17 @@ const Navbar = () => {
                 onClick={() => handleNavigate("/assigned-trainings")}
               >
                 Assigned Learning
+              </button>
+            )}
+
+            {/* Communication - for admin, coach, head */}
+            {user && ['admin', 'coach', 'head'].includes(user.role) && (
+              <button
+                className={`navbar-btn ${location.pathname.includes("/communication") ? "active" : ""}`}
+                onClick={() => handleNavigate("/communication/webinar")}
+              >
+                <Video className="w-4 h-4" />
+                Communication
               </button>
             )}
 
