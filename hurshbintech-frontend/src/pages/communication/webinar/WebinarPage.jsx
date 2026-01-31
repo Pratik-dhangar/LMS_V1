@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Calendar, Clock, Users, Video, Edit, Trash2, Plus, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Users, Video, Edit, Trash2, Plus, ExternalLink, PlayCircle, LogIn } from 'lucide-react';
 import SearchBar from '../../../components/common/SearchBar';
 import webinarService from '../../../api/services/Communication/webinarService';
 import CreateWebinarModal from './CreateWebinarModal';
-import { getPlatformColorClass, getMeetingButtonText, getMeetingButtonIcon } from '../../../utils/platformUtils';
+import { getMeetingButtonText, getMeetingButtonIcon } from '../../../utils/platformUtils';
 import '../../../styles/ManageUsersLayout.css';
 import '../../../styles/Table.css';
 import '../../../styles/common/communication.css';
@@ -19,6 +19,9 @@ const WebinarPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWebinar, setEditingWebinar] = useState(null);
   const [sendingInvitationsFor, setSendingInvitationsFor] = useState(new Set());
+  const [selectedWebinarId, setSelectedWebinarId] = useState(null);
+  const [participantDetails, setParticipantDetails] = useState({});
+  const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
   const navigate = useNavigate();
 
  const getDashboardUrl = () => {
@@ -34,18 +37,76 @@ const WebinarPage = () => {
 
   useEffect(() => {
     fetchWebinars();
-  }, []);
+  }, [user]);
+
+  // Close participant modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (selectedWebinarId && !e.target.closest('td')) {
+        setSelectedWebinarId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [selectedWebinarId]);
 
   const fetchWebinars = async () => {
     try {
       setLoading(true);
-      const data = await webinarService.getAllWebinars();
+      let data;
+      
+      // Admin, Coach, Head: see all webinars
+      if (['admin', 'coach', 'head'].includes(user?.role)) {
+        data = await webinarService.getAllWebinars();
+      } 
+      // Trainer, Learner: see only webinars where they are invited
+      else if (['trainer', 'learner'].includes(user?.role)) {
+        data = await webinarService.getMyInvitedWebinars();
+      }
+      else {
+        // Default: show invited webinars for any other roles
+        data = await webinarService.getMyInvitedWebinars();
+      }
+      
       setWebinars(data);
     } catch (error) {
       console.error('Failed to fetch webinars:', error);
       toast.error('Failed to load webinars');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleParticipantClick = async (webinarId, event) => {
+    // If clicking the same webinar, toggle close
+    if (selectedWebinarId === webinarId) {
+      setSelectedWebinarId(null);
+      return;
+    }
+    
+    // Calculate position for overlay modal
+    const rect = event.currentTarget.getBoundingClientRect();
+    setModalPosition({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX
+    });
+    
+    // Set as selected
+    setSelectedWebinarId(webinarId);
+    
+    // Fetch participants if not already loaded
+    if (!participantDetails[webinarId]) {
+      try {
+        const webinar = await webinarService.getWebinarById(webinarId);
+        setParticipantDetails(prev => ({
+          ...prev,
+          [webinarId]: webinar.participants || []
+        }));
+      } catch (error) {
+        console.error('Failed to fetch participants:', error);
+        toast.error('Failed to load participants');
+      }
     }
   };
 
@@ -217,7 +278,8 @@ const WebinarPage = () => {
                   <tbody className="table-primary-body">
                     {filteredWebinars.map((webinar) => {
                       const isCreator = webinar.created_by_user_id === user?.id;
-                      const ButtonIcon = getMeetingButtonIcon(webinar.platform);
+                      const buttonIconName = getMeetingButtonIcon(webinar.platform);
+                      const ButtonIcon = buttonIconName === 'PlayCircle' ? PlayCircle : LogIn;
                       const buttonText = getMeetingButtonText(webinar.platform, isCreator);
 
                       return (
@@ -238,10 +300,14 @@ const WebinarPage = () => {
                               {/* Platform Badge */}
                               {webinar.platform_display_name && (
                                 <span 
-                                  className={`table-primary-badge ${getPlatformColorClass(webinar.platform)}`}
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                  className="table-primary-badge"
+                                  style={{ 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center',
+                                    fontSize: '0.75rem',
+                                    padding: '0.125rem 0.375rem'
+                                  }}
                                 >
-                                  <ExternalLink size={12} />
                                   {webinar.platform_display_name}
                                 </span>
                               )}
@@ -276,7 +342,10 @@ const WebinarPage = () => {
 
                           {/* Participants */}
                           <td className="table-primary-td">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div 
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+                              onClick={(e) => handleParticipantClick(webinar.id, e)}
+                            >
                               <Users size={16} />
                               <span style={{ fontWeight: '600' }}>{webinar.participant_count}</span>
                               <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -345,6 +414,87 @@ const WebinarPage = () => {
             onSuccess={handleModalSuccess}
             editWebinar={editingWebinar}
           />
+
+          {/* Participant Details Overlay Modal */}
+          {selectedWebinarId && participantDetails[selectedWebinarId] && (
+            <>
+              {/* Overlay backdrop */}
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 999
+                }}
+                onClick={() => setSelectedWebinarId(null)}
+              />
+              {/* Modal */}
+              <div style={{
+                position: 'absolute',
+                top: `${modalPosition.top}px`,
+                left: `${modalPosition.left}px`,
+                zIndex: 1000,
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                padding: '0.75rem',
+                minWidth: '280px',
+                maxWidth: '380px',
+                marginTop: '0.5rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div style={{ fontWeight: '600', fontSize: '0.875rem', color: '#374151' }}>
+                    Participants ({participantDetails[selectedWebinarId].length})
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedWebinarId(null);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      fontSize: '1.25rem',
+                      cursor: 'pointer',
+                      color: '#6b7280',
+                      padding: 0,
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                  {participantDetails[selectedWebinarId].length > 0 ? (
+                    participantDetails[selectedWebinarId].map((participant, idx) => (
+                      <div 
+                        key={idx}
+                        style={{ 
+                          padding: '0.5rem 0',
+                          borderBottom: idx < participantDetails[selectedWebinarId].length - 1 ? '1px solid #f3f4f6' : 'none',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        <div style={{ fontWeight: '500', color: '#111827' }}>
+                          {participant.user_name || 'Guest'}
+                        </div>
+                        <div style={{ color: '#6b7280', fontSize: '0.8125rem' }}>
+                          {participant.user_email || participant.unregistered_email}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
+                      No participants yet
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>

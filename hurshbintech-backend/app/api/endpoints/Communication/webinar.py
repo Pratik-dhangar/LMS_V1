@@ -232,6 +232,18 @@ async def get_my_webinars(
     return [build_webinar_list_response(w) for w in webinars]
 
 
+@router.get("/webinars/my-invitations", response_model=List[WebinarListResponse])
+async def get_my_invited_webinars(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get webinars where current user is invited as a participant"""
+    webinars = await webinar_crud.get_webinars_for_participant(db, current_user.id, skip, limit)
+    return [build_webinar_list_response(w) for w in webinars]
+
+
 @router.get("/webinars/{webinar_id}", response_model=WebinarResponse)
 async def get_webinar(
     webinar_id: int,

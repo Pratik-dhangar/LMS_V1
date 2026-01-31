@@ -112,8 +112,8 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Communication - for admin, coach, head */}
-            {user && ['admin', 'coach', 'head'].includes(user.role) && (
+            {/* Communication - for all authenticated users */}
+            {user && (
               <button
                 className={`navbar-btn ${location.pathname.includes("/communication") ? "active" : ""}`}
                 onClick={() => handleNavigate("/communication/webinar")}
@@ -209,8 +209,8 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Communication - for admin, coach, head */}
-            {user && ['admin', 'coach', 'head'].includes(user.role) && (
+            {/* Communication - for all authenticated users */}
+            {user && (
               <button
                 className={`navbar-btn ${location.pathname.includes("/communication") ? "active" : ""}`}
                 onClick={() => handleNavigate("/communication/webinar")}

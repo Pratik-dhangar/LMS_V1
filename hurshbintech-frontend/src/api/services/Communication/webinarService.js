@@ -69,6 +69,26 @@ const webinarService = {
   },
 
   /**
+   * Get webinars where current user is invited as a participant
+   * @param {number} skip - Pagination skip
+   * @param {number} limit - Pagination limit
+   * @returns {Promise} - Array of webinars
+   */
+  getMyInvitedWebinars: async (skip = 0, limit = 100) => {
+    try {
+      logger.debug('webinarService - Fetching my invited webinars');
+      const response = await axiosInstance.get('/communication/webinars/my-invitations', {
+        params: { skip, limit }
+      });
+      logger.debug('Received my invited webinars:', { count: response.data.length });
+      return response.data;
+    } catch (error) {
+      logger.error('webinarService getMyInvitedWebinars error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get webinar by ID
    * @param {number} webinarId
    * @returns {Promise} - Webinar object with full details

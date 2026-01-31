@@ -103,28 +103,3 @@ def get_platform_display_name(platform: str) -> str:
         MeetingPlatform.OTHER: "External Platform"
     }
     return display_names.get(platform, "External Platform")
-
-
-def get_platform_color(platform: str) -> str:
-    """
-    Get a color code for the platform badge
-    
-    Args:
-        platform: Platform identifier
-        
-    Returns:
-        Color code (hex or CSS color name)
-    """
-    colors = {
-        MeetingPlatform.ZOOM: "#2D8CFF",
-        MeetingPlatform.GOOGLE_MEET: "#00897B",
-        MeetingPlatform.MICROSOFT_TEAMS: "#6264A7",
-        MeetingPlatform.WEBEX: "#00BCF2",
-        MeetingPlatform.SKYPE: "#00AFF0",
-        MeetingPlatform.GOTOMEETING: "#F68D2E",
-        MeetingPlatform.JITSI: "#1D76BA",
-        MeetingPlatform.WHEREBY: "#5D5FEF",
-        MeetingPlatform.BLUEJEANS: "#0E78D5",
-        MeetingPlatform.OTHER: "#6B7280"
-    }
-    return colors.get(platform, "#6B7280")
