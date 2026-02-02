@@ -248,6 +248,27 @@ async def cleanup_old_receipts():
         raise
 
 
+# ============ SESSION TRACKING TASK ============
+
+async def process_ended_sessions_task():
+    """
+    Process all ended sessions and update subscription session counts.
+    - Decrement sessions_remaining when session ends
+    - Mark learner as inactive when sessions_remaining reaches 0
+    Should run frequently (e.g., every 5-10 minutes) to ensure timely processing
+    """
+    logger.info("Starting session tracking task...")
+    
+    try:
+        async with async_session_maker() as db:
+            sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
+            logger.info(f"Session tracking task completed: {sessions_processed} sessions processed")
+            return sessions_processed
+    except Exception as e:
+        logger.error(f"Error in session tracking task: {str(e)}")
+        raise
+
+
 # ============ MASTER TASK SCHEDULER ============
 
 async def run_all_daily_tasks():
@@ -265,6 +286,7 @@ async def run_all_daily_tasks():
         "reminders_7_days": 0,
         "reminders_3_days": 0,
         "grace_period_warnings": 0,
+        "sessions_processed": 0,
     }
     
     try:
@@ -283,6 +305,9 @@ async def run_all_daily_tasks():
         # Task 5: Send grace period warnings
         results["grace_period_warnings"] = await send_grace_period_warnings()
         
+        # Task 6: Process ended sessions and update subscription counts
+        results["sessions_processed"] = await process_ended_sessions_task()
+        
         logger.info("=" * 60)
         logger.info("Daily subscription maintenance tasks completed successfully!")
         logger.info(f"Results: {results}")
@@ -291,6 +316,25 @@ async def run_all_daily_tasks():
         return results
     except Exception as e:
         logger.error(f"Error in daily subscription maintenance tasks: {str(e)}")
+        raise
+
+
+# ============ FREQUENT TASK SCHEDULER (FOR SESSION PROCESSING) ============
+
+async def run_frequent_session_processing():
+    """
+    Run session processing task frequently (every 5-10 minutes).
+    This ensures timely updates to subscription session counts and learner status.
+    """
+    logger.info("Starting frequent session processing task...")
+    
+    try:
+        results = {
+            "sessions_processed": await process_ended_sessions_task(),
+        }
+        return results
+    except Exception as e:
+        logger.error(f"Error in frequent session processing task: {str(e)}")
         raise
 
 
@@ -317,12 +361,14 @@ if __name__ == "__main__":
                 await send_3_day_renewal_reminders()
             elif task_name == "grace-warnings":
                 await send_grace_period_warnings()
+            elif task_name == "process-sessions":
+                await process_ended_sessions_task()
             elif task_name == "all":
                 await run_all_daily_tasks()
             else:
-                print("Unknown task. Available tasks: expire, remind-14, remind-7, remind-3, grace-warnings, all")
+                print("Unknown task. Available tasks: expire, remind-14, remind-7, remind-3, grace-warnings, process-sessions, all")
         else:
             print("Usage: python -m app.workers.subscription_tasks <task_name>")
-            print("Tasks: expire, remind-14, remind-7, remind-3, grace-warnings, all")
+            print("Tasks: expire, remind-14, remind-7, remind-3, grace-warnings, process-sessions, all")
     
     asyncio.run(main())

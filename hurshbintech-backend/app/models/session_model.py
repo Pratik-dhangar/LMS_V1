@@ -59,6 +59,10 @@ class TrainingSession(Base):
     created_by_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )  # Head who created the session
+    
+    # Subscription tracking
+    subscription_id = Column(Integer, ForeignKey("learner_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True, comment="Linked learner subscription for session count tracking")
+    session_counted = Column(Integer, default=False, nullable=False, comment="Has this ended session been counted towards subscription usage?")
 
     # New tracking fields
     total_duration = Column(Integer, comment="Total duration of session in minutes")  # Calculated duration
@@ -87,6 +91,7 @@ class TrainingSession(Base):
     trainer = relationship("User", foreign_keys=[trainer_id], passive_deletes=True)
     learner = relationship("User", foreign_keys=[learner_id], passive_deletes=True)
     created_by = relationship("User", foreign_keys=[created_by_id], passive_deletes=True)
+    subscription = relationship("LearnerSubscription", foreign_keys=[subscription_id], passive_deletes=True)
     learning_contents = relationship(
         "LearningContent", secondary=session_content_association, backref="sessions"
     )
