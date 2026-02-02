@@ -148,7 +148,9 @@ const GuestSession = () => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return {
+      display: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    };
   };
 
   // Component mount - authenticate guest and initialize session
@@ -317,12 +319,13 @@ const GuestSession = () => {
         }
       };
 
-      wbService.onFloatingAnimations = (animations) => {
-        setFloatingAnimations(prev => [...prev, ...animations]);
+      wbService.onFloatingAnimations = (data) => {
+        console.log('[GuestSession] Floating animations received:', data);
+        setFloatingAnimations(prev => [...prev, ...data.animations]);
 
         setTimeout(() => {
           setFloatingAnimations(prevAnims =>
-            prevAnims.filter(anim => !animations.find(newAnim => newAnim.id === anim.id))
+            prevAnims.filter(anim => !data.animations.find(newAnim => newAnim.id === anim.id))
           );
         }, 15000);
       };
@@ -365,6 +368,24 @@ const GuestSession = () => {
       wbService.onStopwatchSync = (data) => {
         setStopwatchElapsedTime(data.elapsedTime);
         setStopwatchIsRunning(data.isRunning);
+      };
+
+      wbService.onFeedbackMessage = (data) => {
+        setFeedbackMessage(data.text || '');
+        if (data.text) {
+          setTimeout(() => {
+            setFeedbackMessage('');
+          }, 3000);
+        }
+      };
+
+      wbService.onWaitingMessage = (data) => {
+        setWaitingMessage(data.text || '');
+        if (data.text) {
+          setTimeout(() => {
+            setWaitingMessage('');
+          }, 5000);
+        }
       };
 
       const tbService = new WhiteboardToolsService(wbService);
