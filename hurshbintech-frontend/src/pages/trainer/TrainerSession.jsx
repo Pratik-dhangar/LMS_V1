@@ -1957,7 +1957,7 @@ const TrainerSession = () => {
             onClick={handleEndSession}
             title="End Session"
           >
-            ⏹️ <span className="xs:inline">End Session</span>
+            ⏹️ <span className="xs:inline">End</span>
           </button>
         </div>
       </div>

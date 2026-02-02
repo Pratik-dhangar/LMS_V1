@@ -1139,7 +1139,7 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
         .where(
             and_(
                 TrainingSession.status == "ended",
-                TrainingSession.session_counted == False,
+                TrainingSession.session_counted == 0,
                 TrainingSession.subscription_id.isnot(None)
             )
         )
@@ -1162,7 +1162,7 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
                 sub.sessions_completed += 1
                 
                 # Mark session as counted
-                session.session_counted = True
+                session.session_counted = 1
                 
                 # Log the adjustment
                 await db.flush()
@@ -1172,7 +1172,7 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
                     subscription_id=sub.id,
                     event_type="SESSION_COMPLETED",
                     event_description=f"Session {session.session_id} counted. Remaining: {sub.sessions_remaining}",
-                    details={
+                    event_metadata={
                         "session_id": session.session_id,
                         "sessions_remaining": sub.sessions_remaining,
                         "sessions_completed": sub.sessions_completed,
@@ -1183,6 +1183,10 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
                 
                 # Check if sessions_remaining reached 0
                 if sub.sessions_remaining == 0:
+                    # Mark subscription as EXPIRED
+                    from app.models.subscription import SubscriptionStatus
+                    sub.status = SubscriptionStatus.EXPIRED
+                    
                     # Mark learner as inactive
                     learner = await db.execute(
                         select(User).where(User.id == sub.learner_id)
@@ -1197,7 +1201,7 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
                             subscription_id=sub.id,
                             event_type="LEARNER_INACTIVATED",
                             event_description=f"Learner {sub.learner_id} marked as inactive - all subscription sessions exhausted",
-                            details={
+                            event_metadata={
                                 "learner_id": sub.learner_id,
                                 "reason": "sessions_exhausted"
                             }
