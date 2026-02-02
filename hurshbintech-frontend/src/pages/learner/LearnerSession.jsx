@@ -1611,6 +1611,7 @@ const LearnerSession = () => {
           flex-direction: column !important;
           flex: 1 !important;
           width: 100% !important;
+          height: 100% !important;
           box-sizing: border-box !important;
           margin: 0 !important;
           padding: 0 !important;
@@ -1626,12 +1627,14 @@ const LearnerSession = () => {
           padding: 8px 8px !important;
           margin: 0 !important;
           gap: 12px !important;
+          overflow: visible !important;
         }
 
         /* Whiteboard Wrapper - Takes all remaining space */
         .learner-whiteboard-wrapper {
           flex: 1 !important;
           width: 100% !important;
+          height: 100% !important;
           box-sizing: border-box !important;
           display: flex !important;
           flex-direction: column !important;
@@ -1649,6 +1652,8 @@ const LearnerSession = () => {
           flex: 1 !important;
           margin: 0 !important;
           padding: 0 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
         }
 
         /* Ensure inner divs fill the space */
@@ -1658,11 +1663,21 @@ const LearnerSession = () => {
           display: flex !important;
           flex-direction: column !important;
           flex: 1 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
         }
 
         .learner-whiteboard-wrapper .w-full {
           width: 100% !important;
           height: 100% !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+
+        .learner-whiteboard-wrapper canvas {
+          width: 100% !important;
+          height: 100% !important;
+          display: block !important;
         }
 
         /* Hide sidebar toggles in full-width learner mode */
@@ -1673,9 +1688,9 @@ const LearnerSession = () => {
         /* Mobile: Use dynamic viewport height (100dvh for modern browsers, 100vh fallback) */
         @media (max-width: 768px) {
           .learner-session-page {
-            height: 100dvh !important;
-            min-height: 100dvh !important;
-            min-height: 100vh !important;
+            height: 100vh !important;
+            // min-height: 100dvh !important;
+            // min-height: 100vh !important;
           }
         }
 
