@@ -183,6 +183,7 @@ const Exercise = ({
 
     // Debounce timer for sending answer updates to trainer
     const answerDebounceTimer = useRef(null);
+    const commentDebounceTimer = useRef(null);
 
     const debouncedSendAnswer = useCallback((answerValue) => {
         const DELAY = 300; // ms
@@ -200,6 +201,23 @@ const Exercise = ({
             answerDebounceTimer.current = null;
         }, DELAY);
     }, [whiteboardService, question]);
+
+    const debouncedSendComment = useCallback((commentValue) => {
+        const DELAY = 300; // ms
+        if (commentDebounceTimer.current) {
+            clearTimeout(commentDebounceTimer.current);
+        }
+        commentDebounceTimer.current = setTimeout(() => {
+            if (whiteboardService) {
+                whiteboardService.send('comment_update', {
+                    text: commentValue,
+                    type: 'learner',
+                    timestamp: new Date().toISOString()
+                });
+            }
+            commentDebounceTimer.current = null;
+        }, DELAY);
+    }, [whiteboardService]);
 
     const flushSendAnswer = useCallback((answerValue) => {
         if (answerDebounceTimer.current) {
@@ -220,6 +238,10 @@ const Exercise = ({
             if (answerDebounceTimer.current) {
                 clearTimeout(answerDebounceTimer.current);
                 answerDebounceTimer.current = null;
+            }
+            if (commentDebounceTimer.current) {
+                clearTimeout(commentDebounceTimer.current);
+                commentDebounceTimer.current = null;
             }
         };
     }, []);
@@ -307,11 +329,35 @@ const Exercise = ({
                     {showComments && (
                         <div className="session-comments-section border-2 border-gray-300 mt-2 rounded bg-gray-50 w-full" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
                             <div style={{ position: 'relative' }}>
-                                {/* Learner Comments Section (small responsive top padding) */}
+                                {/* Learner Comments Editable Section */}
                                 <div style={{ paddingTop: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
                                     <textarea
-                                        value={commentInput || ''}
-                                        onChange={(e) => setCommentInput(e.target.value)}
+                                        value={learnerComments || ''}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            // Update local display state immediately via addReceivedComment
+                                            addReceivedComment({
+                                                text: newValue,
+                                                type: 'learner',
+                                                timestamp: new Date().toISOString()
+                                            });
+                                            // Debounced send to learner via whiteboard
+                                            debouncedSendComment(newValue);
+                                        }}
+                                        onBlur={(e) => {
+                                            // Flush any pending comment sends on blur
+                                            if (commentDebounceTimer.current) {
+                                                clearTimeout(commentDebounceTimer.current);
+                                                if (whiteboardService) {
+                                                    whiteboardService.send('comment_update', {
+                                                        text: e.target.value,
+                                                        type: 'learner',
+                                                        timestamp: new Date().toISOString()
+                                                    });
+                                                }
+                                                commentDebounceTimer.current = null;
+                                            }
+                                        }}
                                         placeholder="Learner comments will appear here..."
                                         className="bg-blue-50 border border-blue-300 rounded p-2 w-full text-gray-700"
                                         style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto', resize: 'none' }}

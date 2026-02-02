@@ -320,7 +320,7 @@ async def create_coach_session(
         )
         .where(CoachSession.id == new_session.id)
     )
-    return result.scalar_one()
+    return result.unique().scalar_one()
 
 
 async def get_coach_session_by_id(db: AsyncSession, session_id: int) -> CoachSession | None:
@@ -333,7 +333,7 @@ async def get_coach_session_by_id(db: AsyncSession, session_id: int) -> CoachSes
         )
         .where(CoachSession.id == session_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_coach_sessions(db: AsyncSession, coach_id: int) -> list[CoachSession]:

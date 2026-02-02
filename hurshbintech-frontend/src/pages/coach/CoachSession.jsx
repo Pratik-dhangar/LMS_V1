@@ -20,69 +20,41 @@ import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFee
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import Emoji from '../../components/common/Emoji';
 import LearningContentSidebar from '../trainer/LearningContentSidebar';
+import Exercise from '../../components/session/Exercise';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-
-
-const REACTION_SVG_ASSETS = {
-  smiley: {
-    type: 'svg',
-    src: '/reactions/realistic-pastel-smile.svg',
-    alt: 'Realistic Pastel Smile'
-  },
-  bubble: {
-    type: 'svg',
-    src: '/reactions/realistic-bubble.svg',
-    alt: 'Realistic Soap Bubble'
-  },
-  balloon: [
-    {
-      type: 'svg',
-      src: '/reactions/02_pastel_mint.svg',
-      alt: 'Realistic Pink Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/03_pastel_pink.svg',
-      alt: 'Realistic Red Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/04_pastel_lavender.svg',
-      alt: 'Realistic Blue Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/05_pastel_peach.svg',
-      alt: 'Realistic Green Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/06_pastel_coral.svg',
-      alt: 'Realistic Yellow Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/07_pastel_teal.svg',
-      alt: 'Realistic Purple Balloon'
-    },
-    {
-      type: 'svg',
-      src: '/reactions/08_pastel_yellow.svg',
-      alt: 'Realistic Orange Balloon'
-    }
-  ],
-  star: {
-    type: 'svg',
-    src: '/reactions/realistic-oil-pastel-star.svg',
-    alt: 'Realistic Oil Pastel Star'
-  }
-};
+// Import session utilities
+import {
+  REACTION_SVG_ASSETS,
+  WB_BUTTON_STYLES,
+  BUCKET_COLORS,
+  WhiteboardTools,
+  getWSBaseURL,
+  initializeWhiteboardService,
+  initializeVideoConferenceService,
+  initializeToolsService,
+  toggleMicrophone as utilToggleMicrophone,
+  toggleCamera as utilToggleCamera,
+  toggleFreeze as utilToggleFreeze,
+  clearAllCanvas,
+  addBucket as utilAddBucket,
+  eraseAllPen as utilEraseAllPen,
+  spawnFloatingAnimation as utilSpawnFloatingAnimation,
+  handleToolClick as utilHandleToolClick,
+  sendFeedbackMessage,
+  sendWaitingMessage,
+  toggleToolAccess as utilToggleToolAccess,
+  cleanupSessionResources,
+  syncStopwatchToParticipant,
+  endSession as utilEndSession,
+  calculateTimeRemaining,
+  triggerParticipantKeyboard
+} from '../../utils/sessionUtils';
 
 const CoachSession = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { navbarClassName, pageClassName } = useAutoHideNavbar();
-  const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+  const WS_BASE_URL = getWSBaseURL(); // Use utility function
 
   // Service instances
   const [webRTC, setWebRTC] = useState(null);
@@ -170,6 +142,8 @@ const CoachSession = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
   const [buckets, setBuckets] = useState([]);
+  const [bucketColor, setBucketColor] = useState('#8B6F47');
+  const [showExercise, setShowExercise] = useState(false);
   const [toolActive, setToolActive] = useState(false);
   const [eraserActive, setEraserActive] = useState(false);
   const [eraseAllActive, setEraseAllActive] = useState(false);
@@ -207,7 +181,7 @@ const CoachSession = () => {
     if (whiteboardService && stopwatch.isRunning) {
       const now = Date.now();
       if (now - lastSyncTimeRef.current > 100) {
-        whiteboardService.sendStopwatchSync({
+        whiteboardService.send('stopwatch_sync', {
           elapsedTime: stopwatch.elapsedTime,
           isRunning: stopwatch.isRunning
         });
@@ -216,11 +190,11 @@ const CoachSession = () => {
     }
   }, [whiteboardService, stopwatch.elapsedTime, stopwatch.isRunning]);
 
-  // Unified whiteboard button styles
-  const wbBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
-  const wbBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded text-center cursor-pointer session-hover-transition transition-all duration-200 font-semibold flex items-center';
-  const wbSmallBtnBase = 'bg-white border-2 border-gray-300 text-black hover:bg-gray-100 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
-  const wbSmallBtnActive = 'bg-white border-2 border-[#DB9D32] text-black shadow-lg rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1';
+  // Unified whiteboard button styles - Use utility constants
+  const wbBtnBase = WB_BUTTON_STYLES.base;
+  const wbBtnActive = WB_BUTTON_STYLES.active;
+  const wbSmallBtnBase = WB_BUTTON_STYLES.smallBase;
+  const wbSmallBtnActive = WB_BUTTON_STYLES.smallActive;
 
   const timersRef = useRef(new Map());
   const stopwatchesRef = useRef(new Map());
@@ -522,202 +496,88 @@ const CoachSession = () => {
 
   const handleToggleMic = () => {
     if (webRTC) {
-      const newState = webRTC.toggleMicrophone();
-      setMicEnabled(newState);
+      utilToggleMicrophone(webRTC, setMicEnabled);
     }
   };
 
   const handleToggleCamera = () => {
     if (webRTC) {
-      const newState = webRTC.toggleCamera();
-      setCameraEnabled(newState);
+      utilToggleCamera(webRTC, setCameraEnabled);
     }
   };
 
   const handleEndSession = async () => {
-    if (window.confirm('Are you sure you want to end this session?')) {
-      try {
-        // Broadcast session end to client/guest before ending
-        if (whiteboardService) {
-          whiteboardService.send('session_ended', {
-            message: 'Coach has ended the session',
-            timestamp: Date.now()
-          });
-        }
-
-        await coachSessionService.endSession(sessionId, '');
-        cleanup();
-        toast.success('Session ended successfully');
-        navigate('/coach/dashboard');
-      } catch (error) {
-        console.error('[CoachSession] Error ending session:', error);
-        toast.error('Failed to end session');
-      }
-    }
+    await utilEndSession({
+      whiteboardService,
+      sessionServiceEndFn: (id, notes) => coachSessionService.endSession(id, notes),
+      sessionId,
+      notes: '',
+      cleanupFn: cleanup,
+      navigate,
+      dashboardPath: '/coach/dashboard',
+      roleName: 'coach'
+    });
   };
 
   const handleFreeze = () => {
-    const newFreezeState = !isFrozen;
-    setIsFrozen(newFreezeState);
-
-    if (webRTC) {
-      webRTC.sendMessage({
-        type: 'freeze',
-        frozen: newFreezeState
-      });
-    }
-
-    toast.info(newFreezeState ? 'Client window frozen' : 'Client window unfrozen');
+    utilToggleFreeze(isFrozen, setIsFrozen, webRTC, 'client');
   };
 
   const cleanup = () => {
-    if (webRTC?.localStream) {
-      webRTC.localStream.getTracks().forEach(track => track.stop());
-    }
-    if (webRTC) {
-      webRTC.close();
-    }
-    if (whiteboardService) {
-      whiteboardService.close();
-    }
-    if (toolsService) {
-      toolsService.cleanup();
-    }
-    isInitializingRef.current = false;
+    cleanupSessionResources({
+      videoService: webRTC,
+      whiteboardService,
+      toolsService,
+      recordingService: null,
+      secondaryVideoService: null,
+      isInitializingRef
+    });
   };
 
   const toggleClientToolAccess = (toolName) => {
-    const updated = { ...clientToolAccess, [toolName]: !clientToolAccess[toolName] };
-    setClientToolAccess(updated);
-
-    // Auto-enable select permission when drag is activated
-    if (toolName === 'drag' && updated.drag) {
-      updated.select = true;
-      setClientToolAccess(updated);
-    }
-
-    // Send permission update to client/guest via whiteboard service
-    if (whiteboardService) {
-      whiteboardService.send('tool_access', {
-        toolName,
-        enabled: updated[toolName],
-        allPermissions: updated
-      });
-
-      // If drag is being enabled, also send select permission update
-      if (toolName === 'drag' && updated.drag) {
-        whiteboardService.send('tool_access', {
-          toolName: 'select',
-          enabled: true,
-          allPermissions: updated
-        });
-      }
-    }
-    console.log('[CoachSession] Client/Guest tool access updated:', updated);
-
-    if (toolName === 'drag' && updated.drag) {
-      setTool('select');
-    }
+    utilToggleToolAccess(toolName, clientToolAccess, setClientToolAccess, whiteboardService, setTool);
   };
 
   const triggerClientKeyboard = () => {
-    if (whiteboardService) {
-      whiteboardService.sendTriggerKeyboard();
-      toast.info('Keyboard tool sent to client');
-    }
+    triggerParticipantKeyboard(whiteboardService, 'client');
   };
 
   const addBucket = () => {
-    // Calculate position for new bucket (place next to previous one)
-    const lastBucket = buckets[buckets.length - 1];
-    const newX = lastBucket ? lastBucket.x + lastBucket.width + 20 : 100;
-    const newY = lastBucket ? lastBucket.y : 100;
-
-    const newBucket = {
-      id: Date.now(),
-      x: newX,
-      y: newY,
-      width: 150,
-      height: 150,
-      label: 'Bucket',
-      items: [] // Items inside bucket
-    };
-    setBuckets(prev => [...prev, newBucket]);
-
-    // Send to other participants
-    if (whiteboardService) {
-      whiteboardService.sendBucketAdded(newBucket);
-    }
+    // Use conservative canvas dimensions to ensure buckets stay within bounds
+    // These are approximate - actual canvas is responsive but we use safe margins
+    utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 900, 500);
   };
 
   const eraseAllPen = () => {
-    // Clear local state
-    setCanvasItems([]);
-    setBuckets([]);
-    setTextBoxes([]);
-    setFloatingAnimations([]); // Clear all floating animations (bubbles, balloons, smileys, stars)
-
-    // Trigger local clear and redraw
-    setErasePenTrigger(prev => prev + 1);
-    setClearCanvasTrigger(prev => prev + 1);
-    setEraseAllActive(true);
-
-    // Send clear command to client
-    if (whiteboardService) {
-      whiteboardService.send('clear_canvas', {
-        timestamp: Date.now()
-      });
-    }
-
-    setTimeout(() => setEraseAllActive(false), 300);
-  };
-
-  const generateSpacedPositions = (count, minPercent = 5, maxPercent = 95) => {
-    const positions = [];
-    const step = (maxPercent - minPercent) / (count - 1 || 1);
-    for (let i = 0; i < count; i++) {
-      positions.push(minPercent + i * step);
-    }
-    return positions;
+    utilEraseAllPen({
+      setErasePenTrigger,
+      setRedrawCanvasTrigger,
+      whiteboardService
+    });
   };
 
   const spawnFloatingAnimation = (type, asset) => {
-    if (activeFloatingAnimationTypesRef.current.has(type)) {
-      toast.warn(`${type.charAt(0).toUpperCase() + type.slice(1)}s are already active!`);
-      return;
-    }
-
-    activeFloatingAnimationTypesRef.current.add(type);
-
-    const count = 10;
-    const leftPositions = generateSpacedPositions(count);
-
-    const newAnimations = leftPositions.map((leftPercent, index) => {
-      // For balloons, randomly select from the color array
-      const selectedAsset = Array.isArray(asset)
-        ? asset[Math.floor(Math.random() * asset.length)]
-        : asset;
-
-      return {
-        id: `${type}_${Date.now()}_${index}`,
-        type,
-        ...selectedAsset,
-        left: `${leftPercent}%`,
-        bottom: '-50px',
-        popped: false
-      };
+    utilSpawnFloatingAnimation({
+      type,
+      asset,
+      activeFloatingAnimationTypesRef: activeFloatingAnimationTypesRef.current,
+      setFloatingAnimations,
+      whiteboardService,
+      count: 10
     });
+  };
 
-    setFloatingAnimations(prev => [...prev, ...newAnimations]);
-
-    if (whiteboardService) {
-      whiteboardService.sendFloatingAnimations(newAnimations);
-    }
-
-    setTimeout(() => {
-      setFloatingAnimations(prev => prev.filter(anim => !newAnimations.find(na => na.id === anim.id)));
-      activeFloatingAnimationTypesRef.current.delete(type);
-    }, 15000);
+  const handleToolClick = (tool) => {
+    utilHandleToolClick({
+      tool,
+      setFeedbackMessage,
+      setWaitingMessage,
+      setShowExercise,
+      spawnFloatingAnimation,
+      toggleLearnerToolAccess: toggleClientToolAccess,
+      whiteboardService,
+      REACTION_SVG_ASSETS
+    });
   };
 
   const audioContextRef = useRef(null);
@@ -968,31 +828,6 @@ const CoachSession = () => {
     }
   };
 
-  const handleToolClick = (toolName) => {
-    if (!toolsService) return;
-
-    // Handle reaction animations
-    if (toolName === 'smiley') {
-      spawnFloatingAnimation('smiley', REACTION_SVG_ASSETS.smiley);
-      return;
-    }
-    if (toolName === 'bubble') {
-      spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
-      return;
-    }
-    if (toolName === 'balloon') {
-      spawnFloatingAnimation('balloon', REACTION_SVG_ASSETS.balloon);
-      return;
-    }
-    if (toolName === 'star') {
-      spawnFloatingAnimation('star', REACTION_SVG_ASSETS.star);
-      return;
-    }
-
-    // Handle drawing tools
-    toolsService.handleToolClick(toolName, tool, setTool);
-  };
-
   if (loading) {
     return (
       <div className="loading-container">
@@ -1050,7 +885,7 @@ const CoachSession = () => {
       {/* Main layout */}
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Content */}
-        <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)', maxHeight: 'calc(100vh - 8rem)' }}>
+        <div className="flex flex-col" style={{ maxHeight: ' 110vh' }}>
           <div className="bg-white rounded-lg shadow p-4 flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
             <h3 className="text-lg font-bold mb-3">📚 Learning Content</h3>
             <div className="overflow-y-auto flex-1" style={{ minHeight: 0 }}>
@@ -1068,7 +903,7 @@ const CoachSession = () => {
           </div>
 
           {/* Message Box - Below Learning Content */}
-          <div className="session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full flex-shrink-0" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+          <div className="mb-4 session-message-box border-2 border-gray-300 mt-4 rounded bg-gray-50 w-full flex-shrink-0" style={{ padding: 'clamp(0.5rem, 1.5vw, 1rem)', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
             <div className="font-semibold text-slate-800 mb-2" style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1rem)' }}>💬 Message Box</div>
             <div className="overflow-y-auto mb-2 flex-1" style={{ maxHeight: '150px', minHeight: '80px' }}>
               {messages.map((msg, idx) => (
@@ -1099,6 +934,23 @@ const CoachSession = () => {
               </button>
             </div>
           </div>
+          {/* Stopwatch */}
+          {showStopwatch && (
+            <div  >
+              <StopwatchDisplay
+                formattedTime={stopwatch.formattedTime}
+                isRunning={stopwatch.isRunning}
+                onStart={stopwatch.start}
+                onPause={stopwatch.pause}
+                onResume={stopwatch.resume}
+                onReset={stopwatch.reset}
+                onSetTime={stopwatch.setTime}
+                showControls={true}
+                size="xs"
+                variant="standard"
+              />
+            </div>
+          )}
         </div>
 
         {/* Center Area */}
@@ -1193,141 +1045,61 @@ const CoachSession = () => {
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Right Sidebar - Tool Controls */}
-        <div className="session-right-sidebar">
-          <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <h3 className="text-sm font-bold mb-2">Whiteboard Tools</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  setTool('pen');
-                  setToolActive(true);
-                  setEraserActive(false);
-                }}
-                className={tool === 'pen' ? wbSmallBtnActive : wbSmallBtnBase}
-              >
-                🖊️ Pen
-              </button>
-              <button
-                onClick={() => {
-                  setTool('eraser');
-                  setEraserActive(true);
-                  setToolActive(true);
-                }}
-                className={tool === 'eraser' ? wbSmallBtnActive : wbSmallBtnBase}
-              >
-                🧹 Eraser
-              </button>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    handleAddTextBox();
-                    setShowTextSizeSlider(!showTextSizeSlider);
-                  }}
-                  className={wbSmallBtnBase}
-                >
-                  📝 Text
-                </button>
-                {showTextSizeSlider && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded p-2 shadow-lg z-50" style={{ minWidth: '120px' }}>
-                    <label className="text-xs font-semibold text-slate-700 block mb-1">Size: {textSize}px</label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="48"
-                      value={textSize}
-                      onChange={(e) => setTextSize(Number(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </div>
-              <button onClick={eraseAllPen} className={wbSmallBtnBase}>
-                ❌ Clear
-              </button>
-              <button
-                onClick={() => {
-                  addBucket();
-                }}
-                className={wbSmallBtnBase}
-              >
-                🪣 Bucket
-              </button>
-            </div>
+          {/* Whiteboard Drawing Tools */}
+          <WhiteboardTools
+            tool={tool}
+            setTool={setTool}
+            toolActive={toolActive}
+            setToolActive={setToolActive}
+            eraserActive={eraserActive}
+            setEraserActive={setEraserActive}
+            setEraseAllActive={setEraseAllActive}
+            eraseAllPen={eraseAllPen}
+            addBucket={addBucket}
+            color={color}
+            setColor={setColor}
+            lineWidth={lineWidth}
+            setLineWidth={setLineWidth}
+            bucketColor={bucketColor}
+            setBucketColor={setBucketColor}
+            setCanvasItems={setCanvasItems}
+            setBuckets={setBuckets}
+            setFloatingAnimations={setFloatingAnimations}
+            setClearCanvasTrigger={setClearCanvasTrigger}
+            whiteboardService={whiteboardService}
+            toolAccess={clientToolAccess}
+            toggleToolAccess={toggleClientToolAccess}
+            showStopwatch={showStopwatch}
+            setShowStopwatch={setShowStopwatch}
+            showExercise={showExercise}
+            setShowExercise={setShowExercise}
+            activeIcons={activeIcons}
+            handleToolClick={handleToolClick}
+            wbBtnBase={wbBtnBase}
+            wbBtnActive={wbBtnActive}
+            wbSmallBtnBase={wbSmallBtnBase}
+            wbSmallBtnActive={wbSmallBtnActive}
+            participantType="client"
+          />
 
-            {/* Pen Color Picker */}
-            <div className="mt-3">
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Pen Color:</label>
-              {/* Color Palette */}
-              <div className="grid grid-cols-5 gap-1 mb-2">
-                {['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB'].map((paletteColor) => (
-                  <button
-                    key={paletteColor}
-                    onClick={() => setColor(paletteColor)}
-                    disabled={tool === 'eraser'}
-                    className={`w-full h-8 rounded border-2 cursor-pointer transition-all ${color === paletteColor ? 'border-[#DB9D32] ring-2 ring-[#DB9D32]' : 'border-gray-300'
-                      }`}
-                    style={{ backgroundColor: paletteColor }}
-                    title={paletteColor}
-                  />
-                ))}
-              </div>
-              {/* Custom Color Picker */}
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                disabled={tool === 'eraser'}
-                className="w-full h-8 rounded cursor-pointer border border-gray-300"
-                title="Choose Custom Color"
-              />
-            </div>
-          </div>
-
-          {/* Client/Guest Tool Access Controls */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-sm font-bold mb-2">Client/Guest Tools</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {/* Select Tool Toggle */}
-              <button
-                onClick={() => toggleClientToolAccess('select')}
-                className={`${clientToolAccess.select ? wbSmallBtnActive : wbSmallBtnBase}`}
-                title={clientToolAccess.select ? 'Disable Select for client/guest' : 'Enable Select for client/guest'}
-              >
-                <span>✋</span>
-                <span>Select</span>
-              </button>
-
-              {/* Drag Tool Toggle */}
-              <button
-                onClick={() => toggleClientToolAccess('drag')}
-                className={`${clientToolAccess.drag ? wbSmallBtnActive : wbSmallBtnBase}`}
-                title={clientToolAccess.drag ? 'Disable Drag for client/guest' : 'Enable Drag for client/guest'}
-              >
-                <span>↔️</span>
-                <span>Drag</span>
-              </button>
-
-              {/* Keyboard Tool Toggle */}
-              {/* <button
-                onClick={() => {
-                  // Toggle keyboard access for client/guest
-                  toggleClientToolAccess('keyboard');
-                  // If enabling, also send an immediate trigger so the keyboard appears right away
-                  if (!clientToolAccess.keyboard) {
-                    triggerClientKeyboard();
+          {/* Exercise Tool */}
+          {showExercise && (
+            <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+              <Exercise
+                isTrainer={true}
+                whiteboardService={whiteboardService}
+                onClose={() => {
+                  setShowExercise(false);
+                  if (whiteboardService) {
+                    whiteboardService.send('exercise_closed', {
+                      timestamp: Date.now()
+                    });
                   }
                 }}
-                className={`${clientToolAccess.keyboard ? wbSmallBtnActive : wbSmallBtnBase}`}
-                title={clientToolAccess.keyboard ? 'Revoke keyboard access' : 'Grant keyboard access'}
-              >
-                <span>⌨️</span>
-                <span>Keyboard</span>
-              </button> */}
+              />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
