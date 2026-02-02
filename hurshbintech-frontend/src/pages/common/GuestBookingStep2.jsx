@@ -13,6 +13,7 @@ const GuestBookingStep2 = () => {
   const email = location.state?.email;
   const otp = location.state?.otp;
   const otpVerified = location.state?.otpVerified;
+  const preSelectedCoach = location.state?.coach; // Get pre-selected coach
 
   // Redirect to Step 1 if no verified OTP
   useEffect(() => {
@@ -30,7 +31,7 @@ const GuestBookingStep2 = () => {
   const [formData, setFormData] = useState({
     guest_name: '',
     guest_phone: '',
-    coach_id: '',
+    coach_id: preSelectedCoach ? String(preSelectedCoach.id) : '',
     scheduled_date: '',
     scheduled_time: '',
     session_type: '',
@@ -47,12 +48,19 @@ const GuestBookingStep2 = () => {
   useEffect(() => {
     const fetchCoaches = async () => {
       try {
-        const data = await bookingService.getAvailableCoaches();
-        setCoaches(data || []);
-        
-        // Fetch availability for each coach
-        if (data && data.length > 0) {
-          await fetchAllCoachAvailability(data);
+        // If coach is pre-selected, only fetch availability for that coach
+        if (preSelectedCoach) {
+          setCoaches([preSelectedCoach]);
+          await fetchAllCoachAvailability([preSelectedCoach]);
+        } else {
+          // Otherwise fetch all coaches
+          const data = await bookingService.getAvailableCoaches();
+          setCoaches(data || []);
+          
+          // Fetch availability for each coach
+          if (data && data.length > 0) {
+            await fetchAllCoachAvailability(data);
+          }
         }
       } catch (err) {
         console.error('Error fetching coaches:', err);
@@ -325,37 +333,60 @@ const GuestBookingStep2 = () => {
                     <h3>Booking Details</h3>
                   </div>
 
-                  <div className="form-group full">
-                    <label>Select Coach *</label>
-                    <div className="coach-cards-grid">
-                      {coaches.map(coach => (
-                        <div 
-                          key={coach.id}
-                          className={`coach-card ${formData.coach_id === String(coach.id) ? 'selected' : ''}`}
-                          onClick={() => handleInputChange({ 
-                            target: { name: 'coach_id', value: String(coach.id) } 
-                          })}
-                        >
-                          {coach.profile_picture_url && (
-                            <img 
-                              src={coach.profile_picture_url} 
-                              alt={coach.name}
-                              className="coach-card-image"
-                            />
-                          )}
-                          <div className="coach-card-info">
-                            <h4 className="coach-card-name">{coach.name}</h4>
-                            {coach.specialization && (
-                              <p className="coach-card-specialization">{coach.specialization}</p>
+                  {/* Show coach selection only if not pre-selected */}
+                  {!preSelectedCoach ? (
+                    <div className="form-group full">
+                      <label>Select Coach *</label>
+                      <div className="coach-cards-grid">
+                        {coaches.map(coach => (
+                          <div 
+                            key={coach.id}
+                            className={`coach-card ${formData.coach_id === String(coach.id) ? 'selected' : ''}`}
+                            onClick={() => handleInputChange({ 
+                              target: { name: 'coach_id', value: String(coach.id) } 
+                            })}
+                          >
+                            {coach.profile_picture_url && (
+                              <img 
+                                src={coach.profile_picture_url} 
+                                alt={coach.name}
+                                className="coach-card-image"
+                              />
+                            )}
+                            <div className="coach-card-info">
+                              <h4 className="coach-card-name">{coach.name}</h4>
+                              {coach.specialization && (
+                                <p className="coach-card-specialization">{coach.specialization}</p>
+                              )}
+                            </div>
+                            {formData.coach_id === String(coach.id) && (
+                              <div className="coach-card-checkmark">✓</div>
                             )}
                           </div>
-                          {formData.coach_id === String(coach.id) && (
-                            <div className="coach-card-checkmark">✓</div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="form-group full">
+                      <label>Selected Coach</label>
+                      <div className="coach-card selected" style={{ cursor: 'default', maxWidth: '400px' }}>
+                        {preSelectedCoach.profile_picture_url && (
+                          <img 
+                            src={preSelectedCoach.profile_picture_url} 
+                            alt={preSelectedCoach.name}
+                            className="coach-card-image"
+                          />
+                        )}
+                        <div className="coach-card-info">
+                          <h4 className="coach-card-name">{preSelectedCoach.name}</h4>
+                          {preSelectedCoach.specialization && (
+                            <p className="coach-card-specialization">{preSelectedCoach.specialization}</p>
                           )}
                         </div>
-                      ))}
+                        <div className="coach-card-checkmark">✓</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="form-row">
                     <div className="form-group">

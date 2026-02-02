@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Loader, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import bookingService from '../../api/services/bookingService';
@@ -8,6 +8,8 @@ import '../../styles/ManageUsersLayout.css';
 
 const GuestBookingStep1 = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const coach = location.state?.coach; // Get pre-selected coach from state
   const [step, setStep] = useState('email'); // 'email' or 'otp'
   const [email, setEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -90,10 +92,10 @@ const GuestBookingStep1 = () => {
       
       toast.success('Email verified! Proceeding to booking details...');
       
-      // Store email and otp in state for Step 2
+      // Store email, otp, and coach in state for Step 2
       setTimeout(() => {
         navigate('/guest-booking/details', { 
-          state: { email, otp, otpVerified: true } 
+          state: { email, otp, otpVerified: true, coach } 
         });
       }, 1500);
     } catch (err) {

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, desc
 
 from app.core.config import settings
 from app.core.deps import (
@@ -214,6 +215,41 @@ async def create_training_session(
         f"Head {current_user.id} creating session for trainer {session_data.trainer_id} and learner {session_data.learner_id}"
     )
 
+    # ✅ Check if learner exists
+    learner_result = await db.execute(
+        select(User).where(User.id == session_data.learner_id)
+    )
+    learner = learner_result.scalar_one_or_none()
+    
+    if not learner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Learner not found"
+        )
+    
+    # ✅ Check if learner has active subscription with remaining sessions
+    # (This is the primary check - subscription status is more important than is_active flag)
+    from app.models.subscription import LearnerSubscription, SubscriptionStatus
+    sub_result = await db.execute(
+        select(LearnerSubscription)
+        .where(
+            and_(
+                LearnerSubscription.learner_id == session_data.learner_id,
+                LearnerSubscription.status == SubscriptionStatus.ACTIVE,
+                LearnerSubscription.sessions_remaining > 0
+            )
+        )
+        .order_by(desc(LearnerSubscription.created_at))
+        .limit(1)
+    )
+    active_subscription = sub_result.scalars().first()
+    
+    if not active_subscription:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create session: Learner has no active subscription with remaining sessions. Please renew the subscription."
+        )
+
     new_session = await session_crud.create_session(db, session_data, current_user.id)
 
     logger.info(f"Session created successfully: {new_session.session_id}")
@@ -331,6 +367,14 @@ async def end_training_session(
         raise HTTPException(status_code=403, detail="Not authorized to end this session")
 
     ended_session = await session_crud.end_session(db, session_id, session_end.notes)
+
+    # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
+    try:
+        from app.crud import subscription_crud
+        sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
+        logger.info(f"✅ Immediately processed {sessions_processed} ended sessions after session {session_id} ended")
+    except Exception as e:
+        logger.error(f"Error immediately processing sessions: {str(e)}")
 
     # Broadcast session end to all participants via WebSocket
     if session_id in active_connections:
@@ -968,4 +1012,54 @@ async def get_trainer_recordings(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recordings: {str(e)}"
+        )
+
+
+# ============ SUBSCRIPTION SESSION TRACKING (MANUAL TRIGGER) ============
+
+@router.post("/admin/process-ended-sessions", status_code=status.HTTP_200_OK)
+async def manual_process_ended_sessions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    ⚙️ ADMIN ONLY: Manually trigger subscription session processing.
+    
+    This endpoint processes all ended sessions and updates subscription counts:
+    - Decrements sessions_remaining when session ends (status = "ended")
+    - Increments sessions_completed
+    - Auto-inactivates learners when sessions_remaining reaches 0
+    
+    This runs automatically every 5 minutes via background scheduler,
+    but can be triggered manually here for testing/debugging.
+    
+    Returns:
+    - sessions_processed: Number of sessions that were processed
+    - affected_subscriptions: Number of subscriptions that were updated
+    """
+    from app.crud import subscription_crud
+    
+    # Only admin/HEAD can trigger this
+    if current_user.role not in ["admin", "head"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin/head can trigger session processing"
+        )
+    
+    try:
+        logger.info(f"Manual session processing triggered by {current_user.email}")
+        sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
+        
+        logger.info(f"Manual processing complete: {sessions_processed} sessions processed")
+        
+        return {
+            "success": True,
+            "sessions_processed": sessions_processed,
+            "message": f"Successfully processed {sessions_processed} ended sessions"
+        }
+    except Exception as e:
+        logger.error(f"Error processing ended sessions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process sessions: {str(e)}"
         )

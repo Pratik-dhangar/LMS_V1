@@ -49,7 +49,7 @@ const LearnerDashboard = () => {
     return days;
   };
 
-  
+
 
   const menuItems = [
     {
@@ -172,10 +172,10 @@ const LearnerDashboard = () => {
                             Sessions
                           </div>
                           <div style={{ fontSize: '28px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>
-                            {mySubscription.sessions_remaining}/{mySubscription.sessions_count}
+                            {mySubscription.sessions_completed}/{mySubscription.sessions_total}
                           </div>
                           <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                            {mySubscription.sessions_completed} completed
+                            {mySubscription.sessions_remaining} remaining
                           </div>
                         </div>
 

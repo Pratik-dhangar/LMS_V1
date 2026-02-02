@@ -493,7 +493,13 @@ const LearnerSubscriptionManager = () => {
                       <div className="discount-detail-row">
                         <span className="discount-detail-label">Sessions:</span>
                         <span className="discount-detail-value">
-                          {sub.sessions_remaining} / {sub.sessions_count}
+                          {sub.sessions_completed}/{sub.sessions_total}
+                        </span>
+                      </div>
+                      <div className="discount-detail-row">
+                        <span className="discount-detail-label">Remaining:</span>
+                        <span className="discount-detail-value">
+                          {sub.sessions_remaining} sessions
                         </span>
                       </div>
                       <div className="discount-detail-row">
@@ -1064,7 +1070,7 @@ const LearnerSubscriptionManager = () => {
                           Period: {new Date(sub.start_date).toLocaleDateString()} - {new Date(sub.expiry_date).toLocaleDateString()}
                         </p>
                         <p>
-                          Sessions: {sub.sessions_remaining} / {sub.sessions_count} remaining
+                          Sessions: {sub.sessions_completed}/{sub.sessions_total} ({sub.sessions_remaining} remaining)
                         </p>
                         <p>Price: ₹{parseFloat(sub.net_price_paid).toLocaleString("en-IN")}</p>
                       </div>

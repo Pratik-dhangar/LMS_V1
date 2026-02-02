@@ -6,6 +6,7 @@ Main application setup with CORS, routers
 import logging
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -60,22 +61,50 @@ logger = logging.getLogger(__name__)
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# Initialize FastAPI app
+# ✅ Background Task Scheduler for Auto-Cleanup Jobs
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.workers.chat_message_cleanup import cleanup_old_messages
+from app.workers.subscription_tasks import process_ended_sessions_task
+
+scheduler = AsyncIOScheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Startup and shutdown logic for the application.
+    Manages the background scheduler lifecycle.
+    """
+    # STARTUP
+    try:
+        if not scheduler.running:
+            # Schedule chat message cleanup daily at 3 AM
+            scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
+            # Schedule session processing every 1 minute to handle subscription session counting (for immediate updates)
+            scheduler.add_job(process_ended_sessions_task, 'interval', minutes=1, id='session_processing', replace_existing=True)
+            scheduler.start()
+            logger.info("✅ Background scheduler started")
+            logger.info("   - Chat message cleanup: Daily at 3 AM")
+            logger.info("   - Session processing: Every 1 minute")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {str(e)}")
+    
+    yield
+    
+    # SHUTDOWN
+    try:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            logger.info("✅ Background scheduler shut down gracefully")
+    except Exception as e:
+        logger.error(f"Error during scheduler shutdown: {str(e)}")
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="HurshBinTech API",
     version="1.0.0",
     description="User management system with role-based authentication",
+    lifespan=lifespan
 )
-
-# ✅ Background Task Scheduler for Auto-Cleanup Jobs
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.workers.chat_message_cleanup import cleanup_old_messages
-
-scheduler = AsyncIOScheduler()
-# Schedule chat message cleanup daily at 3 AM
-scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup')
-scheduler.start()
-logger.info("Background scheduler started - Chat message cleanup scheduled for 3 AM daily")
 
 # Add rate limiter to app state only if not in testing mode
 app.state.limiter = limiter
