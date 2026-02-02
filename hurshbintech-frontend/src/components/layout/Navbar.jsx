@@ -215,7 +215,6 @@ const Navbar = () => {
                 className={`navbar-btn ${location.pathname.includes("/communication") ? "active" : ""}`}
                 onClick={() => handleNavigate("/communication/webinar")}
               >
-                <Video className="w-4 h-4" />
                 Communication
               </button>
             )}
