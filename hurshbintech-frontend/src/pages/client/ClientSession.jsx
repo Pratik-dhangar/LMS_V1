@@ -148,7 +148,9 @@ const ClientSession = () => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return {
+      display: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    };
   };
 
   // Component mount - initialize session
@@ -317,12 +319,31 @@ const ClientSession = () => {
         setStopwatchIsRunning(data.isRunning);
       };
 
-      wbService.onFloatingAnimations = (animations) => {
-        setFloatingAnimations(prev => [...prev, ...animations]);
+      wbService.onFeedbackMessage = (data) => {
+        setFeedbackMessage(data.text || '');
+        if (data.text) {
+          setTimeout(() => {
+            setFeedbackMessage('');
+          }, 3000);
+        }
+      };
+
+      wbService.onWaitingMessage = (data) => {
+        setWaitingMessage(data.text || '');
+        if (data.text) {
+          setTimeout(() => {
+            setWaitingMessage('');
+          }, 5000);
+        }
+      };
+
+      wbService.onFloatingAnimations = (data) => {
+        console.log('[ClientSession] Floating animations received:', data);
+        setFloatingAnimations(prev => [...prev, ...data.animations]);
 
         setTimeout(() => {
           setFloatingAnimations(prevAnims =>
-            prevAnims.filter(anim => !animations.find(newAnim => newAnim.id === anim.id))
+            prevAnims.filter(anim => !data.animations.find(newAnim => newAnim.id === anim.id))
           );
         }, 15000);
       };

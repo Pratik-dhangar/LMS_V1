@@ -3298,8 +3298,8 @@ const Whiteboard = ({
                                 className={`floating-animation ${animation.type} ${animation.popped ? 'popped' : ''}`}
                                 style={{
                                     left: `${animation.x}%`,
-                                    animationDelay: `${animation.startDelay}ms`,
-                                    animationDuration: `${animation.duration}ms`,
+                                    '--animation-delay': animation.startDelay,
+                                    '--animation-duration': animation.duration,
                                     cursor: !animation.popped ? 'pointer' : 'default',
                                     pointerEvents: animation.popped ? 'none' : 'auto',
                                 }}

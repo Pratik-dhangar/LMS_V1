@@ -2333,3 +2333,201 @@ class EmailService:
             email_type="out_of_stock_alert",
         )
 
+    # ========== WEBINAR INVITATION EMAILS ==========
+
+    @staticmethod
+    async def send_webinar_invitation(
+        recipient_email: str,
+        recipient_name: str,
+        webinar_title: str,
+        webinar_description: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        meeting_link: str,
+        host_name: str,
+        host_role: str,
+    ) -> bool:
+        """Send webinar invitation email to participants"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"Webinar Invitation: {webinar_title}"
+        
+        # Format date and time nicely
+        from datetime import datetime
+        try:
+            # Parse if string, otherwise use as-is
+            if isinstance(scheduled_date, str):
+                date_obj = datetime.strptime(scheduled_date, '%Y-%m-%d')
+                date_str = date_obj.strftime('%B %d, %Y')
+            else:
+                date_str = scheduled_date.strftime('%B %d, %Y')
+                
+            if isinstance(scheduled_time, str):
+                time_obj = datetime.strptime(scheduled_time, '%H:%M:%S')
+                time_str = time_obj.strftime('%I:%M %p')
+            else:
+                time_str = scheduled_time.strftime('%I:%M %p')
+        except:
+            date_str = str(scheduled_date)
+            time_str = str(scheduled_time)
+        
+        description_html = f"<p style='color: #555; line-height: 1.6;'>{webinar_description}</p>" if webinar_description else ""
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%);
+                        padding: 25px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .info-box {{
+                        background-color: #f9fafb;
+                        padding: 20px;
+                        border-radius: 6px;
+                        margin: 20px 0;
+                        border-left: 4px solid #db9d32;
+                    }}
+                    .info-row {{
+                        display: flex;
+                        justify-content: space-between;
+                        margin: 10px 0;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                    }}
+                    .info-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .info-label {{
+                        font-weight: 600;
+                        color: #374151;
+                    }}
+                    .info-value {{
+                        color: #555;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 14px 32px;
+                        background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%);
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        font-weight: 600;
+                        margin: 20px 0;
+                        text-align: center;
+                    }}
+                    .btn:hover {{
+                        background: linear-gradient(135deg, #c98d1e 0%, #b87d0f 100%);
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    h2 {{
+                        color: #1f2937;
+                        margin: 0 0 15px 0;
+                    }}
+                    .highlight {{
+                        background-color: #fff8e1;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 15px 0;
+                        border-left: 4px solid #db9d32;
+                        color: #7f5f01;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 28px;">Webinar Invitation</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">{webinar_title}</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        <p>You are invited to join an upcoming webinar hosted by <strong>{host_name}</strong> ({host_role}).</p>
+                        
+                        <h2>{webinar_title}</h2>
+                        
+                        {description_html}
+                        
+                        <div class="info-box">
+                            <div class="info-row">
+                                <span class="info-label">Date:</span>
+                                <span class="info-value">{date_str}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Time:</span>
+                                <span class="info-value">{time_str}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Host:</span>
+                                <span class="info-value">{host_name} ({host_role})</span>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight">
+                            <strong>Important:</strong> Please join the meeting at the scheduled time using the link below.
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{meeting_link}" class="btn">Join Meeting</a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 25px;">
+                            <strong>Meeting Link:</strong><br>
+                            <a href="{meeting_link}" style="color: #db9d32; word-break: break-all;">{meeting_link}</a>
+                        </p>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            We look forward to your participation!
+                        </p>
+                        
+                        <p style="color: #999; font-size: 13px; margin-top: 25px;">
+                            If you have any questions, please contact the host directly.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>This is an automated invitation from HurshBintech Communication System.</p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="webinar_invitation",
+        )

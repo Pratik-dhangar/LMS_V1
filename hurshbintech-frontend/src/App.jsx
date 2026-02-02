@@ -103,6 +103,11 @@ import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
 
+
+// Communication Pages
+import WebinarPage from './pages/communication/webinar/WebinarPage';
+
+
 // Subscription Pages
 import ManageSubscriptionPackages from './pages/admin/ManageSubscriptionPackages';
 import LearnerSubscriptionManager from './pages/head/LearnerSubscriptionManager';
@@ -812,6 +817,15 @@ function AppRoutes() {
             </ProtectedRoute>
           } />
 
+          {/* Communication Routes */}
+          <Route 
+            path="/communication/webinar" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
+                <WebinarPage />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Chat Routes */}
           <Route

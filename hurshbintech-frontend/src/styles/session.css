@@ -80,6 +80,9 @@
   display: flex;
   gap: clamp(0.75rem, 2vw, 1.5rem);
   margin: clamp(0.75rem, 2vw, 1.5rem);
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
 }
 
 /* Desktop: 3-column layout (Left sidebar + Center + Right sidebar) */
@@ -706,12 +709,15 @@
   border-radius: clamp(0.5rem, 1vw, 1rem);
   margin: clamp(0.5rem, 1.5vw, 1rem);
   position: relative;
-  width: calc(100% - clamp(1rem, 3vw, 3rem));
+  /* width: calc(100% - clamp(1rem, 3vw, 3rem)); */
   margin-left: auto;
   margin-right: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-height: 400px;
+  height: 100%;
 }
 
 /* ========================================
@@ -756,7 +762,7 @@
 @media (min-width: 1366px) {
   .session-whiteboard-container {
     height: 520px;
-    max-width: 67.875rem;
+    /* max-width: 67.875rem; */
     /* 1086px */
   }
 }
