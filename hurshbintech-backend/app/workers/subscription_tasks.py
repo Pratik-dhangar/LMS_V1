@@ -10,7 +10,7 @@ from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import async_session_maker
+from app.db.session import AsyncSessionLocal
 from app.crud import subscription_crud, user_crud
 from app.models.subscription import LearnerSubscription
 from app.core.config import settings
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def get_db_session() -> AsyncSession:
     """Create a new database session for background tasks"""
-    async with async_session_maker() as session:
+    async with AsyncSessionLocal() as session:
         return session
 
 
@@ -34,7 +34,7 @@ async def expire_subscriptions_task():
     logger.info("Starting subscription expiry task...")
     
     try:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             expired_count = await subscription_crud.expire_subscriptions(db)
             logger.info(f"Subscription expiry task completed: {expired_count} subscriptions expired")
             return expired_count
@@ -118,7 +118,7 @@ async def send_renewal_reminders_for_days(days_before_expiry: int):
     logger.info(f"Starting renewal reminder task for {days_before_expiry} days before expiry...")
     
     try:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             subscriptions = await subscription_crud.get_subscriptions_needing_reminders(db, days_before_expiry)
             
             reminder_count = 0
@@ -158,7 +158,7 @@ async def send_grace_period_warnings():
     logger.info("Starting grace period warning task...")
     
     try:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             from app.models.subscription import SubscriptionStatus
             from sqlalchemy import select, and_
             
@@ -260,7 +260,7 @@ async def process_ended_sessions_task():
     logger.info("Starting session tracking task...")
     
     try:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
             logger.info(f"Session tracking task completed: {sessions_processed} sessions processed")
             return sessions_processed

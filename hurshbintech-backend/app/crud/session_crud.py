@@ -101,8 +101,9 @@ async def create_session(
             )
         )
         .order_by(desc(LearnerSubscription.created_at))
+        .limit(1)
     )
-    active_subscription = subscription_result.scalar_one_or_none()
+    active_subscription = subscription_result.scalars().first()
     
     if active_subscription:
         new_session.subscription_id = active_subscription.id
