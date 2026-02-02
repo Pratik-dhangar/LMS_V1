@@ -106,7 +106,9 @@ const LearnerSession = () => {
       // Handle comments tool toggle from trainer
       whiteboardService.onCommentsToggle = (data) => {
         console.log('[LearnerSession] Comments toggle received:', data);
-        setIsCommentsOpen(data.visible);
+        // Only open comments panel when trainer sends a prompt
+        // Don't open from other toggle events
+        // setIsCommentsOpen(data.visible);
       };
     }
     return () => {
@@ -176,6 +178,9 @@ const LearnerSession = () => {
 
         // Auto-open Prompt Line div when new prompt is received
         setIsPromptLineOpen(true);
+
+        // Auto-open Comments/Transcript panel when new prompt is received
+        setIsCommentsOpen(true);
 
         // Trigger animation
         setPromptLineAnimating(true);
@@ -1788,25 +1793,33 @@ const LearnerSession = () => {
           {/* Prompt Line with Bulb */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span
+              onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
               style={{
                 fontSize: '24px',
-                filter: promptLineAnimating ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
-                animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none'
+                cursor: 'pointer',
+                filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== '[Prompts from trainer will appear here]' ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
+                animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                transition: 'filter 0.3s ease, transform 0.2s ease',
+                transform: isPromptLineOpen ? 'scale(1.1)' : 'scale(1)',
+                userSelect: 'none'
               }}
             >
               💡
             </span>
-            <div style={{
-              backgroundColor: '#f9fafb',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              border: '1px solid #e5e7eb',
-              maxWidth: '300px'
-            }}>
-              <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {promptText !== '[Prompts from trainer will appear here]' ? promptText : 'Waiting for prompt...'}
-              </p>
-            </div>
+            {isPromptLineOpen && (
+              <div style={{
+                backgroundColor: '#f9fafb',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                border: promptText !== '[Prompts from trainer will appear here]' ? '2px solid #fbbf24' : '1px solid #e5e7eb',
+                maxWidth: '300px',
+                transition: 'border 0.3s ease'
+              }}>
+                <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {promptText !== '[Prompts from trainer will appear here]' ? promptText : 'Waiting for prompt...'}
+                </p>
+              </div>
+            )}
           </div>
 
 

@@ -70,6 +70,9 @@ class AboutUs(Base):
     commitment_title = Column(String(255), nullable=True, default="Our Commitment")
     commitment_content = Column(Text, nullable=True)
     
+    # Featured Coach for appointment booking
+    featured_coach_id = Column(Integer, ForeignKey("coach_profiles.id"), nullable=True)
+    
     # Metadata
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(SAEnum(AboutUsStatus), default=AboutUsStatus.DRAFT, nullable=False)

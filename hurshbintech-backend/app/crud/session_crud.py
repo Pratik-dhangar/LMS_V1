@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -77,12 +77,36 @@ async def create_session(
     
     # Fetch learner to populate learner_name
     from app.models.user_model import User
+    from app.models.subscription import LearnerSubscription, SubscriptionStatus
+    
     learner_result = await db.execute(
         select(User).where(User.id == session_data.learner_id)
     )
     learner = learner_result.scalar_one_or_none()
     if learner:
         new_session.learner_name = learner.name
+    
+    # Automatically link learner's active subscription to track session usage
+    subscription_result = await db.execute(
+        select(LearnerSubscription)
+        .where(
+            and_(
+                LearnerSubscription.learner_id == session_data.learner_id,
+                LearnerSubscription.status.in_([
+                    SubscriptionStatus.ACTIVE,
+                    SubscriptionStatus.PAUSED,
+                    SubscriptionStatus.FROZEN
+                ]),
+                LearnerSubscription.sessions_remaining > 0
+            )
+        )
+        .order_by(desc(LearnerSubscription.created_at))
+        .limit(1)
+    )
+    active_subscription = subscription_result.scalars().first()
+    
+    if active_subscription:
+        new_session.subscription_id = active_subscription.id
 
     # Add learning content associations if provided (BEFORE commit)
     if session_data.content_ids:

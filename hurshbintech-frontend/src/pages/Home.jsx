@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
+import FeaturedCoachCard from "../components/common/FeaturedCoachCard";
 import aboutUsService from '../api/services/aboutUsService';
+import headService from '../api/services/headService';
 import blogService from '../api/services/blogService';
 import vlogService from '../api/services/vlogService';
 import DOMPurify from 'dompurify';
@@ -15,6 +17,7 @@ const Home = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [aboutUs, setAboutUs] = useState(null);
+  const [featuredCoach, setFeaturedCoach] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [vlogs, setVlogs] = useState([]);
   const [visibleSections, setVisibleSections] = useState(new Set());
@@ -28,6 +31,17 @@ const Home = () => {
       setLoading(true);
       const data = await aboutUsService.getPublicAboutUs('en');
       setAboutUs(data);
+      
+      // Fetch featured coach if featured_coach_id exists
+      if (data && data.featured_coach_id) {
+        try {
+          const coach = await headService.getCoachById(data.featured_coach_id);
+          setFeaturedCoach(coach);
+        } catch (err) {
+          console.error('Error fetching featured coach:', err);
+          setFeaturedCoach(null);
+        }
+      }
     } catch (err) {
       if (err?.response?.status !== 404) {
         console.error('Error fetching About Us:', err);
@@ -160,11 +174,7 @@ const Home = () => {
   }, [aboutUs]);
 
   const handleBookAppointment = () => {
-    if (!user) {
-      navigate("/guest-booking");
-    } else {
-      navigate("/book-appointment");
-    }
+    navigate("/book-appointment");
   };
 
   const formatDate = (dateString) => {
@@ -342,6 +352,9 @@ const Home = () => {
         </div>
       ) : aboutUs ? (
         <main id="about-section" className="about-main">
+          {/* Floating Featured Coach Card */}
+          {featuredCoach && <FeaturedCoachCard coach={featuredCoach} floating={true} />}
+          
           {/* Hero Section with Background Image */}
           <div className="home-section-header">
               <h2 className="home-section-title">About Us</h2>
@@ -471,6 +484,15 @@ const Home = () => {
                     />
                   </div>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* Fixed Featured Coach Card in About Section */}
+          {featuredCoach && (
+            <section className="featured-coach-section" style={{ padding: '40px 20px', backgroundColor: '#f9fafb' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'center' }}>
+                <FeaturedCoachCard coach={featuredCoach} floating={false} />
               </div>
             </section>
           )}

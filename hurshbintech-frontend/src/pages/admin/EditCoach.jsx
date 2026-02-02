@@ -150,7 +150,7 @@ const EditCoach = () => {
     }
 
     try {
-      await adminService.deleteCoachReferenceFile(coachId, referenceId);
+      await headService.deleteCoachReferenceFile(coachId, referenceId);
       setExistingReferenceData(prev => prev.filter(file => file.id !== referenceId));
       toast.success('File deleted successfully', {
         position: "top-center",
@@ -212,7 +212,7 @@ const EditCoach = () => {
 
     try {
       // Update coach with null profile picture
-      await adminService.updateCoach(coachId, { profile_picture_url: null });
+      await headService.updateCoach(coachId, { profile_picture_url: null });
 
       setExistingProfilePicture(null);
 

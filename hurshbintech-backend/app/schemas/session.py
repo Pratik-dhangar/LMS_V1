@@ -92,6 +92,9 @@ class SessionResponse(BaseModel):
     # New tracking fields
     total_duration: Optional[int] = None  # Actual session duration in minutes
     session_start_time: Optional[datetime] = None  # When trainer started the session
+    # Subscription tracking
+    subscription_id: Optional[int] = None  # Linked learner subscription for session count tracking
+    session_counted: bool = False  # Has this ended session been counted towards subscription usage?
     # Session notes from session_reports table
     session_notes: Optional[str] = None  # Notes stored in session_reports table
     # Recording fields
