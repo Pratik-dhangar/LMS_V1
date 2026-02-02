@@ -14,7 +14,6 @@ import YouTubePopup from '../../components/common/YouTubePopup';
 import Exercise from '../../components/session/Exercise';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
-import useMessages from '../../hooks/useMessages';
 import useComments from '../../hooks/useComments';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
@@ -59,7 +58,6 @@ const LearnerSession = () => {
   const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
   const [promptVisible, setPromptVisible] = useState(false); // Toggle prompt line visibility (collapsed by default)
   const [isEyeBlinking, setIsEyeBlinking] = useState(false); // Eye blinking animation when new prompt received
-  const [textMessages, setTextMessages] = useState([]); // For text messages displayed on whiteboard
   const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
   const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
   const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
@@ -74,12 +72,8 @@ const LearnerSession = () => {
   const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [promptLineAnimating, setPromptLineAnimating] = useState(false);
-
-  // Use messages hook
-  const { messages, currentMessage, setCurrentMessage, sendMessage, handleKeyPress, addReceivedMessage } = useMessages(webRTC, 'learner');
 
   // -----------------------------------------------------------  
   // 🔹 Purpose: Comments using custom hook (learner can send, but panel only shows when trainer opens)
@@ -172,14 +166,9 @@ const LearnerSession = () => {
     // console.log('[LearnerSession] feedbackMessage state changed to:', feedbackMessage);
   }, [feedbackMessage]);
 
-  // Set up WebRTC message callback
+  // Set up WebRTC message callback (removed - messaging feature disabled)
   useEffect(() => {
     if (webRTC) {
-      webRTC.onMessage = (message) => {
-        // console.log('[LearnerSession] Message received:', message);
-        addReceivedMessage(message);
-      };
-
       // Set up prompt text handler
       webRTC.onPromptText = (data) => {
         // console.log('[LearnerSession] Prompt text received from trainer:', data);
@@ -203,11 +192,10 @@ const LearnerSession = () => {
     }
     return () => {
       if (webRTC) {
-        webRTC.onMessage = null;
         webRTC.onPromptText = null;
       }
     };
-  }, [webRTC, addReceivedMessage]);
+  }, [webRTC]);
 
   // Listen for session end from trainer
   useEffect(() => {
@@ -653,7 +641,7 @@ const LearnerSession = () => {
     // Set up callback for feedback messages from trainer
     whiteboardService.onFeedbackMessage = (data) => {
       // console.log('[LearnerSession] Feedback message received from trainer:', data);
-      setFeedbackMessage(data.message);
+      setFeedbackMessage(data.text || '');
 
       // Auto-hide after 3 seconds
       setTimeout(() => {
@@ -664,7 +652,7 @@ const LearnerSession = () => {
     // Set up callback for waiting messages from trainer
     whiteboardService.onWaitingMessage = (data) => {
       // console.log('[LearnerSession] Waiting message received from trainer:', data);
-      setWaitingMessage(data.message);
+      setWaitingMessage(data.text || '');
 
       // Auto-hide after 3 seconds
       setTimeout(() => {
@@ -674,7 +662,7 @@ const LearnerSession = () => {
 
     // Set up callback for floating animations from trainer
     whiteboardService.onFloatingAnimations = (data) => {
-      // console.log('[LearnerSession] Floating animations received from trainer:', data);
+      console.log('[LearnerSession] Floating animations received from trainer:', data);
       setFloatingAnimations(prev => [...prev, ...data.animations]);
 
       // Auto-remove after 13 seconds (same as trainer)
@@ -1006,7 +994,7 @@ const LearnerSession = () => {
   // --------------------------
   // WebRTC Initialization
   // --------------------------
-  
+
   const initializeWebRTC = async () => {
     // Initialize Whiteboard
     const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'learner');
@@ -1572,7 +1560,133 @@ const LearnerSession = () => {
   }
 
   return (
-    <div className={`learner-session-page ${pageClassName}`}>
+    <div className={`learner-session-page ${pageClassName}`} style={{
+      width: '100%',
+      height: '100vh',
+      margin: 0,
+      padding: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      boxSizing: 'border-box',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        /* Learner Session Full-Width Layout */
+        .learner-session-page {
+          width: 100% !important;
+          height: 100vh !important;
+          display: flex !important;
+          flex-direction: column !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-sizing: border-box !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          height: 100% !important;
+          width: 100% !important;
+          overflow-x: hidden !important;
+        }
+
+        /* Session Header - Fixed at top */
+        .session-header {
+          flex-shrink: 0;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        /* Main Container - Takes remaining height */
+        .learner-main-container {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        /* Header with Metrics - Full width */
+        .learner-metrics-header {
+          width: 100% !important;
+          box-sizing: border-box !important;
+          flex-shrink: 0 !important;
+          padding: 8px 8px !important;
+          margin: 0 !important;
+          gap: 12px !important;
+        }
+
+        /* Whiteboard Wrapper - Takes all remaining space */
+        .learner-whiteboard-wrapper {
+          flex: 1 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          display: flex !important;
+          flex-direction: column !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .session-whiteboard-container {
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        /* Ensure inner divs fill the space */
+        .learner-whiteboard-wrapper > div {
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+        }
+
+        .learner-whiteboard-wrapper .w-full {
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        /* Hide sidebar toggles in full-width learner mode */
+        .session-sidebar-toggles {
+          display: none !important;
+        }
+
+        /* Mobile: Use dynamic viewport height (100dvh for modern browsers, 100vh fallback) */
+        @media (max-width: 768px) {
+          .learner-session-page {
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            min-height: 100vh !important;
+          }
+        }
+
+        /* Desktop: Use regular viewport height */
+        @media (min-width: 769px) {
+          .learner-session-page {
+            height: 100vh !important;
+            min-height: 100vh !important;
+          }
+        }
+      `}</style>
       {/* Hidden audio element for background music */}
       <audio
         ref={learnerAudioRef}
@@ -1622,280 +1736,149 @@ const LearnerSession = () => {
       {/* Fullscreen activation triggers on first user interaction */}
       {showFullscreenPrompt && <div style={{ display: 'none' }} />}
 
-      {/* Frozen Mode Indicator
-      {isFrozen && (
-        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white py-3 px-4 text-center font-bold z-[9999] shadow-lg animate-pulse">
-          🔒 WINDOW FROZEN BY TRAINER - You cannot switch, minimize, or close this window
-        </div>
-      )} */}
+      {/* Main Container - Flexbox column layout */}
+      <div className="learner-main-container">
 
-      {/* Main Container - Responsive 3-column layout */}
-      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        <div className={`w-full bg-white p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
-          {/* Prompt Line Section */}
-          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-all duration-500"
-            style={{
-              background: 'linear-gradient(135deg, #fffbf7 0%, #fffef9 100%)',
-              border: '1px solid rgba(217, 119, 6, 0.2)',
-              ...(promptLineAnimating ? {
-                boxShadow: '0 0 20px rgba(218, 165, 32, 0.3), 0 2px 12px rgba(217, 119, 6, 0.15)'
-              } : {})
+        {/* Header with Metrics - Full width */}
+        <div className="learner-metrics-header" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '8px 8px',
+          backgroundColor: 'white',
+          borderRadius: '4px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          flexWrap: 'wrap',
+          margin: '0',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          {/* Divider */}
+          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+          {/* Prompt Level */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#d97706' }}>P:</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+          {/* Reinforcement Level */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#16a34a' }}>R:</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
+          </div>
+          {/* Prompt Line with Bulb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '24px',
+                filter: promptLineAnimating ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
+                animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none'
+              }}
+            >
+              💡
+            </span>
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              border: '1px solid #e5e7eb',
+              maxWidth: '300px'
             }}>
-            <div
-              onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
-              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-amber-50/50"
-            >
-              <h3 className="font-bold text-sm md:text-base text-gray-800">Prompt Line (For Prompter)</h3>
-              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
-                transform: isPromptLineOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-              }}>{isPromptLineOpen ? '▼' : '▶'}</span>
+              <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {promptText !== '[Prompts from trainer will appear here]' ? promptText : 'Waiting for prompt...'}
+              </p>
             </div>
-            {isPromptLineOpen && (
-              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-                <div className="bg-white rounded-xl overflow-hidden" style={{
-                  boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(217, 119, 6, 0.15)'
-                }}>
-                  <textarea
-                    value={promptText}
-                    readOnly
-                    className="w-full h-24 p-4 sm:p-5 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 text-xs sm:text-sm md:text-base resize-none focus:outline-none border-0"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
-            background: 'linear-gradient(135deg, #fef9f3 0%, #fffbf7 100%)',
-            border: '1px solid rgba(219, 157, 50, 0.2)'
-          }}>
-            <div
-              onClick={() => setIsPrompterMeterOpen(!isPrompterMeterOpen)}
-              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-yellow-50/50"
-            >
-              <h3 className="font-bold text-sm md:text-base text-gray-800">Prompt Level</h3>
-              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
-                transform: isPrompterMeterOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-              }}>{isPrompterMeterOpen ? '▼' : '▶'}</span>
-            </div>
-            {isPrompterMeterOpen && (
-              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-                <div className="bg-white rounded-xl p-4 sm:p-5" style={{
-                  boxShadow: '0 2px 8px rgba(219, 157, 50, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(219, 157, 50, 0.15)'
-                }}>
-                  <div className="text-xs sm:text-sm text-gray-500 font-medium mb-2 tracking-wide">PROMPT LEVEL</div>
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-600">
-                    {promptMeter ?? 0}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
-          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
-            background: 'linear-gradient(135deg, #fef9f3 0%, #fffbf7 100%)',
-            border: '1px solid rgba(34, 197, 94, 0.2)'
-          }}>
-            <div
-              onClick={() => setIsReinforcementMeterOpen(!isReinforcementMeterOpen)}
-              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-yellow-50/50"
-            >
-              <h3 className="font-bold text-sm md:text-base text-gray-800">Reinforcement Level</h3>
-              <span className="text-amber-600 text-lg transition-transform duration-300" style={{
-                transform: isReinforcementMeterOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-              }}>{isReinforcementMeterOpen ? '▼' : '▶'}</span>
-            </div>
-            {isReinforcementMeterOpen && (
-              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-                <div className="bg-white rounded-xl p-4 sm:p-5" style={{
-                  boxShadow: '0 2px 8px rgba(34, 197, 94, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(34, 197, 94, 0.15)'
-                }}>
-                  <div className="text-xs sm:text-sm text-gray-500 font-medium mb-2 tracking-wide">REINFORCEMENT LEVEL</div>
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-600">
-                    {reinforcementMeter ?? 0}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
-            background: 'linear-gradient(135deg, #f8f9fa 0%, #f5f6f7 100%)',
-            border: '1px solid rgba(107, 114, 128, 0.15)'
-          }}>
-            <div
-              onClick={() => setIsMessagesOpen(!isMessagesOpen)}
-              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-gray-100/30"
-            >
-              <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800">Messages</h3>
-              <span className="text-gray-600 text-lg transition-transform duration-300" style={{
-                transform: isMessagesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-              }}>{isMessagesOpen ? '▼' : '▶'}</span>
-            </div>
-            {isMessagesOpen && (
-              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-                <div className="bg-white rounded-xl overflow-hidden" style={{
-                  boxShadow: '0 2px 8px rgba(107, 114, 128, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(107, 114, 128, 0.12)'
-                }}>
-                  <div className="max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto p-4 sm:p-5">
-                    {messages.length > 0 ? (
-                      messages.map((msg, idx) => (
-                        <div key={idx} className="mb-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-xs md:text-sm border border-gray-200/50">
-                          <strong className="text-gray-800 font-semibold">{msg.sender === 'You' ? 'Trainer' : msg.sender}:</strong>
-                          <span className="text-gray-700 ml-2">{msg.text}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.trainer_name ?? 'Trainer'}:</p>
-                        <p className="text-xs sm:text-xs md:text-sm text-gray-500">Great job on the last activity!</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 w-full min-w-0 mt-4 pt-4 border-t border-gray-200/50">
-                    <input
-                      type="text"
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="[Type message...]"
-                      className="flex-1 min-w-0 ml-1 mb-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 focus:bg-white transition-all"
-                    />
-                    <button
-                      onClick={sendMessage}
-                      className="flex-shrink-0 px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-semibold rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Comments Section - Appears when trainer opens it */}
-          <div className="rounded-2xl mb-3 overflow-hidden shadow-md hover:shadow-lg transition-shadow" style={{
-            background: 'linear-gradient(135deg, #f3f4f6 0%, #f5f6f8 100%)',
-            border: '1px solid rgba(59, 130, 246, 0.15)',
-            display: isCommentsOpen ? 'block' : 'none'
-          }}>
-            <div
-              className="flex items-center justify-between cursor-pointer p-4 sm:p-5 transition-all duration-300 hover:bg-blue-50/30"
-            >
-              <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800">💬 Comments</h3>
-            </div>
-            {isCommentsOpen && (
-              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
-                <div className="bg-white rounded-xl overflow-hidden" style={{
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5)',
-                  border: '1px solid rgba(59, 130, 246, 0.12)'
-                }}>
-                  {/* Learner Comments Input Section - Real-time Sync */}
-                  <div className="p-4 sm:p-5">
-                    <div className="font-semibold text-gray-700 text-xs sm:text-sm mb-2">👨‍🎓 Your Comments</div>
-                    <textarea
-                      value={commentInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCommentInput(val);
-                        debouncedSendComment(val);
-                      }}
-                      onBlur={() => flushSendComment(commentInput)}
-                      placeholder="Type your comment"
-                      className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 focus:bg-white transition-all resize-none"
-                      style={{ minHeight: '80px' }}
-                    />
+        </div>
 
-                  </div>
-                </div>
+        {/* Whiteboard - Fills remaining space */}
+        <div className="learner-whiteboard-wrapper">
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="session-whiteboard-container">
+              {/* Moveable Video Feed Overlay - Trainer's Video */}
+              {remoteStream && (
+                <MoveableVideoFeed
+                  videoStream={remoteStream}
+                  label="Trainer"
+                  position={videoPosition}
+                  size={videoSize}
+                  onPositionChange={setVideoPosition}
+                  onSizeChange={setVideoSize}
+                  isDraggable={true}
+                  isResizable={true}
+                  connectionStatus={connectionStatus}
+                  zIndex={100}
+                />
+              )}
+
+              {/* Whiteboard component - keep logic intact */}
+              <div className="w-full h-full">
+                <Whiteboard
+                  whiteboardService={whiteboardService}
+                  isTrainer={false}
+                  canvasItems={canvasItems}
+                  setCanvasItems={setCanvasItems}
+                  isFrozen={false}
+                  isPaused={false}
+                  toolAccess={toolAccess}
+                  remoteSelectedItemIds={remoteSelectedItemIds}
+                  feedbackMessage={feedbackMessage}
+                  waitingMessage={waitingMessage}
+                  floatingAnimations={floatingAnimations}
+                  onAnimationPop={handleAnimationPop}
+                  clearCanvasTrigger={clearCanvasTrigger}
+                  erasePenTrigger={erasePenTrigger}
+                  redrawCanvasTrigger={redrawCanvasTrigger}
+                  buckets={buckets}
+                  setBuckets={setBuckets}
+                  bucketColor={bucketColor}
+                  setBucketColor={setBucketColor}
+                  tool={tool}
+                  setTool={setTool}
+                  color={color}
+                  setColor={setColor}
+                  lineWidth={lineWidth}
+                  setLineWidth={setLineWidth}
+                  stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
+                  stopwatchIsRunning={syncedIsRunning}
+                />
               </div>
-            )}
+            </div>
           </div>
         </div>
-        {/* Whiteboard Area - Scrollable Container */}
-        <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
-          <div className="session-whiteboard-container">
-            {/* Moveable Video Feed Overlay - Trainer's Video */}
-            {remoteStream && (
-              <MoveableVideoFeed
-                videoStream={remoteStream}
-                label="Trainer"
-                position={videoPosition}
-                size={videoSize}
-                onPositionChange={setVideoPosition}
-                onSizeChange={setVideoSize}
-                isDraggable={true}
-                isResizable={true}
-                connectionStatus={connectionStatus}
-                zIndex={100}
-              />
-            )}
 
-            <div className="w-full h-full">
-              <Whiteboard
-                whiteboardService={whiteboardService}
-                isTrainer={false}
-                canvasItems={canvasItems}
-                setCanvasItems={setCanvasItems}
-                isFrozen={false}
-                isPaused={false}
-                toolAccess={toolAccess}
-                remoteSelectedItemIds={remoteSelectedItemIds}
-                textMessages={textMessages}
-                setTextMessages={setTextMessages}
-                feedbackMessage={feedbackMessage}
-                waitingMessage={waitingMessage}
-                floatingAnimations={floatingAnimations}
-                onAnimationPop={handleAnimationPop}
-                clearCanvasTrigger={clearCanvasTrigger}
-                erasePenTrigger={erasePenTrigger}
-                redrawCanvasTrigger={redrawCanvasTrigger}
-                buckets={buckets}
-                setBuckets={setBuckets}
-                bucketColor={bucketColor}
-                setBucketColor={setBucketColor}
-                tool={tool}
-                setTool={setTool}
-                color={color}
-                setColor={setColor}
-                lineWidth={lineWidth}
-                setLineWidth={setLineWidth}
-                stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
-                stopwatchIsRunning={syncedIsRunning}
-              />
-            </div>
-          </div>
+        {/* YouTube Popups - Synced from trainer (read-only for learner) */}
+        {youtubePopups.map(popup => (
+          <YouTubePopup
+            key={popup.id}
+            popupId={popup.id}
+            videoId={popup.videoId}
+            title={popup.title}
+            onClose={() => { }} // Learner cannot close, but provide empty handler
+            initialPosition={popup.position}
+            isTrainer={false}
+            isReadOnly={true} // Learner: view and resize only, cannot drag
+          />
+        ))}
 
-          {/* YouTube Popups - Synced from trainer (read-only for learner) */}
-          {youtubePopups.map(popup => (
-            <YouTubePopup
-              key={popup.id}
-              popupId={popup.id}
-              videoId={popup.videoId}
-              title={popup.title}
-              onClose={() => { }} // Learner cannot close, but provide empty handler
-              initialPosition={popup.position}
+        {/* Exercise Tool */}
+        {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
+          <div className="exercise-tool-container">
+            <Exercise
               isTrainer={false}
-              isReadOnly={true} // Learner: view and resize only, cannot drag
+              onExerciseSubmit={handleExerciseSubmit}
+              onAnswerChange={handleExerciseAnswerChange}
+              whiteboardService={whiteboardService}
+              initialExercise={exerciseData}
             />
-          ))}
-
-          {/* Exercise Tool */}
-          {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
-            <div className="exercise-tool-container">
-              <Exercise
-                isTrainer={false}
-                onExerciseSubmit={handleExerciseSubmit}
-                onAnswerChange={handleExerciseAnswerChange}
-                whiteboardService={whiteboardService}
-                initialExercise={exerciseData}
-              />
-            </div>
-          )}
-
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
