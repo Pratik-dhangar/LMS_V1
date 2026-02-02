@@ -58,6 +58,9 @@ class AboutUsBase(BaseModel):
     commitment_title: Optional[str] = Field(default="Our Commitment", max_length=255)
     commitment_content: Optional[str] = None
     
+    # Featured Coach for appointment booking
+    featured_coach_id: Optional[int] = None
+    
     # Status
     status: str = Field(default="draft", pattern="^(draft|published)$")
 
@@ -118,6 +121,9 @@ class AboutUsUpdate(BaseModel):
     # Commitment
     commitment_title: Optional[str] = Field(None, max_length=255)
     commitment_content: Optional[str] = None
+    
+    # Featured Coach
+    featured_coach_id: Optional[int] = None
     
     # Status
     status: Optional[str] = Field(None, pattern="^(draft|published)$")

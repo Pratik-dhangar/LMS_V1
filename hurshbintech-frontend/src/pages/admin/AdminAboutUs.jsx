@@ -5,6 +5,7 @@ import Loader from "../../components/common/Loader";
 import RichTextEditor from "../../components/RichTextEditor";
 import { FaSave, FaTimes, FaImage, FaGlobe } from "react-icons/fa";
 import aboutUsService from "../../api/services/aboutUsService";
+import adminService from "../../api/services/adminService";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/admin/AdminAboutUs.css";
 
@@ -41,15 +42,39 @@ const AdminAboutUs = () => {
     values_content: "",
     commitment_title: "Our Commitment",
     commitment_content: "",
+    featured_coach_id: null,
     status: "draft",
   });
 
   const [featuredImage, setFeaturedImage] = useState(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState(null);
+  const [coaches, setCoaches] = useState([]);
+  const [selectedCoach, setSelectedCoach] = useState(null);
 
   useEffect(() => {
     fetchAboutUs();
+    fetchCoaches();
   }, []);
+
+  // Set selected coach when coaches are loaded and featured_coach_id exists
+  useEffect(() => {
+    if (coaches.length > 0 && formData.featured_coach_id) {
+      const coach = coaches.find(c => c.id === formData.featured_coach_id);
+      if (coach) {
+        setSelectedCoach(coach);
+      }
+    }
+  }, [coaches, formData.featured_coach_id]);
+
+  const fetchCoaches = async () => {
+    try {
+      const data = await adminService.getAllConsultants();
+      setCoaches(data || []);
+    } catch (err) {
+      console.error("Error fetching coaches:", err);
+      toast.error("Failed to load coaches");
+    }
+  };
 
   const fetchAboutUs = async () => {
     try {
@@ -83,10 +108,18 @@ const AdminAboutUs = () => {
           values_content: aboutUs.values_content || "",
           commitment_title: aboutUs.commitment_title || "Our Commitment",
           commitment_content: aboutUs.commitment_content || "",
+          featured_coach_id: aboutUs.featured_coach_id || null,
           status: aboutUs.status,
         });
         if (aboutUs.featured_image_url) {
           setFeaturedImagePreview(aboutUs.featured_image_url);
+        }
+        // Set selected coach if exists
+        if (aboutUs.featured_coach_id) {
+          const coach = coaches.find(c => c.id === aboutUs.featured_coach_id);
+          if (coach) {
+            setSelectedCoach(coach);
+          }
         }
       }
     } catch (err) {
@@ -112,6 +145,16 @@ const AdminAboutUs = () => {
 
   const handleContentChange = (field, html) => {
     setFormData((prev) => ({ ...prev, [field]: html }));
+  };
+
+  const handleCoachSelect = (e) => {
+    const coachId = parseInt(e.target.value);
+    const coach = coaches.find(c => c.id === coachId);
+    setSelectedCoach(coach || null);
+    setFormData((prev) => ({
+      ...prev,
+      featured_coach_id: coachId || null,
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -225,6 +268,7 @@ const AdminAboutUs = () => {
     { id: "learner_focus", label: "Learner Focus", icon: "🎪" },
     { id: "values", label: "Values", icon: "💎" },
     { id: "commitment", label: "Commitment", icon: "🤝" },
+    { id: "book_appointment", label: "Book Appointment", icon: "📅" },
   ];
 
   if (loading) {
@@ -761,6 +805,122 @@ const AdminAboutUs = () => {
                           handleContentChange("commitment_content", html)
                         }
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Book Appointment */}
+                {activeTab === "book_appointment" && (
+                  <div className="admin-aboutus-tab-content-inner">
+                    <div className="admin-aboutus-content-section">
+                      <label className="admin-aboutus-section-label">
+                        <span className="admin-aboutus-section-icon">📅</span>
+                        Featured Coach
+                      </label>
+                      <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                        Select a coach to be displayed on the landing page for quick appointment booking
+                      </p>
+                      <select
+                        value={formData.featured_coach_id || ''}
+                        onChange={handleCoachSelect}
+                        className="admin-aboutus-input admin-aboutus-input-lg"
+                        style={{ marginBottom: '20px' }}
+                      >
+                        <option value="">-- Select a Coach --</option>
+                        {coaches.map((coach) => (
+                          <option key={coach.id} value={coach.id}>
+                            {coach.name} {coach.specialization ? `- ${coach.specialization}` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Coach Preview Card */}
+                      {selectedCoach && (
+                        <div style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '20px',
+                          backgroundColor: '#f9fafb',
+                          marginTop: '20px'
+                        }}>
+                          <h4 style={{ marginBottom: '15px', color: '#374151', fontSize: '16px', fontWeight: '600' }}>
+                            Preview - How it will appear on Landing Page:
+                          </h4>
+                          <div style={{
+                            border: '2px solid #3b82f6',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            maxWidth: '400px',
+                            backgroundColor: '#ffffff',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            {/* Coach Profile Picture */}
+                            {selectedCoach.profile_picture_url ? (
+                              <img
+                                src={selectedCoach.profile_picture_url}
+                                alt={selectedCoach.name}
+                                style={{
+                                  width: '100%',
+                                  height: '200px',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '200px',
+                                backgroundColor: '#e5e7eb',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '48px',
+                                color: '#9ca3af'
+                              }}>
+                                {selectedCoach.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            
+                            {/* Coach Details */}
+                            <div style={{ padding: '20px' }}>
+                              <h3 style={{
+                                fontSize: '20px',
+                                fontWeight: '700',
+                                color: '#1f2937',
+                                marginBottom: '8px'
+                              }}>
+                                Book Appointment with {selectedCoach.name}
+                              </h3>
+                              {selectedCoach.specialization && (
+                                <p style={{
+                                  fontSize: '14px',
+                                  color: '#6b7280',
+                                  marginBottom: '16px'
+                                }}>
+                                  <strong>Specialization:</strong> {selectedCoach.specialization}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                disabled
+                                style={{
+                                  width: '100%',
+                                  padding: '12px',
+                                  backgroundColor: '#3b82f6',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '16px',
+                                  fontWeight: '600',
+                                  cursor: 'not-allowed',
+                                  opacity: '0.7'
+                                }}
+                              >
+                                Book Appointment
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

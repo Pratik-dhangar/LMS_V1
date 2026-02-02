@@ -83,6 +83,7 @@ def convert_about_us_response(about_us) -> AboutUsResponse:
         "values_content": about_us.values_content,
         "commitment_title": about_us.commitment_title,
         "commitment_content": about_us.commitment_content,
+        "featured_coach_id": about_us.featured_coach_id,
         "status": about_us.status.value,
         "author_id": about_us.author_id,
         "author": {
