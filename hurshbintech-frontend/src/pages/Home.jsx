@@ -160,11 +160,7 @@ const Home = () => {
   }, [aboutUs]);
 
   const handleBookAppointment = () => {
-    if (!user) {
-      navigate("/guest-booking");
-    } else {
-      navigate("/book-appointment");
-    }
+    navigate("/book-appointment");
   };
 
   const formatDate = (dateString) => {

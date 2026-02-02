@@ -105,7 +105,13 @@ const BookAppointment = () => {
   };
 
   const handleBookAppointment = (coach) => {
-    navigate(`/book-appointment/${coach.id}`, { state: { coach } });
+    // For guest users, navigate to email verification with coach data
+    if (!user) {
+      navigate('/guest-booking', { state: { coach } });
+    } else {
+      // For registered users, go to appointment form
+      navigate(`/book-appointment/${coach.id}`, { state: { coach } });
+    }
   };
 
   const renderStars = (rating) => {

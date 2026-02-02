@@ -754,11 +754,7 @@ function AppRoutes() {
           />
           <Route
             path="/book-appointment"
-            element={
-              <ProtectedRoute allowedRoles={['head', 'trainer', 'learner', 'coach', 'admin']}>
-                <BookAppointment />
-              </ProtectedRoute>
-            }
+            element={<BookAppointment />}
           />
           <Route
             path="/book-appointment/:coachId"

@@ -92,11 +92,7 @@ const Navbar = () => {
             <button
               className="navbar-btn"
               onClick={() => {
-                if (!user) {
-                  handleNavigate("/guest-booking");
-                } else {
-                  handleNavigate("/book-appointment");
-                }
+                handleNavigate("/book-appointment");
               }}
             >
               Book Appointment
@@ -189,11 +185,7 @@ const Navbar = () => {
             <button
               className="navbar-btn"
               onClick={() => {
-                if (!user) {
-                  handleNavigate("/guest-booking");
-                } else {
-                  handleNavigate("/book-appointment");
-                }
+                handleNavigate("/book-appointment");
               }}
             >
               Book Appointment
