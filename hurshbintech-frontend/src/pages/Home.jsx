@@ -25,8 +25,7 @@ const Home = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [typedText, setTypedText] = useState('');
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [showFullBio, setShowFullBio] = useState(false);
   const sectionRefs = useRef({});
 
   const fetchAboutUs = useCallback(async () => {
@@ -99,47 +98,6 @@ const Home = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Typing animation effect for appointment card (only on first load)
-  useEffect(() => {
-    if (!featuredCoach) {
-      setTypedText('');
-      setIsTypingComplete(false);
-      return;
-    }
-
-    const fullText = `Book Appointment with ${featuredCoach.name}!`;
-    const hasSeenAnimation = sessionStorage.getItem('hasSeenTypingAnimation');
-
-    // If user has already seen the animation, show full text immediately
-    if (hasSeenAnimation) {
-      setTypedText(fullText);
-      setIsTypingComplete(true);
-      return;
-    }
-
-    let currentIndex = 0;
-    setTypedText('');
-    setIsTypingComplete(false);
-
-    // Delay before starting typing
-    const startDelay = setTimeout(() => {
-      const typingInterval = setInterval(() => {
-        if (currentIndex <= fullText.length) {
-          setTypedText(fullText.slice(0, currentIndex));
-          currentIndex++;
-        } else {
-          setIsTypingComplete(true);
-          sessionStorage.setItem('hasSeenTypingAnimation', 'true');
-          clearInterval(typingInterval);
-        }
-      }, 50); // Type speed: 50ms per character
-
-      return () => clearInterval(typingInterval);
-    }, 800); // Wait 800ms before starting to type
-
-    return () => clearTimeout(startDelay);
-  }, [featuredCoach]);
 
   useEffect(() => {
     if (!aboutUs) return;
@@ -315,13 +273,6 @@ const Home = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const scrollToCoachSection = () => {
-    const element = document.getElementById('featured-coach-section');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -343,18 +294,273 @@ const Home = () => {
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
         <h2 className="home-hero-subtitle"> We stand with families having children facing delays & difficulties by creating optimum learning opportunities!</h2>
-        
-        {/* Book Appointment Overlay Card */}
-        {featuredCoach && typedText && (
-          <div className={`hero-appointment-card ${isTypingComplete ? 'typing-complete' : ''}`} onClick={scrollToCoachSection}>
-            <span className="hero-appointment-icon">📅</span>
-            <h3 className="hero-appointment-text">
-              {typedText}
-              {!isTypingComplete && <span className="typing-cursor">|</span>}
-            </h3>
-          </div>
-        )}
       </section>
+
+      {/* About Us Content */}
+      {loading ? (
+        <div className="about-loading">
+          <Loader />
+        </div>
+      ) : aboutUs ? (
+        <main id="about-section" className="about-main">
+
+          {/* Hero Section with Background Image */}
+          {/* <div className="home-section-header">
+              <h2 className="home-section-title">About Us</h2>
+            </div>
+          <section className="about-hero-section" aria-label="Hero banner">
+            {aboutUs.featured_image_url ? (
+              <>
+                <img
+                  src={aboutUs.featured_image_url}
+                  alt="About Us Hero"
+                  loading="eager"
+                  className="about-hero-image"
+                />
+                <div className="about-hero-overlay" aria-hidden="true"></div>
+              </>
+            ) : (
+              <div className="about-hero-gradient" aria-hidden="true"></div>
+            )}
+
+            <div className="about-hero-content">
+              <h1 className="about-hero-title">
+                {aboutUs.hero_title || 'About Us'}
+              </h1>
+              {aboutUs.hero_subtitle && (
+                <p className="about-hero-subtitle">
+                  {aboutUs.hero_subtitle}
+                </p>
+              )}
+            </div>
+          </section> */}
+
+          {/* Custom Coach Profile Section */}
+          {featuredCoach && (
+            <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
+              <div className="custom-coach-container">
+                {/* Coach Profile Picture */}
+                <div className="custom-coach-image-wrapper">
+                  {featuredCoach.profile_picture_url ? (
+                    <img
+                      src={getFileUrl(featuredCoach.profile_picture_url)}
+                      alt={featuredCoach.name}
+                      className="custom-coach-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="custom-coach-image-placeholder" 
+                    style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
+                  >
+                    {featuredCoach.name?.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Coach Details */}
+                <div className="custom-coach-content">
+                  <h2 id="coach-heading" className="custom-coach-name">
+                    {featuredCoach.name}
+                  </h2>
+                  <div className={`custom-coach-bio-wrapper ${showFullBio ? 'expanded' : ''}`}>
+                    <p className="custom-coach-bio">
+                      Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
+                      She has several degrees and honours to her credit in the field of child development, 
+                      education, psychology, and behaviour modification. She has been working in the field of 
+                      training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
+                      who have delays and difficulties in various areas of development, from physical, language, 
+                      communication, emotional to behaviour and learning.
+                    </p>
+                    <button 
+                      className="custom-coach-read-more"
+                      onClick={() => setShowFullBio(!showFullBio)}
+                    >
+                      {showFullBio ? 'Read Less' : 'Read More'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        navigate('/guest-booking', { state: { coach: featuredCoach } });
+                      } else {
+                        navigate(`/book-appointment/${featuredCoach.id}`, { state: { coach: featuredCoach } });
+                      }
+                    }}
+                    className="btn-primary"
+                  >
+                    Book Appointment
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+   {/* Introduction Section */}
+          {aboutUs.intro_content && (
+            <section className="about-section" aria-labelledby="intro-heading">
+              <div className="about-container">
+                <div className="about-content-wrapper">
+                  {aboutUs.intro_title && (
+                    <div className="about-header-wrapper">
+                      <div className="about-header-inner">
+                        <h2 id="intro-heading" className="about-section-title">
+                          {aboutUs.intro_title}
+                        </h2>
+                        <div className="about-title-divider"></div>
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    className="about-content-text"
+                    dangerouslySetInnerHTML={sanitizeHTML(aboutUs.intro_content)}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Team Roles Grid Section - Numbered Badges */}
+          {sections.length > 0 && (
+            <section className="services-section-wrapper" aria-labelledby="team-heading">
+              <div className="services-section-inner">
+                <div className="services-section-content">
+                  <div className="services-section-header">
+                    <h2 className="services-section-heading">
+                      Our Services & Expertise
+                    </h2>
+                    <p className="services-section-description">
+                      Discover what makes us unique
+                    </p>
+                  </div>
+                  <div className="services-cards-grid">
+                    {sections.slice(0, 8).map((section, index) => (
+                      <article
+                        key={section.id}
+                        ref={(el) => (sectionRefs.current[section.id] = el)}
+                        id={section.id}
+                        className={`service-card-article ${visibleSections.has(section.id) ? 'visible' : ''}`}
+                      >
+                        <button
+                          onClick={() => openModal(section)}
+                          className="service-card-button"
+                          aria-label={`View details about ${section.title}`}
+                        >
+                          <div className="service-card-inner-box">
+                            <div className="service-card-badge">
+                              {index + 1}
+                            </div>
+
+                            <div className="service-card-overlay"></div>
+
+                            <div className="service-card-emoji" aria-hidden="true">{section.icon}</div>
+
+                            <h3 className="service-card-heading">
+                              {section.title}
+                            </h3>
+
+                            <div className="service-card-learn-more">
+                              📖 Click to learn more
+                            </div>
+                          </div>
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Commitment Section */}
+          {aboutUs.commitment_content && (
+            <section className="commitment-section" aria-labelledby="commitment-heading">
+              <div className="commitment-container">
+                <div className="commitment-wrapper">
+                  {aboutUs.commitment_title && (
+                    <div className="commitment-header">
+                      <div className="about-header-inner">
+                        <h2 id="commitment-heading" className="about-commitment-title">
+                          {aboutUs.commitment_title}
+                        </h2>
+                        <div className="about-title-divider"></div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="commitment-content-box">
+                    <div
+                      className="about-content-text"
+                      dangerouslySetInnerHTML={sanitizeHTML(aboutUs.commitment_content)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+        </main>
+      ) : null}
+
+      {/* Vlogs Section */}
+      {vlogs.length > 0 && (
+        <section id="vlogs-section" className="home-vlogs-section">
+          <div className="home-vlogs-container">
+            <div className="home-section-header">
+              <h2 className="home-section-title">Latest Vlogs</h2>
+              <p className="home-section-subtitle">Video content and tutorials</p>
+            </div>
+            <div className="home-vlogs-grid">
+              {vlogs.map((vlog, index) => (
+                <article
+                  key={vlog.id}
+                  className="home-vlog-card"
+                  onClick={() => navigate(`/vlogs/${vlog.id}`)}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {/* Thumbnail */}
+                  <div className="home-vlog-thumbnail-wrapper">
+                    {vlog.thumbnail_url ? (
+                      <img
+                        src={vlog.thumbnail_url}
+                        alt={vlog.title}
+                        className="home-vlog-thumbnail"
+                      />
+                    ) : (
+                      <div className="home-vlog-placeholder">🎥</div>
+                    )}
+                    <div className="home-vlog-play-icon">▶</div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="home-vlog-content">
+                    <h3 className="home-vlog-title">{vlog.title}</h3>
+                    {vlog.description && (
+                      <p className="home-vlog-description">
+                        {truncateText(vlog.description, 100)}
+                      </p>
+                    )}
+                    <div className="home-vlog-footer">
+                      <span className="home-vlog-date">
+                        📅 {formatDate(vlog.created_at)}
+                      </span>
+                      <span className="home-vlog-watch">Watch now →</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="home-section-view-all">
+              <button
+                onClick={() => navigate('/vlogs')}
+                className="home-view-all-btn"
+              >
+                View All Vlogs →
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Blogs Section */}
       {blogs.length > 0 && (
@@ -474,203 +680,6 @@ const Home = () => {
           </div>
         </section>
       )}
-
-      {/* About Us Content */}
-      {loading ? (
-        <div className="about-loading">
-          <Loader />
-        </div>
-      ) : aboutUs ? (
-        <main id="about-section" className="about-main">
-          {/* Hero Section with Background Image */}
-          <div className="home-section-header">
-              <h2 className="home-section-title">About Us</h2>
-            </div>
-          <section className="about-hero-section" aria-label="Hero banner">
-            {aboutUs.featured_image_url ? (
-              <>
-                <img
-                  src={aboutUs.featured_image_url}
-                  alt="About Us Hero"
-                  loading="eager"
-                  className="about-hero-image"
-                />
-                <div className="about-hero-overlay" aria-hidden="true"></div>
-              </>
-            ) : (
-              <div className="about-hero-gradient" aria-hidden="true"></div>
-            )}
-
-            <div className="about-hero-content">
-              <h1 className="about-hero-title">
-                {aboutUs.hero_title || 'About Us'}
-              </h1>
-              {aboutUs.hero_subtitle && (
-                <p className="about-hero-subtitle">
-                  {aboutUs.hero_subtitle}
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* Introduction Section */}
-          {aboutUs.intro_content && (
-            <section className="about-section" aria-labelledby="intro-heading">
-              <div className="about-container">
-                <div className="about-content-wrapper">
-                  {aboutUs.intro_title && (
-                    <div className="about-header-wrapper">
-                      <div className="about-header-inner">
-                        <h2 id="intro-heading" className="about-section-title">
-                          {aboutUs.intro_title}
-                        </h2>
-                        <div className="about-title-divider"></div>
-                      </div>
-                    </div>
-                  )}
-                  <div
-                    className="about-content-text"
-                    dangerouslySetInnerHTML={sanitizeHTML(aboutUs.intro_content)}
-                  />
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Custom Coach Profile Section */}
-          {featuredCoach && (
-            <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
-              <div className="custom-coach-container">
-                {/* Coach Profile Picture */}
-                <div className="custom-coach-image-wrapper">
-                  {featuredCoach.profile_picture_url ? (
-                    <img
-                      src={getFileUrl(featuredCoach.profile_picture_url)}
-                      alt={featuredCoach.name}
-                      className="custom-coach-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="custom-coach-image-placeholder" 
-                    style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
-                  >
-                    {featuredCoach.name?.charAt(0).toUpperCase()}
-                  </div>
-                </div>
-
-                {/* Coach Details */}
-                <div className="custom-coach-content">
-                  <h2 id="coach-heading" className="custom-coach-name">
-                    {featuredCoach.name}
-                  </h2>
-                  <p className="custom-coach-bio">
-                    Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
-                    She has several degrees and honours to her credit in the field of child development, 
-                    education, psychology, and behaviour modification. She has been working in the field of 
-                    training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
-                    who have delays and difficulties in various areas of development, from physical, language, 
-                    communication, emotional to behaviour and learning.
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        navigate('/guest-booking', { state: { coach: featuredCoach } });
-                      } else {
-                        navigate(`/book-appointment/${featuredCoach.id}`, { state: { coach: featuredCoach } });
-                      }
-                    }}
-                    className="btn-primary"
-                  >
-                    Book Appointment
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Team Roles Grid Section - Numbered Badges */}
-          {sections.length > 0 && (
-            <section className="services-section-wrapper" aria-labelledby="team-heading">
-              <div className="services-section-inner">
-                <div className="services-section-content">
-                  <div className="services-section-header">
-                    <h2 className="services-section-heading">
-                      Our Services & Expertise
-                    </h2>
-                    <p className="services-section-description">
-                      Discover what makes us unique
-                    </p>
-                  </div>
-                  <div className="services-cards-grid">
-                    {sections.slice(0, 8).map((section, index) => (
-                      <article
-                        key={section.id}
-                        ref={(el) => (sectionRefs.current[section.id] = el)}
-                        id={section.id}
-                        className={`service-card-article ${visibleSections.has(section.id) ? 'visible' : ''}`}
-                      >
-                        <button
-                          onClick={() => openModal(section)}
-                          className="service-card-button"
-                          aria-label={`View details about ${section.title}`}
-                        >
-                          <div className="service-card-inner-box">
-                            <div className="service-card-badge">
-                              {index + 1}
-                            </div>
-
-                            <div className="service-card-overlay"></div>
-
-                            <div className="service-card-emoji" aria-hidden="true">{section.icon}</div>
-
-                            <h3 className="service-card-heading">
-                              {section.title}
-                            </h3>
-
-                            <div className="service-card-learn-more">
-                              📖 Click to learn more
-                            </div>
-                          </div>
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Commitment Section */}
-          {aboutUs.commitment_content && (
-            <section className="commitment-section" aria-labelledby="commitment-heading">
-              <div className="commitment-container">
-                <div className="commitment-wrapper">
-                  {aboutUs.commitment_title && (
-                    <div className="commitment-header">
-                      <div className="about-header-inner">
-                        <h2 id="commitment-heading" className="about-commitment-title">
-                          {aboutUs.commitment_title}
-                        </h2>
-                        <div className="about-title-divider"></div>
-                      </div>
-                    </div>
-                  )}
-                  <div className="commitment-content-box">
-                    <div
-                      className="about-content-text"
-                      dangerouslySetInnerHTML={sanitizeHTML(aboutUs.commitment_content)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-        </main>
-      ) : null}
 
       {/* Scroll to Top Button */}
       {showScrollTop && (
