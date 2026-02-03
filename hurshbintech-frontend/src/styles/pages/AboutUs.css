@@ -671,8 +671,8 @@
 
 .service-card-article {
   transition: all 0.7s ease-out;
-  opacity: 0;
-  transform: translateY(2.5rem);
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .service-card-article.visible {

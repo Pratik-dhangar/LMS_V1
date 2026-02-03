@@ -46,9 +46,16 @@ const ChatIconWidget = () => {
     '/register-learner/'
   ];
 
-  // Check if current page is a session page or in hidden pages list
+  // Check if current page is a session page
+  // Chat widget should ONLY be visible on trainer/coach/head session pages
   const isSessionPage = location.pathname.includes('/session/') || location.pathname.includes('/guest-session/');
-  const shouldHide = isSessionPage || hiddenPages.some(page => location.pathname.includes(page));
+  const isAllowedSessionPage = 
+    location.pathname.includes('/trainer/session/') || 
+    location.pathname.includes('/coach/session/') || 
+    location.pathname.includes('/head/session/');
+  
+  const shouldHide = hiddenPages.some(page => location.pathname.includes(page)) || 
+                     (isSessionPage && !isAllowedSessionPage);
 
   if (shouldHide) {
     return null;

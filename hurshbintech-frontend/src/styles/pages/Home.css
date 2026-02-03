@@ -20,6 +20,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 /* Hero Navigation Links */
@@ -92,6 +93,116 @@
 @media (min-width: 640px) {
   .home-hero-subtitle {
     font-size: 1.25rem;
+  }
+}
+
+/* Hero Appointment Overlay Card */
+.hero-appointment-card {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: #DB9D32;
+  color: white;
+  padding: 16px 32px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(219, 157, 50, 0.4);
+  z-index: 10;
+  width: auto;
+  min-width: 80px;
+  max-width: 90%;
+}
+
+.hero-appointment-card.typing-complete {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(219, 157, 50, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(219, 157, 50, 0.6);
+    transform: scale(1.05);
+  }
+}
+
+.hero-appointment-card:hover {
+  background-color: #c88d2b;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(219, 157, 50, 0.6);
+  animation: none;
+}
+
+.hero-appointment-card:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.typing-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  animation: blink 0.7s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.hero-appointment-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hero-appointment-text {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .hero-appointment-card {
+    top: 15px;
+    right: 15px;
+    padding: 12px 20px;
+  }
+
+  .hero-appointment-icon {
+    font-size: 20px;
+  }
+
+  .hero-appointment-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-appointment-card {
+    top: 10px;
+    right: 10px;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+
+  .hero-appointment-icon {
+    font-size: 16px;
+  }
+
+  .hero-appointment-text {
+    font-size: 13px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
   }
 }
 
@@ -583,15 +694,15 @@
 /* Scroll to Top Button */
 .scroll-to-top-btn {
   position: fixed;
-  bottom: 2rem;
+  bottom: 5rem;
   right: 2rem;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.9rem;
+  height: 3.9rem;
   background: linear-gradient(135deg, #fc9f0a 0%, #efa42c 100%);
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(241, 187, 10, 0.4);
@@ -615,8 +726,8 @@
 
 @media (max-width: 640px) {
   .scroll-to-top-btn {
-    bottom: 1rem;
-    right: 1rem;
+    bottom: 5rem;
+    right: .8rem;
     width: 3rem;
     height: 3rem;
     font-size: 1.25rem;
