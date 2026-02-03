@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
-import FeaturedCoachCard from "../components/common/FeaturedCoachCard";
 import aboutUsService from '../api/services/aboutUsService';
-import headService from '../api/services/headService';
+import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
 import vlogService from '../api/services/vlogService';
 import DOMPurify from 'dompurify';
+import { getFileUrl } from '../utils/urlHelper';
 import '../styles/pages/Home.css';
 import '../styles/pages/AboutUs.css';
 import '../styles/components/common/Modal.css';
+import '../styles/components/CustomCoachSection.css';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -24,23 +25,32 @@ const Home = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [typedText, setTypedText] = useState('');
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
   const sectionRefs = useRef({});
 
   const fetchAboutUs = useCallback(async () => {
     try {
       setLoading(true);
       const data = await aboutUsService.getPublicAboutUs('en');
+      console.log('About Us data:', data);
+      console.log('Featured coach ID:', data?.featured_coach_id);
       setAboutUs(data);
       
       // Fetch featured coach if featured_coach_id exists
       if (data && data.featured_coach_id) {
         try {
-          const coach = await headService.getCoachById(data.featured_coach_id);
-          setFeaturedCoach(coach);
+          console.log('Fetching coach with ID:', data.featured_coach_id);
+          const allCoaches = await bookingService.getAvailableCoaches();
+          const coach = allCoaches.find(c => c.id === data.featured_coach_id);
+          console.log('Fetched coach:', coach);
+          setFeaturedCoach(coach || null);
         } catch (err) {
           console.error('Error fetching featured coach:', err);
           setFeaturedCoach(null);
         }
+      } else {
+        console.log('No featured_coach_id found in about us data');
       }
     } catch (err) {
       if (err?.response?.status !== 404) {
@@ -89,6 +99,47 @@ const Home = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Typing animation effect for appointment card (only on first load)
+  useEffect(() => {
+    if (!featuredCoach) {
+      setTypedText('');
+      setIsTypingComplete(false);
+      return;
+    }
+
+    const fullText = `Book Appointment with ${featuredCoach.name}!`;
+    const hasSeenAnimation = sessionStorage.getItem('hasSeenTypingAnimation');
+
+    // If user has already seen the animation, show full text immediately
+    if (hasSeenAnimation) {
+      setTypedText(fullText);
+      setIsTypingComplete(true);
+      return;
+    }
+
+    let currentIndex = 0;
+    setTypedText('');
+    setIsTypingComplete(false);
+
+    // Delay before starting typing
+    const startDelay = setTimeout(() => {
+      const typingInterval = setInterval(() => {
+        if (currentIndex <= fullText.length) {
+          setTypedText(fullText.slice(0, currentIndex));
+          currentIndex++;
+        } else {
+          setIsTypingComplete(true);
+          sessionStorage.setItem('hasSeenTypingAnimation', 'true');
+          clearInterval(typingInterval);
+        }
+      }, 50); // Type speed: 50ms per character
+
+      return () => clearInterval(typingInterval);
+    }, 800); // Wait 800ms before starting to type
+
+    return () => clearTimeout(startDelay);
+  }, [featuredCoach]);
 
   useEffect(() => {
     if (!aboutUs) return;
@@ -159,18 +210,79 @@ const Home = () => {
       ];
     }
 
-    return [
-      { id: 'intro', title: aboutUs.intro_title, content: aboutUs.intro_content, icon: '👋' },
-      { id: 'mission', title: aboutUs.mission_title, content: aboutUs.mission_content, icon: '🎯' },
-      { id: 'vision', title: aboutUs.vision_title, content: aboutUs.vision_content, icon: '🔭' },
-      { id: 'programs', title: aboutUs.programs_title, content: aboutUs.programs_content, icon: '📚' },
-      { id: 'methodology', title: aboutUs.methodology_title, content: aboutUs.methodology_content, icon: '🎓' },
-      { id: 'why_us', title: aboutUs.why_us_title, content: aboutUs.why_us_content, icon: '⭐' },
-      { id: 'team', title: aboutUs.team_title, content: aboutUs.team_content, icon: '👥' },
-      { id: 'learner_focus', title: aboutUs.learner_focus_title, content: aboutUs.learner_focus_content, icon: '🎪' },
-      { id: 'values', title: aboutUs.values_title, content: aboutUs.values_content, icon: '💎' },
-      { id: 'commitment', title: aboutUs.commitment_title, content: aboutUs.commitment_content, icon: '🤝' },
-    ].filter(section => section.content?.trim() && section.content !== '<p></p>');
+    // Helper function to check if content is empty
+    const hasContent = (content) => {
+      if (!content) return false;
+      const trimmed = content.trim();
+      if (!trimmed || trimmed === '<p></p>' || trimmed === '<p><br></p>') return false;
+      return true;
+    };
+
+    const allSections = [
+      { 
+        id: 'intro', 
+        title: aboutUs.intro_title || 'Who We Are', 
+        content: hasContent(aboutUs.intro_content) ? aboutUs.intro_content : 'Learn about our organization and mission.', 
+        icon: '👋' 
+      },
+      { 
+        id: 'mission', 
+        title: aboutUs.mission_title || 'Our Mission', 
+        content: hasContent(aboutUs.mission_content) ? aboutUs.mission_content : 'Our mission is to provide quality services.', 
+        icon: '🎯' 
+      },
+      { 
+        id: 'vision', 
+        title: aboutUs.vision_title || 'Our Vision', 
+        content: hasContent(aboutUs.vision_content) ? aboutUs.vision_content : 'Our vision for the future.', 
+        icon: '🔭' 
+      },
+      { 
+        id: 'programs', 
+        title: aboutUs.programs_title || 'What We Teach', 
+        content: hasContent(aboutUs.programs_content) ? aboutUs.programs_content : 'Discover our educational programs.', 
+        icon: '📚' 
+      },
+      { 
+        id: 'methodology', 
+        title: aboutUs.methodology_title || 'How We Teach', 
+        content: hasContent(aboutUs.methodology_content) ? aboutUs.methodology_content : 'Our teaching methodology.', 
+        icon: '🎓' 
+      },
+      { 
+        id: 'why_us', 
+        title: aboutUs.why_us_title || 'Why Choose Us', 
+        content: hasContent(aboutUs.why_us_content) ? aboutUs.why_us_content : 'What makes us unique.', 
+        icon: '⭐' 
+      },
+      { 
+        id: 'team', 
+        title: aboutUs.team_title || 'Our Educators', 
+        content: hasContent(aboutUs.team_content) ? aboutUs.team_content : 'Meet our team of professionals.', 
+        icon: '👥' 
+      },
+      { 
+        id: 'learner_focus', 
+        title: aboutUs.learner_focus_title || 'Learner & Parent Focus', 
+        content: hasContent(aboutUs.learner_focus_content) ? aboutUs.learner_focus_content : 'Our commitment to learners and parents.', 
+        icon: '🎪' 
+      },
+      { 
+        id: 'values', 
+        title: aboutUs.values_title || 'Our Values', 
+        content: hasContent(aboutUs.values_content) ? aboutUs.values_content : 'Our core values.', 
+        icon: '💎' 
+      },
+      { 
+        id: 'commitment', 
+        title: aboutUs.commitment_title || 'Our Commitment', 
+        content: hasContent(aboutUs.commitment_content) ? aboutUs.commitment_content : 'Our commitment to excellence.', 
+        icon: '🤝' 
+      },
+    ];
+
+    const filtered = allSections.filter(section => section.title && section.content);
+    return filtered;
   }, [aboutUs]);
 
   const handleBookAppointment = () => {
@@ -203,6 +315,13 @@ const Home = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const scrollToCoachSection = () => {
+    const element = document.getElementById('featured-coach-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -224,6 +343,17 @@ const Home = () => {
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
         <h2 className="home-hero-subtitle"> We stand with families having children facing delays & difficulties by creating optimum learning opportunities!</h2>
+        
+        {/* Book Appointment Overlay Card */}
+        {featuredCoach && typedText && (
+          <div className={`hero-appointment-card ${isTypingComplete ? 'typing-complete' : ''}`} onClick={scrollToCoachSection}>
+            <span className="hero-appointment-icon">📅</span>
+            <h3 className="hero-appointment-text">
+              {typedText}
+              {!isTypingComplete && <span className="typing-cursor">|</span>}
+            </h3>
+          </div>
+        )}
       </section>
 
       {/* Blogs Section */}
@@ -352,9 +482,6 @@ const Home = () => {
         </div>
       ) : aboutUs ? (
         <main id="about-section" className="about-main">
-          {/* Floating Featured Coach Card */}
-          {featuredCoach && <FeaturedCoachCard coach={featuredCoach} floating={true} />}
-          
           {/* Hero Section with Background Image */}
           <div className="home-section-header">
               <h2 className="home-section-title">About Us</h2>
@@ -405,6 +532,61 @@ const Home = () => {
                     className="about-content-text"
                     dangerouslySetInnerHTML={sanitizeHTML(aboutUs.intro_content)}
                   />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Custom Coach Profile Section */}
+          {featuredCoach && (
+            <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
+              <div className="custom-coach-container">
+                {/* Coach Profile Picture */}
+                <div className="custom-coach-image-wrapper">
+                  {featuredCoach.profile_picture_url ? (
+                    <img
+                      src={getFileUrl(featuredCoach.profile_picture_url)}
+                      alt={featuredCoach.name}
+                      className="custom-coach-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="custom-coach-image-placeholder" 
+                    style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
+                  >
+                    {featuredCoach.name?.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Coach Details */}
+                <div className="custom-coach-content">
+                  <h2 id="coach-heading" className="custom-coach-name">
+                    {featuredCoach.name}
+                  </h2>
+                  <p className="custom-coach-bio">
+                    Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
+                    She has several degrees and honours to her credit in the field of child development, 
+                    education, psychology, and behaviour modification. She has been working in the field of 
+                    training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
+                    who have delays and difficulties in various areas of development, from physical, language, 
+                    communication, emotional to behaviour and learning.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        navigate('/guest-booking', { state: { coach: featuredCoach } });
+                      } else {
+                        navigate(`/book-appointment/${featuredCoach.id}`, { state: { coach: featuredCoach } });
+                      }
+                    }}
+                    className="btn-primary"
+                  >
+                    Book Appointment
+                  </button>
                 </div>
               </div>
             </section>
@@ -484,15 +666,6 @@ const Home = () => {
                     />
                   </div>
                 </div>
-              </div>
-            </section>
-          )}
-
-          {/* Fixed Featured Coach Card in About Section */}
-          {featuredCoach && (
-            <section className="featured-coach-section" style={{ padding: '40px 20px', backgroundColor: '#f9fafb' }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'center' }}>
-                <FeaturedCoachCard coach={featuredCoach} floating={false} />
               </div>
             </section>
           )}
