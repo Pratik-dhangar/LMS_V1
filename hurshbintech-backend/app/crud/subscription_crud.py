@@ -27,6 +27,7 @@ from app.models.subscription import (
     AdjustmentType,
 )
 from app.models.session_model import TrainingSession
+from app.models.user_model import User
 from app.schemas.subscription import (
     SubscriptionPackageCreate,
     SubscriptionPackageUpdate,
@@ -311,6 +312,14 @@ async def create_subscription(
         if discount:
             discount.usage_count += 1
     
+    # Re-activate learner when new subscription is purchased
+    learner = await db.execute(
+        select(User).where(User.id == subscription_data.learner_id)
+    )
+    learner_user = learner.scalar_one_or_none()
+    if learner_user:
+        learner_user.is_active = True
+    
     await db.flush()  # Flush instead of commit to let caller handle transaction
     await db.refresh(subscription)
     
@@ -455,6 +464,14 @@ async def create_backdated_subscription(
         discount = discount_result.scalar_one_or_none()
         if discount:
             discount.usage_count += 1
+    
+    # Re-activate learner when subscription is renewed
+    learner = await db.execute(
+        select(User).where(User.id == subscription_data.learner_id)
+    )
+    learner_user = learner.scalar_one_or_none()
+    if learner_user:
+        learner_user.is_active = True
     
     await db.commit()
     await db.refresh(subscription)

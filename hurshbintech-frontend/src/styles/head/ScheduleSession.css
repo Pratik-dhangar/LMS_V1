@@ -110,6 +110,17 @@
   background-color: #fce5c3 !important;
 }
 
+.schedule-session .dropdown-item-disabled {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.schedule-session .dropdown-item-disabled:hover {
+  background-color: #f3f4f6 !important;
+}
+
 .schedule-session .dropdown-item-meta {
   color: #6b7280 !important;
   font-size: 0.813rem !important;
@@ -485,21 +496,21 @@
   .schedule-session .search-container {
     max-width: 100%;
   }
-  
+
   .schedule-session .content-grid-container {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
-  
+
   .schedule-session .content-card {
     padding: 0.5rem;
   }
-  
+
   .schedule-session .content-thumbnail,
   .schedule-session .content-icon-container {
     height: 60px;
   }
-  
+
   .schedule-session .content-icon {
     font-size: 1.5rem;
   }

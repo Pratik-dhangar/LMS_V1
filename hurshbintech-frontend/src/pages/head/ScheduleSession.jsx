@@ -76,7 +76,7 @@ const ScheduleSession = () => {
       const [trainersData, learnersData, contentsData, goalsData] =
         await Promise.all([
           headService.getAllTrainers(),
-          headService.getAllLearners("ACTIVE"), // Only fetch learners with ACTIVE subscriptions for session scheduling
+          headService.getLearnersForSessionScheduling(), // Fetch learners with subscription and status info
           learningContentService.head.getAll(),
           learningGoalsService.head.getAll(),
         ]);
@@ -181,7 +181,7 @@ const ScheduleSession = () => {
   const filteredLearners = learners.filter(
     (l) =>
       l.name?.toLowerCase().includes(searchTerm.learner.toLowerCase()) ||
-      l.user_id?.toString().includes(searchTerm.learner)
+      l.id?.toString().includes(searchTerm.learner)
   );
 
   const filteredGoals = learningGoals.filter(
@@ -209,9 +209,11 @@ const ScheduleSession = () => {
 
   const getSelectedLearnerName = () => {
     const learner = learners.find(
-      (l) => l.user_id === parseInt(formData.learner_id)
+      (l) => l.id === parseInt(formData.learner_id)
     );
-    return learner ? `${learner.name} (ID: ${learner.user_id})` : "";
+    return learner
+      ? `${learner.name} (ID: ${learner.id}) - ${learner.remaining_sessions} sessions - ${learner.status_text}`
+      : "";
   };
 
   const handleTrainerSelect = (trainerId) => {
@@ -403,15 +405,20 @@ const ScheduleSession = () => {
                         filteredLearners.map((learner) => (
                           <div
                             key={learner.id}
-                            onClick={() => handleLearnerSelect(learner.user_id)}
-                            className={`dropdown-item ${formData.learner_id === learner.user_id
+                            onClick={() => {
+                              // Only allow selection if learner can be scheduled
+                              if (learner.can_schedule) {
+                                handleLearnerSelect(learner.id);
+                              }
+                            }}
+                            className={`dropdown-item ${formData.learner_id === learner.id
                               ? "dropdown-item-selected"
                               : ""
-                              }`}
+                              } ${!learner.can_schedule ? "dropdown-item-disabled" : ""}`}
                           >
-                            {learner.name}{" "}
-                            <span className="dropdown-item-meta">
-                              (ID: {learner.user_id})
+                            {learner.name}{" "} 
+                            <span className="dropdown-item-meta"> 
+                          - {learner.remaining_sessions} sessions - {learner.status_text}
                             </span>
                           </div>
                         ))
