@@ -715,7 +715,56 @@ async def get_my_learners(
     logger.info(f"Head {current_head.user_id} (ID: {current_head.id}) has {len(learners)} learners")
     for learner in learners:
         logger.info(f"  - Learner {learner.user.id}: {learner.user.name} (role: {learner.user.role.value})")
-    return [LearnerResponse.from_orm_with_user(learner) for learner in learners]
+    
+    # Enrich learners with subscription and status info
+    responses = []
+    for learner in learners:
+        response = LearnerResponse.from_orm_with_user(learner)
+        
+        # Get active subscription to fetch remaining sessions
+        active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner.user_id)
+        if active_subscription:
+            response.remaining_sessions = active_subscription.sessions_remaining
+        
+        # Get is_active status from User model
+        response.is_active = learner.user.is_active
+        
+        responses.append(response)
+    
+    return responses
+
+
+@router.get("/learners/for-session-scheduling", response_model=List[dict])
+async def get_learners_for_session_scheduling(
+    db: AsyncSession = Depends(get_db), 
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """
+    Get learners for session scheduling form dropdown.
+    Returns: [{"id": X, "name": "Name", "remaining_sessions": Y, "is_active": true/false, "can_schedule": true/false}, ...]
+    """
+    learners = await user_crud.get_learners_by_head(db, current_head.id)
+    
+    responses = []
+    for learner in learners:
+        # Get active subscription to fetch remaining sessions
+        active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner.user_id)
+        remaining_sessions = active_subscription.sessions_remaining if active_subscription else 0
+        
+        # Learner is only available for scheduling if they have active status AND remaining sessions > 0
+        can_schedule = learner.user.is_active and remaining_sessions > 0
+        status_text = "Active" if can_schedule else "Inactive (Expired)"
+        
+        responses.append({
+            "id": learner.user_id,
+            "name": learner.user.name,
+            "remaining_sessions": remaining_sessions,
+            "is_active": learner.user.is_active,
+            "can_schedule": can_schedule,
+            "status_text": status_text
+        })
+    
+    return responses
 
 
 @router.get("/learners/{learner_id}", response_model=LearnerResponse)
@@ -740,14 +789,18 @@ async def get_learner_details(
     from app.crud import subscription_crud
     active_subscription = await subscription_crud.get_active_subscription_for_learner(db, learner_id)
     
-    response_dict = LearnerResponse.from_orm_with_user(learner).dict()
+    response = LearnerResponse.from_orm_with_user(learner)
     
     # Add subscription data if exists
     if active_subscription:
-        response_dict['package_id'] = active_subscription.package_id
-        response_dict['discount_code'] = active_subscription.discount_code
+        response.package_id = active_subscription.package_id
+        response.discount_code = active_subscription.discount_code
+        response.remaining_sessions = active_subscription.sessions_remaining
     
-    return response_dict
+    # Add learner active status
+    response.is_active = learner.user.is_active
+    
+    return response
 
 
 @router.get("/learners/{learner_id}/subscriptions", response_model=List[LearnerSubscriptionResponse])

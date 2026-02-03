@@ -76,13 +76,10 @@ async def user_login(request: Request, credentials: UserLogin, db: AsyncSession 
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect role or passcode"
             )
 
-        # Verify user is active
-        if not user.is_active:
-            logger.warning(f"Inactive user login attempt: {user.id}")
-            metrics_collector.record_auth_attempt(success=False)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive"
-            )
+        # Note: We do NOT block login for inactive users (is_active = False)
+        # Inactive status is only used to prevent session scheduling
+        # Users with expired subscriptions can still login and view their profile
+        # This allows them to renew their subscription
 
         # Create access token
         user_id = user.id

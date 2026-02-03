@@ -227,6 +227,13 @@ async def create_training_session(
             detail="Learner not found"
         )
     
+    # ✅ Check if learner is inactive (cannot schedule session for inactive learner)
+    if not learner.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot schedule session: Learner account is inactive due to expired subscription. Please renew their subscription first."
+        )
+    
     # ✅ Check if learner has active subscription with remaining sessions
     # (This is the primary check - subscription status is more important than is_active flag)
     from app.models.subscription import LearnerSubscription, SubscriptionStatus
