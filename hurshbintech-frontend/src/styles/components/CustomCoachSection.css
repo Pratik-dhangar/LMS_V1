@@ -180,9 +180,13 @@
 
   .custom-coach-image-wrapper {
     width: 100%;
-    height: 250px;
+    height: 200px;
     min-width: 100%;
     padding: 15px;
+  }
+
+  .custom-coach-image {
+    object-fit: contain;
   }
 
   .custom-coach-content {
@@ -210,8 +214,12 @@
   }
 
   .custom-coach-image-wrapper {
-    height: 200px;
+    height: 180px;
     padding: 10px;
+  }
+
+  .custom-coach-image {
+    object-fit: contain;
   }
 
   .custom-coach-content {
