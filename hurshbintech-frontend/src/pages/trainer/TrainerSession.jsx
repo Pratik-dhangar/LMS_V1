@@ -656,6 +656,14 @@ const TrainerSession = () => {
 
       setSessionInfo(session);
 
+      // 🔹 Purpose: Prevent access to already-ended sessions (e.g., via browser back button)
+      // 🔸 How it works: Check if session status is 'ended', redirect immediately
+      if (session.status === 'ended') {
+        toast.warning('This session has already ended');
+        navigate('/trainer/dashboard');
+        return;
+      }
+
       // 🔹 Purpose: Ensure logged-in user is the trainer for this session
       // 🔸 How it works: compares session.trainer_id to the provided userId and redirects if mismatch
       if (session.trainer_id !== userId) {

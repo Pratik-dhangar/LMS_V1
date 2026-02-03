@@ -362,6 +362,15 @@ const CoachSession = () => {
     try {
       const session = await coachSessionService.getSessionDetails(sessionId);
       console.log('[CoachSession] Session details:', session);
+
+      // 🔹 Purpose: Prevent access to already-ended sessions (e.g., via browser back button)
+      // 🔸 How it works: Check if session status is 'ended', redirect immediately
+      if (session.status === 'ended') {
+        toast.warning('This session has already ended');
+        navigate('/coach/dashboard');
+        return;
+      }
+
       setSessionInfo(session);
 
       await initializeWebRTC(session.session_id);
