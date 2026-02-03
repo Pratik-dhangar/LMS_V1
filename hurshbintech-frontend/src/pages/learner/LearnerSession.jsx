@@ -769,22 +769,32 @@ const LearnerSession = () => {
       setBuckets(prev => {
         const exists = prev.find(bucket => bucket.id === data.id);
         if (!exists) {
+          // NOTE: Don't denormalize here - Whiteboard component handles it
+          // This handler should not be used if Whiteboard is mounted
           return [...prev, data];
         }
         return prev;
       });
     };
 
+    // NOTE: onBucketUpdate handler removed - Whiteboard component handles bucket updates
+    // with proper denormalization. Setting it here would override Whiteboard's handler.
     whiteboardService.onBucketUpdate = (data) => {
-      // console.log('[LearnerSession] Bucket updated:', data);
       if (data.removed) {
         setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
       } else {
-        // Update bucket directly - no normalization/denormalization needed
-        // Buckets use absolute pixel positioning as overlay elements
-        setBuckets(prev => prev.map(bucket =>
-          bucket.id === data.id ? { ...bucket, ...data } : bucket
-        ));
+        setBuckets(prev => prev.map(bucket => {
+          if (bucket.id === data.id) {
+            // Denormalize coordinates if we have canvas ref
+            if (whiteboardCanvasRef.current) {
+              const denormalized = denormalizeBucket(data, whiteboardCanvasRef.current);
+              return { ...bucket, ...denormalized };
+            }
+            // Fallback: apply raw data if canvas not ready
+            return { ...bucket, ...data };
+          }
+          return bucket;
+        }));
       }
     };
 
@@ -1848,6 +1858,7 @@ const LearnerSession = () => {
               {/* Whiteboard component - keep logic intact */}
               <div className="w-full h-full">
                 <Whiteboard
+                  canvasRefForParent={whiteboardCanvasRef}
                   whiteboardService={whiteboardService}
                   isTrainer={false}
                   canvasItems={canvasItems}

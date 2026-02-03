@@ -371,7 +371,7 @@ const TrainerSession = () => {
         // console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
         learnerRTC.toggleMicrophone();
         setMicEnabled(false);
-        toast.info('Video conferencing mic disabled - Voice input enabled');
+        // toast.info('Video conferencing mic disabled - Voice input enabled');
       }
 
       // Toggle voice input using the new hook
@@ -384,7 +384,7 @@ const TrainerSession = () => {
         // console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
         learnerRTC.toggleMicrophone();
         setMicEnabled(true);
-        toast.info('Voice input disabled - Video conferencing mic enabled');
+        // toast.info('Voice input disabled - Video conferencing mic enabled');
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -916,11 +916,11 @@ const TrainerSession = () => {
       // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
         await handleVoiceToggle(); // Stop voice input
-        toast.info('Voice input stopped - video conferencing mic enabled');
+        // toast.info('Voice input stopped - video conferencing mic enabled');
       }
       // If turning OFF video conferencing mic, don't auto-enable voice input
       else if (!newState && !listening) {
-        toast.info('Video conferencing mic disabled');
+        // toast.info('Video conferencing mic disabled');
       }
     }
   };
@@ -1297,10 +1297,10 @@ const TrainerSession = () => {
       // Immediately save the clear action to backend
       await sessionNotesService.clearNotes(sessionId);
       // console.log('[TrainerSession] ✅ Session notes cleared successfully');
-      toast.info('Session notes cleared');
+      // toast.info('Session notes cleared');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error clearing notes:', error);
-      toast.error('Failed to clear notes');
+      // toast.error('Failed to clear notes');
     }
   };
 
@@ -1314,10 +1314,10 @@ const TrainerSession = () => {
       // console.log('[TrainerSession] Force-saving notes (disconnect recovery)');
       await sessionNotesService.forceSaveNotes(sessionId, sessionNotes);
       // console.log('[TrainerSession] ✅ Notes force-saved successfully');
-      toast.info('Notes recovered and saved');
+      // toast.info('Notes recovered and saved');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error force-saving notes:', error);
-      toast.error('Failed to recover notes');
+      // toast.error('Failed to recover notes');
     }
   };
 
@@ -1564,10 +1564,12 @@ const TrainerSession = () => {
   // 🔹 Purpose: Add a new bucket to the whiteboard
   // 🔸 How it works: uses utility function with canvas boundaries
   // -----------------------------------------------------------
+  const whiteboardCanvasRef = useRef(null);
+
   const addBucket = () => {
     // Use conservative canvas dimensions to ensure buckets stay within bounds
     // These are approximate - actual canvas is responsive but we use safe margins
-    utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 900, 500);
+    utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 900, 500, whiteboardCanvasRef);
   };
 
   // -----------------------------------------------------------
@@ -1774,6 +1776,7 @@ const TrainerSession = () => {
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
                 onYoutubeDropped={handleYoutubeDropped}
+                canvasRefForParent={whiteboardCanvasRef}
               />
             </div>
           </div>

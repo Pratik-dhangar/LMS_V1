@@ -1035,21 +1035,50 @@ const Whiteboard = ({
                     ));
                 }
 
-                // Update item properties
-                setCanvasItems(prev => prev.map(item =>
-                    item.id === data.id
-                        ? {
-                            ...item,
-                            // Denormalize coordinates if normalized (0..1 range)
-                            x: data.x !== undefined ? (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x) : item.x,
-                            y: data.y !== undefined ? (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y) : item.y,
-                            width: data.width !== undefined ? (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width) : item.width,
-                            height: data.height !== undefined ? (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height) : item.height,
-                            inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
-                            answers: data.answers !== undefined ? data.answers : item.answers
+                // Handle bucket addition - just track the item in bucket
+                if (data.inBucket) {
+                    setBuckets(prev => prev.map(bucket => {
+                        if (bucket.id === data.inBucket) {
+                            const items = bucket.items || [];
+                            if (!items.includes(data.id)) {
+                                return { ...bucket, items: [...items, data.id] };
+                            }
                         }
-                        : item
-                ));
+                        return bucket;
+                    }));
+                }
+
+                // Update item properties - apply coordinates directly from sender
+                setCanvasItems(prev => prev.map(item => {
+                    if (item.id === data.id) {
+                        // Denormalize if needed, but preserve absolute pixel positions
+                        const newX = data.x !== undefined ?
+                            (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x)
+                            : item.x;
+                        const newY = data.y !== undefined ?
+                            (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y)
+                            : item.y;
+                        const newWidth = data.width !== undefined ?
+                            (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width)
+                            : item.width;
+                        const newHeight = data.height !== undefined ?
+                            (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height)
+                            : item.height;
+
+                        return {
+                            ...item,
+                            x: newX,
+                            y: newY,
+                            width: newWidth,
+                            height: newHeight,
+                            inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
+                            originalWidth: data.originalWidth !== undefined ? data.originalWidth : item.originalWidth,
+                            originalHeight: data.originalHeight !== undefined ? data.originalHeight : item.originalHeight,
+                            answers: data.answers !== undefined ? data.answers : item.answers
+                        };
+                    }
+                    return item;
+                }));
             };
 
             whiteboardService.onItemRemove = (data) => {
@@ -1528,10 +1557,34 @@ const Whiteboard = ({
     };
 
     const getBucketAtPosition = (x, y) => {
-        return buckets.find(bucket =>
-            x >= bucket.x && x <= bucket.x + bucket.width &&
-            y >= bucket.y && y <= bucket.y + bucket.height
-        );
+        // Check if point is inside the bucket's SVG path
+        // Bucket SVG viewBox is 0 0 500 500
+        // Bucket path: M110 200 Q250 230 390 200 L370 400 Q250 435 130 400 Z
+        return buckets.find(bucket => {
+            // Convert click position to SVG viewBox coordinates
+            const svgX = ((x - bucket.x) / bucket.width) * 500;
+            const svgY = ((y - bucket.y) / bucket.height) * 500;
+
+            // Check if point is inside the bucket outline
+            // Approximate the bucket shape as a trapezoid for collision
+            // Top: y ~200, bottom: y ~400
+            // Top width: x ~110-390, bottom width: x ~130-370
+            if (svgY < 200 || svgY > 400) return false;
+
+            // Interpolate x boundaries based on y position
+            const topY = 200;
+            const bottomY = 400;
+            const topLeft = 110;
+            const topRight = 390;
+            const bottomLeft = 130;
+            const bottomRight = 370;
+
+            const t = (svgY - topY) / (bottomY - topY);
+            const leftBound = topLeft + t * (bottomLeft - topLeft);
+            const rightBound = topRight + t * (bottomRight - topRight);
+
+            return svgX >= leftBound && svgX <= rightBound;
+        });
     };
 
     const isBucketResizeHandle = (x, y, bucket) => {
@@ -1571,11 +1624,32 @@ const Whiteboard = ({
     };
 
     const isItemInBucket = (itemX, itemY, itemWidth, itemHeight, bucket) => {
-        // Check if any part of the item overlaps with the bucket
-        return !(itemX + itemWidth < bucket.x ||  // item is to the left
-            itemX > bucket.x + bucket.width ||  // item is to the right
-            itemY + itemHeight < bucket.y ||   // item is above
-            itemY > bucket.y + bucket.height); // item is below
+        // Check if item's center point is inside the bucket's SVG path
+        const centerX = itemX + itemWidth / 2;
+        const centerY = itemY + itemHeight / 2;
+
+        // Convert center point to SVG viewBox coordinates (0-500)
+        const svgX = ((centerX - bucket.x) / bucket.width) * 500;
+        const svgY = ((centerY - bucket.y) / bucket.height) * 500;
+
+        // Check if point is inside the bucket outline
+        // Bucket shape: M110 200 Q250 230 390 200 L370 400 Q250 435 130 400 Z
+        // Approximate as a trapezoid for collision detection
+        if (svgY < 200 || svgY > 400) return false;
+
+        // Interpolate x boundaries based on y position
+        const topY = 200;
+        const bottomY = 400;
+        const topLeft = 110;
+        const topRight = 390;
+        const bottomLeft = 130;
+        const bottomRight = 370;
+
+        const t = (svgY - topY) / (bottomY - topY);
+        const leftBound = topLeft + t * (bottomLeft - topLeft);
+        const rightBound = topRight + t * (bottomRight - topRight);
+
+        return svgX >= leftBound && svgX <= rightBound;
     };
 
     const startDrawing = (e) => {
@@ -1917,6 +1991,22 @@ const Whiteboard = ({
                     updatedItem.width = 40;
                     updatedItem.height = 40;
 
+                    // Calculate proper position inside bucket based on SVG coordinates
+                    // Center the item inside the bucket's visible area
+                    const bucketCenterX = foundBucket.x + foundBucket.width * 0.5; // Center horizontally
+                    const bucketCenterY = foundBucket.y + foundBucket.height * 0.65; // Position in lower 2/3 of bucket
+
+                    // Get current number of items in bucket for stacking
+                    const currentBucket = buckets.find(b => b.id === foundBucket.id);
+                    const itemsInBucket = (currentBucket?.items || []).length;
+
+                    // Arrange items in a circular pattern or grid
+                    const angle = (itemsInBucket * Math.PI * 2) / 8; // Distribute around circle
+                    const radius = Math.min(foundBucket.width, foundBucket.height) * 0.15;
+
+                    updatedItem.x = bucketCenterX + Math.cos(angle) * radius - updatedItem.width / 2;
+                    updatedItem.y = bucketCenterY + Math.sin(angle) * radius - updatedItem.height / 2;
+
                     // Trigger drop animation
                     setAnimatingItemId(updatedItem.id);
 
@@ -1970,16 +2060,33 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms for smooth performance
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
-                // Normalize item bounds for network transmission
-                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
-                whiteboardService?.sendItemUpdate({
-                    id: selectedItem.id,
-                    x: normalizedItem.x,
-                    y: normalizedItem.y,
-                    width: normalizedItem.width,
-                    height: normalizedItem.height,
-                    inBucket: updatedItem.inBucket || null
-                });
+                // Send absolute pixel coordinates for items in buckets, normalized for items outside
+                if (updatedItem.inBucket) {
+                    // Send pixel coordinates directly for bucket items
+                    whiteboardService?.sendItemUpdate({
+                        id: selectedItem.id,
+                        x: updatedItem.x,
+                        y: updatedItem.y,
+                        width: updatedItem.width,
+                        height: updatedItem.height,
+                        inBucket: updatedItem.inBucket,
+                        originalWidth: updatedItem.originalWidth,
+                        originalHeight: updatedItem.originalHeight
+                    });
+                } else {
+                    // Normalize item bounds for network transmission (items outside buckets)
+                    const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
+                    whiteboardService?.sendItemUpdate({
+                        id: selectedItem.id,
+                        x: normalizedItem.x,
+                        y: normalizedItem.y,
+                        width: normalizedItem.width,
+                        height: normalizedItem.height,
+                        inBucket: null,
+                        originalWidth: updatedItem.originalWidth,
+                        originalHeight: updatedItem.originalHeight
+                    });
+                }
                 lastNetworkUpdateRef.current = now;
             }
             // No need to update prevPosRef - we use absolute cursor position with stored offset
