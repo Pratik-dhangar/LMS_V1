@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import webinarService from '../../../api/services/Communication/webinarService';
+import GoogleMeetButton from '../../../components/GoogleMeetButton';
 import '../../../styles/components/common/Modal.css';
 
 const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) => {
@@ -109,6 +110,13 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
     
     setUnregisteredEmails(prev => [...prev, currentEmail]);
     setCurrentEmail('');
+  };
+
+  const handleGoogleMeetCreated = (meetingUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      meeting_link: meetingUrl
+    }));
   };
 
   const removeEmail = (email) => {
@@ -245,6 +253,15 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
             {/* Meeting Link */}
             <div className="app-modal-form-field">
               <label className="app-modal-form-label required">Meeting Link</label>
+              
+              {/* Google Meet Button */}
+              <div style={{ marginBottom: '0.75rem' }}>
+                <GoogleMeetButton 
+                  onMeetingCreated={handleGoogleMeetCreated}
+                  disabled={loading || !!editWebinar}
+                />
+              </div>
+
               <input
                 type="url"
                 name="meeting_link"
@@ -255,7 +272,7 @@ const CreateWebinarModal = ({ isOpen, onClose, onSuccess, editWebinar = null }) 
                 required
               />
               <p className="app-modal-form-helper">
-                Paste the meeting link from Zoom, Google Meet, Microsoft Teams, or any other platform
+                Click the button above to auto-generate a Google Meet link, or paste your own meeting link from Zoom, Microsoft Teams, or any other platform
               </p>
             </div>
 

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
+import GoogleOAuthProvider from './components/GoogleOAuthProvider';
 
 // Pages
 import Home from './pages/Home';
@@ -853,9 +854,11 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ChatProvider>
-          <AppRoutes />
-        </ChatProvider>
+        <GoogleOAuthProvider>
+          <ChatProvider>
+            <AppRoutes />
+          </ChatProvider>
+        </GoogleOAuthProvider>
       </AuthProvider>
     </BrowserRouter>
   );

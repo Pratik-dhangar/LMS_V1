@@ -1,0 +1,26 @@
+/* Google Meet Button Spinner Animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.google-meet-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+.google-meet-btn {
+  transition: all 0.2s ease;
+}
+
+.google-meet-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.google-meet-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
