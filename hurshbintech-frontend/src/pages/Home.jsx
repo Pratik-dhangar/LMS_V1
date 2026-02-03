@@ -25,6 +25,8 @@ const Home = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [typedText, setTypedText] = useState('');
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
   const sectionRefs = useRef({});
 
   const fetchAboutUs = useCallback(async () => {
@@ -97,6 +99,47 @@ const Home = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Typing animation effect for appointment card (only on first load)
+  useEffect(() => {
+    if (!featuredCoach) {
+      setTypedText('');
+      setIsTypingComplete(false);
+      return;
+    }
+
+    const fullText = `Book Appointment with ${featuredCoach.name}!`;
+    const hasSeenAnimation = sessionStorage.getItem('hasSeenTypingAnimation');
+
+    // If user has already seen the animation, show full text immediately
+    if (hasSeenAnimation) {
+      setTypedText(fullText);
+      setIsTypingComplete(true);
+      return;
+    }
+
+    let currentIndex = 0;
+    setTypedText('');
+    setIsTypingComplete(false);
+
+    // Delay before starting typing
+    const startDelay = setTimeout(() => {
+      const typingInterval = setInterval(() => {
+        if (currentIndex <= fullText.length) {
+          setTypedText(fullText.slice(0, currentIndex));
+          currentIndex++;
+        } else {
+          setIsTypingComplete(true);
+          sessionStorage.setItem('hasSeenTypingAnimation', 'true');
+          clearInterval(typingInterval);
+        }
+      }, 50); // Type speed: 50ms per character
+
+      return () => clearInterval(typingInterval);
+    }, 800); // Wait 800ms before starting to type
+
+    return () => clearTimeout(startDelay);
+  }, [featuredCoach]);
 
   useEffect(() => {
     if (!aboutUs) return;
@@ -272,6 +315,13 @@ const Home = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const scrollToCoachSection = () => {
+    const element = document.getElementById('featured-coach-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -293,6 +343,17 @@ const Home = () => {
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
         <h2 className="home-hero-subtitle"> We stand with families having children facing delays & difficulties by creating optimum learning opportunities!</h2>
+        
+        {/* Book Appointment Overlay Card */}
+        {featuredCoach && typedText && (
+          <div className={`hero-appointment-card ${isTypingComplete ? 'typing-complete' : ''}`} onClick={scrollToCoachSection}>
+            <span className="hero-appointment-icon">📅</span>
+            <h3 className="hero-appointment-text">
+              {typedText}
+              {!isTypingComplete && <span className="typing-cursor">|</span>}
+            </h3>
+          </div>
+        )}
       </section>
 
       {/* Blogs Section */}
@@ -478,7 +539,7 @@ const Home = () => {
 
           {/* Custom Coach Profile Section */}
           {featuredCoach && (
-            <section className="custom-coach-section" aria-labelledby="coach-heading">
+            <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
               <div className="custom-coach-container">
                 {/* Coach Profile Picture */}
                 <div className="custom-coach-image-wrapper">
