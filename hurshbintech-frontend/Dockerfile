@@ -25,6 +25,7 @@ RUN echo "=== Checking index.html ===" && \
 # Accept build arguments for Vite
 ARG VITE_API_BASE_URL=https://43.204.218.16:8000/api
 ARG VITE_WS_URL=wss://43.204.218.16:8000
+ARG VITE_GOOGLE_CLIENT_ID
 
 ARG VITE_ENABLE_PWA=false
 ENV VITE_ENABLE_PWA=$VITE_ENABLE_PWA
@@ -32,6 +33,7 @@ ENV VITE_ENABLE_PWA=$VITE_ENABLE_PWA
 # Set as environment variables for build
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Build the application
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
