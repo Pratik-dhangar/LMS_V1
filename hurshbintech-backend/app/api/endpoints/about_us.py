@@ -299,6 +299,7 @@ async def update_about_us(
     values_content: Optional[str] = Form(None),
     commitment_title: Optional[str] = Form(None),
     commitment_content: Optional[str] = Form(None),
+    featured_coach_id: Optional[int] = Form(None),
     status: Optional[str] = Form(None),
     featured_image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
@@ -378,6 +379,8 @@ async def update_about_us(
             update_data["commitment_title"] = commitment_title
         if commitment_content is not None:
             update_data["commitment_content"] = commitment_content
+        if featured_coach_id is not None:
+            update_data["featured_coach_id"] = featured_coach_id
         if status is not None:
             update_data["status"] = status
 

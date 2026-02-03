@@ -583,15 +583,15 @@
 /* Scroll to Top Button */
 .scroll-to-top-btn {
   position: fixed;
-  bottom: 2rem;
+  bottom: 5rem;
   right: 2rem;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.9rem;
+  height: 3.9rem;
   background: linear-gradient(135deg, #fc9f0a 0%, #efa42c 100%);
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(241, 187, 10, 0.4);
@@ -615,8 +615,8 @@
 
 @media (max-width: 640px) {
   .scroll-to-top-btn {
-    bottom: 1rem;
-    right: 1rem;
+    bottom: 5rem;
+    right: .8rem;
     width: 3rem;
     height: 3rem;
     font-size: 1.25rem;
