@@ -1,0 +1,298 @@
+/* Custom Coach Profile Section */
+.custom-coach-section {
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-coach-container {
+  width: 100%;
+  max-width: 1000px;
+  height: 400px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.custom-coach-container:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Coach Image Section (25% width) */
+.custom-coach-image-wrapper {
+  width: 25%;
+  min-width: 25%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-coach-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 8px;
+}
+
+.custom-coach-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+}
+
+/* Coach Content Section (75% width) */
+.custom-coach-content {
+  width: 75%;
+  padding: 40px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.custom-coach-name {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.custom-coach-bio {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #4a5568;
+  margin: 0;
+  text-align: justify;
+  padding-right: 10px;
+}
+
+/* Custom scrollbar for bio */
+.custom-coach-bio::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-coach-bio::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.custom-coach-bio::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 3px;
+}
+
+.custom-coach-bio::-webkit-scrollbar-thumb:hover {
+  background: #764ba2;
+}
+
+/* Read More Button - Hidden on desktop */
+.custom-coach-read-more {
+  display: none;
+}
+
+.custom-coach-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 14px 40px;
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.custom-coach-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.custom-coach-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1100px) {
+  .custom-coach-container {
+    max-width: 850px;
+    height: 350px;
+  }
+
+  .custom-coach-content {
+    padding: 35px 40px;
+  }
+
+  .custom-coach-name {
+    font-size: 28px;
+  }
+
+  .custom-coach-bio {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 900px) {
+  .custom-coach-container {
+    max-width: 700px;
+    height: 320px;
+  }
+
+  .custom-coach-content {
+    padding: 30px 35px;
+  }
+
+  .custom-coach-name {
+    font-size: 26px;
+  }
+
+  .custom-coach-bio {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-coach-section {
+    padding: 30px 15px;
+  }
+
+  .custom-coach-container {
+    flex-direction: row;
+    height: auto;
+    max-width: 100%;
+    min-height: 180px;
+  }
+
+  .custom-coach-image-wrapper {
+    width: 35%;
+    min-width: 35%;
+    height: auto;
+    min-height: 180px;
+    padding: 15px;
+  }
+
+  .custom-coach-image {
+    object-fit: cover;
+  }
+
+  .custom-coach-content {
+    width: 65%;
+    padding: 15px 20px 15px 10px;
+    align-items: flex-start;
+    text-align: left;
+    gap: 10px;
+  }
+
+  .custom-coach-name {
+    font-size: 20px;
+  }
+
+  .custom-coach-bio-wrapper {
+    width: 100%;
+  }
+
+  .custom-coach-bio {
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: left;
+    padding-right: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .custom-coach-bio-wrapper.expanded .custom-coach-bio {
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+
+  .custom-coach-read-more {
+    display: inline-block;
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 8px;
+    text-decoration: underline;
+  }
+
+  .custom-coach-button {
+    width: 100%;
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .custom-coach-section {
+    padding: 25px 10px;
+  }
+
+  .custom-coach-container {
+    max-width: 100%;
+    flex-direction: row;
+  }
+
+  .custom-coach-image-wrapper {
+    width: 35%;
+    min-width: 35%;
+    height: auto;
+    min-height: 160px;
+    padding: 10px;
+  }
+
+  .custom-coach-image {
+    object-fit: cover;
+  }
+
+  .custom-coach-content {
+    width: 65%;
+    padding: 12px 15px 12px 8px;
+    gap: 8px;
+  }
+
+  .custom-coach-name {
+    font-size: 18px;
+  }
+
+  .custom-coach-bio {
+    font-size: 12px;
+    line-height: 1.4;
+    -webkit-line-clamp: 3;
+  }
+
+  .custom-coach-read-more {
+    font-size: 12px;
+  }
+
+  .custom-coach-button {
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 100%;
+  }
+}

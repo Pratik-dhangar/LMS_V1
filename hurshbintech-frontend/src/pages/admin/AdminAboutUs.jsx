@@ -846,74 +846,95 @@ const AdminAboutUs = () => {
                           <h4 style={{ marginBottom: '15px', color: '#374151', fontSize: '16px', fontWeight: '600' }}>
                             Preview - How it will appear on Landing Page:
                           </h4>
+                          {/* New Custom Coach Container - 800px x 300px */}
                           <div style={{
-                            border: '2px solid #3b82f6',
-                            borderRadius: '12px',
+                            width: '100%',
+                            maxWidth: '800px',
+                            height: '300px',
+                            background: 'white',
+                            borderRadius: '16px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                            display: 'flex',
                             overflow: 'hidden',
-                            maxWidth: '400px',
-                            backgroundColor: '#ffffff',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            border: '2px solid #3b82f6'
                           }}>
-                            {/* Coach Profile Picture */}
-                            {selectedCoach.profile_picture_url ? (
-                              <img
-                                src={selectedCoach.profile_picture_url}
-                                alt={selectedCoach.name}
-                                style={{
+                            {/* Left Side - Coach Profile Picture (25% width) */}
+                            <div style={{
+                              width: '25%',
+                              minWidth: '25%',
+                              height: '100%',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            }}>
+                              {selectedCoach.profile_picture_url ? (
+                                <img
+                                  src={selectedCoach.profile_picture_url}
+                                  alt={selectedCoach.name}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    objectPosition: 'center'
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
                                   width: '100%',
-                                  height: '200px',
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            ) : (
-                              <div style={{
-                                width: '100%',
-                                height: '200px',
-                                backgroundColor: '#e5e7eb',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '48px',
-                                color: '#9ca3af'
-                              }}>
-                                {selectedCoach.name?.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            
-                            {/* Coach Details */}
-                            <div style={{ padding: '20px' }}>
-                              <h3 style={{
-                                fontSize: '20px',
-                                fontWeight: '700',
-                                color: '#1f2937',
-                                marginBottom: '8px'
-                              }}>
-                                Book Appointment with {selectedCoach.name}
-                              </h3>
-                              {selectedCoach.specialization && (
-                                <p style={{
-                                  fontSize: '14px',
-                                  color: '#6b7280',
-                                  marginBottom: '16px'
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '64px',
+                                  fontWeight: '700',
+                                  color: 'white'
                                 }}>
-                                  <strong>Specialization:</strong> {selectedCoach.specialization}
-                                </p>
+                                  {selectedCoach.name?.charAt(0).toUpperCase()}
+                                </div>
                               )}
+                            </div>
+
+                            {/* Right Side - Coach Details (75% width) */}
+                            <div style={{
+                              width: '75%',
+                              padding: '30px 40px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              gap: '20px'
+                            }}>
+                              <h2 style={{
+                                fontSize: '28px',
+                                fontWeight: '700',
+                                color: '#1a202c',
+                                margin: 0,
+                                lineHeight: '1.3'
+                              }}>
+                                {selectedCoach.name}
+                              </h2>
+                              <p style={{
+                                fontSize: '14px',
+                                lineHeight: '1.6',
+                                color: '#4a5568',
+                                margin: 0,
+                                textAlign: 'justify',
+                                maxHeight: '120px',
+                                overflowY: 'auto',
+                                paddingRight: '10px'
+                              }}>
+                                Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
+                                She has several degrees and honours to her credit in the field of child development, 
+                                education, psychology, and behaviour modification. She has been working in the field of 
+                                training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
+                                who have delays and difficulties in various areas of development, from physical, language, 
+                                communication, emotional to behaviour and learning.
+                              </p>
                               <button
                                 type="button"
                                 disabled
-                                style={{
-                                  width: '100%',
-                                  padding: '12px',
-                                  backgroundColor: '#3b82f6',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  fontSize: '16px',
-                                  fontWeight: '600',
-                                  cursor: 'not-allowed',
-                                  opacity: '0.7'
-                                }}
+                               className="btn-primary"
                               >
                                 Book Appointment
                               </button>

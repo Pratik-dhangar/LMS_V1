@@ -11,15 +11,30 @@
   background: linear-gradient(rgba(92, 30, 30, 0.75), rgba(92, 30, 30, 0.75)), url('../../assets/hero.jpg') center/cover no-repeat;
   color: white;
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: .5rem 5.5rem;
   border-bottom-left-radius: 1rem;
   border-bottom-right-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
-  min-height: 600px;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .home-hero {
+    min-height: 280px;
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-hero {
+    min-height: 240px;
+    padding: 1.25rem 0.75rem;
+  }
 }
 
 /* Hero Navigation Links */
@@ -36,7 +51,7 @@
   background: none;
   border: none;
   color: white;
-  font-size: 1.525rem;
+  font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -72,26 +87,38 @@
 }
 
 .home-hero-title {
-  font-size: 2.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 @media (min-width: 640px) {
   .home-hero-title {
-    font-size: 3rem;
+    font-size: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-hero-title {
+    font-size: 2.25rem;
   }
 }
 
 .home-hero-subtitle {
-  font-size: 1.125rem;
+  font-size: 0.875rem;
   opacity: 0.9;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 @media (min-width: 640px) {
   .home-hero-subtitle {
-    font-size: 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-hero-subtitle {
+    font-size: 1.125rem;
   }
 }
 
@@ -583,15 +610,15 @@
 /* Scroll to Top Button */
 .scroll-to-top-btn {
   position: fixed;
-  bottom: 2rem;
+  bottom: 5rem;
   right: 2rem;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.9rem;
+  height: 3.9rem;
   background: linear-gradient(135deg, #fc9f0a 0%, #efa42c 100%);
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(241, 187, 10, 0.4);
@@ -615,8 +642,8 @@
 
 @media (max-width: 640px) {
   .scroll-to-top-btn {
-    bottom: 1rem;
-    right: 1rem;
+    bottom: 5rem;
+    right: .8rem;
     width: 3rem;
     height: 3rem;
     font-size: 1.25rem;
