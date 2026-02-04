@@ -6,6 +6,7 @@ import RichTextEditor from "../../components/RichTextEditor";
 import { FaSave, FaTimes, FaImage, FaGlobe } from "react-icons/fa";
 import aboutUsService from "../../api/services/aboutUsService";
 import adminService from "../../api/services/adminService";
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/admin/AdminAboutUs.css";
 
@@ -869,7 +870,7 @@ const AdminAboutUs = () => {
                             }}>
                               {selectedCoach.profile_picture_url ? (
                                 <img
-                                  src={selectedCoach.profile_picture_url}
+                                  src={getFileUrl(selectedCoach.profile_picture_url)}
                                   alt={selectedCoach.name}
                                   style={{
                                     width: '100%',
