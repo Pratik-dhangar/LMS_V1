@@ -450,6 +450,7 @@ const Whiteboard = ({
     const [selectedItems, setSelectedItems] = useState([]); // Array for multiple selection
     const [editingBucketId, setEditingBucketId] = useState(null);
     const [editingBucketLabel, setEditingBucketLabel] = useState('');
+    const [dragOverBucketId, setDragOverBucketId] = useState(null); // Track which bucket is being dragged over
     const [animatingItemId, setAnimatingItemId] = useState(null); // For drop animation
     const [isDragOverCanvas, setIsDragOverCanvas] = useState(false); // For visual feedback during drag over
 
@@ -990,12 +991,33 @@ const Whiteboard = ({
                             height: bounds.height,
                             title: data.title,
                             type: data.type,
+                            inBucket: data.inBucket || null, // Include bucket association
+                            originalWidth: data.originalWidth,
+                            originalHeight: data.originalHeight,
                             // Preserve canonical file metadata for learning content API
                             fileUrl: data.fileUrl,
                             thumbnail: data.thumbnail,
                             originalFilename: data.originalFilename,
                             mimeType: data.mimeType
                         };
+
+                        // If item is in a bucket, add to bucket's items list and trigger animation
+                        if (data.inBucket) {
+                            setBuckets(prevBuckets => prevBuckets.map(bucket => {
+                                if (bucket.id === data.inBucket) {
+                                    const items = bucket.items || [];
+                                    if (!items.includes(data.id)) {
+                                        return { ...bucket, items: [...items, data.id] };
+                                    }
+                                }
+                                return bucket;
+                            }));
+
+                            // Trigger drop animation
+                            setAnimatingItemId(data.id);
+                            setTimeout(() => setAnimatingItemId(null), 300);
+                        }
+
                         // console.log('[Whiteboard] Adding image item to canvasItems:', newItem);
 
                         // Auto-open popup if it's a video/PDF and this is a trainer adding it
@@ -1051,26 +1073,44 @@ const Whiteboard = ({
                 // Update item properties - apply coordinates directly from sender
                 setCanvasItems(prev => prev.map(item => {
                     if (item.id === data.id) {
-                        // Denormalize if needed, but preserve absolute pixel positions
-                        const newX = data.x !== undefined ?
-                            (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x)
-                            : item.x;
-                        const newY = data.y !== undefined ?
-                            (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y)
-                            : item.y;
-                        const newWidth = data.width !== undefined ?
-                            (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width)
-                            : item.width;
-                        const newHeight = data.height !== undefined ?
-                            (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height)
-                            : item.height;
+                        let finalX = data.x;
+                        let finalY = data.y;
+                        let finalWidth = data.width;
+                        let finalHeight = data.height;
+
+                        // For items in buckets, use absolute pixel coordinates directly
+                        // This matches the trainer's approach and avoids complex coordinate transformations
+                        if (data.inBucket) {
+                            // Items in buckets use absolute pixel positions - apply directly
+                            finalX = data.x !== undefined ? data.x : item.x;
+                            finalY = data.y !== undefined ? data.y : item.y;
+                            finalWidth = data.width !== undefined ? data.width : item.width;
+                            finalHeight = data.height !== undefined ? data.height : item.height;
+                        } else {
+                            // For non-bucket items, apply standard denormalization
+                            finalX = data.x !== undefined ?
+                                (data.x >= 0 && data.x <= 1 ? denormalizeItem({ x: data.x }, canvasRef.current).x : data.x)
+                                : item.x;
+
+                            finalY = data.y !== undefined ?
+                                (data.y >= 0 && data.y <= 1 ? denormalizeItem({ y: data.y }, canvasRef.current).y : data.y)
+                                : item.y;
+
+                            finalWidth = data.width !== undefined ?
+                                (data.width >= 0 && data.width <= 1 ? denormalizeItem({ width: data.width }, canvasRef.current).width : data.width)
+                                : item.width;
+
+                            finalHeight = data.height !== undefined ?
+                                (data.height >= 0 && data.height <= 1 ? denormalizeItem({ height: data.height }, canvasRef.current).height : data.height)
+                                : item.height;
+                        }
 
                         return {
                             ...item,
-                            x: newX,
-                            y: newY,
-                            width: newWidth,
-                            height: newHeight,
+                            x: finalX,
+                            y: finalY,
+                            width: finalWidth,
+                            height: finalHeight,
                             inBucket: data.inBucket !== undefined ? data.inBucket : item.inBucket,
                             originalWidth: data.originalWidth !== undefined ? data.originalWidth : item.originalWidth,
                             originalHeight: data.originalHeight !== undefined ? data.originalHeight : item.originalHeight,
@@ -1107,11 +1147,33 @@ const Whiteboard = ({
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
-                    // Update bucket directly - no normalization/denormalization needed
-                    // Buckets use absolute pixel positioning as overlay elements
-                    setBuckets(prev => prev.map(bucket =>
-                        bucket.id === data.id ? { ...bucket, ...data } : bucket
-                    ));
+                    // Calculate delta before updating bucket
+                    setBuckets(prev => {
+                        const oldBucket = prev.find(b => b.id === data.id);
+
+                        // If bucket moved, also move all items inside it
+                        if (oldBucket && (oldBucket.x !== data.x || oldBucket.y !== data.y)) {
+                            const dx = data.x - oldBucket.x;
+                            const dy = data.y - oldBucket.y;
+
+                            // Move items that belong to this bucket - do this OUTSIDE setBuckets
+                            setCanvasItems(prevItems => prevItems.map(item => {
+                                if (item.inBucket === data.id) {
+                                    return {
+                                        ...item,
+                                        x: item.x + dx,
+                                        y: item.y + dy
+                                    };
+                                }
+                                return item;
+                            }));
+                        }
+
+                        // Update bucket position
+                        return prev.map(bucket =>
+                            bucket.id === data.id ? { ...bucket, ...data } : bucket
+                        );
+                    });
                 }
             };
 
@@ -1313,13 +1375,19 @@ const Whiteboard = ({
     }, [animatingItemId]);
 
     // Optimized redraw effect - debounced to prevent excessive renders when adding videos
+    // Skip redraws during active dragging to prevent conflicts
     useEffect(() => {
+        // Don't redraw while actively dragging to prevent conflicts
+        if (isDraggingItem || isResizingItem) {
+            return;
+        }
+
         const timer = setTimeout(() => {
             redrawCanvas();
         }, 16); // 60fps, only redraw once per frame max
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canvasItems]);
+    }, [canvasItems, isDraggingItem, isResizingItem]);
 
     // Redraw when learner selection changes (remote or local) - also debounced
     useEffect(() => {
@@ -1614,9 +1682,14 @@ const Whiteboard = ({
             );
             setBuckets(updatedBuckets);
 
-            // Send update to other participants
+            // Send update to other participants - include items array for full sync
             const updatedBucket = updatedBuckets.find(b => b.id === editingBucketId);
-            whiteboardService?.send('bucket_update', updatedBucket);
+            if (updatedBucket) {
+                whiteboardService?.send('bucket_update', {
+                    ...updatedBucket,
+                    items: updatedBucket.items || [] // Ensure items array is included
+                });
+            }
 
             setEditingBucketId(null);
             setEditingBucketLabel('');
@@ -1656,6 +1729,9 @@ const Whiteboard = ({
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
 
+        // Clear drag-over visual feedback when starting any interaction
+        setDragOverBucketId(null);
+
         // Handle both mouse and touch events
         let x, y;
         if (e.touches) {
@@ -1679,6 +1755,8 @@ const Whiteboard = ({
                 // Check if clicking on resize handle
                 if (isBucketResizeHandle(x, y, bucket)) {
                     setSelectedItems([{ ...bucket, type: 'bucket' }]);
+                    // Reset throttle timer so first state update isn't skipped
+                    dragStateUpdateTimeRef.current = 0;
                     setIsResizingItem(true);
                     prevPosRef.current = { x, y };
                     e.preventDefault();
@@ -1687,6 +1765,8 @@ const Whiteboard = ({
 
                 // Otherwise, drag the bucket
                 setSelectedItems([{ ...bucket, type: 'bucket' }]);
+                // Reset throttle timer so first state update isn't skipped
+                dragStateUpdateTimeRef.current = 0;
                 setIsDraggingItem(true);
                 prevPosRef.current = { x, y };
                 e.preventDefault();
@@ -1714,14 +1794,17 @@ const Whiteboard = ({
 
                 // When drag permission is active
                 if (toolAccess.drag) {
-                    // For drag operations, if item not already selected, add to selection
+                    // For drag operations, ALWAYS update selection to ensure item is in selectedItems
+                    // This ensures performDraw has access to the item even on first click
                     if (!isAlreadySelected) {
-                        setSelectedItems(prev => [...prev, itemWithOriginalSize]);
+                        // Create new selection array with this item
+                        const newSelection = [...selectedItems, itemWithOriginalSize];
+                        setSelectedItems(newSelection);
 
                         // Send selection to trainer via websocket
                         if (whiteboardService) {
                             whiteboardService.send('item_selected', {
-                                itemIds: [...selectedItems.map(si => si.id), item.id],
+                                itemIds: newSelection.map(si => si.id),
                                 selectedBy: 'learner',
                                 timestamp: Date.now()
                             });
@@ -1730,12 +1813,16 @@ const Whiteboard = ({
 
                     // Start dragging only (no resize for learners)
                     // Store offset from cursor to item's top-left corner for smooth dragging
+                    // Always ensure offset is fresh for this drag operation
                     dragOffsetRef.current = {
                         x: x - item.x,
                         y: y - item.y
                     };
+                    // Reset throttle timer so first state update isn't skipped
+                    dragStateUpdateTimeRef.current = 0;
                     setIsDraggingItem(true);
                     prevPosRef.current = { x, y };
+                    e.preventDefault(); // Prevent any default behavior
                 } else {
                     // Select-only mode: single-click adds to selection (multi-select)
                     // Double-click will deselect (handled in onDoubleClick)
@@ -1776,13 +1863,18 @@ const Whiteboard = ({
 
             // Trainer can ALWAYS start dragging/resizing
             if (isResizeHandle(x, y, item)) {
+                // Reset throttle timer so first state update isn't skipped
+                dragStateUpdateTimeRef.current = 0;
                 setIsResizingItem(true);
             } else {
                 // Store offset from cursor to item's top-left corner for smooth dragging
+                // Always ensure offset is fresh for this drag operation
                 dragOffsetRef.current = {
                     x: x - item.x,
                     y: y - item.y
                 };
+                // Reset throttle timer so first state update isn't skipped
+                dragStateUpdateTimeRef.current = 0;
                 setIsDraggingItem(true);
             }
             prevPosRef.current = { x, y };
@@ -1882,7 +1974,8 @@ const Whiteboard = ({
                     x: normalizedVideo.x,
                     y: normalizedVideo.y,
                     width: normalizedVideo.width,
-                    height: normalizedVideo.height
+                    height: normalizedVideo.height,
+                    inBucket: updatedVideo.inBucket
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -1929,21 +2022,18 @@ const Whiteboard = ({
 
             // Throttle network updates to every 50ms
             if (now - lastNetworkUpdateRef.current > 50) {
-                // Send bucket with pixel coordinates (no normalization needed for overlay elements)
-                whiteboardService?.send('bucket_update', updatedBucket);
-                updatedItems.forEach(item => {
-                    if (item.inBucket === selectedItem.id) {
-                        // Normalize item bounds for network transmission
-                        const normalizedItem = normalizeItem(item, canvasRef.current);
-                        whiteboardService?.sendItemUpdate({
-                            id: item.id,
-                            x: normalizedItem.x,
-                            y: normalizedItem.y,
-                            width: normalizedItem.width,
-                            height: normalizedItem.height
-                        });
-                    }
+                // Send only bucket update - items will be moved automatically on learner side by delta
+                // This prevents race conditions where item updates override bucket movement
+                const currentBucket = buckets.find(b => b.id === selectedItem.id);
+                whiteboardService?.send('bucket_update', {
+                    ...updatedBucket,
+                    items: currentBucket?.items || [] // Include items array for full sync
                 });
+
+                // Don't send individual item updates when dragging bucket
+                // The bucket update handler will move items by delta automatically
+                // This ensures items stay in sync with the bucket
+
                 lastNetworkUpdateRef.current = now;
             }
 
@@ -1959,10 +2049,21 @@ const Whiteboard = ({
             }
 
             const selectedItem = selectedItems[0];
+
+            // Get the current item state from canvasItems to ensure we have the latest data
+            // This prevents using stale data from selectedItems which might be outdated
+            const currentItem = canvasItems.find(item => item.id === selectedItem.id);
+
+            // If item not found in canvasItems, it may have been removed, stop dragging
+            if (!currentItem) {
+                setIsDraggingItem(false);
+                return;
+            }
+
             // Use cursor position with stored offset for precise positioning
             // This keeps the item at the exact same position relative to cursor as when drag started
             const updatedItem = {
-                ...selectedItem,
+                ...currentItem,
                 x: currX - dragOffsetRef.current.x,
                 y: currY - dragOffsetRef.current.y
             };
@@ -2015,15 +2116,15 @@ const Whiteboard = ({
                         // Remove from old bucket
                         setBuckets(prev => prev.map(b =>
                             b.id === updatedItem.inBucket
-                                ? { ...b, items: (b.items || []).filter(id => id !== selectedItem.id) }
+                                ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
                                 : b
                         ));
                     }
 
                     // Add to new bucket
                     setBuckets(prev => prev.map(b =>
-                        b.id === foundBucket.id && !(b.items || []).includes(selectedItem.id)
-                            ? { ...b, items: [...(b.items || []), selectedItem.id] }
+                        b.id === foundBucket.id && !(b.items || []).includes(currentItem.id)
+                            ? { ...b, items: [...(b.items || []), currentItem.id] }
                             : b
                     ));
 
@@ -2035,20 +2136,20 @@ const Whiteboard = ({
                     // Remove from old bucket
                     setBuckets(prev => prev.map(b =>
                         b.id === updatedItem.inBucket
-                            ? { ...b, items: (b.items || []).filter(id => id !== selectedItem.id) }
+                            ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
                             : b
                     ));
                     updatedItem.inBucket = null;
                     // Restore original size - expand back to normal
-                    updatedItem.width = selectedItem.originalWidth || updatedItem.width;
-                    updatedItem.height = selectedItem.originalHeight || updatedItem.height;
+                    updatedItem.width = currentItem.originalWidth || updatedItem.width;
+                    updatedItem.height = currentItem.originalHeight || updatedItem.height;
                     setAnimatingItemId(null); // Stop animation when leaving bucket
                 }
             }
 
             // Preserve original dimensions for future bucket operations
-            updatedItem.originalWidth = selectedItem.originalWidth || updatedItem.width;
-            updatedItem.originalHeight = selectedItem.originalHeight || updatedItem.height;
+            updatedItem.originalWidth = currentItem.originalWidth || updatedItem.width;
+            updatedItem.originalHeight = currentItem.originalHeight || updatedItem.height;
 
             const newItems = canvasItems.map(item =>
                 item.id === selectedItem.id ? updatedItem : item
@@ -2064,7 +2165,7 @@ const Whiteboard = ({
                 if (updatedItem.inBucket) {
                     // Send pixel coordinates directly for bucket items
                     whiteboardService?.sendItemUpdate({
-                        id: selectedItem.id,
+                        id: currentItem.id,
                         x: updatedItem.x,
                         y: updatedItem.y,
                         width: updatedItem.width,
@@ -2077,7 +2178,7 @@ const Whiteboard = ({
                     // Normalize item bounds for network transmission (items outside buckets)
                     const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
                     whiteboardService?.sendItemUpdate({
-                        id: selectedItem.id,
+                        id: currentItem.id,
                         x: normalizedItem.x,
                         y: normalizedItem.y,
                         width: normalizedItem.width,
@@ -2120,8 +2221,12 @@ const Whiteboard = ({
 
                 // Throttle network updates to every 50ms
                 if (now - lastNetworkUpdateRef.current > 50) {
-                    // Send bucket with pixel coordinates (no normalization needed for overlay elements)
-                    whiteboardService?.send('bucket_update', updatedBucket);
+                    // Send bucket with pixel coordinates and items array (no normalization needed for overlay elements)
+                    const currentBucket = buckets.find(b => b.id === selectedItem.id);
+                    whiteboardService?.send('bucket_update', {
+                        ...updatedBucket,
+                        items: currentBucket?.items || [] // Include items array for full sync
+                    });
                     lastNetworkUpdateRef.current = now;
                 }
 
@@ -2158,7 +2263,8 @@ const Whiteboard = ({
                     x: normalizedItem.x,
                     y: normalizedItem.y,
                     width: normalizedItem.width,
-                    height: normalizedItem.height
+                    height: normalizedItem.height,
+                    inBucket: updatedItem.inBucket // Include bucket reference to maintain bucket relationship
                 });
                 lastNetworkUpdateRef.current = now;
             }
@@ -2236,17 +2342,39 @@ const Whiteboard = ({
             currentPathRef.current = null;
         }
 
-        // No need to check bucket on stop - it's handled in draw() in real-time
-        setIsDrawing(false);
-        setIsDraggingItem(false);
-        setIsResizingItem(false);
-        setResizingVideo(null);
+        // Track if we need to redraw after state changes
+        const needsRedraw = isDraggingItem || isResizingItem;
+
+        // Reset drag/resize states - only reset what was actually active
+        // to avoid interfering with other ongoing interactions
+        if (isDrawing) {
+            setIsDrawing(false);
+        }
+        if (isDraggingItem) {
+            setIsDraggingItem(false);
+            // Reset drag offset for next drag operation
+            dragOffsetRef.current = { x: 0, y: 0 };
+            // Keep selection for learners with drag permission to enable continuous dragging
+            // Trainer and learners without drag permission can clear selection on click elsewhere
+        }
+        if (isResizingItem) {
+            setIsResizingItem(false);
+        }
+        if (resizingVideo) {
+            setResizingVideo(null);
+        }
+
+        // Redraw canvas after dragging/resizing stops to ensure everything is rendered correctly
+        if (needsRedraw) {
+            setTimeout(() => redrawCanvas(), 16);
+        }
     };
 
     const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragOverCanvas(false);
+        setDragOverBucketId(null); // Clear bucket highlight
 
         if (!isTrainer) return;
 
@@ -2325,22 +2453,53 @@ const Whiteboard = ({
                 return;
             }
 
+            // Check if dropped into a bucket
+            const droppedBucket = buckets.find(bucket =>
+                isItemInBucket(x - 50, y - 50, 100, 100, bucket)
+            );
+
             // For non-video items, add to canvas as overlay
             const newItem = {
                 id: Date.now(),
                 src: droppedData.thumbnail || fullUrl,
                 x: x - 50,
                 y: y - 50,
-                width: 100,
-                height: 100,
+                width: droppedBucket ? 40 : 100,  // Shrink if in bucket
+                height: droppedBucket ? 40 : 100, // Shrink if in bucket
+                originalWidth: 100,
+                originalHeight: 100,
                 title: droppedData.title,
                 type: droppedData.type,
+                inBucket: droppedBucket?.id || null, // Track bucket association
                 // Store canonical file metadata for learning content API
                 fileUrl: fileUrl,
                 thumbnail: droppedData.thumbnail,
                 originalFilename: droppedData.originalFilename || droppedData.title || 'image',
                 mimeType: droppedData.mimeType || 'image/jpeg'
             };
+
+            // If dropped in bucket, position item properly inside bucket
+            if (droppedBucket) {
+                const bucketCenterX = droppedBucket.x + droppedBucket.width * 0.5;
+                const bucketCenterY = droppedBucket.y + droppedBucket.height * 0.65;
+                const itemsInBucket = (droppedBucket.items || []).length;
+                const angle = (itemsInBucket * Math.PI * 2) / 8;
+                const radius = Math.min(droppedBucket.width, droppedBucket.height) * 0.15;
+
+                newItem.x = bucketCenterX + Math.cos(angle) * radius - newItem.width / 2;
+                newItem.y = bucketCenterY + Math.sin(angle) * radius - newItem.height / 2;
+
+                // Trigger drop animation
+                setAnimatingItemId(newItem.id);
+                setTimeout(() => setAnimatingItemId(null), 300);
+
+                // Add item to bucket's items list
+                setBuckets(prev => prev.map(b =>
+                    b.id === droppedBucket.id
+                        ? { ...b, items: [...(b.items || []), newItem.id] }
+                        : b
+                ));
+            }
 
             // console.log('[Whiteboard] Adding new item to trainer canvas:', newItem);
             setCanvasItems(prev => {
@@ -2359,11 +2518,22 @@ const Whiteboard = ({
                 height: newItem.height,
                 title: newItem.title,
                 type: newItem.type,
+                inBucket: newItem.inBucket,
+                originalWidth: newItem.originalWidth,
+                originalHeight: newItem.originalHeight,
                 fileUrl: newItem.fileUrl,
                 thumbnail: newItem.thumbnail,
                 originalFilename: newItem.originalFilename,
                 mimeType: newItem.mimeType
             });
+
+            // Also update bucket if item was added to it
+            if (droppedBucket) {
+                const updatedBucket = buckets.find(b => b.id === droppedBucket.id);
+                if (updatedBucket) {
+                    whiteboardService?.send('bucket_update', updatedBucket);
+                }
+            }
 
             return;
         }
@@ -2417,6 +2587,7 @@ const Whiteboard = ({
         // Only set to false if leaving the canvas element itself, not child elements
         if (e.target === canvasRef.current) {
             setIsDragOverCanvas(false);
+            setDragOverBucketId(null); // Clear bucket highlight when leaving canvas
         }
     };
 
@@ -2425,6 +2596,21 @@ const Whiteboard = ({
         e.stopPropagation();
         if (e.dataTransfer) {
             e.dataTransfer.dropEffect = 'copy';
+        }
+
+        // Check if dragging over a bucket for visual feedback
+        if (isTrainer) {
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Find which bucket (if any) the cursor is over
+            const hoveredBucket = buckets.find(bucket =>
+                isItemInBucket(x, y, 1, 1, bucket)
+            );
+
+            setDragOverBucketId(hoveredBucket?.id || null);
         }
     };
 
@@ -2956,6 +3142,8 @@ const Whiteboard = ({
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
                                                 setSelectedItems([item]);
+                                                // Reset throttle timer so first state update isn't skipped
+                                                dragStateUpdateTimeRef.current = 0;
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX, y: e.clientY };
                                             }}
@@ -3116,6 +3304,8 @@ const Whiteboard = ({
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
                                                 setSelectedItems([item]);
+                                                // Reset throttle timer so first state update isn't skipped
+                                                dragStateUpdateTimeRef.current = 0;
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX, y: e.clientY };
                                             }}
@@ -3157,6 +3347,11 @@ const Whiteboard = ({
                             const offsetOut = bucket.dotOffset !== undefined ? bucket.dotOffset : 6; // px outward offset from anchor
                             const anchorPx = (anchor.x / 200) * (bucket.width || 80) + offsetOut;
                             const anchorPy = (anchor.y / 200) * (bucket.height || 80) + offsetOut;
+
+                            // Check if this bucket is being dragged over
+                            const isDraggedOver = dragOverBucketId === bucket.id;
+                            const itemCount = (bucket.items || []).length;
+
                             return (
                                 <div
                                     key={bucket.id}
@@ -3168,7 +3363,9 @@ const Whiteboard = ({
                                         height: `${bucket.height}px`,
                                         pointerEvents: 'none',
                                         zIndex: 10,
-                                        cursor: 'default'
+                                        cursor: 'default',
+                                        filter: isDraggedOver ? 'drop-shadow(0 0 12px rgba(147, 51, 234, 0.8))' : 'none',
+                                        transition: 'filter 0.2s ease'
                                     }}
                                 >
                                     {/* Box Container - Outline Only */}
@@ -3203,6 +3400,32 @@ const Whiteboard = ({
                                             // top: `-${bucket.height * 0}px`
                                         }}
                                     >
+                                        {/* Item count badge */}
+                                        {itemCount > 0 && (
+                                            <span
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-8px',
+                                                    right: isTrainer ? '32px' : '8px',
+                                                    backgroundColor: '#ef4444',
+                                                    color: 'white',
+                                                    borderRadius: '50%',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '11px',
+                                                    fontWeight: 'bold',
+                                                    border: '2px solid white',
+                                                    pointerEvents: 'none',
+                                                    zIndex: 1
+                                                }}
+                                            >
+                                                {itemCount}
+                                            </span>
+                                        )}
+
                                         <span
                                             onDoubleClick={(e) => {
                                                 e.stopPropagation();
@@ -3266,6 +3489,8 @@ const Whiteboard = ({
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                                 setSelectedItems([{ ...bucket, type: 'bucket' }]);
+                                                // Reset throttle timer so first state update isn't skipped
+                                                dragStateUpdateTimeRef.current = 0;
                                                 setIsResizingItem(true);
                                                 prevPosRef.current = { x: e.clientX - canvasRef.current.getBoundingClientRect().left, y: e.clientY - canvasRef.current.getBoundingClientRect().top };
                                             }}
