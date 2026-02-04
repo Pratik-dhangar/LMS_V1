@@ -109,10 +109,6 @@ const TrainerSession = () => {
   const remoteVideoRef = useRef(null); // Ref for remote video element
   const learnerConnectedRef = useRef(false); // Track if learner has connected
 
-  // Video position and size for moveable video feed
-  const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
-  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
-
   // -----------------------------------------------------------
   // 🔹 Purpose: Mic/video UI toggles and state
   // 🔸 How it works: booleans control UI icons and actual track enabled state.
@@ -371,7 +367,7 @@ const TrainerSession = () => {
         // console.log('[TrainerSession] Turning ON voice input, turning OFF video mic');
         learnerRTC.toggleMicrophone();
         setMicEnabled(false);
-        toast.info('Video conferencing mic disabled - Voice input enabled');
+        // toast.info('Video conferencing mic disabled - Voice input enabled');
       }
 
       // Toggle voice input using the new hook
@@ -384,7 +380,7 @@ const TrainerSession = () => {
         // console.log('[TrainerSession] Turning OFF voice input, turning ON video mic');
         learnerRTC.toggleMicrophone();
         setMicEnabled(true);
-        toast.info('Voice input disabled - Video conferencing mic enabled');
+        // toast.info('Voice input disabled - Video conferencing mic enabled');
       }
     } catch (error) {
       console.error('[TrainerSession] Error in toggleListening:', error);
@@ -543,6 +539,17 @@ const TrainerSession = () => {
       setShowHeader(true);
     }
   };
+
+  // -----------------------------------------------------------
+  // 🔹 Purpose: Attach learner's remote stream to video element
+  // 🔸 How it works: watches remoteStream state and attaches it to remoteVideoRef
+  // -----------------------------------------------------------
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      console.log('[TrainerSession] Attaching remote stream to video element');
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   // Listen for item selection messages from learner
   useEffect(() => {
@@ -916,11 +923,11 @@ const TrainerSession = () => {
       // If turning ON video conferencing mic and voice input is ON, turn OFF voice input
       if (newState && listening) {
         await handleVoiceToggle(); // Stop voice input
-        toast.info('Voice input stopped - video conferencing mic enabled');
+        // toast.info('Voice input stopped - video conferencing mic enabled');
       }
       // If turning OFF video conferencing mic, don't auto-enable voice input
       else if (!newState && !listening) {
-        toast.info('Video conferencing mic disabled');
+        // toast.info('Video conferencing mic disabled');
       }
     }
   };
@@ -1297,10 +1304,10 @@ const TrainerSession = () => {
       // Immediately save the clear action to backend
       await sessionNotesService.clearNotes(sessionId);
       // console.log('[TrainerSession] ✅ Session notes cleared successfully');
-      toast.info('Session notes cleared');
+      // toast.info('Session notes cleared');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error clearing notes:', error);
-      toast.error('Failed to clear notes');
+      // toast.error('Failed to clear notes');
     }
   };
 
@@ -1314,10 +1321,10 @@ const TrainerSession = () => {
       // console.log('[TrainerSession] Force-saving notes (disconnect recovery)');
       await sessionNotesService.forceSaveNotes(sessionId, sessionNotes);
       // console.log('[TrainerSession] ✅ Notes force-saved successfully');
-      toast.info('Notes recovered and saved');
+      // toast.info('Notes recovered and saved');
     } catch (error) {
       console.error('[TrainerSession] ❌ Error force-saving notes:', error);
-      toast.error('Failed to recover notes');
+      // toast.error('Failed to recover notes');
     }
   };
 
@@ -1564,10 +1571,12 @@ const TrainerSession = () => {
   // 🔹 Purpose: Add a new bucket to the whiteboard
   // 🔸 How it works: uses utility function with canvas boundaries
   // -----------------------------------------------------------
+  const whiteboardCanvasRef = useRef(null);
+
   const addBucket = () => {
     // Use conservative canvas dimensions to ensure buckets stay within bounds
     // These are approximate - actual canvas is responsive but we use safe margins
-    utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 900, 500);
+    utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 900, 500, whiteboardCanvasRef);
   };
 
   // -----------------------------------------------------------
@@ -1705,6 +1714,48 @@ const TrainerSession = () => {
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
+          {/* Fixed Video Feed - Above Learning Program */}
+          {remoteStream && (
+            <div style={{
+              width: '100%',
+              height: 'clamp(120px, 20vh, 180px)',
+              backgroundColor: '#000',
+              borderRadius: '8px',
+              border: '2px solid #374151',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              margin: '8px 0',
+              flexShrink: 0
+            }}>
+              {/* Video Label */}
+              <div style={{
+                padding: '6px 10px',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                borderBottom: '1px solid #555'
+              }}>
+                👨‍💼 Learner {connectionStatus && `(${connectionStatus})`}
+              </div>
+
+              {/* Video Stream */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                style={{
+                  flex: 1,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  backgroundColor: '#1a1a1a'
+                }}
+              />
+            </div>
+          )}
           <LearningProgramSidebar
             sessionInfo={sessionInfo}
             filteredLearningGoals={filteredLearningGoals}
@@ -1728,22 +1779,6 @@ const TrainerSession = () => {
 
           {/* Whiteboard */}
           <div className="session-whiteboard-container">
-            {/* Moveable Video Feed Overlay */}
-            {remoteStream && (
-              <MoveableVideoFeed
-                videoStream={remoteStream}
-                label="Learner"
-                position={videoPosition}
-                size={videoSize}
-                onPositionChange={setVideoPosition}
-                onSizeChange={setVideoSize}
-                isDraggable={true}
-                isResizable={true}
-                connectionStatus={connectionStatus}
-                zIndex={100}
-              />
-            )}
-
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
@@ -1774,6 +1809,7 @@ const TrainerSession = () => {
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
                 onYoutubeDropped={handleYoutubeDropped}
+                canvasRefForParent={whiteboardCanvasRef}
               />
             </div>
           </div>
@@ -1924,6 +1960,8 @@ const TrainerSession = () => {
               />
             </div>
           )}
+
+          
 
           {/* Learning Program - 25% height - Tablet/Mobile */}
           <div className="learning-program-container">

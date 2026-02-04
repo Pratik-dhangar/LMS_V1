@@ -278,6 +278,10 @@ const GuestSession = () => {
         // Handle the allPermissions object sent by coach
         if (data.allPermissions) {
           setToolAccess(data.allPermissions);
+          // Clear selection when drag permission is disabled
+          if (data.toolName === 'drag' && !data.enabled) {
+            setSelectedItems([]);
+          }
         } else {
           // Fallback for old format
           setToolAccess(data);
