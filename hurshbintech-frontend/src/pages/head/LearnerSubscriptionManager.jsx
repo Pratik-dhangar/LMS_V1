@@ -778,6 +778,9 @@ const LearnerSubscriptionManager = () => {
                   })()}
                 </select>
               </div>
+              <button type="button" onClick={handleValidateBackdate} className="btn-primary btn-full" style={{ marginTop: "15px", marginBottom: "15px" }}>
+                Validate Backdate
+              </button>
 
               <div className="form-group">
                 <label>New Start Date *</label>
@@ -788,10 +791,6 @@ const LearnerSubscriptionManager = () => {
                   required
                 />
               </div>
-
-              <button type="button" onClick={handleValidateBackdate} className="btn btn-secondary btn-full" style={{ marginBottom: "15px" }}>
-                Validate Backdate
-              </button>
 
               {sessionGapWarning && (
                 <div className="warning-box">

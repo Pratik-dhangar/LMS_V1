@@ -39,10 +39,6 @@ const LearnerSession = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const remoteVideoRef = useRef(null);
 
-  // Video position and size for moveable video feed (trainer's video overlay on whiteboard)
-  const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
-  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
-
   // Canvas ref for denormalization
   const whiteboardCanvasRef = useRef(null);
 
@@ -106,9 +102,8 @@ const LearnerSession = () => {
       // Handle comments tool toggle from trainer
       whiteboardService.onCommentsToggle = (data) => {
         console.log('[LearnerSession] Comments toggle received:', data);
-        // Only open comments panel when trainer sends a prompt
-        // Don't open from other toggle events
-        // setIsCommentsOpen(data.visible);
+        // Open/close comments panel when trainer toggles it
+        setIsCommentsOpen(data.visible);
       };
     }
     return () => {
@@ -631,6 +626,11 @@ const LearnerSession = () => {
         [data.toolName]: data.enabled
       }));
 
+      // Clear selection when drag permission is disabled
+      if (data.toolName === 'drag' && !data.enabled) {
+        setSelectedItems([]);
+      }
+
       // Auto-switch to select tool when drag is enabled
       if (data.toolName === 'drag' && data.enabled) {
         setTool('select');
@@ -724,14 +724,50 @@ const LearnerSession = () => {
 
         setCanvasItems(prev => {
           const existingIndex = prev.findIndex(item => item.id === data.id);
+
+          // If item is relative to a bucket container, convert normalized offset to absolute coordinates
+          let processedData = { ...data };
+          if (data.isRelativeToContainer && data.inBucket) {
+            // Find the bucket this item belongs to
+            const bucket = buckets.find(b => b.id === data.inBucket);
+            if (bucket) {
+              // Denormalize the offset coordinates based on bucket dimensions
+              const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
+              const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
+
+              // Convert normalized offsets back to pixel offsets
+              const pixelOffsetX = (data.x || 0) * bucketWidth;
+              const pixelOffsetY = (data.y || 0) * bucketHeight;
+
+              // Denormalize width/height if they're normalized (0-1)
+              let itemWidth = data.width;
+              let itemHeight = data.height;
+              if (data.width && data.width >= 0 && data.width <= 1) {
+                itemWidth = data.width * bucketWidth;
+              }
+              if (data.height && data.height >= 0 && data.height <= 1) {
+                itemHeight = data.height * bucketHeight;
+              }
+
+              // Convert offset to absolute coordinates by adding bucket position
+              processedData = {
+                ...processedData,
+                x: bucket.x + pixelOffsetX,
+                y: bucket.y + pixelOffsetY,
+                width: itemWidth,
+                height: itemHeight
+              };
+            }
+          }
+
           if (existingIndex >= 0) {
             // Update existing item
             const updated = [...prev];
-            updated[existingIndex] = { ...updated[existingIndex], ...data };
+            updated[existingIndex] = { ...updated[existingIndex], ...processedData };
             return updated;
           } else {
             // Add new item
-            return [...prev, data];
+            return [...prev, processedData];
           }
         });
       }
@@ -769,22 +805,48 @@ const LearnerSession = () => {
       setBuckets(prev => {
         const exists = prev.find(bucket => bucket.id === data.id);
         if (!exists) {
+          // NOTE: Don't denormalize here - Whiteboard component handles it
+          // This handler should not be used if Whiteboard is mounted
           return [...prev, data];
         }
         return prev;
       });
     };
 
+    // NOTE: onBucketUpdate handler - updates bucket and moves items inside it
     whiteboardService.onBucketUpdate = (data) => {
-      // console.log('[LearnerSession] Bucket updated:', data);
       if (data.removed) {
         setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
       } else {
-        // Update bucket directly - no normalization/denormalization needed
-        // Buckets use absolute pixel positioning as overlay elements
-        setBuckets(prev => prev.map(bucket =>
-          bucket.id === data.id ? { ...bucket, ...data } : bucket
-        ));
+        setBuckets(prev => prev.map(bucket => {
+          if (bucket.id === data.id) {
+            // Calculate delta between old and new bucket position
+            const dx = (data.x !== undefined ? data.x : bucket.x) - bucket.x;
+            const dy = (data.y !== undefined ? data.y : bucket.y) - bucket.y;
+
+            // Move items inside this bucket by the same delta
+            setCanvasItems(prevItems => prevItems.map(item => {
+              if (item.inBucket === data.id) {
+                return {
+                  ...item,
+                  x: item.x + dx,
+                  y: item.y + dy
+                };
+              }
+              return item;
+            }));
+
+            // Update bucket position and size (width/height for resize operations)
+            return {
+              ...bucket,
+              ...(data.x !== undefined && { x: data.x }),
+              ...(data.y !== undefined && { y: data.y }),
+              ...(data.width !== undefined && { width: data.width }),
+              ...(data.height !== undefined && { height: data.height })
+            };
+          }
+          return bucket;
+        }));
       }
     };
 
@@ -990,7 +1052,7 @@ const LearnerSession = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error initializing session:', error);
-      toast.error('Failed to join session');
+      toast.error('Waiting for trainer to start the session...');
       navigate('/learner/dashboard');
     }
   };
@@ -1714,7 +1776,7 @@ const LearnerSession = () => {
       />
 
       {/* Navigation / Header - Auto-hide on mobile */}
-      <div className={`session-header ${navbarClassName}`}>
+      {/* <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
             <div className="session-header-title">HurshBin Learner</div>
@@ -1732,7 +1794,7 @@ const LearnerSession = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Sidebar Toggles (Mobile Only) */}
       <div className="session-sidebar-toggles">
@@ -1827,27 +1889,45 @@ const LearnerSession = () => {
 
         {/* Whiteboard - Fills remaining space */}
         <div className="learner-whiteboard-wrapper">
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <div className="session-whiteboard-container">
-              {/* Moveable Video Feed Overlay - Trainer's Video */}
+              {/* Fixed Video Feed Overlay - Trainer's Video (Top Right Corner) */}
               {remoteStream && (
-                <MoveableVideoFeed
-                  videoStream={remoteStream}
-                  label="Trainer"
-                  position={videoPosition}
-                  size={videoSize}
-                  onPositionChange={setVideoPosition}
-                  onSizeChange={setVideoSize}
-                  isDraggable={true}
-                  isResizable={true}
-                  connectionStatus={connectionStatus}
-                  zIndex={100}
-                />
+                <div style={{
+                  position: 'fixed',
+                  top: '55px',
+                  right: '2px',
+                  width: 'clamp(200px, 20vw, 350px)',
+                  height: 'clamp(150px, 15vw, 260px)',
+                  backgroundColor: '#000',
+                  borderRadius: '8px',
+                  border: '2px solid #374151',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  zIndex: 100,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  {/* Video Stream */}
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    style={{
+                      flex: 1,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      backgroundColor: '#1a1a1a'
+                    }}
+                  />
+                </div>
               )}
 
               {/* Whiteboard component - keep logic intact */}
               <div className="w-full h-full">
                 <Whiteboard
+                  canvasRefForParent={whiteboardCanvasRef}
                   whiteboardService={whiteboardService}
                   isTrainer={false}
                   canvasItems={canvasItems}
@@ -1905,6 +1985,114 @@ const LearnerSession = () => {
               whiteboardService={whiteboardService}
               initialExercise={exerciseData}
             />
+          </div>
+        )}
+
+        {/* Standalone Comments Panel - Opens when trainer clicks comments tool */}
+        {isCommentsOpen && !exerciseData.question && !exerciseData.qaItems?.length && (
+          <div className="comments-panel-container" style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            width: '350px',
+            maxHeight: '400px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+            border: '2px solid #e5e7eb',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '12px'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              marginBottom: '8px',
+              borderBottom: '1px solid #d1d5db',
+              paddingBottom: '8px'
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: '#1f2937'
+              }}>
+                💬 Comments
+              </h3>
+            </div>
+
+            {/* Comments Content Area */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              marginBottom: '8px',
+              paddingRight: '4px'
+            }}>
+              {/* Trainer Comments (Read-only for learner) */}
+              {trainerComments && (
+                <div style={{
+                  marginBottom: '12px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <p style={{
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    color: '#d97706',
+                    margin: '0 0 4px 0'
+                  }}>
+                    👨‍🏫 Trainer:
+                  </p>
+                  <p style={{
+                    fontSize: '13px',
+                    color: '#374151',
+                    margin: '0',
+                    padding: '6px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '4px',
+                    wordWrap: 'break-word'
+                  }}>
+                    {trainerComments}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Learner Comment Input - Auto-sends on debounce */}
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'flex-end'
+            }}>
+              <textarea
+                value={commentInput}
+                onChange={(e) => {
+                  setCommentInput(e.target.value);
+                  // Auto-send comment when learner stops typing (debounced)
+                  debouncedSendComment(e.target.value);
+                }}
+                onBlur={(e) => {
+                  // Flush any pending comment sends on blur
+                  flushSendComment(e.target.value);
+                }}
+                placeholder="Type a comment..."
+                style={{
+                  flex: 1,
+                  padding: '6px 8px',
+                  fontSize: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontFamily: 'inherit',
+                  resize: 'none',
+                  minHeight: '36px',
+                  maxHeight: '60px',
+                  overflowY: 'auto'
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -488,7 +488,7 @@ export const clearAllCanvas = ({
  * @param {number} canvasHeight - Height of the whiteboard canvas (default: 600)
  * @returns {Object} New bucket object
  */
-export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#8B6F47', canvasWidth = 1200, canvasHeight = 600) => {
+export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#8B6F47', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
     const BUCKET_WIDTH = 150;
     const BUCKET_HEIGHT = 150;
     const PADDING = 20;
@@ -573,12 +573,12 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
 
     setBuckets(prev => [...prev, newBucket]);
 
-    // Send to other participants
+    // Send bucket to other participants (buckets use pixel coordinates, no normalization needed)
     if (whiteboardService) {
         whiteboardService.sendBucketAdded(newBucket);
     }
 
-    console.log('[SessionUtils] Bucket added:', newBucket);
+    // console.log('[SessionUtils] Bucket added:', newBucket);
     return newBucket;
 };
 

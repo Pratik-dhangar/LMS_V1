@@ -668,6 +668,8 @@ class LearnerResponse(BaseModel):
     # --- Package & Subscription ---
     package_id: Optional[int] = None
     discount_code: Optional[str] = None
+    remaining_sessions: Optional[int] = None  # Remaining sessions in active subscription
+    is_active: bool = True  # Learner active/inactive status
 
     # --- Delivery History ---
     mother_bed_rest: Optional[bool] = None

@@ -128,6 +128,16 @@ const headService = {
     return response.data;
   },
 
+  /**
+   * Get learners for session scheduling (with remaining sessions and status)
+   * @returns {Promise} - Array of learners with subscription info and status
+   */
+  getLearnersForSessionScheduling: async () => {
+    console.log('Fetching learners for session scheduling');
+    const response = await axiosInstance.get('/head/learners/for-session-scheduling');
+    console.log('Received learners data:', { count: response.data.length });
+    return response.data;
+  },
 
   /**
    * Get Learner by ID
