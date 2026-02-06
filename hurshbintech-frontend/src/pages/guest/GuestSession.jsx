@@ -10,11 +10,10 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
-import MessageList from '../../components/common/MessageList';
-import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
+import { playPopSound } from '../../utils/sessionUtils';
 
 
 const GuestSession = () => {
@@ -47,33 +46,6 @@ const GuestSession = () => {
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [coachJoined, setCoachJoined] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
-
-  // Messages
-  const {
-    messages,
-    currentMessage,
-    setCurrentMessage,
-    sendMessage,
-    handleKeyPress,
-    addReceivedMessage
-  } = useMessages(webRTC, 'guest');
-
-  useEffect(() => {
-    if (webRTC) {
-      webRTC.onMessage = (message) => {
-        addReceivedMessage({
-          sender: message.sender === 'guest' ? 'You' : 'Coach',
-          text: message.text,
-          timestamp: message.timestamp
-        });
-      };
-    }
-    return () => {
-      if (webRTC) {
-        webRTC.onMessage = null;
-      }
-    };
-  }, [webRTC, addReceivedMessage]);
 
   // Listen for session end from coach
   useEffect(() => {
@@ -334,6 +306,11 @@ const GuestSession = () => {
         }, 15000);
       };
 
+      wbService.onAnimationPopped = (data) => {
+        console.log('[GuestSession] Animation popped by coach:', data);
+        handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
+      };
+
       wbService.onErasePen = () => {
         setErasePenTrigger(prev => prev + 1);
       };
@@ -499,6 +476,12 @@ const GuestSession = () => {
   };
 
   const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
+    // Find the animation to get its type for sound effect
+    const animation = floatingAnimations.find(a => a.id === animationId);
+    if (animation) {
+      playPopSound(animation.type);
+    }
+
     setFloatingAnimations(prev =>
       prev.map(anim =>
         anim.id === animationId
@@ -614,8 +597,136 @@ const GuestSession = () => {
   }
 
   return (
-    <div className={`learner-session-page ${pageClassName}`}>
-      {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
+    <div className={`learner-session-page ${pageClassName}`} style={{
+      width: '100%',
+      height: '100vh',
+      margin: 0,
+      padding: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      boxSizing: 'border-box',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        /* Learner Session Full-Width Layout */
+        .learner-session-page {
+          width: 100% !important;
+          height: 100vh !important;
+          display: flex !important;
+          flex-direction: column !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-sizing: border-box !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          height: 100% !important;
+          width: 100% !important;
+          overflow-x: hidden !important;
+        }
+
+        /* Session Header - Fixed at top */
+        .session-header {
+          flex-shrink: 0;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        /* Main Container - Takes remaining height */
+        .learner-main-container {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          width: 100% !important;
+          height: 100% !important;
+          box-sizing: border-box !important;
+          margin: 0 !important;
+          padding: 0 0 100px 0 !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        /* Whiteboard Wrapper - Takes all remaining space */
+        .learner-whiteboard-wrapper {
+          flex: 1 !important;
+          width: 100% !important;
+          height: 100% !important;
+          box-sizing: border-box !important;
+          display: flex !important;
+          flex-direction: column !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .session-whiteboard-container {
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+
+        /* Ensure inner divs fill the space */
+        .learner-whiteboard-wrapper > div {
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+
+        .learner-whiteboard-wrapper .w-full {
+          width: 100% !important;
+          height: 100% !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+
+        .learner-whiteboard-wrapper canvas {
+          width: 100% !important;
+          height: 100% !important;
+          display: block !important;
+        }
+
+        /* Hide sidebar toggles in full-width learner mode */
+        .session-sidebar-toggles {
+          display: none !important;
+        }
+
+        /* Mobile: Use dynamic viewport height (100dvh for modern browsers, 100vh fallback) */
+        @media (max-width: 768px) {
+          .learner-session-page {
+            height: 100vh !important;
+          }
+        }
+
+        /* Desktop: Use regular viewport height */
+        @media (min-width: 769px) {
+          .learner-session-page {
+            height: 100vh !important;
+            min-height: 100vh !important;
+          }
+        }
+      `}</style>
+      {/* Navigation / Header */}
       <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
           <div>
@@ -636,180 +747,158 @@ const GuestSession = () => {
         </div>
       </div>
 
-      {/* Sidebar Toggles (Mobile Only) */}
-      <div className="session-sidebar-toggles">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="sidebar-toggle-button"
-          aria-label="Toggle Sidebar"
-        >
-          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-        </button>
-      </div>
-
-      {/* Overlay backdrop for mobile sidebar */}
-      {isSidebarOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main Container - Responsive 3-column layout */}
-      <div className="flex flex-col gap-3 sm:gap-5 md:gap-6 my-3 sm:my-5 md:my-6 mx-2 sm:mx-4 md:mx-6 items-start learner-responsive-layout" style={{ minHeight: 'calc(100vh - 100px)' }}>
-        <div className={`w-full md:w-[380px] lg:w-auto bg-white border-r border-gray-200 p-2 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar transition-transform duration-300 learner-responsive-sidebar-left md:relative ${isSidebarOpen ? 'fixed top-20 left-0 bottom-0 w-[85%] max-w-[450px] z-[999] transform translate-x-0 order-1' : 'max-md:fixed max-md:-translate-x-full max-md:order-1 md:order-1'}`}>
-          {/* Coach Video Feed */}
-          <div className="mb-4 md:mb-5">
-            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg">
-              <div className="relative" style={{ paddingBottom: '56.25%' }}>
-                {remoteStream ? (
-                  <>
-                    <video
-                      ref={remoteVideoRef}
-                      autoPlay
-                      playsInline
-                      className="absolute top-0 left-0 w-full h-full object-cover"
-                    />
-                    <div className={`absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold transition-opacity duration-300 ${navbarClassName}`}>
-                      Coach
-                    </div>
-                    <div className={`absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs transition-opacity duration-300 ${navbarClassName}`}>
-                      {connectionStatus}
-                    </div>
-                  </>
-                ) : (
-                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800">
-                    <div className="text-center">
-                      <div className="session-loader mb-2"></div>
-                      <span className="text-sm text-gray-400">Connecting to coach...</span>
-                    </div>
+      {/* Main Container - Flexbox column layout */}
+      <div className="learner-main-container">
+        {/* Whiteboard - Fills remaining space */}
+        <div className="learner-whiteboard-wrapper">
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div className="session-whiteboard-container">
+              {/* Fixed Video Feed Overlay - Coach's Video (Top Right Corner) */}
+              {remoteStream && (
+                <div style={{
+                  position: 'fixed',
+                  top: '88px',
+                  right: '2px',
+                  width: 'clamp(120px, 15vw, 250px)',
+                  height: 'clamp(90px, 12vw, 180px)',
+                  backgroundColor: '#000',
+                  borderRadius: '8px',
+                  border: '2px solid #374151',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  zIndex: 50,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  {/* Video Stream */}
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    style={{
+                      flex: 1,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      backgroundColor: '#1a1a1a'
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    Coach
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 md:p-5">
-            <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-700 mb-2">Messages</h3>
-            <div className="bg-white border border-gray-300 rounded p-2 max-h-[120px] sm:max-h-[150px] md:max-h-[200px] overflow-y-auto mb-2">
-              {messages.length > 0 ? (
-                messages.map((msg, idx) => (
-                  <div key={idx} className="mb-2 p-2 bg-gray-50 rounded text-xs md:text-sm">
-                    <strong className="text-gray-800">{msg.sender === 'You' ? 'Coach' : msg.sender}:</strong>
-                    <span className="text-gray-700"> {msg.text}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-600">{sessionInfo?.coach_name ?? 'Coach'}:</p>
-                  <p className="text-xs sm:text-xs md:text-sm text-gray-500">Welcome to the session!</p>
                 </div>
               )}
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-              <div className="flex-1 flex items-center border border-gray-300 rounded focus-within:border-[#DB9D32] min-w-0">
-                <input
-                  type="text"
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="[Type message...]"
-                  className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs md:text-sm focus:outline-none min-w-0"
+
+              {/* Whiteboard component */}
+              <div className="w-full h-full">
+                <Whiteboard
+                  whiteboardService={whiteboardService}
+                  isTrainer={false}
+                  canvasItems={canvasItems}
+                  setCanvasItems={setCanvasItems}
+                  isFrozen={false}
+                  isPaused={false}
+                  toolAccess={toolAccess}
+                  remoteSelectedItemIds={remoteSelectedItemIds}
+                  textMessages={textMessages}
+                  setTextMessages={setTextMessages}
+                  feedbackMessage={feedbackMessage}
+                  waitingMessage={waitingMessage}
+                  floatingAnimations={floatingAnimations}
+                  onAnimationPop={handleAnimationPop}
+                  erasePenTrigger={erasePenTrigger}
+                  redrawCanvasTrigger={redrawCanvasTrigger}
+                  buckets={buckets}
+                  setBuckets={setBuckets}
+                  textBoxes={textBoxes}
+                  activeTextBoxId={activeTextBoxId}
+                  setActiveTextBoxId={setActiveTextBoxId}
+                  tool={tool}
+                  setTool={setTool}
+                  color={color}
+                  setColor={setColor}
+                  lineWidth={lineWidth}
+                  setLineWidth={setLineWidth}
+                  keyboardMode={keyboardMode}
+                  keyboardText={keyboardText}
+                  setKeyboardText={setKeyboardText}
+                  keyboardPosition={keyboardPosition}
+                  setKeyboardPosition={setKeyboardPosition}
+                  stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime) : null}
+                  stopwatchIsRunning={stopwatchIsRunning}
                 />
-                <button
-                  onClick={sendMessage}
-                  className="flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#DB9D32] text-white text-xs md:text-sm rounded-r hover:bg-[#9C4D0B] transition-colors"
-                >
-                  Send
-                </button>
               </div>
             </div>
           </div>
         </div>
-        {/* Whiteboard Area - Scrollable Container */}
-        <div className="w-full learner-responsive-main-area learner-responsive-whiteboard-section mx-auto overflow-y-auto">
-          <div className="session-whiteboard-container">
-            <div className="w-full h-full">
-              <Whiteboard
-                whiteboardService={whiteboardService}
-                isTrainer={false}
-                canvasItems={canvasItems}
-                setCanvasItems={setCanvasItems}
-                isFrozen={false}
-                isPaused={false}
-                toolAccess={toolAccess}
-                remoteSelectedItemIds={remoteSelectedItemIds}
-                textMessages={textMessages}
-                setTextMessages={setTextMessages}
-                feedbackMessage={feedbackMessage}
-                waitingMessage={waitingMessage}
-                floatingAnimations={floatingAnimations}
-                onAnimationPop={handleAnimationPop}
-                erasePenTrigger={erasePenTrigger}
-                redrawCanvasTrigger={redrawCanvasTrigger}
-                buckets={buckets}
-                setBuckets={setBuckets}
-                textBoxes={textBoxes}
-                activeTextBoxId={activeTextBoxId}
-                setActiveTextBoxId={setActiveTextBoxId}
-                tool={tool}
-                setTool={setTool}
-                color={color}
-                setColor={setColor}
-                lineWidth={lineWidth}
-                setLineWidth={setLineWidth}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
-                stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime) : null}
-                stopwatchIsRunning={stopwatchIsRunning}
-              />
-            </div>
-          </div>
-          {/* Video Controls */}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 mt-4 mb-4 flex-wrap" style={{ paddingBottom: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
-            <button
-              onClick={handleToggleMic}
-              className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-                } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-              style={{
-                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-              }}
-              title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
-            >
-              <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
-            </button>
-            <button
-              onClick={handleToggleCamera}
-              className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-                } media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-              style={{
-                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-              }}
-              title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
-            >
-              <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
-            </button>
-            <button
-              onClick={handleLeaveSession}
-              className="bg-gray-600 hover:bg-gray-700 media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
-              style={{
-                padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)',
-                fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)',
-                gap: 'clamp(0.25rem, 0.8vw, 0.5rem)'
-              }}
-            >
-              🚪 Leave Session
-            </button>
-          </div>
-        </div>
+      </div>
+
+      {/* Video Controls - Bottom Center - Outside main container */}
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        gap: '12px',
+        zIndex: 50,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        <button
+          onClick={handleToggleMic}
+          className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            gap: '6px',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+          title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
+        >
+          <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
+        </button>
+        <button
+          onClick={handleToggleCamera}
+          className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            gap: '6px',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+          title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+        >
+          <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
+        </button>
+        <button
+          onClick={handleLeaveSession}
+          className="bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            gap: '6px',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          🚪 Leave Session
+        </button>
       </div>
     </div>
   );
