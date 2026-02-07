@@ -21,6 +21,7 @@ from app.models.user_model import User, Appointment, AppointmentStatus, CoachPro
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.schemas.guest_booking import GuestIntentResponse, GuestPaymentUploadResponse
 from app.crud import user_crud, coach_crud
+from app.services.cache_service import cache_service
 from app.services.email_service import EmailService
 from app.utils.s3_utils import convert_s3_url_to_signed
 
@@ -35,7 +36,17 @@ async def get_available_coaches(
     """
     Get all available coaches for appointment booking.
     Public endpoint - accessible by authenticated users and guests.
+    Cached for 30 minutes.
     """
+    cache_key = cache_service.key_available_coaches()
+    
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [CoachResponse(**item) for item in cached_data]
+    
+    logger.debug(f"Cache MISS: {cache_key}")
     coaches = await user_crud.get_all_coaches_system_wide(db)
     
     # Convert responses and update S3 URLs to signed URLs
@@ -46,6 +57,9 @@ async def get_available_coaches(
         for coach_response in responses:
             if coach_response.profile_picture_url and coach_response.profile_picture_url.startswith('s3://'):
                 coach_response.profile_picture_url = convert_s3_url_to_signed(coach_response.profile_picture_url)
+    
+    # Cache for 30 minutes
+    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_COACH_PROFILES)
     
     return responses
 

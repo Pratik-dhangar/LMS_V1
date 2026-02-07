@@ -39,7 +39,10 @@ class CacheService:
         self.TTL_LEARNING_CONTENT = 600   # 10 minutes for learning content
         self.TTL_LEARNING_CONTENT_DETAIL = 900  # 15 minutes for individual content
         self.TTL_LEARNING_GOALS = 900     # 15 minutes for learning goals
-        self.TTL_USER_PROFILE = 1800      # 30 minutes for user profiles
+        self.TTL_USER_PROFILE = 1800      # 30 minutes for user profiles (deprecated - use specific below)
+        self.TTL_USER_PROFILE_ME = 900    # 15 minutes for current user profile
+        self.TTL_COACH_PROFILES = 1800    # 30 minutes for coach profiles list
+        self.TTL_FEATURED_COACH = 3600    # 1 hour for featured coach data
         self.TTL_BLOGS_LIST = 900         # 15 minutes for blog listings
         self.TTL_BLOG_DETAIL = 1800       # 30 minutes for individual blog
         self.TTL_VLOGS_LIST = 900         # 15 minutes for vlog listings
@@ -281,6 +284,22 @@ class CacheService:
         """Cache key for individual learning goal"""
         return f"learning_goals:detail:{goal_id}"
     
+    def key_available_coaches(self) -> str:
+        """Cache key for available coaches list"""
+        return "coaches:available:all"
+    
+    def key_coach_profile(self, coach_id: int) -> str:
+        """Cache key for individual coach profile"""
+        return f"coaches:profile:{coach_id}"
+    
+    def key_featured_coach(self, coach_id: int) -> str:
+        """Cache key for featured coach data"""
+        return f"coaches:featured:{coach_id}"
+    
+    def key_user_profile_me(self, user_id: int) -> str:
+        """Cache key for current user profile (user-specific)"""
+        return f"user:profile:me:{user_id}"
+    
     # ========== Cache Invalidation Helpers ==========
     
     async def invalidate_product_metadata(self):
@@ -357,6 +376,25 @@ class CacheService:
         await self.delete(self.key_learning_goal_detail(goal_id))
         await self.invalidate_learning_goals_lists()
         logger.info(f"Invalidated learning goal cache: {goal_id}")
+    
+    async def invalidate_coach_profiles(self):
+        """Invalidate all coach profile caches"""
+        await self.delete(self.key_available_coaches())
+        await self.delete_pattern("coaches:profile:*")
+        await self.delete_pattern("coaches:featured:*")
+        logger.info("Invalidated coach profiles cache")
+    
+    async def invalidate_coach_profile(self, coach_id: int):
+        """Invalidate specific coach profile and lists"""
+        await self.delete(self.key_coach_profile(coach_id))
+        await self.delete(self.key_featured_coach(coach_id))
+        await self.invalidate_coach_profiles()
+        logger.info(f"Invalidated coach profile cache: {coach_id}")
+    
+    async def invalidate_user_profile(self, user_id: int):
+        """Invalidate specific user profile cache"""
+        await self.delete(self.key_user_profile_me(user_id))
+        logger.info(f"Invalidated user profile cache: {user_id}")
 
 
 # Global cache service instance

@@ -2,6 +2,7 @@
 Profile endpoints for all user types
 """
 
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -23,8 +24,10 @@ from app.schemas.user import (
     TrainerResponse,
 )
 from app.schemas.subscription import LearnerSubscriptionResponse
+from app.services.cache_service import cache_service
 from app import crud
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
@@ -36,17 +39,53 @@ async def get_user_profile(
         Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
-
+    """Get current user profile - Cached for 15 minutes (user-specific)"""
+    # Get user_id for cache key (handle different profile types)
+    if isinstance(current_user, Admin):
+        user_id = current_user.id
+    else:
+        user_id = current_user.user_id if hasattr(current_user, 'user_id') else current_user.id
+    
+    cache_key = cache_service.key_user_profile_me(user_id)
+    
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        # Return appropriate response type based on cached role
+        role = cached_data.get('role')
+        if role == 'head':
+            return HeadResponse(**cached_data)
+        elif role == 'admin':
+            return AdminResponse(**cached_data)
+        elif role == 'trainer':
+            return TrainerResponse(**cached_data)
+        elif role == 'coach':
+            return CoachResponse(**cached_data)
+        elif role == 'learner':
+            return LearnerResponse(**cached_data)
+        return cached_data
+    
+    logger.debug(f"Cache MISS: {cache_key}")
+    
+    # Generate response based on user type
     if isinstance(current_user, HeadProfile):
-        return HeadResponse.from_orm_with_user(current_user)
+        result = HeadResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, Admin):
-        return AdminResponse.model_validate(current_user)
+        result = AdminResponse.model_validate(current_user)
     elif isinstance(current_user, TrainerProfile):
-        return TrainerResponse.from_orm_with_user(current_user)
+        result = TrainerResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, CoachProfile):
-        return CoachResponse.from_orm_with_user(current_user)
+        result = CoachResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, LearnerProfile):
-        return LearnerResponse.from_orm_with_user(current_user)
+        result = LearnerResponse.from_orm_with_user(current_user)
+    else:
+        result = current_user
+    
+    # Cache for 15 minutes
+    await cache_service.set(cache_key, result.model_dump() if hasattr(result, 'model_dump') else result, ttl=cache_service.TTL_USER_PROFILE_ME)
+    
+    return result
 
 
 @router.get("/me/subscriptions", response_model=List[LearnerSubscriptionResponse])

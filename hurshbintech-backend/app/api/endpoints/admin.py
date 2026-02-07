@@ -33,6 +33,7 @@ from app.schemas.subscription import (
     SubscriptionPackageUpdate,
     SubscriptionPackageResponse,
 )
+from app.services.cache_service import cache_service
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
@@ -338,6 +339,9 @@ async def update_head_profile(
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logger.error(f"Failed to upload reference file {filename_str}: {str(e)}")
                 # Continue with other files
+    
+    # Invalidate user profile cache for this head
+    await cache_service.invalidate_user_profile(updated_head.user_id)
     
     return HeadResponse.from_orm_with_user(updated_head)
 
@@ -807,6 +811,9 @@ async def update_coach_profile(
                 # Log error but don't fail
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
+    
+    # Invalidate coach profile caches
+    await cache_service.invalidate_coach_profile(coach_id)
     
     return CoachResponse.from_orm_with_user(updated_coach)
 
