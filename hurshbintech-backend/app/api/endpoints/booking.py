@@ -36,7 +36,7 @@ async def get_available_coaches(
     """
     Get all available coaches for appointment booking.
     Public endpoint - accessible by authenticated users and guests.
-    Cached for 30 minutes.
+    Cached for 30 minutes with pre-signed S3 URLs.
     """
     cache_key = cache_service.key_available_coaches()
     
@@ -49,16 +49,18 @@ async def get_available_coaches(
     logger.debug(f"Cache MISS: {cache_key}")
     coaches = await user_crud.get_all_coaches_system_wide(db)
     
-    # Convert responses and update S3 URLs to signed URLs
+    # Convert responses first
     responses = [CoachResponse.from_orm_with_user(coach) for coach in coaches]
     
-    # Convert S3 profile pictures to signed URLs if using S3
+    # Convert S3 profile pictures to signed URLs BEFORE caching
+    # This way cached data already has signed URLs (valid for cache TTL)
     if settings.USE_S3:
         for coach_response in responses:
             if coach_response.profile_picture_url and coach_response.profile_picture_url.startswith('s3://'):
                 coach_response.profile_picture_url = convert_s3_url_to_signed(coach_response.profile_picture_url)
     
-    # Cache for 30 minutes
+    # Cache responses with signed URLs for 30 minutes
+    # Note: S3 signed URLs are valid for 1 hour by default, so 30min cache is safe
     await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_COACH_PROFILES)
     
     return responses
