@@ -3,6 +3,7 @@ Coach Appointment Session CRUD Operations
 Handles one-on-one sessions created from appointments
 """
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -14,6 +15,8 @@ from sqlalchemy.orm import joinedload
 from app.models.coach_session_model import CoachAppointmentSession
 from app.models.user_model import Appointment, CoachProfile, User
 from app.schemas.coach_session import CoachSessionCreate
+
+logger = logging.getLogger(__name__)
 
 
 async def create_session_from_appointment(
@@ -76,15 +79,38 @@ async def create_session_from_appointment(
     
     # Determine client info (registered user or guest)
     if appointment.user_id:
-        # Registered user
-        client_name = appointment.user.name
-        client_email = appointment.user.email
+        # Registered user - fetch user data
+        user_result = await db.execute(
+            select(User).where(User.id == appointment.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise ValueError(f"User {appointment.user_id} not found")
+        
+        client_name = user.name
+        client_email = user.email
         client_user_id = appointment.user_id
+        
+        # If email is missing, generate a fallback to prevent session creation failure
+        if not client_email:
+            # Generate a fallback email using user ID and name
+            client_email = f"user_{appointment.user_id}@noemail.local"
+            logger.warning(
+                f"User '{client_name}' (ID: {appointment.user_id}) does not have an email address. "
+                f"Using fallback: {client_email}"
+            )
     else:
         # Guest booking
         client_name = appointment.guest_name
         client_email = appointment.guest_email
         client_user_id = None
+        
+        # For guest, email is required
+        if not client_email:
+            raise ValueError(
+                f"Cannot create session: guest booking does not have an email address. "
+                f"Please provide a valid email address for the guest."
+            )
     
     # Build scheduled datetime from appointment date and time
     from datetime import time as dt_time
@@ -99,6 +125,11 @@ async def create_session_from_appointment(
     
     # Generate title if not provided
     title = session_data.title or f"{appointment.session_type or 'Consultation'} - {client_name}"
+    
+    # Safety check: Ensure client_email is never NULL
+    if not client_email:
+        logger.error(f"[CRITICAL] client_email is None after all checks. user_id={client_user_id}, guest_email={appointment.guest_email if not client_user_id else 'N/A'} Assigning fallback.")
+        client_email = f"noemail_{client_user_id or 'guest'}@noemail.local"
     
     # Create session
     new_session = CoachAppointmentSession(

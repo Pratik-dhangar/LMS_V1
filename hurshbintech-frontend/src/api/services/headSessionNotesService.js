@@ -1,19 +1,11 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem('access_token');
-    return { Authorization: `Bearer ${token}` };
-};
+import api from '../axios';
 
 const headSessionNotesService = {
     saveHeadNotes: async (sessionId, notes) => {
         try {
-            const response = await axios.post(
-                `${API_URL}/head-session-notes/${sessionId}`,
-                { notes },
-                { headers: getAuthHeader() }
+            const response = await api.post(
+                `/head-session-notes/${sessionId}`,
+                { notes }
             );
             return response.data;
         } catch (error) {
@@ -24,9 +16,8 @@ const headSessionNotesService = {
 
     getHeadNotes: async (sessionId) => {
         try {
-            const response = await axios.get(
-                `${API_URL}/head-session-notes/${sessionId}`,
-                { headers: getAuthHeader() }
+            const response = await api.get(
+                `/head-session-notes/${sessionId}`
             );
             return response.data;
         } catch (error) {
