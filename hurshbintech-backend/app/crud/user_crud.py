@@ -66,9 +66,12 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
 # Get user by passcode and role (for login)
 async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: str) -> User | None:
     """
-    Query User table by passcode and role for authentication
+    Query User table by role and verify passcode hash
+    Uses index on role for fast filtering
     Supports: admin, head, trainer, coach, learner
-    Uses bcrypt verification for password matching
+    
+    Note: Cannot index on passcode because it's Fernet-encrypted in DB
+    Must verify bcrypt hash (passcode_hash) in application code
     """
     start_time = time.time()
     logger.info(f"[CRUD_AUTH_START] Querying User table for role={role}, passcode={passcode[:3]}***")
@@ -88,24 +91,29 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
             logger.warning(f"Invalid role: {role}")
             return None
 
-        # Get all users with this role (including inactive ones)
-        logger.info(f"[DB_SELECT_START] Executing SELECT query for role {role_enum.value}")
+        # Query all users with this role (uses role index for fast filtering)
+        logger.info(f"[DB_SELECT_START] Executing SELECT query filtering by role")
         query_start = time.time()
         
-        result = await db.execute(select(User).where(User.role == role_enum))
+        result = await db.execute(
+            select(User).where(User.role == role_enum)
+        )
         
         query_duration = time.time() - query_start
         logger.info(f"[DB_SELECT_END] SELECT query completed in {query_duration:.3f}s")
         
         users = result.scalars().all()
-        logger.info(f"[USER_COUNT] Found {len(users)} users with role {role_enum.value}")
+        
+        if not users:
+            total_duration = time.time() - start_time
+            logger.info(f"[AUTH_FAILED] No users found with role={role_enum.value}. Total time: {total_duration:.3f}s")
+            return None
 
-        # Find user with matching password (active status checked at endpoint)
-        logger.info(f"[PASSWORD_VERIFY_START] Starting password verification for {len(users)} users")
+        # Verify password hash for each user with matching role
+        logger.info(f"[PASSWORD_VERIFY_START] Verifying password hash for {len(users)} users")
         verify_start = time.time()
         
-        for idx, user in enumerate(users):
-            logger.debug(f"[PASSWORD_CHECK] Checking user {idx+1}/{len(users)}: ID={user.id}, name={user.name}")
+        for user in users:
             if verify_password(passcode, user.passcode_hash):
                 verify_duration = time.time() - verify_start
                 total_duration = time.time() - start_time
@@ -113,11 +121,12 @@ async def get_user_by_passcode_and_role(db: AsyncSession, passcode: str, role: s
                     f"[PASSWORD_MATCH] Password matched for user: ID={user.id}, name={user.name}, role={user.role.value}, active={user.is_active}, Verify time: {verify_duration:.3f}s, Total time: {total_duration:.3f}s"
                 )
                 return user
-
+        
         verify_duration = time.time() - verify_start
         total_duration = time.time() - start_time
-        logger.info(f"[PASSWORD_NO_MATCH] No user found with role={role} and matching passcode. Verify time: {verify_duration:.3f}s, Total time: {total_duration:.3f}s")
+        logger.info(f"[PASSWORD_NO_MATCH] Password hash verification failed. Verify time: {verify_duration:.3f}s, Total time: {total_duration:.3f}s")
         return None
+            
     except Exception as e:
         duration = time.time() - start_time
         logger.error(f"[CRUD_AUTH_ERROR] Error during authentication: {str(e)}, Duration: {duration:.3f}s", exc_info=True)
