@@ -6,9 +6,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
-import VideoConferenceService from '../../api/services/videoConferenceService';
-import WhiteboardService from '../../api/services/whiteboardService';
-import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
@@ -16,7 +13,14 @@ import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-import { playPopSound } from '../../utils/sessionUtils';
+import {
+  useAttendeeSessionState,
+  formatTime,
+  initializeAttendeeServices,
+  cleanupAttendeeSession,
+  createAnimationPopHandler,
+  sendLeaveNotification
+} from '../../utils/attendeeSession';
 
 
 const ClientSession = () => {
@@ -25,27 +29,83 @@ const ClientSession = () => {
   const { navbarClassName, pageClassName } = useAutoHideNavbar();
   const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
-  // Service instances
-  const [webRTC, setWebRTC] = useState(null);
-  const [whiteboardService, setWhiteboardService] = useState(null);
-  const [toolsService, setToolsService] = useState(null);
-  const isInitializingRef = useRef(false);
-
-  // Media streams
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const remoteVideoRef = useRef(null);
-
-  // Mic/video controls
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-
-  // Session state
-  const [sessionInfo, setSessionInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
-  const [coachJoined, setCoachJoined] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null);
+  // Use shared session state hook
+  const sessionState = useAttendeeSessionState();
+  const {
+    webRTC,
+    setWebRTC,
+    whiteboardService,
+    setWhiteboardService,
+    toolsService,
+    setToolsService,
+    isInitializingRef,
+    localStream,
+    setLocalStream,
+    remoteStream,
+    setRemoteStream,
+    remoteVideoRef,
+    micEnabled,
+    setMicEnabled,
+    cameraEnabled,
+    setCameraEnabled,
+    sessionInfo,
+    setSessionInfo,
+    loading,
+    setLoading,
+    connectionStatus,
+    setConnectionStatus,
+    instructorJoined,
+    setInstructorJoined,
+    timeLeft,
+    setTimeLeft,
+    canvasItems,
+    setCanvasItems,
+    keyboardMode,
+    setKeyboardMode,
+    keyboardText,
+    setKeyboardText,
+    keyboardPosition,
+    setKeyboardPosition,
+    remoteSelectedItemIds,
+    setRemoteSelectedItemIds,
+    textMessages,
+    setTextMessages,
+    feedbackMessage,
+    setFeedbackMessage,
+    waitingMessage,
+    setWaitingMessage,
+    floatingAnimations,
+    setFloatingAnimations,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isFrozen,
+    setIsFrozen,
+    showHeader,
+    setShowHeader,
+    headerTimeoutRef,
+    erasePenTrigger,
+    setErasePenTrigger,
+    redrawCanvasTrigger,
+    setRedrawCanvasTrigger,
+    tool,
+    setTool,
+    color,
+    setColor,
+    lineWidth,
+    setLineWidth,
+    buckets,
+    setBuckets,
+    textBoxes,
+    setTextBoxes,
+    activeTextBoxId,
+    setActiveTextBoxId,
+    toolAccess,
+    setToolAccess,
+    stopwatchElapsedTime,
+    setStopwatchElapsedTime,
+    stopwatchIsRunning,
+    setStopwatchIsRunning
+  } = sessionState;
 
   // Messages
   const {
@@ -56,6 +116,7 @@ const ClientSession = () => {
     handleKeyPress,
     addReceivedMessage
   } = useMessages(webRTC, 'client');
+  const initAttemptedRef = useRef(false);
 
   useEffect(() => {
     if (webRTC) {
@@ -84,15 +145,7 @@ const ClientSession = () => {
 
       // Clean up and redirect after a short delay
       setTimeout(() => {
-        if (webRTC?.localStream) {
-          webRTC.localStream.getTracks().forEach(track => track.stop());
-        }
-        if (webRTC) {
-          webRTC.close();
-        }
-        if (whiteboardService) {
-          whiteboardService.close();
-        }
+        cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
         navigate('/my-appointments');
       }, 2000);
     };
@@ -102,57 +155,7 @@ const ClientSession = () => {
         whiteboardService.onSessionEnded = null;
       }
     };
-  }, [whiteboardService, webRTC, navigate]);
-
-  // Learning content from coach
-  const [textMessages, setTextMessages] = useState([]);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [waitingMessage, setWaitingMessage] = useState('');
-  const [floatingAnimations, setFloatingAnimations] = useState([]);
-
-  // Whiteboard state
-  const [canvasItems, setCanvasItems] = useState([]);
-  const [keyboardMode, setKeyboardMode] = useState(false);
-  const [keyboardText, setKeyboardText] = useState('');
-  const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
-  const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
-
-  // UI state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(false);
-  const [showHeader, setShowHeader] = useState(true);
-  const headerTimeoutRef = useRef(null);
-  const [erasePenTrigger, setErasePenTrigger] = useState(0);
-  const [redrawCanvasTrigger, setRedrawCanvasTrigger] = useState(0);
-
-  // Drawing tools
-  const [tool, setTool] = useState('pen');
-  const [color, setColor] = useState('#000000');
-  const [lineWidth, setLineWidth] = useState(2);
-  const [buckets, setBuckets] = useState([]);
-  const [textBoxes, setTextBoxes] = useState([]);
-  const [activeTextBoxId, setActiveTextBoxId] = useState(null);
-
-  // Tool access control from coach
-  const [toolAccess, setToolAccess] = useState({
-    select: false,
-    drag: false,
-    keyboard: false
-  });
-
-  // Stopwatch (synced from coach)
-  const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
-  const [stopwatchIsRunning, setStopwatchIsRunning] = useState(false);
-  const mediaControl = useMediaControl();
-
-  const formatTime = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return {
-      display: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-    };
-  };
+  }, [whiteboardService, webRTC, navigate, toolsService]);
 
   // Component mount - initialize session
   useEffect(() => {
@@ -168,16 +171,21 @@ const ClientSession = () => {
     const user = JSON.parse(userData);
     console.log('[ClientSession] User data:', { id: user.id, role: user.role, name: user.name });
 
-    // Only initialize if not already initialized
-    if (!webRTC && !whiteboardService && !isInitializingRef.current) {
-      initializeSession(user.id);
+    // Prevent multiple initialization attempts
+    if (initAttemptedRef.current) {
+      console.log('[ClientSession] Initialization already attempted, skipping');
+      return;
     }
+    initAttemptedRef.current = true;
+
+    // Initialize session
+    initializeSession(user.id);
 
     return () => {
       console.log('[ClientSession] Component unmounting, cleaning up');
-      cleanup();
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
     };
-  }, [sessionId, navigate]); // Only re-run if sessionId changes
+  }, [sessionId, navigate]);
 
   // Connect remote stream to video element
   useEffect(() => {
@@ -242,211 +250,25 @@ const ClientSession = () => {
       console.log('[ClientSession] Session details:', session);
       setSessionInfo(session);
 
-      await initializeWebRTC(session.session_id);
+      // Call the shared utility with ClientSession-specific state
+      await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
+
+      // Custom keyboard handler for ClientSession
+      if (whiteboardService) {
+        whiteboardService.onTriggerKeyboard = () => {
+          setKeyboardMode(true);
+          setKeyboardText('');
+          setKeyboardPosition({ x: 100, y: 100 });
+          toast.info('Keyboard tool activated by coach');
+        };
+      }
+
       setLoading(false);
     } catch (error) {
       console.error('[ClientSession] Error initializing session:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to initialize session';
       toast.error(errorMsg);
       navigate('/my-appointments');
-    }
-  };
-
-  const initializeWebRTC = async (numericSessionId) => {
-    // Prevent duplicate initialization
-    if (isInitializingRef.current) {
-      console.log('[ClientSession] Already initializing, skipping duplicate call');
-      return;
-    }
-    isInitializingRef.current = true;
-
-    // Initialize Whiteboard
-    const wbService = new WhiteboardService(WS_BASE_URL, numericSessionId, 'client');
-    try {
-      wbService.initialize();
-      setWhiteboardService(wbService);
-
-      // Listen for coach messages
-      wbService.onToolAccess = (data) => {
-        console.log('[ClientSession] Tool access received from coach:', data);
-        // Handle the allPermissions object sent by coach
-        if (data.allPermissions) {
-          setToolAccess(data.allPermissions);
-          // Clear selection when drag permission is disabled
-          if (data.toolName === 'drag' && !data.enabled) {
-            setSelectedItems([]);
-          }
-        } else {
-          // Fallback for old format
-          setToolAccess(data);
-        }
-      };
-
-      // Listen for item selections from any remote user (coach or other participants)
-      wbService.onItemSelected = (data) => {
-        console.log('[ClientSession] Remote user selected items:', data);
-        if (data.itemIds && Array.isArray(data.itemIds)) {
-          setRemoteSelectedItemIds(data.itemIds);
-        }
-      };
-
-      wbService.onTriggerKeyboard = () => {
-        setKeyboardMode(true);
-        setKeyboardText('');
-        setKeyboardPosition({ x: 100, y: 100 });
-        toast.info('Keyboard tool activated by coach');
-      };
-
-      wbService.onBucketAdded = (data) => {
-        console.log('[ClientSession] Bucket added:', data);
-        setBuckets(prev => {
-          const exists = prev.find(bucket => bucket.id === data.id);
-          if (!exists) {
-            return [...prev, data];
-          }
-          return prev;
-        });
-      };
-
-      wbService.onBucketUpdate = (data) => {
-        console.log('[ClientSession] Bucket updated:', data);
-        if (data.removed) {
-          setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-        } else {
-          setBuckets(prev => prev.map(bucket =>
-            bucket.id === data.id ? { ...bucket, ...data } : bucket
-          ));
-        }
-      };
-
-      wbService.onStopwatchSync = (data) => {
-        setStopwatchElapsedTime(data.elapsedTime);
-        setStopwatchIsRunning(data.isRunning);
-      };
-
-      wbService.onFeedbackMessage = (data) => {
-        setFeedbackMessage(data.text || '');
-        if (data.text) {
-          setTimeout(() => {
-            setFeedbackMessage('');
-          }, 3000);
-        }
-      };
-
-      wbService.onWaitingMessage = (data) => {
-        setWaitingMessage(data.text || '');
-        if (data.text) {
-          setTimeout(() => {
-            setWaitingMessage('');
-          }, 5000);
-        }
-      };
-
-      wbService.onFloatingAnimations = (data) => {
-        console.log('[ClientSession] Floating animations received:', data);
-        setFloatingAnimations(prev => [...prev, ...data.animations]);
-
-        setTimeout(() => {
-          setFloatingAnimations(prevAnims =>
-            prevAnims.filter(anim => !data.animations.find(newAnim => newAnim.id === anim.id))
-          );
-        }, 15000);
-      };
-
-      wbService.onAnimationPopped = (data) => {
-        console.log('[ClientSession] Animation popped by coach:', data);
-        handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
-      };
-
-      wbService.onErasePen = () => {
-        setErasePenTrigger(prev => prev + 1);
-      };
-
-      // Text box handlers
-      wbService.onTextBoxAdded = (textBox) => {
-        console.log('[ClientSession] Text box added:', textBox);
-        setTextBoxes(prev => [...prev, textBox]);
-      };
-
-      wbService.onTextBoxUpdate = (update) => {
-        console.log('[ClientSession] Text box updated:', update);
-        setTextBoxes(prev => prev.map(box =>
-          box.id === update.id ? { ...box, ...update } : box
-        ));
-      };
-
-      wbService.onTextBoxRemoved = (data) => {
-        console.log('[ClientSession] Text box removed:', data);
-        setTextBoxes(prev => prev.filter(box => box.id !== data.id));
-      };
-
-      // Listen for clear canvas command from coach
-      wbService.onClearCanvas = () => {
-        console.log('[ClientSession] Received clear canvas command from coach');
-        setCanvasItems([]);
-        setBuckets([]);
-        setTextBoxes([]);
-        setErasePenTrigger(prev => prev + 1);
-        setRedrawCanvasTrigger(prev => prev + 1);
-      };
-
-      wbService.onFreeze = (frozen) => {
-        setIsFrozen(frozen);
-      };
-
-      const tbService = new WhiteboardToolsService(wbService);
-      setToolsService(tbService);
-    } catch (error) {
-      console.error('[ClientSession] Error initializing whiteboard:', error);
-      toast.error('Failed to initialize whiteboard');
-    }
-
-    // Initialize Video Conference Service
-    const videoService = new VideoConferenceService(WS_BASE_URL, numericSessionId, 'client');
-
-    try {
-      videoService.onLocalStream = (stream) => {
-        console.log('[ClientSession] Local stream initialized');
-        setLocalStream(stream);
-        setConnectionStatus('Waiting for coach...');
-      };
-
-      videoService.onRemoteStream = (stream) => {
-        console.log('[ClientSession] Received remote stream from coach');
-        setRemoteStream(stream);
-        setConnectionStatus('Connected');
-        setCoachJoined(true);
-      };
-
-      videoService.onConnectionStateChange = (state) => {
-        console.log('[ClientSession] Connection state:', state);
-        const statusMap = {
-          'new': 'connecting',
-          'connecting': 'connecting',
-          'connected': 'connected',
-          'disconnected': 'disconnected',
-          'failed': 'failed',
-          'closed': 'disconnected'
-        };
-        const mappedStatus = statusMap[state] || state;
-        setConnectionStatus(mappedStatus);
-
-        // If disconnected or failed, coach might have left
-        if (state === 'disconnected' || state === 'closed') {
-          setCoachJoined(false);
-        }
-      };
-
-      videoService.onError = (error) => {
-        console.error('[ClientSession] Video conference error:', error);
-        toast.error(`Video error: ${error.message}`);
-      };
-
-      await videoService.initialize();
-      setWebRTC(videoService);
-    } catch (error) {
-      console.error('[ClientSession] Video Conference init error:', error);
-      toast.error('Failed to initialize video connection: ' + error.message);
     }
   };
 
@@ -464,64 +286,13 @@ const ClientSession = () => {
     }
   };
 
-  const cleanup = () => {
-    if (webRTC?.localStream) {
-      webRTC.localStream.getTracks().forEach(track => track.stop());
-    }
-    if (webRTC) {
-      webRTC.close();
-    }
-    if (whiteboardService) {
-      whiteboardService.close();
-    }
-    if (toolsService) {
-      toolsService.cleanup();
-    }
-    isInitializingRef.current = false;
-  };
-
   const handleLeaveSession = () => {
-    // Notify coach before leaving
-    if (webRTC && webRTC.isConnected) {
-      try {
-        webRTC.sendMessage({
-          type: 'client_leaving',
-          timestamp: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('[ClientSession] Error sending leave notification:', error);
-      }
-    }
-
-    cleanup();
+    sendLeaveNotification(webRTC);
+    cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
     navigate('/my-appointments');
   };
 
-  const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
-    // Find the animation to get its type for sound effect
-    const animation = floatingAnimations.find(a => a.id === animationId);
-    if (animation) {
-      playPopSound(animation.type);
-    }
-
-    setFloatingAnimations(prev =>
-      prev.map(anim =>
-        anim.id === animationId
-          ? { ...anim, popped: true, poppedLeft, poppedTop }
-          : anim
-      )
-    );
-
-    // Broadcast pop event to all participants
-    if (whiteboardService) {
-      whiteboardService.send('animation_popped', {
-        animationId,
-        poppedLeft,
-        poppedTop,
-        timestamp: Date.now()
-      });
-    }
-  };
+  const handleAnimationPop = createAnimationPopHandler(floatingAnimations, setFloatingAnimations, whiteboardService);
 
   if (loading) {
     return (
@@ -533,7 +304,7 @@ const ClientSession = () => {
 
   // Show waiting overlay if coach hasn't joined yet and session is not yet started
   // Only show waiting screen if session status is 'scheduled', not 'in_progress'
-  if (!loading && !coachJoined && sessionInfo?.status === 'scheduled') {
+  if (!loading && !instructorJoined && sessionInfo?.status === 'scheduled') {
     return (
       <div className={`learner-session-page ${pageClassName}`}>
         {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
@@ -829,7 +600,7 @@ const ClientSession = () => {
                   setKeyboardText={setKeyboardText}
                   keyboardPosition={keyboardPosition}
                   setKeyboardPosition={setKeyboardPosition}
-                  stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime) : null}
+                  stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime).display : null}
                   stopwatchIsRunning={stopwatchIsRunning}
                 />
               </div>
