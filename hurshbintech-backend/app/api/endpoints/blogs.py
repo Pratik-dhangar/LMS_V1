@@ -1,6 +1,8 @@
 """
 Blog API endpoints - Admin and Public routes
 """
+import hashlib
+import json
 import logging
 import os
 import uuid
@@ -16,6 +18,7 @@ from app.core.deps import get_current_admin, get_db
 from app.crud.blog_crud import blog_crud
 from app.models.user_model import User
 from app.schemas.blog import BlogCreate, BlogUpdate, BlogResponse, BlogListResponse
+from app.services.cache_service import cache_service
 from app.utils.s3_utils import S3Manager
 
 logger = logging.getLogger(__name__)
@@ -156,6 +159,10 @@ async def create_blog(
             status=status,
         )
         db_blog = await blog_crud.create_blog(db, blog_data, current_admin.id)
+        
+        # Invalidate blog caches
+        await cache_service.invalidate_blogs()
+        
         return convert_blog_response(db_blog)
     except HTTPException:
         raise
@@ -262,6 +269,10 @@ async def update_blog(
 
         blog_update = BlogUpdate(**update_data)
         updated_blog = await blog_crud.update_blog(db, blog_id, blog_update)
+        
+        # Invalidate blog caches (detail and lists)
+        await cache_service.invalidate_blog(updated_blog.slug)
+        
         return convert_blog_response(updated_blog)
     except HTTPException:
         raise
@@ -282,13 +293,22 @@ async def delete_blog(
     """Delete a blog post (Admin only)"""
     try:
         logger.info(f"Attempting to delete blog ID: {blog_id}")
-        success = await blog_crud.delete_blog(db, blog_id)
-        if not success:
+        
+        # Get blog slug before deletion for cache invalidation
+        db_blog = await blog_crud.get_blog(db, blog_id)
+        if not db_blog:
             logger.warning(f"Blog ID {blog_id} not found")
             raise HTTPException(
                 status_code=404,
                 detail="Blog not found"
             )
+        
+        blog_slug = db_blog.slug
+        success = await blog_crud.delete_blog(db, blog_id)
+        
+        # Invalidate blog caches
+        await cache_service.invalidate_blog(blog_slug)
+        
         logger.info(f"Successfully deleted blog ID: {blog_id}")
         return None
     except HTTPException:
@@ -312,8 +332,21 @@ async def get_public_blogs(
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get published blogs (Public endpoint)"""
+    """Get published blogs (Public endpoint) - Cached for 15 minutes"""
     try:
+        # Generate cache key from filters
+        filters = {"page": page, "per_page": per_page, "search": search, "status": "published"}
+        filters_str = json.dumps(filters, sort_keys=True)
+        filters_hash = hashlib.md5(filters_str.encode()).hexdigest()
+        cache_key = cache_service.key_blogs_list(filters_hash)
+        
+        # Try cache first
+        cached_data = await cache_service.get(cache_key)
+        if cached_data:
+            logger.debug(f"Cache HIT: {cache_key}")
+            return BlogListResponse(**cached_data)
+        
+        logger.debug(f"Cache MISS: {cache_key}")
         skip = (page - 1) * per_page
         blogs, total = await blog_crud.get_blogs(
             db,
@@ -325,13 +358,18 @@ async def get_public_blogs(
         
         total_pages = ceil(total / per_page) if per_page > 0 else 0
         
-        return BlogListResponse(
+        response = BlogListResponse(
             blogs=[convert_blog_response(blog) for blog in blogs],
             total=total,
             page=page,
             per_page=per_page,
             total_pages=total_pages
         )
+        
+        # Cache response for 15 minutes
+        await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_BLOGS_LIST)
+        
+        return response
     except Exception as e:
         logger.error(f"Error fetching public blogs: {str(e)}")
         raise HTTPException(
@@ -345,7 +383,16 @@ async def get_public_blog_by_slug(
     slug: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a published blog by slug (Public endpoint)"""
+    """Get a published blog by slug (Public endpoint) - Cached for 30 minutes"""
+    cache_key = cache_service.key_blog_detail(slug)
+    
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return BlogResponse(**cached_data)
+    
+    logger.debug(f"Cache MISS: {cache_key}")
     db_blog = await blog_crud.get_blog_by_slug(db, slug)
     if not db_blog:
         raise HTTPException(
@@ -360,4 +407,9 @@ async def get_public_blog_by_slug(
             detail="Blog not found"
         )
     
-    return convert_blog_response(db_blog)
+    response = convert_blog_response(db_blog)
+    
+    # Cache response for 30 minutes
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_BLOG_DETAIL)
+    
+    return response

@@ -10,6 +10,7 @@ from app.core.deps import get_current_admin, get_db
 from app.core.config import settings
 from app.crud import product_crud
 from app.models.user_model import User
+from app.services.cache_service import cache_service
 from app.schemas.product import (
     ProductCreate, ProductUpdate, ProductResponse,
     ProductCategoryCreate, ProductCategoryUpdate, ProductCategoryResponse,
@@ -31,6 +32,8 @@ async def create_category(
     """Create a new product category (Admin only)"""
     try:
         category = await product_crud.create_category(db, category_data)
+        # Invalidate category cache
+        await cache_service.invalidate_product_metadata()
         return category
     except Exception as e:
         raise HTTPException(
@@ -42,7 +45,18 @@ async def create_category(
 @router.get("/categories", response_model=List[ProductCategoryResponse])
 async def get_categories(db: AsyncSession = Depends(get_db)):
     """Get all product categories (Public)"""
+    # Try cache first
+    cache_key = cache_service.key_product_categories()
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return cached
+    
+    # Cache miss - fetch from DB
     categories = await product_crud.get_all_categories(db)
+    
+    # Store in cache for 1 hour
+    await cache_service.set(cache_key, categories, cache_service.TTL_PRODUCT_METADATA)
+    
     return categories
 
 
@@ -69,6 +83,11 @@ async def update_category(
     category = await product_crud.update_category(db, category_id, category_data)
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    
+    # Invalidate caches
+    await cache_service.invalidate_product_metadata()
+    await cache_service.invalidate_product_catalogs()
+    
     return category
 
 
@@ -82,6 +101,10 @@ async def delete_category(
     success = await product_crud.delete_category(db, category_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    
+    # Invalidate caches
+    await cache_service.invalidate_product_metadata()
+    await cache_service.invalidate_product_catalogs()
 
 
 # Age Group Endpoints
@@ -94,6 +117,8 @@ async def create_age_group(
     """Create a new age group (Admin only)"""
     try:
         age_group = await product_crud.create_age_group(db, age_group_data)
+        # Invalidate age group cache
+        await cache_service.invalidate_product_metadata()
         return age_group
     except Exception as e:
         raise HTTPException(
@@ -105,7 +130,18 @@ async def create_age_group(
 @router.get("/age-groups", response_model=List[AgeGroupResponse])
 async def get_age_groups(db: AsyncSession = Depends(get_db)):
     """Get all age groups (Public)"""
+    # Try cache first
+    cache_key = cache_service.key_age_groups()
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return cached
+    
+    # Cache miss - fetch from DB
     age_groups = await product_crud.get_all_age_groups(db)
+    
+    # Store in cache for 1 hour
+    await cache_service.set(cache_key, age_groups, cache_service.TTL_PRODUCT_METADATA)
+    
     return age_groups
 
 
@@ -119,6 +155,8 @@ async def create_skill(
     """Create a new skill focus (Admin only)"""
     try:
         skill = await product_crud.create_skill(db, skill_data)
+        # Invalidate skills cache
+        await cache_service.invalidate_product_metadata()
         return skill
     except Exception as e:
         raise HTTPException(
@@ -130,7 +168,18 @@ async def create_skill(
 @router.get("/skills", response_model=List[SkillFocusResponse])
 async def get_skills(db: AsyncSession = Depends(get_db)):
     """Get all skills (Public)"""
+    # Try cache first
+    cache_key = cache_service.key_skills()
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return cached
+    
+    # Cache miss - fetch from DB
     skills = await product_crud.get_all_skills(db)
+    
+    # Store in cache for 1 hour
+    await cache_service.set(cache_key, skills, cache_service.TTL_PRODUCT_METADATA)
+    
     return skills
 
 
@@ -301,6 +350,10 @@ async def create_product(
         logger.info(f"Product created successfully: {product.id}")
         # Log stored description for debugging whitespace/empty-description issues
         logger.info(f"Product description stored: {product.description!r}")
+        
+        # Invalidate product catalog caches
+        await cache_service.invalidate_product_catalogs()
+        
         return product
         
     except HTTPException:
@@ -469,6 +522,10 @@ async def update_product(
     product = await product_crud.update_product(db, product_id, product_data, image_url, thumbnail_url)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    
+    # Invalidate product caches
+    await cache_service.invalidate_product(str(product_id))
+    
     return product
 
 
@@ -482,3 +539,6 @@ async def delete_product(
     success = await product_crud.delete_product(db, product_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    
+    # Invalidate product caches
+    await cache_service.invalidate_product(str(product_id))

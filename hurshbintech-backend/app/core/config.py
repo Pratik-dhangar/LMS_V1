@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     MAX_ADJUSTMENTS_PER_SUBSCRIPTION_HEAD: int = 3
     RENEWAL_REMINDER_DAYS: List[int] = [14, 7, 3]
 
+    # Redis Cache Configuration
+    REDIS_ENABLED: bool = False  # Enable/disable Redis caching
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: Optional[str] = None  # Set in production
+
     @property
     def DATABASE_URI(self) -> str:
         if self.DATABASE_URL:

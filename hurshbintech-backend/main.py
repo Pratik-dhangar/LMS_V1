@@ -65,6 +65,7 @@ limiter = Limiter(key_func=get_remote_address)
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.chat_message_cleanup import cleanup_old_messages
 from app.workers.subscription_tasks import process_ended_sessions_task
+from app.services.cache_service import cache_service
 
 scheduler = AsyncIOScheduler()
 
@@ -72,10 +73,13 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     """
     Startup and shutdown logic for the application.
-    Manages the background scheduler lifecycle.
+    Manages the background scheduler lifecycle and Redis cache connection.
     """
     # STARTUP
     try:
+        # Initialize Redis cache
+        await cache_service.connect()
+        
         if not scheduler.running:
             # Schedule chat message cleanup daily at 3 AM
             scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
@@ -92,6 +96,9 @@ async def lifespan(app: FastAPI):
     
     # SHUTDOWN
     try:
+        # Disconnect Redis
+        await cache_service.disconnect()
+        
         if scheduler.running:
             scheduler.shutdown(wait=False)
             logger.info("✅ Background scheduler shut down gracefully")
