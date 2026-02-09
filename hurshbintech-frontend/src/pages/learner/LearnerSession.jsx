@@ -1396,14 +1396,14 @@ const LearnerSession = () => {
   return (
     <div className={`learner-session-page ${pageClassName}`} style={{
       width: '100%',
-      height: '100vh',
+      height: '100dvh',
       margin: 0,
       padding: 0,
       display: 'flex',
       flexDirection: 'column',
       boxSizing: 'border-box',
-      position: 'relative',
-      overflow: 'hidden'
+      position: 'relative'
+      // overflow removed from inline style - handled by CSS media queries
     }}>
       <style>{`
         @keyframes pulse {
@@ -1421,7 +1421,7 @@ const LearnerSession = () => {
           padding: 0 !important;
           box-sizing: border-box !important;
           position: relative !important;
-          overflow: hidden !important;
+          /* overflow controlled by media queries */
         }
 
         html, body {
@@ -1450,7 +1450,23 @@ const LearnerSession = () => {
           margin: 0 !important;
           padding: 0 !important;
           min-height: 0 !important;
-          overflow: hidden !important;
+          /* overflow controlled by media queries for mobile scrolling */
+        }
+
+        /* Desktop: Hide overflow in main container */
+        @media (min-width: 769px) {
+          .learner-main-container {
+            overflow: hidden !important;
+          }
+        }
+
+        /* Mobile: Allow main container to expand and scroll */
+        @media (max-width: 768px) {
+          .learner-main-container {
+            overflow-y: visible !important;
+            overflow-x: hidden !important;
+            min-height: 100% !important;
+          }
         }
 
         /* Header with Metrics - Full width */
@@ -1476,6 +1492,91 @@ const LearnerSession = () => {
           padding: 0 !important;
           min-height: 0 !important;
           overflow: hidden !important;
+        }
+
+        /* Mobile: Ensure whiteboard wrapper takes proper height */
+        @media (max-width: 768px) {
+          .learner-whiteboard-wrapper {
+            flex: 1 1 auto !important;
+            /* Shorter height for mobile portrait - accounting for metrics header */
+            /* Use smaller value to fit better on mobile screens */
+            min-height: calc(100svh - 120px) !important;
+            /* Use dvh (dynamic viewport) for when address bar hides */
+            min-height: calc(100dvh - 120px) !important;
+            /* iOS Safari fallback */
+            min-height: calc(-webkit-fill-available - 120px) !important;
+            /* Limit max height to prevent excessive scrolling */
+            max-height: calc(100dvh - 60px) !important;
+            max-height: calc(-webkit-fill-available - 60px) !important;
+            /* Account for safe area insets at bottom (navigation bars, rounded corners) */
+            padding-bottom: env(safe-area-inset-bottom, 0) !important;
+          }
+
+          /* Ensure whiteboard container and canvas fill available space */
+          .session-whiteboard-container {
+            min-height: 100% !important;
+          }
+
+          .learner-whiteboard-wrapper canvas {
+            /* Touch-action for better mobile interaction */
+            touch-action: none !important;
+          }
+        }
+
+        /* Very small phones (iPhone SE, etc.) */
+        @media (max-width: 375px) and (max-height: 667px) {
+          .learner-metrics-header {
+            padding: 4px 4px !important;
+            gap: 8px !important;
+          }
+
+          .learner-whiteboard-wrapper {
+            /* Smaller height for tiny screens */
+            min-height: calc(100svh - 100px) !important;
+            min-height: calc(100dvh - 100px) !important;
+            min-height: calc(-webkit-fill-available - 100px) !important;
+            max-height: calc(100dvh - 50px) !important;
+          }
+        }
+
+        /* Mobile Landscape Mode - Optimize for horizontal orientation */
+        @media (max-width: 768px) and (orientation: landscape) {
+          .learner-session-page {
+            /* In landscape, use full height - browser chrome typically hidden when scrolled */
+            height: 100vh !important;
+            height: 100dvh !important;
+            height: -webkit-fill-available !important;
+            /* Prevent scrolling in landscape - should fit perfectly */
+            overflow: hidden !important;
+          }
+
+          .learner-main-container {
+            /* No scrolling needed in landscape */
+            overflow: hidden !important;
+          }
+
+          .learner-metrics-header {
+            /* Minimize header in landscape to maximize whiteboard space */
+            padding: 2px 4px !important;
+            gap: 6px !important;
+            font-size: 12px !important;
+          }
+
+          .learner-whiteboard-wrapper {
+            /* In landscape, fit perfectly in viewport when browser chrome is hidden */
+            min-height: calc(100vh - 40px) !important;
+            max-height: calc(100vh - 40px) !important;
+            height: calc(100vh - 40px) !important;
+            /* Use dvh for dynamic adjustment */
+            min-height: calc(100dvh - 40px) !important;
+            max-height: calc(100dvh - 40px) !important;
+            height: calc(100dvh - 40px) !important;
+            /* iOS Safari fallback */
+            min-height: calc(-webkit-fill-available - 40px) !important;
+            max-height: calc(-webkit-fill-available - 40px) !important;
+            /* Remove bottom padding in landscape */
+            padding-bottom: 0 !important;
+          }
         }
 
         .session-whiteboard-container {
@@ -1519,20 +1620,119 @@ const LearnerSession = () => {
           display: none !important;
         }
 
-        /* Mobile: Use dynamic viewport height (100dvh for modern browsers, 100vh fallback) */
+        /* Mobile: Use dynamic viewport height and allow scrolling to hide browser chrome */
         @media (max-width: 768px) {
           .learner-session-page {
-            height: 100vh !important;
-            // min-height: 100dvh !important;
-            // min-height: 100vh !important;
+            /* IMPORTANT: Use 100svh (small viewport height) initially - shows full content even with browser bars */
+            height: 100svh !important;
+            /* Use 100dvh (dynamic viewport height) for browsers that support it - adjusts as address bar shows/hides */
+            height: 100dvh !important;
+            /* Fallback: -webkit-fill-available for iOS Safari */
+            height: -webkit-fill-available !important;
+            /* Set minimum height to ensure content is always accessible */
+            min-height: 100svh !important;
+            min-height: 100dvh !important;
+            /* Allow scrolling on mobile to hide browser chrome */
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            /* Enable momentum scrolling on iOS */
+            -webkit-overflow-scrolling: touch !important;
+            /* Handle safe areas (notches, rounded corners) */
+            padding-top: env(safe-area-inset-top, 0) !important;
+            padding-bottom: env(safe-area-inset-bottom, 0) !important;
+            padding-left: env(safe-area-inset-left, 0) !important;
+            padding-right: env(safe-area-inset-right, 0) !important;
+          }
+
+          /* On mobile, ensure body/html allow the page to expand */
+          html {
+            /* iOS Safari specific - prevents issues with 100vh */
+            height: -webkit-fill-available !important;
+            overflow-x: hidden !important;
+            /* Allow vertical scrolling to hide browser chrome */
+            overflow-y: auto !important;
+          }
+          
+          body {
+            /* Ensure body can expand beyond initial viewport */
+            min-height: 100vh !important;
+            min-height: 100svh !important;
+            min-height: 100dvh !important;
+            min-height: -webkit-fill-available !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            /* Remove default margins that can cause layout issues */
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Metrics header - Account for safe area insets */
+          .learner-metrics-header {
+            padding-top: max(8px, env(safe-area-inset-top, 8px)) !important;
+            padding-left: max(8px, env(safe-area-inset-left, 8px)) !important;
+            padding-right: max(8px, env(safe-area-inset-right, 8px)) !important;
           }
         }
 
-        /* Desktop: Use regular viewport height */
+        /* Desktop: Use regular viewport height and prevent overflow */
         @media (min-width: 769px) {
           .learner-session-page {
             height: 100vh !important;
             min-height: 100vh !important;
+            overflow: hidden !important;
+          }
+        }
+
+        /* Fixed Video Overlay - Mobile safe area handling */
+        @media (max-width: 768px) {
+          .trainer-video-overlay {
+            /* Adjust for safe areas (notches, rounded corners) */
+            top: max(55px, calc(55px + env(safe-area-inset-top, 0px))) !important;
+            right: max(2px, env(safe-area-inset-right, 2px)) !important;
+            /* Smaller video on mobile */
+            width: clamp(120px, 25vw, 200px) !important;
+            height: clamp(90px, 18.75vw, 150px) !important;
+          }
+        }
+
+        /* Landscape mode - minimize video and adjust positioning */
+        @media (max-width: 768px) and (orientation: landscape) {
+          .trainer-video-overlay {
+            /* Position closer to top in landscape */
+            top: max(35px, calc(35px + env(safe-area-inset-top, 0px))) !important;
+            /* Smaller video in landscape */
+            width: clamp(90px, 18vw, 140px) !important;
+            height: clamp(68px, 13.5vw, 105px) !important;
+          }
+
+          /* Make metrics header elements more compact */
+          .learner-metrics-header > div {
+            font-size: 11px !important;
+          }
+
+          .learner-metrics-header span {
+            font-size: 11px !important;
+          }
+
+          /* Ensure whiteboard container doesn't exceed viewport in landscape */
+          .session-whiteboard-container {
+            max-height: 100% !important;
+            overflow: hidden !important;
+          }
+
+          .learner-whiteboard-wrapper > div {
+            max-height: 100% !important;
+          }
+
+          /* Constrain canvas to fit perfectly */
+          .learner-whiteboard-wrapper canvas {
+            max-height: calc(100dvh - 45px) !important;
+            max-height: calc(-webkit-fill-available - 45px) !important;
+            object-fit: contain !important;
+          }
+
+          .learner-whiteboard-wrapper .w-full {
+            max-height: 100% !important;
           }
         }
       `}</style>
@@ -1663,7 +1863,8 @@ const LearnerSession = () => {
             <div className="session-whiteboard-container">
               {/* Fixed Video Feed Overlay - Trainer's Video (Top Right Corner) */}
               {remoteStream && (
-                <div style={{
+                <div className="trainer-video-overlay"
+                 style={{
                   position: 'fixed',
                   top: '55px',
                   right: '2px',
