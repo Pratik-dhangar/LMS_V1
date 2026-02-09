@@ -16,9 +16,13 @@ export default function usePWAInstall() {
 
   const installApp = async () => {
     if (!promptEvent) return;
+
     promptEvent.prompt();
     const result = await promptEvent.userChoice;
-    console.log("Install result:", result);
+
+    if (result.outcome === 'accepted') {
+      setPromptEvent(null);
+    }
   };
 
   return {

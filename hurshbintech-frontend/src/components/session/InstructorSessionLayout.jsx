@@ -951,6 +951,513 @@ export const initializeToolsService = (whiteboardService) => {
 };
 
 // =============================
+// WHITEBOARD CALLBACK SETUP
+// =============================
+
+/**
+ * Setup whiteboard callbacks for instructor roles (coach/trainer)
+ * Centralizes all whiteboard event handlers for instructor sessions
+ */
+export const setupInstructorWhiteboardCallbacks = ({
+    whiteboardService,
+    setRemoteSelectedItemIds,
+    floatingAnimations,
+    setFloatingAnimations,
+    playPopSound,
+    setExerciseData,
+    setBuckets,
+    setErasePenTrigger,
+    setRedrawCanvasTrigger
+}) => {
+    if (!whiteboardService) return null;
+
+    // Item selection by participant (client/learner/guest)
+    whiteboardService.onItemSelected = (data) => {
+        console.log('[InstructorSession] Remote user selected items:', data);
+        if (data.itemIds && Array.isArray(data.itemIds) && setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds(data.itemIds);
+        }
+    };
+
+    // Animation pop events from participant
+    whiteboardService.onAnimationPopped = (data) => {
+        console.log('[InstructorSession] Animation popped by participant:', data);
+        const animation = floatingAnimations.find(a => a.id === data.animationId);
+        if (animation && playPopSound) {
+            playPopSound(animation.type);
+        }
+
+        if (setFloatingAnimations) {
+            setFloatingAnimations(prev =>
+                prev.map(a => a.id === data.animationId
+                    ? { ...a, popped: true, poppedLeft: data.poppedLeft, poppedTop: data.poppedTop }
+                    : a
+                )
+            );
+        }
+    };
+
+    // Exercise answer updates from participant
+    if (setExerciseData) {
+        whiteboardService.onExerciseAnswerUpdate = (data) => {
+            console.log('[InstructorSession] Participant answer updated:', data);
+            if (data.qaItems) {
+                setExerciseData(prev => ({
+                    ...prev,
+                    qaItems: data.qaItems
+                }));
+            } else {
+                setExerciseData(prev => ({
+                    ...prev,
+                    question: data.question || prev.question,
+                    answer: data.answer || ''
+                }));
+            }
+        };
+
+        // Exercise submission from participant
+        whiteboardService.onExerciseResponse = (data) => {
+            console.log('[InstructorSession] Participant submitted exercise:', data);
+            if (data.qaItems) {
+                setExerciseData(prev => ({
+                    ...prev,
+                    qaItems: data.qaItems
+                }));
+            } else {
+                setExerciseData(prev => ({
+                    ...prev,
+                    question: data.question,
+                    clientAnswer: data.clientAnswer,
+                    learnerAnswer: data.learnerAnswer
+                }));
+            }
+        };
+    }
+
+    // Bucket management (already set in initializeWhiteboardService but keeping for completeness)
+    if (setBuckets) {
+        whiteboardService.onBucketAdded = (data) => {
+            console.log('[InstructorSession] Bucket added:', data);
+            setBuckets(prev => {
+                const exists = prev.find(bucket => bucket.id === data.id);
+                if (!exists) {
+                    return [...prev, data];
+                }
+                return prev;
+            });
+        };
+
+        whiteboardService.onBucketUpdate = (data) => {
+            console.log('[InstructorSession] Bucket updated:', data);
+            if (data.removed) {
+                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
+            } else {
+                setBuckets(prev => prev.map(bucket =>
+                    bucket.id === data.id ? { ...bucket, ...data } : bucket
+                ));
+            }
+        };
+    }
+
+    // Floating animations
+    if (setFloatingAnimations) {
+        whiteboardService.onFloatingAnimations = (data) => {
+            console.log('[InstructorSession] Floating animations received:', data);
+            setFloatingAnimations(prev => [...prev, ...data.animations]);
+
+            setTimeout(() => {
+                setFloatingAnimations(prev =>
+                    prev.filter(a => !data.animations.find(na => na.id === a.id))
+                );
+            }, 13000);
+        };
+    }
+
+    // Erase pen event
+    if (setErasePenTrigger && setRedrawCanvasTrigger) {
+        whiteboardService.onErasePen = () => {
+            console.log('[InstructorSession] Received erase pen event');
+            setErasePenTrigger(prev => prev + 1);
+            setRedrawCanvasTrigger(prev => prev + 1);
+        };
+    }
+
+    // Return cleanup function
+    return () => {
+        if (whiteboardService) {
+            whiteboardService.onItemSelected = null;
+            whiteboardService.onAnimationPopped = null;
+            whiteboardService.onExerciseAnswerUpdate = null;
+            whiteboardService.onExerciseResponse = null;
+            whiteboardService.onBucketAdded = null;
+            whiteboardService.onBucketUpdate = null;
+            whiteboardService.onFloatingAnimations = null;
+            whiteboardService.onErasePen = null;
+        }
+    };
+};
+
+/**
+ * Setup whiteboard callbacks for attendee roles (learner/client/guest)
+ * Centralizes all whiteboard event handlers for attendee sessions
+ */
+export const setupAttendeeWhiteboardCallbacks = ({
+    whiteboardService,
+    setToolAccess,
+    setSelectedItems,
+    setTool,
+    setPromptText,
+    setPromptVisible,
+    setIsEyeBlinking,
+    setFeedbackMessage,
+    setWaitingMessage,
+    setFloatingAnimations,
+    floatingAnimations,
+    setCanvasItems,
+    setBuckets,
+    buckets,
+    setErasePenTrigger,
+    setRedrawCanvasTrigger,
+    setClearCanvasTrigger,
+    setYoutubePopups,
+    setBackgroundMusicPlaying,
+    setSelectedMusic,
+    setMusicVolume,
+    audioRef,
+    setExerciseData,
+    sessionInfo,
+    whiteboardCanvasRef,
+    denormalizeItem
+}) => {
+    if (!whiteboardService) return null;
+
+    // Tool access control from instructor
+    if (setToolAccess) {
+        whiteboardService.onToolAccess = (data) => {
+            console.log('[AttendeeSession] Tool access update:', data);
+            setToolAccess(prevAccess => ({
+                ...prevAccess,
+                [data.toolName]: data.enabled
+            }));
+
+            if (setSelectedItems && data.toolName === 'drag' && !data.enabled) {
+                setSelectedItems([]);
+            }
+
+            if (setTool) {
+                if (data.toolName === 'drag' && data.enabled) {
+                    setTool('select');
+                } else if (data.toolName === 'select' && data.enabled) {
+                    setTool('select');
+                }
+            }
+        };
+    }
+
+    // Prompt updates from instructor (voice-to-text)
+    if (setPromptText) {
+        whiteboardService.onPromptUpdate = (data) => {
+            console.log('[AttendeeSession] Prompt update received:', data);
+            if (data.text) {
+                setPromptText(data.text);
+                if (setPromptVisible) setPromptVisible(true);
+                if (setIsEyeBlinking) {
+                    setIsEyeBlinking(true);
+                    setTimeout(() => setIsEyeBlinking(false), 2000);
+                }
+            }
+        };
+    }
+
+    // Feedback messages from instructor
+    if (setFeedbackMessage) {
+        whiteboardService.onFeedbackMessage = (data) => {
+            console.log('[AttendeeSession] Feedback message received:', data);
+            setFeedbackMessage(data.text || '');
+            setTimeout(() => setFeedbackMessage(''), 3000);
+        };
+    }
+
+    // Waiting messages from instructor
+    if (setWaitingMessage) {
+        whiteboardService.onWaitingMessage = (data) => {
+            console.log('[AttendeeSession] Waiting message received:', data);
+            setWaitingMessage(data.text || '');
+            setTimeout(() => setWaitingMessage(''), 3000);
+        };
+    }
+
+    // Floating animations from instructor
+    if (setFloatingAnimations) {
+        whiteboardService.onFloatingAnimations = (data) => {
+            setFloatingAnimations(prev => [...prev, ...data.animations]);
+            setTimeout(() => {
+                setFloatingAnimations(prev =>
+                    prev.filter(a => !data.animations.find(na => na.id === a.id))
+                );
+            }, 13000);
+        };
+
+        whiteboardService.onAnimationPopped = (data) => {
+            console.log('[AttendeeSession] Animation popped by another user:', data);
+            setFloatingAnimations(prev =>
+                prev.map(a => a.id === data.animationId
+                    ? { ...a, popped: true, poppedLeft: data.poppedLeft, poppedTop: data.poppedTop }
+                    : a
+                )
+            );
+        };
+    }
+
+    // Item removal from instructor
+    if (setCanvasItems) {
+        whiteboardService.onItemRemove = (data) => {
+            console.log('[AttendeeSession] Item remove received:', data);
+            if (data?.id) {
+                setCanvasItems(prev => prev.filter(item => item.id !== data.id));
+            }
+        };
+
+        // Item updates from instructor
+        whiteboardService.onItemUpdate = (data) => {
+            console.log('[AttendeeSession] Item update received:', data);
+            if (data?.id && data?.type) {
+                // Check if item is targeted to specific learner
+                if (data.targetLearnerId) {
+                    const targetId = String(data.targetLearnerId);
+                    const myId = String(sessionInfo?.learner_id || '');
+
+                    if (myId && targetId !== myId) {
+                        console.log('[AttendeeSession] Item not for this learner, ignoring');
+                        return;
+                    }
+                }
+
+                setCanvasItems(prev => {
+                    const existingIndex = prev.findIndex(item => item.id === data.id);
+                    let processedData = { ...data };
+
+                    // Handle bucket-relative items
+                    if (data.isRelativeToContainer && data.inBucket && buckets) {
+                        const bucket = buckets.find(b => b.id === data.inBucket);
+                        if (bucket) {
+                            const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
+                            const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
+                            const pixelOffsetX = (data.x || 0) * bucketWidth;
+                            const pixelOffsetY = (data.y || 0) * bucketHeight;
+
+                            let itemWidth = data.width;
+                            let itemHeight = data.height;
+                            if (data.width && data.width >= 0 && data.width <= 1) {
+                                itemWidth = data.width * bucketWidth;
+                            }
+                            if (data.height && data.height >= 0 && data.height <= 1) {
+                                itemHeight = data.height * bucketHeight;
+                            }
+
+                            processedData = {
+                                ...processedData,
+                                x: bucket.x + pixelOffsetX,
+                                y: bucket.y + pixelOffsetY,
+                                width: itemWidth,
+                                height: itemHeight
+                            };
+                        }
+                    } else if (whiteboardCanvasRef?.current && denormalizeItem) {
+                        // Denormalize coordinates for non-bucket items
+                        const isNormalized = (
+                            data.x !== undefined && data.x >= 0 && data.x <= 1 &&
+                            data.y !== undefined && data.y >= 0 && data.y <= 1 &&
+                            data.width !== undefined && data.width >= 0 && data.width <= 1 &&
+                            data.height !== undefined && data.height >= 0 && data.height <= 1
+                        );
+
+                        if (isNormalized) {
+                            const denormalized = denormalizeItem(processedData, whiteboardCanvasRef.current);
+                            processedData = {
+                                ...processedData,
+                                x: denormalized.x,
+                                y: denormalized.y,
+                                width: denormalized.width,
+                                height: denormalized.height
+                            };
+                        }
+                    }
+
+                    if (existingIndex >= 0) {
+                        const updated = [...prev];
+                        updated[existingIndex] = { ...updated[existingIndex], ...processedData };
+                        return updated;
+                    } else {
+                        return [...prev, processedData];
+                    }
+                });
+            }
+        };
+    }
+
+    // Erase pen and clear canvas
+    if (setErasePenTrigger && setRedrawCanvasTrigger) {
+        whiteboardService.onErasePen = (data) => {
+            console.log('[AttendeeSession] Erase pen received:', data);
+            setErasePenTrigger(prev => prev + 1);
+            setRedrawCanvasTrigger(prev => prev + 1);
+        };
+    }
+
+    if (setClearCanvasTrigger && setCanvasItems && setBuckets && setFloatingAnimations) {
+        whiteboardService.onClearCanvas = () => {
+            console.log('[AttendeeSession] Clear canvas received');
+            setClearCanvasTrigger(prev => prev + 1);
+            setCanvasItems([]);
+            setBuckets([]);
+            setFloatingAnimations([]);
+        };
+    }
+
+    // Bucket management
+    if (setBuckets) {
+        whiteboardService.onBucketAdded = (data) => {
+            console.log('[AttendeeSession] Bucket added:', data);
+            setBuckets(prev => {
+                const exists = prev.find(bucket => bucket.id === data.id);
+                if (!exists) {
+                    return [...prev, data];
+                }
+                return prev;
+            });
+        };
+
+        whiteboardService.onBucketUpdate = (data) => {
+            if (data.removed) {
+                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
+            } else if (buckets) {
+                setBuckets(prev => prev.map(bucket => {
+                    if (bucket.id === data.id) {
+                        const deltaX = (data.x || 0) - (bucket.x || 0);
+                        const deltaY = (data.y || 0) - (bucket.y || 0);
+
+                        if (setCanvasItems && Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
+                            setCanvasItems(items => items.map(item =>
+                                item.inBucket === data.id
+                                    ? { ...item, x: item.x + deltaX, y: item.y + deltaY }
+                                    : item
+                            ));
+                        }
+
+                        return { ...bucket, ...data };
+                    }
+                    return bucket;
+                }));
+            }
+        };
+    }
+
+    // YouTube popups
+    if (setYoutubePopups) {
+        whiteboardService.onYoutubePopupCreated = (data) => {
+            console.log('[AttendeeSession] YouTube popup created:', data);
+            setYoutubePopups(prev => [...prev, data]);
+        };
+
+        whiteboardService.onYoutubePopupClosed = (data) => {
+            console.log('[AttendeeSession] YouTube popup closed:', data);
+            setYoutubePopups(prev => prev.filter(popup => popup.id !== data.id));
+        };
+    }
+
+    // Background music
+    if (setBackgroundMusicPlaying && audioRef) {
+        whiteboardService.onBackgroundMusic = (data) => {
+            console.log('[AttendeeSession] Background music control:', data);
+            if (data.playing && data.url) {
+                audioRef.current.src = data.url;
+                audioRef.current.play().catch(err =>
+                    console.error('[AttendeeSession] Audio play failed:', err)
+                );
+                setBackgroundMusicPlaying(true);
+                if (setSelectedMusic) setSelectedMusic(data.musicId);
+            } else {
+                audioRef.current.pause();
+                setBackgroundMusicPlaying(false);
+                if (setSelectedMusic) setSelectedMusic(null);
+            }
+        };
+
+        whiteboardService.onBackgroundMusicVolume = (data) => {
+            console.log('[AttendeeSession] Music volume update:', data.volume);
+            if (setMusicVolume) setMusicVolume(data.volume);
+            audioRef.current.volume = data.volume;
+        };
+    }
+
+    // Exercise updates
+    if (setExerciseData) {
+        whiteboardService.onExerciseUpdate = (data) => {
+            console.log('[AttendeeSession] Exercise update received:', data);
+            if (data.qaItems && Array.isArray(data.qaItems)) {
+                setExerciseData({
+                    qaItems: data.qaItems
+                });
+            } else if (data.question) {
+                setExerciseData({
+                    question: data.question
+                });
+            }
+        };
+
+        whiteboardService.onExerciseAnswerUpdate = (data) => {
+            console.log('[AttendeeSession] Exercise answer update received:', data);
+            if (data.qaItems) {
+                setExerciseData(prev => ({
+                    ...prev,
+                    qaItems: data.qaItems
+                }));
+            } else {
+                setExerciseData(prev => ({
+                    ...prev,
+                    question: data.question,
+                    learnerAnswer: data.learnerAnswer
+                }));
+            }
+        };
+
+        whiteboardService.onExerciseClosed = (data) => {
+            console.log('[AttendeeSession] Exercise closed:', data);
+            setExerciseData({
+                qaItems: [],
+                question: ''
+            });
+        };
+    }
+
+    // Return cleanup function
+    return () => {
+        if (whiteboardService) {
+            whiteboardService.onToolAccess = null;
+            whiteboardService.onPromptUpdate = null;
+            whiteboardService.onFeedbackMessage = null;
+            whiteboardService.onWaitingMessage = null;
+            whiteboardService.onFloatingAnimations = null;
+            whiteboardService.onAnimationPopped = null;
+            whiteboardService.onItemRemove = null;
+            whiteboardService.onItemUpdate = null;
+            whiteboardService.onErasePen = null;
+            whiteboardService.onClearCanvas = null;
+            whiteboardService.onBucketAdded = null;
+            whiteboardService.onBucketUpdate = null;
+            whiteboardService.onYoutubePopupCreated = null;
+            whiteboardService.onYoutubePopupClosed = null;
+            whiteboardService.onBackgroundMusic = null;
+            whiteboardService.onBackgroundMusicVolume = null;
+            whiteboardService.onExerciseUpdate = null;
+            whiteboardService.onExerciseAnswerUpdate = null;
+            whiteboardService.onExerciseClosed = null;
+        }
+    };
+};
+
+// =============================
 // MEDIA CONTROLS
 // =============================
 

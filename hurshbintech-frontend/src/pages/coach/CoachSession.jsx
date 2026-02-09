@@ -66,6 +66,7 @@ import {
   initializeWhiteboardService,
   initializeVideoConferenceService,
   initializeToolsService,
+  setupInstructorWhiteboardCallbacks,
   toggleMicrophone as utilToggleMicrophone,
   toggleCamera as utilToggleCamera,
   toggleFreeze as utilToggleFreeze,
@@ -521,65 +522,21 @@ const CoachSession = () => {
   useEffect(() => {
     if (!whiteboardService) return;
 
-    // Set up callback for item selection by client/guest
-    whiteboardService.onItemSelected = (data) => {
-      console.log('[CoachSession] Remote user selected items:', data);
-      // Store remote selections regardless of who sent them
-      if (data.itemIds && Array.isArray(data.itemIds)) {
-        setRemoteSelectedItemIds(data.itemIds);
-      }
-    };
+    // Use centralized callback setup for instructor sessions
+    const cleanup = setupInstructorWhiteboardCallbacks({
+      whiteboardService,
+      setRemoteSelectedItemIds,
+      floatingAnimations,
+      setFloatingAnimations,
+      playPopSound,
+      setExerciseData,
+      setBuckets,
+      setErasePenTrigger,
+      setRedrawCanvasTrigger
+    });
 
-    // Set up callback for animation pop events from client/guest
-    setupParticipantAnimationPopListener(whiteboardService, floatingAnimations, setFloatingAnimations, playPopSound);
-
-    // Set up callback for exercise answer updates from client
-    whiteboardService.onExerciseAnswerUpdate = (data) => {
-      // console.log('[CoachSession] 📝 Client answer updated:', data);
-      if (data.qaItems) {
-        // New format with multiple Q&A items
-        setExerciseData(prev => ({
-          ...prev,
-          qaItems: data.qaItems
-        }));
-      } else {
-        // Single answer format
-        setExerciseData(prev => ({
-          ...prev,
-          question: data.question || prev.question,
-          answer: data.answer || ''
-        }));
-      }
-    };
-
-    // Set up callback for exercise submission from client
-    whiteboardService.onExerciseResponse = (data) => {
-      // console.log('[CoachSession] 📋 Client submitted exercise:', data);
-      if (data.qaItems) {
-        // New format with multiple Q&A items
-        setExerciseData(prev => ({
-          ...prev,
-          qaItems: data.qaItems
-        }));
-      } else {
-        // Backward compatibility for single answer
-        setExerciseData(prev => ({
-          ...prev,
-          question: data.question,
-          clientAnswer: data.clientAnswer
-        }));
-      }
-    };
-
-    return () => {
-      if (whiteboardService) {
-        whiteboardService.onItemSelected = null;
-        whiteboardService.onAnimationPopped = null;
-        whiteboardService.onExerciseAnswerUpdate = null;
-        whiteboardService.onExerciseResponse = null;
-      }
-    };
-  }, [whiteboardService]);
+    return cleanup;
+  }, [whiteboardService, floatingAnimations]);
 
   // Auto-hide info bar after 5 seconds (improved UX)
   useEffect(() => {
