@@ -1,0 +1,115 @@
+.pwa-install-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pwa-install-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(30, 64, 175, 0.2);
+    white-space: nowrap;
+}
+
+.pwa-install-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3);
+    transform: translateY(-2px);
+}
+
+.pwa-install-button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(30, 64, 175, 0.2);
+}
+
+.pwa-install-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.pwa-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: pwa-spin 0.8s linear infinite;
+}
+
+@keyframes pwa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.pwa-install-message {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #10b981;
+    color: white;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    animation: pwa-slideIn 0.3s ease;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+@keyframes pwa-slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .pwa-install-button {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+    .pwa-install-button span {
+        display: none;
+    }
+
+    .pwa-install-message {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .pwa-install-button {
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+    }
+
+    .pwa-install-button:hover:not(:disabled) {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    }
+}

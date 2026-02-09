@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/common/Spinner";
 import { CoachSkeleton, ServiceCardsSkeleton, ContentSectionSkeleton } from "../components/common/SkeletonLoader";
+import PWAInstallButton from '../components/common/PWAInstallButton';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
@@ -42,6 +43,22 @@ const Home = () => {
       const data = await aboutUsService.getPublicAboutUs('en');
       console.log('About Us data:', data);
       setAboutUs(data);
+
+      // Fetch featured coach if featured_coach_id exists
+      if (data && data.featured_coach_id) {
+        try {
+          console.log('Fetching coach with ID:', data.featured_coach_id);
+          const allCoaches = await bookingService.getAvailableCoaches();
+          const coach = allCoaches.find(c => c.id === data.featured_coach_id);
+          console.log('Fetched coach:', coach);
+          setFeaturedCoach(coach || null);
+        } catch (err) {
+          console.error('Error fetching featured coach:', err);
+          setFeaturedCoach(null);
+        }
+      } else {
+        console.log('No featured_coach_id found in about us data');
+      }
     } catch (err) {
       if (err?.response?.status !== 404) {
         console.error('Error fetching About Us:', err);
@@ -250,65 +267,65 @@ const Home = () => {
     };
 
     const allSections = [
-      { 
-        id: 'intro', 
-        title: aboutUs.intro_title || 'Who We Are', 
-        content: hasContent(aboutUs.intro_content) ? aboutUs.intro_content : 'Learn about our organization and mission.', 
-        icon: '👋' 
+      {
+        id: 'intro',
+        title: aboutUs.intro_title || 'Who We Are',
+        content: hasContent(aboutUs.intro_content) ? aboutUs.intro_content : 'Learn about our organization and mission.',
+        icon: '👋'
       },
-      { 
-        id: 'mission', 
-        title: aboutUs.mission_title || 'Our Mission', 
-        content: hasContent(aboutUs.mission_content) ? aboutUs.mission_content : 'Our mission is to provide quality services.', 
-        icon: '🎯' 
+      {
+        id: 'mission',
+        title: aboutUs.mission_title || 'Our Mission',
+        content: hasContent(aboutUs.mission_content) ? aboutUs.mission_content : 'Our mission is to provide quality services.',
+        icon: '🎯'
       },
-      { 
-        id: 'vision', 
-        title: aboutUs.vision_title || 'Our Vision', 
-        content: hasContent(aboutUs.vision_content) ? aboutUs.vision_content : 'Our vision for the future.', 
-        icon: '🔭' 
+      {
+        id: 'vision',
+        title: aboutUs.vision_title || 'Our Vision',
+        content: hasContent(aboutUs.vision_content) ? aboutUs.vision_content : 'Our vision for the future.',
+        icon: '🔭'
       },
-      { 
-        id: 'programs', 
-        title: aboutUs.programs_title || 'What We Teach', 
-        content: hasContent(aboutUs.programs_content) ? aboutUs.programs_content : 'Discover our educational programs.', 
-        icon: '📚' 
+      {
+        id: 'programs',
+        title: aboutUs.programs_title || 'What We Teach',
+        content: hasContent(aboutUs.programs_content) ? aboutUs.programs_content : 'Discover our educational programs.',
+        icon: '📚'
       },
-      { 
-        id: 'methodology', 
-        title: aboutUs.methodology_title || 'How We Teach', 
-        content: hasContent(aboutUs.methodology_content) ? aboutUs.methodology_content : 'Our teaching methodology.', 
-        icon: '🎓' 
+      {
+        id: 'methodology',
+        title: aboutUs.methodology_title || 'How We Teach',
+        content: hasContent(aboutUs.methodology_content) ? aboutUs.methodology_content : 'Our teaching methodology.',
+        icon: '🎓'
       },
-      { 
-        id: 'why_us', 
-        title: aboutUs.why_us_title || 'Why Choose Us', 
-        content: hasContent(aboutUs.why_us_content) ? aboutUs.why_us_content : 'What makes us unique.', 
-        icon: '⭐' 
+      {
+        id: 'why_us',
+        title: aboutUs.why_us_title || 'Why Choose Us',
+        content: hasContent(aboutUs.why_us_content) ? aboutUs.why_us_content : 'What makes us unique.',
+        icon: '⭐'
       },
-      { 
-        id: 'team', 
-        title: aboutUs.team_title || 'Our Educators', 
-        content: hasContent(aboutUs.team_content) ? aboutUs.team_content : 'Meet our team of professionals.', 
-        icon: '👥' 
+      {
+        id: 'team',
+        title: aboutUs.team_title || 'Our Educators',
+        content: hasContent(aboutUs.team_content) ? aboutUs.team_content : 'Meet our team of professionals.',
+        icon: '👥'
       },
-      { 
-        id: 'learner_focus', 
-        title: aboutUs.learner_focus_title || 'Learner & Parent Focus', 
-        content: hasContent(aboutUs.learner_focus_content) ? aboutUs.learner_focus_content : 'Our commitment to learners and parents.', 
-        icon: '🎪' 
+      {
+        id: 'learner_focus',
+        title: aboutUs.learner_focus_title || 'Learner & Parent Focus',
+        content: hasContent(aboutUs.learner_focus_content) ? aboutUs.learner_focus_content : 'Our commitment to learners and parents.',
+        icon: '🎪'
       },
-      { 
-        id: 'values', 
-        title: aboutUs.values_title || 'Our Values', 
-        content: hasContent(aboutUs.values_content) ? aboutUs.values_content : 'Our core values.', 
-        icon: '💎' 
+      {
+        id: 'values',
+        title: aboutUs.values_title || 'Our Values',
+        content: hasContent(aboutUs.values_content) ? aboutUs.values_content : 'Our core values.',
+        icon: '💎'
       },
-      { 
-        id: 'commitment', 
-        title: aboutUs.commitment_title || 'Our Commitment', 
-        content: hasContent(aboutUs.commitment_content) ? aboutUs.commitment_content : 'Our commitment to excellence.', 
-        icon: '🤝' 
+      {
+        id: 'commitment',
+        title: aboutUs.commitment_title || 'Our Commitment',
+        content: hasContent(aboutUs.commitment_content) ? aboutUs.commitment_content : 'Our commitment to excellence.',
+        icon: '🤝'
       },
     ];
 
@@ -363,6 +380,8 @@ const Home = () => {
           <button onClick={() => scrollToSection('about-section')} className="hero-nav-link">
             About Us
           </button>
+          <span className="hero-nav-divider">|</span>
+          <PWAInstallButton />
         </div>
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
@@ -475,7 +494,7 @@ const Home = () => {
             ) : null}
           </div>
 
-   {/* Introduction Section */}
+          {/* Introduction Section */}
           {aboutUs.intro_content && (
             <section className="about-section" aria-labelledby="intro-heading">
               <div className="about-container">

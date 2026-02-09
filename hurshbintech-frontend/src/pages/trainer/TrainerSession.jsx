@@ -47,6 +47,7 @@ import {
   initializeWhiteboardService,
   initializeVideoConferenceService,
   initializeToolsService,
+  setupInstructorWhiteboardCallbacks,
   toggleMicrophone as utilToggleMicrophone,
   toggleCamera as utilToggleCamera,
   toggleFreeze as utilToggleFreeze,
@@ -569,64 +570,21 @@ const TrainerSession = () => {
   useEffect(() => {
     if (!whiteboardService) return;
 
-    // Set up callback for item selection by learner
-    whiteboardService.onItemSelected = (data) => {
-      // console.log('[TrainerSession] Remote user selected items:', data);
-      if (data.itemIds && Array.isArray(data.itemIds)) {
-        setRemoteSelectedItemIds(data.itemIds);
-      }
-    };
+    // Use centralized callback setup for instructor sessions
+    const cleanup = setupInstructorWhiteboardCallbacks({
+      whiteboardService,
+      setRemoteSelectedItemIds,
+      floatingAnimations,
+      setFloatingAnimations,
+      playPopSound,
+      setExerciseData,
+      setBuckets,
+      setErasePenTrigger,
+      setRedrawCanvasTrigger
+    });
 
-    // Set up callback for animation pop events from learner
-    setupParticipantAnimationPopListener(whiteboardService, floatingAnimations, setFloatingAnimations, playPopSound);
-
-    // Set up callback for exercise answer updates from learner
-    whiteboardService.onExerciseAnswerUpdate = (data) => {
-      // console.log('[TrainerSession] 📝 Learner answer updated:', data);
-      if (data.qaItems) {
-        // New format with multiple Q&A items
-        setExerciseData(prev => ({
-          ...prev,
-          qaItems: data.qaItems
-        }));
-      } else {
-        // Single answer format
-        setExerciseData(prev => ({
-          ...prev,
-          question: data.question || prev.question,
-          answer: data.answer || ''
-        }));
-      }
-    };
-
-    // Set up callback for exercise submission from learner
-    whiteboardService.onExerciseResponse = (data) => {
-      // console.log('[TrainerSession] 📋 Learner submitted exercise:', data);
-      if (data.qaItems) {
-        // New format with multiple Q&A items
-        setExerciseData(prev => ({
-          ...prev,
-          qaItems: data.qaItems
-        }));
-      } else {
-        // Backward compatibility for single answer
-        setExerciseData(prev => ({
-          ...prev,
-          question: data.question,
-          learnerAnswer: data.learnerAnswer
-        }));
-      }
-    };
-
-    return () => {
-      if (whiteboardService) {
-        whiteboardService.onItemSelected = null;
-        whiteboardService.onAnimationPopped = null;
-        whiteboardService.onExerciseAnswerUpdate = null;
-        whiteboardService.onExerciseResponse = null;
-      }
-    };
-  }, [whiteboardService]);
+    return cleanup;
+  }, [whiteboardService, floatingAnimations]);
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Initialize session data and authorize trainer
