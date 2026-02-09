@@ -80,6 +80,152 @@ const MySessions = () => {
 
   return (
     <div className="page-container">
+      <style>{`
+        /* Mobile Responsive Styles for My Sessions */
+        
+        /* Mobile Portrait */
+        @media (max-width: 768px) {
+          .page-container {
+            padding: 8px !important;
+          }
+          
+          .page-content {
+            padding: 0 !important;
+          }
+          
+          .page-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            margin-bottom: 16px !important;
+          }
+          
+          .page-title {
+            font-size: 1.25rem !important;
+          }
+          
+          .back-button {
+            font-size: 0.875rem !important;
+            padding: 8px 12px !important;
+          }
+        }
+        
+        /* Session Cards Mobile */
+        @media (max-width: 900px) {
+          .session-card-container {
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 12px !important;
+          }
+          
+          .session-card-info {
+            width: 100% !important;
+          }
+          
+          .session-card-actions {
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-top: 8px !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            gap: 8px !important;
+          }
+          
+          .session-card-actions button {
+            flex: 1 !important;
+            min-width: 0 !important;
+            font-size: 0.8rem !important;
+            padding: 10px 12px !important;
+            white-space: nowrap !important;
+          }
+        }
+        
+        /* Header Controls Mobile */
+        @media (max-width: 768px) {
+          .sessions-header-controls {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            width: 100% !important;
+            gap: 8px !important;
+          }
+          
+          .sessions-header-controls > div {
+            width: 100% !important;
+            justify-content: space-between !important;
+          }
+        }
+        
+        /* Mobile Landscape */
+        @media (max-width: 1024px) and (orientation: landscape) {
+          .page-title {
+            font-size: 1.125rem !important;
+          }
+          
+          .session-card-container {
+            padding: 10px !important;
+          }
+          
+          .session-card-actions button {
+            font-size: 0.75rem !important;
+            padding: 6px 10px !important;
+          }
+        }
+        
+        /* Modal Responsive */
+        @media (max-width: 768px) {
+          .app-modal-container {
+            margin: 16px !important;
+            max-width: calc(100vw - 32px) !important;
+            max-height: calc(100vh - 32px) !important;
+            overflow-y: auto !important;
+          }
+          
+          .app-modal-content {
+            padding: 16px !important;
+          }
+          
+          .app-modal-form-grid--2 {
+            grid-template-columns: 1fr !important;
+          }
+          
+          .app-modal-footer {
+            flex-direction: column !important;
+          }
+          
+          .app-modal-footer button {
+            width: 100% !important;
+          }
+        }
+        
+        /* Extra Small Devices */
+        @media (max-width: 480px) {
+          .page-title {
+            font-size: 1.125rem !important;
+          }
+          
+          .session-card-container {
+            padding: 10px !important;
+          }
+          
+          .session-card-actions {
+            flex-direction: column !important;
+            gap: 6px !important;
+          }
+          
+          .session-card-actions button {
+            width: 100% !important;
+            font-size: 0.75rem !important;
+            padding: 8px 10px !important;
+          }
+        }
+        
+        /* Touch-friendly targets */
+        @media (hover: none) and (pointer: coarse) {
+          button {
+            min-height: 44px !important;
+          }
+        }
+      `}</style>
       <main className="page-main">
         <div className="page-content">
           {/* Page Header */}
@@ -101,7 +247,7 @@ const MySessions = () => {
             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
             padding: '1.5rem'
           }}>
-            <div style={{
+            <div className="sessions-header-controls" style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -258,6 +404,7 @@ const MySessions = () => {
                     return (
                       <div
                         key={session.session_id || session.id}
+                        className="session-card-container"
                         style={{
                           borderLeft: `4px solid ${statusColor.border}`,
                           borderRadius: '0.5rem',
@@ -272,7 +419,7 @@ const MySessions = () => {
                         onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'}
                         onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'}
                       >
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="session-card-info" style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                             <h3 style={{ fontWeight: '600', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                               {session.title || `Session with ${session.trainer?.name || session.trainer_name || 'Trainer'}`}
@@ -301,7 +448,7 @@ const MySessions = () => {
                           )}
                         </div>
 
-                        <div style={{ marginLeft: '1rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
+                        <div className="session-card-actions" style={{ marginLeft: '1rem', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
                           {(isEnded || isExpired || isCancelled) && (
                             <span style={{
                               padding: '0.125rem 0.5rem',
