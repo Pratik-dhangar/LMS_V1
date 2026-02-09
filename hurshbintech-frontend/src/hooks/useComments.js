@@ -54,9 +54,13 @@ const useComments = (whiteboardService, userRole = 'trainer') => {
      * Receive a comment from the other participant
      */
     const addReceivedComment = useCallback((commentData) => {
+        console.log('[useComments] addReceivedComment called with:', commentData);
         if (commentData.type === 'trainer') {
+            console.log('[useComments] Setting trainer comment:', commentData.text);
             setTrainerComments(commentData.text);
-        } else if (commentData.type === 'learner') {
+        } else {
+            // All other types (learner, guest, client) go to learnerComments
+            console.log('[useComments] Setting learner/guest/client comment:', commentData.text, 'type:', commentData.type);
             setLearnerComments(commentData.text);
         }
     }, []);

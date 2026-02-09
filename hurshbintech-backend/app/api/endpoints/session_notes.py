@@ -3,15 +3,15 @@ Session Notes Endpoints - Independent auto-save with version tracking and discon
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_trainer, get_current_head
+from app.core.deps import get_current_trainer_optional, get_current_coach_optional, get_current_trainer, get_current_coach, get_current_head
 from app.crud import session_notes_crud, session_crud
 from app.db.session import get_db
-from app.models.user_model import TrainerProfile, HeadProfile
+from app.models.user_model import TrainerProfile, HeadProfile, CoachProfile
 from app.schemas.session_notes import SessionNotesCreate, SessionNotesUpdate
 
 logging.basicConfig(level=logging.INFO)
@@ -20,41 +20,79 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/session-notes", tags=["Session Notes"])
 
 
+async def get_session_user(
+    current_trainer: Optional[TrainerProfile] = Depends(get_current_trainer_optional),
+    current_coach: Optional[CoachProfile] = Depends(get_current_coach_optional),
+) -> Union[TrainerProfile, CoachProfile]:
+    """Get current user - either trainer or coach"""
+    if current_trainer:
+        return current_trainer
+    if current_coach:
+        return current_coach
+    raise HTTPException(status_code=401, detail="Not authenticated")
+
+
 @router.post("/{session_id}", status_code=status.HTTP_201_CREATED)
 async def create_or_update_notes(
     session_id: str,
     notes_data: SessionNotesCreate,
     db: AsyncSession = Depends(get_db),
-    current_trainer: TrainerProfile = Depends(get_current_trainer),
+    current_trainer: Optional[TrainerProfile] = Depends(get_current_trainer_optional),
+    current_coach: Optional[CoachProfile] = Depends(get_current_coach_optional),
 ) -> Dict[str, Any]:
     """
     Create or update session notes with auto-save support.
     - First call creates entry (v1)
     - Subsequent calls update same entry and increment version
     - Notes are independent from session reports
-    - Trainer can save notes at any time (before/during/after session report creation)
+    - Trainer and Coaches can save notes at any time (before/during/after session report creation)
     
     **Frontend Integration:**
     - Call with debounce: waits 10s of inactivity
     - Only saves if content has changed
     - Shows "Saving..." indicator during request
     """
-    logger.info(f"Trainer {current_trainer.user_id} saving notes for session {session_id}")
+    # Determine current user (trainer or coach)
+    current_user = current_trainer or current_coach
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user_type = "Trainer" if current_trainer else "Coach"
+    logger.info(f"{user_type} {current_user.user_id if current_trainer else current_user.id} saving notes for session {session_id}")
 
-    # Get session by session_id string
+    # Get session by session_id string - check both trainer and coach sessions
     session = await session_crud.get_session_by_id(db, session_id)
-    if not session:
+    coach_session = None
+    
+    if not session and current_coach:
+        # For coaches, check coach_appointment_sessions table
+        from app.crud.coach_appointment_session_crud import get_session_by_id as get_coach_session_by_id
+        coach_session = await get_coach_session_by_id(db, session_id)
+    
+    if not session and not coach_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Verify trainer is authorized for this session
-    if session.trainer_id != current_trainer.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to add notes to this session")
+    # Verify user is authorized for this session
+    if current_trainer and session:
+        if session.trainer_id != current_trainer.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to add notes to this session")
+    elif current_coach and coach_session:
+        if coach_session.coach_id != current_coach.id:
+            raise HTTPException(status_code=403, detail="Not authorized to add notes to this session")
 
     # Create or update notes (not finalized during active session)
+    # Use correct session IDs based on session type
+    training_session_id = session.id if session else None
+    coach_appointment_session_id = coach_session.id if coach_session else None
+    notes_trainer_id = current_trainer.user_id if current_trainer else None
+    notes_coach_id = current_coach.id if current_coach else None
+    
     notes = await session_notes_crud.create_or_update_session_notes(
         db=db,
-        session_id=session.id,  # Use internal ID
-        trainer_id=current_trainer.user_id,
+        session_id=training_session_id,
+        coach_appointment_session_id=coach_appointment_session_id,
+        trainer_id=notes_trainer_id,
+        coach_id=notes_coach_id,
         notes=notes_data.notes or "",
         is_finalized="false"
     )
@@ -68,25 +106,49 @@ async def create_or_update_notes(
 async def get_notes(
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    current_trainer: TrainerProfile = Depends(get_current_trainer),
+    current_trainer: Optional[TrainerProfile] = Depends(get_current_trainer_optional),
+    current_coach: Optional[CoachProfile] = Depends(get_current_coach_optional),
 ) -> Optional[Dict[str, Any]]:
     """
     Get session notes for a specific session.
     Returns the notes with version info and finalization status.
     """
-    logger.info(f"Trainer {current_trainer.user_id} fetching notes for session {session_id}")
+    # Determine current user (trainer or coach)
+    current_user = current_trainer or current_coach
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user_type = "Trainer" if current_trainer else "Coach"
+    logger.info(f"{user_type} {current_user.user_id if current_trainer else current_user.id} fetching notes for session {session_id}")
 
-    # Get session by session_id string
+    # Get session by session_id string - check both trainer and coach sessions
     session = await session_crud.get_session_by_id(db, session_id)
-    if not session:
+    coach_session = None
+    
+    if not session and current_coach:
+        # For coaches, check coach_appointment_sessions table
+        from app.crud.coach_appointment_session_crud import get_session_by_id as get_coach_session_by_id
+        coach_session = await get_coach_session_by_id(db, session_id)
+    
+    if not session and not coach_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Verify trainer is authorized for this session
-    if session.trainer_id != current_trainer.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to view notes for this session")
+    # Verify user is authorized for this session
+    if current_trainer and session:
+        if session.trainer_id != current_trainer.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view notes for this session")
+    elif current_coach and coach_session:
+        if coach_session.coach_id != current_coach.id:
+            raise HTTPException(status_code=403, detail="Not authorized to view notes for this session")
 
     # Get notes
-    notes = await session_notes_crud.get_session_notes(db, session.id)
+    training_session_id = session.id if session else None
+    coach_appointment_session_id = coach_session.id if coach_session else None
+    notes = await session_notes_crud.get_session_notes(
+        db,
+        session_id=training_session_id,
+        coach_appointment_session_id=coach_appointment_session_id
+    )
     
     return notes
 
@@ -96,28 +158,54 @@ async def update_notes(
     session_id: str,
     notes_data: SessionNotesUpdate,
     db: AsyncSession = Depends(get_db),
-    current_trainer: TrainerProfile = Depends(get_current_trainer),
+    current_trainer: Optional[TrainerProfile] = Depends(get_current_trainer_optional),
+    current_coach: Optional[CoachProfile] = Depends(get_current_coach_optional),
 ) -> Dict[str, Any]:
     """
     Update session notes (explicit PUT request).
     Same behavior as POST but semantically indicates an update.
+    Supports both Trainers and Coaches.
     """
-    logger.info(f"Trainer {current_trainer.user_id} updating notes for session {session_id}")
+    # Determine current user (trainer or coach)
+    current_user = current_trainer or current_coach
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user_type = "Trainer" if current_trainer else "Coach"
+    logger.info(f"{user_type} {current_user.user_id if current_trainer else current_user.id} updating notes for session {session_id}")
 
-    # Get session by session_id string
+    # Get session by session_id string - check both trainer and coach sessions
     session = await session_crud.get_session_by_id(db, session_id)
-    if not session:
+    coach_session = None
+    
+    if not session and current_coach:
+        # For coaches, check coach_appointment_sessions table
+        from app.crud.coach_appointment_session_crud import get_session_by_id as get_coach_session_by_id
+        coach_session = await get_coach_session_by_id(db, session_id)
+    
+    if not session and not coach_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Verify trainer is authorized for this session
-    if session.trainer_id != current_trainer.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update notes for this session")
+    # Verify user is authorized for this session
+    if current_trainer and session:
+        if session.trainer_id != current_trainer.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update notes for this session")
+    elif current_coach and coach_session:
+        if coach_session.coach_id != current_coach.id:
+            raise HTTPException(status_code=403, detail="Not authorized to update notes for this session")
 
     # Update notes
+    training_session_id = session.id if session else None
+    coach_appointment_session_id = coach_session.id if coach_session else None
+    notes_trainer_id = current_trainer.user_id if current_trainer else None
+    notes_coach_id = current_coach.id if current_coach else None
+    
     notes = await session_notes_crud.create_or_update_session_notes(
         db=db,
-        session_id=session.id,
-        trainer_id=current_trainer.user_id,
+        session_id=training_session_id,
+        coach_appointment_session_id=coach_appointment_session_id,
+        trainer_id=notes_trainer_id,
+        coach_id=notes_coach_id,
         notes=notes_data.notes or "",
         is_finalized="false"
     )

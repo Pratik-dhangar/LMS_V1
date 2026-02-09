@@ -37,7 +37,7 @@ import JanusRecordingService from '../../api/services/janusService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import '../../styles/session.css';
-// Import session utilities
+// Import session utilities from InstructorSessionLayout
 import {
   REACTION_SVG_ASSETS,
   WB_BUTTON_STYLES,
@@ -65,7 +65,25 @@ import {
   handleToolClick as utilHandleToolClick,
   sendFeedbackMessage,
   sendWaitingMessage
-} from '../../utils/sessionUtils';
+} from '../../components/session/InstructorSessionLayout';
+import {
+  MUSIC_OPTIONS,
+  autoSaveSessionNotes,
+  sendFloatingAnimation,
+  toggleParticipantToolAccess,
+  formatTimeRemaining,
+  setupParticipantAnimationPopListener
+} from '../../utils/instructorSession';
+import {
+  InstructorSessionHeader,
+  InstructorVideoControls,
+  BackgroundMusicControls,
+  SessionNotesEditor,
+  FeedbackMessageControls,
+  FloatingAnimationButtons,
+  ToolAccessPanel
+} from '../../components/session/InstructorSessionLayout';
+
 
 
 // -------------------------------------------------------------
@@ -196,12 +214,8 @@ const TrainerSession = () => {
   const [musicVolume, setMusicVolume] = useState(0.5); // Music volume (0 to 1)
   const audioRef = useRef(null); // Reference to audio element
 
-  // Music options - you can add URLs to your music files here
-  const musicOptions = [
-    { id: 0, name: '🎵 Music 1', url: '/music/background-music-1.mp3' },
-    { id: 1, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
-    { id: 2, name: '🎼 Music 3', url: '/music/background-music-3.mp3' }
-  ];
+  // Music options - Use shared constant
+  const musicOptions = MUSIC_OPTIONS;
 
   // Hamburger menu state for responsive sidebars
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -564,10 +578,7 @@ const TrainerSession = () => {
     };
 
     // Set up callback for animation pop events from learner
-    whiteboardService.onAnimationPopped = (data) => {
-      // console.log('[TrainerSession] Animation popped by learner:', data);
-      handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
-    };
+    setupParticipantAnimationPopListener(whiteboardService, floatingAnimations, setFloatingAnimations, playPopSound);
 
     // Set up callback for exercise answer updates from learner
     whiteboardService.onExerciseAnswerUpdate = (data) => {
@@ -1267,26 +1278,11 @@ const TrainerSession = () => {
   const autoSaveTimerRef = useRef(null);
   const restrictionAlertShownRef = useRef(false); // Prevent duplicate toast alerts
 
-  const handleNotesChange = (e) => {
-    const newNotes = e.target.value;
+  const handleNotesChange = (newNotes) => {
     setSessionNotes(newNotes);
 
-    // Clear existing auto-save timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    // Set new auto-save timer (save after 2 seconds of no typing)
-    autoSaveTimerRef.current = setTimeout(async () => {
-      try {
-        // console.log('[TrainerSession] 💾 Auto-saving session notes...');
-        await sessionNotesService.saveNotes(sessionId, newNotes);
-        // console.log('[TrainerSession] ✅ Session notes auto-saved successfully');
-      } catch (error) {
-        console.error('[TrainerSession] ❌ Error auto-saving notes:', error);
-        // Don't show toast for auto-save errors to avoid interrupting user
-      }
-    }, 2000);
+    // Use shared auto-save utility from instructorSession (correct parameter order: sessionId, notes, timerRef, service)
+    autoSaveSessionNotes(sessionId, newNotes, autoSaveTimerRef, sessionNotesService);
   };
 
   // -----------------------------------------------------------
@@ -1832,6 +1828,7 @@ const TrainerSession = () => {
             <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
               <Exercise
                 isTrainer={true}
+                attendeeLabel="Learner"
                 onExerciseSubmit={handleExerciseSubmit}
                 onExerciseUpdate={handleExerciseUpdate}
                 onExerciseDelete={handleExerciseDelete}
@@ -1961,7 +1958,7 @@ const TrainerSession = () => {
             </div>
           )}
 
-          
+
 
           {/* Learning Program - 25% height - Tablet/Mobile */}
           <div className="learning-program-container">

@@ -3,10 +3,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_admin, get_current_head
+from app.core.deps import get_current_admin, get_current_head, get_current_coach
 from app.crud import learning_goals_crud
 from app.db.session import get_db
-from app.models.user_model import HeadProfile, User
+from app.models.user_model import HeadProfile, CoachProfile, User
 from app.schemas.learning_goals import (
     LearningGoalsCreate,
     LearningGoalsResponse,
@@ -119,6 +119,33 @@ async def get_goal_by_id_head(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """Head gets specific learning goal"""
+    goal = await learning_goals_crud.get_learning_goal_by_id(db, goal_id)
+
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    return LearningGoalsResponse.from_orm_with_users(goal)
+
+# ============ COACH ENDPOINTS ============#
+
+
+@router.get("/coach", response_model=List[LearningGoalsResponse])
+async def get_all_goals_coach(
+    db: AsyncSession = Depends(get_db), 
+    current_coach: CoachProfile = Depends(get_current_coach)
+):
+    """Coach gets all learning goals (read-only list)"""
+    goals = await learning_goals_crud.get_all_learning_goals(db)
+    return [LearningGoalsResponse.from_orm_with_users(g) for g in goals]
+
+
+@router.get("/coach/{goal_id}", response_model=LearningGoalsResponse)
+async def get_goal_by_id_coach(
+    goal_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_coach: CoachProfile = Depends(get_current_coach),
+):
+    """Coach gets specific learning goal"""
     goal = await learning_goals_crud.get_learning_goal_by_id(db, goal_id)
 
     if not goal:

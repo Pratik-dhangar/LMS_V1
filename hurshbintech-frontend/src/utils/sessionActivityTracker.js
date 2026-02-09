@@ -10,10 +10,11 @@ const LOCAL_STORAGE_PREFIX = 'device_session_';
 /**
  * Mark a session as active in the current tab
  * @param {string} sessionId - The session ID
- * @param {string} role - The role ('trainer' or 'learner')
+ * @param {string} role - The role ('trainer', 'coach', or 'learner')
+ * @param {boolean} allowOverride - If true, override previous session from different tab (default: false)
  * @returns {object} - { success: boolean, message: string }
  */
-export const markSessionActive = (sessionId, role) => {
+export const markSessionActive = (sessionId, role, allowOverride = false) => {
     try {
         const currentTabId = getTabId();
 
@@ -30,12 +31,20 @@ export const markSessionActive = (sessionId, role) => {
             if (timeSinceLastActivity < 5 * 60 * 1000) {
                 // Check if it's from a different tab
                 if (parsedData.tabId !== currentTabId) {
-                    return {
-                        success: false,
-                        message: 'Active already, Please close previous session.',
-                        isAnotherTab: true
-                    };
+                    // If we're allowing override or it's a coach role (coaches can have only one session at a time)
+                    // then clear the old session and allow the new one
+                    if (allowOverride || role === 'coach') {
+                        localStorage.removeItem(deviceSessionKey);
+                        console.log(`[SessionTracker] Cleared previous ${role} session from another tab`);
+                    } else {
+                        return {
+                            success: false,
+                            message: 'Active already, Please close previous session.',
+                            isAnotherTab: true
+                        };
+                    }
                 } else {
+                    // Same tab, session is still active
                 }
             } else {
                 // Session expired, clear it

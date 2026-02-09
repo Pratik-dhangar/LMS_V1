@@ -1,24 +1,672 @@
-/**
- * sessionUtils.jsx
- * =================
- * Shared utilities and common features for Trainer and Coach session components.
- * Extracts duplicate logic and provides reusable functions for:
- * - Session initialization
- * - WebRTC/Whiteboard setup
- * - Media controls (mic, camera, freeze)
- * - Floating animations (reactions)
- * - Canvas operations (clear, erase)
- * - Stopwatch/timer management
- * - Tool access control
- * - Session cleanup
- */
+// InstructorSessionLayout.jsx
+// ============================================================================
+// 🔹 Purpose: Shared layout components for Instructor Session Pages
+// 🔸 Pages: TrainerSession (optional), CoachSession (optional)
+// 🔹 Role: Common UI controls, toolbars, and session management for instructors
+// 
+// 📦 EXPORTS:
+// - InstructorSessionHeader: Session management header with timer
+// - InstructorVideoControls: Mic, camera, and freeze controls
+// - ToolAccessPanel: Grant/revoke participant tool permissions
+// - BackgroundMusicControls: Music player with volume control
+// - SessionNotesEditor: Auto-save text area for notes
+// - FeedbackMessageControls: Send feedback to participant
+// - VoiceInputControls: Speech-to-text controls
+// - FloatingAnimationButtons: Send reactions (bubbles, smileys, etc.)
+// - QuickActionButtons: Clear canvas, erase pen, freeze screen
+// - SidebarToggles: Mobile/tablet hamburger menus
+// - instructorSessionStyles: CSS-in-JS for instructor layout
+// 
+// 💡 NOTE:
+// These components are ready to use but optional. TrainerSession and CoachSession
+// currently have their own UI implementations that work well.
+// 
+// 🎯 USAGE (when ready):
+// import { 
+//   InstructorSessionHeader,
+//   InstructorVideoControls,
+//   ToolAccessPanel
+// } from '../../components/session/InstructorSessionLayout';
+// ============================================================================
 
 import React from 'react';
+import PropTypes from 'prop-types';
+import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import VideoConferenceService from '../api/services/videoConferenceService';
-import WhiteboardService from '../api/services/whiteboardService';
-import WhiteboardToolsService from '../api/services/WhiteboardToolsService';
-import Emoji from '../components/common/Emoji';
+import VideoConferenceService from '../../api/services/videoConferenceService';
+import WhiteboardService from '../../api/services/whiteboardService';
+import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
+import Emoji from '../common/Emoji';
+
+/**
+ * Session Header for Instructor
+ * Displays session title, participant info, timer, and controls
+ */
+export const InstructorSessionHeader = ({
+    title = 'Session',
+    participantName,
+    connectionStatus,
+    timeLeft,
+    onEndSession,
+    showEndButton = true,
+    navbarClassName = '',
+    additionalInfo
+}) => {
+    return (
+        <div className={`session-header ${navbarClassName}`}>
+            <div className="session-header-main">
+                <div>
+                    <div className="session-header-title">{title}</div>
+                    {participantName && (
+                        <div className="session-header-subtitle">
+                            With: <strong>{participantName}</strong>
+                        </div>
+                    )}
+                </div>
+
+                <div className="session-header-controls">
+                    {additionalInfo}
+                    <div className="session-header-info">
+                        Status: <strong>{connectionStatus}</strong>
+                    </div>
+                    {timeLeft && (
+                        <div className="session-header-info">
+                            Time Left: <strong>{timeLeft}</strong>
+                        </div>
+                    )}
+                    {showEndButton && (
+                        <button className="btn-session btn-session-end" onClick={onEndSession}>
+                            🏁 End Session
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+InstructorSessionHeader.propTypes = {
+    title: PropTypes.string,
+    participantName: PropTypes.string,
+    connectionStatus: PropTypes.string,
+    timeLeft: PropTypes.string,
+    onEndSession: PropTypes.func,
+    showEndButton: PropTypes.bool,
+    navbarClassName: PropTypes.string,
+    additionalInfo: PropTypes.node
+};
+
+/**
+ * Video Controls for Instructor
+ * Microphone, Camera, Freeze Screen controls
+ */
+export const InstructorVideoControls = ({
+    micEnabled,
+    cameraEnabled,
+    isFrozen,
+    onToggleMic,
+    onToggleCamera,
+    onToggleFreeze,
+    showFreezeButton = true
+}) => {
+    return (
+        <div style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-start',
+            marginBottom: '12px'
+        }}>
+            <button
+                onClick={onToggleMic}
+                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                style={{
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    gap: '8px',
+                    border: 'none',
+                    cursor: 'pointer'
+                }}
+                title={micEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
+            >
+                <span style={{ fontSize: '18px' }}>{micEnabled ? '🎤' : '🔇'}</span>
+                <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span>
+            </button>
+
+            <button
+                onClick={onToggleCamera}
+                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                style={{
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    gap: '8px',
+                    border: 'none',
+                    cursor: 'pointer'
+                }}
+                title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+            >
+                <span style={{ fontSize: '18px' }}>{cameraEnabled ? '📹' : '📷'}</span>
+                <span>{cameraEnabled ? 'Video On' : 'Video Off'}</span>
+            </button>
+
+            {showFreezeButton && (
+                <button
+                    onClick={onToggleFreeze}
+                    className={`${isFrozen ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                    style={{
+                        padding: '10px 16px',
+                        fontSize: '14px',
+                        gap: '8px',
+                        border: 'none',
+                        cursor: 'pointer'
+                    }}
+                    title={isFrozen ? 'Unfreeze Participant Screen' : 'Freeze Participant Screen'}
+                >
+                    <span style={{ fontSize: '18px' }}>{isFrozen ? '🔓' : '🔒'}</span>
+                    <span>{isFrozen ? 'Unfreeze' : 'Freeze'}</span>
+                </button>
+            )}
+        </div>
+    );
+};
+
+InstructorVideoControls.propTypes = {
+    micEnabled: PropTypes.bool.isRequired,
+    cameraEnabled: PropTypes.bool.isRequired,
+    isFrozen: PropTypes.bool.isRequired,
+    onToggleMic: PropTypes.func.isRequired,
+    onToggleCamera: PropTypes.func.isRequired,
+    onToggleFreeze: PropTypes.func.isRequired,
+    showFreezeButton: PropTypes.bool
+};
+
+/**
+ * Sidebar Toggle Buttons (Mobile/Tablet)
+ * Hamburger menu and close buttons for left/right sidebars
+ */
+export const SidebarToggles = ({
+    isLeftSidebarOpen,
+    isRightSidebarOpen,
+    onToggleLeft,
+    onToggleRight
+}) => {
+    return (
+        <>
+            {/* Left Sidebar Toggle */}
+            <button
+                onClick={onToggleLeft}
+                className="md:hidden fixed top-16 left-2 z-50 bg-[#DB9D32] text-white p-3 rounded-lg shadow-lg hover:bg-[#c48c28] transition-all"
+                style={{ fontSize: '20px' }}
+            >
+                {isLeftSidebarOpen ? <FaTimes /> : <FaBars />}
+            </button>
+
+            {/* Right Sidebar Toggle */}
+            <button
+                onClick={onToggleRight}
+                className="md:hidden fixed top-16 right-2 z-50 bg-[#DB9D32] text-white p-3 rounded-lg shadow-lg hover:bg-[#c48c28] transition-all"
+                style={{ fontSize: '20px' }}
+            >
+                {isRightSidebarOpen ? <FaTimes /> : <FaBars />}
+            </button>
+        </>
+    );
+};
+
+SidebarToggles.propTypes = {
+    isLeftSidebarOpen: PropTypes.bool.isRequired,
+    isRightSidebarOpen: PropTypes.bool.isRequired,
+    onToggleLeft: PropTypes.func.isRequired,
+    onToggleRight: PropTypes.func.isRequired
+};
+
+/**
+ * Tool Access Control Panel
+ * Grant/revoke participant access to whiteboard tools
+ */
+export const ToolAccessPanel = ({
+    participantToolAccess,
+    onToggleToolAccess,
+    participantLabel = 'Participant'
+}) => {
+    const tools = [
+        { key: 'select', label: 'Select', icon: '🔍' },
+        { key: 'drag', label: 'Drag', icon: '👆' },
+        { key: 'keyboard', label: 'Keyboard', icon: '⌨️' }
+    ];
+
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">
+                🛠️ {participantLabel} Tool Access
+            </h3>
+            <div className="space-y-2">
+                {tools.map(tool => (
+                    <div key={tool.key} className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 text-gray-700">
+                            <span>{tool.icon}</span>
+                            <span>{tool.label}</span>
+                        </label>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={participantToolAccess[tool.key] || false}
+                                onChange={() => onToggleToolAccess(tool.key, !participantToolAccess[tool.key])}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#DB9D32]/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#DB9D32]"></div>
+                        </label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+ToolAccessPanel.propTypes = {
+    participantToolAccess: PropTypes.object.isRequired,
+    onToggleToolAccess: PropTypes.func.isRequired,
+    participantLabel: PropTypes.string
+};
+
+/**
+ * Background Music Controls
+ * Play/stop music, select track, adjust volume
+ */
+export const BackgroundMusicControls = ({
+    musicOptions,
+    selectedMusic,
+    backgroundMusicPlaying,
+    musicVolume,
+    onMusicSelect,
+    onPlayMusic,
+    onStopMusic,
+    onVolumeChange
+}) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">🎵 Background Music</h3>
+
+            <div className="space-y-3">
+                {/* Music Selection */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Track:
+                    </label>
+                    <select
+                        value={selectedMusic ?? ''}
+                        onChange={(e) => onMusicSelect(e.target.value === '' ? null : parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#DB9D32]"
+                    >
+                        <option value="">-- Choose Music --</option>
+                        {musicOptions.map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Play/Stop Buttons */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={onPlayMusic}
+                        disabled={selectedMusic === null || backgroundMusicPlaying}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${selectedMusic === null || backgroundMusicPlaying
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-green-500 hover:bg-green-600 text-white'
+                            }`}
+                    >
+                        ▶️ Play
+                    </button>
+                    <button
+                        onClick={onStopMusic}
+                        disabled={!backgroundMusicPlaying}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${!backgroundMusicPlaying
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-red-500 hover:bg-red-600 text-white'
+                            }`}
+                    >
+                        ⏹️ Stop
+                    </button>
+                </div>
+
+                {/* Volume Control */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Volume: {Math.round(musicVolume * 100)}%
+                    </label>
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={musicVolume * 100}
+                        onChange={(e) => onVolumeChange(parseInt(e.target.value) / 100)}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#DB9D32]"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+BackgroundMusicControls.propTypes = {
+    musicOptions: PropTypes.array.isRequired,
+    selectedMusic: PropTypes.number,
+    backgroundMusicPlaying: PropTypes.bool.isRequired,
+    musicVolume: PropTypes.number.isRequired,
+    onMusicSelect: PropTypes.func.isRequired,
+    onPlayMusic: PropTypes.func.isRequired,
+    onStopMusic: PropTypes.func.isRequired,
+    onVolumeChange: PropTypes.func.isRequired
+};
+
+/**
+ * Session Notes Editor
+ * Auto-save text area for session documentation
+ */
+export const SessionNotesEditor = ({
+    sessionNotes,
+    onNotesChange,
+    placeholder = 'Enter session notes here...',
+    disabled = false
+}) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">📝 Session Notes</h3>
+            <textarea
+                value={sessionNotes}
+                onChange={(e) => onNotesChange(e.target.value)}
+                placeholder={placeholder}
+                disabled={disabled}
+                className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#DB9D32] transition-all"
+                style={{
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    opacity: disabled ? 0.6 : 1
+                }}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+                💾 Auto-saves every 2 seconds
+            </p>
+        </div>
+    );
+};
+
+SessionNotesEditor.propTypes = {
+    sessionNotes: PropTypes.string.isRequired,
+    onNotesChange: PropTypes.func.isRequired,
+    placeholder: PropTypes.string,
+    disabled: PropTypes.bool
+};
+
+/**
+ * Feedback Message Controls
+ * Send feedback messages to participant's whiteboard
+ */
+export const FeedbackMessageControls = ({
+    feedbackMessage,
+    onFeedbackChange,
+    onSendFeedback,
+    onClearFeedback
+}) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">💬 Feedback Message</h3>
+
+            <textarea
+                value={feedbackMessage}
+                onChange={(e) => onFeedbackChange(e.target.value)}
+                placeholder="Type feedback message..."
+                className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#DB9D32] transition-all mb-3"
+                style={{ fontSize: '14px' }}
+            />
+
+            <div className="flex gap-2">
+                <button
+                    onClick={onSendFeedback}
+                    disabled={!feedbackMessage.trim()}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${!feedbackMessage.trim()
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#DB9D32] hover:bg-[#c48c28] text-white'
+                        }`}
+                >
+                    📤 Send
+                </button>
+                <button
+                    onClick={onClearFeedback}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-500 hover:bg-gray-600 text-white transition-all"
+                >
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+    );
+};
+
+FeedbackMessageControls.propTypes = {
+    feedbackMessage: PropTypes.string.isRequired,
+    onFeedbackChange: PropTypes.func.isRequired,
+    onSendFeedback: PropTypes.func.isRequired,
+    onClearFeedback: PropTypes.func.isRequired
+};
+
+/**
+ * Voice Input Controls
+ * Speech-to-text controls for instructor
+ */
+export const VoiceInputControls = ({
+    listening,
+    transcript,
+    onToggleListening,
+    disabled = false
+}) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">🎤 Voice Input</h3>
+
+            <button
+                onClick={onToggleListening}
+                disabled={disabled}
+                className={`w-full px-4 py-3 rounded-lg font-medium transition-all mb-3 ${listening
+                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                    : 'bg-[#DB9D32] hover:bg-[#c48c28] text-white'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+                <FaMicrophone className="inline-block mr-2" />
+                {listening ? '🔴 Stop Listening' : '🎙️ Start Voice Input'}
+            </button>
+
+            {transcript && (
+                <div className="p-3 bg-gray-100 rounded-lg">
+                    <p className="text-sm text-gray-700">{transcript}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+VoiceInputControls.propTypes = {
+    listening: PropTypes.bool.isRequired,
+    transcript: PropTypes.string,
+    onToggleListening: PropTypes.func.isRequired,
+    disabled: PropTypes.bool
+};
+
+/**
+ * Floating Animation Buttons
+ * Send reactions to participant (bubbles, smileys, balloons, stars)
+ */
+export const FloatingAnimationButtons = ({
+    onSendAnimation,
+    activeAnimations = new Set()
+}) => {
+    const animations = [
+        { type: 'bubble', label: 'Bubbles', icon: '🫧' },
+        { type: 'smiley', label: 'Smileys', icon: '😊' },
+        { type: 'balloon', label: 'Balloons', icon: '🎈' },
+        { type: 'star', label: 'Stars', icon: '⭐' }
+    ];
+
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">🎉 Reactions</h3>
+
+            <div className="grid grid-cols-2 gap-2">
+                {animations.map(anim => (
+                    <button
+                        key={anim.type}
+                        onClick={() => onSendAnimation(anim.type)}
+                        disabled={activeAnimations.has(anim.type)}
+                        className={`px-4 py-3 rounded-lg font-medium transition-all ${activeAnimations.has(anim.type)
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#DB9D32] hover:bg-[#c48c28] text-white'
+                            }`}
+                    >
+                        <span className="text-2xl mr-2">{anim.icon}</span>
+                        <span className="text-sm">{anim.label}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+FloatingAnimationButtons.propTypes = {
+    onSendAnimation: PropTypes.func.isRequired,
+    activeAnimations: PropTypes.instanceOf(Set)
+};
+
+/**
+ * Quick Action Buttons
+ * Clear canvas, erase pen strokes, freeze screen
+ */
+export const QuickActionButtons = ({
+    onClearCanvas,
+    onErasePen,
+    onFreezeScreen,
+    isFrozen = false
+}) => {
+    return (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+            <h3 className="font-bold text-lg mb-3 text-gray-800">⚡ Quick Actions</h3>
+
+            <div className="space-y-2">
+                <button
+                    onClick={onClearCanvas}
+                    className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all"
+                >
+                    🗑️ Clear Canvas
+                </button>
+
+                <button
+                    onClick={onErasePen}
+                    className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-all"
+                >
+                    ✏️ Erase Pen Strokes
+                </button>
+
+                <button
+                    onClick={onFreezeScreen}
+                    className={`w-full px-4 py-2 rounded-lg font-medium transition-all ${isFrozen
+                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                        : 'bg-gray-600 hover:bg-gray-700 text-white'
+                        }`}
+                >
+                    {isFrozen ? '🔓 Unfreeze Screen' : '🔒 Freeze Screen'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+QuickActionButtons.propTypes = {
+    onClearCanvas: PropTypes.func.isRequired,
+    onErasePen: PropTypes.func.isRequired,
+    onFreezeScreen: PropTypes.func.isRequired,
+    isFrozen: PropTypes.bool
+};
+
+/**
+ * Full-Screen Session Styles (CSS-in-JS)
+ */
+export const instructorSessionStyles = `
+  .instructor-session-page {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .instructor-main-content {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .instructor-sidebar {
+    background-color: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .instructor-sidebar-left {
+    width: 320px;
+  }
+
+  .instructor-sidebar-right {
+    width: 320px;
+    border-right: none;
+    border-left: 1px solid #e5e7eb;
+  }
+
+  .instructor-whiteboard-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .instructor-sidebar {
+      position: fixed;
+      top: 60px;
+      bottom: 0;
+      z-index: 40;
+      width: 280px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .instructor-sidebar-left {
+      left: -280px;
+      transition: left 0.3s ease-in-out;
+    }
+
+    .instructor-sidebar-left.open {
+      left: 0;
+    }
+
+    .instructor-sidebar-right {
+      right: -280px;
+      transition: right 0.3s ease-in-out;
+    }
+
+    .instructor-sidebar-right.open {
+      right: 0;
+    }
+  }
+`;
+
+// =============================
+// SESSION UTILS - MOVED FROM sessionUtils.jsx
+// =============================
+// All utilities previously in sessionUtils.jsx are now consolidated here
+// for use by Instructor session pages (Trainer/Coach)
 
 // =============================
 // CONSTANTS & CONFIGURATIONS
@@ -117,17 +765,12 @@ export const BUCKET_COLORS = [
 
 /**
  * Validate user session and retrieve user data from localStorage
- * @param {Object} options - Configuration options
- * @param {string} options.requiredRole - Required user role (optional)
- * @param {Function} options.navigate - Navigation function from useNavigate
- * @param {string} options.loginPath - Path to redirect for login (default: '/login')
- * @returns {Object|null} User data object or null if invalid
  */
 export const validateUserSession = ({ requiredRole, navigate, loginPath = '/login' }) => {
     const userData = localStorage.getItem('user_data');
 
     if (!userData) {
-        console.error('[SessionUtils] No user data found in localStorage');
+        console.error('[InstructorSession] No user data found in localStorage');
         toast.error('Please login first');
         navigate(loginPath);
         return null;
@@ -135,7 +778,6 @@ export const validateUserSession = ({ requiredRole, navigate, loginPath = '/logi
 
     const user = JSON.parse(userData);
 
-    // Validate required role if specified
     if (requiredRole && user.role !== requiredRole) {
         toast.error(`Unauthorized access - ${requiredRole}s only`);
         navigate('/');
@@ -151,15 +793,6 @@ export const validateUserSession = ({ requiredRole, navigate, loginPath = '/logi
 
 /**
  * Initialize whiteboard service with common callbacks
- * @param {Object} options - Configuration options
- * @param {string} options.wsBaseUrl - WebSocket base URL
- * @param {string} options.sessionId - Session ID
- * @param {string} options.role - User role (trainer/coach)
- * @param {Function} options.setBuckets - State setter for buckets
- * @param {Function} options.setFloatingAnimations - State setter for floating animations
- * @param {Function} options.setErasePenTrigger - State setter for erase pen trigger
- * @param {Function} options.setRedrawCanvasTrigger - State setter for redraw trigger
- * @returns {Object} Whiteboard service instance
  */
 export const initializeWhiteboardService = ({
     wsBaseUrl,
@@ -171,14 +804,13 @@ export const initializeWhiteboardService = ({
     setRedrawCanvasTrigger
 }) => {
     try {
-        console.log(`[SessionUtils] Initializing whiteboard service for ${role}`);
+        console.log(`[InstructorSession] Initializing whiteboard service for ${role}`);
         const wbService = new WhiteboardService(wsBaseUrl, sessionId, role);
         wbService.initialize();
 
-        // Set up callback for bucket added/updated
         if (setBuckets) {
             wbService.onBucketAdded = (data) => {
-                console.log(`[SessionUtils] Bucket added:`, data);
+                console.log(`[InstructorSession] Bucket added:`, data);
                 setBuckets(prev => {
                     const exists = prev.find(bucket => bucket.id === data.id);
                     if (!exists) {
@@ -189,7 +821,7 @@ export const initializeWhiteboardService = ({
             };
 
             wbService.onBucketUpdate = (data) => {
-                console.log(`[SessionUtils] Bucket updated:`, data);
+                console.log(`[InstructorSession] Bucket updated:`, data);
                 if (data.removed) {
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
@@ -200,13 +832,11 @@ export const initializeWhiteboardService = ({
             };
         }
 
-        // Set up callback for floating animations (reactions)
         if (setFloatingAnimations) {
             wbService.onFloatingAnimations = (data) => {
-                console.log(`[SessionUtils] Floating animations received:`, data);
+                console.log(`[InstructorSession] Floating animations received:`, data);
                 setFloatingAnimations(prev => [...prev, ...data.animations]);
 
-                // Auto-remove after 13 seconds
                 setTimeout(() => {
                     setFloatingAnimations(prev =>
                         prev.filter(a => !data.animations.find(na => na.id === a.id))
@@ -215,19 +845,18 @@ export const initializeWhiteboardService = ({
             };
         }
 
-        // Set up callback for erase pen event
         if (setErasePenTrigger && setRedrawCanvasTrigger) {
             wbService.onErasePen = () => {
-                console.log(`[SessionUtils] Received erase pen event`);
+                console.log(`[InstructorSession] Received erase pen event`);
                 setErasePenTrigger(prev => prev + 1);
                 setRedrawCanvasTrigger(prev => prev + 1);
             };
         }
 
-        console.log(`[SessionUtils] Whiteboard service initialized for ${role}`);
+        console.log(`[InstructorSession] Whiteboard service initialized for ${role}`);
         return wbService;
     } catch (error) {
-        console.error(`[SessionUtils] Error initializing whiteboard:`, error);
+        console.error(`[InstructorSession] Error initializing whiteboard:`, error);
         toast.error('Failed to initialize whiteboard');
         return null;
     }
@@ -235,17 +864,6 @@ export const initializeWhiteboardService = ({
 
 /**
  * Initialize video conference service with common callbacks
- * @param {Object} options - Configuration options
- * @param {string} options.wsBaseUrl - WebSocket base URL
- * @param {string} options.sessionId - Session ID
- * @param {string} options.role - User role (trainer/coach)
- * @param {Function} options.setLocalStream - State setter for local stream
- * @param {Function} options.setRemoteStream - State setter for remote stream
- * @param {Function} options.setConnectionStatus - State setter for connection status
- * @param {Object} options.connectedRef - Ref to track connection status
- * @param {Object} options.sessionInfo - Session information object
- * @param {string} options.participantName - Name of remote participant (learner/client)
- * @returns {Object} Video conference service instance
  */
 export const initializeVideoConferenceService = async ({
     wsBaseUrl,
@@ -259,23 +877,20 @@ export const initializeVideoConferenceService = async ({
     participantName = 'Participant'
 }) => {
     try {
-        console.log(`[SessionUtils] Initializing video conference service for ${role}`);
+        console.log(`[InstructorSession] Initializing video conference service for ${role}`);
         const videoService = new VideoConferenceService(wsBaseUrl, sessionId, role);
 
-        // Set callback for local stream
         videoService.onLocalStream = (stream) => {
-            console.log(`[SessionUtils] Local stream received`);
+            console.log(`[InstructorSession] Local stream received`);
             setLocalStream(stream);
             setConnectionStatus('Waiting for participant...');
         };
 
-        // Set callback for remote stream
         videoService.onRemoteStream = (stream) => {
-            console.log(`[SessionUtils] Remote stream received from ${participantName}`);
+            console.log(`[InstructorSession] Remote stream received from ${participantName}`);
             setRemoteStream(stream);
             setConnectionStatus('Connected');
 
-            // Only show toast once when participant first connects
             if (connectedRef && !connectedRef.current) {
                 connectedRef.current = true;
                 const name = sessionInfo?.learner_name || sessionInfo?.client_name || participantName;
@@ -283,9 +898,8 @@ export const initializeVideoConferenceService = async ({
             }
         };
 
-        // Set callback for connection state changes
         videoService.onConnectionStateChange = (state) => {
-            console.log(`[SessionUtils] Connection state changed to:`, state);
+            console.log(`[InstructorSession] Connection state changed to:`, state);
             const statusMap = {
                 'new': 'connecting',
                 'connecting': 'connecting',
@@ -296,9 +910,8 @@ export const initializeVideoConferenceService = async ({
             };
             setConnectionStatus(statusMap[state] || state);
 
-            // Handle participant disconnect
             if ((state === 'disconnected' || state === 'closed') && connectedRef?.current) {
-                console.log(`[SessionUtils] ${participantName} disconnected`);
+                console.log(`[InstructorSession] ${participantName} disconnected`);
                 const name = sessionInfo?.learner_name || sessionInfo?.client_name || participantName;
                 toast.info(`${name} has left the session`);
                 setRemoteStream(null);
@@ -306,19 +919,17 @@ export const initializeVideoConferenceService = async ({
             }
         };
 
-        // Set error callback
         videoService.onError = (error) => {
-            console.error(`[SessionUtils] Video conference error:`, error);
+            console.error(`[InstructorSession] Video conference error:`, error);
             toast.error(`Video error: ${error.message}`);
         };
 
-        // Initialize video conference
         await videoService.initialize();
-        console.log(`[SessionUtils] Video conference service initialized for ${role}`);
+        console.log(`[InstructorSession] Video conference service initialized for ${role}`);
 
         return videoService;
     } catch (error) {
-        console.error(`[SessionUtils] Video Conference init error:`, error);
+        console.error(`[InstructorSession] Video Conference init error:`, error);
         toast.error('Failed to initialize video conference: ' + error.message);
         return null;
     }
@@ -326,17 +937,15 @@ export const initializeVideoConferenceService = async ({
 
 /**
  * Initialize whiteboard tools service
- * @param {Object} whiteboardService - Whiteboard service instance
- * @returns {Object} Tools service instance
  */
 export const initializeToolsService = (whiteboardService) => {
     try {
-        console.log('[SessionUtils] Initializing tools service');
+        console.log('[InstructorSession] Initializing tools service');
         const toolsService = new WhiteboardToolsService(whiteboardService);
-        console.log('[SessionUtils] Tools service initialized');
+        console.log('[InstructorSession] Tools service initialized');
         return toolsService;
     } catch (error) {
-        console.error('[SessionUtils] Error initializing tools service:', error);
+        console.error('[InstructorSession] Error initializing tools service:', error);
         return null;
     }
 };
@@ -347,10 +956,6 @@ export const initializeToolsService = (whiteboardService) => {
 
 /**
  * Toggle microphone on/off
- * @param {Object} videoService - Video conference service instance
- * @param {Function} setMicEnabled - State setter for mic enabled
- * @param {Array} additionalServices - Additional video services to sync (e.g., observer)
- * @returns {boolean} New microphone state
  */
 export const toggleMicrophone = (videoService, setMicEnabled, additionalServices = []) => {
     if (!videoService) {
@@ -361,13 +966,12 @@ export const toggleMicrophone = (videoService, setMicEnabled, additionalServices
     const newState = videoService.toggleMicrophone();
     setMicEnabled(newState);
 
-    // Sync with additional services if provided (e.g., observer connection)
     additionalServices.forEach(service => {
         if (service && service.peerConnection) {
             const audioSenders = service.peerConnection.getSenders().filter(s => s.track?.kind === 'audio');
             audioSenders.forEach(sender => {
                 if (sender.track) {
-                    sender.track.enabled = false; // Keep additional connections muted
+                    sender.track.enabled = false;
                 }
             });
         }
@@ -378,9 +982,6 @@ export const toggleMicrophone = (videoService, setMicEnabled, additionalServices
 
 /**
  * Toggle camera on/off
- * @param {Object} videoService - Video conference service instance
- * @param {Function} setCameraEnabled - State setter for camera enabled
- * @returns {boolean} New camera state
  */
 export const toggleCamera = (videoService, setCameraEnabled) => {
     if (!videoService) {
@@ -395,11 +996,6 @@ export const toggleCamera = (videoService, setCameraEnabled) => {
 
 /**
  * Toggle freeze mode for participant window
- * @param {boolean} currentFreezeState - Current freeze state
- * @param {Function} setIsFrozen - State setter for freeze state
- * @param {Object} videoService - Video conference service instance
- * @param {string} participantRole - Role of participant to freeze (learner/client)
- * @returns {boolean} New freeze state
  */
 export const toggleFreeze = (currentFreezeState, setIsFrozen, videoService, participantRole = 'participant') => {
     const newFreezeState = !currentFreezeState;
@@ -412,19 +1008,18 @@ export const toggleFreeze = (currentFreezeState, setIsFrozen, videoService, part
             timestamp: new Date().toISOString()
         };
 
-        // Use sendSignal or sendMessage depending on service implementation
         if (typeof videoService.sendSignal === 'function') {
             videoService.sendSignal(freezeSignal);
         } else if (typeof videoService.sendMessage === 'function') {
             videoService.sendMessage(freezeSignal);
         }
 
-        console.log(`[SessionUtils] Freeze signal sent for ${participantRole}:`, freezeSignal);
+        console.log(`[InstructorSession] Freeze signal sent for ${participantRole}:`, freezeSignal);
         toast.info(newFreezeState ? `${participantRole} window frozen` : `${participantRole} window unfrozen`);
     } else {
-        console.error(`[SessionUtils] Cannot send freeze signal - Video service not initialized`);
+        console.error(`[InstructorSession] Cannot send freeze signal - Video service not initialized`);
         toast.error('Unable to send freeze signal');
-        setIsFrozen(!newFreezeState); // Revert state
+        setIsFrozen(!newFreezeState);
     }
 
     return newFreezeState;
@@ -435,16 +1030,7 @@ export const toggleFreeze = (currentFreezeState, setIsFrozen, videoService, part
 // =============================
 
 /**
- * Clear all canvas items including pen strokes, buckets, text boxes, and animations
- * @param {Object} options - Configuration options
- * @param {Function} options.setCanvasItems - State setter for canvas items
- * @param {Function} options.setBuckets - State setter for buckets
- * @param {Function} options.setTextBoxes - State setter for text boxes (optional)
- * @param {Function} options.setFloatingAnimations - State setter for floating animations
- * @param {Function} options.setErasePenTrigger - State setter for erase pen trigger
- * @param {Function} options.setClearCanvasTrigger - State setter for clear canvas trigger
- * @param {Function} options.setEraseAllActive - State setter for erase all active state
- * @param {Object} options.whiteboardService - Whiteboard service instance
+ * Clear all canvas items
  */
 export const clearAllCanvas = ({
     setCanvasItems,
@@ -456,18 +1042,15 @@ export const clearAllCanvas = ({
     setEraseAllActive,
     whiteboardService
 }) => {
-    // Clear local state
     setCanvasItems([]);
     setBuckets([]);
     if (setTextBoxes) setTextBoxes([]);
     setFloatingAnimations([]);
 
-    // Trigger local clear and redraw
     setErasePenTrigger(prev => prev + 1);
     setClearCanvasTrigger(prev => prev + 1);
     setEraseAllActive(true);
 
-    // Send clear command to other participants
     if (whiteboardService) {
         whiteboardService.send('clear_canvas', {
             timestamp: Date.now()
@@ -475,18 +1058,11 @@ export const clearAllCanvas = ({
     }
 
     setTimeout(() => setEraseAllActive(false), 300);
-    console.log('[SessionUtils] Canvas cleared');
+    console.log('[InstructorSession] Canvas cleared');
 };
 
 /**
  * Add a new bucket to the canvas
- * @param {Array} existingBuckets - Current buckets array
- * @param {Function} setBuckets - State setter for buckets
- * @param {Object} whiteboardService - Whiteboard service instance
- * @param {string} bucketColor - Color of the bucket (default: '#8B6F47')
- * @param {number} canvasWidth - Width of the whiteboard canvas (default: 1200)
- * @param {number} canvasHeight - Height of the whiteboard canvas (default: 600)
- * @returns {Object} New bucket object
  */
 export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#8B6F47', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
     const BUCKET_WIDTH = 150;
@@ -494,39 +1070,30 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
     const PADDING = 20;
     const START_X = 20;
     const START_Y = 20;
-    const SAFE_MARGIN = 30; // Extra safety margin from edges
+    const SAFE_MARGIN = 30;
 
-    // Calculate position for new bucket
     let newX = START_X;
     let newY = START_Y;
 
-    // Available space accounting for safe margins
     const maxX = canvasWidth - BUCKET_WIDTH - SAFE_MARGIN;
     const maxY = canvasHeight - BUCKET_HEIGHT - SAFE_MARGIN;
 
     if (existingBuckets.length > 0) {
-        // Try to place next to the last bucket
         const lastBucket = existingBuckets[existingBuckets.length - 1];
         const potentialX = lastBucket.x + BUCKET_WIDTH + PADDING;
 
-        // Check if bucket would go outside right boundary
         if (potentialX + BUCKET_WIDTH + SAFE_MARGIN > canvasWidth) {
-            // Move to next row
             newX = START_X;
             newY = lastBucket.y + BUCKET_HEIGHT + PADDING;
 
-            // Check if bucket would go outside bottom boundary
             if (newY + BUCKET_HEIGHT + SAFE_MARGIN > canvasHeight) {
-                // Try to find space in previous rows
                 let foundSpace = false;
                 for (let row = 0; row < 10 && !foundSpace; row++) {
                     const testY = START_Y + (row * (BUCKET_HEIGHT + PADDING));
                     if (testY + BUCKET_HEIGHT + SAFE_MARGIN <= canvasHeight) {
                         let testX = START_X;
 
-                        // Check for collisions in this row
                         for (const bucket of existingBuckets) {
-                            // If bucket is in this row, place next to it
                             if (Math.abs(bucket.y - testY) < BUCKET_HEIGHT / 2) {
                                 const nextPos = bucket.x + BUCKET_WIDTH + PADDING;
                                 if (nextPos > testX) {
@@ -535,7 +1102,6 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
                             }
                         }
 
-                        // Check if this position fits within bounds
                         if (testX + BUCKET_WIDTH + SAFE_MARGIN <= canvasWidth) {
                             newX = testX;
                             newY = testY;
@@ -544,7 +1110,6 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
                     }
                 }
 
-                // If no space found, stack on top
                 if (!foundSpace) {
                     newX = START_X;
                     newY = Math.max(START_Y, maxY - BUCKET_HEIGHT - PADDING);
@@ -556,7 +1121,6 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
         }
     }
 
-    // Final bounds check - clamp position to ensure it stays within canvas with safety margin
     newX = Math.max(START_X, Math.min(newX, maxX));
     newY = Math.max(START_Y, Math.min(newY, maxY));
 
@@ -568,30 +1132,24 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
         height: BUCKET_HEIGHT,
         label: 'Bucket',
         color: bucketColor,
-        items: [] // Items inside bucket
+        items: []
     };
 
     setBuckets(prev => [...prev, newBucket]);
 
-    // Send bucket to other participants (buckets use pixel coordinates, no normalization needed)
     if (whiteboardService) {
         whiteboardService.sendBucketAdded(newBucket);
     }
 
-    // console.log('[SessionUtils] Bucket added:', newBucket);
     return newBucket;
 };
 
 // =============================
-// FLOATING ANIMATIONS (REACTIONS)
+// FLOATING ANIMATIONS
 // =============================
 
 /**
  * Generate evenly spaced positions for floating animations
- * @param {number} count - Number of positions to generate
- * @param {number} minPercent - Minimum percentage (default: 5)
- * @param {number} maxPercent - Maximum percentage (default: 95)
- * @returns {Array} Array of position percentages
  */
 export const generateSpacedPositions = (count, minPercent = 5, maxPercent = 95) => {
     const positions = [];
@@ -603,15 +1161,7 @@ export const generateSpacedPositions = (count, minPercent = 5, maxPercent = 95) 
 };
 
 /**
- * Spawn floating animation (bubbles, balloons, smileys, stars)
- * @param {Object} options - Configuration options
- * @param {string} options.type - Animation type (bubble/balloon/smiley/star)
- * @param {Object|Array} options.asset - Asset configuration (single object or array for balloons)
- * @param {Set} options.activeFloatingAnimationTypesRef - Ref to track active animation types
- * @param {Function} options.setFloatingAnimations - State setter for floating animations
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {number} options.count - Number of animations to spawn (default: 10)
- * @returns {Array} Array of spawned animations
+ * Spawn floating animation
  */
 export const spawnFloatingAnimation = ({
     type,
@@ -621,7 +1171,6 @@ export const spawnFloatingAnimation = ({
     whiteboardService,
     count = 10
 }) => {
-    // Check if this animation type is already active
     if (activeFloatingAnimationTypesRef.has(type)) {
         toast.warn(`${type.charAt(0).toUpperCase() + type.slice(1)}s are already active!`);
         return [];
@@ -632,7 +1181,6 @@ export const spawnFloatingAnimation = ({
     const leftPositions = generateSpacedPositions(count);
 
     const newAnimations = leftPositions.map((leftPercent, index) => {
-        // For balloons, randomly select from the color array
         const selectedAsset = Array.isArray(asset)
             ? asset[Math.floor(Math.random() * asset.length)]
             : asset;
@@ -641,8 +1189,8 @@ export const spawnFloatingAnimation = ({
             id: `${type}-${Date.now()}-${index}`,
             type: type,
             x: leftPercent,
-            startDelay: index * 200, // 200ms delay between each animation
-            duration: 8000 + Math.random() * 5000, // Random duration between 8-13 seconds in milliseconds
+            startDelay: index * 200,
+            duration: 8000 + Math.random() * 5000,
             asset: {
                 type: selectedAsset.type,
                 src: selectedAsset.src,
@@ -654,12 +1202,10 @@ export const spawnFloatingAnimation = ({
 
     setFloatingAnimations(prev => [...prev, ...newAnimations]);
 
-    // Send to other participants
     if (whiteboardService) {
         whiteboardService.sendFloatingAnimations(newAnimations);
     }
 
-    // Auto-cleanup after 13 seconds and remove from active set
     setTimeout(() => {
         setFloatingAnimations(prev =>
             prev.filter(a => !newAnimations.find(na => na.id === a.id))
@@ -667,7 +1213,7 @@ export const spawnFloatingAnimation = ({
         activeFloatingAnimationTypesRef.delete(type);
     }, 13000);
 
-    console.log(`[SessionUtils] Spawned ${count} ${type} animations`);
+    console.log(`[InstructorSession] Spawned ${count} ${type} animations`);
     return newAnimations;
 };
 
@@ -676,25 +1222,17 @@ export const spawnFloatingAnimation = ({
 // =============================
 
 /**
- * Toggle tool access for participant (learner/client)
- * @param {string} toolName - Tool name (select/drag/keyboard)
- * @param {Object} currentAccess - Current tool access state
- * @param {Function} setToolAccess - State setter for tool access
- * @param {Object} whiteboardService - Whiteboard service instance
- * @param {Function} setTool - State setter for active tool (optional)
- * @returns {Object} Updated tool access state
+ * Toggle tool access for participant
  */
 export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whiteboardService, setTool) => {
     const updated = { ...currentAccess, [toolName]: !currentAccess[toolName] };
 
-    // Auto-enable select permission when drag is activated
     if (toolName === 'drag' && updated.drag) {
         updated.select = true;
     }
 
     setToolAccess(updated);
 
-    // Send permission update to participant via whiteboard service
     if (whiteboardService) {
         whiteboardService.send('tool_access', {
             toolName,
@@ -702,7 +1240,6 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
             allPermissions: updated
         });
 
-        // If drag is being enabled, also send select permission update
         if (toolName === 'drag' && updated.drag) {
             whiteboardService.send('tool_access', {
                 toolName: 'select',
@@ -712,9 +1249,8 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
         }
     }
 
-    console.log('[SessionUtils] Tool access updated:', updated);
+    console.log('[InstructorSession] Tool access updated:', updated);
 
-    // Auto-switch to select tool when drag is enabled
     if (toolName === 'drag' && updated.drag && setTool) {
         setTool('select');
     }
@@ -727,14 +1263,7 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
 // =============================
 
 /**
- * Cleanup session resources (WebRTC, Whiteboard, Tools)
- * @param {Object} options - Services to cleanup
- * @param {Object} options.videoService - Primary video conference service
- * @param {Object} options.whiteboardService - Whiteboard service
- * @param {Object} options.toolsService - Tools service
- * @param {Object} options.recordingService - Recording service (optional)
- * @param {Object} options.secondaryVideoService - Secondary video service (optional, e.g., observer)
- * @param {Object} options.isInitializingRef - Ref to track initialization state
+ * Cleanup session resources
  */
 export const cleanupSessionResources = ({
     videoService,
@@ -744,56 +1273,49 @@ export const cleanupSessionResources = ({
     secondaryVideoService,
     isInitializingRef
 }) => {
-    console.log('[SessionUtils] Cleaning up session resources');
+    console.log('[InstructorSession] Cleaning up session resources');
 
-    // Stop all local stream tracks
     if (videoService?.localStream) {
         videoService.localStream.getTracks().forEach(track => {
             track.stop();
-            console.log('[SessionUtils] Stopped track:', track.kind);
+            console.log('[InstructorSession] Stopped track:', track.kind);
         });
     }
 
-    // Close video service
     if (videoService) {
         videoService.close();
-        console.log('[SessionUtils] Video service closed');
+        console.log('[InstructorSession] Video service closed');
     }
 
-    // Close secondary video service (e.g., observer)
     if (secondaryVideoService) {
         secondaryVideoService.close();
-        console.log('[SessionUtils] Secondary video service closed');
+        console.log('[InstructorSession] Secondary video service closed');
     }
 
-    // Close whiteboard service
     if (whiteboardService) {
         whiteboardService.close();
-        console.log('[SessionUtils] Whiteboard service closed');
+        console.log('[InstructorSession] Whiteboard service closed');
     }
 
-    // Cleanup tools service
     if (toolsService) {
         toolsService.cleanup();
-        console.log('[SessionUtils] Tools service cleaned up');
+        console.log('[InstructorSession] Tools service cleaned up');
     }
 
-    // Cleanup recording service
     if (recordingService) {
         if (typeof recordingService.cleanup === 'function') {
             recordingService.cleanup();
         } else if (typeof recordingService.stopRecording === 'function') {
             recordingService.stopRecording();
         }
-        console.log('[SessionUtils] Recording service cleaned up');
+        console.log('[InstructorSession] Recording service cleaned up');
     }
 
-    // Reset initialization ref
     if (isInitializingRef) {
         isInitializingRef.current = false;
     }
 
-    console.log('[SessionUtils] Session cleanup complete');
+    console.log('[InstructorSession] Session cleanup complete');
 };
 
 // =============================
@@ -802,13 +1324,6 @@ export const cleanupSessionResources = ({
 
 /**
  * Send stopwatch sync to participant via whiteboard service (throttled)
- * @param {Object} options - Configuration options
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {number} options.elapsedTime - Elapsed time in milliseconds
- * @param {boolean} options.isRunning - Whether stopwatch is running
- * @param {Object} options.lastSyncTimeRef - Ref to track last sync time
- * @param {number} options.throttleMs - Throttle interval in milliseconds (default: 100)
- * @returns {boolean} Whether sync was sent
  */
 export const syncStopwatchToParticipant = ({
     whiteboardService,
@@ -819,17 +1334,14 @@ export const syncStopwatchToParticipant = ({
 }) => {
     if (!whiteboardService || elapsedTime < 0) return false;
 
-    // Check if WebSocket is ready before sending
     if (!whiteboardService.ws || whiteboardService.ws.readyState !== WebSocket.OPEN) {
         return false;
     }
 
     const now = Date.now();
-    // Only send if throttle time has passed since last send
     if (now - lastSyncTimeRef.current >= throttleMs) {
         lastSyncTimeRef.current = now;
 
-        // Send stopwatch sync using generic send method
         whiteboardService.send('stopwatch_sync', {
             elapsedTime,
             isRunning
@@ -847,16 +1359,6 @@ export const syncStopwatchToParticipant = ({
 
 /**
  * End session and notify participants
- * @param {Object} options - Configuration options
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {Function} options.sessionServiceEndFn - Session service end function
- * @param {string} options.sessionId - Session ID
- * @param {string} options.notes - Session notes (optional)
- * @param {Function} options.cleanupFn - Cleanup function
- * @param {Function} options.navigate - Navigation function
- * @param {string} options.dashboardPath - Dashboard path to navigate to
- * @param {string} options.roleName - Role name for messages (trainer/coach)
- * @returns {Promise<boolean>} Success status
  */
 export const endSession = async ({
     whiteboardService,
@@ -873,7 +1375,6 @@ export const endSession = async ({
     }
 
     try {
-        // Broadcast session end to participants before ending
         if (whiteboardService) {
             whiteboardService.send('session_ended', {
                 message: `${roleName.charAt(0).toUpperCase() + roleName.slice(1)} has ended the session`,
@@ -881,22 +1382,19 @@ export const endSession = async ({
             });
         }
 
-        // Call session service to end session
         await sessionServiceEndFn(sessionId, notes);
 
         toast.success('Session ended successfully');
 
-        // Cleanup resources
         if (cleanupFn) {
             cleanupFn();
         }
 
-        // Navigate to dashboard
         navigate(dashboardPath);
 
         return true;
     } catch (error) {
-        console.error('[SessionUtils] Error ending session:', error);
+        console.error('[InstructorSession] Error ending session:', error);
         toast.error('Failed to end session');
         return false;
     }
@@ -908,17 +1406,12 @@ export const endSession = async ({
 
 /**
  * Calculate time remaining for session
- * @param {Object} sessionInfo - Session information object
- * @param {string|Date} sessionInfo.started_at - Session start time
- * @param {number} sessionInfo.duration - Session duration in minutes
- * @returns {string} Formatted time remaining (MM:SS) or '--:--' if invalid
  */
 export const calculateTimeRemaining = (sessionInfo) => {
     if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) {
         return '--:--';
     }
 
-    // Parse start time
     let startTime;
     if (typeof sessionInfo.started_at === 'string') {
         startTime = new Date(sessionInfo.started_at.replace(' ', 'T')).getTime();
@@ -926,9 +1419,8 @@ export const calculateTimeRemaining = (sessionInfo) => {
         startTime = new Date(sessionInfo.started_at).getTime();
     }
 
-    // Validate parsed time
     if (isNaN(startTime)) {
-        console.error('[SessionUtils] Invalid start time:', sessionInfo.started_at);
+        console.error('[InstructorSession] Invalid start time:', sessionInfo.started_at);
         return '--:--';
     }
 
@@ -952,8 +1444,6 @@ export const calculateTimeRemaining = (sessionInfo) => {
 
 /**
  * Trigger keyboard tool for participant
- * @param {Object} whiteboardService - Whiteboard service instance
- * @param {string} participantRole - Role of participant (client/learner)
  */
 export const triggerParticipantKeyboard = (whiteboardService, participantRole = 'participant') => {
     if (whiteboardService) {
@@ -972,14 +1462,10 @@ export const triggerParticipantKeyboard = (whiteboardService, participantRole = 
 // AUDIO CONTEXT & SOUND EFFECTS
 // =============================
 
-/**
- * Reusable AudioContext instance (singleton pattern)
- */
 let audioContextInstance = null;
 
 /**
  * Get or create AudioContext instance
- * @returns {AudioContext} Audio context instance
  */
 export const getAudioContext = () => {
     if (!audioContextInstance) {
@@ -990,7 +1476,6 @@ export const getAudioContext = () => {
 
 /**
  * Play pop sound effect based on animation type
- * @param {string} animationType - Type of animation (bubble/smiley/balloon/star)
  */
 export const playPopSound = (animationType) => {
     try {
@@ -999,7 +1484,6 @@ export const playPopSound = (animationType) => {
 
         switch (animationType) {
             case 'bubble': {
-                // Bubble: Simple "bloop" (1 oscillator)
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 osc.type = 'sine';
@@ -1015,7 +1499,6 @@ export const playPopSound = (animationType) => {
             }
 
             case 'smiley': {
-                // Smiley: Simple "ding" (1 oscillator)
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 osc.type = 'sine';
@@ -1030,12 +1513,10 @@ export const playPopSound = (animationType) => {
             }
 
             case 'balloon': {
-                // Balloon: Quick pop with minimal white noise
                 const bufferSize = audioContext.sampleRate * 0.05;
                 const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
                 const data = buffer.getChannelData(0);
 
-                // Generate white noise
                 for (let i = 0; i < bufferSize; i++) {
                     data[i] = Math.random() * 2 - 1;
                 }
@@ -1049,7 +1530,6 @@ export const playPopSound = (animationType) => {
                 noiseGain.connect(audioContext.destination);
                 noiseSource.start(now);
 
-                // Single low thump
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 osc.type = 'sine';
@@ -1065,7 +1545,6 @@ export const playPopSound = (animationType) => {
             }
 
             case 'star': {
-                // Star: Sparkle sound
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 osc.type = 'sine';
@@ -1081,7 +1560,6 @@ export const playPopSound = (animationType) => {
             }
 
             default: {
-                // Default pop sound
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
                 osc.frequency.setValueAtTime(500, now);
@@ -1094,19 +1572,12 @@ export const playPopSound = (animationType) => {
             }
         }
     } catch (error) {
-        console.error('[SessionUtils] Error playing pop sound:', error);
+        console.error('[InstructorSession] Error playing pop sound:', error);
     }
 };
 
 /**
  * Handle animation pop event
- * @param {Object} options - Configuration options
- * @param {string} options.animationId - ID of animation to pop
- * @param {number} options.poppedLeft - Left position of pop
- * @param {number} options.poppedTop - Top position of pop
- * @param {Array} options.floatingAnimations - Current floating animations array
- * @param {Function} options.setFloatingAnimations - State setter for floating animations
- * @param {Object} options.whiteboardService - Whiteboard service instance
  */
 export const handleAnimationPop = ({
     animationId,
@@ -1116,7 +1587,6 @@ export const handleAnimationPop = ({
     setFloatingAnimations,
     whiteboardService
 }) => {
-    // Find the animation to get its type for sound effect
     const animation = floatingAnimations.find(a => a.id === animationId);
     if (animation) {
         playPopSound(animation.type);
@@ -1126,7 +1596,6 @@ export const handleAnimationPop = ({
         prev.map(a => a.id === animationId ? { ...a, popped: true, poppedLeft, poppedTop } : a)
     );
 
-    // Broadcast the animation pop event to participant
     if (whiteboardService) {
         whiteboardService.send('animation_popped', {
             animationId,
@@ -1136,7 +1605,7 @@ export const handleAnimationPop = ({
         });
     }
 
-    console.log('[SessionUtils] Animation popped:', animationId);
+    console.log('[InstructorSession] Animation popped:', animationId);
 };
 
 // =============================
@@ -1144,11 +1613,7 @@ export const handleAnimationPop = ({
 // =============================
 
 /**
- * Erase all pen strokes from whiteboard (keeps canvas items)
- * @param {Object} options - Configuration options
- * @param {Function} options.setErasePenTrigger - State setter for erase pen trigger
- * @param {Function} options.setRedrawCanvasTrigger - State setter for redraw trigger
- * @param {Object} options.whiteboardService - Whiteboard service instance
+ * Erase all pen strokes from whiteboard
  */
 export const eraseAllPen = ({
     setErasePenTrigger,
@@ -1158,14 +1623,13 @@ export const eraseAllPen = ({
     setErasePenTrigger(prev => prev + 1);
     setRedrawCanvasTrigger(prev => prev + 1);
 
-    // Send clear pen command to participant
     if (whiteboardService) {
         whiteboardService.send('erase_pen', {
             timestamp: Date.now()
         });
     }
 
-    console.log('[SessionUtils] Pen strokes erased');
+    console.log('[InstructorSession] Pen strokes erased');
 };
 
 // =============================
@@ -1173,12 +1637,7 @@ export const eraseAllPen = ({
 // =============================
 
 /**
- * Send feedback message to participant via whiteboard
- * @param {Object} options - Configuration options
- * @param {string} options.message - Feedback message to send
- * @param {Function} options.setFeedbackMessage - State setter for feedback message
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {number} options.duration - How long to display (default: 3000ms)
+ * Send feedback message to participant
  */
 export const sendFeedbackMessage = ({
     message,
@@ -1188,7 +1647,6 @@ export const sendFeedbackMessage = ({
 }) => {
     setFeedbackMessage(message);
 
-    // Send to participant
     if (whiteboardService) {
         whiteboardService.send('feedback_message', {
             text: message,
@@ -1196,7 +1654,6 @@ export const sendFeedbackMessage = ({
         });
     }
 
-    // Auto-clear after duration
     setTimeout(() => {
         setFeedbackMessage('');
         if (whiteboardService) {
@@ -1207,16 +1664,11 @@ export const sendFeedbackMessage = ({
         }
     }, duration);
 
-    console.log('[SessionUtils] Feedback message sent:', message);
+    console.log('[InstructorSession] Feedback message sent:', message);
 };
 
 /**
  * Send waiting message to participant
- * @param {Object} options - Configuration options
- * @param {string} options.message - Waiting message to send
- * @param {Function} options.setWaitingMessage - State setter for waiting message
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {number} options.duration - How long to display (default: 5000ms)
  */
 export const sendWaitingMessage = ({
     message,
@@ -1226,7 +1678,6 @@ export const sendWaitingMessage = ({
 }) => {
     setWaitingMessage(message);
 
-    // Send to participant
     if (whiteboardService) {
         whiteboardService.send('waiting_message', {
             text: message,
@@ -1234,7 +1685,6 @@ export const sendWaitingMessage = ({
         });
     }
 
-    // Auto-clear after duration
     setTimeout(() => {
         setWaitingMessage('');
         if (whiteboardService) {
@@ -1245,18 +1695,11 @@ export const sendWaitingMessage = ({
         }
     }, duration);
 
-    console.log('[SessionUtils] Waiting message sent:', message);
+    console.log('[InstructorSession] Waiting message sent:', message);
 };
 
 /**
- * Handle all session tool clicks (feedback, emojis, animations)
- * @param {Object} options - Configuration options
- * @param {string} options.tool - Tool name/label
- * @param {Function} options.setFeedbackMessage - State setter for feedback message
- * @param {Function} options.setWaitingMessage - State setter for waiting message
- * @param {Function} options.setFloatingAnimations - State setter for floating animations
- * @param {Object} options.whiteboardService - Whiteboard service instance
- * @param {Object} options.REACTION_SVG_ASSETS - Reaction assets object
+ * Handle all session tool clicks
  */
 export const handleToolClick = ({
     tool,
@@ -1268,11 +1711,9 @@ export const handleToolClick = ({
     whiteboardService,
     REACTION_SVG_ASSETS
 }) => {
-    console.log('[SessionUtils] Tool clicked:', tool);
+    console.log('[InstructorSession] Tool clicked:', tool);
 
-    // Map tool names to actions
     switch (tool) {
-        // Feedback Messages
         case '👍 Good Job!':
             sendFeedbackMessage({
                 message: 'Good Job!',
@@ -1327,7 +1768,6 @@ export const handleToolClick = ({
             });
             break;
 
-        // Waiting Message
         case '⏳ Wait':
             sendWaitingMessage({
                 message: 'Please Wait...',
@@ -1337,7 +1777,6 @@ export const handleToolClick = ({
             });
             break;
 
-        // Floating Animations
         case '🫧 Bubbles':
             spawnFloatingAnimation('bubble', REACTION_SVG_ASSETS.bubble);
             break;
@@ -1355,7 +1794,7 @@ export const handleToolClick = ({
             break;
 
         default:
-            console.log('[SessionUtils] Unknown tool:', tool);
+            console.log('[InstructorSession] Unknown tool:', tool);
     }
 };
 
@@ -1366,51 +1805,6 @@ export const handleToolClick = ({
 /**
  * WhiteboardTools - Reusable whiteboard tools UI component
  * Used by both TrainerSession and CoachSession
- * 
- * @param {Object} props - Component props
- * @param {string} props.tool - Current tool selected (pen/eraser)
- * @param {Function} props.setTool - Set tool function
- * @param {boolean} props.toolActive - Whether tool is active
- * @param {Function} props.setToolActive - Set tool active function
- * @param {boolean} props.eraserActive - Whether eraser is active
- * @param {Function} props.setEraserActive - Set eraser active function
- * @param {Function} props.setEraseAllActive - Set erase all active function
- * @param {Function} props.eraseAllPen - Erase all pen strokes function
- * @param {Function} props.addBucket - Add bucket function
- * @param {string} props.color - Current pen color
- * @param {Function} props.setColor - Set pen color function
- * @param {number} props.lineWidth - Current pen line width
- * @param {Function} props.setLineWidth - Set pen line width function
- * @param {string} props.bucketColor - Current bucket color
- * @param {Function} props.setBucketColor - Set bucket color function
- * @param {Function} props.setCanvasItems - Set canvas items function
- * @param {Function} props.setBuckets - Set buckets function
- * @param {Function} props.setFloatingAnimations - Set floating animations function
- * @param {Function} props.setClearCanvasTrigger - Set clear canvas trigger function
- * @param {Object} props.whiteboardService - Whiteboard service instance
- * @param {Object} props.toolAccess - Tool access control object
- * @param {Function} props.toggleToolAccess - Toggle tool access function
- * @param {boolean} props.showStopwatch - Whether stopwatch is visible
- * @param {Function} props.setShowStopwatch - Set stopwatch visibility function
- * @param {boolean} props.showExercise - Whether exercise is visible
- * @param {Function} props.setShowExercise - Set exercise visibility function
- * @param {Object} props.activeIcons - Active icons state
- * @param {Function} props.handleToolClick - Handle tool click function
- * @param {Object} props.wbBtnBase - Base button style class
- * @param {Object} props.wbBtnActive - Active button style class
- * @param {Object} props.wbSmallBtnBase - Small base button style class
- * @param {Object} props.wbSmallBtnActive - Small active button style class
- * @param {string} props.participantType - Type of participant (learner/client)
- * @param {Object} props.musicOptions - Music options (optional, for trainer only)
- * @param {Function} props.toggleBackgroundMusic - Toggle background music (optional, for trainer only)
- * @param {string} props.selectedMusic - Selected music ID (optional, for trainer only)
- * @param {boolean} props.backgroundMusicPlaying - Whether music is playing (optional, for trainer only)
- * @param {number} props.musicVolume - Music volume (optional, for trainer only)
- * @param {Function} props.handleMusicVolumeChange - Handle music volume change (optional, for trainer only)
- * @param {boolean} props.showSessionNotes - Whether to show session notes (optional, for trainer only)
- * @param {string} props.sessionNotes - Session notes content (optional, for trainer only)
- * @param {Function} props.handleNotesChange - Handle notes change (optional, for trainer only)
- * @param {Function} props.handleClearNotes - Handle clear notes (optional, for trainer only)
  */
 export const WhiteboardTools = ({
     tool,
@@ -1445,15 +1839,13 @@ export const WhiteboardTools = ({
     wbBtnActive,
     wbSmallBtnBase,
     wbSmallBtnActive,
-    participantType = 'learner', // 'learner' or 'client'
-    // Optional music props (for trainer only)
+    participantType = 'learner',
     musicOptions = null,
     toggleBackgroundMusic = null,
     selectedMusic = null,
     backgroundMusicPlaying = false,
     musicVolume = 0.5,
     handleMusicVolumeChange = null,
-    // Optional session notes props (for trainer only)
     showSessionNotes = false,
     sessionNotes = '',
     handleNotesChange = null,
@@ -1743,63 +2135,11 @@ export const WhiteboardTools = ({
                         className="w-full rounded mt-1 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#DB9D32]"
                         style={{ padding: 'clamp(0.375rem, 1vw, 0.625rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', minHeight: 'clamp(60px, 15vw, 80px)' }}
                         value={sessionNotes}
-                        onChange={handleNotesChange}
+                        onChange={(e) => handleNotesChange(e.target.value)}
                         placeholder="Write session notes here..."
                     />
                 </div>
             )}
         </div>
     );
-};
-
-// =============================
-// EXPORT ALL UTILITIES
-// =============================
-
-export default {
-    // Constants
-    getWSBaseURL,
-    REACTION_SVG_ASSETS,
-    WB_BUTTON_STYLES,
-    BUCKET_COLORS,
-
-    // Session
-    validateUserSession,
-
-    // Services
-    initializeWhiteboardService,
-    initializeVideoConferenceService,
-    initializeToolsService,
-
-    // Media Controls
-    toggleMicrophone,
-    toggleCamera,
-    toggleFreeze,
-
-    // Canvas
-    clearAllCanvas,
-    addBucket,
-    eraseAllPen,
-
-    // Animations
-    generateSpacedPositions,
-    spawnFloatingAnimation,
-    handleAnimationPop,
-
-    // Audio
-    getAudioContext,
-    playPopSound,
-
-    // Tools
-    toggleToolAccess,
-    handleToolClick,
-    sendFeedbackMessage,
-    sendWaitingMessage,
-
-    // Components
-    WhiteboardTools,
-
-    // Session Management
-    cleanupSessionResources,
-    endSession
 };

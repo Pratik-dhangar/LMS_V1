@@ -19,7 +19,8 @@ import {
   Package,
   Link2,
   TrendingUp,
-  Clock
+  Clock,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import subscriptionService from "../../api/services/subscriptionService";
@@ -48,9 +49,11 @@ const LearnerSubscriptionManager = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [showRenewalChainModal, setShowRenewalChainModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [selectedSubscription, setSelectedSubscription] = useState(null);
   const [renewalChain, setRenewalChain] = useState([]);
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState(1);
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -282,6 +285,37 @@ const LearnerSubscriptionManager = () => {
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to cancel subscription");
     }
+  };
+
+  const handleDeleteSubscription = (subscription) => {
+    setSelectedSubscription(subscription);
+    setDeleteConfirmStep(1);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmStep === 1) {
+      setDeleteConfirmStep(2);
+      return;
+    }
+
+    // Final confirmation - proceed with deletion
+    try {
+      await subscriptionService.deleteSubscription(selectedSubscription.id);
+      toast.success("Subscription deleted successfully!");
+      setShowDeleteModal(false);
+      setDeleteConfirmStep(1);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to delete subscription");
+      setShowDeleteModal(false);
+      setDeleteConfirmStep(1);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteConfirmStep(1);
   };
 
   const handleRefundSubscription = async (e) => {
@@ -613,6 +647,29 @@ const LearnerSubscriptionManager = () => {
                         </>
                       )}
 
+                      {["EXPIRED", "CANCELLED"].includes(sub.status) && (
+                        <button
+                          onClick={() => handleDeleteSubscription(sub)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "5px",
+                            padding: "8px",
+                            borderRadius: "6px",
+                            backgroundColor: "#dc2626",
+                            color: "#fff",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                          }}
+                          title="Permanently delete this subscription"
+                        >
+                          <Trash2 size={16} />
+                          Delete
+                        </button>
+                      )}
+
                       <button
                         onClick={() => handleViewRenewalChain(sub.id)}
                         style={{
@@ -640,6 +697,128 @@ const LearnerSubscriptionManager = () => {
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "500px" }}>
+            <div className="modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  backgroundColor: "#fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Trash2 size={24} color="#dc2626" />
+                </div>
+                <div>
+                  <h2 style={{ margin: "0 0 4px 0" }}>
+                    {deleteConfirmStep === 1 ? "Delete Subscription?" : "Final Confirmation"}
+                  </h2>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
+                    {deleteConfirmStep === 1 ? "Step 1 of 2" : "Step 2 of 2"}
+                  </p>
+                </div>
+              </div>
+              <button onClick={handleCancelDelete} className="modal-close">×</button>
+            </div>
+
+            <div className="modal-body" style={{ paddingTop: "12px" }}>
+              {deleteConfirmStep === 1 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <p style={{ color: "#374151", lineHeight: "1.6" }}>
+                    You are about to <strong>permanently delete</strong> this subscription. This action <strong>cannot be undone</strong>.
+                  </p>
+                  <div style={{
+                    backgroundColor: "#fef3c7",
+                    border: "1px solid #fcd34d",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "14px",
+                    color: "#92400e"
+                  }}>
+                    <strong>⚠️ Warning:</strong> All related payment receipts, session logs, and event history will also be permanently deleted from the database.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <p style={{ color: "#374151", lineHeight: "1.6" }}>
+                    Are you absolutely certain you want to delete this subscription for <strong>{selectedSubscription?.learner_name || "Learner #" + selectedSubscription?.learner_id}</strong>?
+                  </p>
+                  <div style={{
+                    backgroundColor: "#fee2e2",
+                    border: "2px solid #fca5a5",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "14px",
+                    color: "#991b1b"
+                  }}>
+                    <strong>🔴 CRITICAL:</strong> This will completely remove the subscription and all associated data from the database. This action is irreversible!
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: "flex",
+              gap: "12px",
+              paddingTop: "20px",
+              borderTop: "1px solid #e5e7eb",
+            }}>
+              <button
+                onClick={handleCancelDelete}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  borderRadius: "6px",
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151",
+                  border: "1px solid #d1d5db",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#e5e7eb";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "#f3f4f6";
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  borderRadius: "6px",
+                  backgroundColor: "#dc2626",
+                  color: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#b91c1c";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "#dc2626";
+                }}
+              >
+                {deleteConfirmStep === 1 ? "Continue to Confirm" : "Delete Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Subscription Modal */}
       {showCreateModal && (
