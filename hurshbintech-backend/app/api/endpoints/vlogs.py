@@ -63,12 +63,24 @@ def get_public_url(file_url: str) -> str:
         return file_url
 
 
-def convert_vlog_response(vlog: Vlog) -> Vlog:
-    """Convert S3 URLs in vlog response to public HTTPS URLs (no expiration)"""
-    vlog.file_url = get_public_url(vlog.file_url)
-    if vlog.thumbnail_url:
-        vlog.thumbnail_url = get_public_url(vlog.thumbnail_url)
-    return vlog
+def convert_vlog_response(vlog) -> Vlog:
+    """Convert S3 URLs in vlog response to public HTTPS URLs (no expiration)
+
+    Args:
+        vlog: SQLAlchemy Vlog model from database
+
+    Returns:
+        Pydantic Vlog schema with converted URLs
+    """
+    # Convert SQLAlchemy model to Pydantic model
+    pydantic_vlog = Vlog.model_validate(vlog)
+
+    # Modify URLs to use public HTTPS (Pydantic v2 models are mutable by default)
+    pydantic_vlog.file_url = get_public_url(pydantic_vlog.file_url)
+    if pydantic_vlog.thumbnail_url:
+        pydantic_vlog.thumbnail_url = get_public_url(pydantic_vlog.thumbnail_url)
+
+    return pydantic_vlog
 
 
 def validate_video_file(file: UploadFile):

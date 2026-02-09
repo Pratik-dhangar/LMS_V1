@@ -159,14 +159,31 @@ async def get_product_detail(
     db: AsyncSession = Depends(get_db)
 ):
     """Get detailed product information (Public)"""
+    # Try cache first
+    cache_key = f"product:detail:{product_id}"
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return ProductResponse(**cached_data)
+
+    logger.debug(f"Cache MISS: {cache_key}")
     product = await product_crud.get_product_by_id(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    
+
     # Convert S3 URLs to public URLs
     if product.image_url:
         product.image_url = get_public_url(product.image_url)
     if product.thumbnail_url:
         product.thumbnail_url = get_public_url(product.thumbnail_url)
-    
-    return product
+
+    # Convert to Pydantic model if needed
+    if hasattr(product, 'model_dump'):
+        response = product
+    else:
+        response = ProductResponse.model_validate(product)
+
+    # Cache for 15 minutes
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_PRODUCT_DETAIL)
+
+    return response

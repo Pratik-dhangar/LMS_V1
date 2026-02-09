@@ -2,6 +2,7 @@
 Training Session Endpoints - Video conferencing sessions
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timezone
@@ -30,6 +31,7 @@ from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, U
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
 from app.utils.s3_utils import S3Manager
 from app.services.recording_storage import get_recording_storage
+from app.services.cache_service import cache_service
 
 # Import SessionUpdate schema
 from app.schemas.session import SessionUpdate
@@ -82,17 +84,30 @@ async def get_all_sessions(
     """Get all sessions created by current Head"""
     logger.info(f"Head {current_head.user_id} fetching all sessions")
 
+    # Try cache first
+    cache_key = f"sessions:head:{current_head.user_id}:all"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [SessionResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     # Import here to avoid circular imports
     from app.crud.session_crud import get_all_sessions_by_head
 
     sessions = await get_all_sessions_by_head(db, current_head.user_id)
-    
+
     # Build responses with notes and reports
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
-    
+
+    # Cache for 10 minutes - serialize to dictionaries
+    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
+
     return responses
 
 
@@ -321,12 +336,26 @@ async def get_trainer_sessions_list(
     """Get all sessions for current trainer"""
     logger.info(f"Fetching sessions for trainer {current_trainer.user_id}")
 
+    # Try cache first
+    cache_key = f"sessions:trainer:{current_trainer.user_id}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [SessionResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     sessions = await session_crud.get_trainer_sessions(db, current_trainer.user_id)
 
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
+
+    # Cache for 10 minutes - serialize to dictionaries
+    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
+
     return responses
 
 
@@ -487,12 +516,26 @@ async def get_learner_sessions_list(
     """Get learner sessions: scheduled, active, and ended sessions from past 30 days"""
     logger.info(f"Fetching sessions for learner {current_learner.user_id}")
 
+    # Try cache first
+    cache_key = f"sessions:learner:{current_learner.user_id}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [SessionResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     sessions = await session_crud.get_learner_sessions(db, current_learner.user_id)
 
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
+
+    # Cache for 10 minutes - serialize to dictionaries
+    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
+
     return responses
 
 

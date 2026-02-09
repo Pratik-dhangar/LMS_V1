@@ -36,6 +36,7 @@ class CacheService:
         # Cache TTL constants (in seconds)
         self.TTL_PRODUCT_METADATA = 3600  # 1 hour for categories/age_groups/skills
         self.TTL_PRODUCT_CATALOG = 300    # 5 minutes for product listings
+        self.TTL_PRODUCT_DETAIL = 900     # 15 minutes for individual product details
         self.TTL_LEARNING_CONTENT = 600   # 10 minutes for learning content
         self.TTL_LEARNING_CONTENT_DETAIL = 900  # 15 minutes for individual content
         self.TTL_LEARNING_GOALS = 900     # 15 minutes for learning goals
@@ -48,6 +49,12 @@ class CacheService:
         self.TTL_VLOGS_LIST = 900         # 15 minutes for vlog listings
         self.TTL_VLOG_DETAIL = 1800       # 30 minutes for individual vlog
         self.TTL_ABOUT_US = 3600          # 1 hour for about us page
+        self.TTL_ORDER = 600              # 10 minutes for order data
+        self.TTL_SUBSCRIPTION_PACKAGES = 3600  # 1 hour for subscription packages
+        self.TTL_USER_SUBSCRIPTIONS = 900  # 15 minutes for user subscriptions
+        self.TTL_SESSIONS = 600           # 10 minutes for session listings
+        self.TTL_ASSIGNED_TRAININGS = 600  # 10 minutes for assigned trainings
+        self.TTL_APPOINTMENTS = 600       # 10 minutes for appointments
         
     async def connect(self):
         """Initialize Redis connection pool"""

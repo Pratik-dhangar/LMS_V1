@@ -3,6 +3,8 @@ Booking endpoints for appointment scheduling with coaches.
 Accessible by all authenticated users (head, trainer, learner).
 """
 
+import hashlib
+import json
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -288,8 +290,19 @@ async def get_my_appointments(
     """
     Get all appointments booked by the current user.
     """
+    # Try cache first
+    cache_key = f"appointments:user:{current_user.id}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        # Reconstruct AppointmentResponse objects from cached dicts
+        return [AppointmentResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     appointments = await coach_crud.get_appointments_by_user(db, current_user.id)
-    
+
     responses = []
     for apt in appointments:
         response = AppointmentResponse(
@@ -310,7 +323,7 @@ async def get_my_appointments(
             created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
             updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
         )
-        
+
         # Convert S3 URLs to signed URLs if using S3
         if settings.USE_S3:
             if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
@@ -319,9 +332,12 @@ async def get_my_appointments(
                 response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
             if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
                 response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
-        
+
         responses.append(response)
-    
+
+    # Cache for 10 minutes - convert to dicts for proper serialization
+    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_APPOINTMENTS)
+
     return responses
 
 

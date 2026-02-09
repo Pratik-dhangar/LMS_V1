@@ -2,6 +2,8 @@
 Admin CRUD endpoints - Manage Heads and Coaches
 """
 
+import hashlib
+import json
 from typing import List, Optional
 from pathlib import Path
 from datetime import date, datetime
@@ -1468,7 +1470,22 @@ async def get_all_subscription_packages(
     current_admin: User = Depends(get_current_admin),
 ):
     """Get all subscription packages (Admin)"""
+    # Try cache first
+    filters_data = {"active_only": active_only}
+    filters_hash = hashlib.md5(json.dumps(filters_data, sort_keys=True).encode()).hexdigest()
+    cache_key = f"subscription:packages:{filters_hash}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [SubscriptionPackageResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
     packages = await subscription_crud.get_all_packages(db, active_only)
+
+    # Cache for 1 hour - serialize to dictionaries
+    await cache_service.set(cache_key, [p.model_dump() if hasattr(p, 'model_dump') else p for p in packages], ttl=cache_service.TTL_SUBSCRIPTION_PACKAGES)
+
     return packages
 
 
