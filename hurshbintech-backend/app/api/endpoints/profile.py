@@ -131,7 +131,18 @@ async def get_my_subscriptions(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        return [LearnerSubscriptionResponse(**item) for item in cached_data]
+        # Validate cached data format - ensure it's a list of dicts, not strings
+        if isinstance(cached_data, list) and len(cached_data) > 0:
+            # Check if first item is a dict (valid format)
+            if isinstance(cached_data[0], dict):
+                return [LearnerSubscriptionResponse(**item) for item in cached_data]
+            else:
+                # Invalid cache format (old data), clear it
+                logger.warning(f"Invalid cache format for {cache_key}, clearing and fetching fresh data")
+                await cache_service.delete(cache_key)
+        elif isinstance(cached_data, list) and len(cached_data) == 0:
+            # Empty list is valid
+            return []
 
     logger.debug(f"Cache MISS: {cache_key}")
     # Use user_id instead of profile id for subscription lookup

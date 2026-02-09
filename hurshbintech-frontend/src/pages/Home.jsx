@@ -119,8 +119,11 @@ const Home = () => {
     const observerCallback = (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          if (entry.target === coachRef.current && aboutUs?.featured_coach_id) {
-            fetchFeaturedCoach(aboutUs.featured_coach_id);
+          if (entry.target === coachRef.current) {
+            // Check for featured_coach_id whenever the section is visible
+            if (aboutUs?.featured_coach_id) {
+              fetchFeaturedCoach(aboutUs.featured_coach_id);
+            }
           }
           if (entry.target === blogsRef.current) {
             fetchBlogs();
@@ -142,6 +145,20 @@ const Home = () => {
       refs.forEach(ref => observer.unobserve(ref));
     };
   }, [aboutUs?.featured_coach_id, fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
+
+  // Trigger coach fetch when aboutUs loads (if section is already visible)
+  useEffect(() => {
+    if (aboutUs?.featured_coach_id && !featuredCoach && !loadingCoach) {
+      // Check if coach section is currently in viewport
+      if (coachRef.current) {
+        const rect = coachRef.current.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        if (isVisible) {
+          fetchFeaturedCoach(aboutUs.featured_coach_id);
+        }
+      }
+    }
+  }, [aboutUs?.featured_coach_id, featuredCoach, loadingCoach, fetchFeaturedCoach]);
 
   useEffect(() => {
     const handleScroll = () => {

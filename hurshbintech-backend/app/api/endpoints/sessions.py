@@ -377,7 +377,8 @@ async def start_training_session(
         raise HTTPException(status_code=403, detail="Not authorized to start this session")
 
     if session.status != "scheduled":
-        raise HTTPException(status_code=400, detail="Session is not in scheduled state")
+        logger.warning(f"Cannot start session {session_id}: current status is '{session.status}', expected 'scheduled'")
+        raise HTTPException(status_code=400, detail=f"Session is not in scheduled state. Current status: {session.status}")
 
     started_session = await session_crud.start_session(db, session_id)
 
@@ -557,7 +558,8 @@ async def join_training_session(
         raise HTTPException(status_code=403, detail="Not authorized to join this session")
 
     if session.status != "active":
-        raise HTTPException(status_code=400, detail="Session is not active")
+        logger.warning(f"Learner {current_learner.user_id} cannot join session {session_id}: current status is '{session.status}', expected 'active'")
+        raise HTTPException(status_code=400, detail=f"Session is not active. Current status: {session.status}")
 
     return {"message": "Joined session successfully"}
 
