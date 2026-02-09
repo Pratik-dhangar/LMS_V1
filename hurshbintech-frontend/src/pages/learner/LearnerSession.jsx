@@ -20,6 +20,7 @@ import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
+import { setupAttendeeWhiteboardCallbacks } from '../../components/session/InstructorSessionLayout';
 import '../../styles/components/common/sessionHeader.css';
 
 import {
@@ -598,348 +599,37 @@ const LearnerSession = () => {
   useEffect(() => {
     if (!whiteboardService) return;
 
-    // Set up callback for tool access messages
-    whiteboardService.onToolAccess = (data) => {
-      // console.log('[LearnerSession] Tool access update:', data);
-      setToolAccess(prevAccess => ({
-        ...prevAccess,
-        [data.toolName]: data.enabled
-      }));
+    // Use centralized callback setup for attendee sessions
+    const cleanup = setupAttendeeWhiteboardCallbacks({
+      whiteboardService,
+      setToolAccess,
+      setTool,
+      setPromptText,
+      setPromptVisible,
+      setIsEyeBlinking,
+      setFeedbackMessage,
+      setWaitingMessage,
+      setFloatingAnimations,
+      floatingAnimations,
+      setCanvasItems,
+      setBuckets,
+      buckets,
+      setErasePenTrigger,
+      setRedrawCanvasTrigger,
+      setClearCanvasTrigger,
+      setYoutubePopups,
+      setBackgroundMusicPlaying,
+      setSelectedMusic,
+      setMusicVolume,
+      audioRef: learnerAudioRef,
+      setExerciseData,
+      sessionInfo,
+      whiteboardCanvasRef,
+      denormalizeItem
+    });
 
-      // Clear selection when drag permission is disabled
-      if (data.toolName === 'drag' && !data.enabled) {
-        setSelectedItems([]);
-      }
-
-      // Auto-switch to select tool when drag is enabled
-      if (data.toolName === 'drag' && data.enabled) {
-        setTool('select');
-      }
-      // Auto-switch to select tool when select is enabled
-      else if (data.toolName === 'select' && data.enabled) {
-        setTool('select');
-      }
-    };
-
-    // NOTE: Auto-send prompt via whiteboardService disabled - only manual send via webRTC.sendPrompt is used
-
-    // Set up callback for feedback messages from trainer
-    whiteboardService.onFeedbackMessage = (data) => {
-      // console.log('[LearnerSession] Feedback message received from trainer:', data);
-      setFeedbackMessage(data.text || '');
-
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
-        setFeedbackMessage('');
-      }, 3000);
-    };
-
-    // Set up callback for waiting messages from trainer
-    whiteboardService.onWaitingMessage = (data) => {
-      // console.log('[LearnerSession] Waiting message received from trainer:', data);
-      setWaitingMessage(data.text || '');
-
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
-        setWaitingMessage('');
-      }, 3000);
-    };
-
-    // Set up callback for floating animations from trainer
-    whiteboardService.onFloatingAnimations = (data) => {
-      setFloatingAnimations(prev => [...prev, ...data.animations]);
-
-      // Auto-remove after 13 seconds (same as trainer)
-      setTimeout(() => {
-        setFloatingAnimations(prev =>
-          prev.filter(a => !data.animations.find(na => na.id === a.id))
-        );
-      }, 13000);
-    };
-
-    // Set up callback for animation pop events from other learners/trainer
-    whiteboardService.onAnimationPopped = (data) => {
-      // console.log('[LearnerSession] Animation popped by another user:', data);
-      updateAnimationPopped(data.animationId, data.poppedLeft, data.poppedTop);
-    };
-
-    // Debug - log feedbackMessage state changes
-    // (we'll watch this console in the learner's browser to confirm receipt)
-    // useEffect can't be declared in this block; we add a top-level effect below
-
-    // Set up callback for item removal from trainer
-    whiteboardService.onItemRemove = (data) => {
-      // console.log('[LearnerSession] Item remove received:', data);
-      if (data?.id) {
-        setCanvasItems(prev => prev.filter(item => item.id !== data.id));
-      }
-    };
-
-    // Set up callback for item updates from trainer (including new exercises)
-    whiteboardService.onItemUpdate = (data) => {
-      // console.log('[LearnerSession] Item update received:', data);
-      if (data?.id && data?.type) {
-        // If the item has a `targetLearnerId`, only show it to that learner
-        if (data.targetLearnerId) {
-          // Convert both IDs to strings for comparison to handle string/number mismatches
-          const targetId = String(data.targetLearnerId);
-          const myId = String(sessionInfo?.learner_id || '');
-
-          // console.log('[LearnerSession] Targeted item check:', {
-          //   itemId: data.id,
-          //   targetLearnerId: targetId,
-          //   myLearnerId: myId,
-          //   sessionInfoLoaded: !!sessionInfo,
-          //   match: targetId === myId
-          // });
-
-          if (myId && targetId !== myId) {
-            // console.log('[LearnerSession] Item not for this learner, ignoring');
-            return; // Don't add this item
-          }
-
-          // console.log('[LearnerSession] Item is for this learner, adding to canvas');
-        }
-
-        setCanvasItems(prev => {
-          const existingIndex = prev.findIndex(item => item.id === data.id);
-
-          // If item is relative to a bucket container, convert normalized offset to absolute coordinates
-          let processedData = { ...data };
-          if (data.isRelativeToContainer && data.inBucket) {
-            // Find the bucket this item belongs to
-            const bucket = buckets.find(b => b.id === data.inBucket);
-            if (bucket) {
-              // Denormalize the offset coordinates based on bucket dimensions
-              const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
-              const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
-
-              // Convert normalized offsets back to pixel offsets
-              const pixelOffsetX = (data.x || 0) * bucketWidth;
-              const pixelOffsetY = (data.y || 0) * bucketHeight;
-
-              // Denormalize width/height if they're normalized (0-1)
-              let itemWidth = data.width;
-              let itemHeight = data.height;
-              if (data.width && data.width >= 0 && data.width <= 1) {
-                itemWidth = data.width * bucketWidth;
-              }
-              if (data.height && data.height >= 0 && data.height <= 1) {
-                itemHeight = data.height * bucketHeight;
-              }
-
-              // Convert offset to absolute coordinates by adding bucket position
-              processedData = {
-                ...processedData,
-                x: bucket.x + pixelOffsetX,
-                y: bucket.y + pixelOffsetY,
-                width: itemWidth,
-                height: itemHeight
-              };
-            }
-          }
-
-          if (existingIndex >= 0) {
-            // Update existing item
-            const updated = [...prev];
-            updated[existingIndex] = { ...updated[existingIndex], ...processedData };
-            return updated;
-          } else {
-            // Add new item
-            return [...prev, processedData];
-          }
-        });
-      }
-    };
-
-    // Set up callback for erase pen strokes from trainer
-    whiteboardService.onErasePen = (data) => {
-      // console.log('[LearnerSession] Erase pen received from trainer:', data);
-      setErasePenTrigger(prev => prev + 1); // Trigger canvas clear in Whiteboard component
-      setRedrawCanvasTrigger(prev => prev + 1); // Trigger redraw of canvas items after clear
-    };
-
-    // Set up callback for clear canvas event (also clears video, items, and buckets)
-    whiteboardService.onClearCanvas = () => {
-      // console.log('[LearnerSession] Received clear canvas event from trainer');
-      // console.log('[LearnerSession] 🗑️ CLEARING CANVAS NOW:');
-      // console.log('[LearnerSession] Current floatingAnimations count:', floatingAnimations.length);
-
-      setClearCanvasTrigger(prev => prev + 1);
-      // console.log('[LearnerSession] ✅ setClearCanvasTrigger called');
-
-      setCanvasItems([]);
-      // console.log('[LearnerSession] ✅ setCanvasItems([]) called');
-
-      setBuckets([]);
-      // console.log('[LearnerSession] ✅ setBuckets([]) called');
-
-      setFloatingAnimations([]);
-      // console.log('[LearnerSession] ✅ setFloatingAnimations([]) called - SHOULD CLEAR ALL ANIMATIONS!');
-    };
-
-    // Set up callback for bucket added/updated
-    whiteboardService.onBucketAdded = (data) => {
-      // console.log('[LearnerSession] Bucket added:', data);
-      setBuckets(prev => {
-        const exists = prev.find(bucket => bucket.id === data.id);
-        if (!exists) {
-          // NOTE: Don't denormalize here - Whiteboard component handles it
-          // This handler should not be used if Whiteboard is mounted
-          return [...prev, data];
-        }
-        return prev;
-      });
-    };
-
-    // NOTE: onBucketUpdate handler - updates bucket and moves items inside it
-    whiteboardService.onBucketUpdate = (data) => {
-      if (data.removed) {
-        setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-      } else {
-        setBuckets(prev => prev.map(bucket => {
-          if (bucket.id === data.id) {
-            // Calculate delta between old and new bucket position
-            const dx = (data.x !== undefined ? data.x : bucket.x) - bucket.x;
-            const dy = (data.y !== undefined ? data.y : bucket.y) - bucket.y;
-
-            // Move items inside this bucket by the same delta
-            setCanvasItems(prevItems => prevItems.map(item => {
-              if (item.inBucket === data.id) {
-                return {
-                  ...item,
-                  x: item.x + dx,
-                  y: item.y + dy
-                };
-              }
-              return item;
-            }));
-
-            // Update bucket position and size (width/height for resize operations)
-            return {
-              ...bucket,
-              ...(data.x !== undefined && { x: data.x }),
-              ...(data.y !== undefined && { y: data.y }),
-              ...(data.width !== undefined && { width: data.width }),
-              ...(data.height !== undefined && { height: data.height })
-            };
-          }
-          return bucket;
-        }));
-      }
-    };
-
-    // YouTube popup event listeners
-    whiteboardService.onYoutubePopupCreated = (data) => {
-      // console.log('[LearnerSession] YouTube popup received from trainer:', data);
-      const newPopup = {
-        id: data.popupId,
-        videoId: data.videoId,
-        title: data.title,
-        position: data.position,
-      };
-      setYoutubePopups(prev => [...prev, newPopup]);
-    };
-
-    whiteboardService.onYoutubePopupClosed = (data) => {
-      // console.log('[LearnerSession] YouTube popup closed from trainer:', data.popupId);
-      setYoutubePopups(prev => prev.filter(popup => popup.id !== data.popupId));
-    };
-
-    // Set up callback for background music from trainer
-    whiteboardService.onBackgroundMusic = (data) => {
-      // console.log('[LearnerSession] Background music command from trainer:', data);
-      if (data.playing) {
-        // Start playing music
-        setBackgroundMusicPlaying(true);
-        if (learnerAudioRef.current) {
-          learnerAudioRef.current.src = data.musicUrl;
-          learnerAudioRef.current.loop = true;
-          learnerAudioRef.current.volume = data.volume || 0.5; // Use trainer's volume
-          learnerAudioRef.current.play().catch(err => { /* console.log('Audio play error:', err); */ });
-        }
-      } else {
-        // Stop playing music
-        setBackgroundMusicPlaying(false);
-        if (learnerAudioRef.current) {
-          learnerAudioRef.current.pause();
-        }
-      }
-    };
-
-    // Set up callback for background music volume changes
-    whiteboardService.onBackgroundMusicVolume = (data) => {
-      // console.log('[LearnerSession] Background music volume changed:', data.volume);
-      if (learnerAudioRef.current) {
-        learnerAudioRef.current.volume = data.volume;
-      }
-    };
-
-    // Set up callback for exercise updates from trainer
-    whiteboardService.onExerciseUpdate = (data) => {
-      // console.log('[LearnerSession] 📋 Exercise update received from trainer:', data);
-
-      // Handle both new qaItems format and old question format for backward compatibility
-      if (data.qaItems && Array.isArray(data.qaItems)) {
-        // console.log('[LearnerSession] Setting exerciseData with qaItems:', data.qaItems);
-        setExerciseData({
-          qaItems: data.qaItems
-        });
-      } else if (data.question) {
-        // console.log('[LearnerSession] Setting exerciseData with question:', data.question);
-        setExerciseData({
-          question: data.question
-        });
-      }
-    };
-
-    // Set up callback for real-time answer updates from trainer's display
-    whiteboardService.onExerciseAnswerUpdate = (data) => {
-      // console.log('[LearnerSession] Exercise answer update received:', data);
-      if (data.qaItems) {
-        setExerciseData(prev => ({
-          ...prev,
-          qaItems: data.qaItems
-        }));
-      } else {
-        setExerciseData(prev => ({
-          ...prev,
-          question: data.question,
-          learnerAnswer: data.learnerAnswer
-        }));
-      }
-    };
-
-    // Set up callback for exercise closed from trainer
-    whiteboardService.onExerciseClosed = (data) => {
-      // console.log('[LearnerSession] Exercise closed by trainer:', data);
-      setExerciseData({
-        qaItems: [],
-        question: ''
-      });
-    };
-
-    return () => {
-      // Cleanup callbacks
-      if (whiteboardService) {
-        whiteboardService.onToolAccess = null;
-        whiteboardService.onPromptUpdate = null;
-        whiteboardService.onItemUpdate = null;
-        whiteboardService.onItemRemove = null;
-        whiteboardService.onErasePen = null;
-        whiteboardService.onClearCanvas = null;
-        whiteboardService.onBucketAdded = null;
-        whiteboardService.onBucketUpdate = null;
-        whiteboardService.onYoutubePopupCreated = null;
-        whiteboardService.onYoutubePopupClosed = null;
-        whiteboardService.onBackgroundMusic = null;
-        whiteboardService.onBackgroundMusicVolume = null;
-        whiteboardService.onExerciseUpdate = null;
-        whiteboardService.onExerciseAnswerUpdate = null;
-        whiteboardService.onExerciseClosed = null;
-      }
-    };
-  }, [whiteboardService, sessionInfo, floatingAnimations, canvasItems, buckets]);
+    return cleanup;
+  }, [whiteboardService, sessionInfo, floatingAnimations, buckets]);
 
   // Countdown timer with auto-end
   useEffect(() => {

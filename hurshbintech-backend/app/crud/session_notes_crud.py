@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.models.session_notes_model import SessionNotes
+from app.models.session_model import TrainingSession
 
 logger = logging.getLogger(__name__)
 
