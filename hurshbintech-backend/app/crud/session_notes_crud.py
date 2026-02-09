@@ -53,32 +53,61 @@ async def create_or_update_session_notes(
         existing_notes = result.scalar_one_or_none()
 
         if existing_notes:
-            # Update existing entry - increment version
-            existing_notes.notes = notes
-            existing_notes.version = existing_notes.version + 1
-            existing_notes.is_finalized = is_finalized
+            # Update existing entry using explicit SQL UPDATE to avoid race conditions
+            if session_id:
+                await db.execute(
+                    update(SessionNotes)
+                    .where(SessionNotes.session_id == session_id)
+                    .values(
+                        notes=notes,
+                        version=SessionNotes.version + 1,
+                        is_finalized=is_finalized
+                    )
+                )
+            else:
+                await db.execute(
+                    update(SessionNotes)
+                    .where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+                    .values(
+                        notes=notes,
+                        version=SessionNotes.version + 1,
+                        is_finalized=is_finalized
+                    )
+                )
+            
             await db.commit()
-            await db.refresh(existing_notes)
+            
+            # Fetch updated record
+            if session_id:
+                result = await db.execute(
+                    select(SessionNotes).where(SessionNotes.session_id == session_id)
+                )
+            else:
+                result = await db.execute(
+                    select(SessionNotes).where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+                )
+            updated_notes = result.scalar_one_or_none()
             
             session_type = "training" if session_id else "coach appointment"
             session_ref = session_id or coach_appointment_session_id
-            logger.info(
-                f"✅ Session notes updated for {session_type} session {session_ref} "
-                f"(v{existing_notes.version}) - Content length: {len(notes)}"
-            )
-            
-            return {
-                "id": existing_notes.id,
-                "session_id": existing_notes.session_id,
-                "coach_appointment_session_id": existing_notes.coach_appointment_session_id,
-                "trainer_id": existing_notes.trainer_id,
-                "coach_id": existing_notes.coach_id,
-                "notes": existing_notes.notes,
-                "version": existing_notes.version,
-                "is_finalized": existing_notes.is_finalized,
-                "created_at": existing_notes.created_at,
-                "updated_at": existing_notes.updated_at,
-            }
+            if updated_notes:
+                logger.info(
+                    f"✅ Session notes updated for {session_type} session {session_ref} "
+                    f"(v{updated_notes.version}) - Content length: {len(notes)}"
+                )
+                
+                return {
+                    "id": updated_notes.id,
+                    "session_id": updated_notes.session_id,
+                    "coach_appointment_session_id": updated_notes.coach_appointment_session_id,
+                    "trainer_id": updated_notes.trainer_id,
+                    "coach_id": updated_notes.coach_id,
+                    "notes": updated_notes.notes,
+                    "version": updated_notes.version,
+                    "is_finalized": updated_notes.is_finalized,
+                    "created_at": updated_notes.created_at,
+                    "updated_at": updated_notes.updated_at,
+                }
         else:
             # Create new entry
             db_notes = SessionNotes(

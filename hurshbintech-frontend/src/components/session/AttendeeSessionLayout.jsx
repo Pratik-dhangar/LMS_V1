@@ -25,6 +25,7 @@ import PropTypes from 'prop-types';
 /**
  * Attendee Session Waiting Screen
  * Displayed when instructor hasn't joined yet
+ * Shows local camera preview and media controls while waiting
  */
 export const AttendeeWaitingScreen = ({
     sessionInfo,
@@ -32,8 +33,21 @@ export const AttendeeWaitingScreen = ({
     onBackClick,
     backButtonText = 'Back to Home',
     pageClassName = '',
-    navbarClassName = ''
+    navbarClassName = '',
+    localVideoRef = null,
+    localStream = null,
+    micEnabled = true,
+    cameraEnabled = true,
+    onToggleMic = null,
+    onToggleCamera = null
 }) => {
+    React.useEffect(() => {
+        // Display local stream in video element when it becomes available
+        if (localVideoRef?.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream, localVideoRef]);
+
     return (
         <div className={`learner-session-page ${pageClassName}`}>
             <div className={`session-header ${navbarClassName}`}>
@@ -53,31 +67,147 @@ export const AttendeeWaitingScreen = ({
             </div>
 
             <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
-                <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
-                    <div className="text-6xl mb-4 animate-bounce">⏳</div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                        Waiting for Instructor
-                    </h2>
-                    <p className="text-gray-600 mb-4">
-                        Your session is ready and you're connected!
-                    </p>
-                    <p className="text-gray-600 mb-6">
-                        Please wait while <strong>{sessionInfo?.instructor_name || 'your instructor'}</strong> joins the session.
-                    </p>
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                        <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
-                        <span>Connecting...</span>
-                    </div>
-                    {sessionInfo && (
-                        <div className="mt-6 p-4 bg-[#fef3e2] rounded-lg">
-                            <p className="text-sm text-gray-700">
-                                <strong>Session Details:</strong>
-                            </p>
-                            {sessionInfo?.duration && (
-                                <p className="text-xs text-gray-600 mt-1">
-                                    ⏱️ Duration: {sessionInfo.duration} minutes
+                <div style={{ width: '100%', maxWidth: '600px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Local Video Preview - Show while waiting */}
+                    {localStream && (
+                        <div style={{
+                            position: 'relative',
+                            width: '100%',
+                            aspectRatio: '16 / 9',
+                            backgroundColor: '#000',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                        }}>
+                            <video
+                                ref={localVideoRef}
+                                autoPlay
+                                muted
+                                playsInline
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    transform: 'scaleX(-1)' // Mirror effect
+                                }}
+                            />
+                            {/* Media Status Indicators */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '12px',
+                                right: '12px',
+                                display: 'flex',
+                                gap: '8px'
+                            }}>
+                                {cameraEnabled && (
+                                    <div style={{
+                                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                        color: '#10b981',
+                                        padding: '6px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        📹 Camera On
+                                    </div>
+                                )}
+                                {micEnabled && (
+                                    <div style={{
+                                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                        color: '#10b981',
+                                        padding: '6px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        🎤 Mic On
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Waiting Message Card */}
+                    <div className="text-center p-8 bg-white rounded-2xl shadow-xl">
+                        <div className="text-6xl mb-4 animate-bounce">⏳</div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                            Waiting for Instructor
+                        </h2>
+                        <p className="text-gray-600 mb-4">
+                            Your session is ready and you're connected!
+                        </p>
+                        <p className="text-gray-600 mb-6">
+                            Please wait while <strong>{sessionInfo?.instructor_name || 'your instructor'}</strong> joins the session.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                            <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
+                            <span>Connecting...</span>
+                        </div>
+                        {sessionInfo && (
+                            <div className="mt-6 p-4 bg-[#fef3e2] rounded-lg">
+                                <p className="text-sm text-gray-700">
+                                    <strong>Session Details:</strong>
                                 </p>
-                            )}
+                                {sessionInfo?.duration && (
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        ⏱️ Duration: {sessionInfo.duration} minutes
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Media Control Buttons */}
+                    {localStream && (
+                        <div style={{
+                            display: 'flex',
+                            gap: '12px',
+                            justifyContent: 'center'
+                        }}>
+                            <button
+                                onClick={onToggleMic}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: micEnabled ? '#10b981' : '#ef4444',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s'
+                                }}
+                                title={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                            >
+                                {micEnabled ? '🎤' : '🔇'} {micEnabled ? 'Mic On' : 'Mic Off'}
+                            </button>
+                            <button
+                                onClick={onToggleCamera}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: cameraEnabled ? '#10b981' : '#ef4444',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s'
+                                }}
+                                title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
+                            >
+                                {cameraEnabled ? '📹' : '🚫'} {cameraEnabled ? 'Camera On' : 'Camera Off'}
+                            </button>
                         </div>
                     )}
                 </div>
@@ -92,7 +222,13 @@ AttendeeWaitingScreen.propTypes = {
     onBackClick: PropTypes.func.isRequired,
     backButtonText: PropTypes.string,
     pageClassName: PropTypes.string,
-    navbarClassName: PropTypes.string
+    navbarClassName: PropTypes.string,
+    localVideoRef: PropTypes.object,
+    localStream: PropTypes.object,
+    micEnabled: PropTypes.bool,
+    cameraEnabled: PropTypes.bool,
+    onToggleMic: PropTypes.func,
+    onToggleCamera: PropTypes.func
 };
 
 /**
@@ -185,7 +321,6 @@ export const RemoteVideoFeed = ({ remoteVideoRef, remoteStream, topPosition = '5
     return (
         <div style={{
             position: 'fixed',
-            top: topPosition,
             right: '2px',
             width: 'clamp(120px, 15vw, 250px)',
             height: 'clamp(90px, 12vw, 180px)',
@@ -273,6 +408,102 @@ AttendeeSessionHeader.propTypes = {
     connectionStatus: PropTypes.string,
     timeLeft: PropTypes.string,
     navbarClassName: PropTypes.string
+};
+
+/**
+ * Attendee Comments Panel
+ * Displays trainer comments and allows attendee to send comments
+ * Used by: ClientSession, GuestSession, LearnerSession
+ */
+export const AttendeeCommentsPanel = ({
+    isOpen,
+    setIsOpen,
+    trainerComments,
+    commentInput,
+    setCommentInput,
+    onSendComment,
+    onFlushComment,
+    sessionType = 'client'
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div style={{
+            position: 'fixed',
+            bottom: '100px',
+            right: '20px',
+            width: 'clamp(200px, 25vw, 350px)',
+            maxHeight: '400px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 40,
+            border: '1px solid #e5e7eb',
+            animation: 'slideUp 0.3s ease-out'
+        }}>
+            {/* Header */}
+            <div style={{
+                padding: '12px',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                backgroundColor: '#f9fafb',
+                borderRadius: '8px 8px 0 0'
+            }}>
+                <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#374151' }}>
+                    💬 Comments
+                </span>
+            </div>
+
+            {/* Comment Input */}
+            <div style={{
+                padding: '12px',
+                display: 'flex',
+                gap: '6px',
+                alignItems: 'flex-end',
+                backgroundColor: '#f9fafb',
+                borderRadius: '0 0 8px 8px'
+            }}>
+                <textarea
+                    value={commentInput}
+                    onChange={(e) => {
+                        setCommentInput(e.target.value);
+                        onSendComment(e.target.value);
+                    }}
+                    onBlur={(e) => {
+                        onFlushComment(e.target.value);
+                    }}
+                    placeholder="Type a comment..."
+                    style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        fontSize: '12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        fontFamily: 'inherit',
+                        resize: 'none',
+                        minHeight: '36px',
+                        maxHeight: '80px',
+                        overflowY: 'auto'
+                    }}
+                />
+            </div>
+        </div>
+    );
+};
+
+AttendeeCommentsPanel.propTypes = {
+    isOpen: PropTypes.bool.isRequired,
+    setIsOpen: PropTypes.func.isRequired,
+    trainerComments: PropTypes.array,
+    commentInput: PropTypes.string,
+    setCommentInput: PropTypes.func.isRequired,
+    onSendComment: PropTypes.func.isRequired,
+    onFlushComment: PropTypes.func.isRequired,
+    sessionType: PropTypes.string
 };
 
 /**
@@ -388,3 +619,101 @@ export const attendeeSessionStyles = `
     }
   }
 `;
+
+/**
+ * Instructor Comments Display Panel
+ * Displays comments received from attendees (guests, clients, learners)
+ * Used by: CoachSession, TrainerSession
+ */
+export const InstructorCommentsDisplay = ({
+    comments = [],
+    isOpen = true,
+    maxHeight = '300px'
+}) => {
+    if (!isOpen || !comments || comments.length === 0) {
+        return null;
+    }
+
+    return (
+        <div style={{
+            position: 'fixed',
+            bottom: '120px',
+            right: '20px',
+            width: 'clamp(250px, 30vw, 400px)',
+            maxHeight: maxHeight,
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+            border: '2px solid #3b82f6',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 40,
+            animation: 'slideUp 0.3s ease-out'
+        }}>
+            {/* Header */}
+            <div style={{
+                padding: '12px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                borderRadius: '6px 6px 0 0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            }}>
+                <span>💬 Attendee Comments ({comments.length})</span>
+            </div>
+
+            {/* Comments List */}
+            <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                backgroundColor: '#f0f4f8'
+            }}>
+                {comments.map((comment, idx) => (
+                    <div key={idx} style={{
+                        backgroundColor: 'white',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        borderLeft: '3px solid #3b82f6',
+                        fontSize: '13px'
+                    }}>
+                        <div style={{
+                            fontWeight: 'bold',
+                            color: '#1e40af',
+                            marginBottom: '4px',
+                            textTransform: 'capitalize'
+                        }}>
+                            {comment.sender || 'Unknown'}:
+                        </div>
+                        <div style={{
+                            color: '#374151',
+                            wordWrap: 'break-word'
+                        }}>
+                            {comment.text}
+                        </div>
+                        <div style={{
+                            fontSize: '11px',
+                            color: '#9ca3af',
+                            marginTop: '4px'
+                        }}>
+                            {new Date(comment.timestamp).toLocaleTimeString()}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+InstructorCommentsDisplay.propTypes = {
+    comments: PropTypes.array,
+    isOpen: PropTypes.bool,
+    maxHeight: PropTypes.string
+};
+

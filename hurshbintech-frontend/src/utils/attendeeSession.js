@@ -28,7 +28,7 @@ import { toast } from 'react-toastify';
 import VideoConferenceService from '../api/services/videoConferenceService';
 import WhiteboardService from '../api/services/whiteboardService';
 import WhiteboardToolsService from '../api/services/WhiteboardToolsService';
-import { playPopSound } from './sessionUtils';
+import { playPopSound } from '../components/session/InstructorSessionLayout';
 
 // ============================================================================
 // CONSTANTS
@@ -107,6 +107,24 @@ export const useAttendeeSessionState = () => {
     const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
     const [stopwatchIsRunning, setStopwatchIsRunning] = useState(false);
 
+    // Background Music (synced from instructor)
+    const [backgroundMusicPlaying, setBackgroundMusicPlaying] = useState(false);
+    const [selectedMusic, setSelectedMusic] = useState(null);
+    const [musicVolume, setMusicVolume] = useState(0.5);
+    const audioRef = useRef(null);
+
+    // Meter states (synced from instructor)
+    const [promptMeter, setPromptMeter] = useState(null);
+    const [reinforcementMeter, setReinforcementMeter] = useState(null);
+    const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown)
+
+    // Prompt text (synced from instructor)
+    const [promptText, setPromptText] = useState('[Prompts from instructor will appear here]');
+
+    // Comments (synced from instructor)
+    const [trainerComments, setTrainerComments] = useState([]);
+    const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+
     return {
         webRTC, setWebRTC,
         whiteboardService, setWhiteboardService,
@@ -145,7 +163,17 @@ export const useAttendeeSessionState = () => {
         activeTextBoxId, setActiveTextBoxId,
         toolAccess, setToolAccess,
         stopwatchElapsedTime, setStopwatchElapsedTime,
-        stopwatchIsRunning, setStopwatchIsRunning
+        stopwatchIsRunning, setStopwatchIsRunning,
+        backgroundMusicPlaying, setBackgroundMusicPlaying,
+        selectedMusic, setSelectedMusic,
+        musicVolume, setMusicVolume,
+        audioRef,
+        promptMeter, setPromptMeter,
+        reinforcementMeter, setReinforcementMeter,
+        bucketColor, setBucketColor,
+        promptText, setPromptText,
+        trainerComments, setTrainerComments,
+        isCommentsOpen, setIsCommentsOpen
     };
 };
 
@@ -171,7 +199,16 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         setStopwatchIsRunning,
         setFeedbackMessage,
         setWaitingMessage,
-        setRedrawCanvasTrigger
+        setRedrawCanvasTrigger,
+        setBackgroundMusicPlaying,
+        setSelectedMusic,
+        setMusicVolume,
+        audioRef,
+        setPromptMeter,
+        setReinforcementMeter,
+        setBucketColor,
+        setTrainerComments,
+        setIsCommentsOpen
     } = state;
 
     // Tool access from instructor
@@ -223,6 +260,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         console.log('[AttendeeSession] Floating animations received:', data);
         setFloatingAnimations(prev => [...prev, ...data.animations]);
 
+        // Auto-remove after 13 seconds
         setTimeout(() => {
             setFloatingAnimations(prevAnims =>
                 prevAnims.filter(anim => !data.animations.find(newAnim => newAnim.id === anim.id))
@@ -231,7 +269,18 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
     };
 
     wbService.onAnimationPopped = (data) => {
-        console.log('[AttendeeSession] Animation popped:', data);
+        console.log('[AttendeeSession] Animation popped by remote user:', data);
+        // Play pop sound on the receiving end
+        playPopSound(data.animationType);
+
+        // Update animation state to show it as popped
+        setFloatingAnimations(prev =>
+            prev.map(anim =>
+                anim.id === data.animationId
+                    ? { ...anim, popped: true, poppedLeft: data.poppedLeft, poppedTop: data.poppedTop }
+                    : anim
+            )
+        );
     };
 
     // Pen erase
@@ -292,6 +341,73 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
             setTimeout(() => setWaitingMessage(''), 5000);
         }
     };
+
+    // Background Music (synced from instructor)
+    wbService.onBackgroundMusic = (data) => {
+        console.log('[AttendeeSession] Background music command received:', data);
+        if (data.playing) {
+            setSelectedMusic(data.musicId);
+            setBackgroundMusicPlaying(true);
+            if (audioRef.current && data.musicUrl) {
+                audioRef.current.src = data.musicUrl;
+                audioRef.current.loop = true;
+                audioRef.current.volume = data.volume || 0.5;
+                audioRef.current.play().catch(err => {
+                    console.log('[AttendeeSession] Audio play error:', err);
+                });
+            }
+        } else {
+            setBackgroundMusicPlaying(false);
+            setSelectedMusic(null);
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+        }
+    };
+
+    // Background Music Volume Sync
+    wbService.onBackgroundMusicVolume = (data) => {
+        console.log('[AttendeeSession] Background music volume change:', data);
+        setMusicVolume(data.volume);
+        if (audioRef.current) {
+            audioRef.current.volume = data.volume;
+        }
+    };
+
+    // Prompt Meter Sync (from instructor)
+    wbService.onPromptMeterUpdate = (data) => {
+        console.log('[AttendeeSession] Prompt meter update:', data);
+        setPromptMeter(data.value !== undefined ? data.value : data);
+    };
+
+    // Reinforcement Meter Sync (from instructor)
+    wbService.onReinforcementMeterUpdate = (data) => {
+        console.log('[AttendeeSession] Reinforcement meter update:', data);
+        setReinforcementMeter(data.value !== undefined ? data.value : data);
+    };
+
+    // Bucket Color Sync (from instructor)
+    wbService.onBucketColorChange = (data) => {
+        console.log('[AttendeeSession] Bucket color update:', data);
+        setBucketColor(data.color || '#8B6F47');
+    };
+
+    // Comments from instructor
+    wbService.onCommentUpdate = (data) => {
+        console.log('[AttendeeSession] Comment received:', data);
+        const normalized = {
+            text: data.text || data.message || '',
+            type: data.type || 'instructor',
+            timestamp: data.timestamp || new Date().toISOString()
+        };
+        setTrainerComments(prev => [...prev, normalized]);
+    };
+
+    // Comments panel toggle from instructor
+    wbService.onCommentsToggle = (data) => {
+        console.log('[AttendeeSession] Comments panel toggled:', data);
+        setIsCommentsOpen(data.visible || false);
+    };
 };
 
 // ============================================================================
@@ -335,7 +451,7 @@ export const initializeAttendeeServices = async (WS_BASE_URL, sessionId, role, s
  * Setup Video Conference Service for attendee
  */
 const setupAttendeeVideoService = async (WS_BASE_URL, sessionId, role, state) => {
-    const { setLocalStream, setRemoteStream, setConnectionStatus, setInstructorJoined } = state;
+    const { setLocalStream, setRemoteStream, setConnectionStatus, setInstructorJoined, setPromptText, setPromptMeter, setReinforcementMeter } = state;
 
     const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, role);
 
@@ -372,6 +488,24 @@ const setupAttendeeVideoService = async (WS_BASE_URL, sessionId, role, state) =>
     videoService.onError = (error) => {
         console.error('[AttendeeSession] Video error:', error);
         toast.error(`Video error: ${error.message}`);
+    };
+
+    // Prompt text from instructor (for all attendee types)
+    videoService.onPromptText = (data) => {
+        console.log('[AttendeeSession] Prompt text received:', data);
+        setPromptText(data.text || data);
+    };
+
+    // Prompt meter updates from instructor
+    videoService.onPromptMeterUpdate = (value) => {
+        console.log('[AttendeeSession] Prompt meter update:', value);
+        setPromptMeter(value);
+    };
+
+    // Reinforcement meter updates from instructor
+    videoService.onReinforcementMeterUpdate = (value) => {
+        console.log('[AttendeeSession] Reinforcement meter update:', value);
+        setReinforcementMeter(value);
     };
 
     await videoService.initialize();
@@ -458,9 +592,22 @@ export const createAnimationPopHandler = (floatingAnimations, setFloatingAnimati
     return (animationId, poppedLeft, poppedTop) => {
         const animation = floatingAnimations.find(a => a.id === animationId);
         if (animation) {
+            // Play sound locally
             playPopSound(animation.type);
+
+            // Broadcast pop event to all participants with animation type
+            if (whiteboardService) {
+                whiteboardService.send('animation_popped', {
+                    animationId,
+                    animationType: animation.type,
+                    poppedLeft,
+                    poppedTop,
+                    timestamp: Date.now()
+                });
+            }
         }
 
+        // Update local state
         setFloatingAnimations(prev =>
             prev.map(anim =>
                 anim.id === animationId
@@ -468,14 +615,94 @@ export const createAnimationPopHandler = (floatingAnimations, setFloatingAnimati
                     : anim
             )
         );
+    };
+};
 
-        if (whiteboardService) {
-            whiteboardService.send('animation_popped', {
-                animationId,
-                poppedLeft,
-                poppedTop,
-                timestamp: Date.now()
+/**
+ * Create comment send handler (shared utility for all attendee types)
+ * Sends comments through whiteboardService with proper debouncing
+ */
+export const createCommentSendHandler = (whiteboardService, sessionType = 'client') => {
+    const debounceTimerRef = { current: null };
+
+    const sendComment = (message) => {
+        if (!message.trim() || !whiteboardService) return;
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
+            whiteboardService.send('comment_update', {
+                text: message.trim(),
+                type: sessionType,
+                timestamp: new Date().toISOString(),
+                sender: sessionType
+            });
+            debounceTimerRef.current = null;
+        }, 300); // 300ms debounce
+    };
+
+    const flushComment = (message) => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+        if (message.trim() && whiteboardService) {
+            whiteboardService.send('comment_update', {
+                text: message.trim(),
+                type: sessionType,
+                timestamp: new Date().toISOString(),
+                sender: sessionType
             });
         }
     };
+
+    const cleanup = () => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+    };
+
+    return { sendComment, flushComment, cleanup, debounceTimerRef };
 };
+
+/**
+ * Setup comment listeners (shared utility for all attendee types)
+ * Handles incoming comments and toggle events from instructor
+ */
+export const setupAttendeeCommentListeners = (whiteboardService, setTrainerComments, setIsCommentsOpen) => {
+    if (!whiteboardService) return;
+
+    // Listen for incoming comments from instructor/coach
+    whiteboardService.onCommentUpdate = (data) => {
+        console.log('[AttendeeSession] Comment received:', data);
+        const normalized = {
+            text: data.text || data.message || '',
+            type: data.type || data.sender || 'instructor',
+            timestamp: data.timestamp || new Date().toISOString()
+        };
+
+        // Add to comments array (support both string and array)
+        setTrainerComments(prev => {
+            const comments = Array.isArray(prev) ? prev : [];
+            return [...comments, normalized];
+        });
+    };
+
+    // Listen for comments panel toggle from instructor
+    whiteboardService.onCommentsToggle = (data) => {
+        console.log('[AttendeeSession] Comments panel toggled:', data);
+        setIsCommentsOpen(data.visible || false);
+    };
+
+    // Return cleanup function
+    return () => {
+        if (whiteboardService) {
+            whiteboardService.onCommentUpdate = null;
+            whiteboardService.onCommentsToggle = null;
+        }
+    };
+};
+

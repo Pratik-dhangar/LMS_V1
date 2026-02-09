@@ -538,8 +538,8 @@ export const initializeInstructorServices = async (sessionId, WS_BASE_URL, state
     // Initialize whiteboard first
     if (!whiteboardService) {
         try {
-            const WhiteboardService = (await import('../../api/services/whiteboardService')).default;
-            const WhiteboardToolsService = (await import('../../api/services/WhiteboardToolsService')).default;
+            const WhiteboardService = (await import('../api/services/whiteboardService')).default;
+            const WhiteboardToolsService = (await import('../api/services/WhiteboardToolsService')).default;
 
             const wbService = new WhiteboardService(WS_BASE_URL, sessionId, 'instructor');
             const toolsInstance = new WhiteboardToolsService();
@@ -573,6 +573,9 @@ export const initializeInstructorServices = async (sessionId, WS_BASE_URL, state
 export const autoSaveSessionNotes = (sessionId, notes, autoSaveTimerRef, sessionNotesService) => {
     if (!sessionId || !sessionNotesService) return;
 
+    // Ensure notes is a string (prevent circular structure errors)
+    const notesText = typeof notes === 'string' ? notes : '';
+
     // Clear existing timer
     if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
@@ -581,7 +584,7 @@ export const autoSaveSessionNotes = (sessionId, notes, autoSaveTimerRef, session
     // Set new timer for 2 seconds
     autoSaveTimerRef.current = setTimeout(async () => {
         try {
-            await sessionNotesService.saveNotes(sessionId, notes);
+            await sessionNotesService.saveNotes(sessionId, notesText);
             console.log('[Instructor] ✅ Session notes auto-saved');
         } catch (error) {
             console.error('[Instructor] ❌ Auto-save session notes failed:', error);
@@ -714,6 +717,38 @@ export const sendFloatingAnimation = (whiteboardService, animationType, activeTy
 };
 
 /**
+ * Setup listener for participant animation pop events
+ * Used by: CoachSession, TrainerSession
+ * Handles sound playback and animation state updates when participant pops an animation
+ * 
+ * @param {Object} whiteboardService - Whiteboard service instance
+ * @param {Array} floatingAnimations - Current floating animations
+ * @param {Function} setFloatingAnimations - State setter for floating animations
+ * @param {Function} playPopSound - Function to play pop sound
+ */
+export const setupParticipantAnimationPopListener = (whiteboardService, floatingAnimations, setFloatingAnimations, playPopSound) => {
+    if (!whiteboardService) return;
+
+    whiteboardService.onAnimationPopped = (data) => {
+        console.log('[InstructorSession] Animation popped by participant:', data);
+
+        // Play sound on instructor side
+        if (data.animationType) {
+            playPopSound(data.animationType);
+        }
+
+        // Update floating animations state to show as popped
+        setFloatingAnimations(prev =>
+            prev.map(anim =>
+                anim.id === data.animationId
+                    ? { ...anim, popped: true, poppedLeft: data.poppedLeft, poppedTop: data.poppedTop }
+                    : anim
+            )
+        );
+    };
+};
+
+/**
  * Music options configuration
  * Shared across Trainer and Coach sessions
  */
@@ -722,3 +757,43 @@ export const MUSIC_OPTIONS = [
     { id: 1, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
     { id: 2, name: '🎼 Music 3', url: '/music/background-music-3.mp3' }
 ];
+
+/**
+ * Setup comment listener for instructor/coach to receive comments from attendees
+ * Used by: CoachSession, TrainerSession
+ * Listens for incoming comments from clients/guests/learners
+ * 
+ * @param {Object} whiteboardService - Whiteboard service instance
+ * @param {Function} setAttendeeComments - State setter for attendee comments
+ */
+export const setupInstructorCommentListener = (whiteboardService, setAttendeeComments) => {
+    if (!whiteboardService) {
+        // Return cleanup function even when whiteboardService is not available
+        return () => { };
+    }
+
+    const commentCallback = (data) => {
+        console.log('[InstructorSession] 💬 Comment received:', { sender: data.type, text: data.text?.substring(0, 30) });
+
+        const normalized = {
+            text: data.text || data.message || '',
+            sender: data.type || data.sender || 'attendee',
+            timestamp: data.timestamp || new Date().toISOString()
+        };
+
+        // Add to comments array
+        setAttendeeComments(prev => {
+            const comments = Array.isArray(prev) ? prev : [];
+            return [...comments, normalized];
+        });
+    };
+
+    whiteboardService.onCommentUpdate = commentCallback;
+
+    // Return cleanup function
+    return () => {
+        if (whiteboardService) {
+            whiteboardService.onCommentUpdate = null;
+        }
+    };
+};

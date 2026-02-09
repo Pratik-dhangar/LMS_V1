@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaBars, FaTimes } from 'react-icons/fa';
+import { Clock } from 'lucide-react';
 import sessionService from '../../api/services/sessionService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
@@ -14,13 +15,29 @@ import YouTubePopup from '../../components/common/YouTubePopup';
 import Exercise from '../../components/session/Exercise';
 import LearnerVideoConference from '../../components/videoConference/LearnerVideoConference';
 import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
-import useComments from '../../hooks/useComments';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds';
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
 import '../../styles/components/common/sessionHeader.css';
+
+import {
+  useAttendeeSessionState,
+  formatTime,
+  initializeAttendeeServices,
+  cleanupAttendeeSession,
+  createAnimationPopHandler,
+  createCommentSendHandler,
+  setupAttendeeCommentListeners
+} from '../../utils/attendeeSession';
+import {
+  AttendeeWaitingScreen,
+  AttendeeVideoControls,
+  RemoteVideoFeed,
+  AttendeeCommentsPanel,
+  attendeeSessionStyles
+} from '../../components/session/AttendeeSessionLayout';
 
 
 const LearnerSession = () => {
@@ -31,131 +48,124 @@ const LearnerSession = () => {
   // Auto-hide navbar hook
   const { navbarClassName, pageClassName } = useAutoHideNavbar();
 
-  // WebRTC and Whiteboard
-  const [webRTC, setWebRTC] = useState(null);
-  const [whiteboardService, setWhiteboardService] = useState(null);
-
-  // Stream state (only remote - trainer's video)
-  const [remoteStream, setRemoteStream] = useState(null);
-  const remoteVideoRef = useRef(null);
+  // Use shared attendee session state
+  const sessionState = useAttendeeSessionState();
+  const {
+    webRTC,
+    setWebRTC,
+    whiteboardService,
+    setWhiteboardService,
+    toolsService,
+    setToolsService,
+    isInitializingRef,
+    remoteStream,
+    setRemoteStream,
+    remoteVideoRef,
+    sessionInfo,
+    setSessionInfo,
+    loading,
+    setLoading,
+    connectionStatus,
+    setConnectionStatus,
+    timeLeft,
+    setTimeLeft,
+    canvasItems,
+    setCanvasItems,
+    feedbackMessage,
+    setFeedbackMessage,
+    waitingMessage,
+    setWaitingMessage,
+    floatingAnimations,
+    setFloatingAnimations,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isFrozen,
+    setIsFrozen,
+    tool,
+    setTool,
+    color,
+    setColor,
+    lineWidth,
+    setLineWidth,
+    buckets,
+    setBuckets,
+    erasePenTrigger,
+    setErasePenTrigger,
+    redrawCanvasTrigger,
+    setRedrawCanvasTrigger,
+    micEnabled,
+    setCameraEnabled,
+    cameraEnabled,
+    backgroundMusicPlaying,
+    setBackgroundMusicPlaying,
+    selectedMusic,
+    setSelectedMusic,
+    musicVolume,
+    setMusicVolume,
+    audioRef,
+    promptMeter,
+    setPromptMeter,
+    reinforcementMeter,
+    setReinforcementMeter,
+    bucketColor,
+    setBucketColor,
+    trainerComments,
+    setTrainerComments,
+    isCommentsOpen,
+    setIsCommentsOpen
+  } = sessionState;
 
   // Canvas ref for denormalization
   const whiteboardCanvasRef = useRef(null);
 
-  // UI and session state
-  const [sessionInfo, setSessionInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [canvasItems, setCanvasItems] = useState([]);
-  const [_timeExpired, setTimeExpired] = useState(false);
-
-  // Prompt and message placeholders
+  // Learner-specific states (not in shared utility)
   const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
   const [promptVisible, setPromptVisible] = useState(false); // Toggle prompt line visibility (collapsed by default)
   const [isEyeBlinking, setIsEyeBlinking] = useState(false); // Eye blinking animation when new prompt received
-  const [feedbackMessage, setFeedbackMessage] = useState(''); // For feedback messages displayed on whiteboard
-  const [waitingMessage, setWaitingMessage] = useState(''); // For waiting message displayed on whiteboard
-  const [floatingAnimations, setFloatingAnimations] = useState([]); // For floating bubbles, smileys, balloons, stars
 
   // YouTube popups synced from trainer
   const [youtubePopups, setYoutubePopups] = useState([]); // Array of { id, videoId, title, position }
-
-  // Hamburger menu state for responsive sidebar
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Collapsible section states
   const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
-  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [promptLineAnimating, setPromptLineAnimating] = useState(false);
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Comments using custom hook (learner can send, but panel only shows when trainer opens)
-  // 🔸 How it works: useComments hook receives comments from trainer, learner can also send
-  // -----------------------------------------------------------  
-  const {
-    trainerComments,
-    commentInput,
-    setCommentInput,
-    sendComment,
-    addReceivedComment
-  } = useComments(whiteboardService, 'learner');
-
-  // -----------------------------------------------------------  
-  // 🔹 Purpose: Set up Whiteboard comment callback
-  // 🔸 How it works: When a comment is received via Whiteboard, add it to comments
-  // -----------------------------------------------------------  
-  useEffect(() => {
-    if (whiteboardService) {
-      whiteboardService.onCommentUpdate = (data) => {
-        // Normalize incoming comment data
-        const normalized = {
-          text: data.text || data.message || '',
-          type: data.type || 'trainer',
-          timestamp: data.timestamp || new Date().toISOString()
-        };
-        addReceivedComment(normalized);
-      };
-
-      // Handle comments tool toggle from trainer
-      whiteboardService.onCommentsToggle = (data) => {
-        console.log('[LearnerSession] Comments toggle received:', data);
-        // Open/close comments panel when trainer toggles it
-        setIsCommentsOpen(data.visible);
-      };
-    }
-    return () => {
-      if (whiteboardService) {
-        whiteboardService.onCommentUpdate = null;
-        whiteboardService.onCommentsToggle = null;
-      }
-    };
-  }, [whiteboardService, addReceivedComment, setIsCommentsOpen]);
-
-  // Debounced comment sender to avoid sending on every keystroke.
-  const commentDebounceTimer = useRef(null);
-
-  const debouncedSendComment = useCallback((message) => {
-    const DELAY = 300; // ms
-    if (commentDebounceTimer.current) {
-      clearTimeout(commentDebounceTimer.current);
-    }
-    commentDebounceTimer.current = setTimeout(() => {
-      if (whiteboardService) {
-        whiteboardService.send('comment_update', {
-          text: message,
-          type: 'learner',
-          timestamp: new Date().toISOString()
-        });
-      }
-      commentDebounceTimer.current = null;
-    }, DELAY);
-  }, [whiteboardService]);
-
-  const flushSendComment = useCallback((message) => {
-    if (commentDebounceTimer.current) {
-      clearTimeout(commentDebounceTimer.current);
-      commentDebounceTimer.current = null;
-    }
-    if (whiteboardService) {
-      whiteboardService.send('comment_update', {
-        text: message,
-        type: 'learner',
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [whiteboardService]);
+  // Comment send functions (using shared utility)
+  const [commentInput, setCommentInput] = useState('');
+  const commentHandlerRef = useRef(null);
 
   useEffect(() => {
+    // Initialize comment handler with shared utility
+    commentHandlerRef.current = createCommentSendHandler(whiteboardService, 'learner');
     return () => {
-      if (commentDebounceTimer.current) {
-        clearTimeout(commentDebounceTimer.current);
-        commentDebounceTimer.current = null;
+      if (commentHandlerRef.current) {
+        commentHandlerRef.current.cleanup();
       }
     };
-  }, []);
+  }, [whiteboardService]);
+
+  const debouncedSendComment = (message) => {
+    if (commentHandlerRef.current) {
+      commentHandlerRef.current.sendComment(message);
+    }
+  };
+
+  const flushSendComment = (message) => {
+    if (commentHandlerRef.current) {
+      commentHandlerRef.current.flushComment(message);
+    }
+  };
+
+  // Setup comment listeners (using shared utility)
+  useEffect(() => {
+    if (!whiteboardService) return;
+    const cleanup = setupAttendeeCommentListeners(whiteboardService, setTrainerComments, setIsCommentsOpen);
+    return cleanup;
+  }, [whiteboardService]);
 
   // Listen for feedback message state changes to debug
   useEffect(() => {
@@ -173,9 +183,6 @@ const LearnerSession = () => {
 
         // Auto-open Prompt Line div when new prompt is received
         setIsPromptLineOpen(true);
-
-        // Auto-open Comments/Transcript panel when new prompt is received
-        setIsCommentsOpen(true);
 
         // Trigger animation
         setPromptLineAnimating(true);
@@ -234,47 +241,19 @@ const LearnerSession = () => {
     }
   }, [remoteStream]);
 
-  // Meter states
-  const [promptMeter, setPromptMeter] = useState(null);
-  const [reinforcementMeter, setReinforcementMeter] = useState(null);
-
-  // Callbacks for meter updates
-  const [_onPromptMeterUpdate] = useState(null);
-  const [_onReinforcementMeterUpdate] = useState(null);
-
-  // Media controls state
-  const [_micEnabled] = useState(true);
-  const [_cameraEnabled] = useState(true);
-  const [_hasLocalAudio] = useState(false);
-  const [_hasLocalVideo] = useState(false);
-
-  // Tool access permissions from trainer
+  // Learner-specific: Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
     select: false,
     drag: false
   });
-  const [_selectedItemId] = useState(null); // Track learner's own selection
 
-  // -----------------------------------------------------------
-  // 🔹 Purpose: Background music player state
-  // 🔸 How it works: learner receives music commands from trainer
-  // -----------------------------------------------------------
-  const [backgroundMusicPlaying, setBackgroundMusicPlaying] = useState(false);
+  // Learner-specific: Background music player ref
   const learnerAudioRef = useRef(null); // Reference to audio element
 
-  // Canvas clear triggers (for syncing with trainer)
+  // Learner-specific: Canvas clear triggers (for syncing with trainer)
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
-  const [erasePenTrigger, setErasePenTrigger] = useState(0);
-  const [redrawCanvasTrigger, setRedrawCanvasTrigger] = useState(0);
 
-  // Buckets and whiteboard settings from trainer
-  const [buckets, setBuckets] = useState([]);
-  const [tool, setTool] = useState('pen');
-  const [color, setColor] = useState('#000000');
-  const [lineWidth, setLineWidth] = useState(2);
-  const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown - synced from trainer)
-  const [_isPaused] = useState(false);
-  const [isFrozen, setIsFrozen] = useState(false);
+  // Learner-specific states
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false);
   const [trainerJoined, setTrainerJoined] = useState(false); // Track if trainer has joined
   const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]); // Track remote user's selections
@@ -297,6 +276,7 @@ const LearnerSession = () => {
   const lastTickSecondRef = useRef(null);
   const hasPlayedCelebrationRef = useRef(false);
   const restrictionAlertShownRef = useRef(false); // Prevent duplicate toast alerts
+  const pollingIntervalRef = useRef(null); // For auto-joining when trainer starts session
 
   // -----------------------------------------------------------
   // 🔹 Purpose: Reusable AudioContext (optimized)
@@ -523,7 +503,7 @@ const LearnerSession = () => {
 
   const handleExerciseKeywordMatched = (matchData) => {
     // console.log('[LearnerSession] Keyword matched:', matchData);
-    toast.success('Keyword found! ✓');
+    // toast.success('Keyword found! ✓');
   };
 
   // Listen for stopwatch updates from trainer
@@ -667,7 +647,6 @@ const LearnerSession = () => {
 
     // Set up callback for floating animations from trainer
     whiteboardService.onFloatingAnimations = (data) => {
-      console.log('[LearnerSession] Floating animations received from trainer:', data);
       setFloatingAnimations(prev => [...prev, ...data.animations]);
 
       // Auto-remove after 13 seconds (same as trainer)
@@ -1038,7 +1017,6 @@ const LearnerSession = () => {
         // Only show alert once (prevent duplicate toasts in StrictMode)
         if (!restrictionAlertShownRef.current) {
           restrictionAlertShownRef.current = true;
-          console.warn('[LearnerSession] Session already active:', sessionCheck.message);
           toast.error(sessionCheck.message);
           navigate('/learner/dashboard');
         }
@@ -1046,16 +1024,115 @@ const LearnerSession = () => {
       }
 
       await sessionService.joinSession(sessionId);
-      // toast.success('Joined session successfully');
-
       await initializeWebRTC();
       setLoading(false);
     } catch (error) {
-      console.error('Error initializing session:', error);
-      toast.error('Waiting for trainer to start the session...');
-      navigate('/learner/dashboard');
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
+      setLoading(false);
+
+      // If session is not active, show the waiting modal without showing a toast
+      if (error.response?.status === 400 && errorMessage.includes('not active')) {
+        setShowWaitingModal(true);
+      } else {
+        // For other errors, show a toast then redirect after a delay
+        toast.error(`Error: ${errorMessage}`);
+        setTimeout(() => navigate('/learner/dashboard'), 3000);
+      }
     }
   };
+
+  // Handle retry when trainer starts session
+  const handleRetryJoin = async () => {
+    setRetrying(true);
+    try {
+      const session = await sessionService.getSessionDetails(sessionId);
+      setSessionInfo(session);
+
+      const sessionCheck = markSessionActive(sessionId, 'learner');
+      if (!sessionCheck.success) {
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          toast.error(sessionCheck.message);
+          navigate('/learner/dashboard');
+        }
+        setRetrying(false);
+        return;
+      }
+
+      await sessionService.joinSession(sessionId);
+      setShowWaitingModal(false);
+      await initializeWebRTC();
+      setLoading(false);
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
+      // Suppress 'Session is not active' toast while the waiting modal is shown
+      if (!(error.response?.status === 400 && errorMessage.includes('not active'))) {
+        toast.error(`Still waiting: ${errorMessage}`);
+      }
+      setRetrying(false);
+    }
+  };
+
+  // Auto-join when trainer starts session
+  useEffect(() => {
+    if (!showWaitingModal) {
+      // Clear polling if modal is closed
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Start polling more frequently to catch status changes
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const session = await sessionService.getSessionDetails(sessionId);
+
+        // Check if session is now active (status can be 'ACTIVE' or 'active')
+        const isActive = session.status === 'ACTIVE' || session.status === 'active';
+
+        if (isActive) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+
+          // Auto-join immediately
+          setTimeout(async () => {
+            setRetrying(true);
+            try {
+              const sessionCheck = markSessionActive(sessionId, 'learner');
+              if (!sessionCheck.success) {
+                if (!restrictionAlertShownRef.current) {
+                  restrictionAlertShownRef.current = true;
+                  toast.error(sessionCheck.message);
+                  navigate('/learner/dashboard');
+                }
+                setRetrying(false);
+                return;
+              }
+
+              await sessionService.joinSession(sessionId);
+              setShowWaitingModal(false);
+              await initializeWebRTC();
+              setLoading(false);
+            } catch (error) {
+              const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
+              setRetrying(false);
+            }
+          }, 300);
+        }
+      } catch (error) {
+        // Silently continue polling
+      }
+    }, 500); // Check every 500ms for faster detection
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [showWaitingModal, sessionId, navigate]);
 
 
   // --------------------------
@@ -1468,7 +1545,7 @@ const LearnerSession = () => {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      toast.warning('This action is blocked while window is frozen', { autoClose: 1000 });
+      // toast.warning('This action is blocked while window is frozen', { autoClose: 1000 });
       return false;
     }
   };
@@ -1484,7 +1561,7 @@ const LearnerSession = () => {
     if (isFrozen && document.hidden) {
       // Page is hidden, try to bring it back
       window.focus();
-      toast.error('You cannot switch windows while frozen!', { autoClose: 2000 });
+      // toast.error('You cannot switch windows while frozen!', { autoClose: 2000 });
     }
   };
 
@@ -1852,6 +1929,9 @@ const LearnerSession = () => {
             <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#16a34a' }}>R:</span>
             <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
           </div>
+          {/* Divider */}
+          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
           {/* Prompt Line with Bulb */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span
@@ -1988,110 +2068,171 @@ const LearnerSession = () => {
           </div>
         )}
 
-        {/* Standalone Comments Panel - Opens when trainer clicks comments tool */}
-        {isCommentsOpen && !exerciseData.question && !exerciseData.qaItems?.length && (
-          <div className="comments-panel-container" style={{
+        {/* Comments Panel */}
+        <AttendeeCommentsPanel
+          isOpen={isCommentsOpen && !exerciseData.question && !exerciseData.qaItems?.length}
+          setIsOpen={setIsCommentsOpen}
+          trainerComments={trainerComments}
+          commentInput={commentInput}
+          setCommentInput={setCommentInput}
+          onSendComment={debouncedSendComment}
+          onFlushComment={flushSendComment}
+          sessionType="learner"
+        />
+
+        {/* Waiting for Trainer Modal */}
+        {showWaitingModal && (
+          <div style={{
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            width: '350px',
-            maxHeight: '400px',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px',
-            border: '2px solid #e5e7eb',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 200,
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             display: 'flex',
-            flexDirection: 'column',
-            padding: '12px'
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
           }}>
-            {/* Header */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              marginBottom: '8px',
-              borderBottom: '1px solid #d1d5db',
-              paddingBottom: '8px'
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '480px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              textAlign: 'center',
+              animation: 'slideUp 0.3s ease-out',
             }}>
-              <h3 style={{
-                margin: 0,
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: '#1f2937'
+              <style>{`
+              @keyframes slideUp {
+                from {
+                  opacity: 0;
+                  transform: translateY(20px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+              
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+              
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
+              }
+            `}</style>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                marginBottom: '24px',
               }}>
-                💬 Comments
-              </h3>
-            </div>
-
-            {/* Comments Content Area */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              marginBottom: '8px',
-              paddingRight: '4px'
-            }}>
-              {/* Trainer Comments (Read-only for learner) */}
-              {trainerComments && (
                 <div style={{
-                  marginBottom: '12px',
-                  paddingBottom: '8px',
-                  borderBottom: '1px solid #e5e7eb'
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fef3c7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'pulse 1.5s ease-in-out infinite',
                 }}>
-                  <p style={{
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    color: '#d97706',
-                    margin: '0 0 4px 0'
-                  }}>
-                    👨‍🏫 Trainer:
-                  </p>
-                  <p style={{
-                    fontSize: '13px',
-                    color: '#374151',
-                    margin: '0',
-                    padding: '6px',
-                    backgroundColor: '#fef3c7',
-                    borderRadius: '4px',
-                    wordWrap: 'break-word'
-                  }}>
-                    {trainerComments}
-                  </p>
+                  <Clock size={48} color="#f59e0b" style={{ animation: 'spin 2s linear infinite' }} />
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Learner Comment Input - Auto-sends on debounce */}
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              alignItems: 'flex-end'
-            }}>
-              <textarea
-                value={commentInput}
-                onChange={(e) => {
-                  setCommentInput(e.target.value);
-                  // Auto-send comment when learner stops typing (debounced)
-                  debouncedSendComment(e.target.value);
-                }}
-                onBlur={(e) => {
-                  // Flush any pending comment sends on blur
-                  flushSendComment(e.target.value);
-                }}
-                placeholder="Type a comment..."
-                style={{
-                  flex: 1,
-                  padding: '6px 8px',
-                  fontSize: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontFamily: 'inherit',
-                  resize: 'none',
-                  minHeight: '36px',
-                  maxHeight: '60px',
-                  overflowY: 'auto'
-                }}
-              />
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '600',
+                color: '#1f2937',
+                margin: '0 0 12px 0',
+              }}>
+                Waiting for Trainer
+              </h2>
+
+              <p style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                margin: '0 0 24px 0',
+                lineHeight: '1.6',
+              }}>
+                The trainer is starting the session. You'll be automatically added once they begin! ✨
+              </p>
+
+              <div style={{
+                backgroundColor: '#dbeafe',
+                border: '1px solid #93c5fd',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '24px',
+                fontSize: '13px',
+                color: '#1e40af',
+              }}>
+                🔄 Auto-joining in progress... or click "Retry Now" to join immediately
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'center',
+              }}>
+                <button
+                  onClick={handleRetryJoin}
+                  disabled={retrying}
+                  style={{
+                    flex: 1,
+                    padding: '12px 24px',
+                    backgroundColor: retrying ? '#d1d5db' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: retrying ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!retrying) e.target.style.backgroundColor = '#059669';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!retrying) e.target.style.backgroundColor = '#10b981';
+                  }}
+                >
+                  {retrying ? 'Checking...' : '🔄 Retry Now'}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowWaitingModal(false);
+                    navigate('/learner/dashboard');
+                  }}
+                  disabled={retrying}
+                  style={{
+                    flex: 1,
+                    padding: '12px 24px',
+                    backgroundColor: retrying ? '#d1d5db' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: retrying ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!retrying) e.target.style.backgroundColor = '#2563eb';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!retrying) e.target.style.backgroundColor = '#3b82f6';
+                  }}
+                >
+                  Back to Dashboard
+                </button>
+              </div>
             </div>
           </div>
         )}

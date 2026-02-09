@@ -241,6 +241,17 @@ const subscriptionService = {
   },
 
   /**
+   * Delete a subscription (permanently remove from database)
+   * @param {number} subscriptionId
+   * @returns {Promise}
+   */
+  deleteSubscription: async (subscriptionId) => {
+    console.log('Deleting subscription:', { subscriptionId });
+    const response = await axiosInstance.delete(`/head/subscriptions/${subscriptionId}`);
+    return response.data;
+  },
+
+  /**
    * Process refund for a subscription
    * @param {number} subscriptionId
    * @param {string} refundType - 'FULL' or 'PRORATED'

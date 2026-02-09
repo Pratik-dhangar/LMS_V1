@@ -6,7 +6,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
+import { markSessionActive } from '../../utils/sessionActivityTracker';
 import Whiteboard from '../../components/common/Whiteboard';
+import Exercise from '../../components/session/Exercise';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import useMessages from '../../hooks/useMessages';
@@ -19,8 +21,16 @@ import {
   initializeAttendeeServices,
   cleanupAttendeeSession,
   createAnimationPopHandler,
-  sendLeaveNotification
+  createCommentSendHandler,
+  setupAttendeeCommentListeners
 } from '../../utils/attendeeSession';
+import {
+  AttendeeWaitingScreen,
+  AttendeeVideoControls,
+  RemoteVideoFeed,
+  AttendeeCommentsPanel,
+  attendeeSessionStyles
+} from '../../components/session/AttendeeSessionLayout';
 
 
 const ClientSession = () => {
@@ -104,8 +114,60 @@ const ClientSession = () => {
     stopwatchElapsedTime,
     setStopwatchElapsedTime,
     stopwatchIsRunning,
-    setStopwatchIsRunning
+    setStopwatchIsRunning,
+    promptMeter,
+    setPromptMeter,
+    reinforcementMeter,
+    setReinforcementMeter,
+    bucketColor,
+    setBucketColor,
+    promptText,
+    setPromptText,
+    trainerComments,
+    setTrainerComments,
+    isCommentsOpen,
+    setIsCommentsOpen
   } = sessionState;
+
+  // Prompt line UI states
+  const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
+  const [promptLineAnimating, setPromptLineAnimating] = useState(false);
+
+  // Update prompt text handler
+  useEffect(() => {
+    if (!promptText || promptText === '[Prompts from instructor will appear here]') return;
+
+    // Auto-open Prompt Line when new prompt is received
+    setIsPromptLineOpen(true);
+
+    // Trigger animation
+    setPromptLineAnimating(true);
+    setTimeout(() => {
+      setPromptLineAnimating(false);
+    }, 2000);
+  }, [promptText]);
+
+  // Bulb glow animation state
+  const [isBulbGlowing, setIsBulbGlowing] = useState(false);
+  const bulbGlowTimerRef = useRef(null);
+
+  // Trigger bulb glow when bucket color changes
+  useEffect(() => {
+    if (bucketColor) {
+      setIsBulbGlowing(true);
+      if (bulbGlowTimerRef.current) {
+        clearTimeout(bulbGlowTimerRef.current);
+      }
+      bulbGlowTimerRef.current = setTimeout(() => {
+        setIsBulbGlowing(false);
+      }, 2000);
+    }
+    return () => {
+      if (bulbGlowTimerRef.current) {
+        clearTimeout(bulbGlowTimerRef.current);
+      }
+    };
+  }, [bucketColor]);
 
   // Messages
   const {
@@ -116,7 +178,103 @@ const ClientSession = () => {
     handleKeyPress,
     addReceivedMessage
   } = useMessages(webRTC, 'client');
+
+  // Comment send functions (using shared utility)
+  const [commentInput, setCommentInput] = useState('');
+  const commentHandlerRef = useRef(null);
+
+  useEffect(() => {
+    // Initialize comment handler with shared utility
+    commentHandlerRef.current = createCommentSendHandler(whiteboardService, 'client');
+    return () => {
+      if (commentHandlerRef.current) {
+        commentHandlerRef.current.cleanup();
+      }
+    };
+  }, [whiteboardService]);
+
+  const debouncedSendComment = (message) => {
+    if (commentHandlerRef.current) {
+      commentHandlerRef.current.sendComment(message);
+    }
+  };
+
+  const flushSendComment = (message) => {
+    if (commentHandlerRef.current) {
+      commentHandlerRef.current.flushComment(message);
+    }
+  };
+
+  // Setup comment listeners (using shared utility)
+  useEffect(() => {
+    if (!whiteboardService) return;
+    const cleanup = setupAttendeeCommentListeners(whiteboardService, setTrainerComments, setIsCommentsOpen);
+    return cleanup;
+  }, [whiteboardService]);
+
+  // Exercise state
+  const [showExercise, setShowExercise] = useState(false);
+  const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
+
+  // Exercise handlers
+  const handleExerciseUpdate = (response) => {
+    console.log('[ClientSession] Exercise update received:', response);
+    setExerciseData({
+      question: response.question || '',
+      answer: response.answer || ''
+    });
+    if (response.question) {
+      setShowExercise(true);
+      console.log('[ClientSession] Exercise opened');
+    }
+  };
+
+  const handleExerciseSubmit = (response) => {
+    console.log('[ClientSession] Exercise response submitted:', response);
+    // Send answer back to coach
+    if (response.status === 'submitted' && whiteboardService) {
+      whiteboardService.send('exercise_answer_update', {
+        question: response.question,
+        answer: response.answer,
+        timestamp: Date.now()
+      });
+      console.log('[ClientSession] Exercise answer sent to coach');
+    }
+  };
+
+  const handleExerciseDelete = () => {
+    console.log('[ClientSession] Exercise closed');
+    setShowExercise(false);
+    setExerciseData({ question: '', answer: '' });
+  };
+
+  // Setup exercise listeners
+  useEffect(() => {
+    if (!whiteboardService) return;
+
+    whiteboardService.onExerciseUpdate = (data) => {
+      console.log('[ClientSession] onExerciseUpdate fired with:', data);
+      handleExerciseUpdate(data);
+    };
+
+    whiteboardService.onExerciseClosed = (data) => {
+      console.log('[ClientSession] onExerciseClosed fired');
+      handleExerciseDelete();
+    };
+
+    return () => {
+      if (whiteboardService) {
+        whiteboardService.onExerciseUpdate = null;
+        whiteboardService.onExerciseClosed = null;
+      }
+    };
+  }, [whiteboardService]);
+
   const initAttemptedRef = useRef(false);
+  const pollingIntervalRef = useRef(null);
+  const restrictionAlertShownRef = useRef(false);
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (webRTC) {
@@ -251,7 +409,19 @@ const ClientSession = () => {
       setSessionInfo(session);
 
       // Call the shared utility with ClientSession-specific state
-      await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
+      try {
+        await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
+      } catch (err) {
+        const errMsg = err.response?.data?.detail || err.message || '';
+        const lower = errMsg.toLowerCase();
+        // If session is not active yet or not created, show waiting modal and start polling
+        if ((err.response?.status === 400 || err.response?.status === 404) && (lower.includes('not active') || lower.includes('not been created') || lower.includes('not been created yet') || lower.includes('not created') || lower.includes('has not been created'))) {
+          setShowWaitingModal(true);
+          setLoading(false);
+          return;
+        }
+        throw err;
+      }
 
       // Custom keyboard handler for ClientSession
       if (whiteboardService) {
@@ -267,10 +437,101 @@ const ClientSession = () => {
     } catch (error) {
       console.error('[ClientSession] Error initializing session:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to initialize session';
+      // If session is not active or not created yet, show waiting modal instead of redirect/error
+      const lower = errorMsg.toLowerCase();
+      const isWaiting = ((error.response?.status === 400 || error.response?.status === 404) && (lower.includes('not active') || lower.includes('not been created') || lower.includes('not been created yet') || lower.includes('not created') || lower.includes('has not been created')));
+      if (isWaiting) {
+        setShowWaitingModal(true);
+        setLoading(false);
+        return;
+      }
+
       toast.error(errorMsg);
       navigate('/my-appointments');
     }
   };
+
+  // Handle retry when coach/trainer starts session
+  const handleRetryJoin = async () => {
+    setRetrying(true);
+    try {
+      const session = await coachSessionService.getSessionDetails(sessionId);
+      setSessionInfo(session);
+
+      const sessionCheck = markSessionActive(sessionId, 'client');
+      if (!sessionCheck.success) {
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          toast.error(sessionCheck.message);
+          navigate('/my-appointments');
+        }
+        setRetrying(false);
+        return;
+      }
+
+      await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
+      setShowWaitingModal(false);
+      setLoading(false);
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
+      if (!(error.response?.status === 400 && errorMessage.includes('not active'))) {
+        toast.error(`Still waiting: ${errorMessage}`);
+      }
+      setRetrying(false);
+    }
+  };
+
+  // Auto-join when coach/trainer starts session
+  useEffect(() => {
+    if (!showWaitingModal) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const session = await coachSessionService.getSessionDetails(sessionId);
+        const isActive = session.status === 'ACTIVE' || session.status === 'active';
+        if (isActive) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+
+          setTimeout(async () => {
+            setRetrying(true);
+            try {
+              const sessionCheck = markSessionActive(sessionId, 'client');
+              if (!sessionCheck.success) {
+                if (!restrictionAlertShownRef.current) {
+                  restrictionAlertShownRef.current = true;
+                  toast.error(sessionCheck.message);
+                  navigate('/my-appointments');
+                }
+                setRetrying(false);
+                return;
+              }
+
+              await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
+              setShowWaitingModal(false);
+              setLoading(false);
+            } catch (error) {
+              setRetrying(false);
+            }
+          }, 300);
+        }
+      } catch (error) {
+      }
+    }, 10000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [showWaitingModal, sessionId, navigate]);
 
   const handleToggleMic = () => {
     if (webRTC) {
@@ -304,61 +565,22 @@ const ClientSession = () => {
 
   // Show waiting overlay if coach hasn't joined yet and session is not yet started
   // Only show waiting screen if session status is 'scheduled', not 'in_progress'
-  if (!loading && !instructorJoined && sessionInfo?.status === 'scheduled') {
+  if (!loading && !instructorJoined && (sessionInfo?.status === 'scheduled' || showWaitingModal)) {
     return (
-      <div className={`learner-session-page ${pageClassName}`}>
-        {/* Navigation / Header - Auto-hide on mobile after 5 seconds */}
-        <div className={`session-header ${navbarClassName}`}>
-          <div className="session-header-main">
-            <div>
-              <div className="session-header-title">HurshBin Client</div>
-              <div className="session-header-subtitle">
-                {sessionInfo?.title ?? 'Coach Session'} — Coach: {sessionInfo?.coach_name ?? 'Coach'}
-              </div>
-            </div>
-            <div className="session-header-controls">
-              <button
-                className="btn-session btn-session-end"
-                onClick={() => navigate('/my-appointments')}
-              >
-                🏠 Back to Appointments
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Waiting Overlay */}
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
-          <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
-            <div className="text-6xl mb-4 animate-bounce">⏳</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">
-              Waiting for Coach
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Your session is ready and you're connected!
-            </p>
-            <p className="text-gray-600 mb-6">
-              Please wait while <strong>{sessionInfo?.coach_name ?? 'your coach'}</strong> joins the session.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
-              <span>Connecting...</span>
-            </div>
-            {sessionInfo && (
-              <div className="mt-6 p-4 bg-[#fef3e2] rounded-lg">
-                <p className="text-sm text-gray-700">
-                  <strong>Session Details:</strong>
-                </p>
-                {sessionInfo?.duration && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    ⏱️ Duration: {sessionInfo.duration} minutes
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <AttendeeWaitingScreen
+        sessionInfo={sessionInfo}
+        attendeeName={sessionInfo?.client_name || 'Client'}
+        onBackClick={() => navigate('/my-appointments')}
+        backButtonText="Back to Appointments"
+        pageClassName={pageClassName}
+        navbarClassName={navbarClassName}
+        localVideoRef={remoteVideoRef}
+        localStream={localStream}
+        micEnabled={micEnabled}
+        cameraEnabled={cameraEnabled}
+        onToggleMic={handleToggleMic}
+        onToggleCamera={handleToggleCamera}
+      />
     );
   }
 
@@ -374,124 +596,7 @@ const ClientSession = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-
-        /* Learner Session Full-Width Layout */
-        .learner-session-page {
-          width: 100% !important;
-          height: 100vh !important;
-          display: flex !important;
-          flex-direction: column !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          box-sizing: border-box !important;
-          position: relative !important;
-          overflow: hidden !important;
-        }
-
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          height: 100% !important;
-          width: 100% !important;
-          overflow-x: hidden !important;
-        }
-
-        /* Session Header - Fixed at top */
-        .session-header {
-          flex-shrink: 0;
-          width: 100% !important;
-          box-sizing: border-box !important;
-        }
-
-        /* Main Container - Takes remaining height */
-        .learner-main-container {
-          display: flex !important;
-          flex-direction: column !important;
-          flex: 1 !important;
-          width: 100% !important;
-          height: 100% !important;
-          box-sizing: border-box !important;
-          margin: 0 !important;
-          padding: 0 0 100px 0 !important;
-          min-height: 0 !important;
-          overflow: hidden !important;
-        }
-
-        /* Whiteboard Wrapper - Takes all remaining space */
-        .learner-whiteboard-wrapper {
-          flex: 1 !important;
-          width: 100% !important;
-          height: 100% !important;
-          box-sizing: border-box !important;
-          display: flex !important;
-          flex-direction: column !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          min-height: 0 !important;
-          overflow: hidden !important;
-        }
-
-        .session-whiteboard-container {
-          width: 100% !important;
-          height: 100% !important;
-          display: flex !important;
-          flex-direction: column !important;
-          flex: 1 !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden !important;
-          box-sizing: border-box !important;
-        }
-
-        /* Ensure inner divs fill the space */
-        .learner-whiteboard-wrapper > div {
-          width: 100% !important;
-          height: 100% !important;
-          display: flex !important;
-          flex-direction: column !important;
-          flex: 1 !important;
-          overflow: hidden !important;
-          box-sizing: border-box !important;
-        }
-
-        .learner-whiteboard-wrapper .w-full {
-          width: 100% !important;
-          height: 100% !important;
-          overflow: hidden !important;
-          box-sizing: border-box !important;
-        }
-
-        .learner-whiteboard-wrapper canvas {
-          width: 100% !important;
-          height: 100% !important;
-          display: block !important;
-        }
-
-        /* Hide sidebar toggles in full-width learner mode */
-        .session-sidebar-toggles {
-          display: none !important;
-        }
-
-        /* Mobile: Use dynamic viewport height (100dvh for modern browsers, 100vh fallback) */
-        @media (max-width: 768px) {
-          .learner-session-page {
-            height: 100vh !important;
-          }
-        }
-
-        /* Desktop: Use regular viewport height */
-        @media (min-width: 769px) {
-          .learner-session-page {
-            height: 100vh !important;
-            min-height: 100vh !important;
-          }
-        }
-      `}</style>
+      <style>{attendeeSessionStyles}</style>
       {/* Navigation / Header */}
       <div className={`session-header ${navbarClassName}`}>
         <div className="session-header-main">
@@ -513,57 +618,106 @@ const ClientSession = () => {
         </div>
       </div>
 
+      {/* Metrics Header - Full width (P:, R:, Bucket Color) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '8px 8px',
+        backgroundColor: 'white',
+        borderRadius: '4px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        flexWrap: 'wrap',
+        margin: '0',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        {/* Divider */}
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+        {/* Prompt Level */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#d97706' }}>P:</span>
+          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+        {/* Reinforcement Level */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#16a34a' }}>R:</span>
+          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+        {/* Bucket Color - Bulb with Glow */}
+        <span
+          style={{
+            fontSize: '24px',
+            cursor: 'pointer',
+            filter: isBulbGlowing ? `drop-shadow(0 0 12px ${bucketColor}) drop-shadow(0 0 20px ${bucketColor}80)` : bucketColor !== '#8B6F47' ? `drop-shadow(0 0 8px ${bucketColor})` : 'none',
+            animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
+            transition: 'filter 0.3s ease, transform 0.2s ease',
+            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          💡
+        </span>
+
+        {/* Divider */}
+        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+
+        {/* Prompt Line with Bulb */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
+            style={{
+              fontSize: '24px',
+              cursor: 'pointer',
+              filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== '[Prompts from instructor will appear here]' ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
+              animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
+              transition: 'filter 0.3s ease, transform 0.2s ease',
+              transform: isPromptLineOpen ? 'scale(1.1)' : 'scale(1)',
+              userSelect: 'none'
+            }}
+          >
+            💡
+          </span>
+          {isPromptLineOpen && (
+            <div style={{
+              backgroundColor: '#f9fafb',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              border: promptText !== '[Prompts from instructor will appear here]' ? '2px solid #fbbf24' : '1px solid #e5e7eb',
+              maxWidth: '300px',
+              transition: 'border 0.3s ease'
+            }}>
+              <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {promptText !== '[Prompts from instructor will appear here]' ? promptText : 'Waiting for prompt...'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Main Container - Flexbox column layout */}
       <div className="learner-main-container">
         {/* Whiteboard - Fills remaining space */}
         <div className="learner-whiteboard-wrapper">
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <div className="session-whiteboard-container">
-              {/* Fixed Video Feed Overlay - Coach's Video (Top Right Corner) */}
-              {remoteStream && (
-                <div style={{
-                  position: 'fixed',
-                  top: '55px',
-                  right: '2px',
-                  width: 'clamp(120px, 15vw, 250px)',
-                  height: 'clamp(90px, 12vw, 180px)',
-                  backgroundColor: '#000',
-                  borderRadius: '8px',
-                  border: '2px solid #374151',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                  zIndex: 100,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  {/* Video Stream */}
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    style={{
-                      flex: 1,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      backgroundColor: '#1a1a1a'
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}>
-                    Coach
-                  </div>
-                </div>
-              )}
+              {/* Remote Video Feed - Coach */}
+              <RemoteVideoFeed
+                remoteVideoRef={remoteVideoRef}
+                remoteStream={remoteStream}
+                topPosition="55px"
+                label="Coach"
+              />
 
               {/* Whiteboard component */}
               <div className="w-full h-full">
@@ -607,65 +761,43 @@ const ClientSession = () => {
             </div>
           </div>
         </div>
+
+        {/* Exercise Tool */}
+        {showExercise && (
+          <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+            <Exercise
+              isTrainer={false}
+              onExerciseSubmit={handleExerciseSubmit}
+              onExerciseUpdate={() => { }}
+              onExerciseDelete={handleExerciseDelete}
+              onAnswerChange={() => { }}
+              whiteboardService={whiteboardService}
+              initialExercise={exerciseData.question ? exerciseData : null}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Video Controls - Bottom Center - Outside main container */}
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        gap: '12px',
-        zIndex: 50,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
-        <button
-          onClick={handleToggleMic}
-          className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            gap: '6px',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-          title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
-        >
-          <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
-        </button>
-        <button
-          onClick={handleToggleCamera}
-          className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            gap: '6px',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-          title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
-        >
-          <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
-        </button>
-        <button
-          onClick={handleLeaveSession}
-          className="bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            gap: '6px',
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          🚪 Leave Session
-        </button>
-      </div>
+      {/* Comments Panel */}
+      <AttendeeCommentsPanel
+        isOpen={isCommentsOpen}
+        setIsOpen={setIsCommentsOpen}
+        trainerComments={trainerComments}
+        commentInput={commentInput}
+        setCommentInput={setCommentInput}
+        onSendComment={debouncedSendComment}
+        onFlushComment={flushSendComment}
+        sessionType="client"
+      />
+
+      {/* Video Controls */}
+      <AttendeeVideoControls
+        micEnabled={micEnabled}
+        cameraEnabled={cameraEnabled}
+        onToggleMic={handleToggleMic}
+        onToggleCamera={handleToggleCamera}
+        onLeaveSession={handleLeaveSession}
+      />
     </div>
   );
 };
