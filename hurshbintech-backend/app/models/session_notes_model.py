@@ -5,7 +5,7 @@ Independent from SessionReport - can be created/updated anytime
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -19,6 +19,9 @@ class SessionNotes(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Support both training sessions and coach appointment sessions
+    # Each trainer can have ONE note per training session
+    # Each coach can have ONE note per coach appointment session
+    # This allows trainer and coach to have independent notes for the same session
     session_id = Column(
         Integer, ForeignKey("training_sessions.id", ondelete="CASCADE"), nullable=True, index=True
     )

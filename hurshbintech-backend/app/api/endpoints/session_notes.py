@@ -141,13 +141,18 @@ async def get_notes(
         if coach_session.coach_id != current_coach.id:
             raise HTTPException(status_code=403, detail="Not authorized to view notes for this session")
 
-    # Get notes
+    # Get notes for current user only
     training_session_id = session.id if session else None
     coach_appointment_session_id = coach_session.id if coach_session else None
+    notes_trainer_id = current_trainer.user_id if current_trainer else None
+    notes_coach_id = current_coach.id if current_coach else None
+    
     notes = await session_notes_crud.get_session_notes(
         db,
         session_id=training_session_id,
-        coach_appointment_session_id=coach_appointment_session_id
+        coach_appointment_session_id=coach_appointment_session_id,
+        trainer_id=notes_trainer_id,
+        coach_id=notes_coach_id
     )
     
     return notes

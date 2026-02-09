@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
 import GoogleOAuthProvider from './components/GoogleOAuthProvider';
+import { registerSW } from 'virtual:pwa-register';
 
 // Pages
 import Home from './pages/Home';
@@ -815,13 +816,13 @@ function AppRoutes() {
           } />
 
           {/* Communication Routes */}
-          <Route 
-            path="/communication/webinar" 
+          <Route
+            path="/communication/webinar"
             element={
               <ProtectedRoute allowedRoles={['admin', 'head', 'coach', 'trainer', 'learner']}>
                 <WebinarPage />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Chat Routes */}
@@ -851,6 +852,16 @@ function AppRoutes() {
 }
 
 function App() {
+  // Register PWA Service Worker
+  useEffect(() => {
+    if (import.meta.env.VITE_ENABLE_PWA === 'true') {
+      registerSW({
+        onNeedRefresh() { },
+        onOfflineReady() { },
+      });
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
