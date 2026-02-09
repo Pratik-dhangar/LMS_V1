@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
+import PWAInstallButton from '../components/common/PWAInstallButton';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
@@ -35,7 +36,7 @@ const Home = () => {
       console.log('About Us data:', data);
       console.log('Featured coach ID:', data?.featured_coach_id);
       setAboutUs(data);
-      
+
       // Fetch featured coach if featured_coach_id exists
       if (data && data.featured_coach_id) {
         try {
@@ -177,65 +178,65 @@ const Home = () => {
     };
 
     const allSections = [
-      { 
-        id: 'intro', 
-        title: aboutUs.intro_title || 'Who We Are', 
-        content: hasContent(aboutUs.intro_content) ? aboutUs.intro_content : 'Learn about our organization and mission.', 
-        icon: '👋' 
+      {
+        id: 'intro',
+        title: aboutUs.intro_title || 'Who We Are',
+        content: hasContent(aboutUs.intro_content) ? aboutUs.intro_content : 'Learn about our organization and mission.',
+        icon: '👋'
       },
-      { 
-        id: 'mission', 
-        title: aboutUs.mission_title || 'Our Mission', 
-        content: hasContent(aboutUs.mission_content) ? aboutUs.mission_content : 'Our mission is to provide quality services.', 
-        icon: '🎯' 
+      {
+        id: 'mission',
+        title: aboutUs.mission_title || 'Our Mission',
+        content: hasContent(aboutUs.mission_content) ? aboutUs.mission_content : 'Our mission is to provide quality services.',
+        icon: '🎯'
       },
-      { 
-        id: 'vision', 
-        title: aboutUs.vision_title || 'Our Vision', 
-        content: hasContent(aboutUs.vision_content) ? aboutUs.vision_content : 'Our vision for the future.', 
-        icon: '🔭' 
+      {
+        id: 'vision',
+        title: aboutUs.vision_title || 'Our Vision',
+        content: hasContent(aboutUs.vision_content) ? aboutUs.vision_content : 'Our vision for the future.',
+        icon: '🔭'
       },
-      { 
-        id: 'programs', 
-        title: aboutUs.programs_title || 'What We Teach', 
-        content: hasContent(aboutUs.programs_content) ? aboutUs.programs_content : 'Discover our educational programs.', 
-        icon: '📚' 
+      {
+        id: 'programs',
+        title: aboutUs.programs_title || 'What We Teach',
+        content: hasContent(aboutUs.programs_content) ? aboutUs.programs_content : 'Discover our educational programs.',
+        icon: '📚'
       },
-      { 
-        id: 'methodology', 
-        title: aboutUs.methodology_title || 'How We Teach', 
-        content: hasContent(aboutUs.methodology_content) ? aboutUs.methodology_content : 'Our teaching methodology.', 
-        icon: '🎓' 
+      {
+        id: 'methodology',
+        title: aboutUs.methodology_title || 'How We Teach',
+        content: hasContent(aboutUs.methodology_content) ? aboutUs.methodology_content : 'Our teaching methodology.',
+        icon: '🎓'
       },
-      { 
-        id: 'why_us', 
-        title: aboutUs.why_us_title || 'Why Choose Us', 
-        content: hasContent(aboutUs.why_us_content) ? aboutUs.why_us_content : 'What makes us unique.', 
-        icon: '⭐' 
+      {
+        id: 'why_us',
+        title: aboutUs.why_us_title || 'Why Choose Us',
+        content: hasContent(aboutUs.why_us_content) ? aboutUs.why_us_content : 'What makes us unique.',
+        icon: '⭐'
       },
-      { 
-        id: 'team', 
-        title: aboutUs.team_title || 'Our Educators', 
-        content: hasContent(aboutUs.team_content) ? aboutUs.team_content : 'Meet our team of professionals.', 
-        icon: '👥' 
+      {
+        id: 'team',
+        title: aboutUs.team_title || 'Our Educators',
+        content: hasContent(aboutUs.team_content) ? aboutUs.team_content : 'Meet our team of professionals.',
+        icon: '👥'
       },
-      { 
-        id: 'learner_focus', 
-        title: aboutUs.learner_focus_title || 'Learner & Parent Focus', 
-        content: hasContent(aboutUs.learner_focus_content) ? aboutUs.learner_focus_content : 'Our commitment to learners and parents.', 
-        icon: '🎪' 
+      {
+        id: 'learner_focus',
+        title: aboutUs.learner_focus_title || 'Learner & Parent Focus',
+        content: hasContent(aboutUs.learner_focus_content) ? aboutUs.learner_focus_content : 'Our commitment to learners and parents.',
+        icon: '🎪'
       },
-      { 
-        id: 'values', 
-        title: aboutUs.values_title || 'Our Values', 
-        content: hasContent(aboutUs.values_content) ? aboutUs.values_content : 'Our core values.', 
-        icon: '💎' 
+      {
+        id: 'values',
+        title: aboutUs.values_title || 'Our Values',
+        content: hasContent(aboutUs.values_content) ? aboutUs.values_content : 'Our core values.',
+        icon: '💎'
       },
-      { 
-        id: 'commitment', 
-        title: aboutUs.commitment_title || 'Our Commitment', 
-        content: hasContent(aboutUs.commitment_content) ? aboutUs.commitment_content : 'Our commitment to excellence.', 
-        icon: '🤝' 
+      {
+        id: 'commitment',
+        title: aboutUs.commitment_title || 'Our Commitment',
+        content: hasContent(aboutUs.commitment_content) ? aboutUs.commitment_content : 'Our commitment to excellence.',
+        icon: '🤝'
       },
     ];
 
@@ -290,6 +291,8 @@ const Home = () => {
           <button onClick={() => scrollToSection('about-section')} className="hero-nav-link">
             About Us
           </button>
+          <span className="hero-nav-divider">|</span>
+          <PWAInstallButton />
         </div>
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
@@ -352,8 +355,8 @@ const Home = () => {
                       }}
                     />
                   ) : null}
-                  <div 
-                    className="custom-coach-image-placeholder" 
+                  <div
+                    className="custom-coach-image-placeholder"
                     style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
                   >
                     {featuredCoach.name?.charAt(0).toUpperCase()}
@@ -367,14 +370,14 @@ const Home = () => {
                   </h2>
                   <div className={`custom-coach-bio-wrapper ${showFullBio ? 'expanded' : ''}`}>
                     <p className="custom-coach-bio">
-                      Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
-                      She has several degrees and honours to her credit in the field of child development, 
-                      education, psychology, and behaviour modification. She has been working in the field of 
-                      training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
-                      who have delays and difficulties in various areas of development, from physical, language, 
+                      Binal Shah is a child development and behaviour modification consultant based in Mumbai.
+                      She has several degrees and honours to her credit in the field of child development,
+                      education, psychology, and behaviour modification. She has been working in the field of
+                      training and rehabilitation for 18 years. Binal Shah has vast experience training kids
+                      who have delays and difficulties in various areas of development, from physical, language,
                       communication, emotional to behaviour and learning.
                     </p>
-                    <button 
+                    <button
                       className="custom-coach-read-more"
                       onClick={() => setShowFullBio(!showFullBio)}
                     >
@@ -398,7 +401,7 @@ const Home = () => {
             </section>
           )}
 
-   {/* Introduction Section */}
+          {/* Introduction Section */}
           {aboutUs.intro_content && (
             <section className="about-section" aria-labelledby="intro-heading">
               <div className="about-container">

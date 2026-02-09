@@ -172,6 +172,166 @@ const AssignedPrograms = () => {
 
   return (
     <div className="page-container">
+      <style>{`
+        /* Mobile Responsive Styles for Assigned Programs */
+        
+        /* Mobile Portrait */
+        @media (max-width: 768px) {
+          .page-container {
+            padding: 8px !important;
+          }
+          
+          .page-content {
+            padding: 0 !important;
+          }
+          
+          .page-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            margin-bottom: 16px !important;
+          }
+          
+          .page-title {
+            font-size: 1.125rem !important;
+            line-height: 1.3 !important;
+          }
+          
+          .back-button {
+            font-size: 0.875rem !important;
+            padding: 8px 12px !important;
+          }
+        }
+        
+        /* Program Cards Mobile */
+        @media (max-width: 900px) {
+          .program-card-container {
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 12px !important;
+          }
+          
+          .program-card-layout {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+          
+          .program-card-info {
+            width: 100% !important;
+          }
+          
+          .program-card-actions {
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-top: 12px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 8px !important;
+          }
+          
+          .program-card-actions button {
+            width: 100% !important;
+            justify-content: center !important;
+            font-size: 0.875rem !important;
+            padding: 12px 16px !important;
+            margin: 0 !important;
+          }
+          
+          .program-timeline {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+          }
+          
+          .program-card-container h3 {
+            font-size: 0.95rem !important;
+          }
+          
+          .program-card-container p {
+            font-size: 0.875rem !important;
+          }
+        }
+        
+        /* Mobile Landscape */
+        @media (max-width: 1024px) and (orientation: landscape) {
+          .page-title {
+            font-size: 1rem !important;
+          }
+          
+          .program-card-container {
+            padding: 10px !important;
+          }
+          
+          .program-card-actions {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+          }
+          
+          .program-card-actions button {
+            font-size: 0.75rem !important;
+            padding: 8px 12px !important;
+            flex: 1 !important;
+            min-width: max-content !important;
+          }
+        }
+        
+        /* Modal Responsive */
+        @media (max-width: 768px) {
+          .program-modal-container {
+            margin: 16px !important;
+            max-width: calc(100vw - 32px) !important;
+            max-height: calc(100vh - 32px) !important;
+            overflow-y: auto !important;
+          }
+          
+          .program-modal-content {
+            padding: 16px !important;
+          }
+          
+          .program-modal-footer {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          
+          .program-modal-footer button {
+            width: 100% !important;
+          }
+        }
+        
+        /* Extra Small Devices */
+        @media (max-width: 480px) {
+          .page-title {
+            font-size: 1rem !important;
+          }
+          
+          .program-card-container {
+            padding: 10px !important;
+          }
+          
+          .program-card-container h3 {
+            font-size: 0.9rem !important;
+          }
+          
+          .program-card-container p {
+            font-size: 0.8rem !important;
+          }
+          
+          .program-card-actions button {
+            font-size: 0.8125rem !important;
+            padding: 10px 12px !important;
+          }
+          
+          .program-timeline {
+            font-size: 0.7rem !important;
+          }
+        }
+        
+        /* Touch-friendly targets */
+        @media (hover: none) and (pointer: coarse) {
+          button {
+            min-height: 44px !important;
+          }
+        }
+      `}</style>
       <main className="page-main">
         <div className="page-content">
           {/* Page Header */}
@@ -222,6 +382,7 @@ const AssignedPrograms = () => {
                   return (
                     <div
                       key={titleKey}
+                      className="program-card-container"
                       style={{
                         padding: '1.25rem',
                         borderRadius: '0.5rem',
@@ -233,8 +394,8 @@ const AssignedPrograms = () => {
                       onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
                       onMouseLeave={(e) => e.currentTarget.style.background = '#f9fafb'}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                        <div style={{ flex: 1 }}>
+                      <div className="program-card-layout" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                        <div className="program-card-info" style={{ flex: 1 }}>
                           <h3 style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
                             📌 {titleKey}
                           </h3>
@@ -258,7 +419,7 @@ const AssignedPrograms = () => {
                           </div>
 
                           {/* Timeline Info */}
-                          <div style={{
+                          <div className="program-timeline" style={{
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '0.25rem',
@@ -285,7 +446,7 @@ const AssignedPrograms = () => {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginLeft: '1rem', flexShrink: 0 }}>
+                        <div className="program-card-actions" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginLeft: '1rem', flexShrink: 0 }}>
                           {/* Show Remarks button when final feedback exists */}
                           {hasFinalFeedback && (
                             <button
@@ -392,9 +553,9 @@ const AssignedPrograms = () => {
 
                           {isSubmitted && (
                             <button
-                             className="btn-primary"
+                              className="btn-primary"
                               onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-                             
+
                             >
                               View
                             </button>
@@ -423,7 +584,7 @@ const AssignedPrograms = () => {
           zIndex: 50,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="program-modal-container" style={{
             background: '#ffffff',
             borderRadius: '1rem',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -465,7 +626,7 @@ const AssignedPrograms = () => {
             </div>
 
             {/* Modal Content */}
-            <div style={{ padding: '1.5rem' }}>
+            <div className="program-modal-content" style={{ padding: '1.5rem' }}>
               {/* Rating */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#4b5563', marginBottom: '0.5rem', display: 'block' }}>Rating</label>
@@ -522,7 +683,7 @@ const AssignedPrograms = () => {
             </div>
 
             {/* Modal Footer */}
-            <div style={{ padding: '1.5rem', paddingTop: 0 }}>
+            <div className="program-modal-footer" style={{ padding: '1.5rem', paddingTop: 0 }}>
               <button
                 onClick={() => setShowFeedbackModal(false)}
                 style={{
@@ -559,7 +720,7 @@ const AssignedPrograms = () => {
           zIndex: 50,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="program-modal-container" style={{
             background: '#ffffff',
             borderRadius: '1rem',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -601,7 +762,7 @@ const AssignedPrograms = () => {
             </div>
 
             {/* Modal Content */}
-            <div style={{ padding: '1.5rem' }}>
+            <div className="program-modal-content" style={{ padding: '1.5rem' }}>
 
               {/* Learner Notes */}
               <div style={{ marginBottom: '1rem' }}>
@@ -660,7 +821,7 @@ const AssignedPrograms = () => {
             </div>
 
             {/* Modal Footer */}
-            <div style={{ padding: '1.5rem', paddingTop: 0, display: 'flex', gap: '0.75rem' }}>
+            <div className="program-modal-footer" style={{ padding: '1.5rem', paddingTop: 0, display: 'flex', gap: '0.75rem' }}>
               <button
                 onClick={handleCloseSubmitModal}
                 disabled={submittingProgram}
