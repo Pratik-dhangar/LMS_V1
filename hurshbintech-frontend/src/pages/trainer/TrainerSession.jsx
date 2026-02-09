@@ -1609,6 +1609,101 @@ const TrainerSession = () => {
 
   return (
     <div className={`session-page ${pageClassName}`}>
+      <style>{`
+        /* Learner Video Overlay Styles - Absolute positioning within whiteboard */
+        .session-whiteboard-container {
+          position: relative !important;
+        }
+
+        .learner-video-overlay {
+          position: absolute;
+          top: 0rem;
+          right: 0rem;
+          width: clamp(8rem, 15vw, 14rem);
+          height: clamp(6rem, 11.25vw, 10.5rem);
+          z-index: 100;
+          pointer-events: auto;
+        }
+
+        /* Prevent whiteboard items from being dragged behind video */
+        .learner-video-overlay::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 100;
+          pointer-events: none;
+        }
+
+        /* Mobile Portrait (phones) */
+        @media (max-width: 48rem) {
+          .learner-video-overlay {
+            width: 6rem !important;
+            height: 4.5rem !important;
+            min-width: 6rem !important;
+            min-height: 4.5rem !important;
+            top: 0 !important;
+            right: 0 !important;
+          }
+        }
+
+        /* Mobile Portrait Specific */
+        @media (max-width: 48rem) and (orientation: portrait) {
+          .learner-video-overlay {
+            top: 0 !important;
+            right: 0 !important;
+            width: 5rem !important;
+            height: 3.75rem !important;
+          }
+        }
+
+        /* Mobile Landscape */
+        @media (max-width: 64rem) and (orientation: landscape) {
+          .learner-video-overlay {
+            top: 0 !important;
+            right: 0 !important;
+            width: 6rem !important;
+            height: 4.5rem !important;
+          }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 22.5rem) {
+          .learner-video-overlay {
+            width: 4.5rem !important;
+            height: 3.375rem !important;
+            top: 0 !important;
+          }
+        }
+
+        /* Tablet Portrait */
+        @media (min-width: 48rem) and (max-width: 64rem) and (orientation: portrait) {
+          .learner-video-overlay {
+            width: 8rem !important;
+            height: 6rem !important;
+            top: 0 !important;
+          }
+        }
+
+        /* Tablet Landscape */
+        @media (min-width: 48rem) and (max-width: 64rem) and (orientation: landscape) {
+          .learner-video-overlay {
+            width: 9rem !important;
+            height: 6.75rem !important;
+            top: 0 !important;
+          }
+        }
+
+        /* Handle safe area insets (notches) */
+        @supports (padding: env(safe-area-inset-top)) {
+          .learner-video-overlay {
+            top: env(safe-area-inset-top) !important;
+            right: env(safe-area-inset-right) !important;
+          }
+        }
+      `}</style>
       {/* Hidden audio element for background music */}
       <audio
         ref={audioRef}
@@ -1668,48 +1763,6 @@ const TrainerSession = () => {
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
-          {/* Fixed Video Feed - Above Learning Program */}
-          {remoteStream && (
-            <div style={{
-              width: '100%',
-              height: 'clamp(120px, 20vh, 180px)',
-              backgroundColor: '#000',
-              borderRadius: '8px',
-              border: '2px solid #374151',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              margin: '8px 0',
-              flexShrink: 0
-            }}>
-              {/* Video Label */}
-              <div style={{
-                padding: '6px 10px',
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                borderBottom: '1px solid #555'
-              }}>
-                👨‍💼 Learner {connectionStatus && `(${connectionStatus})`}
-              </div>
-
-              {/* Video Stream */}
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                style={{
-                  flex: 1,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  backgroundColor: '#1a1a1a'
-                }}
-              />
-            </div>
-          )}
           <LearningProgramSidebar
             sessionInfo={sessionInfo}
             filteredLearningGoals={filteredLearningGoals}
@@ -1732,7 +1785,41 @@ const TrainerSession = () => {
         <div className="session-center-area">
 
           {/* Whiteboard */}
-          <div className="session-whiteboard-container">
+          <div className="session-whiteboard-container" style={{ position: 'relative' }}>
+            {/* Learner Video Overlay - Fixed within whiteboard (Top Right Corner) */}
+            {remoteStream && (
+              <div className="learner-video-overlay" style={{
+                position: 'absolute',
+                top: '0',
+                right: '0',
+                width: 'clamp(8rem, 15vw, 14rem)',
+                height: 'clamp(6rem, 11.25vw, 10.5rem)',
+                backgroundColor: '#000',
+                borderRadius: '0.5rem',
+                border: '0.125rem solid #374151',
+                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
+                zIndex: 100,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                pointerEvents: 'auto'
+              }}>
+                {/* Video Stream */}
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    flex: 1,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    backgroundColor: '#1a1a1a'
+                  }}
+                />
+              </div>
+            )}
+
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
