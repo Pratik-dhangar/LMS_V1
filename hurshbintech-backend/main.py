@@ -131,11 +131,12 @@ async def validation_exception_handler(request, exc):
 
 
 # ✅ CORS Configuration
-# For development: accept all origins with wildcard
+# For development: accept localhost origins
 # For production: use specific BACKEND_CORS_ORIGINS from settings
 import re
 
 if settings.BACKEND_CORS_ORIGINS:
+    # Production: use specific origins from settings
     allowed_origins = settings.BACKEND_CORS_ORIGINS
     logger.info(f"CORS allowed origins (from settings): {allowed_origins}")
     app.add_middleware(
@@ -147,31 +148,22 @@ if settings.BACKEND_CORS_ORIGINS:
         expose_headers=["*"],
     )
 else:
-    # Development mode: accept all origins for local network and known domains
-    logger.info("CORS: Development mode - allowing all origins with regex pattern")
+    # Development mode: accept localhost and local network origins
+    logger.info("CORS: Development mode - allowing localhost and local network origins")
     
-    from starlette.middleware.cors import CORSMiddleware as StarletteCorS
-    
-    class CustomCORSMiddleware(StarletteCorS):
-        def is_allowed_origin(self, origin: str) -> bool:
-            # Allow localhost and 127.0.0.1
-            if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
-                return True
-            # Allow all local network IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-            if re.match(r"^https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
-                return True
-            if re.match(r"^https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
-                return True
-            if re.match(r"^https?://172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$", origin):
-                return True
-            # Allow production domains
-            if "hurshbin.lumesoftai.in" in origin or "43.204.218.16" in origin:
-                return True
-            return False
+    development_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8000",
+    ]
     
     app.add_middleware(
-        CustomCORSMiddleware,
-        allow_origins=["*"],  # Will be filtered by is_allowed_origin
+        CORSMiddleware,
+        allow_origins=development_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

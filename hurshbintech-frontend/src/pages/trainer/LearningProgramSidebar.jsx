@@ -17,7 +17,9 @@ const LearningProgramSidebar = ({
   listening,
   transcript,
   whiteboardService,
-  onSaveReport
+  onSaveReport,
+  learningGoalsSearch,
+  setLearningGoalsSearch
 }) => {
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
@@ -45,8 +47,29 @@ const LearningProgramSidebar = ({
       </div>
 
       <div className="sidebar-content">
-        {/* Search removed - list shows full program items */}
         <div className="sidebar-section-title">Program Items</div>
+
+        {/* Coach: Search input (only shown when setLearningGoalsSearch is provided) */}
+        {setLearningGoalsSearch && (
+          <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e0e0e0' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search programs..."
+              value={learningGoalsSearch || ''}
+              onChange={(e) => setLearningGoalsSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+        )}
+
         <div className="sidebar-scrollable">
           {filteredLearningGoals.length > 0 ? (
             filteredLearningGoals.map((goal, index) => (
@@ -61,7 +84,7 @@ const LearningProgramSidebar = ({
                 <div className="sidebar-badge" title="Click to record prompt level">—</div>
               </div>
             ))
-          ) : <div className="sidebar-empty-text">No program items found.</div>
+          ) : <div className="sidebar-empty-text"></div>
           }
         </div>
 
@@ -73,20 +96,21 @@ const LearningProgramSidebar = ({
                 key={p}
                 className={`meter-button ${selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'}`}
                 onClick={() => {
-                  setSelectedPromptLevel(p);
-                  webRTC && webRTC.sendPromptMeter(p);
+                  const newValue = selectedPromptLevel === p ? null : p;
+                  setSelectedPromptLevel(newValue);
+                  webRTC && webRTC.sendPromptMeter(newValue);
                 }}
               >
                 {p}
               </div>
             ))}
           </div>
-          <div className="meter-helper-text">Click to record prompt level for selected item</div>
-          {selectedPromptLevel && (
+          {/* <div className="meter-helper-text">Click to record prompt level for selected item</div> */}
+          {/* {selectedPromptLevel && (
             <div className="meter-selected-text">
               Selected: {selectedPromptLevel}
             </div>
-          )}
+          )} */}
         </div>
 
         <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
@@ -97,8 +121,9 @@ const LearningProgramSidebar = ({
                 key={r}
                 className={`meter-button ${selectedReinforcementLevel === r ? 'meter-button-selected' : 'meter-button-green'}`}
                 onClick={() => {
-                  setSelectedReinforcementLevel(r);
-                  webRTC && webRTC.sendReinforcementMeter(r);
+                  const newValue = selectedReinforcementLevel === r ? null : r;
+                  setSelectedReinforcementLevel(newValue);
+                  webRTC && webRTC.sendReinforcementMeter(newValue);
                 }}
               >
                 {r}
@@ -106,11 +131,11 @@ const LearningProgramSidebar = ({
             ))}
           </div>
 
-          {selectedReinforcementLevel && (
+          {/* {selectedReinforcementLevel && (
             <div className="meter-selected-text">
               Selected: {selectedReinforcementLevel}
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Save Report Button */}
@@ -122,11 +147,7 @@ const LearningProgramSidebar = ({
             💾 Save Session Report
           </button>
         )}
-        {selectedProgramId && (!selectedPromptLevel || !selectedReinforcementLevel) && (
-          <div className="sidebar-warning">
-            ⚠️ Select both Prompt and Reinforcement levels to save report
-          </div>
-        )}
+
 
         {/* Speech Section */}
         <div className="voice-section">
@@ -137,9 +158,9 @@ const LearningProgramSidebar = ({
           >
             {listening ? "🔇" : <FaMicrophone />}
           </button>
-          <p className="voice-status-text">
+          {/* <p className="voice-status-text">
             {listening ? '🎤 Recording... Click to stop' : '📢 Click to start recording'}
-          </p>
+          </p> */}
           <textarea
             value={editableTranscript || transcript || ''}
             onChange={(e) => setEditableTranscript(e.target.value)}

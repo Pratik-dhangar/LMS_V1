@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
-from sqlalchemy import select, and_, or_, func, desc
+from sqlalchemy import select, and_, or_, func, desc, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -703,6 +703,75 @@ async def cancel_subscription(
     
     logger.info(f"Cancelled subscription {subscription_id}")
     return subscription, None
+
+
+async def delete_subscription(
+    db: AsyncSession,
+    subscription_id: int
+) -> Tuple[bool, Optional[str]]:
+    """
+    Hard delete a subscription and all related records from the database.
+    This removes the subscription completely including payment receipts, session adjustments, and event logs.
+    
+    Returns: (success, error_message)
+    """
+    try:
+        subscription = await get_subscription_by_id(db, subscription_id)
+        if not subscription:
+            return False, "Subscription not found"
+        
+        # Check if subscription has any active sessions scheduled for the future
+        from app.models.session_model import TrainingSession
+        from datetime import datetime as dt
+        
+        result = await db.execute(
+            select(func.count(TrainingSession.id))
+            .where(
+                and_(
+                    TrainingSession.subscription_id == subscription_id,
+                    TrainingSession.scheduled_date >= dt.utcnow(),
+                    TrainingSession.status.in_(["scheduled", "ongoing"])
+                )
+            )
+        )
+        active_sessions_count = result.scalar() or 0
+        
+        if active_sessions_count > 0:
+            return False, f"Cannot delete subscription with {active_sessions_count} active/scheduled sessions"
+        
+        # Delete all related records first (maintaining referential integrity)
+        # Delete payment receipts
+        await db.execute(
+            delete(SubscriptionPaymentReceipt)
+            .where(SubscriptionPaymentReceipt.subscription_id == subscription_id)
+        )
+        
+        # Delete session adjustments
+        await db.execute(
+            delete(SessionAdjustmentLog)
+            .where(SessionAdjustmentLog.subscription_id == subscription_id)
+        )
+        
+        # Delete event logs
+        await db.execute(
+            delete(SubscriptionEventLog)
+            .where(SubscriptionEventLog.subscription_id == subscription_id)
+        )
+        
+        # Delete the subscription itself
+        await db.delete(subscription)
+        
+        # Commit all deletions
+        await db.commit()
+        
+        logger.info(f"Hard deleted subscription {subscription_id} along with all related records")
+        return True, None
+        
+    except Exception as e:
+        await db.rollback()
+        error_msg = f"Error deleting subscription: {str(e)}"
+        logger.error(error_msg)
+        return False, error_msg
 
 
 async def process_refund(

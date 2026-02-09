@@ -34,7 +34,7 @@
 //  - Lazy loading: learning content loads on demand
 // ============================================================================
 
-import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
@@ -45,19 +45,18 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
-import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
-import useMessages from '../../hooks/useMessages';
 import useStopwatch from '../../hooks/useStopwatch';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import { useMediaControl } from '../../context/MediaControlContext';
-import MoveableVideoFeed from '../../components/videoConference/MoveableVideoFeed';
-import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
+import { FaMicrophone } from 'react-icons/fa';
 import Emoji from '../../components/common/Emoji';
 import LearningContentSidebar from '../trainer/LearningContentSidebar';
+import LearningProgramSidebar from '../trainer/LearningProgramSidebar';
+import YouTubePopup from '../../components/common/YouTubePopup';
 import Exercise from '../../components/session/Exercise';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
-// Import session utilities
+// Import session utilities from InstructorSessionLayout
 import {
   REACTION_SVG_ASSETS,
   WB_BUTTON_STYLES,
@@ -82,10 +81,23 @@ import {
   syncStopwatchToParticipant,
   endSession as utilEndSession,
   calculateTimeRemaining,
-  triggerParticipantKeyboard
-} from '../../utils/sessionUtils';
+  triggerParticipantKeyboard,
+  getAudioContext,
+  playPopSound,
+  handleAnimationPop as utilHandleAnimationPop
+} from '../../components/session/InstructorSessionLayout';
+
+import {
+  MUSIC_OPTIONS,
+  autoSaveSessionNotes,
+  sendFloatingAnimation,
+  toggleParticipantToolAccess,
+  formatTimeRemaining,
+  setupParticipantAnimationPopListener
+} from '../../utils/instructorSession';
 
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
+import '../../styles/session.css';
 
 const CoachSession = () => {
   const { sessionId } = useParams();
@@ -103,8 +115,7 @@ const CoachSession = () => {
   // Media streams
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [videoPosition, setVideoPosition] = useState({ x: 20, y: 20 });
-  const [videoSize, setVideoSize] = useState({ width: 320, height: 240 });
+  const remoteVideoRef = useRef(null); // Ref for remote video element
 
   // Mic/video controls
   const [micEnabled, setMicEnabled] = useState(true);
@@ -127,11 +138,7 @@ const CoachSession = () => {
   const [musicVolume, setMusicVolume] = useState(0.5);
   const audioRef = useRef(null);
 
-  const musicOptions = [
-    { id: 0, name: '🎵 Music 1', url: '/music/background-music-1.mp3' },
-    { id: 1, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
-    { id: 2, name: '🎼 Music 3', url: '/music/background-music-3.mp3' }
-  ];
+  const musicOptions = MUSIC_OPTIONS;
 
   // Voice Input
   const handleMuteMicCallback = (transcriptText) => {
@@ -162,34 +169,36 @@ const CoachSession = () => {
   const [selectedPromptLevel, setSelectedPromptLevel] = useState(null);
   const [selectedReinforcementLevel, setSelectedReinforcementLevel] = useState(null);
 
-  // Messages
-  const {
-    messages,
-    currentMessage,
-    setCurrentMessage,
-    sendMessage,
-    handleKeyPress,
-    addReceivedMessage
-  } = useMessages(webRTC, 'coach');
+  // YouTube popup state
+  const [youtubePopups, setYoutubePopups] = useState([]); // Array of { id, videoId, title, position }
 
-  useEffect(() => {
-    if (webRTC) {
-      webRTC.onMessage = (message) => {
-        addReceivedMessage({
-          sender: message.sender === 'coach' ? 'You' : message.sender,
-          text: message.text,
-          timestamp: message.timestamp
-        });
-      };
-    }
-    return () => {
-      if (webRTC) {
-        webRTC.onMessage = null;
-      }
-    };
-  }, [webRTC, addReceivedMessage]);
+  // Messages - Removed useMessages hook (not used in trainer session layout)
+  // const {
+  //   messages,
+  //   currentMessage,
+  //   setCurrentMessage,
+  //   sendMessage,
+  //   handleKeyPress,
+  //   addReceivedMessage
+  // } = useMessages(webRTC, 'coach');
 
-  const [textMessages, setTextMessages] = useState([]);
+  // useEffect(() => {
+  //   if (webRTC) {
+  //     webRTC.onMessage = (message) => {
+  //       addReceivedMessage({
+  //         sender: message.sender === 'coach' ? 'You' : message.sender,
+  //         text: message.text,
+  //         timestamp: message.timestamp
+  //       });
+  //     };
+  //   }
+  //   return () => {
+  //     if (webRTC) {
+  //       webRTC.onMessage = null;
+  //     }
+  //   };
+  // }, [webRTC, addReceivedMessage]);
+
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
   const [floatingAnimations, setFloatingAnimations] = useState([]);
@@ -203,10 +212,8 @@ const CoachSession = () => {
 
   // Whiteboard state
   const [canvasItems, setCanvasItems] = useState([]);
-  const [keyboardMode] = useState(false);
-  const [keyboardText, setKeyboardText] = useState('');
-  const [keyboardPosition, setKeyboardPosition] = useState({ x: 0, y: 0 });
   const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
+  const whiteboardCanvasRef = useRef(null); // Ref for whiteboard canvas (for positioning)
 
   // UI state
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
@@ -219,6 +226,11 @@ const CoachSession = () => {
   const [clearCanvasTrigger, setClearCanvasTrigger] = useState(0);
   const [erasePenTrigger, setErasePenTrigger] = useState(0);
   const [redrawCanvasTrigger, setRedrawCanvasTrigger] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState({
+    video: true,
+    program: false,
+    content: false
+  }); // Drawer states for mobile/tablet
 
   // Drawing tools
   const [tool, setTool] = useState('pen');
@@ -227,21 +239,18 @@ const CoachSession = () => {
   const [buckets, setBuckets] = useState([]);
   const [bucketColor, setBucketColor] = useState('#8B6F47');
   const [showExercise, setShowExercise] = useState(false);
+  const [exerciseData, setExerciseData] = useState({
+    question: '',
+    answer: ''
+  });
   const [toolActive, setToolActive] = useState(false);
   const [eraserActive, setEraserActive] = useState(false);
   const [eraseAllActive, setEraseAllActive] = useState(false);
 
-  // Text tool state
-  const [textBoxes, setTextBoxes] = useState([]);
-  const [activeTextBoxId, setActiveTextBoxId] = useState(null);
-  const [textSize, setTextSize] = useState(16);
-  const [showTextSizeSlider, setShowTextSizeSlider] = useState(false);
-
   // Tool access control for client
   const [clientToolAccess, setClientToolAccess] = useState({
-    select: false,
-    drag: false,
-    keyboard: false
+    select: false,    // Can select items on canvas
+    drag: false       // Can drag items on canvas
   });
 
   // Stopwatch
@@ -360,8 +369,8 @@ const CoachSession = () => {
   // Filter learning goals based on search
   useEffect(() => {
     if (!learningGoalsSearch.trim()) {
-      // Show all goals when search is empty
-      setFilteredLearningGoals(allLearningGoals);
+      // Show nothing when search is empty - only show results after user searches
+      setFilteredLearningGoals([]);
       return;
     }
 
@@ -522,15 +531,52 @@ const CoachSession = () => {
     };
 
     // Set up callback for animation pop events from client/guest
-    whiteboardService.onAnimationPopped = (data) => {
-      console.log('[CoachSession] Animation popped by client/guest:', data);
-      handleAnimationPop(data.animationId, data.poppedLeft, data.poppedTop);
+    setupParticipantAnimationPopListener(whiteboardService, floatingAnimations, setFloatingAnimations, playPopSound);
+
+    // Set up callback for exercise answer updates from client
+    whiteboardService.onExerciseAnswerUpdate = (data) => {
+      // console.log('[CoachSession] 📝 Client answer updated:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Single answer format
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question || prev.question,
+          answer: data.answer || ''
+        }));
+      }
+    };
+
+    // Set up callback for exercise submission from client
+    whiteboardService.onExerciseResponse = (data) => {
+      // console.log('[CoachSession] 📋 Client submitted exercise:', data);
+      if (data.qaItems) {
+        // New format with multiple Q&A items
+        setExerciseData(prev => ({
+          ...prev,
+          qaItems: data.qaItems
+        }));
+      } else {
+        // Backward compatibility for single answer
+        setExerciseData(prev => ({
+          ...prev,
+          question: data.question,
+          clientAnswer: data.clientAnswer
+        }));
+      }
     };
 
     return () => {
       if (whiteboardService) {
         whiteboardService.onItemSelected = null;
         whiteboardService.onAnimationPopped = null;
+        whiteboardService.onExerciseAnswerUpdate = null;
+        whiteboardService.onExerciseResponse = null;
       }
     };
   }, [whiteboardService]);
@@ -563,9 +609,20 @@ const CoachSession = () => {
     };
   }, [showHeader]);
 
+  // Show header again on click for mobile/tablet
   const handleHeaderClick = () => {
-    setShowHeader(true);
+    if (window.innerWidth < 1024) {
+      setShowHeader(true);
+    }
   };
+
+  // Attach client's remote stream to video element
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      console.log('[CoachSession] Attaching remote stream to video element');
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   const initializeSession = async (userId) => {
     try {
@@ -811,104 +868,19 @@ const CoachSession = () => {
     });
   };
 
-  const audioContextRef = useRef(null);
+  // Animation pop handler using utility function
+  const handleAnimationPop = (animationId, poppedLeft, poppedTop) => {
+    utilHandleAnimationPop({
+      animationId,
+      poppedLeft,
+      poppedTop,
+      floatingAnimations,
+      setFloatingAnimations,
+      whiteboardService
+    });
+  };
 
-  // Cross-browser audio context initialization
-  const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      try {
-        // Try standard AudioContext first (Chrome, Firefox, Safari 14.1+)
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      } catch (error) {
-        console.error('[CoachSession] Failed to initialize AudioContext:', error);
-        return null;
-      }
-    }
-    return audioContextRef.current;
-  }, []);
 
-  const playPopSound = useCallback((animationType) => {
-    try {
-      const ctx = getAudioContext();
-      if (!ctx) return; // Audio context not available
-
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      switch (animationType) {
-        case 'bubble':
-          osc.frequency.setValueAtTime(800, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
-          gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.1);
-          break;
-        case 'balloon':
-          osc.frequency.setValueAtTime(600, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
-          gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.15);
-          break;
-        case 'smiley':
-          osc.frequency.setValueAtTime(700, ctx.currentTime);
-          osc.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.05);
-          gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.08);
-          break;
-        case 'star':
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(1200, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.12);
-          gainNode.gain.setValueAtTime(0.25, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.12);
-          break;
-        default:
-          osc.frequency.setValueAtTime(500, ctx.currentTime);
-          gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.1);
-      }
-    } catch (error) {
-      console.error('[CoachSession] Error playing pop sound:', error);
-    }
-  }, [getAudioContext]);
-
-  const handleAnimationPop = useCallback((animationId, poppedLeft, poppedTop) => {
-    // Find the animation to get its type for sound effect
-    const animation = floatingAnimations.find(a => a.id === animationId);
-    if (animation) {
-      playPopSound(animation.type);
-    }
-
-    setFloatingAnimations(prev =>
-      prev.map(anim =>
-        anim.id === animationId
-          ? { ...anim, popped: true, poppedLeft, poppedTop }
-          : anim
-      )
-    );
-
-    // Broadcast the animation pop event to client
-    if (whiteboardService) {
-      whiteboardService.send('animation_popped', {
-        animationId,
-        poppedLeft,
-        poppedTop,
-        timestamp: Date.now()
-      });
-    }
-  }, [floatingAnimations, whiteboardService, playPopSound]);
 
   // Learning content search handler with lazy loading
   const handleLearningContentSearch = async (e) => {
@@ -990,82 +962,129 @@ const CoachSession = () => {
 
   // Drag start handler for content cards
   const onDragStartContent = (e, content) => {
-    e.dataTransfer.setData('application/json', JSON.stringify({
+    const dragPayload = {
       id: content.id,
       title: content.title,
-      type: content.content_type,
-      url: content.file_url,
-      thumbnail: content.thumbnail_url,
+      type: content.is_youtube ? 'youtube' : content.content_type,
+      url: content.file_url || null,
+      thumbnail: content.thumbnail_url || null,
       mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
-      originalFilename: content.title
-    }));
+      originalFilename: content.title,
+      is_youtube: content.is_youtube || false,
+      youtube_url: content.youtube_url || null,
+      youtube_video_id: content.youtube_video_id || null,
+    };
+
+    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  // Text tool handlers
-  const handleAddTextBox = () => {
-    const newTextBox = {
-      id: `text_${Date.now()}`,
-      text: '',
-      x: window.innerWidth / 2 - 200,
-      y: window.innerHeight / 2 - 75,
-      width: 400,
-      height: 150,
-      fontSize: textSize,
-      fontColor: '#000000'
+  // Handle YouTube content dropped on whiteboard
+  const handleYoutubeDropped = (videoData) => {
+    const newPopup = {
+      id: Date.now(),
+      videoId: videoData.videoId,
+      title: videoData.title,
+      position: videoData.position,
     };
 
-    setTextBoxes(prev => [...prev, newTextBox]);
-    setActiveTextBoxId(newTextBox.id);
+    // console.log('[CoachSession] YouTube popup created:', newPopup);
+    setYoutubePopups(prev => [...prev, newPopup]);
 
-    // Broadcast to clients
-    if (whiteboardService) {
-      whiteboardService.send('text_box_added', newTextBox);
+    // Broadcast to client via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_created', {
+        popupId: newPopup.id,
+        videoId: newPopup.videoId,
+        title: newPopup.title,
+        position: newPopup.position,
+        timestamp: Date.now()
+      });
+      // console.log('[CoachSession] YouTube popup sync sent to client');
     }
   };
 
-  const handleTextBoxChange = (id, text) => {
-    setTextBoxes(prev => prev.map(box =>
-      box.id === id ? { ...box, text } : box
-    ));
+  // Close a YouTube popup and sync to client
+  const handleCloseYoutubePopup = (popupId) => {
+    setYoutubePopups(prev => prev.filter(popup => popup.id !== popupId));
 
-    // Broadcast text change in real-time
-    if (whiteboardService) {
-      whiteboardService.send('text_box_update', { id, text });
+    // Broadcast closure to client via whiteboard service
+    if (whiteboardService && typeof whiteboardService.send === 'function') {
+      whiteboardService.send('youtube_popup_closed', {
+        popupId: popupId,
+        timestamp: Date.now()
+      });
+      // console.log('[CoachSession] YouTube popup closed, sync sent to client');
     }
   };
 
-  const handleTextBoxResize = (id, width, height) => {
-    setTextBoxes(prev => prev.map(box =>
-      box.id === id ? { ...box, width, height } : box
-    ));
 
-    // Broadcast resize
+
+  // Exercise tool handlers
+  const handleExerciseUpdate = (exerciseInfo) => {
+    // console.log('[CoachSession] Exercise updated:', exerciseInfo);
+    setExerciseData(exerciseInfo);
+
+    // Send exercise to client via whiteboard service
     if (whiteboardService) {
-      whiteboardService.send('text_box_update', { id, width, height });
+      whiteboardService.send('exercise_update', {
+        question: exerciseInfo.question,
+        answer: exerciseInfo.answer || '',
+        timestamp: Date.now()
+      });
     }
   };
 
-  const handleTextBoxMove = (id, x, y) => {
-    setTextBoxes(prev => prev.map(box =>
-      box.id === id ? { ...box, x, y } : box
-    ));
+  const handleExerciseAnswerChange = (answerData) => {
+    // console.log('[CoachSession] Client answer updated:', answerData);
+    // Update the answer in exerciseData
+    setExerciseData(prev => ({
+      ...prev,
+      answer: answerData.answer || ''
+    }));
+  };
 
-    // Broadcast move
-    if (whiteboardService) {
-      whiteboardService.send('text_box_update', { id, x, y });
+  const handleExerciseSubmit = (response) => {
+    console.log('[CoachSession] Exercise response received:', response);
+
+    // Handle client's answer submission
+    if (response.status === 'submitted') {
+      // Send feedback to client or save the response
+      if (whiteboardService) {
+        console.log('[CoachSession] ✅ Sending exercise_response to learners');
+        whiteboardService.send('exercise_response', {
+          question: response.question,
+          answer: response.answer,
+          timestamp: Date.now()
+        });
+      }
+    } else if (response.status === 'sent_to_learner') {
+      // Send exercise to client when "Send to Client" is clicked
+      if (whiteboardService) {
+        console.log('[CoachSession] ✅ Sending exercise_update to learners:', response.question);
+        whiteboardService.send('exercise_update', {
+          question: response.question,
+          answer: '',
+          timestamp: Date.now()
+        });
+      }
     }
   };
 
-  const handleRemoveTextBox = (id) => {
-    setTextBoxes(prev => prev.filter(box => box.id !== id));
-    if (activeTextBoxId === id) {
-      setActiveTextBoxId(null);
-    }
+  const handleExerciseDelete = () => {
+    // console.log('[CoachSession] Exercise deleted');
+    setShowExercise(false);
+    setExerciseData({
+      question: '',
+      answer: ''
+    });
 
-    // Broadcast removal
+    // Notify client that exercise has been closed
     if (whiteboardService) {
-      whiteboardService.send('text_box_removed', { id });
+      whiteboardService.send('exercise_closed', {
+        message: 'Exercise has been closed by coach',
+        timestamp: Date.now()
+      });
     }
   };
 
@@ -1076,21 +1095,8 @@ const CoachSession = () => {
   // Session Notes Handlers
   const handleNotesChange = useCallback((newNotes) => {
     setSessionNotes(newNotes);
-
-    // Clear existing auto-save timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    // Set new auto-save timer (save after 2 seconds of inactivity)
-    autoSaveTimerRef.current = setTimeout(async () => {
-      try {
-        await sessionNotesService.saveNotes(sessionId, newNotes);
-        console.log('[CoachSession] Session notes auto-saved');
-      } catch (error) {
-        console.error('[CoachSession] Error auto-saving notes:', error);
-      }
-    }, 2000);
+    // Use shared auto-save utility
+    autoSaveSessionNotes(sessionId, newNotes, autoSaveTimerRef, sessionNotesService);
   }, [sessionId]);
 
   const handleClearNotes = useCallback(() => {
@@ -1206,11 +1212,11 @@ const CoachSession = () => {
         ref={audioRef}
         crossOrigin="anonymous"
         onEnded={() => {
-          // Music loops automatically
+          // When music ends, it will loop automatically (loop attribute set)
         }}
       />
 
-      {/* Navigation / Header */}
+      {/* Navigation / Header - Auto-hide after 5s on mobile/tablet */}
       <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
         <div className="session-header-main">
           <div>
@@ -1230,20 +1236,21 @@ const CoachSession = () => {
             <button
               className="btn-secondary"
               style={{ color: 'white' }}
-              onClick={() => window.open('/coach/dashboard', '_blank', 'noopener,noreferrer')}
+              onClick={() =>
+                window.open('/coach/dashboard', '_blank', 'noopener,noreferrer')
+              }
             >
               🏠 Dashboard
             </button>
+
           </div>
         </div>
       </div>
 
-      {/* Info bar */}
+      {/* Info bar - Auto-hide after 5 seconds */}
       {showInfoBar && (
         <div className="session-info-banner">
-          <span className="session-info-text">
-            <strong>ℹ️ Session Active:</strong> All interactions are being recorded.
-          </span>
+          <span className="session-info-text"><strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to client).</span>
           <button
             onClick={() => setShowInfoBar(false)}
             className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-2 sm:ml-4"
@@ -1254,205 +1261,76 @@ const CoachSession = () => {
         </div>
       )}
 
-      {/* Main layout */}
-      <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)', display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 'clamp(0.5rem, 1.5vw, 1rem)', padding: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
 
-        {/* LEFT SIDEBAR: Coach Goals + Meters + Voice Input + Notes */}
-        <div className="sidebar-container">
-          <div className="sidebar-header sidebar-header-blue">
-            🎯 Coach Goals
-          </div>
-
-          <div className="sidebar-content">
-            {/* Learning Goals */}
-            <div className="sidebar-section-title">Learning Goals</div>
-            <div className="sidebar-search-box">
-              <input
-                type="text"
-                className="sidebar-search-input"
-                placeholder="🔍 Search Program name..."
-                value={learningGoalsSearch}
-                onChange={(e) => setLearningGoalsSearch(e.target.value)}
-              />
-            </div>
-            <div className="sidebar-scrollable">
-              {learningGoalsSearch && filteredLearningGoals.length > 0 ? (
-                filteredLearningGoals.map((goal, index) => (
-                  <div key={goal.id ?? index} className="sidebar-list-item">
-                    <input
-                      type="checkbox"
-                      className="sidebar-checkbox"
-                      checked={selectedGoalId === goal.id}
-                      onChange={() => {
-                        setSelectedGoalId(selectedGoalId === goal.id ? null : goal.id);
-                        if (whiteboardService) {
-                          whiteboardService.send('goal_selected', {
-                            goalId: goal.id,
-                            selected: selectedGoalId !== goal.id,
-                            timestamp: Date.now()
-                          });
-                        }
-                      }}
-                    />
-                    <div className="sidebar-item-text">
-                      <div>{goal.title || goal.goal}</div>
-                      {goal.description && <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>{goal.description}</div>}
-                    </div>
-                    <div className="sidebar-badge" title="Goal selected">—</div>
-                  </div>
-                ))
-              ) : learningGoalsSearch ? <div className="sidebar-empty-text">No programs match "{learningGoalsSearch}"</div> : null
-              }
-            </div>
-
-            {/* Prompt Meter */}
-            <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
-            <div className="meter-container meter-container-blue">
-              <div className="meter-buttons">
-                {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
-                  <div
-                    key={p}
-                    className={`meter-button ${selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'}`}
-                    onClick={() => {
-                      setSelectedPromptLevel(p);
-                      if (webRTC) {
-                        webRTC.sendPromptMeter(p);
-                      }
-                    }}
-                  >
-                    {p}
-                  </div>
-                ))}
+      {/* Main layout - Desktop: 3 columns, Tablet/Mobile: 70% center + 30% right stacked */}
+      <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
+        {/* Desktop Only: Left Sidebar - Learning Program */}
+        <div className="session-left-sidebar">
+          {/* Fixed Video Feed - Above Learning Program */}
+          {remoteStream && (
+            <div style={{
+              width: '100%',
+              height: 'clamp(120px, 20vh, 180px)',
+              backgroundColor: '#000',
+              borderRadius: '8px',
+              border: '2px solid #374151',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              margin: '8px 0',
+              flexShrink: 0
+            }}>
+              {/* Video Label */}
+              <div style={{
+                padding: '6px 10px',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                borderBottom: '1px solid #555'
+              }}>
+                👨‍💼 Client {connectionStatus && `(${connectionStatus})`}
               </div>
-              <div className="meter-helper-text">Click to record prompt level for selected goal</div>
-              {selectedPromptLevel && (
-                <div className="meter-selected-text">
-                  Selected: {selectedPromptLevel}
-                </div>
-              )}
-            </div>
 
-            {/* Reinforcement Meter */}
-            <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
-            <div className="meter-container meter-container-green">
-              <div className="meter-buttons">
-                {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
-                  <div
-                    key={r}
-                    className={`meter-button ${selectedReinforcementLevel === r ? 'meter-button-selected' : 'meter-button-green'}`}
-                    onClick={() => {
-                      setSelectedReinforcementLevel(r);
-                      if (webRTC) {
-                        webRTC.sendReinforcementMeter(r);
-                      }
-                    }}
-                  >
-                    {r}
-                  </div>
-                ))}
-              </div>
-              {selectedReinforcementLevel && (
-                <div className="meter-selected-text">
-                  Selected: {selectedReinforcementLevel}
-                </div>
-              )}
-            </div>
-
-            {/* Voice Input Section */}
-            <div className="voice-section">
-              <h3 className="sidebar-section-title">🎙️ Voice Input</h3>
-              <button
-                onClick={toggleListening}
-                className={`voice-button ${listening ? 'voice-button-recording' : 'voice-button-idle'}`}
-              >
-                {listening ? "🔇" : <FaMicrophone />}
-              </button>
-              <p className="voice-status-text">
-                {listening ? '🎤 Recording... Click to stop' : '📢 Click to start recording'}
-              </p>
-              <textarea
-                value={transcript || ''}
-                onChange={(e) => { }}
-                placeholder="Your voice will be transcribed here..."
-                readOnly
+              {/* Video Stream */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
                 style={{
+                  flex: 1,
                   width: '100%',
-                  padding: '10px',
-                  minHeight: '80px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontFamily: 'inherit',
-                  fontSize: '14px',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  backgroundColor: '#fff',
-                  color: '#000'
+                  height: '100%',
+                  objectFit: 'cover',
+                  backgroundColor: '#1a1a1a'
                 }}
               />
-              <button
-                onClick={() => {
-                  if (transcript && whiteboardService) {
-                    whiteboardService.send('prompt_update', {
-                      text: transcript.trim(),
-                      timestamp: Date.now()
-                    });
-                  }
-                }}
-                disabled={!transcript}
-                className="btn-send-to-learner"
-              >
-                ✈️ Send to Client
-              </button>
             </div>
-
-            {/* Session Notes */}
-            <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📝 Session Notes</div>
-            <div className="session-notes-box" style={{ padding: '12px', marginBottom: '12px' }}>
-              <textarea
-                value={sessionNotes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Type session notes here... (auto-saves every 2 seconds)"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  minHeight: '100px',
-                  border: '1px solid #d6d6d6',
-                  borderRadius: '4px',
-                  fontFamily: 'inherit',
-                  fontSize: '12px',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  backgroundColor: '#fff',
-                  color: '#000'
-                }}
-              />
-              <div style={{ fontSize: '11px', color: '#999', marginTop: '6px', textAlign: 'right' }}>
-                {sessionNotes.length} characters
-              </div>
-            </div>
-          </div>
+          )}
+          <LearningProgramSidebar
+            sessionInfo={sessionInfo}
+            filteredLearningGoals={filteredLearningGoals}
+            selectedPromptLevel={selectedPromptLevel}
+            setSelectedPromptLevel={setSelectedPromptLevel}
+            selectedReinforcementLevel={selectedReinforcementLevel}
+            setSelectedReinforcementLevel={setSelectedReinforcementLevel}
+            webRTC={webRTC}
+            toggleListening={toggleListening}
+            listening={listening}
+            transcript={transcript}
+            whiteboardService={whiteboardService}
+            learningGoalsSearch={learningGoalsSearch}
+            setLearningGoalsSearch={setLearningGoalsSearch}
+          />
         </div>
 
-        {/* CENTER: Whiteboard + Controls */}
-        <div className="session-center-area" style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+        {/* Center Area - 70% on mobile/tablet, flexible on desktop */}
+        <div className="session-center-area">
+
           {/* Whiteboard */}
           <div className="session-whiteboard-container">
-            {/* Moveable Video Feed Overlay */}
-            {remoteStream && (
-              <MoveableVideoFeed
-                videoStream={remoteStream}
-                label="Client"
-                position={videoPosition}
-                size={videoSize}
-                onPositionChange={setVideoPosition}
-                onSizeChange={setVideoSize}
-                isDraggable={true}
-                isResizable={true}
-                connectionStatus={connectionStatus}
-                zIndex={100}
-              />
-            )}
-
+            {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
                 whiteboardService={whiteboardService}
@@ -1460,14 +1338,7 @@ const CoachSession = () => {
                 canvasItems={canvasItems}
                 setCanvasItems={setCanvasItems}
                 toolAccess={clientToolAccess}
-                keyboardMode={keyboardMode}
-                keyboardText={keyboardText}
-                setKeyboardText={setKeyboardText}
-                keyboardPosition={keyboardPosition}
-                setKeyboardPosition={setKeyboardPosition}
                 remoteSelectedItemIds={remoteSelectedItemIds}
-                textMessages={textMessages}
-                setTextMessages={setTextMessages}
                 feedbackMessage={feedbackMessage}
                 waitingMessage={waitingMessage}
                 floatingAnimations={floatingAnimations}
@@ -1480,26 +1351,52 @@ const CoachSession = () => {
                 setLineWidth={setLineWidth}
                 buckets={buckets}
                 setBuckets={setBuckets}
+                bucketColor={bucketColor}
+                setBucketColor={setBucketColor}
                 clearCanvasTrigger={clearCanvasTrigger}
                 erasePenTrigger={erasePenTrigger}
                 redrawCanvasTrigger={redrawCanvasTrigger}
                 stopwatchFormattedTime={stopwatch.isRunning ? stopwatch.formattedTime : null}
                 stopwatchIsRunning={stopwatch.isRunning}
                 toolActive={toolActive}
-                textBoxes={textBoxes}
-                onTextBoxChange={handleTextBoxChange}
-                onTextBoxResize={handleTextBoxResize}
-                onTextBoxMove={handleTextBoxMove}
-                onRemoveTextBox={handleRemoveTextBox}
-                activeTextBoxId={activeTextBoxId}
-                setActiveTextBoxId={setActiveTextBoxId}
+                onYoutubeDropped={handleYoutubeDropped}
+                canvasRefForParent={whiteboardCanvasRef}
               />
             </div>
           </div>
 
-          {/* Video Controls */}
-          <div className="w-full">
-            <div className="flex items-center justify-center flex-wrap" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+          {/* YouTube Popups - Rendered outside whiteboard container to avoid stacking context issues */}
+          {youtubePopups.map(popup => (
+            <YouTubePopup
+              key={popup.id}
+              popupId={popup.id}
+              videoId={popup.videoId}
+              title={popup.title}
+              onClose={() => handleCloseYoutubePopup(popup.id)}
+              initialPosition={popup.position}
+              isTrainer={true}
+            />
+          ))}
+
+          {/* Exercise Tool */}
+          {showExercise && (
+            <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+              <Exercise
+                isTrainer={true}
+                attendeeLabel="Guest/Client"
+                onExerciseSubmit={handleExerciseSubmit}
+                onExerciseUpdate={handleExerciseUpdate}
+                onExerciseDelete={handleExerciseDelete}
+                onAnswerChange={handleExerciseAnswerChange}
+                whiteboardService={whiteboardService}
+                initialExercise={exerciseData.question ? exerciseData : null}
+              />
+            </div>
+          )}
+
+          {/* Video Controls - Below Whiteboard */}
+          <div className="w-full mt-4 mb-3">
+            <div className="flex items-center justify-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
               <button
                 onClick={handleToggleMic}
                 className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
@@ -1507,8 +1404,8 @@ const CoachSession = () => {
                 title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
               >
                 <span>{micEnabled ? '🎤' : '🔇'}</span>
+                {/* <span>{micEnabled ? 'Mic On' : 'Mic Off'}</span> */}
               </button>
-
               <button
                 onClick={handleToggleCamera}
                 className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
@@ -1516,65 +1413,11 @@ const CoachSession = () => {
                 title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
               >
                 <span>{cameraEnabled ? '📹' : '📷'}</span>
-              </button>
-
-
-
-              {/* End Session */}
-              <button
-                onClick={handleEndSession}
-                className="bg-red-600 hover:bg-red-700 media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
-                style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
-              >
-                🔴 End
+                {/* <span>{cameraEnabled ? 'Camera On' : 'Camera Off'}</span> */}
               </button>
             </div>
 
-            {/* Background Music Controls */}
-            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center justify-between mb-2" style={{ gap: '0.5rem' }}>
-                <span className="font-semibold text-sm">🎵 Background Music</span>
-                <div className="flex gap-2">
-                  {musicOptions.map(music => (
-                    <button
-                      key={music.id}
-                      onClick={() => toggleBackgroundMusic(music.id)}
-                      className={`px-2 py-1 rounded text-xs transition-all duration-200 ${selectedMusic === music.id && backgroundMusicPlaying
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
-                        }`}
-                    >
-                      {music.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Volume Control */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold">Volume:</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={musicVolume}
-                  onChange={(e) => handleMusicVolumeChange(parseFloat(e.target.value))}
-                  className="flex-1"
-                  style={{ maxWidth: '150px' }}
-                  title={`Volume: ${Math.round(musicVolume * 100)}%`}
-                />
-                <span className="text-xs font-semibold">{Math.round(musicVolume * 100)}%</span>
-              </div>
-
-              {backgroundMusicPlaying && (
-                <div className="text-xs text-green-600 mt-2 font-semibold">
-                  ✅ Music is playing and synced to client
-                </div>
-              )}
-            </div>
           </div>
-
           {/* Whiteboard Drawing Tools */}
           <WhiteboardTools
             tool={tool}
@@ -1610,29 +1453,42 @@ const CoachSession = () => {
             wbSmallBtnBase={wbSmallBtnBase}
             wbSmallBtnActive={wbSmallBtnActive}
             participantType="client"
+            musicOptions={musicOptions}
+            toggleBackgroundMusic={toggleBackgroundMusic}
+            selectedMusic={selectedMusic}
+            backgroundMusicPlaying={backgroundMusicPlaying}
+            musicVolume={musicVolume}
+            handleMusicVolumeChange={handleMusicVolumeChange}
+            showSessionNotes={true}
+            sessionNotes={sessionNotes}
+            handleNotesChange={handleNotesChange}
+            handleClearNotes={handleClearNotes}
           />
+        </div>
 
-          {/* Exercise Tool */}
-          {showExercise && (
-            <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
-              <Exercise
-                isTrainer={true}
-                whiteboardService={whiteboardService}
-                onClose={() => {
-                  setShowExercise(false);
-                  if (whiteboardService) {
-                    whiteboardService.send('exercise_closed', {
-                      timestamp: Date.now()
-                    });
-                  }
+        {/* Right Column - 30% on mobile/tablet (Learning Content + Learning Program) */}
+        <div className="session-right-column">
+          {/* Learning Content - 25% height */}
+          <div className=" learning-content-container ">
+            <div className="section-content">
+              <span className='bg-[#7a2c2c] text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
+              <LearningContentSidebar
+                learningContentSearch={learningContentSearch}
+                handleLearningContentSearch={handleLearningContentSearch}
+                filteredLearningContent={filteredLearningContent}
+                isSearching={isSearching}
+                onDragStartContent={onDragStartContent}
+                onRemoveFromWhiteboard={(itemId) => {
+                  setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                  whiteboardService?.send('item_remove', { id: itemId });
                 }}
               />
             </div>
-          )}
+          </div>
 
           {/* Stopwatch */}
           {showStopwatch && (
-            <div>
+            <div  >
               <StopwatchDisplay
                 formattedTime={stopwatch.formattedTime}
                 isRunning={stopwatch.isRunning}
@@ -1647,26 +1503,49 @@ const CoachSession = () => {
               />
             </div>
           )}
+
+
+
+          {/* Learning Program - 25% height - Tablet/Mobile */}
+          <div className="learning-program-container">
+
+            <div className="section-content">
+              <LearningProgramSidebar
+                sessionInfo={sessionInfo}
+                filteredLearningGoals={filteredLearningGoals}
+                selectedPromptLevel={selectedPromptLevel}
+                setSelectedPromptLevel={setSelectedPromptLevel}
+                selectedReinforcementLevel={selectedReinforcementLevel}
+                setSelectedReinforcementLevel={setSelectedReinforcementLevel}
+                webRTC={webRTC}
+                toggleListening={toggleListening}
+                listening={listening}
+                transcript={transcript}
+                whiteboardService={whiteboardService}
+                learningGoalsSearch={learningGoalsSearch}
+                setLearningGoalsSearch={setLearningGoalsSearch}
+              />
+            </div>
+          </div>
         </div>
-
-        {/* RIGHT SIDEBAR: Learning Content */}
-        <div className="sidebar-container">
-          <div className="sidebar-header sidebar-header-blue">
-            📚 Learning Content
-          </div>
-
-          <div className="sidebar-content">
-            <LearningContentSidebar
-              learningContentSearch={learningContentSearch}
-              handleLearningContentSearch={handleLearningContentSearch}
-              filteredLearningContent={filteredLearningContent}
-              isSearching={isSearching}
-              onDragStartContent={onDragStartContent}
-              onRemoveFromWhiteboard={(itemId) => {
-                setCanvasItems(prev => prev.filter(item => item.id !== itemId));
-              }}
-            />
-          </div>
+      </div>
+      {/* Session Info Bar - fixed to bottom with no surrounding margin */}
+      <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
+        <div className="session-info-actions">
+          <button
+            className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
+            onClick={handleFreeze}
+            title={isFrozen ? "Unfreeze Client Window" : "Freeze Client Window"}
+          >
+            {isFrozen ? '🔓' : '🔒'} <span className="xs:inline">{isFrozen ? 'Unfreeze' : 'Freeze'}</span>
+          </button>
+          <button
+            className="btn-end-session"
+            onClick={handleEndSession}
+            title="End Session"
+          >
+            ⏹️ <span className="xs:inline">End</span>
+          </button>
         </div>
       </div>
     </div>

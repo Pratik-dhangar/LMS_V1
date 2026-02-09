@@ -1496,6 +1496,35 @@ async def cancel_subscription(
     return subscription
 
 
+@router.delete("/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_subscription(
+    subscription_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """
+    Permanently delete a subscription and all related records from the database.
+    This operation cannot be undone.
+    
+    Requirements:
+    - Subscription must not have any active or scheduled sessions
+    """
+    subscription = await subscription_crud.get_subscription_by_id(db, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    
+    # Verify subscription belongs to current head
+    if subscription.current_head_id != current_head.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this subscription")
+    
+    success, error = await subscription_crud.delete_subscription(db, subscription_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Return 204 No Content on success
+    return None
+
+
 @router.post("/subscriptions/{subscription_id}/refund", response_model=SubscriptionRefundResponse)
 async def process_subscription_refund(
     subscription_id: int,
