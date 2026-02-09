@@ -144,6 +144,52 @@ const TodaysSchedule = () => {
     return session.status || 'scheduled';
   };
 
+  // Check if trainer can start session based on scheduled time
+  const canStartSession = (session) => {
+    // Can only start if status is scheduled (not ended, cancelled, or already active)
+    if (session.status !== 'scheduled') {
+      return false;
+    }
+
+    // Check if current time has reached the scheduled time
+    if (session.scheduled_date) {
+      try {
+        const now = new Date();
+        const scheduled = new Date(session.scheduled_date);
+
+        // Button is enabled only when current time >= scheduled_date
+        if (now >= scheduled) {
+          return true;
+        }
+      } catch (e) {
+        console.warn('Error parsing session date:', e);
+      }
+    }
+    return false;
+  };
+
+  // Get time until session starts
+  const getTimeUntilSession = (session) => {
+    if (!session.scheduled_date) return null;
+    try {
+      const now = new Date();
+      const scheduled = new Date(session.scheduled_date);
+      const diffMs = scheduled.getTime() - now.getTime();
+
+      if (diffMs <= 0) return null; // Session time has arrived
+
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 60) {
+        return `${diffMins}m`;
+      }
+      const diffHours = Math.floor(diffMins / 60);
+      return `${diffHours}h`;
+    } catch (e) {
+      console.warn('Error calculating time until session:', e);
+      return null;
+    }
+  };
+
   const todaysDateString = useMemo(() => {
     const d = new Date();
     return d.toLocaleDateString(undefined, {
@@ -296,14 +342,23 @@ const TodaysSchedule = () => {
 
                         <div className="trainer-session-actions">
                           {getSessionStatus(session) === "scheduled" && (
-                            <button
-                              onClick={() =>
-                                handleStartSession(session.session_id)
-                              }
-                              className="trainer-btn-start"
-                            >
-                              Start Session
-                            </button>
+                            <div>
+                              <button
+                                onClick={() =>
+                                  handleStartSession(session.session_id)
+                                }
+                                className="trainer-btn-start"
+                                disabled={!canStartSession(session)}
+                                title={!canStartSession(session) ? `Session starts in ${getTimeUntilSession(session)}` : "Click to start session"}
+                              >
+                                Start Session
+                              </button>
+                              {!canStartSession(session) && getTimeUntilSession(session) && (
+                                <div className="trainer-session-time-warning">
+                                  Starts in {getTimeUntilSession(session)}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {getSessionStatus(session) === "active" && (
                             <button

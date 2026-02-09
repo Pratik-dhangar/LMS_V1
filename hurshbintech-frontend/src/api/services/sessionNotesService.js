@@ -1,11 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem('access_token');
-    return { Authorization: `Bearer ${token}` };
-};
+import api from '../axios';
 
 const sessionNotesService = {
     /**
@@ -17,10 +10,9 @@ const sessionNotesService = {
     saveNotes: async (sessionId, notes) => {
         try {
             console.log('[SessionNotes] Saving notes for session:', sessionId, 'Content length:', notes?.length || 0);
-            const response = await axios.post(
-                `${API_URL}/session-notes/${sessionId}`,
-                { notes },
-                { headers: getAuthHeader() }
+            const response = await api.post(
+                `/session-notes/${sessionId}`,
+                { notes }
             );
             console.log('[SessionNotes] ✅ Notes saved successfully for session:', sessionId);
             return response.data;
@@ -37,9 +29,8 @@ const sessionNotesService = {
      */
     getNotes: async (sessionId) => {
         try {
-            const response = await axios.get(
-                `${API_URL}/session-notes/${sessionId}`,
-                { headers: getAuthHeader() }
+            const response = await api.get(
+                `/session-notes/${sessionId}`
             );
             return response.data;
         } catch (error) {
@@ -56,10 +47,9 @@ const sessionNotesService = {
      */
     updateNotes: async (sessionId, notes) => {
         try {
-            const response = await axios.put(
-                `${API_URL}/session-notes/${sessionId}`,
-                { notes },
-                { headers: getAuthHeader() }
+            const response = await api.put(
+                `/session-notes/${sessionId}`,
+                { notes }
             );
             return response.data;
         } catch (error) {
@@ -75,13 +65,12 @@ const sessionNotesService = {
      */
     getNotesByInternalId: async (sessionInternalId) => {
         try {
-            const response = await axios.get(
-                `${API_URL}/session-notes/by-session-internal/${sessionInternalId}`,
-                { headers: getAuthHeader() }
+            const response = await api.get(
+                `/session-notes/by-session-internal/${sessionInternalId}`
             );
             return response.data;
         } catch (error) {
-            console.error('Error fetching session notes by internal ID:', error);
+            console.error('Error fetching session notes by ID:', error);
             throw error;
         }
     },
@@ -94,10 +83,9 @@ const sessionNotesService = {
     clearNotes: async (sessionId) => {
         try {
             console.log('[SessionNotes] Clearing notes for session:', sessionId);
-            const response = await axios.post(
-                `${API_URL}/session-notes/${sessionId}`,
-                { notes: '' },
-                { headers: getAuthHeader() }
+            const response = await api.post(
+                `/session-notes/${sessionId}`,
+                { notes: '' }
             );
             console.log('[SessionNotes] ✅ Notes cleared successfully for session:', sessionId);
             return response.data;
@@ -116,10 +104,9 @@ const sessionNotesService = {
     forceSaveNotes: async (sessionId, notes) => {
         try {
             console.log('[SessionNotes] ⚠️ Force-saving notes for session (disconnect recovery):', sessionId);
-            const response = await axios.post(
-                `${API_URL}/session-notes/${sessionId}/force-save`,
-                { notes },
-                { headers: getAuthHeader() }
+            const response = await api.post(
+                `/session-notes/${sessionId}/force-save`,
+                { notes }
             );
             console.log('[SessionNotes] ✅ Notes force-saved successfully:', sessionId);
             return response.data;
@@ -138,10 +125,9 @@ const sessionNotesService = {
     finalizeNotes: async (sessionId, notes = null) => {
         try {
             console.log('[SessionNotes] Finalizing notes for session:', sessionId);
-            const response = await axios.post(
-                `${API_URL}/session-notes/${sessionId}/finalize`,
-                { notes },
-                { headers: getAuthHeader() }
+            const response = await api.post(
+                `/session-notes/${sessionId}/finalize`,
+                { notes }
             );
             console.log('[SessionNotes] ✅ Notes finalized successfully for session:', sessionId);
             return response.data;

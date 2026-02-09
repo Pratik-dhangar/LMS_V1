@@ -3,6 +3,7 @@ Authentication dependencies for protected routes
 Validates JWT tokens and returns authenticated users
 """
 
+from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
@@ -419,6 +420,86 @@ async def get_current_admin_or_head(
             )
 
         return user
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+        )
+
+
+async def get_current_trainer_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[TrainerProfile]:
+    """
+    Get current authenticated trainer profile from JWT token
+    Returns None if user is not a trainer (instead of raising exception)
+    Used in routes that support multiple roles
+    """
+    try:
+        # Decode JWT token
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+
+        # Return None if not a trainer
+        if role != "trainer":
+            return None
+
+        # Get trainer profile from database
+        result = await db.execute(
+            select(TrainerProfile)
+            .options(joinedload(TrainerProfile.user))
+            .join(User, TrainerProfile.user_id == User.id)
+            .where(User.id == user_id, User.role == UserRole.TRAINER)
+        )
+        trainer = result.scalar_one_or_none()
+
+        return trainer
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+        )
+
+
+async def get_current_coach_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[CoachProfile]:
+    """
+    Get current authenticated coach profile from JWT token
+    Returns None if user is not a coach (instead of raising exception)
+    Used in routes that support multiple roles
+    """
+    try:
+        # Decode JWT token
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+
+        # Return None if not a coach
+        if role != "coach":
+            return None
+
+        # Get coach profile from database
+        result = await db.execute(
+            select(CoachProfile)
+            .options(joinedload(CoachProfile.user))
+            .join(User, CoachProfile.user_id == User.id)
+            .where(User.id == user_id, User.role == UserRole.COACH)
+        )
+        coach = result.scalar_one_or_none()
+
+        return coach
 
     except JWTError:
         raise HTTPException(

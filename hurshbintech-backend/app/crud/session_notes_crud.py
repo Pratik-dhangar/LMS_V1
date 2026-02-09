@@ -18,54 +18,103 @@ logger = logging.getLogger(__name__)
 
 async def create_or_update_session_notes(
     db: AsyncSession,
-    session_id: int,
-    trainer_id: int,
-    notes: str,
+    session_id: Optional[int] = None,
+    coach_appointment_session_id: Optional[int] = None,
+    trainer_id: Optional[int] = None,
+    coach_id: Optional[int] = None,
+    notes: str = "",
     is_finalized: str = "false"
 ) -> Optional[Dict[str, Any]]:
     """
-    Create or update session notes.
+    Create or update session notes for either training sessions or coach appointment sessions.
     - First time: creates new entry with version 1
     - Subsequent: updates same entry and increments version
     - Auto-saves with debounce (10s of inactivity)
     - Handles disconnect recovery
+    - Supports both training sessions and coach appointment sessions
     """
+    if not session_id and not coach_appointment_session_id:
+        logger.error("❌ Neither session_id nor coach_appointment_session_id provided")
+        raise ValueError("Either session_id or coach_appointment_session_id must be provided")
+    
     try:
         # Check if notes entry exists for this session
-        result = await db.execute(
-            select(SessionNotes)
-            .where(SessionNotes.session_id == session_id)
-        )
+        if session_id:
+            result = await db.execute(
+                select(SessionNotes)
+                .where(SessionNotes.session_id == session_id)
+            )
+        else:
+            result = await db.execute(
+                select(SessionNotes)
+                .where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+            )
+        
         existing_notes = result.scalar_one_or_none()
 
         if existing_notes:
-            # Update existing entry - increment version
-            existing_notes.notes = notes
-            existing_notes.version = existing_notes.version + 1
-            existing_notes.is_finalized = is_finalized
+            # Update existing entry using explicit SQL UPDATE to avoid race conditions
+            if session_id:
+                await db.execute(
+                    update(SessionNotes)
+                    .where(SessionNotes.session_id == session_id)
+                    .values(
+                        notes=notes,
+                        version=SessionNotes.version + 1,
+                        is_finalized=is_finalized
+                    )
+                )
+            else:
+                await db.execute(
+                    update(SessionNotes)
+                    .where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+                    .values(
+                        notes=notes,
+                        version=SessionNotes.version + 1,
+                        is_finalized=is_finalized
+                    )
+                )
+            
             await db.commit()
-            await db.refresh(existing_notes)
             
-            logger.info(
-                f"✅ Session notes updated for session {session_id} "
-                f"(v{existing_notes.version}) - Content length: {len(notes)}"
-            )
+            # Fetch updated record
+            if session_id:
+                result = await db.execute(
+                    select(SessionNotes).where(SessionNotes.session_id == session_id)
+                )
+            else:
+                result = await db.execute(
+                    select(SessionNotes).where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+                )
+            updated_notes = result.scalar_one_or_none()
             
-            return {
-                "id": existing_notes.id,
-                "session_id": existing_notes.session_id,
-                "trainer_id": existing_notes.trainer_id,
-                "notes": existing_notes.notes,
-                "version": existing_notes.version,
-                "is_finalized": existing_notes.is_finalized,
-                "created_at": existing_notes.created_at,
-                "updated_at": existing_notes.updated_at,
-            }
+            session_type = "training" if session_id else "coach appointment"
+            session_ref = session_id or coach_appointment_session_id
+            if updated_notes:
+                logger.info(
+                    f"✅ Session notes updated for {session_type} session {session_ref} "
+                    f"(v{updated_notes.version}) - Content length: {len(notes)}"
+                )
+                
+                return {
+                    "id": updated_notes.id,
+                    "session_id": updated_notes.session_id,
+                    "coach_appointment_session_id": updated_notes.coach_appointment_session_id,
+                    "trainer_id": updated_notes.trainer_id,
+                    "coach_id": updated_notes.coach_id,
+                    "notes": updated_notes.notes,
+                    "version": updated_notes.version,
+                    "is_finalized": updated_notes.is_finalized,
+                    "created_at": updated_notes.created_at,
+                    "updated_at": updated_notes.updated_at,
+                }
         else:
             # Create new entry
             db_notes = SessionNotes(
                 session_id=session_id,
+                coach_appointment_session_id=coach_appointment_session_id,
                 trainer_id=trainer_id,
+                coach_id=coach_id,
                 notes=notes,
                 version=1,
                 is_finalized=is_finalized
@@ -74,15 +123,19 @@ async def create_or_update_session_notes(
             await db.commit()
             await db.refresh(db_notes)
             
+            session_type = "training" if session_id else "coach appointment"
+            session_ref = session_id or coach_appointment_session_id
             logger.info(
-                f"✅ Session notes created for session {session_id} "
+                f"✅ Session notes created for {session_type} session {session_ref} "
                 f"(v1) - Content length: {len(notes)}"
             )
             
             return {
                 "id": db_notes.id,
                 "session_id": db_notes.session_id,
+                "coach_appointment_session_id": db_notes.coach_appointment_session_id,
                 "trainer_id": db_notes.trainer_id,
+                "coach_id": db_notes.coach_id,
                 "notes": db_notes.notes,
                 "version": db_notes.version,
                 "is_finalized": db_notes.is_finalized,
@@ -98,26 +151,42 @@ async def create_or_update_session_notes(
 
 async def get_session_notes(
     db: AsyncSession,
-    session_id: int
+    session_id: Optional[int] = None,
+    coach_appointment_session_id: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
     """
-    Get session notes for a specific session.
+    Get session notes for a specific session (either training or coach appointment).
     Returns the latest notes entry with version info.
     """
+    if not session_id and not coach_appointment_session_id:
+        logger.error("❌ Neither session_id nor coach_appointment_session_id provided")
+        return None
+    
     try:
-        result = await db.execute(
-            select(SessionNotes)
-            .where(SessionNotes.session_id == session_id)
-        )
+        if session_id:
+            result = await db.execute(
+                select(SessionNotes)
+                .where(SessionNotes.session_id == session_id)
+            )
+        else:
+            result = await db.execute(
+                select(SessionNotes)
+                .where(SessionNotes.coach_appointment_session_id == coach_appointment_session_id)
+            )
+        
         notes = result.scalar_one_or_none()
         
         if notes:
-            logger.info(f"✅ Session notes retrieved for session {session_id} (v{notes.version})")
+            session_type = "training" if session_id else "coach appointment"
+            session_ref = session_id or coach_appointment_session_id
+            logger.info(f"✅ Session notes retrieved for {session_type} session {session_ref} (v{notes.version})")
             
             return {
                 "id": notes.id,
                 "session_id": notes.session_id,
+                "coach_appointment_session_id": notes.coach_appointment_session_id,
                 "trainer_id": notes.trainer_id,
+                "coach_id": notes.coach_id,
                 "notes": notes.notes,
                 "version": notes.version,
                 "is_finalized": notes.is_finalized,

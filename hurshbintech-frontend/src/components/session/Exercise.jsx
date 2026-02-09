@@ -11,7 +11,8 @@ const Exercise = ({
     onExerciseDelete = null,
     onAnswerChange = null,
     whiteboardService = null,
-    initialExercise = null
+    initialExercise = null,
+    attendeeLabel = 'Attendee' // 'Guest/Client' for Coach, 'Learner' for Trainer
 }) => {
     const answerTextareaRef = useRef(null);
     const [mode, setMode] = useState(isTrainer && !initialExercise ? 'create' : 'view'); // 'create', 'edit', 'view', 'sent'
@@ -81,18 +82,24 @@ const Exercise = ({
     useEffect(() => {
         if (!whiteboardService) return;
 
+        console.log('[Exercise] Setting up whiteboardService.onCommentUpdate handler');
+
         whiteboardService.onCommentUpdate = (data) => {
+            console.log('[Exercise] ✅ onCommentUpdate callback triggered with data:', data);
             // normalize incoming comment shape to what useComments expects
             const incoming = {
                 text: data.message || data.text || '',
                 type: data.type || 'learner',
                 timestamp: data.timestamp || Date.now()
             };
+            console.log('[Exercise] ✅ Calling addReceivedComment with normalized:', incoming);
             addReceivedComment(incoming);
+            console.log('[Exercise] ✅ addReceivedComment completed');
         };
 
         return () => {
             if (whiteboardService) {
+                console.log('[Exercise] Cleaning up whiteboardService.onCommentUpdate');
                 whiteboardService.onCommentUpdate = null;
             }
         };
@@ -112,8 +119,8 @@ const Exercise = ({
         setExerciseCreated(true);
         setMode('view');
 
-        // Do not auto-send the question to learners here.
-        // The trainer must explicitly "Send to Learner" via the Send button (handleGiveCursor).
+        // Do not auto-send the question to attendees here.
+        // The trainer must explicitly "Send to Attendee" via the Send button (handleGiveCursor).
 
         setTimeout(() => setFeedbackMessage(''), 3000);
     };
@@ -341,7 +348,7 @@ const Exercise = ({
                                                 type: 'learner',
                                                 timestamp: new Date().toISOString()
                                             });
-                                            // Debounced send to learner via whiteboard
+                                            // Debounced send to attendee via whiteboard
                                             debouncedSendComment(newValue);
                                         }}
                                         onBlur={(e) => {
@@ -411,7 +418,7 @@ const Exercise = ({
 
                         <div className="button-group">
                             <button onClick={handleGiveCursor} className="btn btn-primary">
-                                Send to Learner
+                                Send to {attendeeLabel}
                             </button>
                             <button onClick={handleEditExercise} className="btn btn-secondary">
                                 <FaEdit /> Edit

@@ -47,7 +47,7 @@ axiosInstance.interceptors.response.use(
   (error) => {
     // Handle 401 - Unauthorized (token expired)
     if (error.response?.status === 401) {
-      // Check if it's a login request - if so, let the component handle the error
+      // Check if this is a login request - if so, let the component handle the error
       // and don't trigger session expiration logic
       if (error.config?.url?.includes('/auth/user/login')) {
         return Promise.reject(error);
@@ -56,6 +56,17 @@ axiosInstance.interceptors.response.use(
       // Check if this is a silent auth check (browsing without login)
       // Don't show error toast or redirect for optional authentication
       if (error.config?.silentAuthCheck) {
+        return Promise.reject(error);
+      }
+
+      // Check if this is an optional endpoint that shouldn't trigger logout
+      // (e.g., session notes, learning goals that fail due to permissions)
+      const optionalEndpoints = ['/session-notes/', '/learning-goals/', '/head-session-notes/'];
+      const isOptionalEndpoint = optionalEndpoints.some(endpoint => error.config?.url?.includes(endpoint));
+
+      if (isOptionalEndpoint) {
+        // Just reject the promise without triggering logout
+        console.warn(`[Axios] Got 401 on optional endpoint: ${error.config?.url}, continuing without it`);
         return Promise.reject(error);
       }
 
