@@ -880,4 +880,3 @@ InstructorCommentsDisplay.propTypes = {
     isOpen: PropTypes.bool,
     maxHeight: PropTypes.string
 };
-
