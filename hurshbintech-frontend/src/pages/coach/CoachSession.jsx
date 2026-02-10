@@ -41,9 +41,6 @@ import coachSessionService from '../../api/services/coachSessionService';
 import learningContentService from '../../api/services/learningContentService';
 import learningGoalsService from '../../api/services/learningGoalsService';
 import sessionNotesService from '../../api/services/sessionNotesService';
-import VideoConferenceService from '../../api/services/videoConferenceService';
-import WhiteboardService from '../../api/services/whiteboardService';
-import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Whiteboard from '../../components/common/Whiteboard';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import useStopwatch from '../../hooks/useStopwatch';
@@ -56,6 +53,7 @@ import LearningProgramSidebar from '../trainer/LearningProgramSidebar';
 import YouTubePopup from '../../components/common/YouTubePopup';
 import Exercise from '../../components/session/Exercise';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
+import { RemoteVideoFeed } from '../../components/session/AttendeeSessionLayout';
 // Import session utilities from InstructorSessionLayout
 import {
   REACTION_SVG_ASSETS,
@@ -627,115 +625,39 @@ const CoachSession = () => {
     }
     isInitializingRef.current = true;
 
-    // Initialize Whiteboard
-    const wbService = new WhiteboardService(WS_BASE_URL, numericSessionId, 'coach');
-    try {
-      wbService.initialize();
+    // Initialize Whiteboard using utility function from InstructorSessionLayout
+    const wbService = initializeWhiteboardService({
+      wsBaseUrl: WS_BASE_URL,
+      sessionId: numericSessionId,
+      role: 'coach',
+      setBuckets,
+      setFloatingAnimations,
+      setErasePenTrigger,
+      setRedrawCanvasTrigger
+    });
+
+    if (wbService) {
       setWhiteboardService(wbService);
-
-      // Set up callback for bucket added/updated
-      wbService.onBucketAdded = (data) => {
-        console.log('[CoachSession] Bucket added:', data);
-        setBuckets(prev => {
-          const exists = prev.find(bucket => bucket.id === data.id);
-          if (!exists) {
-            return [...prev, data];
-          }
-          return prev;
-        });
-      };
-
-      wbService.onBucketUpdate = (data) => {
-        console.log('[CoachSession] Bucket updated:', data);
-        if (data.removed) {
-          setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-        } else {
-          setBuckets(prev => prev.map(bucket =>
-            bucket.id === data.id ? { ...bucket, ...data } : bucket
-          ));
-        }
-      };
-
-      // Set up callback for floating animations (reactions)
-      wbService.onFloatingAnimations = (data) => {
-        console.log('[CoachSession] Floating animations received:', data);
-        setFloatingAnimations(prev => [...prev, ...data.animations]);
-
-        // Auto-remove after 13 seconds (same as trainer)
-        setTimeout(() => {
-          setFloatingAnimations(prev =>
-            prev.filter(a => !data.animations.find(na => na.id === a.id))
-          );
-        }, 13000);
-      };
-
-      // Set up callback for erase pen event
-      wbService.onErasePen = () => {
-        console.log('[CoachSession] Received erase pen event');
-        setErasePenTrigger(prev => prev + 1);
-        setRedrawCanvasTrigger(prev => prev + 1);
-      };
-
-      const tbService = new WhiteboardToolsService(wbService);
+      // Initialize tools service using utility function
+      const tbService = initializeToolsService(wbService);
       setToolsService(tbService);
-    } catch (error) {
-      console.error('[CoachSession] Error initializing whiteboard:', error);
-      toast.error('Failed to initialize whiteboard');
     }
 
-    // Initialize Video Conference Service
-    const videoService = new VideoConferenceService(WS_BASE_URL, numericSessionId, 'coach');
+    // Initialize Video Conference Service using utility function from InstructorSessionLayout
+    const videoService = await initializeVideoConferenceService({
+      wsBaseUrl: WS_BASE_URL,
+      sessionId: numericSessionId,
+      role: 'coach',
+      setLocalStream,
+      setRemoteStream,
+      setConnectionStatus,
+      connectedRef: clientConnectedRef,
+      sessionInfo,
+      participantName: 'Client'
+    });
 
-    try {
-      videoService.onLocalStream = (stream) => {
-        console.log('[CoachSession] Local stream initialized');
-        setLocalStream(stream);
-        setConnectionStatus('Waiting for client...');
-      };
-
-      videoService.onRemoteStream = (stream) => {
-        console.log('[CoachSession] Received remote stream from client');
-        setRemoteStream(stream);
-        setConnectionStatus('Connected');
-
-        // Only show toast once when client first connects
-        if (!clientConnectedRef.current) {
-          clientConnectedRef.current = true;
-          toast.success(`${sessionInfo?.client_name || 'Client'} has joined the session`);
-        }
-      };
-
-      videoService.onConnectionStateChange = (state) => {
-        console.log('[CoachSession] Connection state changed to:', state);
-        const statusMap = {
-          'new': 'connecting',
-          'connecting': 'connecting',
-          'connected': 'connected',
-          'disconnected': 'disconnected',
-          'failed': 'failed',
-          'closed': 'disconnected'
-        };
-        setConnectionStatus(statusMap[state] || state);
-
-        // Handle client disconnect
-        if ((state === 'disconnected' || state === 'closed') && clientConnectedRef.current) {
-          console.log('[CoachSession] Client disconnected');
-          toast.info(`${sessionInfo?.client_name || 'Client'} has left the session`);
-          setRemoteStream(null);
-          clientConnectedRef.current = false;
-        }
-      };
-
-      videoService.onError = (error) => {
-        console.error('[CoachSession] Video conference error:', error);
-        toast.error(`Video error: ${error.message}`);
-      };
-
-      await videoService.initialize();
+    if (videoService) {
       setWebRTC(videoService);
-    } catch (error) {
-      console.error('[CoachSession] Video Conference init error:', error);
-      toast.error('Failed to initialize video connection: ' + error.message);
     }
   };
 
@@ -1223,48 +1145,6 @@ const CoachSession = () => {
       <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
         {/* Desktop Only: Left Sidebar - Learning Program */}
         <div className="session-left-sidebar">
-          {/* Fixed Video Feed - Above Learning Program */}
-          {remoteStream && (
-            <div style={{
-              width: '100%',
-              height: 'clamp(120px, 20vh, 180px)',
-              backgroundColor: '#000',
-              borderRadius: '8px',
-              border: '2px solid #374151',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              margin: '8px 0',
-              flexShrink: 0
-            }}>
-              {/* Video Label */}
-              <div style={{
-                padding: '6px 10px',
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                borderBottom: '1px solid #555'
-              }}>
-                👨‍💼 Client {connectionStatus && `(${connectionStatus})`}
-              </div>
-
-              {/* Video Stream */}
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                style={{
-                  flex: 1,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  backgroundColor: '#1a1a1a'
-                }}
-              />
-            </div>
-          )}
           <LearningProgramSidebar
             sessionInfo={sessionInfo}
             filteredLearningGoals={filteredLearningGoals}
@@ -1286,7 +1166,16 @@ const CoachSession = () => {
         <div className="session-center-area">
 
           {/* Whiteboard */}
-          <div className="session-whiteboard-container">
+          <div className="session-whiteboard-container" style={{ position: 'relative' }}>
+            {/* Client Camera - top-right overlay */}
+            {remoteStream && (
+              <RemoteVideoFeed
+                remoteVideoRef={remoteVideoRef}
+                remoteStream={remoteStream}
+                topPosition="8px"
+                label="Client"
+              />
+            )}
             {/* Whiteboard component - keep logic intact */}
             <div className="w-full h-full">
               <Whiteboard
