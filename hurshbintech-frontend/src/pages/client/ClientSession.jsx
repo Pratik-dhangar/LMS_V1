@@ -618,45 +618,47 @@ const ClientSession = () => {
         </div>
       </div>
 
-      {/* Metrics Header - Full width (P:, R:, Bucket Color) */}
-      <div style={{
+      {/* Metrics Header - Full width (P:, R:, Bucket Color) - ✅ Responsive */}
+      <div className="learner-metrics-header" style={{
         display: 'flex',
+        position: 'relative',
         alignItems: 'center',
-        gap: '12px',
-        padding: '8px 8px',
+        gap: 'clamp(6px, 1.5vw, 12px)',
+        padding: 'clamp(6px, 1.2vh, 8px) clamp(6px, 1.2vw, 8px)',
         backgroundColor: 'white',
         borderRadius: '4px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         flexWrap: 'wrap',
         margin: '0',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        fontSize: 'clamp(10px, 1.8vw, 12px)'
       }}>
         {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
         {/* Prompt Level */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#d97706' }}>P:</span>
-          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
+          <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#d97706' }}>P:</span>
+          <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
         </div>
 
         {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
         {/* Reinforcement Level */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#16a34a' }}>R:</span>
-          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
+          <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#16a34a' }}>R:</span>
+          <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
         </div>
 
         {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
         {/* Bucket Color - Bulb with Glow */}
         <span
           style={{
-            fontSize: '24px',
+            fontSize: 'clamp(20px, 3.5vw, 24px)',
             cursor: 'pointer',
             filter: isBulbGlowing ? `drop-shadow(0 0 12px ${bucketColor}) drop-shadow(0 0 20px ${bucketColor}80)` : bucketColor !== '#8B6F47' ? `drop-shadow(0 0 8px ${bucketColor})` : 'none',
             animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
@@ -670,14 +672,14 @@ const ClientSession = () => {
         </span>
 
         {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
         {/* Prompt Line with Bulb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)' }}>
           <span
             onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
             style={{
-              fontSize: '24px',
+              fontSize: 'clamp(20px, 3.5vw, 24px)',
               cursor: 'pointer',
               filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== '[Prompts from instructor will appear here]' ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
               animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
@@ -691,17 +693,42 @@ const ClientSession = () => {
           {isPromptLineOpen && (
             <div style={{
               backgroundColor: '#f9fafb',
-              borderRadius: '6px',
-              padding: '8px 12px',
+              borderRadius: 'clamp(4px, 0.8vw, 6px)',
+              padding: 'clamp(6px, 1.2vw, 8px) clamp(8px, 1.5vw, 12px)',
               border: promptText !== '[Prompts from instructor will appear here]' ? '2px solid #fbbf24' : '1px solid #e5e7eb',
-              maxWidth: '300px',
+              maxWidth: 'clamp(200px, 40vw, 300px)',
               transition: 'border 0.3s ease'
             }}>
-              <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{
+                fontSize: 'clamp(10px, 1.8vw, 12px)',
+                color: '#374151',
+                margin: 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
                 {promptText !== '[Prompts from instructor will appear here]' ? promptText : 'Waiting for prompt...'}
               </p>
             </div>
           )}
+        </div>
+
+        {/* Centered Video Controls - absolute centered within metrics header */}
+        <div style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 60,
+          pointerEvents: 'auto'
+        }}>
+          <AttendeeVideoControls
+            micEnabled={micEnabled}
+            cameraEnabled={cameraEnabled}
+            onToggleMic={handleToggleMic}
+            onToggleCamera={handleToggleCamera}
+            onLeaveSession={handleLeaveSession}
+          />
         </div>
       </div>
 
@@ -715,7 +742,7 @@ const ClientSession = () => {
               <RemoteVideoFeed
                 remoteVideoRef={remoteVideoRef}
                 remoteStream={remoteStream}
-                topPosition="55px"
+                topPosition="4px"
                 label="Coach"
               />
 
@@ -788,15 +815,6 @@ const ClientSession = () => {
         onSendComment={debouncedSendComment}
         onFlushComment={flushSendComment}
         sessionType="client"
-      />
-
-      {/* Video Controls */}
-      <AttendeeVideoControls
-        micEnabled={micEnabled}
-        cameraEnabled={cameraEnabled}
-        onToggleMic={handleToggleMic}
-        onToggleCamera={handleToggleCamera}
-        onLeaveSession={handleLeaveSession}
       />
     </div>
   );
