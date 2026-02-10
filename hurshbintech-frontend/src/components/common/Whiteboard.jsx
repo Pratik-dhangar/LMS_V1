@@ -1170,6 +1170,9 @@ const Whiteboard = ({
             whiteboardService.onBucketUpdate = (data) => {
                 // console.log('[Whiteboard] Bucket updated:', data);
                 if (data.removed) {
+                    // Remove all items inside the bucket first
+                    setCanvasItems(prev => prev.filter(item => item.inBucket !== data.id));
+                    
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
@@ -1610,6 +1613,10 @@ const Whiteboard = ({
     // };
 
     const removeBucket = (bucketId) => {
+        // Remove all items inside the bucket
+        setCanvasItems(prev => prev.filter(item => item.inBucket !== bucketId));
+        
+        // Remove the bucket itself
         setBuckets(prev => prev.filter(b => b.id !== bucketId));
 
         // Send update to other participants
@@ -1651,33 +1658,16 @@ const Whiteboard = ({
     };
 
     const getBucketAtPosition = (x, y) => {
-        // Check if point is inside the bucket's SVG path
-        // Bucket SVG viewBox is 0 0 500 500
-        // Bucket path: M110 200 Q250 230 390 200 L370 400 Q250 435 130 400 Z
+        // Check if point is inside the bucket's rectangular bounds
         return buckets.find(bucket => {
-            // Convert click position to SVG viewBox coordinates
-            const svgX = ((x - bucket.x) / bucket.width) * 500;
-            const svgY = ((y - bucket.y) / bucket.height) * 500;
+            // Simple rectangular collision detection for the new bucket design
+            const bucketTop = bucket.y;
+            const bucketBottom = bucket.y + bucket.height;
+            const bucketLeft = bucket.x;
+            const bucketRight = bucket.x + bucket.width;
 
-            // Check if point is inside the bucket outline
-            // Approximate the bucket shape as a trapezoid for collision
-            // Top: y ~200, bottom: y ~400
-            // Top width: x ~110-390, bottom width: x ~130-370
-            if (svgY < 200 || svgY > 400) return false;
-
-            // Interpolate x boundaries based on y position
-            const topY = 200;
-            const bottomY = 400;
-            const topLeft = 110;
-            const topRight = 390;
-            const bottomLeft = 130;
-            const bottomRight = 370;
-
-            const t = (svgY - topY) / (bottomY - topY);
-            const leftBound = topLeft + t * (bottomLeft - topLeft);
-            const rightBound = topRight + t * (bottomRight - topRight);
-
-            return svgX >= leftBound && svgX <= rightBound;
+            return x >= bucketLeft && x <= bucketRight &&
+                   y >= bucketTop && y <= bucketBottom;
         });
     };
 
@@ -1723,32 +1713,19 @@ const Whiteboard = ({
     };
 
     const isItemInBucket = (itemX, itemY, itemWidth, itemHeight, bucket) => {
-        // Check if item's center point is inside the bucket's SVG path
+        // Check if item's center point is inside the bucket's rectangular bounds
         const centerX = itemX + itemWidth / 2;
         const centerY = itemY + itemHeight / 2;
 
-        // Convert center point to SVG viewBox coordinates (0-500)
-        const svgX = ((centerX - bucket.x) / bucket.width) * 500;
-        const svgY = ((centerY - bucket.y) / bucket.height) * 500;
+        // Simple rectangular collision detection for the new bucket design
+        // Bucket has a handle area at top (-32px), so we adjust the collision area
+        const bucketTop = bucket.y; // Include the handle area
+        const bucketBottom = bucket.y + bucket.height;
+        const bucketLeft = bucket.x;
+        const bucketRight = bucket.x + bucket.width;
 
-        // Check if point is inside the bucket outline
-        // Bucket shape: M110 200 Q250 230 390 200 L370 400 Q250 435 130 400 Z
-        // Approximate as a trapezoid for collision detection
-        if (svgY < 200 || svgY > 400) return false;
-
-        // Interpolate x boundaries based on y position
-        const topY = 200;
-        const bottomY = 400;
-        const topLeft = 110;
-        const topRight = 390;
-        const bottomLeft = 130;
-        const bottomRight = 370;
-
-        const t = (svgY - topY) / (bottomY - topY);
-        const leftBound = topLeft + t * (bottomLeft - topLeft);
-        const rightBound = topRight + t * (bottomRight - topRight);
-
-        return svgX >= leftBound && svgX <= rightBound;
+        return centerX >= bucketLeft && centerX <= bucketRight &&
+               centerY >= bucketTop && centerY <= bucketBottom;
     };
 
     const startDrawing = (e) => {
@@ -1809,14 +1786,29 @@ const Whiteboard = ({
                 originalHeight: item.originalHeight || item.height
             };
 
+            // If item is in a bucket, require explicit selection before dragging
+            const isAlreadySelected = selectedItems.some(si => si.id === item.id);
+            if (item.inBucket && !isAlreadySelected) {
+                // Select the item (click or long press), don't start dragging yet
+                setSelectedItems([itemWithOriginalSize]);
+                
+                // Broadcast selection to all participants
+                if (whiteboardService) {
+                    whiteboardService.send('item_selected', {
+                        itemIds: [item.id],
+                        timestamp: Date.now()
+                    });
+                }
+                e.preventDefault();
+                return; // Don't start dragging, just select
+            }
+
             // Check permissions for learners
             if (!isTrainer) {
                 // Learner needs select permission to interact with items
                 if (!toolAccess.select) {
                     return; // No permission - do nothing
                 }
-
-                const isAlreadySelected = selectedItems.some(si => si.id === item.id);
 
                 // When drag permission is active
                 if (toolAccess.drag) {
@@ -1870,8 +1862,22 @@ const Whiteboard = ({
 
             // Trainer logic: trainer can ALWAYS drag/resize items regardless of toolAccess
             // toolAccess controls LEARNER permissions, not trainer permissions
-            // Select item for highlighting
-            const isAlreadySelected = selectedItems.some(si => si.id === item.id);
+            
+            // For items in bucket, trainer must also select first before dragging
+            if (item.inBucket && !isAlreadySelected) {
+                // Select the item, don't start dragging yet
+                setSelectedItems([itemWithOriginalSize]);
+                
+                // Broadcast selection to learner when select feature is enabled
+                if (toolAccess.select && whiteboardService) {
+                    whiteboardService.send('item_selected', {
+                        itemIds: [item.id],
+                        timestamp: Date.now()
+                    });
+                }
+                e.preventDefault();
+                return; // Don't start dragging, just select
+            }
 
             if (!isAlreadySelected) {
                 // Add to selection (trainer always uses single-select for simplicity)
@@ -2119,21 +2125,23 @@ const Whiteboard = ({
                     updatedItem.width = 40;
                     updatedItem.height = 40;
 
-                    // Calculate proper position inside bucket based on SVG coordinates
-                    // Center the item inside the bucket's visible area
-                    const bucketCenterX = foundBucket.x + foundBucket.width * 0.5; // Center horizontally
-                    const bucketCenterY = foundBucket.y + foundBucket.height * 0.65; // Position in lower 2/3 of bucket
+                    // Calculate proper position inside bucket - arranged in rows and columns
+                    const bucketStartX = foundBucket.x + 10; // 10px padding from left
+                    const bucketStartY = foundBucket.y + 60; // Start below handle and rim (52px) + padding
 
-                    // Get current number of items in bucket for stacking
+                    // Get current number of items in bucket for grid arrangement
                     const currentBucket = buckets.find(b => b.id === foundBucket.id);
                     const itemsInBucket = (currentBucket?.items || []).length;
 
-                    // Arrange items in a circular pattern or grid
-                    const angle = (itemsInBucket * Math.PI * 2) / 8; // Distribute around circle
-                    const radius = Math.min(foundBucket.width, foundBucket.height) * 0.15;
+                    // Arrange items in a grid pattern (rows and columns)
+                    const itemSize = 40; // Size of each item
+                    const gap = 8; // Gap between items
+                    const cols = Math.floor((foundBucket.width - 20) / (itemSize + gap)); // Calculate columns based on bucket width
+                    const row = Math.floor(itemsInBucket / Math.max(1, cols));
+                    const col = itemsInBucket % Math.max(1, cols);
 
-                    updatedItem.x = bucketCenterX + Math.cos(angle) * radius - updatedItem.width / 2;
-                    updatedItem.y = bucketCenterY + Math.sin(angle) * radius - updatedItem.height / 2;
+                    updatedItem.x = bucketStartX + col * (itemSize + gap);
+                    updatedItem.y = bucketStartY + row * (itemSize + gap);
 
                     // Trigger drop animation
                     setAnimatingItemId(updatedItem.id);
@@ -2156,22 +2164,32 @@ const Whiteboard = ({
                     ));
 
                     updatedItem.inBucket = foundBucket.id;
+
+                    // Auto-deselect item when it enters bucket
+                    const newSelection = selectedItems.filter(si => si.id !== updatedItem.id);
+                    setSelectedItems(newSelection);
+                    
+                    // Broadcast deselection to other participants
+                    if (whiteboardService) {
+                        whiteboardService.send('item_selected', {
+                            itemIds: newSelection.map(si => si.id),
+                            timestamp: Date.now()
+                        });
+                    }
                 }
-            } else {
-                // Item is outside all buckets - unshrink if it was in a bucket
-                if (updatedItem.inBucket) {
-                    // Remove from old bucket
-                    setBuckets(prev => prev.map(b =>
-                        b.id === updatedItem.inBucket
-                            ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
-                            : b
-                    ));
-                    updatedItem.inBucket = null;
-                    // Restore original size - expand back to normal
-                    updatedItem.width = currentItem.originalWidth || updatedItem.width;
-                    updatedItem.height = currentItem.originalHeight || updatedItem.height;
-                    setAnimatingItemId(null); // Stop animation when leaving bucket
-                }
+            } else if (updatedItem.inBucket) {
+                // Handle item leaving bucket - restore to normal size
+                // Remove from old bucket
+                setBuckets(prev => prev.map(b =>
+                    b.id === updatedItem.inBucket
+                        ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
+                        : b
+                ));
+                updatedItem.inBucket = null;
+                // Restore original size - expand back to normal
+                updatedItem.width = currentItem.originalWidth || updatedItem.width;
+                updatedItem.height = currentItem.originalHeight || updatedItem.height;
+                setAnimatingItemId(null); // Stop animation when leaving bucket
             }
 
             // Preserve original dimensions for future bucket operations
@@ -3368,24 +3386,15 @@ const Whiteboard = ({
 
                         {/* Render Buckets as Overlays - Visible to both trainer and learner */}
                         {buckets.map(bucket => {
-                            const dotSize = Math.max(12, Math.round(Math.min(bucket.width || 80, bucket.height || 80) * 0.12));
-                            const borderPx = Math.max(1, Math.round(dotSize * 0.12));
-                            // Map a fixed SVG anchor point (viewBox coords) to bucket pixels so the dot sits at the intended outline spot.
-                            // Default anchor chosen near the bottom-right outline of the pot (viewBox 0..200): {x:142, y:148}.
-                            const defaultAnchor = { x: 142, y: 148 };
-                            const anchor = bucket.dotAnchor || defaultAnchor;
-                            const offsetOut = bucket.dotOffset !== undefined ? bucket.dotOffset : 6; // px outward offset from anchor
-                            const anchorPx = (anchor.x / 200) * (bucket.width || 80) + offsetOut;
-                            const anchorPy = (anchor.y / 200) * (bucket.height || 80) + offsetOut;
-
                             // Check if this bucket is being dragged over
                             const isDraggedOver = dragOverBucketId === bucket.id;
                             const itemCount = (bucket.items || []).length;
+                            const bucketColorValue = bucket.color || bucketColor;
 
                             return (
                                 <div
                                     key={bucket.id}
-                                    className="absolute"
+                                    className="absolute select-none"
                                     style={{
                                         left: `${bucket.x}px`,
                                         top: `${bucket.y}px`,
@@ -3393,128 +3402,238 @@ const Whiteboard = ({
                                         height: `${bucket.height}px`,
                                         pointerEvents: 'none',
                                         zIndex: 10,
-                                        cursor: 'default',
-                                        filter: isDraggedOver ? 'drop-shadow(0 0 12px rgba(147, 51, 234, 0.8))' : 'none',
-                                        transition: 'filter 0.2s ease'
+                                        transition: 'transform 0.1s ease',
+                                        transform: isDraggedOver ? 'scale(1.05)' : 'scale(1)'
                                     }}
                                 >
-                                    {/* Box Container - Outline Only */}
-                                    <svg width={bucket.width} height={bucket.height} style={{ position: 'absolute', top: 0, left: 0 }} viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-                                        {/* Bucket design - curved bottom and top rim */}
-                                        <path
-                                            d="M110 200 Q250 230 390 200 L370 400 Q250 435 130 400 Z"
-                                            fill={bucket.color || bucketColor}
-                                            stroke="#000000"
-                                            strokeWidth="8"
-                                            strokeLinejoin="round"
-                                        />
-
-                                        {/* Bucket rim - same color as bucket */}
-                                        <path
-                                            d="M110 200 Q250 230 390 200 Q390 175 250 175 Q110 175 110 200 Z"
-                                            fill={bucket.color || bucketColor}
-                                            stroke="#000000"
-                                            strokeWidth="8"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
-
-                                    {/* Bucket Label - Editable for trainers only */}
+                                    {/* Bucket Handle - Draggable Area */}
                                     <div
-                                        className="bucket-label"
                                         style={{
-                                            backgroundColor: bucket.color || bucketColor,
-                                            pointerEvents: isTrainer ? 'auto' : 'none',
-                                            cursor: editingBucketId !== bucket.id ? 'pointer' : 'default',
-                                            // place label closer to the top of the bucket
-                                            // top: `-${bucket.height * 0}px`
+                                            position: 'absolute',
+                                            top: '-32px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            width: bucket.width * 0.7,
+                                            height: '32px',
+                                            border: `3px solid ${isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b'}`,
+                                            borderBottom: 'none',
+                                            borderTopLeftRadius: '50%',
+                                            borderTopRightRadius: '50%',
+                                            backgroundColor: isDraggedOver ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'move',
+                                            pointerEvents: 'none',
+                                            transition: 'all 0.3s ease'
                                         }}
                                     >
-                                        {/* Item count badge */}
-                                        {itemCount > 0 && (
-                                            <span
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '-8px',
-                                                    right: isTrainer ? '32px' : '8px',
-                                                    backgroundColor: '#ef4444',
-                                                    color: 'white',
-                                                    borderRadius: '50%',
-                                                    width: '20px',
-                                                    height: '20px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '11px',
-                                                    fontWeight: 'bold',
-                                                    border: '2px solid white',
-                                                    pointerEvents: 'none',
-                                                    zIndex: 1
-                                                }}
-                                            >
-                                                {itemCount}
-                                            </span>
-                                        )}
-
-                                        <span
-                                            onDoubleClick={(e) => {
-                                                e.stopPropagation();
-                                                if (!isTrainer) return;
-                                                handleBucketLabelClick(bucket, e);
-                                            }}
-                                            style={{ cursor: editingBucketId !== bucket.id ? 'pointer' : 'default' }}
-                                        >
-                                            {editingBucketId === bucket.id ? (
-                                                <input
-                                                    type="text"
-                                                    value={editingBucketLabel}
-                                                    onChange={handleBucketLabelChange}
-                                                    onBlur={handleBucketLabelBlur}
-                                                    onKeyPress={(e) => e.key === 'Enter' && handleBucketLabelBlur()}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                    autoFocus
-                                                    className="bucket-input"
-                                                    style={{ backgroundColor: bucket.color || bucketColor }}
-                                                />
-                                            ) : (
-                                                <span>{bucket.label}</span>
-                                            )}
+                                        <span style={{
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            color: isDraggedOver ? '#3b82f6' : '#94a3b8',
+                                            letterSpacing: '1px',
+                                            userSelect: 'none'
+                                        }}>
+                                            ⋮⋮ ⋮⋮
                                         </span>
-
-                                        {/* Remove Bucket Button */}
-                                        {isTrainer && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeBucket(bucket.id);
-                                                }}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                className="bucket-close-button"
-                                                title="Remove Bucket"
-                                            >
-                                                ×
-                                            </button>
-                                        )}
                                     </div>
 
-                                    {/* Resize Handle Visual (Trainer only) - Larger and more visible */}
+                                    {/* Bucket Body Container */}
+                                    <div style={{
+                                        position: 'relative',
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: '8px 8px 24px 24px',
+                                        overflow: 'hidden',
+                                        border: `3px solid ${isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b'}`,
+                                        backgroundColor: isDraggedOver ? 'rgba(59, 130, 246, 0.2)' : itemCount > 0 ? `${bucketColorValue}30` : 'rgba(51, 65, 85, 0.5)',
+                                        boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                                        transition: 'all 0.3s ease'
+                                    }}>
+                                        {/* Bucket Rim */}
+                                        <div style={{
+                                            height: '20px',
+                                            backgroundColor: isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'move',
+                                            pointerEvents: 'none',
+                                            transition: 'background-color 0.3s ease'
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                {[...Array(5)].map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        style={{
+                                                            width: '4px',
+                                                            height: '4px',
+                                                            borderRadius: '50%',
+                                                            backgroundColor: 'rgba(255,255,255,0.4)'
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Bucket Interior */}
+                                        <div style={{
+                                            minHeight: `${bucket.height - 20}px`,
+                                            padding: '12px',
+                                            position: 'relative'
+                                        }}>
+                                            {/* Status Indicator */}
+                                            <div style={{
+                                                textAlign: 'center',
+                                                marginBottom: '12px',
+                                                pointerEvents: isTrainer ? 'auto' : 'none'
+                                            }}>
+                                                <span
+                                                    onDoubleClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!isTrainer) return;
+                                                        handleBucketLabelClick(bucket, e);
+                                                    }}
+                                                    style={{
+                                                        display: 'inline-block',
+                                                        padding: '4px 12px',
+                                                        borderRadius: '12px',
+                                                        fontSize: '13px',
+                                                        fontWeight: '600',
+                                                        backgroundColor: itemCount > 0 ? bucketColorValue : '#64748b',
+                                                        color: '#fff',
+                                                        cursor: editingBucketId !== bucket.id && isTrainer ? 'pointer' : 'default',
+                                                        transition: 'background-color 0.3s ease',
+                                                        position: 'relative'
+                                                    }}
+                                                >
+                                                    {/* Item count badge */}
+                                                    {itemCount > 0 && (
+                                                        <span
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '-8px',
+                                                                right: isTrainer ? '-8px' : '-8px',
+                                                                backgroundColor: '#ef4444',
+                                                                color: 'white',
+                                                                borderRadius: '50%',
+                                                                width: '18px',
+                                                                height: '18px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '10px',
+                                                                fontWeight: 'bold',
+                                                                border: '2px solid white',
+                                                                pointerEvents: 'none',
+                                                                zIndex: 1
+                                                            }}
+                                                        >
+                                                            {itemCount}
+                                                        </span>
+                                                    )}
+
+                                                    {editingBucketId === bucket.id ? (
+                                                        <input
+                                                            type="text"
+                                                            value={editingBucketLabel}
+                                                            onChange={handleBucketLabelChange}
+                                                            onBlur={handleBucketLabelBlur}
+                                                            onKeyPress={(e) => e.key === 'Enter' && handleBucketLabelBlur()}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            autoFocus
+                                                            style={{
+                                                                backgroundColor: 'transparent',
+                                                                border: 'none',
+                                                                outline: 'none',
+                                                                color: '#fff',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                width: '100%',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span>
+                                                            {itemCount === 0 ? '🪣 ' : '📦 '}
+                                                            {bucket.label}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Remove Bucket Button */}
+                                                    {isTrainer && editingBucketId !== bucket.id && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeBucket(bucket.id);
+                                                            }}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '-8px',
+                                                                left: '-8px',
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                borderRadius: '50%',
+                                                                border: '2px solid white',
+                                                                backgroundColor: '#ef4444',
+                                                                color: 'white',
+                                                                fontSize: '14px',
+                                                                fontWeight: 'bold',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                pointerEvents: 'auto',
+                                                                zIndex: 2,
+                                                                transition: 'transform 0.2s ease'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                            title="Remove Bucket"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {/* Bottom Shine Effect */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: '8px',
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                width: '75%',
+                                                height: '4px',
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                borderRadius: '2px'
+                                            }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Resize Handle Visual (Trainer only) - Bottom right corner */}
                                     {isTrainer && (
                                         <div
-                                            className="bucket-color-indicator"
                                             style={{
-                                                backgroundColor: bucket.color || bucketColor,
+                                                position: 'absolute',
+                                                backgroundColor: bucketColorValue,
                                                 pointerEvents: 'auto',
-                                                width: `${dotSize}px`,
-                                                height: `${dotSize}px`,
-                                                left: `${Math.round(anchorPx - dotSize / 2)}px`,
-                                                top: `${Math.round(anchorPy - dotSize / 2)}px`,
-                                                transform: 'translate(0,0)',
+                                                width: '16px',
+                                                height: '16px',
+                                                right: '-8px',
+                                                bottom: '-8px',
                                                 cursor: 'nwse-resize',
-                                                border: `${borderPx}px solid white`,
-                                                borderRadius: '9999px'
+                                                border: '2px solid white',
+                                                borderRadius: '50%',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                                transition: 'transform 0.2s ease'
                                             }}
                                             title="Drag to resize"
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
