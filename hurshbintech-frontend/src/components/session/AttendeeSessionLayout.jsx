@@ -232,8 +232,9 @@ AttendeeWaitingScreen.propTypes = {
 };
 
 /**
- * Attendee Video Controls (Bottom Center)
+ * Attendee Video Controls (Above Whiteboard)
  * Microphone, Camera, and Leave Session buttons
+ * ✅ Fully Responsive - adapts to mobile, tablet, and desktop
  */
 export const AttendeeVideoControls = ({
     micEnabled,
@@ -244,61 +245,77 @@ export const AttendeeVideoControls = ({
 }) => {
     return (
         <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            position: 'relative',
+            width: '100%',
             display: 'flex',
-            gap: '12px',
+            gap: 'clamp(4px, 1vw, 8px)',
             zIndex: 50,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            flexWrap: 'wrap',
-            justifyContent: 'center'
+            // backgroundColor: 'rgba(0,0,0,0.7)',
+            padding: 'clamp(6px, 1vh, 8px) clamp(8px, 1.5vw, 12px)',
+            borderRadius: 'clamp(4px, 0.8vw, 6px)',
+            flexWrap: 'nowrap',
+            justifyContent: 'center',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
         }}>
             <button
                 onClick={onToggleMic}
                 className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
                 style={{
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    gap: '6px',
+                    padding: 'clamp(4px, 0.8vh, 6px) clamp(8px, 1.5vw, 12px)',
+                    fontSize: 'clamp(10px, 1.5vw, 13px)',
+                    gap: 'clamp(3px, 0.6vw, 5px)',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'auto'
                 }}
                 title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
             >
-                <span>{micEnabled ? '🎤 Mic On' : '🔇 Mic Off'}</span>
+                <span>{micEnabled ? '🎤' : '🔇'}</span>
+                <span style={{ display: window.innerWidth < 400 ? 'none' : 'inline' }}>
+                    {micEnabled ? ' Mic On' : ' Mic Off'}
+                </span>
             </button>
 
             <button
                 onClick={onToggleCamera}
                 className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
                 style={{
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    gap: '6px',
+                    padding: 'clamp(4px, 0.8vh, 6px) clamp(8px, 1.5vw, 12px)',
+                    fontSize: 'clamp(10px, 1.5vw, 13px)',
+                    gap: 'clamp(3px, 0.6vw, 5px)',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'auto'
                 }}
                 title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
             >
-                <span>{cameraEnabled ? '📹 Video On' : '📷 Video Off'}</span>
+                <span>{cameraEnabled ? '📹' : '📷'}</span>
+                <span style={{ display: window.innerWidth < 400 ? 'none' : 'inline' }}>
+                    {cameraEnabled ? ' Video On' : ' Video Off'}
+                </span>
             </button>
 
             <button
                 onClick={onLeaveSession}
                 className="bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center transition-all duration-200 shadow-md"
                 style={{
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    gap: '6px',
+                    padding: 'clamp(4px, 0.8vh, 6px) clamp(8px, 1.5vw, 12px)',
+                    fontSize: 'clamp(10px, 1.5vw, 13px)',
+                    gap: 'clamp(3px, 0.6vw, 5px)',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'auto'
                 }}
+                title="Leave Session"
             >
-                🚪 Leave Session
+                <span>🚪</span>
+                <span style={{ display: window.innerWidth < 400 ? 'none' : 'inline' }}>
+                    {' Leave Session'}
+                </span>
             </button>
         </div>
     );
@@ -315,13 +332,14 @@ AttendeeVideoControls.propTypes = {
 /**
  * Remote Video Feed (Instructor's Video - Top Right Corner)
  */
-export const RemoteVideoFeed = ({ remoteVideoRef, remoteStream, topPosition = '55px', label = 'Instructor' }) => {
+export const RemoteVideoFeed = ({ remoteVideoRef, remoteStream, topPosition = '4px', label = 'Instructor' }) => {
     if (!remoteStream) return null;
 
     return (
         <div style={{
-            position: 'fixed',
-            right: '2px',
+            position: 'absolute',
+            top: topPosition,
+            right: '4px',
             width: 'clamp(120px, 15vw, 250px)',
             height: 'clamp(90px, 12vw, 180px)',
             backgroundColor: '#000',
@@ -332,7 +350,8 @@ export const RemoteVideoFeed = ({ remoteVideoRef, remoteStream, topPosition = '5
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
-        }}>
+        }}
+            className="remote-video-feed-overlay">
             <video
                 ref={remoteVideoRef}
                 autoPlay
@@ -549,11 +568,18 @@ export const attendeeSessionStyles = `
     height: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    padding: 0 0 100px 0 !important;
+    padding: 0rem !important;
     min-height: 0 !important;
     overflow: hidden !important;
   }
 
+  @media (max-width: 767px) {
+    .learner-main-container {
+      padding: 0rem !important;
+    }
+  }
+
+  /* Whiteboard Wrapper - Takes all remaining space */
   .learner-whiteboard-wrapper {
     flex: 1 !important;
     width: 100% !important;
@@ -565,6 +591,87 @@ export const attendeeSessionStyles = `
     padding: 0 !important;
     min-height: 0 !important;
     overflow: hidden !important;
+  }
+
+  /* Mobile: Ensure whiteboard wrapper takes proper height */
+  @media (max-width: 768px) {
+    .learner-whiteboard-wrapper {
+      flex: 1 1 auto !important;
+      /* Shorter height for mobile portrait - accounting for metrics header */
+      min-height: calc(100svh - 120px) !important;
+      /* Use dvh (dynamic viewport) for when address bar hides */
+      min-height: calc(100dvh - 120px) !important;
+      /* iOS Safari fallback */
+      min-height: calc(-webkit-fill-available - 120px) !important;
+      /* Limit max height to prevent excessive scrolling */
+      max-height: calc(100dvh - 60px) !important;
+      max-height: calc(-webkit-fill-available - 60px) !important;
+      /* Account for safe area insets at bottom (navigation bars, rounded corners) */
+      padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    }
+
+    /* Ensure whiteboard container and canvas fill available space */
+    .session-whiteboard-container {
+      min-height: 100% !important;
+    }
+
+    .learner-whiteboard-wrapper canvas {
+      /* Touch-action for better mobile interaction */
+      touch-action: none !important;
+    }
+
+    .learner-session-page {
+      height: 100vh !important;
+    }
+  }
+
+  /* Very small phones (iPhone SE, etc.) */
+  @media (max-width: 375px) and (max-height: 667px) {
+    .learner-metrics-header {
+      padding: 4px 4px !important;
+      gap: 8px !important;
+    }
+
+    .learner-whiteboard-wrapper {
+      /* Smaller height for tiny screens */
+      min-height: calc(100svh - 100px) !important;
+      min-height: calc(100dvh - 100px) !important;
+      min-height: calc(-webkit-fill-available - 100px) !important;
+      max-height: calc(100dvh - 50px) !important;
+    }
+  }
+
+  /* Mobile Landscape Mode - Optimize for horizontal orientation */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .learner-session-page {
+      /* In landscape, use full height - browser chrome typically hidden when scrolled */
+      height: 100vh !important;
+      height: 100dvh !important;
+      height: -webkit-fill-available !important;
+      /* Prevent scrolling in landscape - should fit perfectly */
+      overflow: hidden !important;
+    }
+
+    .learner-main-container {
+      /* No scrolling needed in landscape */
+      overflow: hidden !important;
+    }
+
+    .learner-whiteboard-wrapper {
+      /* In landscape, fit perfectly in viewport when browser chrome is hidden */
+      min-height: calc(100vh - 40px) !important;
+      max-height: calc(100vh - 40px) !important;
+      height: calc(100vh - 40px) !important;
+      /* Use dvh for dynamic adjustment */
+      min-height: calc(100dvh - 40px) !important;
+      max-height: calc(100dvh - 40px) !important;
+      height: calc(100dvh - 40px) !important;
+      /* iOS Safari fallback */
+      min-height: calc(-webkit-fill-available - 40px) !important;
+      max-height: calc(-webkit-fill-available - 40px) !important;
+      /* Remove bottom padding in landscape */
+      padding-bottom: 0 !important;
+    }
   }
 
   .session-whiteboard-container {
@@ -579,6 +686,7 @@ export const attendeeSessionStyles = `
     box-sizing: border-box !important;
   }
 
+  /* Ensure inner divs fill the space */
   .learner-whiteboard-wrapper > div {
     width: 100% !important;
     height: 100% !important;
@@ -602,20 +710,76 @@ export const attendeeSessionStyles = `
     display: block !important;
   }
 
+  /* Header with Metrics - Full width */
+  .learner-metrics-header {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    padding: 8px 8px !important;
+    margin: 0 !important;
+    gap: 12px !important;
+    overflow: visible !important;
+  }
+
+  /* Hide sidebar toggles in full-width learner mode */
   .session-sidebar-toggles {
     display: none !important;
   }
 
+  /* Remote Video Feed - Responsive positioning */
+  .remote-video-feed-overlay {
+    /* Mobile portrait - smaller size, better positioned */
+  }
+
   @media (max-width: 768px) {
-    .learner-session-page {
-      height: 100vh !important;
+    .remote-video-feed-overlay {
+      width: clamp(100px, 20vw, 150px) !important;
+      height: clamp(75px, 15vw, 115px) !important;
+      right: 4px !important;
     }
   }
 
+  @media (max-width: 768px) and (orientation: landscape) {
+    .learner-metrics-header {
+      /* Minimize header in landscape to maximize whiteboard space */
+      padding: 2px 4px !important;
+      gap: 6px !important;
+      font-size: 12px !important;
+    }
+
+    /* Make metrics header elements more compact */
+    .learner-metrics-header > div {
+      font-size: 11px !important;
+    }
+
+    .learner-metrics-header span {
+      font-size: 11px !important;
+    }
+
+    .remote-video-feed-overlay {
+      /* In landscape mobile, make video feed smaller and position better */
+      width: clamp(80px, 12vw, 120px) !important;
+      height: clamp(60px, 9vw, 90px) !important;
+      top: 2px !important;
+      right: 4px !important;
+    }
+  }
+
+  /* Safe area handling for mobile devices with notches */
+  @media (max-width: 768px) {
+    .learner-metrics-header {
+      padding-top: max(8px, env(safe-area-inset-top, 8px)) !important;
+      padding-left: max(8px, env(safe-area-inset-left, 8px)) !important;
+      padding-right: max(8px, env(safe-area-inset-right, 8px)) !important;
+    }
+  }
+
+  /* Desktop: Use regular viewport height and prevent overflow */
   @media (min-width: 769px) {
     .learner-session-page {
       height: 100vh !important;
       min-height: 100vh !important;
+      overflow: hidden !important;
     }
   }
 `;
