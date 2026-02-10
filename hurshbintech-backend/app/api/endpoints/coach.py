@@ -880,6 +880,12 @@ async def create_session(
 ):
     """Create a new coach session"""
     session = await coach_crud.create_coach_session(db, session_data, current_coach.id)
+    
+    # Invalidate coach's session cache
+    cache_key = f"sessions:coach:{current_coach.id}"
+    await cache_service.delete(cache_key)
+    logger.info(f"Invalidated cache after session creation: {cache_key}")
+    
     return CoachSessionResponse.from_orm(session)
 
 
@@ -970,6 +976,12 @@ async def update_session(
         )
 
     updated = await coach_crud.update_coach_session(db, session_id, session_update)
+    
+    # Invalidate coach's session cache
+    cache_key = f"sessions:coach:{current_coach.id}"
+    await cache_service.delete(cache_key)
+    logger.info(f"Invalidated cache after session update: {cache_key}")
+    
     return CoachSessionResponse.from_orm(updated)
 
 
@@ -996,6 +1008,11 @@ async def delete_session(
 
     success = await coach_crud.delete_coach_session(db, session_id)
     if success:
+        # Invalidate coach's session cache
+        cache_key = f"sessions:coach:{current_coach.id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated cache after session deletion: {cache_key}")
+        
         return {"message": "Session deleted successfully"}
     return {"message": "Failed to delete session"}
 

@@ -55,6 +55,40 @@ if settings.USE_S3:
 active_connections: Dict[str, List[WebSocket]] = {}
 
 
+async def invalidate_session_caches(db: AsyncSession, head_id: int = None, trainer_id: int = None, learner_id: int = None):
+    """
+    Invalidate all relevant session caches when a session is created, updated, or deleted.
+    
+    Args:
+        db: Database session
+        head_id: Head user ID who owns the session
+        trainer_id: Trainer user ID assigned to the session
+        learner_id: Learner user ID assigned to the session
+    """
+    try:
+        # Invalidate head's session cache
+        if head_id:
+            head_cache_key = f"sessions:head:{head_id}:all"
+            await cache_service.delete(head_cache_key)
+            logger.debug(f"Invalidated cache: {head_cache_key}")
+        
+        # Invalidate trainer's session cache
+        if trainer_id:
+            trainer_cache_key = f"sessions:trainer:{trainer_id}"
+            await cache_service.delete(trainer_cache_key)
+            logger.debug(f"Invalidated cache: {trainer_cache_key}")
+        
+        # Invalidate learner's session cache
+        if learner_id:
+            learner_cache_key = f"sessions:learner:{learner_id}"
+            await cache_service.delete(learner_cache_key)
+            logger.debug(f"Invalidated cache: {learner_cache_key}")
+        
+        logger.info(f"Session caches invalidated for head={head_id}, trainer={trainer_id}, learner={learner_id}")
+    except Exception as e:
+        logger.error(f"Error invalidating session caches: {e}")
+
+
 def get_public_url(file_url: str) -> str:
     """
     Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
@@ -274,6 +308,14 @@ async def create_training_session(
 
     new_session = await session_crud.create_session(db, session_data, current_user.id)
 
+    # Invalidate caches for all affected users
+    await invalidate_session_caches(
+        db,
+        head_id=current_user.id,
+        trainer_id=session_data.trainer_id,
+        learner_id=session_data.learner_id
+    )
+
     logger.info(f"Session created successfully: {new_session.session_id}")
     return await build_session_response(db, new_session)
 
@@ -324,6 +366,14 @@ async def update_training_session(
     if not updated_session:
         raise HTTPException(status_code=500, detail="Failed to update session")
 
+    # Invalidate caches for all affected users
+    await invalidate_session_caches(
+        db,
+        head_id=current_head.user_id,
+        trainer_id=updated_session.trainer_id,
+        learner_id=updated_session.learner_id
+    )
+
     logger.info(f"Session {session_id} updated successfully by Head {current_head.user_id}")
     return await build_session_response(db, updated_session)
 
@@ -365,8 +415,8 @@ async def start_training_session(
     db: AsyncSession = Depends(get_db),
     current_trainer: TrainerProfile = Depends(get_current_trainer),
 ):
-    """Start a scheduled session"""
-    logger.info(f"Trainer {current_trainer.user_id} starting session {session_id}")
+    """Start a scheduled session or rejoin an active session"""
+    logger.info(f"Trainer {current_trainer.user_id} starting/rejoining session {session_id}")
 
     session = await session_crud.get_session_by_id(db, session_id)
 
@@ -376,9 +426,15 @@ async def start_training_session(
     if session.trainer_id != current_trainer.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to start this session")
 
+    # Allow rejoining active/in_progress sessions
+    if session.status in ["in_progress", "active"]:
+        logger.info(f"Trainer rejoining active session {session_id} (status: {session.status})")
+        return await build_session_response(db, session)
+    
+    # Start session if in scheduled state
     if session.status != "scheduled":
-        logger.warning(f"Cannot start session {session_id}: current status is '{session.status}', expected 'scheduled'")
-        raise HTTPException(status_code=400, detail=f"Session is not in scheduled state. Current status: {session.status}")
+        logger.warning(f"Cannot start session {session_id}: current status is '{session.status}'")
+        raise HTTPException(status_code=400, detail=f"Session cannot be started. Current status: {session.status}")
 
     started_session = await session_crud.start_session(db, session_id)
 
@@ -403,6 +459,10 @@ async def end_training_session(
     if session.trainer_id != current_trainer.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to end this session")
 
+    # Store session details before ending for cache invalidation
+    head_id = session.created_by_id
+    learner_id = session.learner_id
+
     ended_session = await session_crud.end_session(db, session_id, session_end.notes)
 
     # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
@@ -412,6 +472,14 @@ async def end_training_session(
         logger.info(f"✅ Immediately processed {sessions_processed} ended sessions after session {session_id} ended")
     except Exception as e:
         logger.error(f"Error immediately processing sessions: {str(e)}")
+
+    # Invalidate caches for all affected users
+    await invalidate_session_caches(
+        db,
+        head_id=head_id,
+        trainer_id=current_trainer.user_id,
+        learner_id=learner_id
+    )
 
     # Broadcast session end to all participants via WebSocket
     if session_id in active_connections:
@@ -460,10 +528,22 @@ async def delete_training_session(
             detail=f"Cannot delete {session.status} session. Only scheduled sessions can be deleted.",
         )
 
+    # Store session details before deletion for cache invalidation
+    trainer_id = session.trainer_id
+    learner_id = session.learner_id
+
     success = await session_crud.delete_session(db, session_id)
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete session")
+
+    # Invalidate caches for all affected users
+    await invalidate_session_caches(
+        db,
+        head_id=current_head.user_id,
+        trainer_id=trainer_id,
+        learner_id=learner_id
+    )
 
     logger.info(f"Session {session_id} deleted successfully by Head {current_head.user_id}")
     return {"message": "Session deleted successfully"}
@@ -500,6 +580,14 @@ async def cancel_training_session(
 
     if not cancelled_session:
         raise HTTPException(status_code=500, detail="Failed to cancel session")
+
+    # Invalidate caches for all affected users
+    await invalidate_session_caches(
+        db,
+        head_id=current_head.user_id,
+        trainer_id=cancelled_session.trainer_id,
+        learner_id=cancelled_session.learner_id
+    )
 
     response = await build_session_response(db, cancelled_session)
     logger.info(f"Session {session_id} cancelled successfully by Head {current_head.user_id}")
