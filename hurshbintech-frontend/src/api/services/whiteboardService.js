@@ -48,13 +48,13 @@ class WhiteboardService {
             this.ws = new WebSocket(fullWsUrl);
             this.setupWebSocket();
         } catch (error) {
-            console.error('[WhiteboardService] Error creating WebSocket:', error);
+            // console.error('[WhiteboardService] Error creating WebSocket:', error);
         }
     }
 
     setupWebSocket() {
         this.ws.onopen = () => {
-            console.log('[WhiteboardService] WebSocket connected for role:', this.role, 'session:', this.sessionId);
+            // console.log('[WhiteboardService] WebSocket connected for role:', this.role, 'session:', this.sessionId);
             const joinMessage = {
                 type: 'join',
                 sessionId: this.sessionId,
@@ -68,7 +68,7 @@ class WhiteboardService {
 
             // Log all incoming messages for debugging
             if (message.type !== 'ping' && message.type !== 'pong') {
-                console.log('[WhiteboardService] Received message type:', message.type, 'data:', message.data);
+                // console.log('[WhiteboardService] Received message type:', message.type, 'data:', message.data);
             }
 
             switch (message.type) {
@@ -135,7 +135,7 @@ class WhiteboardService {
                             this.onBucketUpdate(message.data);
                             // console.log('[WhiteboardService] ✓ onBucketUpdate callback executed successfully');
                         } catch (error) {
-                            console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
+                            // console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
                         }
                     } else {
                         // console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
@@ -161,12 +161,12 @@ class WhiteboardService {
                     break;
 
                 case 'erase_pen':
-                    console.log('[WhiteboardService] 📩 Received erase_pen message:', message.data);
+                    // console.log('[WhiteboardService] 📩 Received erase_pen message:', message.data);
                     if (this.onErasePen) {
-                        console.log('[WhiteboardService] ✅ Calling onErasePen callback...');
+                        // console.log('[WhiteboardService] ✅ Calling onErasePen callback...');
                         this.onErasePen(message.data);
                     } else {
-                        console.warn('[WhiteboardService] ⚠️ WARNING: onErasePen callback is NOT registered!');
+                        // console.warn('[WhiteboardService] ⚠️ WARNING: onErasePen callback is NOT registered!');
                     }
                     break;
 
@@ -247,22 +247,22 @@ class WhiteboardService {
                     break;
 
                 case 'background_music':
-                    console.log('[WhiteboardService] 🎵 Received background_music message:', message);
+                    // console.log('[WhiteboardService] 🎵 Received background_music message:', message);
                     if (this.onBackgroundMusic) {
-                        console.log('[WhiteboardService] 🎵 Callback exists, calling onBackgroundMusic with data:', message.data);
+                        // console.log('[WhiteboardService] 🎵 Callback exists, calling onBackgroundMusic with data:', message.data);
                         this.onBackgroundMusic(message.data);
                     } else {
-                        console.warn('[WhiteboardService] ⚠️ No onBackgroundMusic callback registered!');
+                        // console.warn('[WhiteboardService] ⚠️ No onBackgroundMusic callback registered!');
                     }
                     break;
 
                 case 'background_music_volume':
-                    console.log('[WhiteboardService] 🔊 Received background_music_volume message:', message);
+                    // console.log('[WhiteboardService] 🔊 Received background_music_volume message:', message);
                     if (this.onBackgroundMusicVolume) {
-                        console.log('[WhiteboardService] 🔊 Callback exists, calling onBackgroundMusicVolume with data:', message.data);
+                        // console.log('[WhiteboardService] 🔊 Callback exists, calling onBackgroundMusicVolume with data:', message.data);
                         this.onBackgroundMusicVolume(message.data);
                     } else {
-                        console.warn('[WhiteboardService] ⚠️ No onBackgroundMusicVolume callback registered!');
+                        // console.warn('[WhiteboardService] ⚠️ No onBackgroundMusicVolume callback registered!');
                     }
                     break;
 
@@ -308,7 +308,7 @@ class WhiteboardService {
                         type: 'pong',
                         timestamp: new Date().toISOString()
                     }));
-                    console.debug('[WhiteboardService] Responded to ping with pong');
+                    // console.debug('[WhiteboardService] Responded to ping with pong');
                     break;
 
                 default:
@@ -318,7 +318,7 @@ class WhiteboardService {
         };
 
         this.ws.onerror = (error) => {
-            console.error('[WhiteboardService] Whiteboard WebSocket error:', error);
+            // console.error('[WhiteboardService] Whiteboard WebSocket error:', error);
         };
 
         this.ws.onclose = (event) => {
@@ -370,7 +370,7 @@ class WhiteboardService {
                 data: data
             }));
         } else {
-            console.warn('[WhiteboardService] Cannot send video state - WebSocket not ready');
+            // console.warn('[WhiteboardService] Cannot send video state - WebSocket not ready');
         }
     }
 
@@ -383,7 +383,7 @@ class WhiteboardService {
                 data: data
             }));
         } else {
-            console.warn('[WhiteboardService] Cannot send media_control - WebSocket not ready');
+            // console.warn('[WhiteboardService] Cannot send media_control - WebSocket not ready');
         }
     }
 
@@ -415,18 +415,18 @@ class WhiteboardService {
 
     // Generic send method for custom message types
     send(type, data) {
-        console.log(`[WhiteboardService.send] Called with type: ${type}`);
-        console.log(`[WhiteboardService.send] WebSocket exists: ${!!this.ws}, ReadyState: ${this.ws?.readyState}`);
-        console.log(`[WhiteboardService.send] WebSocket.OPEN constant: ${WebSocket.OPEN}`);
+        // console.log(`[WhiteboardService.send] Called with type: ${type}`);
+        // console.log(`[WhiteboardService.send] WebSocket exists: ${!!this.ws}, ReadyState: ${this.ws?.readyState}`);
+        // console.log(`[WhiteboardService.send] WebSocket.OPEN constant: ${WebSocket.OPEN}`);
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            console.log(`[WhiteboardService] Sending ${type} message:`, data);
+            // console.log(`[WhiteboardService] Sending ${type} message:`, data);
             this.ws.send(JSON.stringify({
                 type: type,
                 data: data
             }));
         } else {
-            console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
+            // console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
         }
     }
 
