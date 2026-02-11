@@ -125,12 +125,8 @@ class WhiteboardService {
                     if (this.onBucketUpdate) {
                         // console.log('[WhiteboardService] Calling onBucketUpdate callback');
                         try {
-                            // Handle bucket removal
-                            if (message.data.removed) {
-                                this.onBucketUpdate({ id: message.data.id, removed: true });
-                            } else {
-                                this.onBucketUpdate(message.data);
-                            }
+                            // Pass all data including items array for removal
+                            this.onBucketUpdate(message.data);
                             // console.log('[WhiteboardService] ✓ onBucketUpdate callback executed successfully');
                         } catch (error) {
                             console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
