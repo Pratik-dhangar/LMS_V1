@@ -90,6 +90,23 @@ const coachService = {
   },
 
   /**
+   * Get current coach profile
+   */
+  getCurrentProfile: async () => {
+    try {
+      console.log('[coachService] Fetching current profile...');
+      const response = await api.get('/profile/me/user');
+      console.log('[coachService] Profile response status:', response.status);
+      console.log('[coachService] Profile response data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[coachService] Error fetching profile:', error);
+      console.error('[coachService] Error response:', error.response?.data);
+      throw error;
+    }
+  },
+
+  /**
    * Reject an appointment with reason and optional refund receipt
    */
   rejectAppointment: async (appointmentId, formData) => {

@@ -479,6 +479,8 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                     
                     other_roles = role_mapping.get(role, [])
                     recipients_found = False
+                    if message.get('type') == 'erase_pen':
+                        print(f"[WHITEBOARD] 🗑️ Erase pen message received from {role}, forwarding to: {other_roles}")
                     for other_role in other_roles:
                         if other_role in whiteboard_connections[session_id]:
                             other_conn = whiteboard_connections[session_id][other_role]
@@ -486,6 +488,8 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                                 logger.debug(
                                     f"[WHITEBOARD] Forwarding {message.get('type')} from {role} to {other_role}"
                                 )
+                                if message.get('type') == 'erase_pen':
+                                    print(f"[WHITEBOARD] ✅ Forwarding erase_pen to {other_role}")
                                 await other_conn.websocket.send_json(message)
                                 recipients_found = True
                     

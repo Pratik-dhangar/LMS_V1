@@ -159,8 +159,12 @@ class WhiteboardService {
                     break;
 
                 case 'erase_pen':
+                    console.log('[WhiteboardService] 📩 Received erase_pen message:', message.data);
                     if (this.onErasePen) {
+                        console.log('[WhiteboardService] ✅ Calling onErasePen callback...');
                         this.onErasePen(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ WARNING: onErasePen callback is NOT registered!');
                     }
                     break;
 
@@ -401,18 +405,18 @@ class WhiteboardService {
 
     // Generic send method for custom message types
     send(type, data) {
-        // console.log(`[WhiteboardService.send] Called with type: ${type}`);
-        // console.log(`[WhiteboardService.send] WebSocket exists: ${!!this.ws}, ReadyState: ${this.ws?.readyState}`);
-        // console.log(`[WhiteboardService.send] WebSocket.OPEN constant: ${WebSocket.OPEN}`);
+        console.log(`[WhiteboardService.send] Called with type: ${type}`);
+        console.log(`[WhiteboardService.send] WebSocket exists: ${!!this.ws}, ReadyState: ${this.ws?.readyState}`);
+        console.log(`[WhiteboardService.send] WebSocket.OPEN constant: ${WebSocket.OPEN}`);
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            // console.log(`[WhiteboardService] Sending ${type} message:`, data);
+            console.log(`[WhiteboardService] Sending ${type} message:`, data);
             this.ws.send(JSON.stringify({
                 type: type,
                 data: data
             }));
         } else {
-            // console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
+            console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
         }
     }
 

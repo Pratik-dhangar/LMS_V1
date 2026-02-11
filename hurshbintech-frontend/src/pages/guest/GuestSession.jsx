@@ -630,26 +630,7 @@ const GuestSession = () => {
         style={{ display: 'none' }}
       />
       <style>{attendeeSessionStyles}</style>
-      {/* Navigation / Header */}
-      <div className={`session-header ${navbarClassName}`}>
-        <div className="session-header-main">
-          <div>
-            <div className="session-header-title">HurshBin Guest Session</div>
-            <div className="session-header-subtitle">
-              Session with {sessionInfo?.coach_name ?? 'Coach'} — Guest: {guestInfo?.name || 'Guest'}
-            </div>
-          </div>
 
-          <div className="session-header-controls">
-            <div className="session-header-info">
-              Status: <strong>{connectionStatus}</strong>
-            </div>
-            <div className="session-header-info">
-              Time Left: <strong>{timeLeft ?? '--:--'}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Metrics Header - Full width (P:, R:, Bucket Color) - ✅ Responsive */}
       <div className="learner-metrics-header" style={{
