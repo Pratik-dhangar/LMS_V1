@@ -815,6 +815,8 @@ const GuestSession = () => {
         sessionType="guest"
       />
 
+      {/* Background Music Audio Element */}
+      <audio ref={audioRef} crossOrigin="anonymous" />
 
     </div>
   );

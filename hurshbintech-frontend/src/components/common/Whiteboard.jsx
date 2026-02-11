@@ -1170,8 +1170,13 @@ const Whiteboard = ({
             whiteboardService.onBucketUpdate = (data) => {
                 // console.log('[Whiteboard] Bucket updated:', data);
                 if (data.removed) {
-                    // Remove all items inside the bucket first
-                    setCanvasItems(prev => prev.filter(item => item.inBucket !== data.id));
+                    // Remove all items inside the bucket
+                    // Use items array if provided (more reliable), otherwise fallback to inBucket property
+                    if (data.items && data.items.length > 0) {
+                        setCanvasItems(prev => prev.filter(item => !data.items.includes(item.id)));
+                    } else {
+                        setCanvasItems(prev => prev.filter(item => item.inBucket !== data.id));
+                    }
                     
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
@@ -1613,13 +1618,22 @@ const Whiteboard = ({
     // };
 
     const removeBucket = (bucketId) => {
-        // Remove all items inside the bucket
+        // Get all items that are inside this bucket (from canvasItems, not bucket.items)
+        const childItems = canvasItems.filter(item => item.inBucket === bucketId);
+        
+        // Remove all items inside the bucket locally
         setCanvasItems(prev => prev.filter(item => item.inBucket !== bucketId));
         
         // Remove the bucket itself
         setBuckets(prev => prev.filter(b => b.id !== bucketId));
 
-        // Send update to other participants
+        // Send individual item_remove for each child item first
+        // This is the most reliable way - onItemRemove is never overridden
+        childItems.forEach(item => {
+            whiteboardService?.send('item_remove', { id: item.id });
+        });
+
+        // Then send bucket removal
         whiteboardService?.send('bucket_update', { id: bucketId, removed: true });
     };
 
@@ -1718,7 +1732,7 @@ const Whiteboard = ({
         const centerY = itemY + itemHeight / 2;
 
         // Simple rectangular collision detection for the new bucket design
-        // Bucket has a handle area at top (-32px), so we adjust the collision area
+        // Bucket has a handle area at top (-20px), so we adjust the collision area
         const bucketTop = bucket.y; // Include the handle area
         const bucketBottom = bucket.y + bucket.height;
         const bucketLeft = bucket.x;
@@ -2112,7 +2126,7 @@ const Whiteboard = ({
 
             // If item should be in a bucket
             if (foundBucket) {
-                // Only shrink if not already in this bucket
+                // Only process if not already in this bucket
                 if (updatedItem.inBucket !== foundBucket.id) {
                     // Save original dimensions before shrinking
                     if (!updatedItem.originalWidth) {
@@ -2127,7 +2141,7 @@ const Whiteboard = ({
 
                     // Calculate proper position inside bucket - arranged in rows and columns
                     const bucketStartX = foundBucket.x + 10; // 10px padding from left
-                    const bucketStartY = foundBucket.y + 60; // Start below handle and rim (52px) + padding
+                    const bucketStartY = foundBucket.y + 76; // Start below rim (20px) + padding (12px) + label (~28px) + label margin (12px) + gap (4px)
 
                     // Get current number of items in bucket for grid arrangement
                     const currentBucket = buckets.find(b => b.id === foundBucket.id);
@@ -2165,17 +2179,41 @@ const Whiteboard = ({
 
                     updatedItem.inBucket = foundBucket.id;
 
-                    // Auto-deselect item when it enters bucket
-                    const newSelection = selectedItems.filter(si => si.id !== updatedItem.id);
-                    setSelectedItems(newSelection);
-                    
+                    // Auto-deselect and immediately stop dragging
+                    setSelectedItems([]);
+                    setIsDraggingItem(false);
+                    dragOffsetRef.current = { x: 0, y: 0 };
+
                     // Broadcast deselection to other participants
                     if (whiteboardService) {
                         whiteboardService.send('item_selected', {
-                            itemIds: newSelection.map(si => si.id),
+                            itemIds: [],
                             timestamp: Date.now()
                         });
                     }
+
+                    // Commit the final item state to canvas
+                    const finalItems = canvasItems.map(item =>
+                        item.id === selectedItem.id ? updatedItem : item
+                    );
+                    setCanvasItems(finalItems);
+
+                    // Send final position to other participants immediately
+                    whiteboardService?.sendItemUpdate({
+                        id: currentItem.id,
+                        x: updatedItem.x,
+                        y: updatedItem.y,
+                        width: updatedItem.width,
+                        height: updatedItem.height,
+                        inBucket: updatedItem.inBucket,
+                        originalWidth: updatedItem.originalWidth,
+                        originalHeight: updatedItem.originalHeight,
+                        normalized: false  // Pixel coordinates for bucket items
+                    });
+
+                    // Redraw canvas after drop
+                    setTimeout(() => redrawCanvas(), 16);
+                    return; // Stop processing - item has been dropped into bucket
                 }
             } else if (updatedItem.inBucket) {
                 // Handle item leaving bucket - restore to normal size
@@ -3410,16 +3448,16 @@ const Whiteboard = ({
                                     <div
                                         style={{
                                             position: 'absolute',
-                                            top: '-32px',
+                                            top: '-20px',
                                             left: '50%',
                                             transform: 'translateX(-50%)',
                                             width: bucket.width * 0.7,
-                                            height: '32px',
-                                            border: `3px solid ${isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b'}`,
+                                            height: '20px',
+                                            border: `3px solid ${isDraggedOver ? '#22c55e' : bucketColorValue}`,
                                             borderBottom: 'none',
                                             borderTopLeftRadius: '50%',
                                             borderTopRightRadius: '50%',
-                                            backgroundColor: isDraggedOver ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                            backgroundColor: isDraggedOver ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -3429,10 +3467,10 @@ const Whiteboard = ({
                                         }}
                                     >
                                         <span style={{
-                                            fontSize: '10px',
+                                            fontSize: '8px',
                                             fontWeight: '600',
-                                            color: isDraggedOver ? '#3b82f6' : '#94a3b8',
-                                            letterSpacing: '1px',
+                                            color: isDraggedOver ? '#22c55e' : '#94a3b8',
+                                            letterSpacing: '0.5px',
                                             userSelect: 'none'
                                         }}>
                                             ⋮⋮ ⋮⋮
@@ -3446,15 +3484,15 @@ const Whiteboard = ({
                                         height: '100%',
                                         borderRadius: '8px 8px 24px 24px',
                                         overflow: 'hidden',
-                                        border: `3px solid ${isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b'}`,
-                                        backgroundColor: isDraggedOver ? 'rgba(59, 130, 246, 0.2)' : itemCount > 0 ? `${bucketColorValue}30` : 'rgba(51, 65, 85, 0.5)',
+                                        border: `3px solid ${isDraggedOver ? '#22c55e' : bucketColorValue}`,
+                                        backgroundColor: isDraggedOver ? 'rgba(34, 197, 94, 0.15)' : `${bucketColorValue}30`,
                                         boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
                                         transition: 'all 0.3s ease'
                                     }}>
                                         {/* Bucket Rim */}
                                         <div style={{
                                             height: '20px',
-                                            backgroundColor: isDraggedOver ? '#3b82f6' : itemCount > 0 ? bucketColorValue : '#64748b',
+                                            backgroundColor: isDraggedOver ? '#22c55e' : bucketColorValue,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -3501,7 +3539,7 @@ const Whiteboard = ({
                                                         borderRadius: '12px',
                                                         fontSize: '13px',
                                                         fontWeight: '600',
-                                                        backgroundColor: itemCount > 0 ? bucketColorValue : '#64748b',
+                                                        backgroundColor: bucketColorValue,
                                                         color: '#fff',
                                                         cursor: editingBucketId !== bucket.id && isTrainer ? 'pointer' : 'default',
                                                         transition: 'background-color 0.3s ease',
@@ -3557,7 +3595,7 @@ const Whiteboard = ({
                                                         />
                                                     ) : (
                                                         <span>
-                                                            {itemCount === 0 ? '🪣 ' : '📦 '}
+                                                            {itemCount === 0 ? ' ' : '📦 '}
                                                             {bucket.label}
                                                         </span>
                                                     )}

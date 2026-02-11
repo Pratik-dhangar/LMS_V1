@@ -1501,28 +1501,48 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
     }
 
-    // Background music
+    // Background music - Instructor side receives sync from learner/client
     if (setBackgroundMusicPlaying && audioRef) {
         whiteboardService.onBackgroundMusic = (data) => {
-            console.log('[AttendeeSession] Background music control:', data);
-            if (data.playing && data.url) {
-                audioRef.current.src = data.url;
-                audioRef.current.play().catch(err =>
-                    console.error('[AttendeeSession] Audio play failed:', err)
-                );
-                setBackgroundMusicPlaying(true);
-                if (setSelectedMusic) setSelectedMusic(data.musicId);
-            } else {
+            console.log('[InstructorSessionLayout] 🎵 ===== BACKGROUND MUSIC RECEIVED FROM PARTICIPANT =====');
+            console.log('[InstructorSessionLayout] 🎵 Message data:', data);
+
+            if (data.playing && (data.musicUrl || data.url)) {
+                const musicUrl = data.musicUrl || data.url;
+                console.log('[InstructorSessionLayout] 🎵 [PLAY] Syncing: Playing', musicUrl);
+
+                audioRef.current.src = musicUrl;
+                audioRef.current.volume = data.volume || 0.5;
+                audioRef.current.loop = true;
+                audioRef.current.currentTime = 0;
+
+                audioRef.current.play()
+                    .then(() => {
+                        console.log('[InstructorSessionLayout] ✅ [PLAY] Participant music synced');
+                        setBackgroundMusicPlaying(true);
+                        if (setSelectedMusic) setSelectedMusic(data.musicId);
+                    })
+                    .catch(err => {
+                        console.error('[InstructorSessionLayout] ❌ [PLAY] Sync error:', err.message);
+                    });
+            } else if (!data.playing) {
+                console.log('[InstructorSessionLayout] 🎵 [STOP] Syncing: Stopping music');
                 audioRef.current.pause();
+                audioRef.current.currentTime = 0;
                 setBackgroundMusicPlaying(false);
                 if (setSelectedMusic) setSelectedMusic(null);
+                console.log('[InstructorSessionLayout] ✅ [STOP] Participant music stopped');
             }
+            console.log('[InstructorSessionLayout] 🎵 ===== SYNC COMPLETE =====');
         };
 
         whiteboardService.onBackgroundMusicVolume = (data) => {
-            console.log('[AttendeeSession] Music volume update:', data.volume);
+            console.log('[InstructorSessionLayout] 🔊 [VOLUME] Volume sync from participant:', data.volume);
             if (setMusicVolume) setMusicVolume(data.volume);
-            audioRef.current.volume = data.volume;
+            if (audioRef.current) {
+                audioRef.current.volume = data.volume;
+                console.log('[InstructorSessionLayout] ✅ [VOLUME] Volume synced');
+            }
         };
     }
 

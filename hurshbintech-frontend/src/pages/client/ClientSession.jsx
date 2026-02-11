@@ -126,7 +126,8 @@ const ClientSession = () => {
     trainerComments,
     setTrainerComments,
     isCommentsOpen,
-    setIsCommentsOpen
+    setIsCommentsOpen,
+    audioRef
   } = sessionState;
 
   // Prompt line UI states
@@ -597,7 +598,7 @@ const ClientSession = () => {
       overflow: 'hidden'
     }}>
       <style>{attendeeSessionStyles}</style>
-      
+
       {/* Metrics Header - Full width (P:, R:, Bucket Color) - ✅ Responsive */}
       <div className="learner-metrics-header" style={{
         display: 'flex',
@@ -777,6 +778,9 @@ const ClientSession = () => {
         onFlushComment={flushSendComment}
         sessionType="client"
       />
+
+      {/* Background Music Audio Element */}
+      <audio ref={audioRef} crossOrigin="anonymous" />
     </div>
   );
 };

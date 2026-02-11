@@ -465,6 +465,30 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                 if message.get("type") == "media_control":
                     # Handle media control events
                     await handle_media_control(message, session_id, role, websocket)
+                elif message.get("type") == "background_music":
+                    # Handle background music events (play, stop, volume)
+                    logger.info(f"[WHITEBOARD] Background music event from {role}: {message}")
+                    # Broadcast to all connected participants except the sender
+                    if session_id in whiteboard_connections:
+                        for other_role, other_conn in whiteboard_connections[session_id].items():
+                            if other_role != role and other_conn.is_alive:
+                                try:
+                                    logger.debug(f"[WHITEBOARD] Forwarding background_music to {other_role}")
+                                    await other_conn.websocket.send_json(message)
+                                except Exception as e:
+                                    logger.error(f"[WHITEBOARD] Error sending background_music to {other_role}: {e}")
+                elif message.get("type") == "background_music_volume":
+                    # Handle background music volume changes
+                    logger.info(f"[WHITEBOARD] Background music volume change from {role}: {message}")
+                    # Broadcast to all connected participants except the sender
+                    if session_id in whiteboard_connections:
+                        for other_role, other_conn in whiteboard_connections[session_id].items():
+                            if other_role != role and other_conn.is_alive:
+                                try:
+                                    logger.debug(f"[WHITEBOARD] Forwarding background_music_volume to {other_role}")
+                                    await other_conn.websocket.send_json(message)
+                                except Exception as e:
+                                    logger.error(f"[WHITEBOARD] Error sending background_music_volume to {other_role}: {e}")
                 else:
                     # Forward draw/clear/item_update messages to the other participant(s)
                     # Map roles to their counterparts (coach can have both client and guest, trainer broadcasts to learner and observer)

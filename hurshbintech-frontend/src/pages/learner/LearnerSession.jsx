@@ -2141,6 +2141,9 @@ const LearnerSession = () => {
             </div>
           </div>
         )}
+
+        {/* Background Music Audio Element */}
+        <audio ref={audioRef} crossOrigin="anonymous" />
       </div>
     </div>
   );

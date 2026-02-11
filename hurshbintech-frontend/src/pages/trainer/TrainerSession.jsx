@@ -277,6 +277,7 @@ const TrainerSession = () => {
     mediaWasVisibleRef: state.mediaWasVisibleRef,
     mediaControl,
     learningContentSearch: state.learningContentSearch,
+    learningGoalsSearch: state.learningGoalsSearch,
     restrictionAlertShownRef: state.restrictionAlertShownRef,
     floatingAnimations: state.floatingAnimations,
     sessionService,
@@ -294,6 +295,8 @@ const TrainerSession = () => {
     setDatabaseSearchResults: state.setDatabaseSearchResults,
     setIsSearching: state.setIsSearching,
     setFilteredLearningGoals: state.setFilteredLearningGoals,
+    setDatabaseGoalsSearchResults: state.setDatabaseGoalsSearchResults,
+    setIsSearchingGoals: state.setIsSearchingGoals,
     initializeWebRTC,
     cleanup,
   });

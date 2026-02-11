@@ -218,21 +218,32 @@ export const useInstructorHandlers = ({
 
     // Music
     const toggleBackgroundMusic = useCallback((musicId) => {
+        console.log('[useInstructorHandlers] 🎵 ===== BACKGROUND MUSIC TOGGLE =====');
+        console.log('[useInstructorHandlers] 🎵 Current state - playing:', backgroundMusicPlaying, 'selected:', selectedMusic);
+
         if (selectedMusic === musicId && backgroundMusicPlaying) {
+            // STOP MUSIC
+            console.log('[useInstructorHandlers] 🎵 [STOP] Stopping music ID:', musicId);
             audioRef.current?.pause();
             setBackgroundMusicPlaying(false);
             setSelectedMusic(null);
 
-            // Broadcast music stop to learner/client
+            // Broadcast STOP to all attendees
             if (whiteboardService) {
-                whiteboardService.send('background_music_stop', {
-                    musicId: null,
-                    playing: false
-                });
+                const stopMessage = {
+                    playing: false,
+                    musicId: null
+                };
+                console.log('[useInstructorHandlers] 📡 [STOP] Broadcasting to attendees:', stopMessage);
+                whiteboardService.send('background_music', stopMessage);
+                console.log('[useInstructorHandlers] ✅ [STOP] Message sent to attendees');
             }
         } else {
+            // PLAY MUSIC
             const music = musicOptions.find(m => m.id === musicId);
             if (music && audioRef.current) {
+                console.log('[useInstructorHandlers] 🎵 [PLAY] Starting music:', music.name, '(ID:', musicId + ')');
+
                 audioRef.current.src = music.url;
                 audioRef.current.volume = musicVolume;
                 audioRef.current.loop = true;
@@ -240,30 +251,45 @@ export const useInstructorHandlers = ({
                 setBackgroundMusicPlaying(true);
                 setSelectedMusic(musicId);
 
-                // Broadcast music to learner/client
+                // Broadcast PLAY to all attendees
                 if (whiteboardService) {
-                    whiteboardService.send('background_music_play', {
+                    const playMessage = {
+                        playing: true,
                         musicId: music.id,
                         musicUrl: music.url,
                         musicName: music.name,
                         volume: musicVolume
-                    });
+                    };
+                    console.log('[useInstructorHandlers] 📡 [PLAY] Broadcasting to attendees:', playMessage);
+                    whiteboardService.send('background_music', playMessage);
+                    console.log('[useInstructorHandlers] ✅ [PLAY] Message sent to attendees');
                 }
             }
         }
+        console.log('[useInstructorHandlers] 🎵 ===== TOGGLE COMPLETE =====');
     }, [selectedMusic, backgroundMusicPlaying, musicOptions, musicVolume, audioRef, whiteboardService, setBackgroundMusicPlaying, setSelectedMusic]);
 
     const handleMusicVolumeChange = useCallback((e) => {
         const volume = parseFloat(e.target.value);
-        setMusicVolume(volume);
-        if (audioRef.current) audioRef.current.volume = volume;
+        console.log('[useInstructorHandlers] 🔊 [VOLUME] Changing volume to:', volume);
 
-        // Broadcast volume change to learner/client
+        setMusicVolume(volume);
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+            console.log('[useInstructorHandlers] 🔊 [VOLUME] Instructor audio updated to:', volume);
+        }
+
+        // Broadcast volume change to attendees (only if music is playing)
         if (whiteboardService && backgroundMusicPlaying) {
-            whiteboardService.send('background_music_volume', {
+            const volumeMessage = {
                 musicId: selectedMusic,
                 volume: volume
-            });
+            };
+            console.log('[useInstructorHandlers] 📡 [VOLUME] Broadcasting to attendees:', volumeMessage);
+            whiteboardService.send('background_music_volume', volumeMessage);
+            console.log('[useInstructorHandlers] ✅ [VOLUME] Message sent to attendees');
+        } else if (!backgroundMusicPlaying) {
+            console.log('[useInstructorHandlers] 🔊 [VOLUME] Music not playing, volume broadcast skipped');
         }
     }, [audioRef, whiteboardService, backgroundMusicPlaying, selectedMusic, setMusicVolume]);
 
