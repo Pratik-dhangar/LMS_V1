@@ -120,7 +120,11 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        devOptions: { enabled: true, type: 'module' }
+        devOptions: { 
+          enabled: true, 
+          type: 'module',
+          suppressWarnings: true
+        }
       })
     );
   } else {

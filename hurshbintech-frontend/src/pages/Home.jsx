@@ -122,6 +122,21 @@ const Home = () => {
     };
   }, [fetchAboutUs]);
 
+  // Fetch featured coach when aboutUs data loads with featured_coach_id
+  useEffect(() => {
+    if (aboutUs?.featured_coach_id && !featuredCoach && !loadingCoach) {
+      // Check if coach section is already in viewport or near it
+      if (coachRef.current) {
+        const rect = coachRef.current.getBoundingClientRect();
+        const isNearViewport = rect.top < window.innerHeight + 200; // 200px before viewport
+        
+        if (isNearViewport) {
+          fetchFeaturedCoach(aboutUs.featured_coach_id);
+        }
+      }
+    }
+  }, [aboutUs?.featured_coach_id, featuredCoach, loadingCoach, fetchFeaturedCoach]);
+
   // Intersection Observer for lazy loading below-the-fold content
   useEffect(() => {
     const observerOptions = {
