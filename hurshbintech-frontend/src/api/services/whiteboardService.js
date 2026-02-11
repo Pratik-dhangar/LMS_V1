@@ -54,6 +54,7 @@ class WhiteboardService {
 
     setupWebSocket() {
         this.ws.onopen = () => {
+            console.log('[WhiteboardService] WebSocket connected for role:', this.role, 'session:', this.sessionId);
             const joinMessage = {
                 type: 'join',
                 sessionId: this.sessionId,
@@ -64,6 +65,11 @@ class WhiteboardService {
 
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
+
+            // Log all incoming messages for debugging
+            if (message.type !== 'ping' && message.type !== 'pong') {
+                console.log('[WhiteboardService] Received message type:', message.type, 'data:', message.data);
+            }
 
             switch (message.type) {
                 case 'draw':
@@ -241,14 +247,22 @@ class WhiteboardService {
                     break;
 
                 case 'background_music':
+                    console.log('[WhiteboardService] 🎵 Received background_music message:', message);
                     if (this.onBackgroundMusic) {
+                        console.log('[WhiteboardService] 🎵 Callback exists, calling onBackgroundMusic with data:', message.data);
                         this.onBackgroundMusic(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ No onBackgroundMusic callback registered!');
                     }
                     break;
 
                 case 'background_music_volume':
+                    console.log('[WhiteboardService] 🔊 Received background_music_volume message:', message);
                     if (this.onBackgroundMusicVolume) {
+                        console.log('[WhiteboardService] 🔊 Callback exists, calling onBackgroundMusicVolume with data:', message.data);
                         this.onBackgroundMusicVolume(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ No onBackgroundMusicVolume callback registered!');
                     }
                     break;
 

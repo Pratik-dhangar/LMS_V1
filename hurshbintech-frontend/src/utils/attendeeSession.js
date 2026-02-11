@@ -185,6 +185,10 @@ export const useAttendeeSessionState = () => {
  * Setup all whiteboard event listeners for attendee
  */
 export const setupAttendeeWhiteboardListeners = (wbService, state) => {
+    console.log('[AttendeeSession] 🔧 Setting up whiteboard listeners');
+    console.log('[AttendeeSession] 🔧 wbService exists?', !!wbService);
+    console.log('[AttendeeSession] 🔧 audioRef from state:', state.audioRef);
+
     const {
         setToolAccess,
         setRemoteSelectedItemIds,
@@ -352,35 +356,63 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         }
     };
 
-    // Background Music (synced from instructor)
+    // Background Music (synced from instructor) - Attendee ALWAYS follows instructor
     wbService.onBackgroundMusic = (data) => {
-        console.log('[AttendeeSession] Background music command received:', data);
-        if (data.playing) {
+        console.log('[AttendeeSession] 🎵 ===== BACKGROUND MUSIC SYNC START =====');
+        console.log('[AttendeeSession] 🎵 Instructor command:', data);
+
+        if (data.playing && data.musicUrl) {
+            // PLAY - Follow instructor immediately
+            console.log('[AttendeeSession] 🎵 [PLAY] Playing:', data.musicUrl);
             setSelectedMusic(data.musicId);
             setBackgroundMusicPlaying(true);
-            if (audioRef.current && data.musicUrl) {
-                audioRef.current.src = data.musicUrl;
-                audioRef.current.loop = true;
-                audioRef.current.volume = data.volume || 0.5;
-                audioRef.current.play().catch(err => {
-                    console.log('[AttendeeSession] Audio play error:', err);
-                });
+            setMusicVolume(data.volume || 0.5);
+
+            if (!audioRef.current) {
+                console.error('[AttendeeSession] ❌ [PLAY] audioRef is NULL!');
+                return;
             }
-        } else {
+
+            audioRef.current.src = data.musicUrl;
+            audioRef.current.volume = data.volume || 0.5;
+            audioRef.current.loop = true;
+            audioRef.current.currentTime = 0;
+
+            audioRef.current.play()
+                .then(() => {
+                    console.log('[AttendeeSession] ✅ [PLAY] Audio NOW playing on attendee');
+                })
+                .catch(err => {
+                    console.error('[AttendeeSession] ❌ [PLAY] Error:', err.message);
+                });
+        } else if (!data.playing) {
+            // STOP - Follow instructor immediately
+            console.log('[AttendeeSession] 🎵 [STOP] Stopping music');
             setBackgroundMusicPlaying(false);
             setSelectedMusic(null);
+
             if (audioRef.current) {
                 audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                console.log('[AttendeeSession] ✅ [STOP] Audio NOW stopped on attendee');
             }
+        } else {
+            console.warn('[AttendeeSession] ⚠️ Invalid data:', data);
         }
+        console.log('[AttendeeSession] 🎵 ===== BACKGROUND MUSIC SYNC COMPLETE =====');
     };
 
-    // Background Music Volume Sync
+    // Background Music Volume Sync - Follow instructor immediately
     wbService.onBackgroundMusicVolume = (data) => {
-        console.log('[AttendeeSession] Background music volume change:', data);
+        console.log('[AttendeeSession] 🔊 [VOLUME SYNC] Instructor volume:', data.volume);
+
         setMusicVolume(data.volume);
+
         if (audioRef.current) {
             audioRef.current.volume = data.volume;
+            console.log('[AttendeeSession] ✅ [VOLUME SYNC] Attendee volume NOW:', audioRef.current.volume);
+        } else {
+            console.warn('[AttendeeSession] ⚠️ [VOLUME SYNC] audioRef not available');
         }
     };
 
@@ -418,6 +450,16 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         console.log('[AttendeeSession] Comments panel toggled:', data);
         setIsCommentsOpen(data.visible || false);
     };
+
+    console.log('[AttendeeSession] ✅ All whiteboard listeners setup complete');
+    console.log('[AttendeeSession] ✅ Registered callbacks:', {
+        onBackgroundMusic: !!wbService.onBackgroundMusic,
+        onBackgroundMusicVolume: !!wbService.onBackgroundMusicVolume,
+        onToolAccess: !!wbService.onToolAccess,
+        onBucketAdded: !!wbService.onBucketAdded,
+        onAnimationPopped: !!wbService.onAnimationPopped,
+        onPromptMeterUpdate: !!wbService.onPromptMeterUpdate
+    });
 };
 
 // ============================================================================

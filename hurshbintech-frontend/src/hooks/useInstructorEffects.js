@@ -251,54 +251,6 @@ export const useInstructorEffects = ({
 
         setFilteredLearningGoals(filteredGoals);
     }, [sessionInfo, learningGoalsSearch, setFilteredLearningGoals]);
-
-    // 11. Handle background music broadcast from instructor
-    useEffect(() => {
-        if (!whiteboardService) return;
-
-        // Listen for instructor playing background music
-        const handleMusicPlay = (data) => {
-            console.log(`[${role}Session] Received music play event:`, data);
-            const audio = new Audio(data.musicUrl);
-            audio.volume = data.volume || 0.5;
-            audio.loop = true;
-            audio.play().catch(err => console.error('Failed to play music:', err));
-
-            // Store reference for volume and stop control
-            window.instructorMusicAudio = audio;
-        };
-
-        // Listen for instructor stopping background music
-        const handleMusicStop = () => {
-            console.log(`[${role}Session] Received music stop event`);
-            if (window.instructorMusicAudio) {
-                window.instructorMusicAudio.pause();
-                window.instructorMusicAudio = null;
-            }
-        };
-
-        // Listen for volume changes
-        const handleMusicVolume = (data) => {
-            console.log(`[${role}Session] Received volume change event:`, data);
-            if (window.instructorMusicAudio) {
-                window.instructorMusicAudio.volume = data.volume;
-            }
-        };
-
-        whiteboardService.onBackgroundMusicPlay = handleMusicPlay;
-        whiteboardService.onBackgroundMusicStop = handleMusicStop;
-        whiteboardService.onBackgroundMusicVolume = handleMusicVolume;
-
-        return () => {
-            whiteboardService.onBackgroundMusicPlay = null;
-            whiteboardService.onBackgroundMusicStop = null;
-            whiteboardService.onBackgroundMusicVolume = null;
-            if (window.instructorMusicAudio) {
-                window.instructorMusicAudio.pause();
-                window.instructorMusicAudio = null;
-            }
-        };
-    }, [whiteboardService, role]);
 };
 
 export default useInstructorEffects;

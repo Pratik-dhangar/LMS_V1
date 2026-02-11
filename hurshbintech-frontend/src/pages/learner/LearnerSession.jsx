@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaBars, FaTimes } from 'react-icons/fa';
-import { Clock } from 'lucide-react';
 import sessionService from '../../api/services/sessionService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
@@ -34,9 +33,12 @@ import {
 } from '../../utils/attendeeSession';
 import {
   AttendeeWaitingScreen,
-  AttendeeVideoControls,
-  RemoteVideoFeed,
-  AttendeeCommentsPanel,
+  AttendeeUpperSection,
+  AttendeeWhiteboardSection,
+  LearnerWhiteboardWithVideo,
+  AttendeeWaitingModal,
+  usePromptAnimation,
+  useBulbGlowAnimation,
   attendeeSessionStyles
 } from '../../components/session/AttendeeSessionLayout';
 
@@ -49,7 +51,7 @@ const LearnerSession = () => {
   // Auto-hide navbar hook
   const { navbarClassName, pageClassName } = useAutoHideNavbar();
 
-  // Use shared attendee session state
+  // Shared attendee session state
   const sessionState = useAttendeeSessionState();
   const {
     webRTC,
@@ -119,21 +121,19 @@ const LearnerSession = () => {
   // Canvas ref for denormalization
   const whiteboardCanvasRef = useRef(null);
 
-  // Learner-specific states (not in shared utility)
-  const [promptText, setPromptText] = useState('[Prompts from trainer will appear here]');
-  const [promptVisible, setPromptVisible] = useState(false); // Toggle prompt line visibility (collapsed by default)
-  const [isEyeBlinking, setIsEyeBlinking] = useState(false); // Eye blinking animation when new prompt received
-
-  // YouTube popups synced from trainer
-  const [youtubePopups, setYoutubePopups] = useState([]); // Array of { id, videoId, title, position }
-
-  // Collapsible section states
-  const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
+  // Learner-specific states
+  const [promptText, setPromptText] = useState('');
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [isEyeBlinking, setIsEyeBlinking] = useState(false);
+  const [youtubePopups, setYoutubePopups] = useState([]);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
-  const [promptLineAnimating, setPromptLineAnimating] = useState(false);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
+
+  // Use shared animation hooks
+  const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
+  const isBulbGlowing = useBulbGlowAnimation(bucketColor);
 
   // Comment send functions (using shared utility)
   const [commentInput, setCommentInput] = useState('');
@@ -174,24 +174,13 @@ const LearnerSession = () => {
     // console.log('[LearnerSession] feedbackMessage state changed to:', feedbackMessage);
   }, [feedbackMessage]);
 
-  // Set up WebRTC message callback (removed - messaging feature disabled)
+  // Set up WebRTC message callback for prompt text
   useEffect(() => {
     if (webRTC) {
-      // Set up prompt text handler
       webRTC.onPromptText = (data) => {
-        // console.log('[LearnerSession] Prompt text received from trainer:', data);
         setPromptText(data.text);
 
-        // Auto-open Prompt Line div when new prompt is received
-        setIsPromptLineOpen(true);
-
-        // Trigger animation
-        setPromptLineAnimating(true);
-        setTimeout(() => {
-          setPromptLineAnimating(false);
-        }, 2000);
-
-        // Trigger eye blinking animation when new prompt is received
+        // Eye blinking animation when new prompt received (unique to learner)
         setIsEyeBlinking(true);
         setTimeout(() => {
           setIsEyeBlinking(false);
@@ -1742,26 +1731,7 @@ const LearnerSession = () => {
         crossOrigin="anonymous"
       />
 
-      {/* Navigation / Header - Auto-hide on mobile */}
-      {/* <div className={`session-header ${navbarClassName}`}>
-        <div className="session-header-main">
-          <div>
-            <div className="session-header-title">HurshBin Learner</div>
-            <div className="session-header-subtitle">
-              {sessionInfo?.title ?? 'Training Session'} — Trainer : {sessionInfo?.trainer_name ?? 'Trainer'}
-            </div>
-          </div>
 
-          <div className="session-header-controls">
-            <div className="session-header-info">
-              Status: <strong>{connectionStatus}</strong>
-            </div>
-            <div className="session-header-info">
-              Time Left: <strong>{timeLeft ?? '--:--'}</strong>
-            </div>
-          </div>
-        </div>
-      </div> */}
 
       {/* Sidebar Toggles (Mobile Only) */}
       <div className="session-sidebar-toggles">
@@ -1788,177 +1758,76 @@ const LearnerSession = () => {
       {/* Main Container - Flexbox column layout */}
       <div className="learner-main-container">
 
-        {/* Header with Metrics - Full width */}
-        <div className="learner-metrics-header" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '8px 8px',
-          backgroundColor: 'white',
-          borderRadius: '4px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          flexWrap: 'wrap',
-          margin: '0',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
-          {/* Divider */}
-          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+        {/* Upper Section: Metrics (20%) | Prompt (60%) | Video (20%) */}
+        <AttendeeUpperSection
+          // Metrics Panel Props
+          promptMeter={promptMeter}
+          reinforcementMeter={reinforcementMeter}
+          bucketColor={bucketColor}
 
-          {/* Prompt Level */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#d97706' }}>P:</span>
-            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
-          </div>
+          // Prompt Panel Props
+          promptText={promptText}
+          isCommentsOpen={isCommentsOpen}
+          commentInput={commentInput}
+          setCommentInput={setCommentInput}
+          onSendComment={debouncedSendComment}
+          onFlushComment={flushSendComment}
+          exerciseData={exerciseData}
+          showExercise={!!exerciseData && (!!exerciseData.question || !!exerciseData.qaItems?.length)}
+          Exercise={Exercise}
+          whiteboardService={whiteboardService}
+          onExerciseSubmit={handleExerciseSubmit}
+          onExerciseUpdate={null}
+          onExerciseDelete={null}
 
-          {/* Divider */}
-          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+          // Video Panel Props
+          remoteVideoRef={remoteVideoRef}
+          remoteStream={remoteStream}
+          micEnabled={micEnabled}
+          cameraEnabled={cameraEnabled}
+          onToggleMic={null}
+          onToggleCamera={null}
+          onLeaveSession={null}
+          videoLabel="Trainer"
+          showVideoControls={false}
 
-          {/* Reinforcement Level */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#16a34a' }}>R:</span>
-            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
-          </div>
-          {/* Divider */}
-          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
-
-          {/* Prompt Line with Bulb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
-              style={{
-                fontSize: '24px',
-                cursor: 'pointer',
-                filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== '[Prompts from trainer will appear here]' ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
-                animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                transition: 'filter 0.3s ease, transform 0.2s ease',
-                transform: isPromptLineOpen ? 'scale(1.1)' : 'scale(1)',
-                userSelect: 'none'
-              }}
-            >
-              💡
-            </span>
-            {isPromptLineOpen && (
-              <div style={{
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                border: promptText !== '[Prompts from trainer will appear here]' ? '2px solid #fbbf24' : '1px solid #e5e7eb',
-                maxWidth: '300px',
-                transition: 'border 0.3s ease'
-              }}>
-                <p style={{ fontSize: '12px', color: '#374151', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {promptText !== '[Prompts from trainer will appear here]' ? promptText : 'Waiting for prompt...'}
-                </p>
-              </div>
-            )}
-          </div>
-
-
-        </div>
+          sessionType="learner"
+        />
 
         {/* Whiteboard - Fills remaining space */}
-        <div className="learner-whiteboard-wrapper">
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            <div className="session-whiteboard-container">
-              {/* Fixed Video Feed Overlay - Trainer's Video (Top Right Corner) */}
-              {remoteStream && (
-                <div className="trainer-video-overlay"
-                  style={{
-                    position: 'fixed',
-                    top: '55px',
-                    right: '2px',
-                    width: 'clamp(200px, 20vw, 350px)',
-                    height: 'clamp(150px, 15vw, 260px)',
-                    backgroundColor: '#000',
-                    borderRadius: '8px',
-                    border: '2px solid #374151',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                    zIndex: 100,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}>
-                  {/* Video Stream */}
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    style={{
-                      flex: 1,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      backgroundColor: '#1a1a1a'
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Whiteboard component - keep logic intact */}
-              <div className="w-full h-full" style={{ position: 'relative' }}>
-                <Whiteboard
-                  canvasRefForParent={whiteboardCanvasRef}
-                  whiteboardService={whiteboardService}
-                  isTrainer={false}
-                  canvasItems={canvasItems}
-                  setCanvasItems={setCanvasItems}
-                  isFrozen={false}
-                  isPaused={false}
-                  toolAccess={toolAccess}
-                  remoteSelectedItemIds={remoteSelectedItemIds}
-                  feedbackMessage={feedbackMessage}
-                  waitingMessage={waitingMessage}
-                  floatingAnimations={floatingAnimations}
-                  onAnimationPop={handleAnimationPop}
-                  clearCanvasTrigger={clearCanvasTrigger}
-                  erasePenTrigger={erasePenTrigger}
-                  redrawCanvasTrigger={redrawCanvasTrigger}
-                  buckets={buckets}
-                  setBuckets={setBuckets}
-                  bucketColor={bucketColor}
-                  setBucketColor={setBucketColor}
-                  tool={tool}
-                  setTool={setTool}
-                  color={color}
-                  setColor={setColor}
-                  lineWidth={lineWidth}
-                  setLineWidth={setLineWidth}
-                  stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
-                  stopwatchIsRunning={syncedIsRunning}
-                />
-
-                {/* Exercise overlay: show centered over whiteboard when instructor sends a question */}
-                {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
-                  <div
-                    className="exercise-overlay"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'rgba(0,0,0,0.35)',
-                      zIndex: 1200,
-                      pointerEvents: 'auto',
-                      padding: '16px'
-                    }}
-                  >
-                    <div style={{ width: 'min(900px, 95%)', maxHeight: '90%', overflowY: 'auto' }}>
-                      <Exercise
-                        isTrainer={false}
-                        onExerciseSubmit={handleExerciseSubmit}
-                        onAnswerChange={handleExerciseAnswerChange}
-                        whiteboardService={whiteboardService}
-                        initialExercise={exerciseData}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <AttendeeWhiteboardSection>
+          <LearnerWhiteboardWithVideo
+            remoteVideoRef={remoteVideoRef}
+            remoteStream={remoteStream}
+            whiteboardCanvasRef={whiteboardCanvasRef}
+            whiteboardService={whiteboardService}
+            canvasItems={canvasItems}
+            setCanvasItems={setCanvasItems}
+            toolAccess={toolAccess}
+            remoteSelectedItemIds={remoteSelectedItemIds}
+            feedbackMessage={feedbackMessage}
+            waitingMessage={waitingMessage}
+            floatingAnimations={floatingAnimations}
+            onAnimationPop={handleAnimationPop}
+            clearCanvasTrigger={clearCanvasTrigger}
+            erasePenTrigger={erasePenTrigger}
+            redrawCanvasTrigger={redrawCanvasTrigger}
+            buckets={buckets}
+            setBuckets={setBuckets}
+            bucketColor={bucketColor}
+            setBucketColor={setBucketColor}
+            tool={tool}
+            setTool={setTool}
+            color={color}
+            setColor={setColor}
+            lineWidth={lineWidth}
+            setLineWidth={setLineWidth}
+            syncedElapsedTime={syncedElapsedTime}
+            syncedIsRunning={syncedIsRunning}
+            stopwatch={stopwatch}
+            Whiteboard={Whiteboard}
+          />
+        </AttendeeWhiteboardSection>
 
         {/* YouTube Popups - Synced from trainer (read-only for learner) */}
         {youtubePopups.map(popup => (
@@ -1973,174 +1842,22 @@ const LearnerSession = () => {
             isReadOnly={true} // Learner: view and resize only, cannot drag
           />
         ))}
-        {/* Comments Panel */}
-        <AttendeeCommentsPanel
-          isOpen={isCommentsOpen && !exerciseData.question && !exerciseData.qaItems?.length}
-          setIsOpen={setIsCommentsOpen}
-          trainerComments={trainerComments}
-          commentInput={commentInput}
-          setCommentInput={setCommentInput}
-          onSendComment={debouncedSendComment}
-          onFlushComment={flushSendComment}
-          sessionType="learner"
+
+        {/* Waiting Modal - Uses shared component */}
+        <AttendeeWaitingModal
+          show={showWaitingModal}
+          title="Waiting for Trainer"
+          description="The trainer is starting the session. You'll be automatically added once they begin! ✨"
+          retrying={retrying}
+          onRetry={handleRetryJoin}
+          onCancel={() => {
+            setShowWaitingModal(false);
+            navigate('/learner/dashboard');
+          }}
         />
 
-        {/* Waiting for Trainer Modal */}
-        {showWaitingModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              padding: '32px',
-              maxWidth: '480px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              textAlign: 'center',
-              animation: 'slideUp 0.3s ease-out',
-            }}>
-              <style>{`
-              @keyframes slideUp {
-                from {
-                  opacity: 0;
-                  transform: translateY(20px);
-                }
-                to {
-                  opacity: 1;
-                  transform: translateY(0);
-                }
-              }
-              
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-              
-              @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
-              }
-            `}</style>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                marginBottom: '24px',
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  backgroundColor: '#fef3c7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  animation: 'pulse 1.5s ease-in-out infinite',
-                }}>
-                  <Clock size={48} color="#f59e0b" style={{ animation: 'spin 2s linear infinite' }} />
-                </div>
-              </div>
-
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: '600',
-                color: '#1f2937',
-                margin: '0 0 12px 0',
-              }}>
-                Waiting for Trainer
-              </h2>
-
-              <p style={{
-                fontSize: '14px',
-                color: '#6b7280',
-                margin: '0 0 24px 0',
-                lineHeight: '1.6',
-              }}>
-                The trainer is starting the session. You'll be automatically added once they begin! ✨
-              </p>
-
-              <div style={{
-                backgroundColor: '#dbeafe',
-                border: '1px solid #93c5fd',
-                borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '24px',
-                fontSize: '13px',
-                color: '#1e40af',
-              }}>
-                🔄 Auto-joining in progress... or click "Retry Now" to join immediately
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'center',
-              }}>
-                <button
-                  onClick={handleRetryJoin}
-                  disabled={retrying}
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    backgroundColor: retrying ? '#d1d5db' : '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: retrying ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!retrying) e.target.style.backgroundColor = '#059669';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!retrying) e.target.style.backgroundColor = '#10b981';
-                  }}
-                >
-                  {retrying ? 'Checking...' : '🔄 Retry Now'}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowWaitingModal(false);
-                    navigate('/learner/dashboard');
-                  }}
-                  disabled={retrying}
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    backgroundColor: retrying ? '#d1d5db' : '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: retrying ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!retrying) e.target.style.backgroundColor = '#2563eb';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!retrying) e.target.style.backgroundColor = '#3b82f6';
-                  }}
-                >
-                  Back to Dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Background Music Audio Element */}
+        <audio ref={audioRef} crossOrigin="anonymous" />
       </div>
     </div>
   );

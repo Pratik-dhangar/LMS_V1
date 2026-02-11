@@ -1,7 +1,7 @@
 // AttendeeSessionLayout.jsx
 // ============================================================================
 // 🔹 Purpose: Shared layout component for Attendee Session Pages
-// 🔸 Pages: ClientSession ✅, GuestSession ✅, LearnerSession (future)
+// 🔸 Pages: ClientSession ✅, GuestSession ✅, LearnerSession ✅
 // 🔹 Role: Common UI structure and video controls for all attendee types
 // 
 // 📦 EXPORTS:
@@ -9,18 +9,24 @@
 // - AttendeeVideoControls: Mic, camera, and leave session buttons
 // - RemoteVideoFeed: Instructor's video (top right corner)
 // - AttendeeSessionHeader: Session info and status header
+// - AttendeeMetricsHeader: P:, R:, Prompt line with bulb (NEW)
+// - AttendeeMainLayout: Complete session layout wrapper (NEW)
+// - AttendeeWaitingModal: Reusable waiting modal (NEW)
+// - usePromptAnimation: Hook for prompt animations (NEW)
+// - useBulbGlowAnimation: Hook for bucket glow animations (NEW)
 // - attendeeSessionStyles: CSS-in-JS for full-screen layout
 // 
 // 🎯 USAGE:
 // import { 
-//   AttendeeWaitingScreen,
-//   AttendeeVideoControls,
-//   RemoteVideoFeed
+//   AttendeeMainLayout,
+//   AttendeeMetricsHeader,
+//   usePromptAnimation
 // } from '../../components/session/AttendeeSessionLayout';
 // ============================================================================
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import { Clock } from 'lucide-react';
 
 /**
  * Attendee Session Waiting Screen
@@ -880,3 +886,4 @@ InstructorCommentsDisplay.propTypes = {
     isOpen: PropTypes.bool,
     maxHeight: PropTypes.string
 };
+
