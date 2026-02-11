@@ -36,17 +36,56 @@ async def get_user_profile(
         Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
-
-    if isinstance(current_user, HeadProfile):
+    from app.models.user_model import User
+    from fastapi import HTTPException
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"get_user_profile called - Type: {type(current_user).__name__}")
+    
+    # Handle User objects with profiles loaded (from get_current_user)
+    if isinstance(current_user, User):
+        role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+        logger.info(f"User object with role: {role_str}")
+        
+        if role_str.lower() == 'head' and hasattr(current_user, 'head_profile') and current_user.head_profile:
+            logger.info("Returning HeadResponse")
+            return HeadResponse.from_orm_with_user(current_user.head_profile, current_user)
+        elif role_str.lower() == 'trainer' and hasattr(current_user, 'trainer_profile') and current_user.trainer_profile:
+            logger.info("Returning TrainerResponse")
+            return TrainerResponse.from_orm_with_user(current_user.trainer_profile, current_user)
+        elif role_str.lower() == 'coach' and hasattr(current_user, 'coach_profile') and current_user.coach_profile:
+            logger.info(f"Returning CoachResponse with profile ID: {current_user.coach_profile.id}")
+            return CoachResponse.from_orm_with_user(current_user.coach_profile, current_user)
+        elif role_str.lower() == 'learner' and hasattr(current_user, 'learner_profile') and current_user.learner_profile:
+            logger.info("Returning LearnerResponse")
+            return LearnerResponse.from_orm_with_user(current_user.learner_profile, current_user)
+        elif role_str.lower() == 'admin':
+            logger.info("Returning AdminResponse")
+            return AdminResponse.model_validate(current_user)
+        else:
+            logger.error(f"No profile found for user role: {role_str}")
+            raise HTTPException(status_code=404, detail=f"Profile not found for role: {role_str}")
+    # Handle profile objects directly (from specific get_current_* dependencies)
+    elif isinstance(current_user, HeadProfile):
+        logger.info("Direct HeadProfile")
         return HeadResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, Admin):
+        logger.info("Direct Admin")
         return AdminResponse.model_validate(current_user)
     elif isinstance(current_user, TrainerProfile):
+        logger.info("Direct TrainerProfile")
         return TrainerResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, CoachProfile):
+        logger.info(f"Direct CoachProfile with ID: {current_user.id}")
         return CoachResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, LearnerProfile):
+        logger.info("Direct LearnerProfile")
         return LearnerResponse.from_orm_with_user(current_user)
+    
+    # Should never reach here
+    logger.error(f"Unhandled case - Type: {type(current_user).__name__}")
+    raise HTTPException(status_code=500, detail="Unable to determine profile type")
 
 
 @router.get("/me/subscriptions", response_model=List[LearnerSubscriptionResponse])

@@ -169,10 +169,12 @@ async def get_current_user(
         elif role_upper == "COACH":
             result = await db.execute(
                 select(User)
-                .options(joinedload(User.coach_profile))
+                .options(
+                    joinedload(User.coach_profile).joinedload(CoachProfile.reference_data)
+                )
                 .where(User.id == user_id, User.role == UserRole.COACH)
             )
-            user = result.scalar_one_or_none()
+            user = result.unique().scalar_one_or_none()
         elif role_upper == "ADMIN":
             result = await db.execute(
                 select(User)

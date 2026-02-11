@@ -1864,21 +1864,21 @@ const LearnerSession = () => {
               {/* Fixed Video Feed Overlay - Trainer's Video (Top Right Corner) */}
               {remoteStream && (
                 <div className="trainer-video-overlay"
-                 style={{
-                  position: 'fixed',
-                  top: '55px',
-                  right: '2px',
-                  width: 'clamp(200px, 20vw, 350px)',
-                  height: 'clamp(150px, 15vw, 260px)',
-                  backgroundColor: '#000',
-                  borderRadius: '8px',
-                  border: '2px solid #374151',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                  zIndex: 100,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
+                  style={{
+                    position: 'fixed',
+                    top: '55px',
+                    right: '2px',
+                    width: 'clamp(200px, 20vw, 350px)',
+                    height: 'clamp(150px, 15vw, 260px)',
+                    backgroundColor: '#000',
+                    borderRadius: '8px',
+                    border: '2px solid #374151',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    zIndex: 100,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
                   {/* Video Stream */}
                   <video
                     ref={remoteVideoRef}
@@ -1896,7 +1896,7 @@ const LearnerSession = () => {
               )}
 
               {/* Whiteboard component - keep logic intact */}
-              <div className="w-full h-full">
+              <div className="w-full h-full" style={{ position: 'relative' }}>
                 <Whiteboard
                   canvasRefForParent={whiteboardCanvasRef}
                   whiteboardService={whiteboardService}
@@ -1927,6 +1927,34 @@ const LearnerSession = () => {
                   stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
                   stopwatchIsRunning={syncedIsRunning}
                 />
+
+                {/* Exercise overlay: show centered over whiteboard when instructor sends a question */}
+                {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
+                  <div
+                    className="exercise-overlay"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0,0,0,0.35)',
+                      zIndex: 1200,
+                      pointerEvents: 'auto',
+                      padding: '16px'
+                    }}
+                  >
+                    <div style={{ width: 'min(900px, 95%)', maxHeight: '90%', overflowY: 'auto' }}>
+                      <Exercise
+                        isTrainer={false}
+                        onExerciseSubmit={handleExerciseSubmit}
+                        onAnswerChange={handleExerciseAnswerChange}
+                        whiteboardService={whiteboardService}
+                        initialExercise={exerciseData}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1945,20 +1973,6 @@ const LearnerSession = () => {
             isReadOnly={true} // Learner: view and resize only, cannot drag
           />
         ))}
-
-        {/* Exercise Tool */}
-        {(exerciseData.question || (exerciseData.qaItems && exerciseData.qaItems.length > 0)) && (
-          <div className="exercise-tool-container">
-            <Exercise
-              isTrainer={false}
-              onExerciseSubmit={handleExerciseSubmit}
-              onAnswerChange={handleExerciseAnswerChange}
-              whiteboardService={whiteboardService}
-              initialExercise={exerciseData}
-            />
-          </div>
-        )}
-
         {/* Comments Panel */}
         <AttendeeCommentsPanel
           isOpen={isCommentsOpen && !exerciseData.question && !exerciseData.qaItems?.length}
@@ -2127,6 +2141,9 @@ const LearnerSession = () => {
             </div>
           </div>
         )}
+
+        {/* Background Music Audio Element */}
+        <audio ref={audioRef} crossOrigin="anonymous" />
       </div>
     </div>
   );
