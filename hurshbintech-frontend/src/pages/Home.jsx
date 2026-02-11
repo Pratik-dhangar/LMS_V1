@@ -43,22 +43,7 @@ const Home = () => {
       const data = await aboutUsService.getPublicAboutUs('en');
       console.log('About Us data:', data);
       setAboutUs(data);
-
-      // Fetch featured coach if featured_coach_id exists
-      if (data && data.featured_coach_id) {
-        try {
-          console.log('Fetching coach with ID:', data.featured_coach_id);
-          const allCoaches = await bookingService.getAvailableCoaches();
-          const coach = allCoaches.find(c => c.id === data.featured_coach_id);
-          console.log('Fetched coach:', coach);
-          setFeaturedCoach(coach || null);
-        } catch (err) {
-          console.error('Error fetching featured coach:', err);
-          setFeaturedCoach(null);
-        }
-      } else {
-        console.log('No featured_coach_id found in about us data');
-      }
+      // Coach will be lazy-loaded by Intersection Observer when section becomes visible
     } catch (err) {
       if (err?.response?.status !== 404) {
         console.error('Error fetching About Us:', err);
@@ -122,7 +107,19 @@ const Home = () => {
 
   // Load critical content on mount
   useEffect(() => {
-    fetchAboutUs();
+    let cancelled = false;
+    
+    const loadData = async () => {
+      if (!cancelled) {
+        await fetchAboutUs();
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [fetchAboutUs]);
 
   // Intersection Observer for lazy loading below-the-fold content
@@ -163,20 +160,7 @@ const Home = () => {
     };
   }, [aboutUs?.featured_coach_id, fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
 
-  // Trigger coach fetch when aboutUs loads (if section is already visible)
-  useEffect(() => {
-    if (aboutUs?.featured_coach_id && !featuredCoach && !loadingCoach) {
-      // Check if coach section is currently in viewport
-      if (coachRef.current) {
-        const rect = coachRef.current.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-        if (isVisible) {
-          fetchFeaturedCoach(aboutUs.featured_coach_id);
-        }
-      }
-    }
-  }, [aboutUs?.featured_coach_id, featuredCoach, loadingCoach, fetchFeaturedCoach]);
-
+  // Scroll indicator (removed duplicate coach fetch useEffect)
   useEffect(() => {
     const handleScroll = () => {
       const scrolled = window.scrollY;
@@ -428,7 +412,7 @@ const Home = () => {
           </section> */}
 
           {/* Custom Coach Profile Section */}
-          <div ref={coachRef} style={{ minHeight: '500px' }}>
+          <div ref={coachRef} style={{ minHeight: '100px' }}>
             {loadingCoach ? (
               <CoachSkeleton />
             ) : featuredCoach ? (

@@ -45,17 +45,24 @@ async def create_category(
 @router.get("/categories", response_model=List[ProductCategoryResponse])
 async def get_categories(db: AsyncSession = Depends(get_db)):
     """Get all product categories (Public)"""
-    # Try cache first
-    cache_key = cache_service.key_product_categories()
-    cached = await cache_service.get(cache_key)
-    if cached is not None:
-        return cached
+    try:
+        # Try cache first
+        cache_key = cache_service.key_product_categories()
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception as e:
+        # Cache failed - log and continue to DB
+        logger.warning(f"Cache retrieval failed for categories: {e}")
     
     # Cache miss - fetch from DB
     categories = await product_crud.get_all_categories(db)
     
-    # Store in cache for 1 hour
-    await cache_service.set(cache_key, categories, cache_service.TTL_PRODUCT_METADATA)
+    try:
+        # Store in cache for 1 hour
+        await cache_service.set(cache_key, categories, cache_service.TTL_PRODUCT_METADATA)
+    except Exception as e:
+        logger.warning(f"Cache storage failed for categories: {e}")
     
     return categories
 
@@ -130,17 +137,24 @@ async def create_age_group(
 @router.get("/age-groups", response_model=List[AgeGroupResponse])
 async def get_age_groups(db: AsyncSession = Depends(get_db)):
     """Get all age groups (Public)"""
-    # Try cache first
-    cache_key = cache_service.key_age_groups()
-    cached = await cache_service.get(cache_key)
-    if cached is not None:
-        return cached
+    try:
+        # Try cache first
+        cache_key = cache_service.key_age_groups()
+        cached = await cache_service.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception as e:
+        # Cache failed - log and continue to DB
+        logger.warning(f"Cache retrieval failed for age groups: {e}")
     
     # Cache miss - fetch from DB
     age_groups = await product_crud.get_all_age_groups(db)
     
-    # Store in cache for 1 hour
-    await cache_service.set(cache_key, age_groups, cache_service.TTL_PRODUCT_METADATA)
+    try:
+        # Store in cache for 1 hour
+        await cache_service.set(cache_key, age_groups, cache_service.TTL_PRODUCT_METADATA)
+    except Exception as e:
+        logger.warning(f"Cache storage failed for age groups: {e}")
     
     return age_groups
 

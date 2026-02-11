@@ -65,7 +65,7 @@
 .skeleton-coach-section {
   padding: 4rem 1.5rem;
   background: #fff;
-  min-height: 500px; /* Reserve space to prevent layout shift */
+  min-height: 200px; /* Reserve space to prevent layout shift */
 }
 
 .skeleton-coach-container {

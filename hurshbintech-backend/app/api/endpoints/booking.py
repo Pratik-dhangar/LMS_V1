@@ -290,17 +290,6 @@ async def get_my_appointments(
     """
     Get all appointments booked by the current user.
     """
-    # Try cache first
-    cache_key = f"appointments:user:{current_user.id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        # Reconstruct AppointmentResponse objects from cached dicts
-        return [AppointmentResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     appointments = await coach_crud.get_appointments_by_user(db, current_user.id)
 
     responses = []
@@ -334,9 +323,6 @@ async def get_my_appointments(
                 response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
 
         responses.append(response)
-
-    # Cache for 10 minutes - convert to dicts for proper serialization
-    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_APPOINTMENTS)
 
     return responses
 

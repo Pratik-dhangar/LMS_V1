@@ -55,40 +55,6 @@ if settings.USE_S3:
 active_connections: Dict[str, List[WebSocket]] = {}
 
 
-async def invalidate_session_caches(db: AsyncSession, head_id: int = None, trainer_id: int = None, learner_id: int = None):
-    """
-    Invalidate all relevant session caches when a session is created, updated, or deleted.
-    
-    Args:
-        db: Database session
-        head_id: Head user ID who owns the session
-        trainer_id: Trainer user ID assigned to the session
-        learner_id: Learner user ID assigned to the session
-    """
-    try:
-        # Invalidate head's session cache
-        if head_id:
-            head_cache_key = f"sessions:head:{head_id}:all"
-            await cache_service.delete(head_cache_key)
-            logger.debug(f"Invalidated cache: {head_cache_key}")
-        
-        # Invalidate trainer's session cache
-        if trainer_id:
-            trainer_cache_key = f"sessions:trainer:{trainer_id}"
-            await cache_service.delete(trainer_cache_key)
-            logger.debug(f"Invalidated cache: {trainer_cache_key}")
-        
-        # Invalidate learner's session cache
-        if learner_id:
-            learner_cache_key = f"sessions:learner:{learner_id}"
-            await cache_service.delete(learner_cache_key)
-            logger.debug(f"Invalidated cache: {learner_cache_key}")
-        
-        logger.info(f"Session caches invalidated for head={head_id}, trainer={trainer_id}, learner={learner_id}")
-    except Exception as e:
-        logger.error(f"Error invalidating session caches: {e}")
-
-
 def get_public_url(file_url: str) -> str:
     """
     Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
@@ -118,16 +84,6 @@ async def get_all_sessions(
     """Get all sessions created by current Head"""
     logger.info(f"Head {current_head.user_id} fetching all sessions")
 
-    # Try cache first
-    cache_key = f"sessions:head:{current_head.user_id}:all"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        return [SessionResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     # Import here to avoid circular imports
     from app.crud.session_crud import get_all_sessions_by_head
 
@@ -138,9 +94,6 @@ async def get_all_sessions(
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
-
-    # Cache for 10 minutes - serialize to dictionaries
-    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
 
     return responses
 
@@ -308,14 +261,6 @@ async def create_training_session(
 
     new_session = await session_crud.create_session(db, session_data, current_user.id)
 
-    # Invalidate caches for all affected users
-    await invalidate_session_caches(
-        db,
-        head_id=current_user.id,
-        trainer_id=session_data.trainer_id,
-        learner_id=session_data.learner_id
-    )
-
     logger.info(f"Session created successfully: {new_session.session_id}")
     return await build_session_response(db, new_session)
 
@@ -366,14 +311,6 @@ async def update_training_session(
     if not updated_session:
         raise HTTPException(status_code=500, detail="Failed to update session")
 
-    # Invalidate caches for all affected users
-    await invalidate_session_caches(
-        db,
-        head_id=current_head.user_id,
-        trainer_id=updated_session.trainer_id,
-        learner_id=updated_session.learner_id
-    )
-
     logger.info(f"Session {session_id} updated successfully by Head {current_head.user_id}")
     return await build_session_response(db, updated_session)
 
@@ -386,25 +323,12 @@ async def get_trainer_sessions_list(
     """Get all sessions for current trainer"""
     logger.info(f"Fetching sessions for trainer {current_trainer.user_id}")
 
-    # Try cache first
-    cache_key = f"sessions:trainer:{current_trainer.user_id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        return [SessionResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     sessions = await session_crud.get_trainer_sessions(db, current_trainer.user_id)
 
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
-
-    # Cache for 10 minutes - serialize to dictionaries
-    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
 
     return responses
 
@@ -473,14 +397,6 @@ async def end_training_session(
     except Exception as e:
         logger.error(f"Error immediately processing sessions: {str(e)}")
 
-    # Invalidate caches for all affected users
-    await invalidate_session_caches(
-        db,
-        head_id=head_id,
-        trainer_id=current_trainer.user_id,
-        learner_id=learner_id
-    )
-
     # Broadcast session end to all participants via WebSocket
     if session_id in active_connections:
         end_message = {
@@ -537,14 +453,6 @@ async def delete_training_session(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete session")
 
-    # Invalidate caches for all affected users
-    await invalidate_session_caches(
-        db,
-        head_id=current_head.user_id,
-        trainer_id=trainer_id,
-        learner_id=learner_id
-    )
-
     logger.info(f"Session {session_id} deleted successfully by Head {current_head.user_id}")
     return {"message": "Session deleted successfully"}
 
@@ -581,14 +489,6 @@ async def cancel_training_session(
     if not cancelled_session:
         raise HTTPException(status_code=500, detail="Failed to cancel session")
 
-    # Invalidate caches for all affected users
-    await invalidate_session_caches(
-        db,
-        head_id=current_head.user_id,
-        trainer_id=cancelled_session.trainer_id,
-        learner_id=cancelled_session.learner_id
-    )
-
     response = await build_session_response(db, cancelled_session)
     logger.info(f"Session {session_id} cancelled successfully by Head {current_head.user_id}")
     return response
@@ -605,25 +505,12 @@ async def get_learner_sessions_list(
     """Get learner sessions: scheduled, active, and ended sessions from past 30 days"""
     logger.info(f"Fetching sessions for learner {current_learner.user_id}")
 
-    # Try cache first
-    cache_key = f"sessions:learner:{current_learner.user_id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        return [SessionResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     sessions = await session_crud.get_learner_sessions(db, current_learner.user_id)
 
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
-
-    # Cache for 10 minutes - serialize to dictionaries
-    await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_SESSIONS)
 
     return responses
 

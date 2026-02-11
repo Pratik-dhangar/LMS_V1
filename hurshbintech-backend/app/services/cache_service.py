@@ -1,9 +1,5 @@
 """
 Redis Cache Service for Performance Optimization
-Provides caching layer for frequently accessed data:
-- Product categories, age groups, skills (metadata)
-- Product catalogs with filters
-- Learning content listings
 
 Cache Strategy:
 - TTL-based expiration (5-60 minutes depending on data type)
@@ -13,7 +9,10 @@ Cache Strategy:
 
 import json
 import logging
-from typing import Any, Optional, Union
+import random
+import time
+import asyncio
+from typing import Any, Optional, Union, Dict
 from datetime import timedelta
 from functools import wraps
 
@@ -32,6 +31,16 @@ class CacheService:
     def __init__(self):
         self.redis_client: Optional[Redis] = None
         self.enabled = settings.REDIS_ENABLED
+        
+        # Circuit breaker state
+        self._failure_count: int = 0
+        self._failure_threshold: int = 5          # Trip after 5 consecutive failures
+        self._recovery_timeout: int = 30          # Wait 30s before retrying Redis
+        self._circuit_opened_at: Optional[float] = None  # Timestamp when circuit opened
+        
+        # Request coalescing (prevent cache stampede)
+        self._pending_requests: Dict[str, asyncio.Lock] = {}
+        self._locks_lock = asyncio.Lock()  # Protect the locks dictionary itself
         
         # Cache TTL constants (in seconds)
         self.TTL_PRODUCT_METADATA = 3600  # 1 hour for categories/age_groups/skills
@@ -52,9 +61,7 @@ class CacheService:
         self.TTL_ORDER = 600              # 10 minutes for order data
         self.TTL_SUBSCRIPTION_PACKAGES = 3600  # 1 hour for subscription packages
         self.TTL_USER_SUBSCRIPTIONS = 900  # 15 minutes for user subscriptions
-        self.TTL_SESSIONS = 600           # 10 minutes for session listings
         self.TTL_ASSIGNED_TRAININGS = 600  # 10 minutes for assigned trainings
-        self.TTL_APPOINTMENTS = 600       # 10 minutes for appointments
         
     async def connect(self):
         """Initialize Redis connection pool"""
@@ -92,6 +99,62 @@ class CacheService:
             await self.redis_client.close()
             logger.info("Redis connection closed")
     
+    # ========== Circuit Breaker Logic ==========
+    
+    def _is_circuit_open(self) -> bool:
+        """
+        Check if the circuit breaker is open (Redis calls should be skipped).
+        
+        States:
+          CLOSED  – Redis is healthy, all calls go through.
+          OPEN    – Too many consecutive failures, skip Redis entirely.
+          HALF-OPEN – Recovery timeout elapsed, allow ONE probe call.
+        """
+        if self._failure_count < self._failure_threshold:
+            return False  # Circuit CLOSED
+        
+        # Circuit is tripped — check if recovery timeout has elapsed
+        if self._circuit_opened_at is None:
+            return True
+        
+        elapsed = time.monotonic() - self._circuit_opened_at
+        if elapsed >= self._recovery_timeout:
+            # HALF-OPEN: allow a probe call through
+            logger.info("Circuit breaker HALF-OPEN: allowing probe call to Redis")
+            return False
+        
+        return True  # Circuit still OPEN
+    
+    def _record_success(self):
+        """Reset circuit breaker on a successful Redis call."""
+        if self._failure_count > 0:
+            logger.info("Circuit breaker CLOSED: Redis recovered")
+        self._failure_count = 0
+        self._circuit_opened_at = None
+    
+    def _record_failure(self, error: Exception, context: str = ""):
+        """Record a failure and potentially trip the circuit breaker."""
+        self._failure_count += 1
+        if self._failure_count >= self._failure_threshold:
+            if self._circuit_opened_at is None:
+                self._circuit_opened_at = time.monotonic()
+                logger.error(
+                    f"Circuit breaker OPEN: {self._failure_count} consecutive Redis failures. "
+                    f"Skipping Redis for {self._recovery_timeout}s. Last error ({context}): {error}"
+                )
+        else:
+            logger.warning(f"Redis failure {self._failure_count}/{self._failure_threshold} ({context}): {error}")
+    
+    def _get_ttl_with_jitter(self, base_ttl: int) -> int:
+        """
+        Add +/- 10% random jitter to TTL to prevent thundering herd.
+        
+        Without jitter, a server restart causes all keys to be set at the
+        same time and expire simultaneously, slamming the database.
+        """
+        jitter = int(base_ttl * 0.1)
+        return base_ttl + random.randint(-jitter, jitter)
+    
     def _serialize(self, value: Any) -> str:
         """Serialize Python object to JSON string"""
         try:
@@ -112,21 +175,22 @@ class CacheService:
     
     async def get(self, key: str) -> Optional[Any]:
         """
-        Retrieve value from cache
-        Returns None if key doesn't exist or cache is disabled
+        Retrieve value from cache.
+        Returns None if key doesn't exist, cache is disabled, or circuit is open.
         """
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return None
         
         try:
             value = await self.redis_client.get(key)
+            self._record_success()
             if value:
                 logger.debug(f"Cache HIT: {key}")
                 return self._deserialize(value)
             logger.debug(f"Cache MISS: {key}")
             return None
         except Exception as e:
-            logger.error(f"Redis GET error for key {key}: {e}")
+            self._record_failure(e, context=f"GET {key}")
             return None
     
     async def set(
@@ -146,34 +210,38 @@ class CacheService:
         Returns:
             True if successful, False otherwise
         """
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return False
         
         try:
             serialized_value = self._serialize(value)
             
             if ttl:
-                await self.redis_client.setex(key, ttl, serialized_value)
+                final_ttl = self._get_ttl_with_jitter(ttl)
+                await self.redis_client.setex(key, final_ttl, serialized_value)
             else:
+                final_ttl = None
                 await self.redis_client.set(key, serialized_value)
             
-            logger.debug(f"Cache SET: {key} (TTL: {ttl}s)")
+            self._record_success()
+            logger.debug(f"Cache SET: {key} (base TTL: {ttl}s, actual: {final_ttl}s)")
             return True
         except Exception as e:
-            logger.error(f"Redis SET error for key {key}: {e}")
+            self._record_failure(e, context=f"SET {key}")
             return False
     
     async def delete(self, key: str) -> bool:
         """Delete single key from cache"""
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return False
         
         try:
             deleted = await self.redis_client.delete(key)
+            self._record_success()
             logger.debug(f"Cache DELETE: {key} (deleted: {deleted})")
             return deleted > 0
         except Exception as e:
-            logger.error(f"Redis DELETE error for key {key}: {e}")
+            self._record_failure(e, context=f"DELETE {key}")
             return False
     
     async def delete_pattern(self, pattern: str) -> int:
@@ -184,7 +252,7 @@ class CacheService:
         Returns:
             Number of keys deleted
         """
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return 0
         
         try:
@@ -194,35 +262,40 @@ class CacheService:
             
             if keys:
                 deleted = await self.redis_client.delete(*keys)
+                self._record_success()
                 logger.info(f"Cache DELETE PATTERN: {pattern} (deleted {deleted} keys)")
                 return deleted
+            self._record_success()
             return 0
         except Exception as e:
-            logger.error(f"Redis DELETE PATTERN error for {pattern}: {e}")
+            self._record_failure(e, context=f"DELETE PATTERN {pattern}")
             return 0
     
     async def exists(self, key: str) -> bool:
         """Check if key exists in cache"""
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return False
         
         try:
-            return await self.redis_client.exists(key) > 0
+            result = await self.redis_client.exists(key) > 0
+            self._record_success()
+            return result
         except Exception as e:
-            logger.error(f"Redis EXISTS error for key {key}: {e}")
+            self._record_failure(e, context=f"EXISTS {key}")
             return False
     
     async def clear_all(self) -> bool:
         """Clear entire cache database (use with caution!)"""
-        if not self.enabled or not self.redis_client:
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
             return False
         
         try:
             await self.redis_client.flushdb()
+            self._record_success()
             logger.warning("⚠️ Cache CLEARED: All keys deleted")
             return True
         except Exception as e:
-            logger.error(f"Redis FLUSHDB error: {e}")
+            self._record_failure(e, context="FLUSHDB")
             return False
     
     # ========== Cache Key Builders ==========
@@ -434,23 +507,58 @@ def cache_decorator(
             if key_builder:
                 cache_key = key_builder(*args, **kwargs)
             else:
-                cache_key = key_prefix
+                # Auto-generate key from prefix + arguments to avoid
+                # the "static key" bug where different inputs share one cache entry.
+                # Filter out non-hashable args like db sessions by type.
+                safe_args = [str(a) for a in args if isinstance(a, (str, int, float, bool))]
+                safe_kwargs = [f"{k}={v}" for k, v in sorted(kwargs.items()) if isinstance(v, (str, int, float, bool))]
+                suffix = ":".join(safe_args + safe_kwargs)
+                cache_key = f"{key_prefix}:{suffix}" if suffix else key_prefix
             
-            # Try to get from cache
+            # Try to get from cache (fast path)
             cached_value = await cache_service.get(cache_key)
             if cached_value is not None:
                 logger.info(f"Returning cached result for: {cache_key}")
                 return cached_value
             
-            # Cache miss - execute function
-            result = await func(*args, **kwargs)
+            # Cache miss — use request coalescing to prevent stampede
+            async with cache_service._locks_lock:
+                if cache_key in cache_service._pending_requests:
+                    # Another request is already fetching this — wait for it
+                    lock = cache_service._pending_requests[cache_key]
+                    logger.debug(f"Request coalescing: waiting for pending request ({cache_key})")
+                else:
+                    # We're the first — create a lock for others to wait on
+                    lock = asyncio.Lock()
+                    cache_service._pending_requests[cache_key] = lock
+                    await lock.acquire()  # Acquire immediately (we're the first)
             
-            # Store in cache
-            if result is not None:
-                await cache_service.set(cache_key, result, ttl)
-                logger.info(f"Cached result for: {cache_key}")
+            # If we're waiting for another request, wait for the lock then check cache
+            if lock.locked() and cache_key in cache_service._pending_requests:
+                async with lock:
+                    pass  # Just wait
+                # The first request should have populated cache — try again
+                cached_value = await cache_service.get(cache_key)
+                if cached_value is not None:
+                    logger.debug(f"Request coalescing: cache populated by first request ({cache_key})")
+                    return cached_value
             
-            return result
+            # We're the first request — execute function
+            try:
+                result = await func(*args, **kwargs)
+                
+                # Store in cache
+                if result is not None:
+                    await cache_service.set(cache_key, result, ttl)
+                    logger.info(f"Cached result for: {cache_key}")
+                
+                return result
+            finally:
+                # Release and remove lock
+                async with cache_service._locks_lock:
+                    if cache_key in cache_service._pending_requests:
+                        cache_service._pending_requests[cache_key].release()
+                        del cache_service._pending_requests[cache_key]
         
         return wrapper
     return decorator

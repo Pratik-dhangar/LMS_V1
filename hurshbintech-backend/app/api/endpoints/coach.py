@@ -352,17 +352,6 @@ async def get_coach_appointments(
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """Get all appointments for the current coach with user details"""
-    # Try cache first
-    cache_key = f"appointments:coach:{current_coach.id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        # Reconstruct AppointmentResponse objects from cached dicts
-        return [AppointmentResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     appointments = await coach_crud.get_appointments_by_coach(db, current_coach.id)
 
     # Add user name and new column data to each appointment
@@ -400,9 +389,6 @@ async def get_coach_appointments(
                 response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
 
         result.append(response)
-
-    # Cache for 10 minutes - convert to dicts for proper serialization
-    await cache_service.set(cache_key, [r.model_dump() for r in result], ttl=cache_service.TTL_APPOINTMENTS)
 
     return result
 
@@ -881,11 +867,6 @@ async def create_session(
     """Create a new coach session"""
     session = await coach_crud.create_coach_session(db, session_data, current_coach.id)
     
-    # Invalidate coach's session cache
-    cache_key = f"sessions:coach:{current_coach.id}"
-    await cache_service.delete(cache_key)
-    logger.info(f"Invalidated cache after session creation: {cache_key}")
-    
     return CoachSessionResponse.from_orm(session)
 
 
@@ -895,21 +876,8 @@ async def get_coach_sessions(
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """Get all sessions for the current coach"""
-    # Try cache first
-    cache_key = f"sessions:coach:{current_coach.id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        return [CoachSessionResponse(**item) for item in cached_data]
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     sessions = await coach_crud.get_coach_sessions(db, current_coach.id)
     result = [CoachSessionResponse.from_orm(session) for session in sessions]
-
-    # Cache for 10 minutes - serialize to dictionaries
-    await cache_service.set(cache_key, [r.model_dump() for r in result], ttl=cache_service.TTL_SESSIONS)
 
     return result
 
@@ -921,16 +889,6 @@ async def get_session_details(
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """Get session details"""
-    # Try cache first
-    cache_key = f"sessions:coach:{current_coach.id}:session:{session_id}"
-
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        return CoachSessionResponse(**cached_data)
-
-    logger.debug(f"Cache MISS: {cache_key}")
-
     session = await coach_crud.get_coach_session_by_id(db, session_id)
 
     if not session:
@@ -946,9 +904,6 @@ async def get_session_details(
         )
 
     result = CoachSessionResponse.from_orm(session)
-
-    # Cache for 10 minutes - serialize to dictionary
-    await cache_service.set(cache_key, result.model_dump(), ttl=cache_service.TTL_SESSIONS)
 
     return result
 
@@ -977,11 +932,6 @@ async def update_session(
 
     updated = await coach_crud.update_coach_session(db, session_id, session_update)
     
-    # Invalidate coach's session cache
-    cache_key = f"sessions:coach:{current_coach.id}"
-    await cache_service.delete(cache_key)
-    logger.info(f"Invalidated cache after session update: {cache_key}")
-    
     return CoachSessionResponse.from_orm(updated)
 
 
@@ -1008,11 +958,6 @@ async def delete_session(
 
     success = await coach_crud.delete_coach_session(db, session_id)
     if success:
-        # Invalidate coach's session cache
-        cache_key = f"sessions:coach:{current_coach.id}"
-        await cache_service.delete(cache_key)
-        logger.info(f"Invalidated cache after session deletion: {cache_key}")
-        
         return {"message": "Session deleted successfully"}
     return {"message": "Failed to delete session"}
 
