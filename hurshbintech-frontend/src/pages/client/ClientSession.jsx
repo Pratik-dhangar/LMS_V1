@@ -597,27 +597,7 @@ const ClientSession = () => {
       overflow: 'hidden'
     }}>
       <style>{attendeeSessionStyles}</style>
-      {/* Navigation / Header */}
-      <div className={`session-header ${navbarClassName}`}>
-        <div className="session-header-main">
-          <div>
-            <div className="session-header-title">HurshBin Client</div>
-            <div className="session-header-subtitle">
-              {sessionInfo?.title ?? 'Coach Session'} — Coach: {sessionInfo?.coach_name ?? 'Coach'}
-            </div>
-          </div>
-
-          <div className="session-header-controls">
-            <div className="session-header-info">
-              Status: <strong>{connectionStatus}</strong>
-            </div>
-            <div className="session-header-info">
-              Time Left: <strong>{timeLeft ?? '--:--'}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      
       {/* Metrics Header - Full width (P:, R:, Bucket Color) - ✅ Responsive */}
       <div className="learner-metrics-header" style={{
         display: 'flex',
@@ -651,26 +631,7 @@ const ClientSession = () => {
           <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#16a34a' }}>R:</span>
           <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
         </div>
-
-        {/* Divider */}
-        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
-
         {/* Bucket Color - Bulb with Glow */}
-        <span
-          style={{
-            fontSize: 'clamp(20px, 3.5vw, 24px)',
-            cursor: 'pointer',
-            filter: isBulbGlowing ? `drop-shadow(0 0 12px ${bucketColor}) drop-shadow(0 0 20px ${bucketColor}80)` : bucketColor !== '#8B6F47' ? `drop-shadow(0 0 8px ${bucketColor})` : 'none',
-            animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
-            transition: 'filter 0.3s ease, transform 0.2s ease',
-            userSelect: 'none',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          💡
-        </span>
-
         {/* Divider */}
         <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 

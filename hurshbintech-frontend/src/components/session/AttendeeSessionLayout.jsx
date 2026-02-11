@@ -50,7 +50,7 @@ export const AttendeeWaitingScreen = ({
 
     return (
         <div className={`learner-session-page ${pageClassName}`}>
-            <div className={`session-header ${navbarClassName}`}>
+            {/* <div className={`session-header ${navbarClassName}`}>
                 <div className="session-header-main">
                     <div>
                         <div className="session-header-title">Session</div>
@@ -64,7 +64,7 @@ export const AttendeeWaitingScreen = ({
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 150px)' }}>
                 <div style={{ width: '100%', maxWidth: '600px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -449,8 +449,8 @@ export const AttendeeCommentsPanel = ({
     return (
         <div style={{
             position: 'fixed',
-            bottom: '100px',
-            right: '20px',
+            bottom: '0.5rem',
+            right: '0.5rem',
             width: 'clamp(200px, 25vw, 350px)',
             maxHeight: '400px',
             backgroundColor: 'white',

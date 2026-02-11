@@ -353,11 +353,6 @@ const TodaysSchedule = () => {
                               >
                                 Start Session
                               </button>
-                              {!canStartSession(session) && getTimeUntilSession(session) && (
-                                <div className="trainer-session-time-warning">
-                                  Starts in {getTimeUntilSession(session)}
-                                </div>
-                              )}
                             </div>
                           )}
                           {getSessionStatus(session) === "active" && (

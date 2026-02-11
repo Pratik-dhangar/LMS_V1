@@ -37,6 +37,11 @@ import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Emoji from '../common/Emoji';
+import Whiteboard from '../common/Whiteboard';
+import Exercise from './Exercise';
+import YouTubePopup from '../common/YouTubePopup';
+import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
+import StopwatchDisplay from '../common/StopwatchDisplay';
 
 /**
  * Session Header for Instructor
@@ -759,6 +764,16 @@ export const BUCKET_COLORS = [
     { name: 'Orange', hex: '#E8944C' }
 ];
 
+/**
+ * Background music options for sessions
+ * References actual music files from public/music folder
+ */
+export const MUSIC_OPTIONS = [
+    { id: 1, name: '🎶 Music 1', url: '/music/background-music-1.mp3' },
+    { id: 2, name: '🎶 Music 2', url: '/music/background-music-2.mp3' },
+    { id: 3, name: '🎶 Music 3', url: '/music/background-music-3.mp3' }
+];
+
 // =============================
 // SESSION INITIALIZATION
 // =============================
@@ -946,6 +961,126 @@ export const initializeToolsService = (whiteboardService) => {
         return toolsService;
     } catch (error) {
         console.error('[InstructorSession] Error initializing tools service:', error);
+        return null;
+    }
+};
+
+/**
+ * Initialize instructor session with authorization and duplicate access prevention
+ * Handles common logic for both coach and trainer sessions
+ * 
+ * @param {Object} params - Configuration object
+ * @param {string} params.sessionId - Session ID to initialize
+ * @param {number} params.userId - Current user ID
+ * @param {string} params.role - User role ('coach' or 'trainer')
+ * @param {Function} params.sessionService - Service to fetch session details (coachSessionService or sessionService)
+ * @param {Function} params.navigate - Navigation function from useNavigate
+ * @param {Object} params.restrictionAlertShownRef - Ref to prevent duplicate alerts
+ * @param {Function} params.markSessionActive - Session activity tracker function
+ * @param {Function} params.setSessionInfo - State setter for session info
+ * @param {Function} params.setLoading - State setter for loading state
+ * @param {Function} params.initializeWebRTC - Callback to initialize WebRTC after authorization
+ * @returns {Promise<Object|null>} - Returns session object on success, null on failure
+ */
+export const initializeInstructorSession = async ({
+    sessionId,
+    userId,
+    role,
+    sessionService,
+    navigate,
+    restrictionAlertShownRef,
+    markSessionActive,
+    setSessionInfo,
+    setLoading,
+    initializeWebRTC
+}) => {
+    try {
+        // Fetch session details
+        const session = await sessionService.getSessionDetails(sessionId);
+        console.log(`[${role}Session] Session details received:`, {
+            id: session.id,
+            session_id: session.session_id,
+            title: session.title,
+            status: session.status
+        });
+
+        // Prevent access to already-ended sessions
+        if (session.status === 'ended') {
+            toast.warning('This session has already ended');
+            navigate(`/${role}/dashboard`);
+            return null;
+        }
+
+        // Validate user authorization
+        if (role === 'trainer') {
+            // For trainer, check trainer_id matches user_id directly
+            if (session.trainer_id !== userId) {
+                console.error(`[${role}Session] Unauthorized: trainer_id mismatch`, {
+                    session_trainer_id: session.trainer_id,
+                    user_id: userId
+                });
+                toast.error('Unauthorized access');
+                navigate('/dashboard');
+                return null;
+            }
+        } else if (role === 'coach') {
+            // For coach, fetch profile ID since session stores coach_id (profile ID), not user_id
+            try {
+                const { default: coachService } = await import('../../api/services/coachService');
+                const profile = await coachService.getCurrentProfile();
+                console.log(`[${role}Session] Profile response:`, profile);
+
+                if (!profile || !profile.id) {
+                    console.error(`[${role}Session] Invalid profile response:`, profile);
+                    toast.error('Failed to verify coach profile');
+                    navigate('/dashboard');
+                    return null;
+                }
+
+                if (session.coach_id !== profile.id) {
+                    console.error(`[${role}Session] Unauthorized: coach_id mismatch`, {
+                        session_coach_id: session.coach_id,
+                        profile_id: profile.id
+                    });
+                    toast.error('Unauthorized access');
+                    navigate('/dashboard');
+                    return null;
+                }
+
+                console.log(`[${role}Session] Authorization successful with profile ID:`, profile.id);
+            } catch (error) {
+                console.error(`[${role}Session] Failed to fetch coach profile:`, error);
+                console.error(`[${role}Session] Error response:`, error.response?.data);
+                toast.error('Failed to verify authorization');
+                navigate('/dashboard');
+                return null;
+            }
+        }
+
+        // Check if session is already active on another device/tab
+        const sessionCheck = markSessionActive(sessionId, role);
+        if (!sessionCheck.success) {
+            if (!restrictionAlertShownRef.current) {
+                restrictionAlertShownRef.current = true;
+                toast.error(sessionCheck.message);
+                navigate(`/${role}/dashboard`);
+            }
+            return null;
+        }
+
+        setSessionInfo(session);
+
+        // Initialize WebRTC with numeric session ID
+        await initializeWebRTC(session.session_id || session.id);
+        setLoading(false);
+
+        console.log(`[${role}Session] Session initialization complete`);
+        return session;
+    } catch (error) {
+        console.error(`[${role}Session] Error initializing session:`, error);
+        const errorMsg = error.response?.data?.detail || 'Failed to initialize session';
+        toast.error(errorMsg);
+        navigate(`/${role}/dashboard`);
         return null;
     }
 };
@@ -2127,13 +2262,26 @@ export const eraseAllPen = ({
     setRedrawCanvasTrigger,
     whiteboardService
 }) => {
-    setErasePenTrigger(prev => prev + 1);
-    setRedrawCanvasTrigger(prev => prev + 1);
+    console.log('[InstructorSession] 🗑️ Erase all pen button clicked');
+    console.log('[InstructorSession] whiteboardService:', whiteboardService);
+
+    setErasePenTrigger(prev => {
+        console.log('[InstructorSession] Setting erasePenTrigger from', prev, 'to', prev + 1);
+        return prev + 1;
+    });
+    setRedrawCanvasTrigger(prev => {
+        console.log('[InstructorSession] Setting redrawCanvasTrigger from', prev, 'to', prev + 1);
+        return prev + 1;
+    });
 
     if (whiteboardService) {
+        console.log('[InstructorSession] Sending erase_pen message to server...');
         whiteboardService.send('erase_pen', {
             timestamp: Date.now()
         });
+        console.log('[InstructorSession] ✅ erase_pen message sent');
+    } else {
+        console.error('[InstructorSession] ❌ whiteboardService is null/undefined, cannot send erase_pen message');
     }
 
     console.log('[InstructorSession] Pen strokes erased');
@@ -2313,6 +2461,690 @@ export const handleToolClick = ({
  * WhiteboardTools - Reusable whiteboard tools UI component
  * Used by both TrainerSession and CoachSession
  */
+// =============================
+// LEARNING CONTENT SEARCH UTILITIES
+// =============================
+
+/**
+ * Create learning content search handler
+ * Handles input change and initiates debounced search
+ * 
+ * @param {Function} setLearningContentSearch - State setter for search term
+ * @param {Function} setDatabaseSearchResults - State setter for search results  
+ * @param {Function} setIsSearching - State setter for loading state
+ * @returns {Function} - Event handler function
+ */
+export const createLearningContentSearchHandler = (
+    setLearningContentSearch,
+    setDatabaseSearchResults,
+    setIsSearching
+) => {
+    return (e) => {
+        const searchValue = e.target.value;
+        setLearningContentSearch(searchValue);
+
+        // Clear database results if search is empty
+        if (!searchValue.trim()) {
+            setDatabaseSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+
+        // Indicate search is starting (actual search happens in debounced effect)
+        setIsSearching(true);
+    };
+};
+
+/**
+ * Search learning content database with filter
+ * Used in debounced useEffect to perform actual API search
+ * 
+ * @param {string} searchTerm - The search query
+ * @param {string} userRole - User role ('trainer', 'coach', 'admin', 'head')
+ * @param {Object} learningContentService - The learning content API service
+ * @param {Function} setDatabaseSearchResults - State setter for results
+ * @param {Function} setIsSearching - State setter for loading state
+ * @param {string} logPrefix - Prefix for console logs (e.g., '[TrainerSession]')
+ */
+export const searchLearningContentDatabase = async ({
+    searchTerm,
+    userRole,
+    learningContentService,
+    setDatabaseSearchResults,
+    setIsSearching,
+    logPrefix = '[InstructorSession]'
+}) => {
+    if (!searchTerm.trim()) {
+        setDatabaseSearchResults([]);
+        setIsSearching(false);
+        return;
+    }
+
+    try {
+        setIsSearching(true);
+        console.log(`${logPrefix} Searching database for:`, searchTerm);
+
+        // Fetch all learning content from database based on user role
+        let allContent = [];
+        if (userRole === 'admin') {
+            allContent = await learningContentService.admin.getAll();
+        } else if (userRole === 'trainer') {
+            allContent = await learningContentService.trainer.getAll();
+        } else if (userRole === 'coach') {
+            allContent = await learningContentService.coach?.getAll() || [];
+        } else if (userRole === 'head') {
+            allContent = await learningContentService.head.getAll();
+        }
+
+        // Filter results based on search term
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = allContent.filter(content => {
+            return (
+                content.title?.toLowerCase().includes(searchLower) ||
+                content.content_type?.toLowerCase().includes(searchLower) ||
+                content.category?.toLowerCase().includes(searchLower) ||
+                content.description?.toLowerCase().includes(searchLower)
+            );
+        });
+
+        console.log(`${logPrefix} Database search results:`, filtered.length);
+        setDatabaseSearchResults(filtered);
+    } catch (error) {
+        console.error(`${logPrefix} Error searching database:`, error);
+        setDatabaseSearchResults([]);
+    } finally {
+        setIsSearching(false);
+    }
+};
+
+/**
+ * Search learning goals database and filter by search term
+ * Used by Coach to search all available programs
+ * 
+ * @param {string} searchTerm - Search query
+ * @param {Object} learningGoalsService - The learning goals API service
+ * @param {Function} setDatabaseSearchResults - State setter for results
+ * @param {Function} setIsSearching - State setter for loading state
+ * @param {string} logPrefix - Prefix for console logs
+ */
+export const searchLearningGoalsDatabase = async ({
+    searchTerm,
+    learningGoalsService,
+    setDatabaseSearchResults,
+    setIsSearching,
+    logPrefix = '[InstructorSession]'
+}) => {
+    if (!searchTerm.trim()) {
+        setDatabaseSearchResults([]);
+        setIsSearching(false);
+        return;
+    }
+
+    try {
+        setIsSearching(true);
+        console.log(`${logPrefix} 🔍 Searching learning goals database for:`, searchTerm);
+
+        // Fetch all learning goals from database
+        const allGoals = await learningGoalsService.coach.getAll();
+        console.log(`${logPrefix} Retrieved ${allGoals.length} total learning goals from database`);
+
+        // Filter results based on search term
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = allGoals.filter(goal => {
+            const goalText = goal.goal || goal.name || goal.title || '';
+            return goalText.toLowerCase().includes(searchLower);
+        });
+
+        console.log(`${logPrefix} ✅ Found ${filtered.length} matching learning goals`);
+        setDatabaseSearchResults(filtered);
+    } catch (error) {
+        console.error(`${logPrefix} ❌ Error searching learning goals database:`, error);
+        setDatabaseSearchResults([]);
+    } finally {
+        setIsSearching(false);
+    }
+};
+
+/**
+ * Create drag start handler for learning content cards
+ * Enables drag-and-drop functionality for content items to whiteboard
+ * 
+ * @param {Object} content - The content item being dragged
+ * @returns {Object} - Drag payload with content details
+ */
+export const createContentDragPayload = (content) => {
+    return {
+        id: content.id,
+        title: content.title,
+        type: content.is_youtube ? 'youtube' : content.content_type,
+        url: content.file_url || null,
+        thumbnail: content.thumbnail_url || null,
+        mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
+        originalFilename: content.title,
+        is_youtube: content.is_youtube || false,
+        youtube_url: content.youtube_url || null
+    };
+};
+
+// =============================
+// COMPLETE SESSION PAGE LAYOUT
+// =============================
+
+/**
+ * Complete Session Page Layout for both Trainer and Coach
+ * Eliminates ~500 lines of duplicate JSX per file
+ */
+export const InstructorSessionPage = ({
+    // Role configuration
+    role = 'trainer', // 'trainer' or 'coach'
+    participantName = 'Learner', // 'Learner' or 'Client'
+    participantType = 'learner', // 'learner' or 'client'
+
+    // Page state
+    pageClassName = '',
+    navbarClassName = '',
+    showHeader = true,
+    showInfoBar = true,
+    setShowInfoBar,
+
+    // Session info
+    sessionInfo,
+    connectionStatus,
+    timeLeft,
+
+    // Media controls
+    micEnabled,
+    cameraEnabled,
+    handleToggleMic,
+    handleToggleCamera,
+    handleFreeze,
+    handleEndSession,
+    isFrozen,
+
+    // Video streams
+    localStream,
+    remoteStream,
+    remoteVideoRef,
+    audioRef,
+
+    // Whiteboard
+    whiteboardService,
+    whiteboardCanvasRef,
+    canvasItems,
+    setCanvasItems,
+    remoteSelectedItemIds,
+    feedbackMessage,
+    waitingMessage,
+    floatingAnimations,
+    setFloatingAnimations,
+    handleAnimationPop,
+
+    // Drawing tools
+    tool,
+    setTool,
+    color,
+    setColor,
+    lineWidth,
+    setLineWidth,
+    buckets,
+    setBuckets,
+    addBucket,
+    bucketColor,
+    setBucketColor,
+    toolActive,
+    setToolActive,
+    eraserActive,
+    setEraserActive,
+    eraseAllActive,
+    setEraseAllActive,
+    clearCanvasTrigger,
+    setClearCanvasTrigger,
+    erasePenTrigger,
+    redrawCanvasTrigger,
+    eraseAllPen,
+
+    // Tool access
+    toolAccess,
+    toggleToolAccess,
+
+    // Exercise
+    showExercise,
+    setShowExercise,
+    exerciseData,
+    handleExerciseSubmit,
+    handleExerciseUpdate,
+    handleExerciseDelete,
+    handleExerciseAnswerChange,
+
+    // Stopwatch
+    showStopwatch,
+    setShowStopwatch,
+    stopwatch,
+
+    // Music
+    musicOptions,
+    toggleBackgroundMusic,
+    selectedMusic,
+    backgroundMusicPlaying,
+    musicVolume,
+    handleMusicVolumeChange,
+
+    // Session notes
+    sessionNotes,
+    handleNotesChange,
+    handleClearNotes,
+
+    // Learning content
+    learningContentSearch,
+    handleLearningContentSearch,
+    filteredLearningContent,
+    isSearching,
+    onDragStartContent,
+
+    // Learning program (left sidebar)
+    filteredLearningGoals,
+    selectedPromptLevel,
+    setSelectedPromptLevel,
+    selectedReinforcementLevel,
+    setSelectedReinforcementLevel,
+    selectedProgramId,
+    handleProgramCheck,
+    webRTC,
+    toggleListening,
+    listening,
+    transcript,
+    onSaveReport,
+    learningGoalsSearch,
+    setLearningGoalsSearch,
+
+    // YouTube popups
+    youtubePopups,
+    handleYoutubeDropped,
+    handleCloseYoutubePopup,
+
+    // Active icons
+    activeIcons,
+    handleToolClick,
+
+    // Button styles
+    wbBtnBase,
+    wbBtnActive,
+    wbSmallBtnBase,
+    wbSmallBtnActive,
+
+    // Additional handlers
+    handleHeaderClick,
+
+    // Observer modal (Trainer only)
+    showObserverModal,
+    observerData,
+    handleObserverModalOk,
+
+    // Custom video overlay component (optional)
+    remoteVideoComponent,
+
+    // Left sidebar component
+    LeftSidebarComponent
+}) => {
+    // Components are imported at the top of the file
+    const roleTitle = role === 'trainer' ? 'HurshBin Trainer' : 'HurshBin Coach';
+    const dashboardPath = `/${role}/dashboard`;
+
+    return (
+        <div className={`session-page ${pageClassName}`}>
+            {role === 'trainer' && (
+                <style>{`
+                    .session-whiteboard-container {
+                        position: relative !important;
+                    }
+                    .learner-video-overlay {
+                        position: absolute;
+                        top: 0rem;
+                        right: 0rem;
+                        width: clamp(8rem, 15vw, 14rem);
+                        height: clamp(6rem, 11.25vw, 10.5rem);
+                        z-index: 100;
+                        pointer-events: auto;
+                    }
+                    @media (max-width: 48rem) {
+                        .learner-video-overlay {
+                            width: 6rem !important;
+                            height: 4.5rem !important;
+                        }
+                    }
+                `}</style>
+            )}
+
+            {/* Hidden audio element for background music */}
+            <audio ref={audioRef} crossOrigin="anonymous" onEnded={() => { }} />
+
+            {/* Navigation / Header */}
+            <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
+                <div className="session-header-main">
+                    <div>
+                        <div className="session-header-title">{roleTitle}</div>
+                        <div className="session-header-subtitle">
+                            {sessionInfo?.title ?? `${role === 'trainer' ? 'Training' : 'Coach'} Session`} — {participantName}: {(sessionInfo?.learner_name || sessionInfo?.client_name) ?? participantName}
+                        </div>
+                    </div>
+
+                    <div className="session-header-controls">
+                        <div className="session-header-info">
+                            Status: <strong>{connectionStatus}</strong>
+                        </div>
+                        <div className="session-header-info">
+                            Time Left: <strong>{timeLeft ?? '--:--'}</strong>
+                        </div>
+                        <button
+                            className="btn-secondary"
+                            style={{ color: 'white' }}
+                            onClick={() => window.open(dashboardPath, '_blank', 'noopener,noreferrer')}
+                        >
+                            🏠 Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Info bar */}
+            {showInfoBar && (
+                <div className="session-info-banner">
+                    <span className="session-info-text">
+                        <strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to {participantType}).
+                    </span>
+                    <button
+                        onClick={() => setShowInfoBar(false)}
+                        className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-2 sm:ml-4"
+                        title="Close"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {/* Main layout */}
+            <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
+                {/* Left Sidebar */}
+                <div className="session-left-sidebar">
+                    {LeftSidebarComponent}
+                </div>
+
+                {/* Center Area */}
+                <div className="session-center-area">
+                    {/* Whiteboard */}
+                    <div className="session-whiteboard-container" style={{ position: 'relative' }}>
+                        {/* Remote Video */}
+                        {remoteStream && (remoteVideoComponent || (
+                            <div className={role === 'trainer' ? 'learner-video-overlay' : ''} style={role === 'coach' ? {
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                width: 'clamp(8rem, 15vw, 14rem)',
+                                height: 'clamp(6rem, 11.25vw, 10.5rem)',
+                                backgroundColor: '#000',
+                                borderRadius: '0.5rem',
+                                border: '0.125rem solid #374151',
+                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
+                                zIndex: 100,
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column'
+                            } : {
+                                backgroundColor: '#000',
+                                borderRadius: '0.5rem',
+                                border: '0.125rem solid #374151',
+                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}>
+                                <video
+                                    ref={remoteVideoRef}
+                                    autoPlay
+                                    playsInline
+                                    style={{
+                                        flex: 1,
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        backgroundColor: '#1a1a1a'
+                                    }}
+                                />
+                            </div>
+                        ))}
+
+                        {/* Whiteboard */}
+                        <div className="w-full h-full">
+                            <Whiteboard
+                                whiteboardService={whiteboardService}
+                                isTrainer={true}
+                                canvasItems={canvasItems}
+                                setCanvasItems={setCanvasItems}
+                                toolAccess={toolAccess}
+                                remoteSelectedItemIds={remoteSelectedItemIds}
+                                feedbackMessage={feedbackMessage}
+                                waitingMessage={waitingMessage}
+                                floatingAnimations={floatingAnimations}
+                                onAnimationPop={handleAnimationPop}
+                                tool={tool}
+                                setTool={setTool}
+                                color={color}
+                                setColor={setColor}
+                                lineWidth={lineWidth}
+                                setLineWidth={setLineWidth}
+                                buckets={buckets}
+                                setBuckets={setBuckets}
+                                bucketColor={bucketColor}
+                                setBucketColor={setBucketColor}
+                                clearCanvasTrigger={clearCanvasTrigger}
+                                erasePenTrigger={erasePenTrigger}
+                                redrawCanvasTrigger={redrawCanvasTrigger}
+                                stopwatchFormattedTime={stopwatch?.isRunning ? stopwatch.formattedTime : null}
+                                stopwatchIsRunning={stopwatch?.isRunning}
+                                toolActive={toolActive}
+                                onYoutubeDropped={handleYoutubeDropped}
+                                canvasRefForParent={whiteboardCanvasRef}
+                            />
+                        </div>
+                    </div>
+
+                    {/* YouTube Popups */}
+                    {youtubePopups?.map(popup => (
+                        <YouTubePopup
+                            key={popup.id}
+                            popupId={popup.id}
+                            videoId={popup.videoId}
+                            title={popup.title}
+                            onClose={() => handleCloseYoutubePopup(popup.id)}
+                            initialPosition={popup.position}
+                            isTrainer={true}
+                        />
+                    ))}
+
+                    {/* Exercise Tool */}
+                    {showExercise && (
+                        <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
+                            <Exercise
+                                isTrainer={true}
+                                attendeeLabel={participantType === 'learner' ? 'Learner' : 'Guest/Client'}
+                                onExerciseSubmit={handleExerciseSubmit}
+                                onExerciseUpdate={handleExerciseUpdate}
+                                onExerciseDelete={handleExerciseDelete}
+                                onAnswerChange={handleExerciseAnswerChange}
+                                whiteboardService={whiteboardService}
+                                initialExercise={exerciseData?.question ? exerciseData : null}
+                            />
+                        </div>
+                    )}
+
+                    {/* Video Controls */}
+                    <div className="w-full mt-4 mb-3">
+                        <div className="flex items-center justify-center" style={{ gap: 'clamp(0.5rem, 1.5vw, 1rem)' }}>
+                            <button
+                                onClick={handleToggleMic}
+                                className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                                style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
+                                title={micEnabled ? 'Turn Microphone Off' : 'Turn Microphone On'}
+                            >
+                                <span>{micEnabled ? '🎤' : '🔇'}</span>
+                            </button>
+                            <button
+                                onClick={handleToggleCamera}
+                                className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                                style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
+                                title={cameraEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+                            >
+                                <span>{cameraEnabled ? '📹' : '📷'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Whiteboard Drawing Tools */}
+                    <WhiteboardTools
+                        tool={tool}
+                        setTool={setTool}
+                        toolActive={toolActive}
+                        setToolActive={setToolActive}
+                        eraserActive={eraserActive}
+                        setEraserActive={setEraserActive}
+                        setEraseAllActive={setEraseAllActive}
+                        eraseAllPen={eraseAllPen}
+                        addBucket={addBucket}
+                        color={color}
+                        setColor={setColor}
+                        lineWidth={lineWidth}
+                        setLineWidth={setLineWidth}
+                        bucketColor={bucketColor}
+                        setBucketColor={setBucketColor}
+                        setCanvasItems={setCanvasItems}
+                        setBuckets={setBuckets}
+                        setFloatingAnimations={setFloatingAnimations}
+                        setClearCanvasTrigger={setClearCanvasTrigger}
+                        whiteboardService={whiteboardService}
+                        toolAccess={toolAccess}
+                        toggleToolAccess={toggleToolAccess}
+                        showStopwatch={showStopwatch}
+                        setShowStopwatch={setShowStopwatch}
+                        showExercise={showExercise}
+                        setShowExercise={setShowExercise}
+                        activeIcons={activeIcons}
+                        handleToolClick={handleToolClick}
+                        wbBtnBase={wbBtnBase}
+                        wbBtnActive={wbBtnActive}
+                        wbSmallBtnBase={wbSmallBtnBase}
+                        wbSmallBtnActive={wbSmallBtnActive}
+                        participantType={participantType}
+                        musicOptions={musicOptions}
+                        toggleBackgroundMusic={toggleBackgroundMusic}
+                        selectedMusic={selectedMusic}
+                        backgroundMusicPlaying={backgroundMusicPlaying}
+                        musicVolume={musicVolume}
+                        handleMusicVolumeChange={handleMusicVolumeChange}
+                        showSessionNotes={true}
+                        sessionNotes={sessionNotes}
+                        handleNotesChange={handleNotesChange}
+                        handleClearNotes={handleClearNotes}
+                    />
+                </div>
+
+                {/* Right Column */}
+                <div className="session-right-column">
+                    {/* Learning Content */}
+                    <div className="learning-content-container">
+                        <div className="section-content">
+                            <span className='bg-[#7a2c2c] text-white px-2 py-3 bold rounded'>📚 Learning Content</span>
+                            <LearningContentSidebar
+                                learningContentSearch={learningContentSearch}
+                                handleLearningContentSearch={handleLearningContentSearch}
+                                filteredLearningContent={filteredLearningContent}
+                                isSearching={isSearching}
+                                onDragStartContent={onDragStartContent}
+                                onRemoveFromWhiteboard={(itemId) => {
+                                    setCanvasItems(prev => prev.filter(item => item.id !== itemId));
+                                    whiteboardService?.send('item_remove', { id: itemId });
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Stopwatch */}
+                    {showStopwatch && stopwatch && (
+                        <div>
+                            <StopwatchDisplay
+                                formattedTime={stopwatch.formattedTime}
+                                isRunning={stopwatch.isRunning}
+                                onStart={stopwatch.start}
+                                onPause={stopwatch.pause}
+                                onResume={stopwatch.resume}
+                                onReset={stopwatch.reset}
+                                onSetTime={stopwatch.setTime}
+                                showControls={true}
+                                size="xs"
+                                variant="standard"
+                            />
+                        </div>
+                    )}
+
+                    {/* Learning Program - Tablet/Mobile */}
+                    <div className="learning-program-container">
+                        <div className="section-content">
+                            {LeftSidebarComponent}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Session Info Bar */}
+            <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
+                <div className="session-info-actions">
+                    <button
+                        className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
+                        onClick={handleFreeze}
+                        title={isFrozen ? `Unfreeze ${participantName} Window` : `Freeze ${participantName} Window`}
+                    >
+                        {isFrozen ? '🔓' : '🔒'} <span className="xs:inline">{isFrozen ? 'Unfreeze' : 'Freeze'}</span>
+                    </button>
+                    <button
+                        className="btn-end-session"
+                        onClick={handleEndSession}
+                        title="End Session"
+                    >
+                        ⏹️ <span className="xs:inline">End</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Observer Modal (Trainer only) */}
+            {showObserverModal && observerData && (
+                <div className="app-modal-overlay" onClick={(e) => e.stopPropagation()}>
+                    <div className="app-modal-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="app-modal-header app-modal-header--primary">
+                            <h2 className="app-modal-title">Observer Joined</h2>
+                        </div>
+                        <div className="app-modal-content">
+                            <p className="app-modal-text">
+                                <strong>{observerData.name}</strong> has joined as an observer. Please share your screen!
+                            </p>
+                        </div>
+                        <div className="app-modal-footer">
+                            <button
+                                onClick={handleObserverModalOk}
+                                className="app-modal-btn app-modal-btn--primary"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// =============================
+// WHITEBOARD TOOLS COMPONENT
+// =============================
+
 export const WhiteboardTools = ({
     tool,
     setTool,
@@ -2576,7 +3408,15 @@ export const WhiteboardTools = ({
                                         min="0"
                                         max="100"
                                         value={musicVolume * 100}
-                                        onChange={(e) => handleMusicVolumeChange(e.target.value / 100)}
+                                        onChange={(e) => {
+                                            // Create a synthetic event-like object for handleMusicVolumeChange
+                                            const syntheticEvent = {
+                                                target: {
+                                                    value: String(e.target.value / 100)
+                                                }
+                                            };
+                                            handleMusicVolumeChange(syntheticEvent);
+                                        }}
                                         className="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                         title={`Volume: ${Math.round(musicVolume * 100)}%`}
                                     />

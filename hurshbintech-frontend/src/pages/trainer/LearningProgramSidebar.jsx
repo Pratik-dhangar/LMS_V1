@@ -6,6 +6,7 @@ import '../../styles/LearningProgram.css';
 const LearningProgramSidebar = ({
   sessionInfo,
   filteredLearningGoals,
+  isSearching = false,
   selectedPromptLevel,
   setSelectedPromptLevel,
   selectedReinforcementLevel,
@@ -25,6 +26,13 @@ const LearningProgramSidebar = ({
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
   // State for editable transcript
   const [editableTranscript, setEditableTranscript] = useState(transcript || '');
+
+  // Debug log
+  // console.log('[LearningProgramSidebar] Render:', {
+  //   filteredLearningGoals: filteredLearningGoals.length,
+  //   learningGoalsSearch,
+  //   hasSetLearningGoalsSearch: !!setLearningGoalsSearch
+  // });
 
   // Sync transcript from speech input to editable field
   useEffect(() => {
@@ -47,45 +55,73 @@ const LearningProgramSidebar = ({
       </div>
 
       <div className="sidebar-content">
-        <div className="sidebar-section-title">Program Items</div>
-
         {/* Coach: Search input (only shown when setLearningGoalsSearch is provided) */}
         {setLearningGoalsSearch && (
-          <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e0e0e0' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
             <input
               type="text"
               placeholder="🔍 Search programs..."
               value={learningGoalsSearch || ''}
-              onChange={(e) => setLearningGoalsSearch(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                console.log('[LearningProgramSidebar] 🔍 Search changed to:', value);
+                setLearningGoalsSearch(value);
+              }}
               style={{
                 width: '100%',
                 padding: '8px',
-                border: '1px solid #ccc',
+                border: '2px solid #4A90E2',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'inherit',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                outline: 'none'
               }}
             />
+            {learningGoalsSearch && (
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                {isSearching ? (
+                  '🔄 Searching database...'
+                ) : (
+                  `${filteredLearningGoals.length} program${filteredLearningGoals.length !== 1 ? 's' : ''} found`
+                )}
+              </div>
+            )}
           </div>
         )}
 
+        <div className="sidebar-section-title">Program Items</div>
+
         <div className="sidebar-scrollable">
-          {filteredLearningGoals.length > 0 ? (
-            filteredLearningGoals.map((goal, index) => (
-              <div key={goal.id ?? index} className="sidebar-list-item">
-                <input
-                  type="checkbox"
-                  className="sidebar-checkbox"
-                  checked={selectedProgramId === goal.id}
-                  onChange={() => handleProgramCheck(goal.id)}
-                />
-                <div className="sidebar-item-text">{index + 1}. {goal.goal}</div>
-                <div className="sidebar-badge" title="Click to record prompt level">—</div>
-              </div>
-            ))
-          ) : <div className="sidebar-empty-text"></div>
-          }
+          {isSearching ? (
+            <div style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
+              <div>🔄 Searching programs...</div>
+            </div>
+          ) :
+            (
+              filteredLearningGoals.length > 0 ? (
+                filteredLearningGoals.map((goal, index) => {
+                  const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+                  return (
+                    <div key={goal.id ?? index} className="sidebar-list-item">
+                      <input
+                        type="checkbox"
+                        className="sidebar-checkbox"
+                        checked={selectedProgramId === goal.id}
+                        onChange={() => handleProgramCheck(goal.id)}
+                      />
+                      <div className="sidebar-item-text">{index + 1}. {goalText}</div>
+                      <div className="sidebar-badge" title="Click to record prompt level">—</div>
+                    </div>
+                  );
+                })
+              ) : learningGoalsSearch ? (
+                <div className="sidebar-empty-text" style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
+                  <div>🔍 No programs match "{learningGoalsSearch}"</div>
+                  <div style={{ fontSize: '12px', marginTop: '8px' }}>Try a different search term</div>
+                </div>
+              ) : null
+            )}
         </div>
 
         <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
@@ -141,7 +177,12 @@ const LearningProgramSidebar = ({
         {/* Save Report Button */}
         {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
           <button
-            onClick={onSaveReport}
+            onClick={() => onSaveReport({
+              programId: selectedProgramId,
+              programName: selectedProgram?.goal || 'Unknown Program',
+              promptMeter: selectedPromptLevel,
+              reinforcementMeter: selectedReinforcementLevel
+            })}
             className="btn-primary w-50 ml-3.5"
           >
             💾 Save Session Report

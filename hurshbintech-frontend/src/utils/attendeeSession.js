@@ -285,7 +285,17 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
 
     // Pen erase
     wbService.onErasePen = () => {
-        setErasePenTrigger(prev => prev + 1);
+        console.log('[AttendeeSession] 🗑️ Erase pen received from coach');
+        console.log('[AttendeeSession] Setting erasePenTrigger...');
+        setErasePenTrigger(prev => {
+            console.log('[AttendeeSession] erasePenTrigger updated from', prev, 'to', prev + 1);
+            return prev + 1;
+        });
+        console.log('[AttendeeSession] Setting redrawCanvasTrigger...');
+        setRedrawCanvasTrigger(prev => {
+            console.log('[AttendeeSession] redrawCanvasTrigger updated from', prev, 'to', prev + 1);
+            return prev + 1;
+        });
     };
 
     // Text box handlers
