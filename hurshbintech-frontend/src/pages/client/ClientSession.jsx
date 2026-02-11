@@ -1,6 +1,5 @@
 // ClientSession.jsx
-// Client session page - Mirrors LearnerSession.jsx
-// Simplified version without prompt meter and voice prompt features
+// Client session page - Simplified with shared components
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -13,7 +12,6 @@ import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import useMessages from '../../hooks/useMessages';
 import { useMediaControl } from '../../context/MediaControlContext';
-import { FaBars, FaTimes } from 'react-icons/fa';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import {
   useAttendeeSessionState,
@@ -25,10 +23,14 @@ import {
   setupAttendeeCommentListeners
 } from '../../utils/attendeeSession';
 import {
+  AttendeeSessionRoot,
+  AttendeeUpperSection,
+  AttendeeWhiteboardSection,
+  AttendeeWhiteboardWithVideo,
   AttendeeWaitingScreen,
-  AttendeeVideoControls,
-  RemoteVideoFeed,
-  AttendeeCommentsPanel,
+  AttendeeWaitingModal,
+  usePromptAnimation,
+  useBulbGlowAnimation,
   attendeeSessionStyles
 } from '../../components/session/AttendeeSessionLayout';
 
@@ -39,136 +41,68 @@ const ClientSession = () => {
   const { navbarClassName, pageClassName } = useAutoHideNavbar();
   const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
-  // Use shared session state hook
+  // Shared session state
   const sessionState = useAttendeeSessionState();
   const {
-    webRTC,
-    setWebRTC,
-    whiteboardService,
-    setWhiteboardService,
-    toolsService,
-    setToolsService,
+    webRTC, setWebRTC,
+    whiteboardService, setWhiteboardService,
+    toolsService, setToolsService,
     isInitializingRef,
-    localStream,
-    setLocalStream,
-    remoteStream,
-    setRemoteStream,
+    localStream, setLocalStream,
+    remoteStream, setRemoteStream,
     remoteVideoRef,
-    micEnabled,
-    setMicEnabled,
-    cameraEnabled,
-    setCameraEnabled,
-    sessionInfo,
-    setSessionInfo,
-    loading,
-    setLoading,
-    connectionStatus,
-    setConnectionStatus,
-    instructorJoined,
-    setInstructorJoined,
-    timeLeft,
-    setTimeLeft,
-    canvasItems,
-    setCanvasItems,
-    keyboardMode,
-    setKeyboardMode,
-    keyboardText,
-    setKeyboardText,
-    keyboardPosition,
-    setKeyboardPosition,
-    remoteSelectedItemIds,
-    setRemoteSelectedItemIds,
-    textMessages,
-    setTextMessages,
-    feedbackMessage,
-    setFeedbackMessage,
-    waitingMessage,
-    setWaitingMessage,
-    floatingAnimations,
-    setFloatingAnimations,
-    isSidebarOpen,
-    setIsSidebarOpen,
-    isFrozen,
-    setIsFrozen,
-    showHeader,
-    setShowHeader,
+    micEnabled, setMicEnabled,
+    cameraEnabled, setCameraEnabled,
+    sessionInfo, setSessionInfo,
+    loading, setLoading,
+    connectionStatus, setConnectionStatus,
+    instructorJoined, setInstructorJoined,
+    timeLeft, setTimeLeft,
+    canvasItems, setCanvasItems,
+    keyboardMode, setKeyboardMode,
+    keyboardText, setKeyboardText,
+    keyboardPosition, setKeyboardPosition,
+    remoteSelectedItemIds, setRemoteSelectedItemIds,
+    textMessages, setTextMessages,
+    feedbackMessage, setFeedbackMessage,
+    waitingMessage, setWaitingMessage,
+    floatingAnimations, setFloatingAnimations,
+    isSidebarOpen, setIsSidebarOpen,
+    isFrozen, setIsFrozen,
+    showHeader, setShowHeader,
     headerTimeoutRef,
-    erasePenTrigger,
-    setErasePenTrigger,
-    redrawCanvasTrigger,
-    setRedrawCanvasTrigger,
-    tool,
-    setTool,
-    color,
-    setColor,
-    lineWidth,
-    setLineWidth,
-    buckets,
-    setBuckets,
-    textBoxes,
-    setTextBoxes,
-    activeTextBoxId,
-    setActiveTextBoxId,
-    toolAccess,
-    setToolAccess,
-    stopwatchElapsedTime,
-    setStopwatchElapsedTime,
-    stopwatchIsRunning,
-    setStopwatchIsRunning,
-    promptMeter,
-    setPromptMeter,
-    reinforcementMeter,
-    setReinforcementMeter,
-    bucketColor,
-    setBucketColor,
-    promptText,
-    setPromptText,
-    trainerComments,
-    setTrainerComments,
-    isCommentsOpen,
-    setIsCommentsOpen,
+    erasePenTrigger, setErasePenTrigger,
+    redrawCanvasTrigger, setRedrawCanvasTrigger,
+    tool, setTool,
+    color, setColor,
+    lineWidth, setLineWidth,
+    buckets, setBuckets,
+    textBoxes, setTextBoxes,
+    activeTextBoxId, setActiveTextBoxId,
+    toolAccess, setToolAccess,
+    stopwatchElapsedTime, setStopwatchElapsedTime,
+    stopwatchIsRunning, setStopwatchIsRunning,
+    promptMeter, setPromptMeter,
+    reinforcementMeter, setReinforcementMeter,
+    bucketColor, setBucketColor,
+    promptText, setPromptText,
+    trainerComments, setTrainerComments,
+    isCommentsOpen, setIsCommentsOpen,
     audioRef
   } = sessionState;
 
-  // Prompt line UI states
-  const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
-  const [promptLineAnimating, setPromptLineAnimating] = useState(false);
+  // Client-specific state
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [showExercise, setShowExercise] = useState(false);
+  const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
 
-  // Update prompt text handler
-  useEffect(() => {
-    if (!promptText || promptText === '[Prompts from instructor will appear here]') return;
+  const pollingIntervalRef = useRef(null);
+  const restrictionAlertShownRef = useRef(false);
 
-    // Auto-open Prompt Line when new prompt is received
-    setIsPromptLineOpen(true);
-
-    // Trigger animation
-    setPromptLineAnimating(true);
-    setTimeout(() => {
-      setPromptLineAnimating(false);
-    }, 2000);
-  }, [promptText]);
-
-  // Bulb glow animation state
-  const [isBulbGlowing, setIsBulbGlowing] = useState(false);
-  const bulbGlowTimerRef = useRef(null);
-
-  // Trigger bulb glow when bucket color changes
-  useEffect(() => {
-    if (bucketColor) {
-      setIsBulbGlowing(true);
-      if (bulbGlowTimerRef.current) {
-        clearTimeout(bulbGlowTimerRef.current);
-      }
-      bulbGlowTimerRef.current = setTimeout(() => {
-        setIsBulbGlowing(false);
-      }, 2000);
-    }
-    return () => {
-      if (bulbGlowTimerRef.current) {
-        clearTimeout(bulbGlowTimerRef.current);
-      }
-    };
-  }, [bucketColor]);
+  // Use shared animation hooks
+  const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
+  const isBulbGlowing = useBulbGlowAnimation(bucketColor);
 
   // Messages
   const {
@@ -205,17 +139,6 @@ const ClientSession = () => {
       commentHandlerRef.current.flushComment(message);
     }
   };
-
-  // Setup comment listeners (using shared utility)
-  useEffect(() => {
-    if (!whiteboardService) return;
-    const cleanup = setupAttendeeCommentListeners(whiteboardService, setTrainerComments, setIsCommentsOpen);
-    return cleanup;
-  }, [whiteboardService]);
-
-  // Exercise state
-  const [showExercise, setShowExercise] = useState(false);
-  const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
 
   // Exercise handlers
   const handleExerciseUpdate = (response) => {
@@ -271,11 +194,14 @@ const ClientSession = () => {
     };
   }, [whiteboardService]);
 
+  // Setup comment listeners (using shared utility)
+  useEffect(() => {
+    if (!whiteboardService) return;
+    const cleanup = setupAttendeeCommentListeners(whiteboardService, setTrainerComments, setIsCommentsOpen);
+    return cleanup;
+  }, [whiteboardService]);
+
   const initAttemptedRef = useRef(false);
-  const pollingIntervalRef = useRef(null);
-  const restrictionAlertShownRef = useRef(false);
-  const [showWaitingModal, setShowWaitingModal] = useState(false);
-  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (webRTC) {
@@ -586,202 +512,100 @@ const ClientSession = () => {
   }
 
   return (
-    <div className={`learner-session-page ${pageClassName}`} style={{
-      width: '100%',
-      height: '100vh',
-      margin: 0,
-      padding: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      boxSizing: 'border-box',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      <style>{attendeeSessionStyles}</style>
+    <AttendeeSessionRoot pageClassName={pageClassName} audioRef={audioRef}>
+      {/* Upper Section: Metrics (20%) | Prompt (60%) | Video (20%) */}
+      <AttendeeUpperSection
+        // Metrics Panel Props
+        promptMeter={promptMeter}
+        reinforcementMeter={reinforcementMeter}
+        bucketColor={bucketColor}
 
-      {/* Metrics Header - Full width (P:, R:, Bucket Color) - ✅ Responsive */}
-      <div className="learner-metrics-header" style={{
-        display: 'flex',
-        position: 'relative',
-        alignItems: 'center',
-        gap: 'clamp(6px, 1.5vw, 12px)',
-        padding: 'clamp(6px, 1.2vh, 8px) clamp(6px, 1.2vw, 8px)',
-        backgroundColor: 'white',
-        borderRadius: '4px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        flexWrap: 'wrap',
-        margin: '0',
-        width: '100%',
-        boxSizing: 'border-box',
-        fontSize: 'clamp(10px, 1.8vw, 12px)'
-      }}>
-        {/* Divider */}
-        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
-
-        {/* Prompt Level */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
-          <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#d97706' }}>P:</span>
-          <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#d97706' }}>{promptMeter ?? 0}</span>
-        </div>
-
-        {/* Divider */}
-        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
-
-        {/* Reinforcement Level */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
-          <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#16a34a' }}>R:</span>
-          <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter ?? 0}</span>
-        </div>
-        {/* Bucket Color - Bulb with Glow */}
-        {/* Divider */}
-        <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
-
-        {/* Prompt Line with Bulb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)' }}>
-          <span
-            onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
-            style={{
-              fontSize: 'clamp(20px, 3.5vw, 24px)',
-              cursor: 'pointer',
-              filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== '[Prompts from instructor will appear here]' ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
-              animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
-              transition: 'filter 0.3s ease, transform 0.2s ease',
-              transform: isPromptLineOpen ? 'scale(1.1)' : 'scale(1)',
-              userSelect: 'none'
-            }}
-          >
-            💡
-          </span>
-          {isPromptLineOpen && (
-            <div style={{
-              backgroundColor: '#f9fafb',
-              borderRadius: 'clamp(4px, 0.8vw, 6px)',
-              padding: 'clamp(6px, 1.2vw, 8px) clamp(8px, 1.5vw, 12px)',
-              border: promptText !== '[Prompts from instructor will appear here]' ? '2px solid #fbbf24' : '1px solid #e5e7eb',
-              maxWidth: 'clamp(200px, 40vw, 300px)',
-              transition: 'border 0.3s ease'
-            }}>
-              <p style={{
-                fontSize: 'clamp(10px, 1.8vw, 12px)',
-                color: '#374151',
-                margin: 0,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {promptText !== '[Prompts from instructor will appear here]' ? promptText : 'Waiting for prompt...'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Centered Video Controls - absolute centered within metrics header */}
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 60,
-          pointerEvents: 'auto'
-        }}>
-          <AttendeeVideoControls
-            micEnabled={micEnabled}
-            cameraEnabled={cameraEnabled}
-            onToggleMic={handleToggleMic}
-            onToggleCamera={handleToggleCamera}
-            onLeaveSession={handleLeaveSession}
-          />
-        </div>
-      </div>
-
-      {/* Main Container - Flexbox column layout */}
-      <div className="learner-main-container">
-        {/* Whiteboard - Fills remaining space */}
-        <div className="learner-whiteboard-wrapper">
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            <div className="session-whiteboard-container">
-              {/* Remote Video Feed - Coach */}
-              <RemoteVideoFeed
-                remoteVideoRef={remoteVideoRef}
-                remoteStream={remoteStream}
-                topPosition="4px"
-                label="Coach"
-              />
-
-              {/* Whiteboard component */}
-              <div className="w-full h-full">
-                <Whiteboard
-                  whiteboardService={whiteboardService}
-                  isTrainer={false}
-                  canvasItems={canvasItems}
-                  setCanvasItems={setCanvasItems}
-                  isFrozen={false}
-                  isPaused={false}
-                  toolAccess={toolAccess}
-                  remoteSelectedItemIds={remoteSelectedItemIds}
-                  textMessages={textMessages}
-                  setTextMessages={setTextMessages}
-                  feedbackMessage={feedbackMessage}
-                  waitingMessage={waitingMessage}
-                  floatingAnimations={floatingAnimations}
-                  onAnimationPop={handleAnimationPop}
-                  erasePenTrigger={erasePenTrigger}
-                  redrawCanvasTrigger={redrawCanvasTrigger}
-                  buckets={buckets}
-                  setBuckets={setBuckets}
-                  textBoxes={textBoxes}
-                  activeTextBoxId={activeTextBoxId}
-                  setActiveTextBoxId={setActiveTextBoxId}
-                  tool={tool}
-                  setTool={setTool}
-                  color={color}
-                  setColor={setColor}
-                  lineWidth={lineWidth}
-                  setLineWidth={setLineWidth}
-                  keyboardMode={keyboardMode}
-                  keyboardText={keyboardText}
-                  setKeyboardText={setKeyboardText}
-                  keyboardPosition={keyboardPosition}
-                  setKeyboardPosition={setKeyboardPosition}
-                  stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime).display : null}
-                  stopwatchIsRunning={stopwatchIsRunning}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Exercise Tool */}
-        {showExercise && (
-          <div className="exercise-tool-container" style={{ marginTop: '20px', padding: '0 10px', position: 'relative' }}>
-            <Exercise
-              isTrainer={false}
-              onExerciseSubmit={handleExerciseSubmit}
-              onExerciseUpdate={() => { }}
-              onExerciseDelete={handleExerciseDelete}
-              onAnswerChange={() => { }}
-              whiteboardService={whiteboardService}
-              initialExercise={exerciseData.question ? exerciseData : null}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Comments Panel */}
-      <AttendeeCommentsPanel
-        isOpen={isCommentsOpen}
-        setIsOpen={setIsCommentsOpen}
-        trainerComments={trainerComments}
+        // Prompt Panel Props
+        promptText={promptText}
+        isCommentsOpen={isCommentsOpen}
         commentInput={commentInput}
         setCommentInput={setCommentInput}
         onSendComment={debouncedSendComment}
         onFlushComment={flushSendComment}
+        exerciseData={exerciseData}
+        showExercise={showExercise}
+        Exercise={Exercise}
+        whiteboardService={whiteboardService}
+        onExerciseSubmit={handleExerciseSubmit}
+        onExerciseUpdate={() => { }}
+        onExerciseDelete={handleExerciseDelete}
+
+        // Video Panel Props
+        remoteVideoRef={remoteVideoRef}
+        remoteStream={remoteStream}
+        micEnabled={micEnabled}
+        cameraEnabled={cameraEnabled}
+        onToggleMic={handleToggleMic}
+        onToggleCamera={handleToggleCamera}
+        onLeaveSession={handleLeaveSession}
+        videoLabel="Coach"
+        showVideoControls={true}
+
         sessionType="client"
       />
 
-      {/* Background Music Audio Element */}
-      <audio ref={audioRef} crossOrigin="anonymous" />
-    </div>
+      {/* Main Container - Whiteboard */}
+      <div className="learner-main-container">
+        <AttendeeWhiteboardSection>
+          <div className="w-full h-full">
+            <Whiteboard
+              whiteboardService={whiteboardService}
+              isTrainer={false}
+              canvasItems={canvasItems}
+              setCanvasItems={setCanvasItems}
+              isFrozen={false}
+              isPaused={false}
+              toolAccess={toolAccess}
+              remoteSelectedItemIds={remoteSelectedItemIds}
+              textMessages={textMessages}
+              setTextMessages={setTextMessages}
+              feedbackMessage={feedbackMessage}
+              waitingMessage={waitingMessage}
+              floatingAnimations={floatingAnimations}
+              onAnimationPop={handleAnimationPop}
+              erasePenTrigger={erasePenTrigger}
+              redrawCanvasTrigger={redrawCanvasTrigger}
+              buckets={buckets}
+              setBuckets={setBuckets}
+              textBoxes={textBoxes}
+              activeTextBoxId={activeTextBoxId}
+              setActiveTextBoxId={setActiveTextBoxId}
+              tool={tool}
+              setTool={setTool}
+              color={color}
+              setColor={setColor}
+              lineWidth={lineWidth}
+              setLineWidth={setLineWidth}
+              keyboardMode={keyboardMode}
+              keyboardText={keyboardText}
+              setKeyboardText={setKeyboardText}
+              keyboardPosition={keyboardPosition}
+              setKeyboardPosition={setKeyboardPosition}
+              stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime).display : null}
+              stopwatchIsRunning={stopwatchIsRunning}
+            />
+          </div>
+        </AttendeeWhiteboardSection>
+      </div>
+
+      {/* Waiting Modal */}
+      <AttendeeWaitingModal
+        show={showWaitingModal}
+        title="Waiting for Coach"
+        description="The coach is starting the session. You'll be automatically added once they begin! ✨"
+        retrying={retrying}
+        onRetry={handleRetryJoin}
+        onCancel={() => {
+          setShowWaitingModal(false);
+          navigate('/client/dashboard');
+        }}
+      />
+    </AttendeeSessionRoot>
   );
 };
 
