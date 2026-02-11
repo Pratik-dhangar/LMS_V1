@@ -894,20 +894,32 @@ InstructorCommentsDisplay.propTypes = {
 export const usePromptAnimation = (promptText, defaultText = '[Prompts from instructor will appear here]') => {
     const [isPromptLineOpen, setIsPromptLineOpen] = useState(false);
     const [promptLineAnimating, setPromptLineAnimating] = useState(false);
+    const prevPromptTextRef = useRef(promptText);
 
     useEffect(() => {
-        if (!promptText || promptText === defaultText) return;
+        // Skip if no prompt text or if it's the default text
+        if (!promptText || promptText === defaultText) {
+            return;
+        }
 
-        // Auto-open Prompt Line when new prompt is received
-        setIsPromptLineOpen(true);
+        // Only trigger animation if the prompt text actually changed
+        if (prevPromptTextRef.current !== promptText) {
+            console.log('[usePromptAnimation] New prompt received:', promptText);
 
-        // Trigger animation
-        setPromptLineAnimating(true);
-        const timer = setTimeout(() => {
-            setPromptLineAnimating(false);
-        }, 2000);
+            // Auto-open Prompt Line when new prompt is received
+            setIsPromptLineOpen(true);
 
-        return () => clearTimeout(timer);
+            // Trigger animation
+            setPromptLineAnimating(true);
+            const timer = setTimeout(() => {
+                setPromptLineAnimating(false);
+            }, 2000);
+
+            // Update the previous prompt text reference
+            prevPromptTextRef.current = promptText;
+
+            return () => clearTimeout(timer);
+        }
     }, [promptText, defaultText]);
 
     return {
@@ -977,6 +989,11 @@ export const AttendeeMetricsHeader = ({
             fontSize: 'clamp(10px, 1.8vw, 12px)',
             ...style
         }}>
+            {/* defensive styles to ensure bulb is clickable even if overlays exist */}
+            <style>{`
+                .prompt-bulb-clickable { z-index: 99999 !important; pointer-events: auto !important; cursor: pointer !important; position: relative; display: inline-block; }
+                .prompt-bulb-container { z-index: 99998 !important; pointer-events: auto !important; }
+            `}</style>
             {/* Divider */}
             <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
@@ -999,17 +1016,23 @@ export const AttendeeMetricsHeader = ({
             <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
             {/* Prompt Line with Bulb */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)' }}>
-                <span
-                    onClick={() => setIsPromptLineOpen(!isPromptLineOpen)}
+            <div className="prompt-bulb-container" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)', position: 'relative', zIndex: 10 }}>
+                <span className="prompt-bulb-clickable"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('[Bulb Click] Current state:', isPromptLineOpen, '-> toggling to:', !isPromptLineOpen);
+                        setIsPromptLineOpen(!isPromptLineOpen);
+                    }}
                     style={{
                         fontSize: 'clamp(20px, 3.5vw, 24px)',
-                        cursor: 'pointer',
                         filter: promptLineAnimating ? 'drop-shadow(0 0 12px #fbbf24) drop-shadow(0 0 20px rgba(251, 191, 36, 0.6))' : promptText !== defaultPromptText ? 'drop-shadow(0 0 8px #fbbf24)' : 'none',
                         animation: promptLineAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none',
                         transition: 'filter 0.3s ease, transform 0.2s ease',
                         transform: isPromptLineOpen ? 'scale(1.1)' : 'scale(1)',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        display: 'inline-block',
+                        padding: '2px',
+                        position: 'relative'
                     }}
                     title="Click to toggle prompt visibility"
                 >
@@ -1913,6 +1936,13 @@ export const AttendeePromptPanel = ({
     onExerciseDelete = null,
     sessionType = 'guest'
 }) => {
+    // Local fallback for exercise answer when parent doesn't provide onExerciseUpdate
+    const [localExerciseAnswer, setLocalExerciseAnswer] = React.useState(exerciseData?.answer || '');
+
+    React.useEffect(() => {
+        setLocalExerciseAnswer(exerciseData?.answer || '');
+    }, [exerciseData && exerciseData.answer]);
+
     return (
         <div className="attendee-prompt-panel" style={{
             width: '100%',
@@ -2075,13 +2105,17 @@ export const AttendeePromptPanel = ({
                             YOUR ANSWER:
                         </div>
                         <textarea
-                            value={exerciseData.answer || ''}
+                            value={onExerciseUpdate ? (exerciseData?.learnerAnswer ?? exerciseData?.answer ?? '') : localExerciseAnswer}
                             onChange={(e) => {
+                                const v = e.target.value;
                                 if (onExerciseUpdate && exerciseData) {
                                     onExerciseUpdate({
                                         ...exerciseData,
-                                        answer: e.target.value
+                                        learnerAnswer: v,
+                                        timestamp: Date.now()
                                     });
+                                } else {
+                                    setLocalExerciseAnswer(v);
                                 }
                             }}
                             placeholder="Type your answer here..."

@@ -1068,6 +1068,36 @@ export const initializeInstructorSession = async ({
             return null;
         }
 
+        // Auto-start session if not already started
+        if (!session.started_at && (session.status === 'scheduled' || session.status === 'active')) {
+            console.log(`[${role}Session] Auto-starting session as it hasn't been started yet`);
+            try {
+                const startedSession = await sessionService.startSession(sessionId);
+                if (startedSession) {
+                    // Merge the started session data into current session
+                    Object.assign(session, startedSession);
+                    console.log(`[${role}Session] Session started successfully:`, {
+                        started_at: session.started_at,
+                        duration: session.duration,
+                        status: session.status
+                    });
+                }
+            } catch (error) {
+                console.error(`[${role}Session] Failed to auto-start session:`, error);
+                console.error(`[${role}Session] Error detail:`, error.response?.data);
+                // Continue anyway - session might already be active or started
+            }
+        } else if (session.started_at) {
+            console.log(`[${role}Session] Session already started at:`, session.started_at);
+        }
+
+        console.log(`[${role}Session] Final session info before setState:`, {
+            id: session.id,
+            started_at: session.started_at,
+            duration: session.duration,
+            status: session.status
+        });
+
         setSessionInfo(session);
 
         // Initialize WebRTC with numeric session ID
@@ -1135,17 +1165,21 @@ export const setupInstructorWhiteboardCallbacks = ({
     // Exercise answer updates from participant
     if (setExerciseData) {
         whiteboardService.onExerciseAnswerUpdate = (data) => {
-            console.log('[InstructorSession] Participant answer updated:', data);
+            // console.log('[InstructorSession] Participant answer updated:', data);
             if (data.qaItems) {
                 setExerciseData(prev => ({
                     ...prev,
                     qaItems: data.qaItems
                 }));
             } else {
+                const incomingAnswer = data.learnerAnswer ?? data.clientAnswer ?? data.answer ?? '';
                 setExerciseData(prev => ({
                     ...prev,
                     question: data.question || prev.question,
-                    answer: data.answer || ''
+                    // keep both fields in sync for compatibility
+                    answer: incomingAnswer,
+                    learnerAnswer: incomingAnswer,
+                    clientAnswer: data.clientAnswer ?? prev.clientAnswer
                 }));
             }
         };
@@ -1569,10 +1603,13 @@ export const setupAttendeeWhiteboardCallbacks = ({
                     qaItems: data.qaItems
                 }));
             } else {
+                const incomingAnswer = data.learnerAnswer ?? data.clientAnswer ?? data.answer ?? '';
                 setExerciseData(prev => ({
                     ...prev,
-                    question: data.question,
-                    learnerAnswer: data.learnerAnswer
+                    question: data.question ?? prev.question,
+                    answer: incomingAnswer,
+                    learnerAnswer: incomingAnswer,
+                    clientAnswer: data.clientAnswer ?? prev.clientAnswer
                 }));
             }
         };
@@ -2071,12 +2108,26 @@ export const endSession = async ({
  */
 export const calculateTimeRemaining = (sessionInfo) => {
     if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) {
+        console.log('[calculateTimeRemaining] Missing data:', {
+            hasSessionInfo: !!sessionInfo,
+            started_at: sessionInfo?.started_at,
+            duration: sessionInfo?.duration
+        });
         return '--:--';
     }
 
     let startTime;
     if (typeof sessionInfo.started_at === 'string') {
-        startTime = new Date(sessionInfo.started_at.replace(' ', 'T')).getTime();
+        // Handle both 'YYYY-MM-DD HH:MM:SS' and ISO 8601 formats
+        let dateString = sessionInfo.started_at;
+        if (dateString.includes(' ') && !dateString.includes('T')) {
+            dateString = dateString.replace(' ', 'T');
+        }
+        // If no timezone, treat as UTC
+        if (!dateString.endsWith('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+            dateString += 'Z';
+        }
+        startTime = new Date(dateString).getTime();
     } else {
         startTime = new Date(sessionInfo.started_at).getTime();
     }
@@ -2090,6 +2141,15 @@ export const calculateTimeRemaining = (sessionInfo) => {
     const endTime = startTime + durationMs;
     const now = Date.now();
     const remaining = endTime - now;
+
+    // console.log('[calculateTimeRemaining] Debug:', {
+    //     started_at: sessionInfo.started_at,
+    //     duration: sessionInfo.duration,
+    //     startTime: new Date(startTime).toISOString(),
+    //     endTime: new Date(endTime).toISOString(),
+    //     now: new Date(now).toISOString(),
+    //     remaining: Math.floor(remaining / 1000) + ' seconds'
+    // });
 
     if (remaining <= 0) {
         return '00:00';
@@ -2886,6 +2946,33 @@ export const InstructorSessionPage = ({
             <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
                 {/* Left Sidebar */}
                 <div className="session-left-sidebar">
+                    {/* Remote Video */}
+                    {remoteStream && (remoteVideoComponent || (
+                        <div style={{
+                            width: '100%',
+                            backgroundColor: '#000',
+                            borderRadius: '0.5rem',
+                            border: '0.125rem solid #374151',
+                            boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            aspectRatio: '4/3'
+                        }}>
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    backgroundColor: '#1a1a1a'
+                                }}
+                            />
+                        </div>
+                    ))}
                     {LeftSidebarComponent}
                 </div>
 
@@ -2893,46 +2980,6 @@ export const InstructorSessionPage = ({
                 <div className="session-center-area">
                     {/* Whiteboard */}
                     <div className="session-whiteboard-container" style={{ position: 'relative' }}>
-                        {/* Remote Video */}
-                        {remoteStream && (remoteVideoComponent || (
-                            <div className={role === 'trainer' ? 'learner-video-overlay' : ''} style={role === 'coach' ? {
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                width: 'clamp(8rem, 15vw, 14rem)',
-                                height: 'clamp(6rem, 11.25vw, 10.5rem)',
-                                backgroundColor: '#000',
-                                borderRadius: '0.5rem',
-                                border: '0.125rem solid #374151',
-                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
-                                zIndex: 100,
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            } : {
-                                backgroundColor: '#000',
-                                borderRadius: '0.5rem',
-                                border: '0.125rem solid #374151',
-                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <video
-                                    ref={remoteVideoRef}
-                                    autoPlay
-                                    playsInline
-                                    style={{
-                                        flex: 1,
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        backgroundColor: '#1a1a1a'
-                                    }}
-                                />
-                            </div>
-                        ))}
-
                         {/* Whiteboard */}
                         <div className="w-full h-full">
                             <Whiteboard
@@ -2966,6 +3013,7 @@ export const InstructorSessionPage = ({
                                 canvasRefForParent={whiteboardCanvasRef}
                             />
                         </div>
+
                     </div>
 
                     {/* YouTube Popups */}
