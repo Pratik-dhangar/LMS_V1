@@ -904,7 +904,7 @@ export const usePromptAnimation = (promptText, defaultText = '[Prompts from inst
 
         // Only trigger animation if the prompt text actually changed
         if (prevPromptTextRef.current !== promptText) {
-            console.log('[usePromptAnimation] New prompt received:', promptText);
+            // console.log('[usePromptAnimation] New prompt received:', promptText);
 
             // Auto-open Prompt Line when new prompt is received
             setIsPromptLineOpen(true);
@@ -1020,7 +1020,7 @@ export const AttendeeMetricsHeader = ({
                 <span className="prompt-bulb-clickable"
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log('[Bulb Click] Current state:', isPromptLineOpen, '-> toggling to:', !isPromptLineOpen);
+                        // console.log('[Bulb Click] Current state:', isPromptLineOpen, '-> toggling to:', !isPromptLineOpen);
                         setIsPromptLineOpen(!isPromptLineOpen);
                     }}
                     style={{

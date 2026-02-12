@@ -82,7 +82,7 @@ const Exercise = ({
     useEffect(() => {
         if (!whiteboardService) return;
 
-        console.log('[Exercise] Setting up whiteboardService.onCommentUpdate handler');
+        // console.log('[Exercise] Setting up whiteboardService.onCommentUpdate handler');
 
         whiteboardService.onCommentUpdate = (data) => {
             // console.log('[Exercise] ✅ onCommentUpdate callback triggered with data:', data);
@@ -99,7 +99,7 @@ const Exercise = ({
 
         return () => {
             if (whiteboardService) {
-                console.log('[Exercise] Cleaning up whiteboardService.onCommentUpdate');
+                // console.log('[Exercise] Cleaning up whiteboardService.onCommentUpdate');
                 whiteboardService.onCommentUpdate = null;
             }
         };
