@@ -1777,7 +1777,7 @@ const LearnerSession = () => {
           Exercise={Exercise}
           whiteboardService={whiteboardService}
           onExerciseSubmit={handleExerciseSubmit}
-          onExerciseUpdate={null}
+          onExerciseUpdate={handleExerciseAnswerChange}
           onExerciseDelete={null}
 
           // Video Panel Props

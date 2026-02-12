@@ -82,24 +82,24 @@ const Exercise = ({
     useEffect(() => {
         if (!whiteboardService) return;
 
-        console.log('[Exercise] Setting up whiteboardService.onCommentUpdate handler');
+        // console.log('[Exercise] Setting up whiteboardService.onCommentUpdate handler');
 
         whiteboardService.onCommentUpdate = (data) => {
-            console.log('[Exercise] ✅ onCommentUpdate callback triggered with data:', data);
+            // console.log('[Exercise] ✅ onCommentUpdate callback triggered with data:', data);
             // normalize incoming comment shape to what useComments expects
             const incoming = {
                 text: data.message || data.text || '',
                 type: data.type || 'learner',
                 timestamp: data.timestamp || Date.now()
             };
-            console.log('[Exercise] ✅ Calling addReceivedComment with normalized:', incoming);
+            // console.log('[Exercise] ✅ Calling addReceivedComment with normalized:', incoming);
             addReceivedComment(incoming);
-            console.log('[Exercise] ✅ addReceivedComment completed');
+            // console.log('[Exercise] ✅ addReceivedComment completed');
         };
 
         return () => {
             if (whiteboardService) {
-                console.log('[Exercise] Cleaning up whiteboardService.onCommentUpdate');
+                // console.log('[Exercise] Cleaning up whiteboardService.onCommentUpdate');
                 whiteboardService.onCommentUpdate = null;
             }
         };

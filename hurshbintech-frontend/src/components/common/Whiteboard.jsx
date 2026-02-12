@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { FaPlay, FaPause, FaStepBackward, FaStepForward, FaVolumeUp, FaVolumeMute, FaExpand } from 'react-icons/fa';
 import Emoji from './Emoji';
+import StopwatchDisplay from './StopwatchDisplay';
 import '../../styles/components/common/Whiteboard.css';
 import appleImage from '../../assets/Red_Apple.jpg';
 import bananaImage from '../../assets/banana.jpeg';
@@ -453,6 +454,7 @@ const Whiteboard = ({
     const [dragOverBucketId, setDragOverBucketId] = useState(null); // Track which bucket is being dragged over
     const [animatingItemId, setAnimatingItemId] = useState(null); // For drop animation
     const [isDragOverCanvas, setIsDragOverCanvas] = useState(false); // For visual feedback during drag over
+    const [showStopwatch, setShowStopwatch] = useState(false); // Control stopwatch visibility
 
     // Performance optimization refs for 60fps
     const rafIdRef = useRef(null);
@@ -488,6 +490,23 @@ const Whiteboard = ({
             }, 8000); // Show for 8 seconds
         }
     }, [isTrainer]);
+
+    // Control stopwatch visibility - show when running, hide when reset or time completes
+    useEffect(() => {
+        // If stopwatch data is null, hide immediately (reset)
+        if (!stopwatchFormattedTime) {
+            setShowStopwatch(false);
+            return;
+        }
+
+        // If stopwatch is running, show it
+        if (stopwatchIsRunning) {
+            setShowStopwatch(true);
+        } else {
+            // If not running, hide it
+            setShowStopwatch(false);
+        }
+    }, [stopwatchIsRunning, stopwatchFormattedTime]);
 
     const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner, bucketColorOverride = null) => {
         if (!isSelectedByTrainer && !isSelectedByLearner && !isSelectedByRemoteLearner) {
@@ -1050,14 +1069,14 @@ const Whiteboard = ({
             };
 
             whiteboardService.onItemUpdate = (data) => {
-                console.log('[Whiteboard] Item update received:', { 
-                    id: data.id, 
-                    x: data.x, 
-                    y: data.y, 
-                    width: data.width, 
+                console.log('[Whiteboard] Item update received:', {
+                    id: data.id,
+                    x: data.x,
+                    y: data.y,
+                    width: data.width,
                     height: data.height,
                     inBucket: data.inBucket,
-                    normalized: data.normalized 
+                    normalized: data.normalized
                 });
 
                 // Handle bucket removal
@@ -1086,11 +1105,11 @@ const Whiteboard = ({
                 setCanvasItems(prev => {
                     console.log('[Whiteboard] Current canvasItems count:', prev.length);
                     console.log('[Whiteboard] Looking for item:', data.id);
-                    
+
                     const updated = prev.map(item => {
                         if (item.id === data.id) {
                             console.log('[Whiteboard] Found item to update:', { id: item.id, currentX: item.x, currentY: item.y });
-                            
+
                             let finalX, finalY, finalWidth, finalHeight;
 
                             // Determine if we need to denormalize (default to true for backward compatibility)
@@ -1103,9 +1122,9 @@ const Whiteboard = ({
                                 finalY = data.y !== undefined ? denormalized.y : item.y;
                                 finalWidth = data.width !== undefined ? denormalized.width : item.width;
                                 finalHeight = data.height !== undefined ? denormalized.height : item.height;
-                                console.log('[Whiteboard] Denormalized:', { 
-                                    from: { x: data.x, y: data.y, w: data.width, h: data.height }, 
-                                    to: { x: finalX, y: finalY, w: finalWidth, h: finalHeight } 
+                                console.log('[Whiteboard] Denormalized:', {
+                                    from: { x: data.x, y: data.y, w: data.width, h: data.height },
+                                    to: { x: finalX, y: finalY, w: finalWidth, h: finalHeight }
                                 });
                             } else {
                                 // Use pixel coordinates directly (items in buckets or already in pixel space)
@@ -1127,23 +1146,23 @@ const Whiteboard = ({
                                 originalHeight: data.originalHeight !== undefined ? data.originalHeight : item.originalHeight,
                                 answers: data.answers !== undefined ? data.answers : item.answers
                             };
-                            
+
                             console.log('[Whiteboard] Item updated:', { id: item.id, oldX: item.x, oldY: item.y, newX: finalX, newY: finalY });
                             return updatedItem;
                         }
                         return item;
                     });
-                    
+
                     const foundItem = updated.find(i => i.id === data.id);
                     if (foundItem) {
                         console.log('[Whiteboard] Updated item in array:', { id: foundItem.id, x: foundItem.x, y: foundItem.y });
                     } else {
                         console.warn('[Whiteboard] Item not found in canvasItems:', data.id);
                     }
-                    
+
                     return updated;
                 });
-                
+
                 console.log('[Whiteboard] Item state updated, triggering re-render');
             };
 
@@ -1177,7 +1196,7 @@ const Whiteboard = ({
                     } else {
                         setCanvasItems(prev => prev.filter(item => item.inBucket !== data.id));
                     }
-                    
+
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
@@ -1620,10 +1639,10 @@ const Whiteboard = ({
     const removeBucket = (bucketId) => {
         // Get all items that are inside this bucket (from canvasItems, not bucket.items)
         const childItems = canvasItems.filter(item => item.inBucket === bucketId);
-        
+
         // Remove all items inside the bucket locally
         setCanvasItems(prev => prev.filter(item => item.inBucket !== bucketId));
-        
+
         // Remove the bucket itself
         setBuckets(prev => prev.filter(b => b.id !== bucketId));
 
@@ -1681,7 +1700,7 @@ const Whiteboard = ({
             const bucketRight = bucket.x + bucket.width;
 
             return x >= bucketLeft && x <= bucketRight &&
-                   y >= bucketTop && y <= bucketBottom;
+                y >= bucketTop && y <= bucketBottom;
         });
     };
 
@@ -1739,7 +1758,7 @@ const Whiteboard = ({
         const bucketRight = bucket.x + bucket.width;
 
         return centerX >= bucketLeft && centerX <= bucketRight &&
-               centerY >= bucketTop && centerY <= bucketBottom;
+            centerY >= bucketTop && centerY <= bucketBottom;
     };
 
     const startDrawing = (e) => {
@@ -1805,7 +1824,7 @@ const Whiteboard = ({
             if (item.inBucket && !isAlreadySelected) {
                 // Select the item (click or long press), don't start dragging yet
                 setSelectedItems([itemWithOriginalSize]);
-                
+
                 // Broadcast selection to all participants
                 if (whiteboardService) {
                     whiteboardService.send('item_selected', {
@@ -1876,12 +1895,12 @@ const Whiteboard = ({
 
             // Trainer logic: trainer can ALWAYS drag/resize items regardless of toolAccess
             // toolAccess controls LEARNER permissions, not trainer permissions
-            
+
             // For items in bucket, trainer must also select first before dragging
             if (item.inBucket && !isAlreadySelected) {
                 // Select the item, don't start dragging yet
                 setSelectedItems([itemWithOriginalSize]);
-                
+
                 // Broadcast selection to learner when select feature is enabled
                 if (toolAccess.select && whiteboardService) {
                     whiteboardService.send('item_selected', {
@@ -2915,13 +2934,18 @@ const Whiteboard = ({
                 </div>
             )}
 
-            {/* Stopwatch Display - Top Right Corner */}
-            {stopwatchFormattedTime && (
+            {/* Stopwatch Display - Top Right Corner - Mechanical Analog Clock Style */}
+            {showStopwatch && stopwatchFormattedTime && (
                 <div className="stopwatch-overlay">
                     <div className="stopwatch-overlay-inner">
                         <div className="stopwatch-content">
-                            <span className="stopwatch-time">{stopwatchFormattedTime.display}</span>
-                            {stopwatchIsRunning && <span className="stopwatch-indicator"></span>}
+                            <StopwatchDisplay
+                                formattedTime={stopwatchFormattedTime}
+                                isRunning={stopwatchIsRunning}
+                                showControls={false}
+                                size="md"
+                                variant="mechanical"
+                            />
                         </div>
                     </div>
                 </div>

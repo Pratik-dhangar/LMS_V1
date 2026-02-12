@@ -785,7 +785,7 @@ export const validateUserSession = ({ requiredRole, navigate, loginPath = '/logi
     const userData = localStorage.getItem('user_data');
 
     if (!userData) {
-        console.error('[InstructorSession] No user data found in localStorage');
+        // // console.error('[InstructorSession] No user data found in localStorage');
         toast.error('Please login first');
         navigate(loginPath);
         return null;
@@ -819,13 +819,13 @@ export const initializeWhiteboardService = ({
     setRedrawCanvasTrigger
 }) => {
     try {
-        console.log(`[InstructorSession] Initializing whiteboard service for ${role}`);
+        // console.log(`[InstructorSession] Initializing whiteboard service for ${role}`);
         const wbService = new WhiteboardService(wsBaseUrl, sessionId, role);
         wbService.initialize();
 
         if (setBuckets) {
             wbService.onBucketAdded = (data) => {
-                console.log(`[InstructorSession] Bucket added:`, data);
+                // console.log(`[InstructorSession] Bucket added:`, data);
                 setBuckets(prev => {
                     const exists = prev.find(bucket => bucket.id === data.id);
                     if (!exists) {
@@ -836,7 +836,7 @@ export const initializeWhiteboardService = ({
             };
 
             wbService.onBucketUpdate = (data) => {
-                console.log(`[InstructorSession] Bucket updated:`, data);
+                // console.log(`[InstructorSession] Bucket updated:`, data);
                 if (data.removed) {
                     setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
                 } else {
@@ -849,7 +849,7 @@ export const initializeWhiteboardService = ({
 
         if (setFloatingAnimations) {
             wbService.onFloatingAnimations = (data) => {
-                console.log(`[InstructorSession] Floating animations received:`, data);
+                // console.log(`[InstructorSession] Floating animations received:`, data);
                 setFloatingAnimations(prev => [...prev, ...data.animations]);
 
                 setTimeout(() => {
@@ -862,16 +862,16 @@ export const initializeWhiteboardService = ({
 
         if (setErasePenTrigger && setRedrawCanvasTrigger) {
             wbService.onErasePen = () => {
-                console.log(`[InstructorSession] Received erase pen event`);
+                // console.log(`[InstructorSession] Received erase pen event`);
                 setErasePenTrigger(prev => prev + 1);
                 setRedrawCanvasTrigger(prev => prev + 1);
             };
         }
 
-        console.log(`[InstructorSession] Whiteboard service initialized for ${role}`);
+        // console.log(`[InstructorSession] Whiteboard service initialized for ${role}`);
         return wbService;
     } catch (error) {
-        console.error(`[InstructorSession] Error initializing whiteboard:`, error);
+        // console.error(`[InstructorSession] Error initializing whiteboard:`, error);
         toast.error('Failed to initialize whiteboard');
         return null;
     }
@@ -892,17 +892,17 @@ export const initializeVideoConferenceService = async ({
     participantName = 'Participant'
 }) => {
     try {
-        console.log(`[InstructorSession] Initializing video conference service for ${role}`);
+        // console.log(`[InstructorSession] Initializing video conference service for ${role}`);
         const videoService = new VideoConferenceService(wsBaseUrl, sessionId, role);
 
         videoService.onLocalStream = (stream) => {
-            console.log(`[InstructorSession] Local stream received`);
+            // console.log(`[InstructorSession] Local stream received`);
             setLocalStream(stream);
             setConnectionStatus('Waiting for participant...');
         };
 
         videoService.onRemoteStream = (stream) => {
-            console.log(`[InstructorSession] Remote stream received from ${participantName}`);
+            // console.log(`[InstructorSession] Remote stream received from ${participantName}`);
             setRemoteStream(stream);
             setConnectionStatus('Connected');
 
@@ -914,7 +914,7 @@ export const initializeVideoConferenceService = async ({
         };
 
         videoService.onConnectionStateChange = (state) => {
-            console.log(`[InstructorSession] Connection state changed to:`, state);
+            // console.log(`[InstructorSession] Connection state changed to:`, state);
             const statusMap = {
                 'new': 'connecting',
                 'connecting': 'connecting',
@@ -926,7 +926,7 @@ export const initializeVideoConferenceService = async ({
             setConnectionStatus(statusMap[state] || state);
 
             if ((state === 'disconnected' || state === 'closed') && connectedRef?.current) {
-                console.log(`[InstructorSession] ${participantName} disconnected`);
+                // console.log(`[InstructorSession] ${participantName} disconnected`);
                 const name = sessionInfo?.learner_name || sessionInfo?.client_name || participantName;
                 toast.info(`${name} has left the session`);
                 setRemoteStream(null);
@@ -935,16 +935,16 @@ export const initializeVideoConferenceService = async ({
         };
 
         videoService.onError = (error) => {
-            console.error(`[InstructorSession] Video conference error:`, error);
+            // console.error(`[InstructorSession] Video conference error:`, error);
             toast.error(`Video error: ${error.message}`);
         };
 
         await videoService.initialize();
-        console.log(`[InstructorSession] Video conference service initialized for ${role}`);
+        // console.log(`[InstructorSession] Video conference service initialized for ${role}`);
 
         return videoService;
     } catch (error) {
-        console.error(`[InstructorSession] Video Conference init error:`, error);
+        // console.error(`[InstructorSession] Video Conference init error:`, error);
         toast.error('Failed to initialize video conference: ' + error.message);
         return null;
     }
@@ -955,12 +955,12 @@ export const initializeVideoConferenceService = async ({
  */
 export const initializeToolsService = (whiteboardService) => {
     try {
-        console.log('[InstructorSession] Initializing tools service');
+        // console.log('[InstructorSession] Initializing tools service');
         const toolsService = new WhiteboardToolsService(whiteboardService);
-        console.log('[InstructorSession] Tools service initialized');
+        // console.log('[InstructorSession] Tools service initialized');
         return toolsService;
     } catch (error) {
-        console.error('[InstructorSession] Error initializing tools service:', error);
+        // console.error('[InstructorSession] Error initializing tools service:', error);
         return null;
     }
 };
@@ -997,12 +997,12 @@ export const initializeInstructorSession = async ({
     try {
         // Fetch session details
         const session = await sessionService.getSessionDetails(sessionId);
-        console.log(`[${role}Session] Session details received:`, {
-            id: session.id,
-            session_id: session.session_id,
-            title: session.title,
-            status: session.status
-        });
+        // console.log(`[${role}Session] Session details received:`, {
+        //     id: session.id,
+        //     session_id: session.session_id,
+        //     title: session.title,
+        //     status: session.status
+        // });
 
         // Prevent access to already-ended sessions
         if (session.status === 'ended') {
@@ -1015,10 +1015,10 @@ export const initializeInstructorSession = async ({
         if (role === 'trainer') {
             // For trainer, check trainer_id matches user_id directly
             if (session.trainer_id !== userId) {
-                console.error(`[${role}Session] Unauthorized: trainer_id mismatch`, {
-                    session_trainer_id: session.trainer_id,
-                    user_id: userId
-                });
+                // console.error(`[${role}Session] Unauthorized: trainer_id mismatch`, {
+                //     session_trainer_id: session.trainer_id,
+                //     user_id: userId
+                // });
                 toast.error('Unauthorized access');
                 navigate('/dashboard');
                 return null;
@@ -1028,29 +1028,29 @@ export const initializeInstructorSession = async ({
             try {
                 const { default: coachService } = await import('../../api/services/coachService');
                 const profile = await coachService.getCurrentProfile();
-                console.log(`[${role}Session] Profile response:`, profile);
+                // console.log(`[${role}Session] Profile response:`, profile);
 
                 if (!profile || !profile.id) {
-                    console.error(`[${role}Session] Invalid profile response:`, profile);
+                    // console.error(`[${role}Session] Invalid profile response:`, profile);
                     toast.error('Failed to verify coach profile');
                     navigate('/dashboard');
                     return null;
                 }
 
                 if (session.coach_id !== profile.id) {
-                    console.error(`[${role}Session] Unauthorized: coach_id mismatch`, {
-                        session_coach_id: session.coach_id,
-                        profile_id: profile.id
-                    });
+                    // console.error(`[${role}Session] Unauthorized: coach_id mismatch`, {
+                    //     session_coach_id: session.coach_id,
+                    //     profile_id: profile.id
+                    // });
                     toast.error('Unauthorized access');
                     navigate('/dashboard');
                     return null;
                 }
 
-                console.log(`[${role}Session] Authorization successful with profile ID:`, profile.id);
+                // console.log(`[${role}Session] Authorization successful with profile ID:`, profile.id);
             } catch (error) {
-                console.error(`[${role}Session] Failed to fetch coach profile:`, error);
-                console.error(`[${role}Session] Error response:`, error.response?.data);
+                // console.error(`[${role}Session] Failed to fetch coach profile:`, error);
+                // console.error(`[${role}Session] Error response:`, error.response?.data);
                 toast.error('Failed to verify authorization');
                 navigate('/dashboard');
                 return null;
@@ -1068,16 +1068,46 @@ export const initializeInstructorSession = async ({
             return null;
         }
 
+        // Auto-start session if not already started
+        if (!session.started_at && (session.status === 'scheduled' || session.status === 'active')) {
+            // console.log(`[${role}Session] Auto-starting session as it hasn't been started yet`);
+            try {
+                const startedSession = await sessionService.startSession(sessionId);
+                if (startedSession) {
+                    // Merge the started session data into current session
+                    Object.assign(session, startedSession);
+                    // console.log(`[${role}Session] Session started successfully:`, {
+                    //     started_at: session.started_at,
+                    //     duration: session.duration,
+                    //     status: session.status
+                    // });
+                }
+            } catch (error) {
+                // console.error(`[${role}Session] Failed to auto-start session:`, error);
+                // console.error(`[${role}Session] Error detail:`, error.response?.data);
+                // Continue anyway - session might already be active or started
+            }
+        } else if (session.started_at) {
+            // console.log(`[${role}Session] Session already started at:`, session.started_at);
+        }
+
+        // console.log(`[${role}Session] Final session info before setState:`, {
+        //     id: session.id,
+        //     started_at: session.started_at,
+        //     duration: session.duration,
+        //     status: session.status
+        // });
+
         setSessionInfo(session);
 
         // Initialize WebRTC with numeric session ID
         await initializeWebRTC(session.session_id || session.id);
         setLoading(false);
 
-        console.log(`[${role}Session] Session initialization complete`);
+        // console.log(`[${role}Session] Session initialization complete`);
         return session;
     } catch (error) {
-        console.error(`[${role}Session] Error initializing session:`, error);
+        // console.error(`[${role}Session] Error initializing session:`, error);
         const errorMsg = error.response?.data?.detail || 'Failed to initialize session';
         toast.error(errorMsg);
         navigate(`/${role}/dashboard`);
@@ -1108,7 +1138,7 @@ export const setupInstructorWhiteboardCallbacks = ({
 
     // Item selection by participant (client/learner/guest)
     whiteboardService.onItemSelected = (data) => {
-        console.log('[InstructorSession] Remote user selected items:', data);
+        // console.log('[InstructorSession] Remote user selected items:', data);
         if (data.itemIds && Array.isArray(data.itemIds) && setRemoteSelectedItemIds) {
             setRemoteSelectedItemIds(data.itemIds);
         }
@@ -1116,7 +1146,7 @@ export const setupInstructorWhiteboardCallbacks = ({
 
     // Animation pop events from participant
     whiteboardService.onAnimationPopped = (data) => {
-        console.log('[InstructorSession] Animation popped by participant:', data);
+        // console.log('[InstructorSession] Animation popped by participant:', data);
         const animation = floatingAnimations.find(a => a.id === data.animationId);
         if (animation && playPopSound) {
             playPopSound(animation.type);
@@ -1135,24 +1165,28 @@ export const setupInstructorWhiteboardCallbacks = ({
     // Exercise answer updates from participant
     if (setExerciseData) {
         whiteboardService.onExerciseAnswerUpdate = (data) => {
-            console.log('[InstructorSession] Participant answer updated:', data);
+            // // console.log('[InstructorSession] Participant answer updated:', data);
             if (data.qaItems) {
                 setExerciseData(prev => ({
                     ...prev,
                     qaItems: data.qaItems
                 }));
             } else {
+                const incomingAnswer = data.learnerAnswer ?? data.clientAnswer ?? data.answer ?? '';
                 setExerciseData(prev => ({
                     ...prev,
                     question: data.question || prev.question,
-                    answer: data.answer || ''
+                    // keep both fields in sync for compatibility
+                    answer: incomingAnswer,
+                    learnerAnswer: incomingAnswer,
+                    clientAnswer: data.clientAnswer ?? prev.clientAnswer
                 }));
             }
         };
 
         // Exercise submission from participant
         whiteboardService.onExerciseResponse = (data) => {
-            console.log('[InstructorSession] Participant submitted exercise:', data);
+            // console.log('[InstructorSession] Participant submitted exercise:', data);
             if (data.qaItems) {
                 setExerciseData(prev => ({
                     ...prev,
@@ -1172,7 +1206,7 @@ export const setupInstructorWhiteboardCallbacks = ({
     // Bucket management (already set in initializeWhiteboardService but keeping for completeness)
     if (setBuckets) {
         whiteboardService.onBucketAdded = (data) => {
-            console.log('[InstructorSession] Bucket added:', data);
+            // console.log('[InstructorSession] Bucket added:', data);
             setBuckets(prev => {
                 const exists = prev.find(bucket => bucket.id === data.id);
                 if (!exists) {
@@ -1183,7 +1217,7 @@ export const setupInstructorWhiteboardCallbacks = ({
         };
 
         whiteboardService.onBucketUpdate = (data) => {
-            console.log('[InstructorSession] Bucket updated:', data);
+            // console.log('[InstructorSession] Bucket updated:', data);
             if (data.removed) {
                 setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
             } else {
@@ -1197,7 +1231,7 @@ export const setupInstructorWhiteboardCallbacks = ({
     // Floating animations
     if (setFloatingAnimations) {
         whiteboardService.onFloatingAnimations = (data) => {
-            console.log('[InstructorSession] Floating animations received:', data);
+            // console.log('[InstructorSession] Floating animations received:', data);
             setFloatingAnimations(prev => [...prev, ...data.animations]);
 
             setTimeout(() => {
@@ -1211,7 +1245,7 @@ export const setupInstructorWhiteboardCallbacks = ({
     // Erase pen event
     if (setErasePenTrigger && setRedrawCanvasTrigger) {
         whiteboardService.onErasePen = () => {
-            console.log('[InstructorSession] Received erase pen event');
+            // console.log('[InstructorSession] Received erase pen event');
             setErasePenTrigger(prev => prev + 1);
             setRedrawCanvasTrigger(prev => prev + 1);
         };
@@ -1269,7 +1303,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Tool access control from instructor
     if (setToolAccess) {
         whiteboardService.onToolAccess = (data) => {
-            console.log('[AttendeeSession] Tool access update:', data);
+            // console.log('[AttendeeSession] Tool access update:', data);
             setToolAccess(prevAccess => ({
                 ...prevAccess,
                 [data.toolName]: data.enabled
@@ -1292,7 +1326,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Prompt updates from instructor (voice-to-text)
     if (setPromptText) {
         whiteboardService.onPromptUpdate = (data) => {
-            console.log('[AttendeeSession] Prompt update received:', data);
+            // console.log('[AttendeeSession] Prompt update received:', data);
             if (data.text) {
                 setPromptText(data.text);
                 if (setPromptVisible) setPromptVisible(true);
@@ -1307,7 +1341,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Feedback messages from instructor
     if (setFeedbackMessage) {
         whiteboardService.onFeedbackMessage = (data) => {
-            console.log('[AttendeeSession] Feedback message received:', data);
+            // console.log('[AttendeeSession] Feedback message received:', data);
             setFeedbackMessage(data.text || '');
             setTimeout(() => setFeedbackMessage(''), 3000);
         };
@@ -1316,7 +1350,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Waiting messages from instructor
     if (setWaitingMessage) {
         whiteboardService.onWaitingMessage = (data) => {
-            console.log('[AttendeeSession] Waiting message received:', data);
+            // console.log('[AttendeeSession] Waiting message received:', data);
             setWaitingMessage(data.text || '');
             setTimeout(() => setWaitingMessage(''), 3000);
         };
@@ -1334,7 +1368,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
 
         whiteboardService.onAnimationPopped = (data) => {
-            console.log('[AttendeeSession] Animation popped by another user:', data);
+            // console.log('[AttendeeSession] Animation popped by another user:', data);
             setFloatingAnimations(prev =>
                 prev.map(a => a.id === data.animationId
                     ? { ...a, popped: true, poppedLeft: data.poppedLeft, poppedTop: data.poppedTop }
@@ -1347,24 +1381,94 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Item removal from instructor
     if (setCanvasItems) {
         whiteboardService.onItemRemove = (data) => {
-            console.log('[AttendeeSession] Item remove received:', data);
+            // console.log('[AttendeeSession] Item remove received:', data);
             if (data?.id) {
                 setCanvasItems(prev => prev.filter(item => item.id !== data.id));
             }
         };
 
-        // ⚠️ IMPORTANT: Do NOT override onItemUpdate here!
-        // Whiteboard component handles this in its own useEffect
-        // Overriding it here prevents Whiteboard's denormalization logic from working
-        // which causes items to not move/update on learner's canvas
-        
-        // If learner-specific targeting is needed, it should be added to Whiteboard's handler
+        // Item updates from instructor
+        whiteboardService.onItemUpdate = (data) => {
+            // console.log('[AttendeeSession] Item update received:', data);
+            if (data?.id && data?.type) {
+                // Check if item is targeted to specific learner
+                if (data.targetLearnerId) {
+                    const targetId = String(data.targetLearnerId);
+                    const myId = String(sessionInfo?.learner_id || '');
+
+                    if (myId && targetId !== myId) {
+                        // console.log('[AttendeeSession] Item not for this learner, ignoring');
+                        return;
+                    }
+                }
+
+                setCanvasItems(prev => {
+                    const existingIndex = prev.findIndex(item => item.id === data.id);
+                    let processedData = { ...data };
+
+                    // Handle bucket-relative items
+                    if (data.isRelativeToContainer && data.inBucket && buckets) {
+                        const bucket = buckets.find(b => b.id === data.inBucket);
+                        if (bucket) {
+                            const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
+                            const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
+                            const pixelOffsetX = (data.x || 0) * bucketWidth;
+                            const pixelOffsetY = (data.y || 0) * bucketHeight;
+
+                            let itemWidth = data.width;
+                            let itemHeight = data.height;
+                            if (data.width && data.width >= 0 && data.width <= 1) {
+                                itemWidth = data.width * bucketWidth;
+                            }
+                            if (data.height && data.height >= 0 && data.height <= 1) {
+                                itemHeight = data.height * bucketHeight;
+                            }
+
+                            processedData = {
+                                ...processedData,
+                                x: bucket.x + pixelOffsetX,
+                                y: bucket.y + pixelOffsetY,
+                                width: itemWidth,
+                                height: itemHeight
+                            };
+                        }
+                    } else if (whiteboardCanvasRef?.current && denormalizeItem) {
+                        // Denormalize coordinates for non-bucket items
+                        const isNormalized = (
+                            data.x !== undefined && data.x >= 0 && data.x <= 1 &&
+                            data.y !== undefined && data.y >= 0 && data.y <= 1 &&
+                            data.width !== undefined && data.width >= 0 && data.width <= 1 &&
+                            data.height !== undefined && data.height >= 0 && data.height <= 1
+                        );
+
+                        if (isNormalized) {
+                            const denormalized = denormalizeItem(processedData, whiteboardCanvasRef.current);
+                            processedData = {
+                                ...processedData,
+                                x: denormalized.x,
+                                y: denormalized.y,
+                                width: denormalized.width,
+                                height: denormalized.height
+                            };
+                        }
+                    }
+
+                    if (existingIndex >= 0) {
+                        const updated = [...prev];
+                        updated[existingIndex] = { ...updated[existingIndex], ...processedData };
+                        return updated;
+                    } else {
+                        return [...prev, processedData];
+                    }
+                });
+            }
+        };
     }
 
     // Erase pen and clear canvas
     if (setErasePenTrigger && setRedrawCanvasTrigger) {
         whiteboardService.onErasePen = (data) => {
-            console.log('[AttendeeSession] Erase pen received:', data);
+            // console.log('[AttendeeSession] Erase pen received:', data);
             setErasePenTrigger(prev => prev + 1);
             setRedrawCanvasTrigger(prev => prev + 1);
         };
@@ -1372,7 +1476,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
 
     if (setClearCanvasTrigger && setCanvasItems && setBuckets && setFloatingAnimations) {
         whiteboardService.onClearCanvas = () => {
-            console.log('[AttendeeSession] Clear canvas received');
+            // console.log('[AttendeeSession] Clear canvas received');
             setClearCanvasTrigger(prev => prev + 1);
             setCanvasItems([]);
             setBuckets([]);
@@ -1383,7 +1487,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Bucket management
     if (setBuckets) {
         whiteboardService.onBucketAdded = (data) => {
-            console.log('[AttendeeSession] Bucket added:', data);
+            // console.log('[AttendeeSession] Bucket added:', data);
             setBuckets(prev => {
                 const exists = prev.find(bucket => bucket.id === data.id);
                 if (!exists) {
@@ -1421,12 +1525,12 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // YouTube popups
     if (setYoutubePopups) {
         whiteboardService.onYoutubePopupCreated = (data) => {
-            console.log('[AttendeeSession] YouTube popup created:', data);
+            // console.log('[AttendeeSession] YouTube popup created:', data);
             setYoutubePopups(prev => [...prev, data]);
         };
 
         whiteboardService.onYoutubePopupClosed = (data) => {
-            console.log('[AttendeeSession] YouTube popup closed:', data);
+            // console.log('[AttendeeSession] YouTube popup closed:', data);
             setYoutubePopups(prev => prev.filter(popup => popup.id !== data.id));
         };
     }
@@ -1434,12 +1538,12 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Background music - Instructor side receives sync from learner/client
     if (setBackgroundMusicPlaying && audioRef) {
         whiteboardService.onBackgroundMusic = (data) => {
-            console.log('[InstructorSessionLayout] 🎵 ===== BACKGROUND MUSIC RECEIVED FROM PARTICIPANT =====');
-            console.log('[InstructorSessionLayout] 🎵 Message data:', data);
+            // console.log('[InstructorSessionLayout] 🎵 ===== BACKGROUND MUSIC RECEIVED FROM PARTICIPANT =====');
+            // console.log('[InstructorSessionLayout] 🎵 Message data:', data);
 
             if (data.playing && (data.musicUrl || data.url)) {
                 const musicUrl = data.musicUrl || data.url;
-                console.log('[InstructorSessionLayout] 🎵 [PLAY] Syncing: Playing', musicUrl);
+                // console.log('[InstructorSessionLayout] 🎵 [PLAY] Syncing: Playing', musicUrl);
 
                 audioRef.current.src = musicUrl;
                 audioRef.current.volume = data.volume || 0.5;
@@ -1448,30 +1552,30 @@ export const setupAttendeeWhiteboardCallbacks = ({
 
                 audioRef.current.play()
                     .then(() => {
-                        console.log('[InstructorSessionLayout] ✅ [PLAY] Participant music synced');
+                        // console.log('[InstructorSessionLayout] ✅ [PLAY] Participant music synced');
                         setBackgroundMusicPlaying(true);
                         if (setSelectedMusic) setSelectedMusic(data.musicId);
                     })
                     .catch(err => {
-                        console.error('[InstructorSessionLayout] ❌ [PLAY] Sync error:', err.message);
+                        // console.error('[InstructorSessionLayout] ❌ [PLAY] Sync error:', err.message);
                     });
             } else if (!data.playing) {
-                console.log('[InstructorSessionLayout] 🎵 [STOP] Syncing: Stopping music');
+                // console.log('[InstructorSessionLayout] 🎵 [STOP] Syncing: Stopping music');
                 audioRef.current.pause();
                 audioRef.current.currentTime = 0;
                 setBackgroundMusicPlaying(false);
                 if (setSelectedMusic) setSelectedMusic(null);
-                console.log('[InstructorSessionLayout] ✅ [STOP] Participant music stopped');
+                // console.log('[InstructorSessionLayout] ✅ [STOP] Participant music stopped');
             }
-            console.log('[InstructorSessionLayout] 🎵 ===== SYNC COMPLETE =====');
+            // console.log('[InstructorSessionLayout] 🎵 ===== SYNC COMPLETE =====');
         };
 
         whiteboardService.onBackgroundMusicVolume = (data) => {
-            console.log('[InstructorSessionLayout] 🔊 [VOLUME] Volume sync from participant:', data.volume);
+            // console.log('[InstructorSessionLayout] 🔊 [VOLUME] Volume sync from participant:', data.volume);
             if (setMusicVolume) setMusicVolume(data.volume);
             if (audioRef.current) {
                 audioRef.current.volume = data.volume;
-                console.log('[InstructorSessionLayout] ✅ [VOLUME] Volume synced');
+                // console.log('[InstructorSessionLayout] ✅ [VOLUME] Volume synced');
             }
         };
     }
@@ -1479,7 +1583,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Exercise updates
     if (setExerciseData) {
         whiteboardService.onExerciseUpdate = (data) => {
-            console.log('[AttendeeSession] Exercise update received:', data);
+            // console.log('[AttendeeSession] Exercise update received:', data);
             if (data.qaItems && Array.isArray(data.qaItems)) {
                 setExerciseData({
                     qaItems: data.qaItems
@@ -1492,23 +1596,26 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
 
         whiteboardService.onExerciseAnswerUpdate = (data) => {
-            console.log('[AttendeeSession] Exercise answer update received:', data);
+            // console.log('[AttendeeSession] Exercise answer update received:', data);
             if (data.qaItems) {
                 setExerciseData(prev => ({
                     ...prev,
                     qaItems: data.qaItems
                 }));
             } else {
+                const incomingAnswer = data.learnerAnswer ?? data.clientAnswer ?? data.answer ?? '';
                 setExerciseData(prev => ({
                     ...prev,
-                    question: data.question,
-                    learnerAnswer: data.learnerAnswer
+                    question: data.question ?? prev.question,
+                    answer: incomingAnswer,
+                    learnerAnswer: incomingAnswer,
+                    clientAnswer: data.clientAnswer ?? prev.clientAnswer
                 }));
             }
         };
 
         whiteboardService.onExerciseClosed = (data) => {
-            console.log('[AttendeeSession] Exercise closed:', data);
+            // console.log('[AttendeeSession] Exercise closed:', data);
             setExerciseData({
                 qaItems: [],
                 question: ''
@@ -1606,10 +1713,10 @@ export const toggleFreeze = (currentFreezeState, setIsFrozen, videoService, part
             videoService.sendMessage(freezeSignal);
         }
 
-        console.log(`[InstructorSession] Freeze signal sent for ${participantRole}:`, freezeSignal);
+        // console.log(`[InstructorSession] Freeze signal sent for ${participantRole}:`, freezeSignal);
         toast.info(newFreezeState ? `${participantRole} window frozen` : `${participantRole} window unfrozen`);
     } else {
-        console.error(`[InstructorSession] Cannot send freeze signal - Video service not initialized`);
+        // console.error(`[InstructorSession] Cannot send freeze signal - Video service not initialized`);
         toast.error('Unable to send freeze signal');
         setIsFrozen(!newFreezeState);
     }
@@ -1650,7 +1757,7 @@ export const clearAllCanvas = ({
     }
 
     setTimeout(() => setEraseAllActive(false), 300);
-    console.log('[InstructorSession] Canvas cleared');
+    // console.log('[InstructorSession] Canvas cleared');
 };
 
 /**
@@ -1805,7 +1912,7 @@ export const spawnFloatingAnimation = ({
         activeFloatingAnimationTypesRef.delete(type);
     }, 13000);
 
-    console.log(`[InstructorSession] Spawned ${count} ${type} animations`);
+    // console.log(`[InstructorSession] Spawned ${count} ${type} animations`);
     return newAnimations;
 };
 
@@ -1841,7 +1948,7 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
         }
     }
 
-    console.log('[InstructorSession] Tool access updated:', updated);
+    // console.log('[InstructorSession] Tool access updated:', updated);
 
     if (toolName === 'drag' && updated.drag && setTool) {
         setTool('select');
@@ -1865,33 +1972,33 @@ export const cleanupSessionResources = ({
     secondaryVideoService,
     isInitializingRef
 }) => {
-    console.log('[InstructorSession] Cleaning up session resources');
+    // console.log('[InstructorSession] Cleaning up session resources');
 
     if (videoService?.localStream) {
         videoService.localStream.getTracks().forEach(track => {
             track.stop();
-            console.log('[InstructorSession] Stopped track:', track.kind);
+            // console.log('[InstructorSession] Stopped track:', track.kind);
         });
     }
 
     if (videoService) {
         videoService.close();
-        console.log('[InstructorSession] Video service closed');
+        // console.log('[InstructorSession] Video service closed');
     }
 
     if (secondaryVideoService) {
         secondaryVideoService.close();
-        console.log('[InstructorSession] Secondary video service closed');
+        // console.log('[InstructorSession] Secondary video service closed');
     }
 
     if (whiteboardService) {
         whiteboardService.close();
-        console.log('[InstructorSession] Whiteboard service closed');
+        // console.log('[InstructorSession] Whiteboard service closed');
     }
 
     if (toolsService) {
         toolsService.cleanup();
-        console.log('[InstructorSession] Tools service cleaned up');
+        // console.log('[InstructorSession] Tools service cleaned up');
     }
 
     if (recordingService) {
@@ -1900,14 +2007,14 @@ export const cleanupSessionResources = ({
         } else if (typeof recordingService.stopRecording === 'function') {
             recordingService.stopRecording();
         }
-        console.log('[InstructorSession] Recording service cleaned up');
+        // console.log('[InstructorSession] Recording service cleaned up');
     }
 
     if (isInitializingRef) {
         isInitializingRef.current = false;
     }
 
-    console.log('[InstructorSession] Session cleanup complete');
+    // console.log('[InstructorSession] Session cleanup complete');
 };
 
 // =============================
@@ -1986,7 +2093,7 @@ export const endSession = async ({
 
         return true;
     } catch (error) {
-        console.error('[InstructorSession] Error ending session:', error);
+        // console.error('[InstructorSession] Error ending session:', error);
         toast.error('Failed to end session');
         return false;
     }
@@ -2001,18 +2108,32 @@ export const endSession = async ({
  */
 export const calculateTimeRemaining = (sessionInfo) => {
     if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) {
+        // console.log('[calculateTimeRemaining] Missing data:', {
+        //     hasSessionInfo: !!sessionInfo,
+        //     started_at: sessionInfo?.started_at,
+        //     duration: sessionInfo?.duration
+        // });
         return '--:--';
     }
 
     let startTime;
     if (typeof sessionInfo.started_at === 'string') {
-        startTime = new Date(sessionInfo.started_at.replace(' ', 'T')).getTime();
+        // Handle both 'YYYY-MM-DD HH:MM:SS' and ISO 8601 formats
+        let dateString = sessionInfo.started_at;
+        if (dateString.includes(' ') && !dateString.includes('T')) {
+            dateString = dateString.replace(' ', 'T');
+        }
+        // If no timezone, treat as UTC
+        if (!dateString.endsWith('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+            dateString += 'Z';
+        }
+        startTime = new Date(dateString).getTime();
     } else {
         startTime = new Date(sessionInfo.started_at).getTime();
     }
 
     if (isNaN(startTime)) {
-        console.error('[InstructorSession] Invalid start time:', sessionInfo.started_at);
+        // console.error('[InstructorSession] Invalid start time:', sessionInfo.started_at);
         return '--:--';
     }
 
@@ -2020,6 +2141,15 @@ export const calculateTimeRemaining = (sessionInfo) => {
     const endTime = startTime + durationMs;
     const now = Date.now();
     const remaining = endTime - now;
+
+    // // console.log('[calculateTimeRemaining] Debug:', {
+    //     started_at: sessionInfo.started_at,
+    //     duration: sessionInfo.duration,
+    //     startTime: new Date(startTime).toISOString(),
+    //     endTime: new Date(endTime).toISOString(),
+    //     now: new Date(now).toISOString(),
+    //     remaining: Math.floor(remaining / 1000) + ' seconds'
+    // });
 
     if (remaining <= 0) {
         return '00:00';
@@ -2164,7 +2294,7 @@ export const playPopSound = (animationType) => {
             }
         }
     } catch (error) {
-        console.error('[InstructorSession] Error playing pop sound:', error);
+        // console.error('[InstructorSession] Error playing pop sound:', error);
     }
 };
 
@@ -2197,7 +2327,7 @@ export const handleAnimationPop = ({
         });
     }
 
-    console.log('[InstructorSession] Animation popped:', animationId);
+    // console.log('[InstructorSession] Animation popped:', animationId);
 };
 
 // =============================
@@ -2212,29 +2342,29 @@ export const eraseAllPen = ({
     setRedrawCanvasTrigger,
     whiteboardService
 }) => {
-    console.log('[InstructorSession] 🗑️ Erase all pen button clicked');
-    console.log('[InstructorSession] whiteboardService:', whiteboardService);
+    // console.log('[InstructorSession] 🗑️ Erase all pen button clicked');
+    // console.log('[InstructorSession] whiteboardService:', whiteboardService);
 
     setErasePenTrigger(prev => {
-        console.log('[InstructorSession] Setting erasePenTrigger from', prev, 'to', prev + 1);
+        // console.log('[InstructorSession] Setting erasePenTrigger from', prev, 'to', prev + 1);
         return prev + 1;
     });
     setRedrawCanvasTrigger(prev => {
-        console.log('[InstructorSession] Setting redrawCanvasTrigger from', prev, 'to', prev + 1);
+        // console.log('[InstructorSession] Setting redrawCanvasTrigger from', prev, 'to', prev + 1);
         return prev + 1;
     });
 
     if (whiteboardService) {
-        console.log('[InstructorSession] Sending erase_pen message to server...');
+        // console.log('[InstructorSession] Sending erase_pen message to server...');
         whiteboardService.send('erase_pen', {
             timestamp: Date.now()
         });
-        console.log('[InstructorSession] ✅ erase_pen message sent');
+        // console.log('[InstructorSession] ✅ erase_pen message sent');
     } else {
-        console.error('[InstructorSession] ❌ whiteboardService is null/undefined, cannot send erase_pen message');
+        // console.error('[InstructorSession] ❌ whiteboardService is null/undefined, cannot send erase_pen message');
     }
 
-    console.log('[InstructorSession] Pen strokes erased');
+    // console.log('[InstructorSession] Pen strokes erased');
 };
 
 // =============================
@@ -2269,7 +2399,7 @@ export const sendFeedbackMessage = ({
         }
     }, duration);
 
-    console.log('[InstructorSession] Feedback message sent:', message);
+    // console.log('[InstructorSession] Feedback message sent:', message);
 };
 
 /**
@@ -2300,7 +2430,7 @@ export const sendWaitingMessage = ({
         }
     }, duration);
 
-    console.log('[InstructorSession] Waiting message sent:', message);
+    // console.log('[InstructorSession] Waiting message sent:', message);
 };
 
 /**
@@ -2316,7 +2446,7 @@ export const handleToolClick = ({
     whiteboardService,
     REACTION_SVG_ASSETS
 }) => {
-    console.log('[InstructorSession] Tool clicked:', tool);
+    // console.log('[InstructorSession] Tool clicked:', tool);
 
     switch (tool) {
         case '👍 Good Job!':
@@ -2399,7 +2529,7 @@ export const handleToolClick = ({
             break;
 
         default:
-            console.log('[InstructorSession] Unknown tool:', tool);
+            // console.log('[InstructorSession] Unknown tool:', tool);
     }
 };
 
@@ -2454,7 +2584,7 @@ export const createLearningContentSearchHandler = (
  * @param {Object} learningContentService - The learning content API service
  * @param {Function} setDatabaseSearchResults - State setter for results
  * @param {Function} setIsSearching - State setter for loading state
- * @param {string} logPrefix - Prefix for console logs (e.g., '[TrainerSession]')
+ * @param {string} logPrefix - Prefix for // console logs (e.g., '[TrainerSession]')
  */
 export const searchLearningContentDatabase = async ({
     searchTerm,
@@ -2472,7 +2602,7 @@ export const searchLearningContentDatabase = async ({
 
     try {
         setIsSearching(true);
-        console.log(`${logPrefix} Searching database for:`, searchTerm);
+        // console.log(`${logPrefix} Searching database for:`, searchTerm);
 
         // Fetch all learning content from database based on user role
         let allContent = [];
@@ -2497,10 +2627,10 @@ export const searchLearningContentDatabase = async ({
             );
         });
 
-        console.log(`${logPrefix} Database search results:`, filtered.length);
+        // console.log(`${logPrefix} Database search results:`, filtered.length);
         setDatabaseSearchResults(filtered);
     } catch (error) {
-        console.error(`${logPrefix} Error searching database:`, error);
+        // console.error(`${logPrefix} Error searching database:`, error);
         setDatabaseSearchResults([]);
     } finally {
         setIsSearching(false);
@@ -2515,7 +2645,7 @@ export const searchLearningContentDatabase = async ({
  * @param {Object} learningGoalsService - The learning goals API service
  * @param {Function} setDatabaseSearchResults - State setter for results
  * @param {Function} setIsSearching - State setter for loading state
- * @param {string} logPrefix - Prefix for console logs
+ * @param {string} logPrefix - Prefix for // console logs
  */
 export const searchLearningGoalsDatabase = async ({
     searchTerm,
@@ -2532,11 +2662,11 @@ export const searchLearningGoalsDatabase = async ({
 
     try {
         setIsSearching(true);
-        console.log(`${logPrefix} 🔍 Searching learning goals database for:`, searchTerm);
+        // console.log(`${logPrefix} 🔍 Searching learning goals database for:`, searchTerm);
 
         // Fetch all learning goals from database
         const allGoals = await learningGoalsService.coach.getAll();
-        console.log(`${logPrefix} Retrieved ${allGoals.length} total learning goals from database`);
+        // console.log(`${logPrefix} Retrieved ${allGoals.length} total learning goals from database`);
 
         // Filter results based on search term
         const searchLower = searchTerm.toLowerCase();
@@ -2545,10 +2675,10 @@ export const searchLearningGoalsDatabase = async ({
             return goalText.toLowerCase().includes(searchLower);
         });
 
-        console.log(`${logPrefix} ✅ Found ${filtered.length} matching learning goals`);
+        // console.log(`${logPrefix} ✅ Found ${filtered.length} matching learning goals`);
         setDatabaseSearchResults(filtered);
     } catch (error) {
-        console.error(`${logPrefix} ❌ Error searching learning goals database:`, error);
+        // console.error(`${logPrefix} ❌ Error searching learning goals database:`, error);
         setDatabaseSearchResults([]);
     } finally {
         setIsSearching(false);
@@ -2816,6 +2946,33 @@ export const InstructorSessionPage = ({
             <div className="session-main-layout" style={{ minHeight: 'calc(100vh - 6.25rem)' }}>
                 {/* Left Sidebar */}
                 <div className="session-left-sidebar">
+                    {/* Remote Video */}
+                    {remoteStream && (remoteVideoComponent || (
+                        <div style={{
+                            width: '100%',
+                            backgroundColor: '#000',
+                            borderRadius: '0.5rem',
+                            border: '0.125rem solid #374151',
+                            boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            aspectRatio: '4/3'
+                        }}>
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                style={{
+                                    flex: 1,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    backgroundColor: '#1a1a1a'
+                                }}
+                            />
+                        </div>
+                    ))}
                     {LeftSidebarComponent}
                 </div>
 
@@ -2823,46 +2980,6 @@ export const InstructorSessionPage = ({
                 <div className="session-center-area">
                     {/* Whiteboard */}
                     <div className="session-whiteboard-container" style={{ position: 'relative' }}>
-                        {/* Remote Video */}
-                        {remoteStream && (remoteVideoComponent || (
-                            <div className={role === 'trainer' ? 'learner-video-overlay' : ''} style={role === 'coach' ? {
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                width: 'clamp(8rem, 15vw, 14rem)',
-                                height: 'clamp(6rem, 11.25vw, 10.5rem)',
-                                backgroundColor: '#000',
-                                borderRadius: '0.5rem',
-                                border: '0.125rem solid #374151',
-                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
-                                zIndex: 100,
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            } : {
-                                backgroundColor: '#000',
-                                borderRadius: '0.5rem',
-                                border: '0.125rem solid #374151',
-                                boxShadow: '0 0.25rem 0.75rem rgba(0,0,0,0.3)',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <video
-                                    ref={remoteVideoRef}
-                                    autoPlay
-                                    playsInline
-                                    style={{
-                                        flex: 1,
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        backgroundColor: '#1a1a1a'
-                                    }}
-                                />
-                            </div>
-                        ))}
-
                         {/* Whiteboard */}
                         <div className="w-full h-full">
                             <Whiteboard
@@ -2896,6 +3013,7 @@ export const InstructorSessionPage = ({
                                 canvasRefForParent={whiteboardCanvasRef}
                             />
                         </div>
+
                     </div>
 
                     {/* YouTube Popups */}

@@ -1,64 +1,97 @@
+# =============================================================================
+# Bitbucket Pipelines - HurshBintech PWA
+# Triggers ONLY on pushes to "uat-pwa" branch
+# =============================================================================
 image: atlassian/default-image:3
 
 definitions:
   steps:
-    - step: &test-backend
-        name: Test Backend
+    # ── Backend Basic Checks ──────────────────────────────────────────────
+    - step: &check-backend
+        name: Backend - Lint & Syntax Check
         image: python:3.11-slim
         caches:
           - pip
         script:
           - cd hurshbintech-backend
           - pip install -r requirements.txt
-          - echo "Backend tests passed"
-          # Add your tests: pytest tests/
+          # Syntax check — ensure all Python files compile without errors
+          - python -m py_compile main.py
+          - python -m compileall app/ -q
+          # Lint check with flake8 (ignore line-length & import order for now)
+          - python -m flake8 app/ main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Import check — verify the FastAPI app can be imported
+          - python -c "from main import app; print('FastAPI app imported successfully')"
+          - echo "Backend checks passed"
 
-    - step: &test-frontend
-        name: Test Frontend
+    # ── Frontend Basic Checks ─────────────────────────────────────────────
+    - step: &check-frontend
+        name: Frontend - Lint & Build Check
         image: node:20-alpine
         caches:
           - node
         script:
           - cd hurshbintech-frontend
-          - npm ci
+          - npm ci --legacy-peer-deps
+          # ESLint check
           - npm run lint
-          - echo "Frontend tests passed"
-          # Add your tests: npm test
+          # Build check — ensure the production build succeeds
+          - npm run build
+          - echo "Frontend checks passed"
 
+    # ── Docker Compose Validation ─────────────────────────────────────────
+    - step: &validate-docker
+        name: Validate Docker Compose & Dockerfiles
+        script:
+          # Validate docker-compose syntax
+          - docker-compose -f docker-compose-pwa.yml config -q
+          - echo "docker-compose-pwa.yml is valid"
+          # Validate Dockerfiles syntax
+          - docker run --rm -i hadolint/hadolint < hurshbintech-backend/Dockerfile || true
+          - docker run --rm -i hadolint/hadolint < hurshbintech-frontend/Dockerfile || true
+          - echo "Dockerfile validation complete"
+
+    # ── Deploy to EC2 ─────────────────────────────────────────────────────
     - step: &deploy-to-ec2
-        name: Deploy to EC2
+        name: Deploy to EC2 (PWA)
         deployment: production
         script:
-          - pipe: atlassian/ssh-run:0.4.1
+          - pipe: atlassian/ssh-run:0.8.1
             variables:
-              SSH_USER: $EC2_USER
-              SERVER: $EC2_HOST
+              SSH_USER: ubuntu
+              SERVER: 43.204.218.16
               SSH_KEY: $EC2_SSH_KEY
-              MODE: 'script'
-              COMMAND: 'deploy.sh'
-              ENV_VARS: >-
-                DATABASE_URL="${DATABASE_URL}"
-                SECRET_KEY="${SECRET_KEY}"
-                AWS_REGION="${AWS_REGION}"
-                S3_BUCKET_NAME="${S3_BUCKET_NAME}"
-                VITE_API_BASE_URL="${VITE_API_BASE_URL}"
+              MODE: 'command'
+              EXTRA_ARGS: '-o StrictHostKeyChecking=no' # <--- PREVENTS CONNECTION HANGS
+              COMMAND: >
+                set -e &&
+                cd ~/hurshbintech-pwa &&
+                echo "📥 Pulling latest code from uat-pwa..." &&
+                git fetch origin uat-pwa &&
+                git checkout uat-pwa &&
+                git pull origin uat-pwa &&
+                echo "🔧 Rebuilding backend..." &&
+                docker-compose -f docker-compose-pwa.yml up -d --build --force-recreate backend-pwa &&
+                echo "🔧 Rebuilding frontend..." &&
+                docker-compose -f docker-compose-pwa.yml up -d --build --force-recreate frontend-pwa &&
+                echo "🗄️ Running database migrations..." &&
+                docker exec hurshbintech-backend-pwa alembic upgrade head &&
+                echo "🧹 Cleaning up unused Docker images..." &&
+                docker image prune -f &&
+                echo "⏳ Waiting for services to be healthy..." &&
+                sleep 10 &&
+                docker ps --filter "name=hurshbintech-backend-pwa" --filter "name=hurshbintech-frontend-pwa" --format "{{.Names}}: {{.Status}}" &&
+                echo "Deployment complete!"
 
+# =============================================================================
+# Pipeline Triggers
+# =============================================================================
 pipelines:
+  # ONLY trigger on pushes to uat-pwa branch
   branches:
-    main:
+    uat-pwa:
       - parallel:
-          - step: *test-backend
-          - step: *test-frontend
+          - step: *check-backend
+          - step: *check-frontend
+          - step: *validate-docker
       - step: *deploy-to-ec2
-
-  pull-requests:
-    '**':
-      - parallel:
-          - step: *test-backend
-          - step: *test-frontend
-
-  custom:
-    deploy-production:
-      - step: *deploy-to-ec2
-
-
