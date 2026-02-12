@@ -904,7 +904,7 @@ export const usePromptAnimation = (promptText, defaultText = '[Prompts from inst
 
         // Only trigger animation if the prompt text actually changed
         if (prevPromptTextRef.current !== promptText) {
-            console.log('[usePromptAnimation] New prompt received:', promptText);
+            // console.log('[usePromptAnimation] New prompt received:', promptText);
 
             // Auto-open Prompt Line when new prompt is received
             setIsPromptLineOpen(true);
@@ -1020,7 +1020,7 @@ export const AttendeeMetricsHeader = ({
                 <span className="prompt-bulb-clickable"
                     onClick={(e) => {
                         e.stopPropagation();
-                        console.log('[Bulb Click] Current state:', isPromptLineOpen, '-> toggling to:', !isPromptLineOpen);
+                        // console.log('[Bulb Click] Current state:', isPromptLineOpen, '-> toggling to:', !isPromptLineOpen);
                         setIsPromptLineOpen(!isPromptLineOpen);
                     }}
                     style={{
@@ -2073,7 +2073,8 @@ export const AttendeePromptPanel = ({
                             QUESTION:
                         </div>
                         <div style={{
-                            fontSize: 'clamp(0.625rem, 1.4vw, 0.8rem)',
+                            fontWeight: '1rem',
+                            fontSize: 'clamp(0.625rem, 1.4vw, 1rem)',
                             color: '#1f2937',
                             padding: 'clamp(0.25rem, 0.6vh, 0.375rem)',
                             backgroundColor: '#f9fafb',
@@ -2102,7 +2103,7 @@ export const AttendeePromptPanel = ({
                             textTransform: 'uppercase',
                             letterSpacing: '0.025rem'
                         }}>
-                            YOUR ANSWER:
+                            ANSWER:
                         </div>
                         <textarea
                             value={onExerciseUpdate ? (exerciseData?.learnerAnswer ?? exerciseData?.answer ?? '') : localExerciseAnswer}
@@ -2123,7 +2124,7 @@ export const AttendeePromptPanel = ({
                                 flex: 1,
                                 minHeight: 'clamp(2.5rem, 6vh, 4rem)',
                                 padding: 'clamp(0.25rem, 0.6vh, 0.375rem)',
-                                fontSize: 'clamp(0.625rem, 1.4vw, 0.8rem)',
+                                fontSize: 'clamp(0.625rem, 1.4vw, 1.2rem)',
                                 border: '0.0625rem solid #d1d5db',
                                 borderRadius: 'clamp(0.25rem, 0.8vw, 0.375rem)',
                                 fontFamily: 'inherit',

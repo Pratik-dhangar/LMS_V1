@@ -382,3 +382,166 @@
         opacity: .5;
     }
 }
+
+/* ============================================================================ */
+/* ANALOG CLOCK STOPWATCH - Clean Modern Design                               */
+/* ============================================================================ */
+
+.analog-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.analog-clock-outer {
+    position: relative;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+    border: 3px solid #333;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        inset 0 1px 2px rgba(255, 255, 255, 0.8),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.analog-clock-dial {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 0px 0px rgba(0, 0, 0, 0));
+}
+
+/* Running indicator light */
+.analog-clock-running-indicator {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle, #2ecc71 0%, #27ae60 100%);
+    border-radius: 50%;
+    bottom: 6px;
+    right: 6px;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.8);
+    animation: pulse-indicator 1s ease-in-out infinite;
+}
+
+/* Digital display */
+.analog-clock-digital-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(180deg, #2c3e50 0%, #1a1a1a 100%);
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 2px solid #34495e;
+    min-width: 100px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.digital-display-time {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    color: #27ae60;
+    letter-spacing: 1px;
+    text-shadow: 0 0 4px rgba(39, 174, 96, 0.4);
+}
+
+.digital-display-status {
+    font-size: 10px;
+    color: #e74c3c;
+    font-weight: bold;
+    letter-spacing: 1px;
+    animation: blink-status 1s ease-in-out infinite;
+}
+
+/* Size variants */
+.analog-clock.sm .analog-clock-digital-display {
+    padding: 4px 10px;
+}
+
+.analog-clock.sm .digital-display-time {
+    font-size: 12px;
+}
+
+.analog-clock.md .digital-display-time {
+    font-size: 13px;
+}
+
+.analog-clock.lg .digital-display-time {
+    font-size: 14px;
+}
+
+/* Animations */
+@keyframes pulse-indicator {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(46, 204, 113, 0.8);
+    }
+
+    50% {
+        opacity: 0.6;
+        box-shadow: 0 0 12px rgba(46, 204, 113, 1);
+    }
+}
+
+@keyframes blink-status {
+
+    0%,
+    49% {
+        opacity: 1;
+    }
+
+    50%,
+    100% {
+        opacity: 0.5;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .analog-clock {
+        gap: 6px;
+    }
+
+    .analog-clock.lg .analog-clock-outer {
+        width: 28px;
+        height: 28px;
+    }
+
+    .analog-clock-digital-display {
+        padding: 5px 12px;
+    }
+
+    .digital-display-time {
+        font-size: 12px;
+    }
+
+    .digital-display-status {
+        font-size: 9px;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+    .analog-clock-outer {
+        border-width: 4px;
+        background: #ffffff;
+    }
+
+    .analog-clock-dial circle {
+        stroke-width: 3;
+    }
+
+    .digital-display-time {
+        text-shadow: none;
+    }
+}

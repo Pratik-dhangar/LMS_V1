@@ -154,9 +154,9 @@ export const useInstructorEffects = ({
         mediaWasVisibleRef.current = mediaControl.currentMedia.isVisible;
     }, [mediaControl.currentMedia.isVisible, mediaWasVisibleRef, setShowStopwatch]);
 
-    // 8. Sync stopwatch to participant
+    // 8. Sync stopwatch to participant (including reset)
     useEffect(() => {
-        if (!whiteboardService || !stopwatch.isRunning) return;
+        if (!whiteboardService) return;
         const now = Date.now();
         if (now - lastSyncTimeRef.current > 100) {
             whiteboardService.send('stopwatch_sync', {
