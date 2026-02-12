@@ -145,12 +145,35 @@ const GuestSession = () => {
   }, [whiteboardService]);
 
   // Exercise handlers
+  // Debounce timer for exercise answer updates
+  const exerciseAnswerDebounceRef = useRef(null);
+
   const handleExerciseUpdate = (response) => {
     console.log('[GuestSession] Exercise update received:', response);
     setExerciseData({
       question: response.question || '',
-      answer: response.answer || ''
+      answer: response.answer || '',
+      learnerAnswer: response.learnerAnswer || response.answer || ''
     });
+
+    // Debounced send answer to coach (avoid per-keystroke sends)
+    if (response.learnerAnswer !== undefined && whiteboardService) {
+      if (exerciseAnswerDebounceRef.current) {
+        clearTimeout(exerciseAnswerDebounceRef.current);
+      }
+
+      exerciseAnswerDebounceRef.current = setTimeout(() => {
+        whiteboardService.send('exercise_answer_update', {
+          question: response.question || '',
+          answer: response.learnerAnswer,
+          learnerAnswer: response.learnerAnswer,
+          timestamp: Date.now()
+        });
+        console.log('[GuestSession] Answer sent to coach:', response.learnerAnswer);
+        exerciseAnswerDebounceRef.current = null;
+      }, 500); // Send after 500ms of inactivity
+    }
+
     if (response.question) {
       setShowExercise(true);
       console.log('[GuestSession] Exercise opened');
@@ -175,6 +198,16 @@ const GuestSession = () => {
     setShowExercise(false);
     setExerciseData({ question: '', answer: '' });
   };
+
+  // Cleanup exercise debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (exerciseAnswerDebounceRef.current) {
+        clearTimeout(exerciseAnswerDebounceRef.current);
+        exerciseAnswerDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   // Setup exercise listeners
   useEffect(() => {
@@ -558,7 +591,7 @@ const GuestSession = () => {
         Exercise={Exercise}
         whiteboardService={whiteboardService}
         onExerciseSubmit={handleExerciseSubmit}
-        onExerciseUpdate={() => { }}
+        onExerciseUpdate={handleExerciseUpdate}
         onExerciseDelete={handleExerciseDelete}
 
         // Video Panel Props

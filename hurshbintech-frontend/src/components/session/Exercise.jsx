@@ -256,7 +256,8 @@ const Exercise = ({
     const handleAnswerChange = (value) => {
         setAnswer(value);
 
-        // Notify parent immediately (local state update)
+        // Notify parent immediately (local state update only)
+        // Do NOT send to trainer while typing
         if (onAnswerChange) {
             onAnswerChange({
                 question,
@@ -264,16 +265,23 @@ const Exercise = ({
                 timestamp: Date.now()
             });
         }
+    };
 
-        // Debounced send to trainer via WebSocket to avoid per-keystroke sends
-        if (!isTrainer) {
-            debouncedSendAnswer(value);
+    const handleAnswerBlur = (value) => {
+        // Send answer to trainer when user leaves the field
+        if (whiteboardService) {
+            whiteboardService.send('exercise_answer_update', {
+                question,
+                answer: value,
+                timestamp: Date.now()
+            });
         }
     };
 
     const handleSubmitAnswer = () => {
         if (!answer.trim()) {
             setFeedbackMessage('Please answer the question');
+            setTimeout(() => setFeedbackMessage(''), 3000);
             return;
         }
 
@@ -443,7 +451,7 @@ const Exercise = ({
                         </div>
 
                         <div className="exercise-section answer-input-section">
-                            <h4>Learner's Answer:</h4>
+                            <h4>Answer:</h4>
                             <textarea
                                 ref={answerTextareaRef}
                                 value={answer || ''}
@@ -492,12 +500,11 @@ const Exercise = ({
                                 ref={answerTextareaRef}
                                 value={answer || ''}
                                 onChange={(e) => handleAnswerChange(e.target.value)}
-                                onBlur={(e) => flushSendAnswer(e.target.value)}
+                                onBlur={(e) => handleAnswerBlur(e.target.value)}
                                 placeholder="Click to focus or start typing..."
                                 className="answer-input"
                                 style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
                             />
-
                         </div>
                     </div>
                 </div>
