@@ -26,7 +26,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { Clock } from 'lucide-react';
+import { Clock, Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
 
 /**
  * Attendee Session Waiting Screen
@@ -1822,7 +1822,13 @@ AttendeeCommentsPanelWrapper.propTypes = {
 export const AttendeeMetricsPanel = ({
     promptMeter = 0,
     reinforcementMeter = 0,
-    bucketColor = null
+    bucketColor = null,
+    micEnabled = true,
+    cameraEnabled = true,
+    onToggleMic,
+    onToggleCamera,
+    onLeaveSession,
+    showControls = false
 }) => {
     const isBulbGlowing = useBulbGlowAnimation(bucketColor);
 
@@ -1835,7 +1841,7 @@ export const AttendeeMetricsPanel = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 'clamp(1rem, 3vh, 1.5rem)',
+            gap: 'clamp(0.5rem, 1.5vh, 0.75rem)',
             backgroundColor: 'white',
             borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
             padding: 'clamp(0.75rem, 2vh, 1rem)',
@@ -1844,55 +1850,60 @@ export const AttendeeMetricsPanel = ({
             overflow: 'hidden',
             boxSizing: 'border-box'
         }}>
-            {/* Prompt Level */}
+            {/* Row 1: P and R side by side */}
             <div style={{
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 'clamp(0.15rem, 0.3vw, 0.25rem)',
+                gap: 'clamp(1rem, 3vw, 1.5rem)',
                 width: '100%',
                 flexShrink: 0
             }}>
-                <span style={{
-                    fontWeight: 'bold',
-                    fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
-                    color: '#d97706',
-                    whiteSpace: 'nowrap'
-                }}>P :</span>
-                <span style={{
-                    fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
-                    fontWeight: 'bold',
-                    color: '#d97706',
-                    whiteSpace: 'nowrap'
-                }}>{promptMeter}</span>
+                {/* Prompt Level */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
+                }}>
+                    <span style={{
+                        fontWeight: 'bold',
+                        fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
+                        color: '#d97706',
+                        whiteSpace: 'nowrap'
+                    }}>P :</span>
+                    <span style={{
+                        fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
+                        fontWeight: 'bold',
+                        color: '#d97706',
+                        whiteSpace: 'nowrap'
+                    }}>{promptMeter}</span>
+                </div>
+
+                {/* Reinforcement Level */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
+                }}>
+                    <span style={{
+                        fontWeight: 'bold',
+                        fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
+                        color: '#16a34a',
+                        whiteSpace: 'nowrap'
+                    }}>R :</span>
+                    <span style={{
+                        fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
+                        fontWeight: 'bold',
+                        color: '#16a34a',
+                        whiteSpace: 'nowrap'
+                    }}>{reinforcementMeter}</span>
+                </div>
             </div>
 
-            {/* Reinforcement Level */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'clamp(0.15rem, 0.3vw, 0.25rem)',
-                width: '100%',
-                flexShrink: 0
-            }}>
-                <span style={{
-                    fontWeight: 'bold',
-                    fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
-                    color: '#16a34a',
-                    whiteSpace: 'nowrap'
-                }}>R :</span>
-                <span style={{
-                    fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
-                    fontWeight: 'bold',
-                    color: '#16a34a',
-                    whiteSpace: 'nowrap'
-                }}>{reinforcementMeter}</span>
-            </div>
-
-            {/* Bulb */}
+            {/* Row 2: Bulb */}
             <div style={{
                 fontSize: 'clamp(1rem, 1.5vw, 1.5rem)',
                 filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
@@ -1905,6 +1916,61 @@ export const AttendeeMetricsPanel = ({
             }}>
                 💡
             </div>
+
+            {/* Row 3: Video control icons */}
+            {showControls && onToggleMic && onToggleCamera && onLeaveSession && (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'clamp(0.75rem, 2vw, 1.25rem)',
+                    flexShrink: 0
+                }}>
+                    <span
+                        onClick={onToggleMic}
+                        title={micEnabled ? 'Mute' : 'Unmute'}
+                        style={{
+                            cursor: 'pointer',
+                            color: micEnabled ? '#16a34a' : '#dc2626',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                    >
+                        {micEnabled
+                            ? <Mic size={18} />
+                            : <MicOff size={18} />
+                        }
+                    </span>
+                    <span
+                        onClick={onToggleCamera}
+                        title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
+                        style={{
+                            cursor: 'pointer',
+                            color: cameraEnabled ? '#16a34a' : '#dc2626',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                    >
+                        {cameraEnabled
+                            ? <Video size={18} />
+                            : <VideoOff size={18} />
+                        }
+                    </span>
+                    <span
+                        onClick={onLeaveSession}
+                        title="Leave Session"
+                        style={{
+                            cursor: 'pointer',
+                            color: '#dc2626',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <PhoneOff size={18} />
+                    </span>
+                </div>
+            )}
         </div>
     );
 };
@@ -1912,7 +1978,13 @@ export const AttendeeMetricsPanel = ({
 AttendeeMetricsPanel.propTypes = {
     promptMeter: PropTypes.number,
     reinforcementMeter: PropTypes.number,
-    bucketColor: PropTypes.string
+    bucketColor: PropTypes.string,
+    micEnabled: PropTypes.bool,
+    cameraEnabled: PropTypes.bool,
+    onToggleMic: PropTypes.func,
+    onToggleCamera: PropTypes.func,
+    onLeaveSession: PropTypes.func,
+    showControls: PropTypes.bool
 };
 
 /**
@@ -2160,18 +2232,12 @@ AttendeePromptPanel.propTypes = {
 
 /**
  * AttendeeVideoPanel (Right 20%)
- * Displays WebRTC video with controls overlay (for Guest/Client)
+ * Displays WebRTC video feed
  */
 export const AttendeeVideoPanel = ({
     remoteVideoRef,
     remoteStream,
-    micEnabled = true,
-    cameraEnabled = true,
-    onToggleMic,
-    onToggleCamera,
-    onLeaveSession,
-    label = 'Instructor',
-    showControls = true
+    label = 'Instructor'
 }) => {
     return (
         <div className="attendee-video-panel" style={{
@@ -2236,62 +2302,7 @@ export const AttendeeVideoPanel = ({
                 {label}
             </div>
 
-            {/* Video Controls Overlay - for Guest/Client */}
-            {showControls && onToggleMic && onToggleCamera && onLeaveSession && (
-                <div className="video-controls-overlay" style={{
-                    position: 'absolute',
-                    bottom: 'clamp(0.25rem, 1vh, 0.5rem)',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'clamp(0.25rem, 0.8vh, 0.375rem)',
-                    width: '90%'
-                }}>
-                    <button
-                        onClick={onToggleMic}
-                        className={`${micEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded flex items-center justify-center transition-all duration-200 shadow-md`}
-                        style={{
-                            padding: 'clamp(0.25rem, 0.8vh, 0.375rem)',
-                            fontSize: 'clamp(0.5625rem, 1.4vw, 0.75rem)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%'
-                        }}
-                        title={micEnabled ? 'Mute' : 'Unmute'}
-                    >
-                        {micEnabled ? '🎤 Mic' : '🔇 Muted'}
-                    </button>
-                    <button
-                        onClick={onToggleCamera}
-                        className={`${cameraEnabled ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white rounded flex items-center justify-center transition-all duration-200 shadow-md`}
-                        style={{
-                            padding: 'clamp(0.25rem, 0.8vh, 0.375rem)',
-                            fontSize: 'clamp(0.5625rem, 1.4vw, 0.75rem)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%'
-                        }}
-                        title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
-                    >
-                        {cameraEnabled ? '📹 Video' : '📷 Off'}
-                    </button>
-                    <button
-                        onClick={onLeaveSession}
-                        className="bg-gray-600 hover:bg-gray-700 text-white rounded flex items-center justify-center transition-all duration-200 shadow-md"
-                        style={{
-                            padding: 'clamp(0.25rem, 0.8vh, 0.375rem)',
-                            fontSize: 'clamp(0.5625rem, 1.4vw, 0.75rem)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%'
-                        }}
-                        title="Leave Session"
-                    >
-                        🚪 Leave
-                    </button>
-                </div>
-            )}
+            {/* Video Controls Overlay - removed, controls now in AttendeeMetricsPanel */}
         </div>
     );
 };
@@ -2299,13 +2310,7 @@ export const AttendeeVideoPanel = ({
 AttendeeVideoPanel.propTypes = {
     remoteVideoRef: PropTypes.object.isRequired,
     remoteStream: PropTypes.object,
-    micEnabled: PropTypes.bool,
-    cameraEnabled: PropTypes.bool,
-    onToggleMic: PropTypes.func,
-    onToggleCamera: PropTypes.func,
-    onLeaveSession: PropTypes.func,
-    label: PropTypes.string,
-    showControls: PropTypes.bool
+    label: PropTypes.string
 };
 
 /**
@@ -2398,11 +2403,6 @@ export const AttendeeUpperSection = ({
                         min-height: 6rem !important;
                         max-height: 8rem !important;
                         height: auto !important;
-                    }
-                    .video-controls-overlay {
-                        flex-direction: row !important;
-                        width: 95% !important;
-                        gap: 0.25rem !important;
                     }
                 }
 
@@ -2501,6 +2501,12 @@ export const AttendeeUpperSection = ({
                     promptMeter={promptMeter}
                     reinforcementMeter={reinforcementMeter}
                     bucketColor={bucketColor}
+                    micEnabled={micEnabled}
+                    cameraEnabled={cameraEnabled}
+                    onToggleMic={onToggleMic}
+                    onToggleCamera={onToggleCamera}
+                    onLeaveSession={onLeaveSession}
+                    showControls={showVideoControls}
                 />
 
                 {/* Middle: Prompt Line, Question/Comment and Answer Panel (60%) */}
@@ -2526,13 +2532,7 @@ export const AttendeeUpperSection = ({
                 <AttendeeVideoPanel
                     remoteVideoRef={remoteVideoRef}
                     remoteStream={remoteStream}
-                    micEnabled={micEnabled}
-                    cameraEnabled={cameraEnabled}
-                    onToggleMic={onToggleMic}
-                    onToggleCamera={onToggleCamera}
-                    onLeaveSession={onLeaveSession}
                     label={videoLabel}
-                    showControls={showVideoControls}
                 />
             </div>
         </>
