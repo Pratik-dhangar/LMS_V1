@@ -288,6 +288,7 @@
 }
 
 .exercise-content {
+    font-weight: bold;
     background-color: #f8f9fa;
     padding: 8px 10px;
     border-left: 4px solid #4a90e2;
@@ -587,6 +588,7 @@
     }
 
     .exercise-content {
+        font-weight: bold;
         padding: 12px;
         font-size: 0.9em;
     }
