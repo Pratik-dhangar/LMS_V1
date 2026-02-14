@@ -44,8 +44,6 @@ const UnifiedChatPage = ({ isModal = false }) => {
     markAsRead,
     sendTypingStatus,
     isConnected,
-    connectChat,
-    disconnectChat,
   } = useChat();
 
   const [selectedChat, setSelectedChat] = useState(null);
@@ -78,14 +76,6 @@ const UnifiedChatPage = ({ isModal = false }) => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Connect to chat when component mounts
-  useEffect(() => {
-    connectChat();
-    return () => {
-      disconnectChat();
-    };
-  }, [connectChat, disconnectChat]);
 
   // Handle URL params for direct conversation access
   useEffect(() => {

@@ -329,7 +329,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #e80909;
+    background: #ffffff;
 }
 
 .chat-window.hidden-mobile {

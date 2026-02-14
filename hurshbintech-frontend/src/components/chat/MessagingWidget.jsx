@@ -31,8 +31,6 @@ const MessagingWidget = () => {
     sendTypingStatus,
     createConversation,
     currentConversation,
-    connectChat,
-    disconnectChat,
     allUsers,
   } = useChat();
 
@@ -59,14 +57,6 @@ const MessagingWidget = () => {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set());
-
-  // Connect to chat only when widget is expanded (not collapsed)
-  useEffect(() => {
-    if (widgetState !== 'collapsed') {
-      connectChat();
-      return () => disconnectChat();
-    }
-  }, [widgetState, connectChat, disconnectChat]);
 
   // Auto-scroll to bottom in chat view
   useEffect(() => {
@@ -326,6 +316,9 @@ const MessagingWidget = () => {
     ? selectedConversation.member_ids?.find(id => id !== currentUser?.id)
     : null;
 
+  // Total unread count for notification dot
+  const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+
   // Render based on state
   return (
     <>
@@ -335,8 +328,14 @@ const MessagingWidget = () => {
           <div className="messaging-collapsed" onClick={handleToggleWidget}>
             <div className="messaging-collapsed-avatar">
               {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+              {totalUnread > 0 && (
+                <span className="messaging-unread-dot" />
+              )}
             </div>
             <span className="messaging-collapsed-text">Messaging</span>
+            {totalUnread > 0 && (
+              <span className="messaging-unread-dot-header" />
+            )}
             <ChevronUp size={20} className="messaging-collapsed-icon" />
           </div>
         )}
@@ -350,7 +349,12 @@ const MessagingWidget = () => {
                 <div className="messaging-header-avatar">
                   {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <h3 className="messaging-header-title">Messaging</h3>
+                <h3 className="messaging-header-title">
+                  Messaging
+                  {totalUnread > 0 && (
+                    <span className="messaging-unread-dot-header" />
+                  )}
+                </h3>
               </div>
               <div className="messaging-header-actions">
                 {canCreateGroups && (
