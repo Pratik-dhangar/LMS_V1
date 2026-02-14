@@ -526,10 +526,10 @@ const Whiteboard = ({
             selectionColor = '#007bff';
             gradientAccent = 'rgba(0, 123, 255, 0.65)';
         }
-        // Remote learner selections (pink/rose)
+        // Remote learner selections (brown)
         else if (isSelectedByRemoteLearner) {
-            selectionColor = 'var(--color-baby-rose, #ff86c1)';
-            gradientAccent = 'rgba(255, 164, 199, 0.65)';
+            selectionColor = 'var(--color-baby-rose, #8A7666)';
+            gradientAccent = 'rgba(138, 118, 102, 0.65)';
         }
         // Learner's own selections (blue)
         else if (isSelectedByLearner) {
@@ -1298,6 +1298,11 @@ const Whiteboard = ({
                     }
                 }
             };
+
+            whiteboardService.onItemsUnselected = (data) => {
+                // console.log('[Whiteboard] Items unselected by instructor');
+                setSelectedItems([]);
+            };
         }
 
         // Handle window resize - replay normalized paths to preserve drawings
@@ -1346,6 +1351,7 @@ const Whiteboard = ({
                 whiteboardService.onBucketAdded = null;
                 whiteboardService.onBucketUpdate = null;
                 whiteboardService.onMediaControl = null;
+                whiteboardService.onItemsUnselected = null;
             }
             window.removeEventListener('resize', handleResize);
         };

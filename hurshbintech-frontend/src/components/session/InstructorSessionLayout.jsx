@@ -702,12 +702,12 @@ export const REACTION_SVG_ASSETS = {
         {
             type: 'svg',
             src: '/reactions/02_pastel_mint.svg',
-            alt: 'Realistic Pink Balloon'
+            alt: 'Realistic Mint Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/03_pastel_pink.svg',
-            alt: 'Realistic Red Balloon'
+            src: '/reactions/03_pastel_brown.svg',
+            alt: 'Realistic Brown Balloon'
         },
         {
             type: 'svg',
@@ -756,11 +756,11 @@ export const WB_BUTTON_STYLES = {
  * Default bucket colors for whiteboard
  */
 export const BUCKET_COLORS = [
-    { name: 'Brown', hex: '#8B6F47' },
+    { name: 'Brown', hex: '#6D5A3F' },
     { name: 'Red', hex: '#ec221a' },
     { name: 'Blue', hex: '#5B7B9F' },
     { name: 'Yellow', hex: '#F4D394' },
-    { name: 'Pink', hex: '#E8A8C7' },
+    { name: 'Brown', hex: '#8A7666' },
     { name: 'Orange', hex: '#E8944C' }
 ];
 
@@ -1144,6 +1144,14 @@ export const setupInstructorWhiteboardCallbacks = ({
         }
     };
 
+    // Item unselection by instructor (confirmation from attendee)
+    whiteboardService.onItemsUnselected = (data) => {
+        // console.log('[InstructorSession] Items unselected confirmation received');
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds([]);
+        }
+    };
+
     // Animation pop events from participant
     whiteboardService.onAnimationPopped = (data) => {
         // console.log('[InstructorSession] Animation popped by participant:', data);
@@ -1255,6 +1263,7 @@ export const setupInstructorWhiteboardCallbacks = ({
     return () => {
         if (whiteboardService) {
             whiteboardService.onItemSelected = null;
+            whiteboardService.onItemsUnselected = null;
             whiteboardService.onAnimationPopped = null;
             whiteboardService.onExerciseAnswerUpdate = null;
             whiteboardService.onExerciseResponse = null;
@@ -1763,7 +1772,7 @@ export const clearAllCanvas = ({
 /**
  * Add a new bucket to the canvas
  */
-export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#8B6F47', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
+export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#6D5A3F', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
     const BUCKET_WIDTH = 150;
     const BUCKET_HEIGHT = 150;
     const PADDING = 20;
@@ -2529,7 +2538,7 @@ export const handleToolClick = ({
             break;
 
         default:
-            // console.log('[InstructorSession] Unknown tool:', tool);
+        // console.log('[InstructorSession] Unknown tool:', tool);
     }
 };
 
@@ -2753,6 +2762,7 @@ export const InstructorSessionPage = ({
     canvasItems,
     setCanvasItems,
     remoteSelectedItemIds,
+    setRemoteSelectedItemIds,
     feedbackMessage,
     waitingMessage,
     floatingAnimations,
@@ -3112,6 +3122,9 @@ export const InstructorSessionPage = ({
                         sessionNotes={sessionNotes}
                         handleNotesChange={handleNotesChange}
                         handleClearNotes={handleClearNotes}
+                        canvasItems={canvasItems}
+                        remoteSelectedItemIds={remoteSelectedItemIds}
+                        setRemoteSelectedItemIds={setRemoteSelectedItemIds}
                     />
                 </div>
 
@@ -3256,11 +3269,93 @@ export const WhiteboardTools = ({
     showSessionNotes = false,
     sessionNotes = '',
     handleNotesChange = null,
-    handleClearNotes = null
+    handleClearNotes = null,
+    canvasItems = [],
+    remoteSelectedItemIds = [],
+    setRemoteSelectedItemIds = null
 }) => {
+    // Handler to unselect specific item selected by attendee
+    const handleUnselectItem = (itemId) => {
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => id !== itemId));
+        }
+        // Send unselect message to attendee through whiteboard service
+        if (whiteboardService) {
+            whiteboardService.send('items_unselected', { itemIds: [] });
+        }
+    };
+
+    // Handler to unselect all items selected by attendee
+    const handleUnselectAll = () => {
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds([]);
+        }
+        // Send unselect message to attendee through whiteboard service
+        if (whiteboardService) {
+            whiteboardService.send('items_unselected', { itemIds: [] });
+        }
+    };
+
+    // Get selected items details from canvasItems
+    const getSelectedItemDetails = () => {
+        if (!remoteSelectedItemIds || remoteSelectedItemIds.length === 0) return [];
+        return canvasItems.filter((item) => remoteSelectedItemIds.includes(item.id));
+    };
+
+    const selectedItems = getSelectedItemDetails();
     return (
         <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
-            {/* Drawing tool buttons */}
+            {/* Attendee Selected Content Display & Unselect Controls */}
+            {selectedItems.length > 0 && (
+                <div style={{ width: '100%', backgroundColor: '#D4C4B7', padding: 'clamp(0.75rem, 1.5vw, 1rem)', borderRadius: '8px', marginBottom: 'clamp(0.5rem, 1vw, 0.75rem)', border: '2px solid #6D5A3F' }}>
+                    <div style={{ fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)', fontWeight: 'bold', marginBottom: '8px', color: '#4A382A', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <span>📌 Attendee Selected Content ({selectedItems.length})</span>
+                        <button
+                            onClick={handleUnselectAll}
+                            style={{
+                                backgroundColor: '#6D5A3F',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            🗑️ Unselect All
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {selectedItems.map((item) => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid #6D5A3F', fontSize: 'clamp(0.625rem, 1vw, 0.75rem)' }}>
+                                <span style={{ flex: 1, marginRight: '8px', color: '#1f2937', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {item.title || `Item #${item.id?.toString().slice(0, 8)}`}
+                                </span>
+                                <button
+                                    onClick={() => handleUnselectItem(item.id)}
+                                    style={{
+                                        backgroundColor: '#B39B85',
+                                        color: '#4A382A',
+                                        border: 'none',
+                                        padding: '3px 6px',
+                                        borderRadius: '3px',
+                                        fontSize: 'clamp(0.5rem, 0.9vw, 0.625rem)',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    title="Remove this item from selection"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="flex" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
                 <button
                     onClick={() => {

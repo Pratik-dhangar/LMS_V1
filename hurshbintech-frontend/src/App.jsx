@@ -31,6 +31,7 @@ import AdminAboutUs from './pages/admin/AdminAboutUs';
 import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
 import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
+import AdminContacts from './pages/admin/AdminContacts';
 
 
 // Head Pages
@@ -84,6 +85,7 @@ import GuestSession from './pages/guest/GuestSession';
 import BookAppointment from './pages/common/BookAppointment';
 import BookAppointmentForm from './pages/common/BookAppointmentForm';
 import MyAppointments from './pages/common/MyAppointments';
+import ContactUs from './pages/common/ContactUs';
 import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
@@ -441,6 +443,14 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/contacts"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminContacts />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Head Routes */}
           <Route
@@ -746,6 +756,7 @@ function AppRoutes() {
           />
 
           {/* Common Routes */}
+          <Route path="/contact-us" element={<ContactUs />} />
           <Route
             path="/my-appointments"
             element={

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogOut, LogIn, Menu, X, Home, Video } from "lucide-react";
+import { LogOut, LogIn, Menu, X, Home, Video, Mail } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
@@ -98,6 +98,15 @@ const Navbar = () => {
               Book Appointment
             </button>
 
+            {/* Contact Us */}
+            <button
+              className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
+              onClick={() => handleNavigate("/contact-us")}
+            >
+              <Mail className="w-4 h-4" />
+              Contact Us
+            </button>
+
             {/* Assigned Learning - for authenticated users */}
             {user && (
               <button
@@ -189,6 +198,15 @@ const Navbar = () => {
               }}
             >
               Book Appointment
+            </button>
+
+            {/* Contact Us */}
+            <button
+              className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
+              onClick={() => handleNavigate("/contact-us")}
+            >
+              <Mail className="w-4 h-4" />
+              Contact Us
             </button>
 
             {/* Assigned Learning - for authenticated users */}
