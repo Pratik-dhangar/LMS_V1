@@ -35,6 +35,7 @@ const Home = () => {
   const blogsRef = useRef(null);
   const vlogsRef = useRef(null);
   const coachRef = useRef(null);
+  const fetchFnsRef = useRef({});
 
   // Fetch About Us content first (critical)
   const fetchAboutUs = useCallback(async () => {
@@ -137,6 +138,11 @@ const Home = () => {
     }
   }, [aboutUs?.featured_coach_id, featuredCoach, loadingCoach, fetchFeaturedCoach]);
 
+  // Keep fetch functions in a ref so the observer effect doesn't re-run when they change
+  useEffect(() => {
+    fetchFnsRef.current = { fetchFeaturedCoach, fetchBlogs, fetchVlogs };
+  }, [fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
+
   // Intersection Observer for lazy loading below-the-fold content
   useEffect(() => {
     const observerOptions = {
@@ -151,14 +157,14 @@ const Home = () => {
           if (entry.target === coachRef.current) {
             // Check for featured_coach_id whenever the section is visible
             if (aboutUs?.featured_coach_id) {
-              fetchFeaturedCoach(aboutUs.featured_coach_id);
+              fetchFnsRef.current.fetchFeaturedCoach(aboutUs.featured_coach_id);
             }
           }
           if (entry.target === blogsRef.current) {
-            fetchBlogs();
+            fetchFnsRef.current.fetchBlogs();
           }
           if (entry.target === vlogsRef.current) {
-            fetchVlogs();
+            fetchFnsRef.current.fetchVlogs();
           }
         }
       });
@@ -171,9 +177,9 @@ const Home = () => {
     refs.forEach(ref => observer.observe(ref));
 
     return () => {
-      refs.forEach(ref => observer.unobserve(ref));
+      observer.disconnect();
     };
-  }, [aboutUs?.featured_coach_id, fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
+  }, [aboutUs?.featured_coach_id]);
 
   // Scroll indicator (removed duplicate coach fetch useEffect)
   useEffect(() => {

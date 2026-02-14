@@ -6,6 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from typing import List
 
 from app.core.deps import get_current_user
@@ -17,6 +18,7 @@ from app.models.user_model import (
     LearnerProfile,
     TrainerProfile,
     User,
+    UserRole,
 )
 from app.schemas.user import (
     AdminResponse,
@@ -38,18 +40,21 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 async def get_user_profile(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile | User
     ) = Depends(get_current_user),
 ):
     """Get current user profile - Cached for 15 minutes (user-specific)"""
     # Get user_id for cache key (handle different profile types)
     if isinstance(current_user, Admin):
         user_id = current_user.id
+    elif isinstance(current_user, User):
+        # Base User object - need to get profile based on role
+        user_id = current_user.id
     else:
         user_id = current_user.user_id if hasattr(current_user, 'user_id') else current_user.id
-    
+
     cache_key = cache_service.key_user_profile_me(user_id)
-    
+
     # Try cache first
     cached_data = await cache_service.get(cache_key)
     if cached_data:
@@ -67,9 +72,64 @@ async def get_user_profile(
         elif role == 'learner':
             return LearnerResponse(**cached_data)
         return cached_data
-    
+
     logger.debug(f"Cache MISS: {cache_key}")
-    
+
+    # If current_user is base User type, fetch or extract the appropriate profile
+    if isinstance(current_user, User) and not isinstance(current_user, (Admin, HeadProfile, TrainerProfile, CoachProfile, LearnerProfile)):
+        logger.info(f"Base User object received for role: {current_user.role}")
+
+        # Fetch the appropriate profile based on role
+        # First check if profile is already loaded via relationship
+        if current_user.role == UserRole.HEAD:
+            if hasattr(current_user, 'head_profile') and current_user.head_profile:
+                current_user = current_user.head_profile
+            else:
+                result = await db.execute(
+                    select(HeadProfile)
+                    .options(joinedload(HeadProfile.user))
+                    .where(HeadProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.TRAINER:
+            if hasattr(current_user, 'trainer_profile') and current_user.trainer_profile:
+                current_user = current_user.trainer_profile
+            else:
+                result = await db.execute(
+                    select(TrainerProfile)
+                    .options(joinedload(TrainerProfile.user))
+                    .where(TrainerProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.COACH:
+            if hasattr(current_user, 'coach_profile') and current_user.coach_profile:
+                current_user = current_user.coach_profile
+            else:
+                result = await db.execute(
+                    select(CoachProfile)
+                    .options(joinedload(CoachProfile.user))
+                    .where(CoachProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.LEARNER:
+            if hasattr(current_user, 'learner_profile') and current_user.learner_profile:
+                current_user = current_user.learner_profile
+            else:
+                result = await db.execute(
+                    select(LearnerProfile)
+                    .options(joinedload(LearnerProfile.user))
+                    .where(LearnerProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+
     # Generate response based on user type
     if isinstance(current_user, HeadProfile):
         result = HeadResponse.from_orm_with_user(current_user)
@@ -84,10 +144,10 @@ async def get_user_profile(
     else:
         logger.error(f"Unhandled case - Type: {type(current_user).__name__}")
         raise HTTPException(status_code=500, detail="Unable to determine profile type")
-    
+
     # Cache for 15 minutes
     await cache_service.set(cache_key, result.model_dump(), ttl=cache_service.TTL_USER_PROFILE_ME)
-    
+
     return result
 
 
