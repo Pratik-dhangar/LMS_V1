@@ -229,30 +229,28 @@ const LearnerProgramAssignmentDetails = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-
-    if (!proofOfWork) {
-      toast.error("Please upload a proof of work file");
+    // Allow either a file OR notes (or both). Require at least one.
+    if (!proofOfWork && !proofNotes.trim()) {
+      toast.error("Please upload a file or add notes for your proof of work");
       return;
     }
 
     try {
       setUploading(true);
       const statusBefore = assignment?.completion_status;
-      console.log(`📤 PROOF-ONLY UPLOAD: Starting for assignment ${id}`);
+      console.log(`📤 PROOF-ONLY SUBMISSION: Starting for assignment ${id}`);
       console.log(`📌 Status BEFORE: ${statusBefore}`);
-      console.log(`📌 Proof file: ${proofOfWork.name}`);
 
-      // ONLY upload file - absolutely NO other operations
-      const uploadResponse = await programAssignmentService.uploadMyAttachment(
-        parseInt(id),
-        proofOfWork,
-        "Proof of Work"
-      );
-
-      console.log(`✅ Upload successful:`, uploadResponse);
-      console.log(
-        `📌 Status AFTER upload (must be ${statusBefore}): ${assignment?.completion_status}`
-      );
+      // If a file is present, upload it. Otherwise skip upload.
+      if (proofOfWork) {
+        console.log(`📌 Proof file: ${proofOfWork.name}`);
+        const uploadResponse = await programAssignmentService.uploadMyAttachment(
+          parseInt(id),
+          proofOfWork,
+          "Proof of Work"
+        );
+        console.log(`✅ Upload successful:`, uploadResponse);
+      }
 
       // If notes provided, append them to learner_notes
       if (proofNotes.trim()) {
@@ -281,16 +279,12 @@ const LearnerProgramAssignmentDetails = () => {
       // Success - show message and close
       toast.success("Proof of work submitted successfully!");
 
-      // Reset state ONLY for this modal
+      // Reset file input for this modal
       setProofOfWork(null);
-      // Keep notes - don't auto-clear. User can manually delete if they want new notes
+      // Keep notes in textarea so user can re-submit or edit if desired
       setShowProofModal(false);
-
-      // CRITICAL: Do NOT refresh assignment data
-      // CRITICAL: Do NOT update assignment status
-      // Status must remain unchanged after proof upload
     } catch (error) {
-      console.error("❌ Proof upload failed:", error);
+      console.error("❌ Proof submission failed:", error);
       const errorMessage =
         error.response?.data?.detail ||
         error.response?.data?.message ||
@@ -608,7 +602,7 @@ const LearnerProgramAssignmentDetails = () => {
 
           <div className="contents-section">
             <div style={{ marginBottom: "1.5rem" }}>
-              <h2 className="contents-title">📚 Assignment Contents</h2>
+              <h2 className="contents-title">📚 Learning Contents</h2>
               <p className="contents-subtitle">
                 All content from all programs in this assignment:
               </p>
@@ -787,7 +781,7 @@ const LearnerProgramAssignmentDetails = () => {
 
                 <div className="app-modal-form-field">
                   <label className="app-modal-form-label" htmlFor="proof-file">
-                    Proof of Work <span className="text-required">*</span>
+                    Proof of Work (Optional)
                   </label>
                   <input
                     type="file"
@@ -839,7 +833,7 @@ const LearnerProgramAssignmentDetails = () => {
                   type="button"
                   className="app-modal-btn app-modal-btn--primary"
                   onClick={handleSubmitProofOnly}
-                  disabled={uploading || !proofOfWork}
+                  disabled={uploading}
                 >
                   {uploading ? "Uploading..." : "Submit Proof"}
                 </button>

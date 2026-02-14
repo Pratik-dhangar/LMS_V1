@@ -299,6 +299,7 @@ const TrainerSession = () => {
     setIsSearchingGoals: state.setIsSearchingGoals,
     initializeWebRTC,
     cleanup,
+    handleEndSession: handlers.handleEndSession,
   });
 
   // Loading state
@@ -351,6 +352,7 @@ const TrainerSession = () => {
       canvasItems={state.canvasItems}
       setCanvasItems={state.setCanvasItems}
       remoteSelectedItemIds={state.remoteSelectedItemIds}
+      setRemoteSelectedItemIds={state.setRemoteSelectedItemIds}
       feedbackMessage={state.feedbackMessage}
       waitingMessage={state.waitingMessage}
       floatingAnimations={state.floatingAnimations}

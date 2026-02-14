@@ -361,11 +361,11 @@ const AssignedPrograms = () => {
               paddingBottom: '0.75rem',
               marginBottom: '1rem'
             }}>
-              📚 Assigned Programs (Grouped by Assignment Title)
+              📚 Assigned Home Programs
             </h2>
 
             {loadingPrograms ? (
-              <p style={{ color: '#6b7280' }}>Loading assigned programs...</p>
+              <p style={{ color: '#6b7280' }}>Loading assigned home programs...</p>
             ) : learningPrograms.length === 0 ? (
               <p style={{ color: '#6b7280' }}>No home programs assigned yet.</p>
             ) : (
