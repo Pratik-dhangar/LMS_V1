@@ -636,9 +636,24 @@ const LearnerSession = () => {
       if (distance < 0) {
         clearInterval(interval);
         setTimeLeft('00:00');
-        setTimeExpired(true);
         toast.info('Session time has ended.');
-        cleanup(); // Auto-end session
+
+        // Auto-end session and redirect
+        try {
+          if (webRTC?.localStream) {
+            webRTC.localStream.getTracks().forEach(track => track.stop());
+          }
+          webRTC?.close();
+          whiteboardService?.close();
+          clearSessionActivity(sessionId, 'learner');
+        } catch (error) {
+          console.error('[LearnerSession] Error during cleanup:', error);
+        }
+
+        // Redirect to dashboard after cleanup
+        setTimeout(() => {
+          navigate('/learner/dashboard');
+        }, 500);
         return;
       }
 
@@ -655,7 +670,7 @@ const LearnerSession = () => {
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionInfo]);
+  }, [sessionInfo, navigate, webRTC, whiteboardService, sessionId]);
 
   // Auto check for session end
   useEffect(() => {

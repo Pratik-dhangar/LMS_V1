@@ -455,6 +455,18 @@ const GuestSession = () => {
       if (remaining <= 0) {
         setTimeLeft('00:00');
         clearInterval(intervalId);
+        toast.info('Session time has ended.');
+
+        // Auto-end: cleanup and redirect
+        setTimeout(() => {
+          try {
+            cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+          } catch (error) {
+            console.error('[GuestSession] Error during auto-end cleanup:', error);
+          }
+          navigate('/');
+        }, 1500);
+        return;
       } else {
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
@@ -463,7 +475,7 @@ const GuestSession = () => {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [sessionInfo]);
+  }, [sessionInfo, webRTC, whiteboardService, toolsService, isInitializingRef, navigate]);
 
   // Auto-hide header after 5 seconds on mobile/tablet
   useEffect(() => {

@@ -2,8 +2,9 @@
 // Custom hook to manage all instructor session side effects
 // Used by both TrainerSession and CoachSession
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import sessionNotesService from '../api/services/sessionNotesService';
 import learningContentService from '../api/services/learningContentService';
 import {
@@ -60,8 +61,10 @@ export const useInstructorEffects = ({
     setIsSearchingGoals,
     initializeWebRTC,
     cleanup,
+    handleEndSession,
 }) => {
     const navigate = useNavigate();
+    const sessionEndedRef = useRef(false);
 
     // 1. Validate user session on mount
     useEffect(() => {
@@ -112,15 +115,55 @@ export const useInstructorEffects = ({
         return () => clearTimeout(timer);
     }, [sessionNotes, sessionId]);
 
-    // 4. Time remaining calculator
+    // 4. Time remaining calculator with auto-end when time expires
     useEffect(() => {
         if (!sessionInfo) return;
         const interval = setInterval(() => {
             const remaining = calculateTimeRemaining(sessionInfo);
             setTimeLeft(remaining);
+
+            // Auto-end session when time reaches 00:00
+            if (remaining === '00:00' && !sessionEndedRef.current && sessionInfo.status === 'active') {
+                sessionEndedRef.current = true;
+                clearInterval(interval);
+                toast.info('Session time has ended. Ending session automatically...');
+
+                // Auto-end: call the end session API + notify attendee + cleanup + redirect
+                const autoEndSession = async () => {
+                    try {
+                        const { endSession: utilEndSession } = await import('../components/session/InstructorSessionLayout');
+                        const dashboardPath = `/${role}/dashboard`;
+                        // Send session_ended via whiteboard and call API
+                        if (whiteboardService) {
+                            whiteboardService.send('session_ended', {
+                                message: 'Session time has expired',
+                                timestamp: Date.now()
+                            });
+                        }
+                        // Call the backend end session API
+                        if (sessionService && sessionId) {
+                            try {
+                                await sessionService.endSession(sessionId, '');
+                            } catch (err) {
+                                console.error('[useInstructorEffects] Error calling end session API:', err);
+                            }
+                        }
+                        // Cleanup resources
+                        if (cleanup) cleanup();
+                        // Navigate to dashboard
+                        navigate(dashboardPath);
+                    } catch (error) {
+                        console.error('[useInstructorEffects] Error auto-ending session:', error);
+                        // Force navigate even if end API fails
+                        navigate(`/${role}/dashboard`);
+                    }
+                };
+
+                autoEndSession();
+            }
         }, 1000);
         return () => clearInterval(interval);
-    }, [sessionInfo, setTimeLeft]);
+    }, [sessionInfo, setTimeLeft, role, whiteboardService, sessionService, sessionId, cleanup, navigate]);
 
     // 5. Attach remote video stream
     useEffect(() => {

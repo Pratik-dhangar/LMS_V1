@@ -10,6 +10,7 @@ class WhiteboardService {
         this.onItemUpdate = null;
         this.onToolAccess = null; // New callback for tool access messages
         this.onItemSelected = null; // New callback for item selection
+        this.onItemsUnselected = null; // New callback for items unselected by instructor
         this.onPromptUpdate = null; // New callback for prompt updates from voice input
         this.onTextAdded = null; // New callback for text added to whiteboard
         this.onBucketAdded = null; // New callback for bucket added
@@ -105,6 +106,12 @@ class WhiteboardService {
                 case 'item_selected':
                     if (this.onItemSelected) {
                         this.onItemSelected(message.data);
+                    }
+                    break;
+
+                case 'items_unselected':
+                    if (this.onItemsUnselected) {
+                        this.onItemsUnselected(message.data);
                     }
                     break;
 

@@ -26,6 +26,7 @@ from app.api.endpoints.assigned_trainings import router as assigned_trainings_ro
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
+from app.api.endpoints.contact import router as contact_router
 from app.api.endpoints.coach import router as coach_router
 from app.api.endpoints.coach_appointment_sessions import router as coach_sessions_router
 from app.api.endpoints.guest_sessions import router as guest_sessions_router
@@ -194,6 +195,7 @@ app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
+app.include_router(contact_router, prefix="/api", tags=["contact"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments

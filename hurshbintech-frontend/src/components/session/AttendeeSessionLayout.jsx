@@ -26,7 +26,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { Clock, Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react';
+import { Clock, Mic, MicOff, Video, VideoOff, PhoneOff, Bold } from 'lucide-react';
 
 /**
  * Attendee Session Waiting Screen
@@ -479,7 +479,7 @@ export const AttendeeCommentsPanel = ({
                 borderRadius: '8px 8px 0 0'
             }}>
                 <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#374151' }}>
-                    💬 Comments
+                    💬 Response
                 </span>
             </div>
 
@@ -535,12 +535,12 @@ AttendeeCommentsPanel.propTypes = {
  * Full-Screen Session Styles (CSS-in-JS)
  */
 export const attendeeSessionStyles = `
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
 
-  .learner-session-page {
+    .learner-session-page {
     width: 100% !important;
     height: 100vh !important;
     display: flex !important;
@@ -1828,9 +1828,15 @@ export const AttendeeMetricsPanel = ({
     onToggleMic,
     onToggleCamera,
     onLeaveSession,
-    showControls = false
+    showControls = false,
+    // New: toggle prompt visibility from bulb click
+    onTogglePrompt,
+    isPromptOpen = false,
+    // New: when true, prompt animation (instructor sent prompt) should glow bulb
+    promptAnimating = false
 }) => {
-    const isBulbGlowing = useBulbGlowAnimation(bucketColor);
+    const bulbGlowFromBucket = useBulbGlowAnimation(bucketColor);
+    const isBulbGlowing = bulbGlowFromBucket || !!promptAnimating;
 
     return (
         <div className="attendee-metrics-panel" style={{
@@ -1869,12 +1875,12 @@ export const AttendeeMetricsPanel = ({
                 }}>
                     <span style={{
                         fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
+                        fontSize: 'clamp(0.625rem, 2vw, 12rem)',
                         color: '#d97706',
                         whiteSpace: 'nowrap'
                     }}>P :</span>
                     <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
+                        fontSize: 'clamp(0.875rem, 2vw, 12rem)',
                         fontWeight: 'bold',
                         color: '#d97706',
                         whiteSpace: 'nowrap'
@@ -1890,12 +1896,12 @@ export const AttendeeMetricsPanel = ({
                 }}>
                     <span style={{
                         fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)',
+                        fontSize: 'clamp(0.625rem, 2vw, 12rem)',
                         color: '#16a34a',
                         whiteSpace: 'nowrap'
                     }}>R :</span>
                     <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 1.25rem)',
+                        fontSize: 'clamp(0.875rem, 2vw, 12rem)',
                         fontWeight: 'bold',
                         color: '#16a34a',
                         whiteSpace: 'nowrap'
@@ -1904,18 +1910,24 @@ export const AttendeeMetricsPanel = ({
             </div>
 
             {/* Row 2: Bulb */}
-            <div style={{
-                fontSize: 'clamp(1rem, 1.5vw, 1.5rem)',
-                filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
-                animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                transition: 'filter 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-            }}>
+            <span
+                onClick={(e) => { if (onTogglePrompt) onTogglePrompt(); }}
+                title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
+                style={{
+                    fontSize: 'clamp(1rem, 2.2vw, 18rem)',
+                    filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
+                    animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                    transition: 'filter 0.3s ease, transform 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    cursor: onTogglePrompt ? 'pointer' : 'default',
+                    transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)'
+                }}
+            >
                 💡
-            </div>
+            </span>
 
             {/* Row 3: Video control icons */}
             {showControls && onToggleMic && onToggleCamera && onLeaveSession && (
@@ -1984,8 +1996,12 @@ AttendeeMetricsPanel.propTypes = {
     onToggleMic: PropTypes.func,
     onToggleCamera: PropTypes.func,
     onLeaveSession: PropTypes.func,
-    showControls: PropTypes.bool
+    showControls: PropTypes.bool,
+    onTogglePrompt: PropTypes.func,
+    isPromptOpen: PropTypes.bool,
+    focusOnOpen: PropTypes.bool
 };
+
 
 /**
  * AttendeePromptPanel (Middle 60%)
@@ -2006,7 +2022,11 @@ export const AttendeePromptPanel = ({
     onExerciseSubmit = null,
     onExerciseUpdate = null,
     onExerciseDelete = null,
-    sessionType = 'guest'
+    sessionType = 'guest',
+    // New: control whether the prompt line is visible (toggled by bulb)
+    isPromptOpen = false,
+    // New: when true, attempt to focus first textarea/input inside the panel when it opens
+    focusOnOpen = false
 }) => {
     // Local fallback for exercise answer when parent doesn't provide onExerciseUpdate
     const [localExerciseAnswer, setLocalExerciseAnswer] = React.useState(exerciseData?.answer || '');
@@ -2015,8 +2035,30 @@ export const AttendeePromptPanel = ({
         setLocalExerciseAnswer(exerciseData?.answer || '');
     }, [exerciseData && exerciseData.answer]);
 
+    // Focus handling: when focusOnOpen becomes true and prompt panel is visible,
+    // focus the first textarea/input inside the panel or the container itself.
+    const panelRef = React.useRef(null);
+    React.useEffect(() => {
+        if (!focusOnOpen || !isPromptOpen) return;
+
+        // small timeout to allow render
+        const t = setTimeout(() => {
+            if (!panelRef.current) return;
+            const textarea = panelRef.current.querySelector('textarea, input');
+            if (textarea) {
+                textarea.focus();
+                if (typeof textarea.select === 'function') textarea.select();
+            } else {
+                // focus container so keyboard can be ready for accessibility
+                panelRef.current.focus && panelRef.current.focus();
+            }
+        }, 80);
+
+        return () => clearTimeout(t);
+    }, [focusOnOpen, isPromptOpen]);
+
     return (
-        <div className="attendee-prompt-panel" style={{
+        <div ref={panelRef} tabIndex={-1} className="attendee-prompt-panel" style={{
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -2030,8 +2072,8 @@ export const AttendeePromptPanel = ({
             justifyContent: 'flex-start',
             boxSizing: 'border-box'
         }}>
-            {/* Prompt Line - Only shows when no other feature is active */}
-            {!isCommentsOpen && !showExercise && (
+            {/* Prompt Line - Only shows when no other feature is active or when toggled open */}
+            {!isCommentsOpen && !showExercise && isPromptOpen && (
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -2092,7 +2134,7 @@ export const AttendeePromptPanel = ({
                         letterSpacing: '0.05rem',
                         marginBottom: '0.125rem'
                     }}>
-                        💬 Comment
+                        💬 Response
                     </div>
                     <textarea
                         value={commentInput}
@@ -2103,7 +2145,7 @@ export const AttendeePromptPanel = ({
                         onBlur={(e) => {
                             onFlushComment && onFlushComment(e.target.value);
                         }}
-                        placeholder="Type your comment or question here..."
+                        placeholder="Type your response or question here..."
                         style={{
                             flex: 1,
                             minHeight: 'clamp(3.125rem, 10vh, 4.5rem)',
@@ -2136,8 +2178,8 @@ export const AttendeePromptPanel = ({
                         flex: '0 0 auto'
                     }}>
                         <div style={{
-                            fontSize: 'clamp(0.5rem, 1.2vw, 0.7rem)',
-                            fontWeight: '600',
+                            fontSize: 'clamp(0.5rem, 1.2vw, 1rem)',
+                            fontWeight: 'bold',
                             color: '#374151',
                             textTransform: 'uppercase',
                             letterSpacing: '0.025rem'
@@ -2145,7 +2187,8 @@ export const AttendeePromptPanel = ({
                             QUESTION:
                         </div>
                         <div style={{
-                            fontSize: 'clamp(0.625rem, 1.4vw, 0.8rem)',
+                            fontSize: 'clamp(0.625rem, 1.4vw, 1rem)',
+                            fontWeight: 'bold',
                             color: '#1f2937',
                             padding: 'clamp(0.25rem, 0.6vh, 0.375rem)',
                             backgroundColor: '#f9fafb',
@@ -2168,8 +2211,8 @@ export const AttendeePromptPanel = ({
                         minHeight: 0
                     }}>
                         <div style={{
-                            fontSize: 'clamp(0.5rem, 1.2vw, 0.7rem)',
-                            fontWeight: '600',
+                            fontSize: 'clamp(0.5rem, 1.2vw, 1rem)',
+                            fontWeight: 'bold',
                             color: '#374151',
                             textTransform: 'uppercase',
                             letterSpacing: '0.025rem'
@@ -2195,10 +2238,11 @@ export const AttendeePromptPanel = ({
                                 flex: 1,
                                 minHeight: 'clamp(2.5rem, 6vh, 4rem)',
                                 padding: 'clamp(0.25rem, 0.6vh, 0.375rem)',
-                                fontSize: 'clamp(0.625rem, 1.4vw, 0.8rem)',
+                                fontSize: 'clamp(0.625rem, 1.4vw, 1rem)',
                                 border: '0.0625rem solid #d1d5db',
                                 borderRadius: 'clamp(0.25rem, 0.8vw, 0.375rem)',
                                 fontFamily: 'inherit',
+                                fontWeight: 'bold',
                                 resize: 'none',
                                 backgroundColor: '#ffffff',
                                 outline: 'none',
@@ -2227,9 +2271,10 @@ AttendeePromptPanel.propTypes = {
     onExerciseSubmit: PropTypes.func,
     onExerciseUpdate: PropTypes.func,
     onExerciseDelete: PropTypes.func,
-    sessionType: PropTypes.string
+    sessionType: PropTypes.string,
+    isPromptOpen: PropTypes.bool,
+    focusOnOpen: PropTypes.bool
 };
-
 /**
  * AttendeeVideoPanel (Right 20%)
  * Displays WebRTC video feed
@@ -2355,6 +2400,43 @@ export const AttendeeUpperSection = ({
 }) => {
     const [isMobile, setIsMobile] = React.useState(false);
     const [isTablet, setIsTablet] = React.useState(false);
+    // New: control whether the Prompt Line (middle panel) is visible (closed by default)
+    const [isPromptOpen, setIsPromptOpen] = React.useState(false);
+    // Track whether the open was triggered automatically by instructor ('auto') or manually by user ('manual')
+    const [promptOpenSource, setPromptOpenSource] = React.useState(null); // 'auto' | 'manual' | null
+    const autoCloseTimerRef = React.useRef(null);
+    // Use prompt animation hook to detect when instructor sends a prompt
+    const { isPromptLineOpen: _isPromptLineOpen, setIsPromptLineOpen: _setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText, defaultPromptText);
+
+    // Auto-open the prompt panel when instructor sends a prompt (animation starts)
+    React.useEffect(() => {
+        if (promptLineAnimating || _isPromptLineOpen) {
+            // mark as auto-open so we can auto-close after a delay
+            setPromptOpenSource('auto');
+            setIsPromptOpen(true);
+
+            // clear any existing auto-close timer
+            if (autoCloseTimerRef.current) {
+                clearTimeout(autoCloseTimerRef.current);
+                autoCloseTimerRef.current = null;
+            }
+
+            // auto-close after 8 seconds unless user opens manually
+            autoCloseTimerRef.current = setTimeout(() => {
+                setIsPromptOpen(false);
+                setPromptOpenSource(null);
+                autoCloseTimerRef.current = null;
+            }, 8000);
+        }
+    }, [promptLineAnimating, _isPromptLineOpen]);
+
+    // If user toggles manually, cancel auto-close timer
+    React.useEffect(() => {
+        if (promptOpenSource === 'manual' && autoCloseTimerRef.current) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
+    }, [promptOpenSource]);
 
     React.useEffect(() => {
         const checkScreenSize = () => {
@@ -2507,6 +2589,14 @@ export const AttendeeUpperSection = ({
                     onToggleCamera={onToggleCamera}
                     onLeaveSession={onLeaveSession}
                     showControls={showVideoControls}
+                    // prompt toggle wiring
+                    isPromptOpen={isPromptOpen}
+                    onTogglePrompt={() => {
+                        setPromptOpenSource('manual');
+                        setIsPromptOpen(prev => !prev);
+                    }}
+                    // glow when bucket OR when instructor sent prompt
+                    promptAnimating={promptLineAnimating}
                 />
 
                 {/* Middle: Prompt Line, Question/Comment and Answer Panel (60%) */}
@@ -2526,6 +2616,9 @@ export const AttendeeUpperSection = ({
                     onExerciseUpdate={onExerciseUpdate}
                     onExerciseDelete={onExerciseDelete}
                     sessionType={sessionType}
+                    isPromptOpen={isPromptOpen}
+                    // focus the prompt panel when it was auto-opened
+                    focusOnOpen={promptOpenSource === 'auto' && isPromptOpen}
                 />
 
                 {/* Right: Video Panel (20%) */}
