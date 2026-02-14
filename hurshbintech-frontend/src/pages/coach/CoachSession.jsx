@@ -236,6 +236,7 @@ const CoachSession = () => {
     sessionService: coachSessionService,
     initializeWebRTC,
     cleanup,
+    handleEndSession: handlers.handleEndSession,
   });
 
   // Loading state

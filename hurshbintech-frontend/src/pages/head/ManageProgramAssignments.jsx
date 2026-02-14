@@ -670,9 +670,9 @@ const ManageProgramAssignments = () => {
               Back to Dashboard
             </button>
             <div>
-              <h1 className="page-title">Manage Program Assignments</h1>
+              <h1 className="page-title">Manage Home Program Assignments</h1>
               <p className="page-description">
-                Assign learning programs to learners and track their progress
+                Assign home learning programs to learners and track their progress
               </p>
             </div>
           </div>
@@ -683,7 +683,7 @@ const ManageProgramAssignments = () => {
               onClick={() => setShowAssignModal(true)}
               className="btn-gradient  "
             >
-              + Assign Program
+              + Assign Home Program
             </button>
           </div>
 
@@ -700,7 +700,7 @@ const ManageProgramAssignments = () => {
                 className={`mpa-tab-btn ${activeTab === 'assignments' ? 'mpa-tab-btn-active' : ''}`}
                 onClick={() => setActiveTab('assignments')}
               >
-                📋 All Assignments
+                📋 All Home Program Assignments
               </button>
             </div>
           </div>
@@ -715,7 +715,7 @@ const ManageProgramAssignments = () => {
               ) : overview.length === 0 ? (
                 <div className="mpa-empty-state">
                   <p className="mpa-empty-state-description">
-                    No assignments yet. Start by assigning programs to learners!
+                    No assignments yet. Start by assigning home programs to learners!
                   </p>
                 </div>
               ) : (
@@ -735,7 +735,7 @@ const ManageProgramAssignments = () => {
                       </div>
 
                       <div className="overview-programs">
-                        <h4 className="overview-programs-title">📌 Assigned Titles</h4>
+                        <h4 className="overview-programs-title">📌 Assigned Home Program Titles</h4>
                         <div className="overview-programs-list">
                           {Array.from(
                             // Group assignments by assignment_title
@@ -964,12 +964,12 @@ const ManageProgramAssignments = () => {
         </div>
       </div>
 
-      {/* Assign Program Modal */}
+      {/* Assign Home Program Modal */}
       {showAssignModal && (
         <div className="app-modal-overlay">
           <div className="app-modal-container app-modal-container--lg">
             <div className="app-modal-header app-modal-header--primary">
-              <h2 className="app-modal-title">Assign Program to Learners</h2>
+              <h2 className="app-modal-title">Assign Home Program to Learners</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -1240,7 +1240,7 @@ const ManageProgramAssignments = () => {
                   Cancel
                 </button>
                 <button type="submit" className="btn-gradient">
-                  Assign Program
+                  Assign Home Program
                 </button>
               </div>
             </form>
@@ -1539,7 +1539,7 @@ const ManageProgramAssignments = () => {
         <div className="app-modal-overlay">
           <div className="app-modal-container mpa-modal-lg">
             <div className="app-modal-header">
-              <h2 className="app-modal-title">Assignment Tracking</h2>
+              <h2 className="app-modal-title">Home Program Tracking</h2>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button
                   onClick={handleRefreshTracking}
@@ -1569,16 +1569,16 @@ const ManageProgramAssignments = () => {
 
               {/* Assignment Details */}
               <div className="mpa-assignment-details">
-                <h3 className="mpa-section-title">Program Details</h3>
+                <h3 className="mpa-section-title">Home Program Details</h3>
                 <div className="mpa-details-grid">
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Assignment Title:</span>
+                    <span className="mpa-detail-label">Home Program Title:</span>
                     <span className="mpa-detail-value">
                       {selectedAssignment?.assignment_title || 'N/A'}
                     </span>
                   </div>
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Programs:</span>
+                    <span className="mpa-detail-label">Home Programs:</span>
                     <span className="mpa-detail-value">
                       {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
                         ? selectedAssignment.program_names.join(', ')
@@ -1614,7 +1614,7 @@ const ManageProgramAssignments = () => {
                 {/* Learning Contents - Both Auto and Manual */}
                 {selectedAssignment?.content_assignments && selectedAssignment.content_assignments.length > 0 ? (
                   <div className="mpa-contents-section">
-                    <h4 className="mpa-subsection-title">Assigned Learning Contents ({selectedAssignment.content_assignments.length})</h4>
+                    <h4 className="mpa-subsection-title">Learning Contents ({selectedAssignment.content_assignments.length})</h4>
                     <div className="mpa-contents-list">
                       {selectedAssignment.content_assignments.map((assignment, index) => (
                         <div key={assignment.id} className="mpa-content-item">

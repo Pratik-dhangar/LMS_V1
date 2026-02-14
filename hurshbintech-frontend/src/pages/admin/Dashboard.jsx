@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package } from 'lucide-react';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package, Mail } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     { id: '1.7', title: 'Manage Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
     { id: '1.8', title: 'Manage Blogs', description: 'Create and manage blog posts', icon: FileText, color: 'indigo', onClick: () => navigate('/admin/blogs') },
     { id: '1.9', title: 'Manage About Us', description: 'Edit About Us page content', icon: Info, color: 'cyan', onClick: () => navigate('/admin/about-us') },
+    { id: '1.9b', title: 'Contact Submissions', description: 'View and manage contact form submissions', icon: Mail, color: 'pink', onClick: () => navigate('/admin/contacts') },
     { id: '1.10', title: 'MarketPlace Inventory', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
     { id: '1.11', title: 'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
     { id: '3.1', title: 'Manage Subscription Packages', description: 'Create and manage subscription packages for learners', icon: Package, color: 'orange', onClick: () => navigate('/admin/subscriptions/packages') },

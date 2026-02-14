@@ -116,7 +116,7 @@ export const useAttendeeSessionState = () => {
     // Meter states (synced from instructor)
     const [promptMeter, setPromptMeter] = useState(null);
     const [reinforcementMeter, setReinforcementMeter] = useState(null);
-    const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown)
+    const [bucketColor, setBucketColor] = useState('#6D5A3F'); // Default bucket color (Brown)
 
     // Prompt text (synced from instructor)
     const [promptText, setPromptText] = useState('[Prompts from instructor will appear here]');
@@ -431,7 +431,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
     // Bucket Color Sync (from instructor)
     wbService.onBucketColorChange = (data) => {
         console.log('[AttendeeSession] Bucket color update:', data);
-        setBucketColor(data.color || '#8B6F47');
+        setBucketColor(data.color || '#6D5A3F');
     };
 
     // Comments from instructor

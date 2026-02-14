@@ -140,7 +140,7 @@ export const useInstructorSessionState = (options = {}) => {
     const [color, setColor] = useState('#000000');
     const [lineWidth, setLineWidth] = useState(2);
     const [buckets, setBuckets] = useState([]);
-    const [bucketColor, setBucketColor] = useState('#8B6F47');
+    const [bucketColor, setBucketColor] = useState('#6D5A3F');
     const [toolActive, setToolActive] = useState(false);
     const [eraserActive, setEraserActive] = useState(false);
     const [eraseAllActive, setEraseAllActive] = useState(false);
