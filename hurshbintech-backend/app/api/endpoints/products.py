@@ -1,5 +1,6 @@
 """API endpoints for E-Commerce Products (Admin)
 """
+import logging
 from typing import List
 from uuid import UUID
 
@@ -18,6 +19,8 @@ from app.schemas.product import (
     SkillFocusCreate, SkillFocusUpdate, SkillFocusResponse
 )
 from app.utils.file_handler import upload_file
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["Products - Admin"])
 
@@ -59,8 +62,10 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     categories = await product_crud.get_all_categories(db)
     
     try:
+        # Convert ORM objects to dicts before caching
+        categories_data = [ProductCategoryResponse.model_validate(c).model_dump(mode="json") for c in categories]
         # Store in cache for 1 hour
-        await cache_service.set(cache_key, categories, cache_service.TTL_PRODUCT_METADATA)
+        await cache_service.set(cache_key, categories_data, cache_service.TTL_PRODUCT_METADATA)
     except Exception as e:
         logger.warning(f"Cache storage failed for categories: {e}")
     
@@ -151,8 +156,10 @@ async def get_age_groups(db: AsyncSession = Depends(get_db)):
     age_groups = await product_crud.get_all_age_groups(db)
     
     try:
+        # Convert ORM objects to dicts before caching
+        age_groups_data = [AgeGroupResponse.model_validate(ag).model_dump(mode="json") for ag in age_groups]
         # Store in cache for 1 hour
-        await cache_service.set(cache_key, age_groups, cache_service.TTL_PRODUCT_METADATA)
+        await cache_service.set(cache_key, age_groups_data, cache_service.TTL_PRODUCT_METADATA)
     except Exception as e:
         logger.warning(f"Cache storage failed for age groups: {e}")
     
@@ -191,8 +198,13 @@ async def get_skills(db: AsyncSession = Depends(get_db)):
     # Cache miss - fetch from DB
     skills = await product_crud.get_all_skills(db)
     
-    # Store in cache for 1 hour
-    await cache_service.set(cache_key, skills, cache_service.TTL_PRODUCT_METADATA)
+    # Convert ORM objects to dicts before caching
+    try:
+        skills_data = [SkillFocusResponse.model_validate(s).model_dump(mode="json") for s in skills]
+        # Store in cache for 1 hour
+        await cache_service.set(cache_key, skills_data, cache_service.TTL_PRODUCT_METADATA)
+    except Exception as e:
+        logger.warning(f"Cache storage failed for skills: {e}")
     
     return skills
 
