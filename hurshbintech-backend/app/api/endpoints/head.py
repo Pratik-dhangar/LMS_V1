@@ -51,6 +51,7 @@ from app.schemas.subscription import (
     SessionGapWarning,
 )
 from app.models.subscription import RefundType
+from app.services.cache_service import cache_service
 
 router = APIRouter(prefix="/head", tags=["Head Operations"])
 
@@ -1252,6 +1253,14 @@ async def create_learner_subscription(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{subscription.learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {subscription.learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
+    
     return subscription
 
 
@@ -1268,6 +1277,14 @@ async def create_backdated_subscription(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{subscription.learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {subscription.learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     return subscription
 
@@ -1444,9 +1461,18 @@ async def pause_subscription(
     if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to pause this subscription")
     
+    learner_id = subscription.learner_id  # Store before modification
     subscription, error = await subscription_crud.pause_subscription(db, subscription_id, pause_data.reason)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     return subscription
 
@@ -1466,9 +1492,18 @@ async def resume_subscription(
     if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to resume this subscription")
     
+    learner_id = subscription.learner_id  # Store before modification
     subscription, error = await subscription_crud.resume_subscription(db, subscription_id)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     return subscription
 
@@ -1489,9 +1524,18 @@ async def cancel_subscription(
     if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this subscription")
     
+    learner_id = subscription.learner_id  # Store before modification
     subscription, error = await subscription_crud.cancel_subscription(db, subscription_id, cancel_data.reason)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     return subscription
 
@@ -1517,9 +1561,18 @@ async def delete_subscription(
     if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this subscription")
     
+    learner_id = subscription.learner_id  # Store before deletion
     success, error = await subscription_crud.delete_subscription(db, subscription_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     # Return 204 No Content on success
     return None
@@ -1541,12 +1594,21 @@ async def process_subscription_refund(
     if subscription.current_head_id != current_head.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to refund this subscription")
     
+    learner_id = subscription.learner_id  # Store before modification
     refund_amount, error = await subscription_crud.process_refund(db, refund_data)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     
     # Refresh subscription after refund
     await db.refresh(subscription)
+    
+    # Invalidate subscription cache for this learner
+    try:
+        cache_key = f"subscription:user:{learner_id}"
+        await cache_service.delete(cache_key)
+        logger.info(f"Invalidated subscription cache for learner {learner_id}")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription cache: {e}")
     
     return SubscriptionRefundResponse(
         subscription_id=subscription.id,

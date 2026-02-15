@@ -193,8 +193,57 @@ async def get_my_subscriptions(
     subscriptions = await crud.subscription_crud.get_subscriptions_by_learner(db, current_user.user_id)
     logger.info(f"Found {len(subscriptions)} subscriptions for learner {current_user.user_id}")
 
-    # Cache for 15 minutes - serialize to dictionaries
-    subscription_data = [s.model_dump() for s in subscriptions]
+    # Cache for 15 minutes - convert SQLAlchemy models to dicts
+    subscription_data = []
+    for sub in subscriptions:
+        # Extract learner name from relationship
+        learner_name = None
+        if sub.learner and hasattr(sub.learner, 'name'):
+            learner_name = sub.learner.name
+        
+        # Extract head name from relationship
+        head_name = None
+        if sub.current_head and hasattr(sub.current_head, 'name'):
+            head_name = sub.current_head.name
+        
+        # Create dict with all fields including relationship data
+        sub_dict = {
+            "id": sub.id,
+            "learner_id": sub.learner_id,
+            "learner_name": learner_name,
+            "package_id": sub.package_id,
+            "created_by_head_id": sub.created_by_head_id,
+            "current_head_id": sub.current_head_id,
+            "head_name": head_name,
+            "package_name": sub.package_name,
+            "package_sessions": sub.package_sessions,
+            "package_validity_days": sub.package_validity_days,
+            "package_original_price": float(sub.package_original_price),
+            "start_date": sub.start_date,
+            "expiry_date": sub.expiry_date,
+            "status": sub.status.value if hasattr(sub.status, 'value') else sub.status,
+            "sessions_total": sub.sessions_total,
+            "sessions_completed": sub.sessions_completed,
+            "sessions_remaining": sub.sessions_remaining,
+            "discount_applied": float(sub.discount_applied),
+            "discount_code_id": sub.discount_code_id,
+            "applied_by_head_id": sub.applied_by_head_id,
+            "net_price_paid": float(sub.net_price_paid),
+            "paused_at": sub.paused_at,
+            "paused_duration_days": sub.paused_duration_days,
+            "frozen_at": sub.frozen_at,
+            "frozen_duration_days": sub.frozen_duration_days,
+            "renewed_from_subscription_id": sub.renewed_from_subscription_id,
+            "renewed_to_subscription_id": sub.renewed_to_subscription_id,
+            "refund_amount": float(sub.refund_amount) if sub.refund_amount else None,
+            "refund_type": sub.refund_type.value if sub.refund_type and hasattr(sub.refund_type, 'value') else sub.refund_type,
+            "refund_date": sub.refund_date,
+            "refund_reason": sub.refund_reason,
+            "created_at": sub.created_at,
+            "updated_at": sub.updated_at,
+        }
+        subscription_data.append(sub_dict)
+    
     await cache_service.set(cache_key, subscription_data, ttl=cache_service.TTL_USER_SUBSCRIPTIONS)
 
     return subscriptions

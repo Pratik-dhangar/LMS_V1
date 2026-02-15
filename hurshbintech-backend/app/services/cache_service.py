@@ -37,6 +37,7 @@ class CacheService:
         self._failure_threshold: int = 5          # Trip after 5 consecutive failures
         self._recovery_timeout: int = 30          # Wait 30s before retrying Redis
         self._circuit_opened_at: Optional[float] = None  # Timestamp when circuit opened
+        self._half_open_probe_in_progress: bool = False   # Guard: only ONE probe at a time
         
         # Request coalescing (prevent cache stampede)
         self._pending_requests: Dict[str, asyncio.Lock] = {}
@@ -46,12 +47,12 @@ class CacheService:
         self.TTL_PRODUCT_METADATA = 3600  # 1 hour for categories/age_groups/skills
         self.TTL_PRODUCT_CATALOG = 300    # 5 minutes for product listings
         self.TTL_PRODUCT_DETAIL = 900     # 15 minutes for individual product details
-        self.TTL_LEARNING_CONTENT = 600   # 10 minutes for learning content
+        self.TTL_LEARNING_CONTENT = 3600  # 1 hour for learning content
         self.TTL_LEARNING_CONTENT_DETAIL = 900  # 15 minutes for individual content
-        self.TTL_LEARNING_GOALS = 900     # 15 minutes for learning goals
+        self.TTL_LEARNING_GOALS = 3600    # 1 hour for learning goals
         self.TTL_USER_PROFILE = 1800      # 30 minutes for user profiles (deprecated - use specific below)
         self.TTL_USER_PROFILE_ME = 900    # 15 minutes for current user profile
-        self.TTL_COACH_PROFILES = 1800    # 30 minutes for coach profiles list
+        self.TTL_COACH_PROFILES = 3600    # 1 hour for coach profiles list
         self.TTL_FEATURED_COACH = 3600    # 1 hour for featured coach data
         self.TTL_BLOGS_LIST = 900         # 15 minutes for blog listings
         self.TTL_BLOG_DETAIL = 1800       # 30 minutes for individual blog
@@ -78,7 +79,8 @@ class CacheService:
                 encoding="utf-8",
                 decode_responses=True,
                 socket_keepalive=True,
-                socket_connect_timeout=10,  # Increased from 5 to 10 seconds
+                socket_connect_timeout=2,  # Fast fail — don't block requests for 10s on Redis outage
+                socket_timeout=2,          # Also limit per-command timeout
                 retry_on_timeout=True,
                 max_connections=50,
                 health_check_interval=30
@@ -108,7 +110,7 @@ class CacheService:
         States:
           CLOSED  – Redis is healthy, all calls go through.
           OPEN    – Too many consecutive failures, skip Redis entirely.
-          HALF-OPEN – Recovery timeout elapsed, allow ONE probe call.
+          HALF-OPEN – Recovery timeout elapsed, allow exactly ONE probe call.
         """
         if self._failure_count < self._failure_threshold:
             return False  # Circuit CLOSED
@@ -119,7 +121,11 @@ class CacheService:
         
         elapsed = time.monotonic() - self._circuit_opened_at
         if elapsed >= self._recovery_timeout:
-            # HALF-OPEN: allow a probe call through
+            # HALF-OPEN: allow only ONE probe call through
+            if self._half_open_probe_in_progress:
+                # Another request is already probing — skip Redis for this request
+                return True
+            self._half_open_probe_in_progress = True
             logger.info("Circuit breaker HALF-OPEN: allowing probe call to Redis")
             return False
         
@@ -131,16 +137,27 @@ class CacheService:
             logger.info("Circuit breaker CLOSED: Redis recovered")
         self._failure_count = 0
         self._circuit_opened_at = None
+        self._half_open_probe_in_progress = False
     
     def _record_failure(self, error: Exception, context: str = ""):
         """Record a failure and potentially trip the circuit breaker."""
         self._failure_count += 1
+        self._half_open_probe_in_progress = False  # Reset probe guard
+        
         if self._failure_count >= self._failure_threshold:
             if self._circuit_opened_at is None:
+                # First time tripping the circuit
                 self._circuit_opened_at = time.monotonic()
                 logger.error(
                     f"Circuit breaker OPEN: {self._failure_count} consecutive Redis failures. "
                     f"Skipping Redis for {self._recovery_timeout}s. Last error ({context}): {error}"
+                )
+            else:
+                # Re-tripping after a failed HALF-OPEN probe — reset the timer
+                self._circuit_opened_at = time.monotonic()
+                logger.warning(
+                    f"Circuit breaker OPEN (probe failed): Redis still down. "
+                    f"Skipping Redis for another {self._recovery_timeout}s. ({context}): {error}"
                 )
         else:
             logger.warning(f"Redis failure {self._failure_count}/{self._failure_threshold} ({context}): {error}")

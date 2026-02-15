@@ -3,6 +3,11 @@
 ## Overview
 Redis caching layer implemented to improve API response times and reduce database load for frequently accessed data.
 
+For future reference: redis-cli SHUTDOWN kills the server process. To restart it on Windows, run:
+
+Start-Process "C:\Program Files\Redis\redis-server.exe" -WindowStyle Hidden
+
+
 ## Performance Benefits
 - **Product metadata**: 60-90% faster response times
 - **Learning content**: 70-85% faster for frequently accessed content

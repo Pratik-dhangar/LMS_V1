@@ -1460,6 +1460,14 @@ async def create_subscription_package(
 ):
     """Create a new subscription package (Admin)"""
     package = await subscription_crud.create_package(db, package_data, current_admin.id)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after creation")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return package
 
 
@@ -1487,8 +1495,9 @@ async def get_all_subscription_packages(
     packages = await subscription_crud.get_all_packages(db, active_only)
 
     try:
-        # Cache for 1 hour - serialize to dictionaries
-        await cache_service.set(cache_key, [p.model_dump() if hasattr(p, 'model_dump') else p for p in packages], ttl=cache_service.TTL_SUBSCRIPTION_PACKAGES)
+        # Cache for 1 hour - convert SQLAlchemy models to dicts
+        packages_data = [SubscriptionPackageResponse.model_validate(p).model_dump() for p in packages]
+        await cache_service.set(cache_key, packages_data, ttl=cache_service.TTL_SUBSCRIPTION_PACKAGES)
     except Exception as e:
         logger.warning(f"Cache storage failed for subscription packages: {e}")
 
@@ -1522,6 +1531,14 @@ async def update_subscription_package(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     updated_package = await subscription_crud.update_package(db, package_id, package_data)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after update")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return updated_package
 
 
@@ -1537,5 +1554,13 @@ async def delete_subscription_package(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     await subscription_crud.soft_delete_package(db, package_id)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after deletion")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return None
 
