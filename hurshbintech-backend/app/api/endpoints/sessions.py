@@ -389,6 +389,14 @@ async def end_training_session(
 
     ended_session = await session_crud.end_session(db, session_id, session_end.notes)
 
+    # Clean up whiteboard state for ended session
+    try:
+        from app.crud import whiteboard_crud
+        await whiteboard_crud.cleanup_session_state(db, session_id)
+        logger.info(f"✅ Cleaned up whiteboard state for ended session {session_id}")
+    except Exception as e:
+        logger.error(f"Error cleaning up whiteboard state for session {session_id}: {str(e)}")
+
     # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
     try:
         from app.crud import subscription_crud
