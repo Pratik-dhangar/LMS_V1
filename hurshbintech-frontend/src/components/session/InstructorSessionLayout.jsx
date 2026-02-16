@@ -38,6 +38,7 @@ import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Emoji from '../common/Emoji';
 import Whiteboard from '../common/Whiteboard';
+import { normalizeItem } from '../../utils/drawingSync';
 import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
@@ -823,29 +824,9 @@ export const initializeWhiteboardService = ({
         const wbService = new WhiteboardService(wsBaseUrl, sessionId, role);
         wbService.initialize();
 
-        if (setBuckets) {
-            wbService.onBucketAdded = (data) => {
-                // console.log(`[InstructorSession] Bucket added:`, data);
-                setBuckets(prev => {
-                    const exists = prev.find(bucket => bucket.id === data.id);
-                    if (!exists) {
-                        return [...prev, data];
-                    }
-                    return prev;
-                });
-            };
-
-            wbService.onBucketUpdate = (data) => {
-                // console.log(`[InstructorSession] Bucket updated:`, data);
-                if (data.removed) {
-                    setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-                } else {
-                    setBuckets(prev => prev.map(bucket =>
-                        bucket.id === data.id ? { ...bucket, ...data } : bucket
-                    ));
-                }
-            };
-        }
+        // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+        // Whiteboard.jsx handlers include denormalization, delta-based child item movement, and String() comparisons.
+        // Do NOT set them here — it would overwrite the working handlers.
 
         if (setFloatingAnimations) {
             wbService.onFloatingAnimations = (data) => {
@@ -1211,30 +1192,9 @@ export const setupInstructorWhiteboardCallbacks = ({
         };
     }
 
-    // Bucket management (already set in initializeWhiteboardService but keeping for completeness)
-    if (setBuckets) {
-        whiteboardService.onBucketAdded = (data) => {
-            // console.log('[InstructorSession] Bucket added:', data);
-            setBuckets(prev => {
-                const exists = prev.find(bucket => bucket.id === data.id);
-                if (!exists) {
-                    return [...prev, data];
-                }
-                return prev;
-            });
-        };
-
-        whiteboardService.onBucketUpdate = (data) => {
-            // console.log('[InstructorSession] Bucket updated:', data);
-            if (data.removed) {
-                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-            } else {
-                setBuckets(prev => prev.map(bucket =>
-                    bucket.id === data.id ? { ...bucket, ...data } : bucket
-                ));
-            }
-        };
-    }
+    // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+    // Whiteboard.jsx handlers include denormalization, delta-based child item movement, and String() comparisons.
+    // Do NOT set them here — it would overwrite the working handlers.
 
     // Floating animations
     if (setFloatingAnimations) {
@@ -1267,8 +1227,7 @@ export const setupInstructorWhiteboardCallbacks = ({
             whiteboardService.onAnimationPopped = null;
             whiteboardService.onExerciseAnswerUpdate = null;
             whiteboardService.onExerciseResponse = null;
-            whiteboardService.onBucketAdded = null;
-            whiteboardService.onBucketUpdate = null;
+            // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component — don't nullify
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onErasePen = null;
         }
@@ -1392,7 +1351,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
         whiteboardService.onItemRemove = (data) => {
             // console.log('[AttendeeSession] Item remove received:', data);
             if (data?.id) {
-                setCanvasItems(prev => prev.filter(item => item.id !== data.id));
+                setCanvasItems(prev => prev.filter(item => String(item.id) !== String(data.id)));
             }
         };
 
@@ -1420,43 +1379,9 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
     }
 
-    // Bucket management
-    if (setBuckets) {
-        whiteboardService.onBucketAdded = (data) => {
-            // console.log('[AttendeeSession] Bucket added:', data);
-            setBuckets(prev => {
-                const exists = prev.find(bucket => bucket.id === data.id);
-                if (!exists) {
-                    return [...prev, data];
-                }
-                return prev;
-            });
-        };
-
-        whiteboardService.onBucketUpdate = (data) => {
-            if (data.removed) {
-                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-            } else if (buckets) {
-                setBuckets(prev => prev.map(bucket => {
-                    if (bucket.id === data.id) {
-                        const deltaX = (data.x || 0) - (bucket.x || 0);
-                        const deltaY = (data.y || 0) - (bucket.y || 0);
-
-                        if (setCanvasItems && Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
-                            setCanvasItems(items => items.map(item =>
-                                item.inBucket === data.id
-                                    ? { ...item, x: item.x + deltaX, y: item.y + deltaY }
-                                    : item
-                            ));
-                        }
-
-                        return { ...bucket, ...data };
-                    }
-                    return bucket;
-                }));
-            }
-        };
-    }
+    // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+    // It uses denormalizeItem() for precise coordinate mapping across different canvas sizes.
+    // Do NOT set whiteboardService.onBucketAdded or onBucketUpdate here — it would overwrite the working handlers.
 
     // YouTube popups
     if (setYoutubePopups) {
@@ -1572,8 +1497,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
             // Note: onItemUpdate is handled by Whiteboard component, not here
             whiteboardService.onErasePen = null;
             whiteboardService.onClearCanvas = null;
-            whiteboardService.onBucketAdded = null;
-            whiteboardService.onBucketUpdate = null;
+            // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component, not here
             whiteboardService.onYoutubePopupCreated = null;
             whiteboardService.onYoutubePopupClosed = null;
             whiteboardService.onBackgroundMusic = null;
@@ -1773,7 +1697,14 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
     setBuckets(prev => [...prev, newBucket]);
 
     if (whiteboardService) {
-        whiteboardService.sendBucketAdded(newBucket);
+        // Normalize bucket coordinates to 0-1 range for cross-canvas sync
+        const canvas = canvasRef?.current;
+        if (canvas) {
+            const normalizedBucket = normalizeItem(newBucket, canvas);
+            whiteboardService.sendBucketAdded({ ...normalizedBucket, normalized: true });
+        } else {
+            whiteboardService.sendBucketAdded(newBucket);
+        }
     }
 
     return newBucket;

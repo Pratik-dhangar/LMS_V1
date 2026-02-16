@@ -136,9 +136,9 @@ class WhiteboardService {
                     break;
 
                 case 'bucket_update':
-                    // console.log('[WhiteboardService] Received bucket_update:', message.data);
+                    console.log('[WhiteboardService] Received bucket_update:', message.data);
                     if (this.onBucketUpdate) {
-                        // console.log('[WhiteboardService] Calling onBucketUpdate callback');
+                        console.log('[WhiteboardService] Calling onBucketUpdate callback');
                         try {
                             // Pass all data including items array for removal
                             this.onBucketUpdate(message.data);
@@ -147,7 +147,7 @@ class WhiteboardService {
                             // console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
                         }
                     } else {
-                        // console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
+                        console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
                     }
                     break;
 
