@@ -441,6 +441,42 @@ const Whiteboard = ({
         }
     }, [isVideoItem, isPdfItem, mediaControl]);
 
+    /**
+     * Compute the grid position for an item inside a bucket.
+     * Items in buckets are arranged in a grid: 40px items, 8px gap, 10px padding, 76px header.
+     * This ensures items are always correctly positioned relative to their bucket
+     * regardless of canvas size or normalization differences.
+     */
+    const computeBucketItemPosition = useCallback((bucket, itemIndex) => {
+        const paddingX = 10;
+        const headerHeight = 76; // rim + padding + label + margin + gap
+        const itemSize = 40;
+        const gap = 8;
+        const cols = Math.max(1, Math.floor((bucket.width - paddingX * 2) / (itemSize + gap)));
+        const row = Math.floor(itemIndex / cols);
+        const col = itemIndex % cols;
+        return {
+            x: bucket.x + paddingX + col * (itemSize + gap),
+            y: bucket.y + headerHeight + row * (itemSize + gap)
+        };
+    }, []);
+
+    /**
+     * Reposition all items inside a bucket using the grid layout.
+     * Call this whenever a bucket moves to ensure items stay inside.
+     */
+    const repositionItemsInBucket = useCallback((items, bucket) => {
+        let idx = 0;
+        return items.map(item => {
+            if (String(item.inBucket) === String(bucket.id)) {
+                const pos = computeBucketItemPosition(bucket, idx);
+                idx++;
+                return { ...item, x: pos.x, y: pos.y, width: 40, height: 40 };
+            }
+            return item;
+        });
+    }, [computeBucketItemPosition]);
+
     const canvasRef = useRef(null);
     const bucketsRef = useRef(buckets); // Keep ref in sync for use in stale closures
     const prevPosRef = useRef({ x: 0, y: 0 });
@@ -1003,15 +1039,35 @@ const Whiteboard = ({
                     console.log('[Whiteboard] Current canvasItems before adding:', prev.length);
                     const exists = prev.find(item => String(item.id) === String(data.id));
                     if (!exists) {
-                        // Denormalize item bounds if they're normalized (0..1 range)
-                        const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
-                        const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                        let itemX, itemY, itemW, itemH;
 
-                        let itemX = bounds.x;
-                        let itemY = bounds.y;
-                        // Items in buckets always use fixed 40x40 size; free items use denormalized size
-                        let itemW = data.inBucket ? 40 : bounds.width;
-                        let itemH = data.inBucket ? 40 : bounds.height;
+                        if (data.inBucket) {
+                            // Items inside buckets: position using grid layout relative to LOCAL bucket
+                            // This avoids independent normalization/denormalization mismatch
+                            const bucket = bucketsRef.current.find(b => String(b.id) === String(data.inBucket));
+                            if (bucket) {
+                                const existingBucketItems = prev.filter(i => String(i.inBucket) === String(data.inBucket));
+                                const pos = computeBucketItemPosition(bucket, existingBucketItems.length);
+                                itemX = pos.x;
+                                itemY = pos.y;
+                            } else {
+                                // Bucket not found yet, fall back to denormalized coords
+                                const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                                const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                                itemX = bounds.x;
+                                itemY = bounds.y;
+                            }
+                            itemW = 40;
+                            itemH = 40;
+                        } else {
+                            // Free items: denormalize from 0-1 range to local canvas pixels
+                            const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                            const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                            itemX = bounds.x;
+                            itemY = bounds.y;
+                            itemW = bounds.width;
+                            itemH = bounds.height;
+                        }
 
                         const newItem = {
                             id: data.id,
@@ -1121,35 +1177,47 @@ const Whiteboard = ({
                             console.log('[Whiteboard] Found item to update:', { id: item.id, currentX: item.x, currentY: item.y });
 
                             let finalX, finalY, finalWidth, finalHeight;
-
-                            // Determine if we need to denormalize (default to true for backward compatibility)
-                            const needsDenormalization = data.normalized !== false;
-
-                            if (needsDenormalization) {
-                                // Denormalize coordinates from 0-1 range to canvas pixels
-                                const denormalized = denormalizeItem(data, canvasRef.current);
-                                finalX = data.x !== undefined ? denormalized.x : item.x;
-                                finalY = data.y !== undefined ? denormalized.y : item.y;
-                                finalWidth = data.width !== undefined ? denormalized.width : item.width;
-                                finalHeight = data.height !== undefined ? denormalized.height : item.height;
-                                console.log('[Whiteboard] Denormalized:', {
-                                    from: { x: data.x, y: data.y, w: data.width, h: data.height },
-                                    to: { x: finalX, y: finalY, w: finalWidth, h: finalHeight }
-                                });
-                            } else {
-                                // Use pixel coordinates directly (legacy/fallback)
-                                finalX = data.x !== undefined ? data.x : item.x;
-                                finalY = data.y !== undefined ? data.y : item.y;
-                                finalWidth = data.width !== undefined ? data.width : item.width;
-                                finalHeight = data.height !== undefined ? data.height : item.height;
-                                console.log('[Whiteboard] Using pixel coordinates directly:', { x: finalX, y: finalY, w: finalWidth, h: finalHeight });
-                            }
-
-                            // Items in buckets always use fixed 40x40 size
                             const targetInBucket = data.inBucket !== undefined ? data.inBucket : item.inBucket;
+
                             if (targetInBucket) {
+                                // Items inside buckets: position using grid layout relative to LOCAL bucket
+                                // This avoids normalization/denormalization mismatch between canvases
+                                const bucket = bucketsRef.current.find(b => String(b.id) === String(targetInBucket));
+                                if (bucket) {
+                                    // Count items already in this bucket (before this one)
+                                    const bucketItems = prev.filter(i => String(i.inBucket) === String(targetInBucket) && String(i.id) !== String(data.id));
+                                    const pos = computeBucketItemPosition(bucket, bucketItems.length);
+                                    finalX = pos.x;
+                                    finalY = pos.y;
+                                } else {
+                                    // Bucket not found, fall back to denormalized coords
+                                    const needsDenormalization = data.normalized !== false;
+                                    if (needsDenormalization) {
+                                        const denormalized = denormalizeItem(data, canvasRef.current);
+                                        finalX = data.x !== undefined ? denormalized.x : item.x;
+                                        finalY = data.y !== undefined ? denormalized.y : item.y;
+                                    } else {
+                                        finalX = data.x !== undefined ? data.x : item.x;
+                                        finalY = data.y !== undefined ? data.y : item.y;
+                                    }
+                                }
                                 finalWidth = 40;
                                 finalHeight = 40;
+                            } else {
+                                // Free items: denormalize from 0-1 range to canvas pixels
+                                const needsDenormalization = data.normalized !== false;
+                                if (needsDenormalization) {
+                                    const denormalized = denormalizeItem(data, canvasRef.current);
+                                    finalX = data.x !== undefined ? denormalized.x : item.x;
+                                    finalY = data.y !== undefined ? denormalized.y : item.y;
+                                    finalWidth = data.width !== undefined ? denormalized.width : item.width;
+                                    finalHeight = data.height !== undefined ? denormalized.height : item.height;
+                                } else {
+                                    finalX = data.x !== undefined ? data.x : item.x;
+                                    finalY = data.y !== undefined ? data.y : item.y;
+                                    finalWidth = data.width !== undefined ? data.width : item.width;
+                                    finalHeight = data.height !== undefined ? data.height : item.height;
+                                }
                             }
 
                             const updatedItem = {
@@ -1229,44 +1297,34 @@ const Whiteboard = ({
                     // Remove bucket
                     setBuckets(prev => prev.filter(bucket => String(bucket.id) !== bucketIdStr));
                 } else {
-                    // Move bucket and reposition all child items absolutely (not delta-based)
-                    // to avoid rounding drift from repeated denormalization during rapid drag updates
-                    setBuckets(prev => {
-                        const oldBucket = prev.find(b => String(b.id) === String(processedData.id));
+                    // Move bucket and reposition child items using grid layout.
+                    // Grid-based positioning is immune to normalization/denormalization mismatch
+                    // because item positions are derived from the LOCAL bucket position.
+                    const updatedBucketData = {
+                        x: processedData.x,
+                        y: processedData.y,
+                        width: processedData.width,
+                        height: processedData.height,
+                    };
 
-                        // If bucket moved, reposition all items inside it
-                        if (oldBucket && (oldBucket.x !== processedData.x || oldBucket.y !== processedData.y)) {
-                            // Reposition items using their offset from the OLD bucket position
-                            // applied to the NEW bucket position. This avoids delta accumulation errors.
-                            setCanvasItems(prevItems => prevItems.map(item => {
-                                if (String(item.inBucket) === String(processedData.id)) {
-                                    const offsetX = item.x - oldBucket.x;
-                                    const offsetY = item.y - oldBucket.y;
-                                    return {
-                                        ...item,
-                                        x: processedData.x + offsetX,
-                                        y: processedData.y + offsetY
-                                    };
-                                }
-                                return item;
-                            }));
-                        }
+                    // Update bucket state first
+                    setBuckets(prev => prev.map(bucket =>
+                        String(bucket.id) === String(processedData.id)
+                            ? {
+                                ...bucket,
+                                ...updatedBucketData,
+                                label: processedData.label !== undefined ? processedData.label : bucket.label,
+                                color: processedData.color !== undefined ? processedData.color : bucket.color,
+                            }
+                            : bucket
+                    ));
 
-                        // Update bucket position — only spread position/size fields to preserve local state
-                        return prev.map(bucket =>
-                            String(bucket.id) === String(processedData.id)
-                                ? {
-                                    ...bucket,
-                                    x: processedData.x,
-                                    y: processedData.y,
-                                    width: processedData.width,
-                                    height: processedData.height,
-                                    label: processedData.label !== undefined ? processedData.label : bucket.label,
-                                    color: processedData.color !== undefined ? processedData.color : bucket.color,
-                                }
-                                : bucket
-                        );
-                    });
+                    // Reposition all items inside the bucket using grid layout
+                    // Items are placed at fixed grid positions relative to the bucket,
+                    // so they always stay inside regardless of canvas size.
+                    setCanvasItems(prevItems =>
+                        repositionItemsInBucket(prevItems, { id: processedData.id, ...updatedBucketData })
+                    );
                 }
             };
 
@@ -1416,8 +1474,35 @@ const Whiteboard = ({
                         // Restore regular canvas items — denormalize coordinates if needed
                         if (regularItems.length > 0) {
                             const canvas = canvasRef.current;
+                            
+                            // First, denormalize free items normally
+                            // For items in buckets, use grid layout relative to their (already restored) bucket
+                            const processedBucketsForLookup = bucketItems.length > 0
+                                ? bucketItems.map(bucket => {
+                                    const isNormalized = bucket.normalized === true || (
+                                        bucket.x >= 0 && bucket.x <= 1 && bucket.y >= 0 && bucket.y <= 1 &&
+                                        bucket.width >= 0 && bucket.width <= 1 && bucket.height >= 0 && bucket.height <= 1
+                                    );
+                                    return (isNormalized && canvas) ? { ...denormalizeItem(bucket, canvas), normalized: false } : bucket;
+                                })
+                                : [];
+
+                            // Track how many items per bucket so we can assign grid positions
+                            const bucketItemCounts = {};
+
                             const processedItems = regularItems.map(item => {
-                                // Check if coordinates are normalized (0-1 range) from item_update persistence
+                                if (item.inBucket) {
+                                    // Position using grid layout relative to the local bucket
+                                    const bucket = processedBucketsForLookup.find(b => String(b.id) === String(item.inBucket));
+                                    if (bucket) {
+                                        const idx = bucketItemCounts[String(item.inBucket)] || 0;
+                                        bucketItemCounts[String(item.inBucket)] = idx + 1;
+                                        const pos = computeBucketItemPosition(bucket, idx);
+                                        return { ...item, x: pos.x, y: pos.y, width: 40, height: 40, normalized: false };
+                                    }
+                                }
+
+                                // Free items: denormalize normally
                                 const isNormalized = item.normalized === true || (
                                     item.x !== undefined && item.x >= 0 && item.x <= 1 &&
                                     item.y !== undefined && item.y >= 0 && item.y <= 1 &&
