@@ -540,6 +540,17 @@ export const attendeeSessionStyles = `
         50% { opacity: 0.7; }
     }
 
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     .learner-session-page {
     width: 100% !important;
     height: 100vh !important;
@@ -724,7 +735,8 @@ export const attendeeSessionStyles = `
     padding: 8px 8px !important;
     margin: 0 !important;
     gap: 12px !important;
-    overflow: visible !important;
+    overflow: auto !important;
+    max-height: 120px !important;
   }
 
   /* Hide sidebar toggles in full-width learner mode */
@@ -751,11 +763,14 @@ export const attendeeSessionStyles = `
       padding: 2px 4px !important;
       gap: 6px !important;
       font-size: 12px !important;
+      max-height: 100px !important;
+      overflow-y: auto !important;
     }
 
     /* Make metrics header elements more compact */
     .learner-metrics-header > div {
       font-size: 11px !important;
+      flex-shrink: 0 !important;
     }
 
     .learner-metrics-header span {
@@ -787,6 +802,13 @@ export const attendeeSessionStyles = `
       min-height: 100vh !important;
       overflow: hidden !important;
     }
+  }
+
+  /* Prompt display box constraints - fully responsive */
+  .prompt-bulb-container {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: visible !important;
   }
 `;
 
@@ -976,7 +998,7 @@ export const AttendeeMetricsHeader = ({
         <div className="learner-metrics-header" style={{
             display: 'flex',
             position: 'relative',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: 'clamp(6px, 1.5vw, 12px)',
             padding: 'clamp(6px, 1.2vh, 8px) clamp(6px, 1.2vw, 8px)',
             backgroundColor: 'white',
@@ -987,6 +1009,10 @@ export const AttendeeMetricsHeader = ({
             width: '100%',
             boxSizing: 'border-box',
             fontSize: 'clamp(10px, 1.8vw, 12px)',
+            minHeight: 'clamp(50px, 6vh, 80px)',
+            maxHeight: 'clamp(100px, 15vh, 180px)',
+            overflowY: 'auto',
+            overflowX: 'hidden',
             ...style
         }}>
             {/* defensive styles to ensure bulb is clickable even if overlays exist */}
@@ -994,29 +1020,23 @@ export const AttendeeMetricsHeader = ({
                 .prompt-bulb-clickable { z-index: 99999 !important; pointer-events: auto !important; cursor: pointer !important; position: relative; display: inline-block; }
                 .prompt-bulb-container { z-index: 99998 !important; pointer-events: auto !important; }
             `}</style>
-            {/* Divider */}
-            <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
             {/* Prompt Level */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)', whiteSpace: 'nowrap', flexShrink: 0, order: 1 }}>
                 <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#d97706' }}>P:</span>
                 <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#d97706' }}>{promptMeter}</span>
             </div>
 
-            {/* Divider */}
-            <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
             {/* Reinforcement Level */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 6px)', whiteSpace: 'nowrap', flexShrink: 0, order: 2 }}>
                 <span style={{ fontWeight: 'bold', fontSize: 'clamp(10px, 1.8vw, 12px)', color: '#16a34a' }}>R:</span>
                 <span style={{ fontSize: 'clamp(14px, 2.5vw, 16px)', fontWeight: 'bold', color: '#16a34a' }}>{reinforcementMeter}</span>
             </div>
 
-            {/* Divider */}
-            <div style={{ width: '1px', height: 'clamp(16px, 3vh, 24px)', backgroundColor: '#d1d5db' }}></div>
 
             {/* Prompt Line with Bulb */}
-            <div className="prompt-bulb-container" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)', position: 'relative', zIndex: 10 }}>
+            <div className="prompt-bulb-container" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.2vw, 8px)', position: 'relative', zIndex: 10, flex: 1, minWidth: 0, order: 3, width: '100%', minHeight: 0 }}>
                 <span className="prompt-bulb-clickable"
                     onClick={(e) => {
                         e.stopPropagation();
@@ -1032,7 +1052,8 @@ export const AttendeeMetricsHeader = ({
                         userSelect: 'none',
                         display: 'inline-block',
                         padding: '2px',
-                        position: 'relative'
+                        position: 'relative',
+                        flexShrink: 0
                     }}
                     title="Click to toggle prompt visibility"
                 >
@@ -1044,16 +1065,20 @@ export const AttendeeMetricsHeader = ({
                         borderRadius: 'clamp(4px, 0.8vw, 6px)',
                         padding: 'clamp(6px, 1.2vw, 8px) clamp(8px, 1.5vw, 12px)',
                         border: promptText !== defaultPromptText ? '2px solid #fbbf24' : '1px solid #e5e7eb',
-                        maxWidth: 'clamp(200px, 40vw, 300px)',
-                        transition: 'border 0.3s ease'
+                        flex: 1,
+                        maxHeight: 'clamp(50px, 8vh, 100px)',
+                        overflowY: 'auto',
+                        transition: 'border 0.3s ease',
+                        boxSizing: 'border-box',
+                        minWidth: 0
                     }}>
                         <p style={{
                             fontSize: 'clamp(10px, 1.8vw, 12px)',
                             color: '#374151',
                             margin: 0,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            whiteSpace: 'pre-wrap',
+                            wordWrap: 'break-word',
+                            overflow: 'hidden'
                         }}>
                             {promptText !== defaultPromptText ? promptText : 'Waiting for prompt...'}
                         </p>
@@ -1833,7 +1858,10 @@ export const AttendeeMetricsPanel = ({
     onTogglePrompt,
     isPromptOpen = false,
     // New: when true, prompt animation (instructor sent prompt) should glow bulb
-    promptAnimating = false
+    promptAnimating = false,
+    // Prompt text display
+    promptText = '[Prompts from instructor will appear here]',
+    defaultPromptText = '[Prompts from instructor will appear here]'
 }) => {
     const bulbGlowFromBucket = useBulbGlowAnimation(bucketColor);
     const isBulbGlowing = bulbGlowFromBucket || !!promptAnimating;
@@ -1853,12 +1881,14 @@ export const AttendeeMetricsPanel = ({
             padding: 'clamp(0.75rem, 2vh, 1rem)',
             boxShadow: '0 0.125rem 0.25rem rgba(0,0,0,0.1)',
             height: '100%',
-            overflow: 'hidden',
-            boxSizing: 'border-box'
+            overflow: 'visible',
+            boxSizing: 'border-box',
+            position: 'relative'
         }}>
             {/* Row 1: P and R side by side */}
             <div style={{
                 display: 'flex',
+                height : '0.1rem',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1875,12 +1905,12 @@ export const AttendeeMetricsPanel = ({
                 }}>
                     <span style={{
                         fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 2vw, 12rem)',
+                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
                         color: '#d97706',
                         whiteSpace: 'nowrap'
                     }}>P :</span>
                     <span style={{
-                        fontSize: 'clamp(0.875rem, 2vw, 12rem)',
+                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
                         fontWeight: 'bold',
                         color: '#d97706',
                         whiteSpace: 'nowrap'
@@ -1896,12 +1926,12 @@ export const AttendeeMetricsPanel = ({
                 }}>
                     <span style={{
                         fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 2vw, 12rem)',
+                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
                         color: '#16a34a',
                         whiteSpace: 'nowrap'
                     }}>R :</span>
                     <span style={{
-                        fontSize: 'clamp(0.875rem, 2vw, 12rem)',
+                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
                         fontWeight: 'bold',
                         color: '#16a34a',
                         whiteSpace: 'nowrap'
@@ -1909,25 +1939,96 @@ export const AttendeeMetricsPanel = ({
                 </div>
             </div>
 
-            {/* Row 2: Bulb */}
-            <span
-                onClick={(e) => { if (onTogglePrompt) onTogglePrompt(); }}
-                title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
-                style={{
-                    fontSize: 'clamp(1rem, 2.2vw, 18rem)',
-                    filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
-                    animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                    transition: 'filter 0.3s ease, transform 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    cursor: onTogglePrompt ? 'pointer' : 'default',
-                    transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)'
-                }}
-            >
-                💡
-            </span>
+            {/* Row 2: Bulb with Dropdown Prompt */}
+            <div style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                // gap: '0.5rem',   
+                width: '100%'
+            }}>
+                <span
+                    onClick={(e) => { if (onTogglePrompt) onTogglePrompt(); }}
+                    title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
+                    style={{
+                        fontSize: 'clamp(1rem, 1.6vw, 18rem)',
+                        filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
+                        animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                        transition: 'filter 0.3s ease, transform 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        cursor: onTogglePrompt ? 'pointer' : 'default',
+                        transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)',
+                        zIndex: 100
+                    }}
+                >
+                    💡
+                </span>
+
+                {/* Prompt Box - Integrated into metrics panel */}
+                {isPromptOpen && (
+                    <div style={{
+                        width: '100%',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '0.375rem',
+                        padding: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                        border: promptText !== defaultPromptText ? '2px solid #fbbf24' : '1px solid #d1d5db',
+                        boxShadow: promptText !== defaultPromptText
+                            ? '0 2px 8px rgba(251, 191, 36, 0.2)'
+                            : '0 1px 3px rgba(0, 0, 0, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        minHeight: 'clamp(3.5rem, 9vh, 4.5rem)',
+                        maxHeight: 'clamp(6rem, 16vh, 5rem)',
+                        overflow: 'auto',
+                        animation: 'slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        position: 'relative',
+                        gap: '0.25rem'
+                    }}>
+                        {/* Small arrow pointing to bulb */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '0',
+                            height: '0',
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderBottom: promptText !== defaultPromptText ? '6px solid #fbbf24' : '6px solid #d1d5db',
+                            zIndex: 1
+                        }} />
+
+                        <p style={{
+                            fontSize: 'clamp(0.65rem, 1.6vw, 0.8rem)',
+                            color: promptText !== defaultPromptText ? '#1f2937' : '#6b7280',
+                            margin: 0,
+                            textAlign: 'center',
+                            fontStyle: promptText !== defaultPromptText ? 'normal' : 'italic',
+                            lineHeight: '1.4',
+                            fontWeight: promptText !== defaultPromptText ? '600' : '500',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            hyphens: 'manual',
+                            padding: '0.25rem 0.5rem',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word'
+                        }}>
+                            {promptText !== defaultPromptText ? promptText : 'Waiting...'}
+
+                        </p>
+                    </div>
+                )}
+            </div>
 
             {/* Row 3: Video control icons */}
             {showControls && onToggleMic && onToggleCamera && onLeaveSession && (
@@ -1999,7 +2100,9 @@ AttendeeMetricsPanel.propTypes = {
     showControls: PropTypes.bool,
     onTogglePrompt: PropTypes.func,
     isPromptOpen: PropTypes.bool,
-    focusOnOpen: PropTypes.bool
+    focusOnOpen: PropTypes.bool,
+    promptText: PropTypes.string,
+    defaultPromptText: PropTypes.string
 };
 
 
@@ -2072,51 +2175,7 @@ export const AttendeePromptPanel = ({
             justifyContent: 'flex-start',
             boxSizing: 'border-box'
         }}>
-            {/* Prompt Line - Only shows when no other feature is active or when toggled open */}
-            {!isCommentsOpen && !showExercise && isPromptOpen && (
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'clamp(0.375rem, 1vh, 0.5rem)',
-                    width: '100%'
-                }}>
-                    <div style={{
-                        fontSize: 'clamp(0.625rem, 1.5vw, 0.875rem)',
-                        fontWeight: '600',
-                        color: '#6b7280',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05rem'
-                    }}>
-                        📝 Prompt Line
-                    </div>
-                    <div style={{
-                        flex: 1,
-                        backgroundColor: '#f9fafb',
-                        borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
-                        padding: 'clamp(0.625rem, 1.5vh, 1rem)',
-                        border: promptText !== defaultPromptText ? '0.125rem solid #fbbf24' : '0.0625rem solid #e5e7eb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'auto'
-                    }}>
-                        <p style={{
-                            fontSize: 'clamp(0.75rem, 1.8vw, 1.125rem)',
-                            color: promptText !== defaultPromptText ? '#374151' : '#9ca3af',
-                            margin: 0,
-                            textAlign: 'center',
-                            fontStyle: promptText !== defaultPromptText ? 'normal' : 'italic',
-                            lineHeight: '1.5',
-                            fontWeight: promptText !== defaultPromptText ? '500' : 'normal'
-                        }}>
-                            {promptText !== defaultPromptText ? promptText : 'Waiting for instructor prompt...'}
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Question/Comment Box - Shows when instructor gives access, hides Prompt Line */}
+            {/* Question/Comment Box - Shows when instructor gives access */}
             {isCommentsOpen && setCommentInput && (
                 <div style={{
                     flex: showExercise ? '0 0 auto' : '1',
@@ -2161,8 +2220,8 @@ export const AttendeePromptPanel = ({
                 </div>
             )}
 
-            {/* Answer Box (Exercise) - Shows when instructor gives access */}
-            {showExercise && exerciseData && (
+            {/* Answer Box (Exercise) - Shows when instructor gives access (only for guest/client, not learner) */}
+            {showExercise && exerciseData && sessionType !== 'learner' && (
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -2356,6 +2415,147 @@ AttendeeVideoPanel.propTypes = {
     remoteVideoRef: PropTypes.object.isRequired,
     remoteStream: PropTypes.object,
     label: PropTypes.string
+};
+
+/**
+ * Exercise Overlay Component
+ * Displays question and answer box overlaid on whiteboard
+ * Used by learner session to save space
+ */
+export const ExerciseOverlay = ({
+    exerciseData = null,
+    showExercise = false,
+    onExerciseUpdate = null,
+    sessionType = 'learner'
+}) => {
+    const [localExerciseAnswer, setLocalExerciseAnswer] = React.useState(exerciseData?.answer || '');
+
+    React.useEffect(() => {
+        setLocalExerciseAnswer(exerciseData?.answer || '');
+    }, [exerciseData && exerciseData.answer]);
+
+    if (!showExercise || !exerciseData) return null;
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 50,
+            width: 'clamp(280px, 65vw, 800px)',
+            maxHeight: 'clamp(200px, 70vh, 600px)',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)',
+            border: '2px solid #3b82f6',
+            padding: 'clamp(1rem, 2.5vh, 1.5rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'clamp(0.75rem, 1.5vh, 1rem)',
+            overflow: 'auto',
+            animation: 'slideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        }}>
+
+
+            {/* Question Section */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+            }}>
+                <label style={{
+                    fontSize: 'clamp(0.875rem, 1.8vw, 1rem)',
+                    fontWeight: 'bold',
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                }}>
+                    ❓ Question
+                </label>
+                <div style={{
+                    fontSize: 'clamp(0.875rem, 1.8vw, 1rem)',
+                    fontWeight: '600',
+                    color: '#1f2937',
+                    padding: 'clamp(0.75rem, 1.5vh, 1rem)',
+                    backgroundColor: '#f0f9ff',
+                    borderRadius: '8px',
+                    borderLeft: '4px solid #3b82f6',
+                    lineHeight: '1.6',
+                    maxHeight: '150px',
+                    overflow: 'auto'
+                }}>
+                    {exerciseData.question || 'Given by Instructor'}
+                </div>
+            </div>
+
+            {/* Answer Section */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                flex: 1,
+                minHeight: 0
+            }}>
+                <label style={{
+                    fontSize: 'clamp(0.875rem, 1.8vw, 1rem)',
+                    fontWeight: 'bold',
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                }}>
+                    ✏️ Your Answer
+                </label>
+                <textarea
+                    value={onExerciseUpdate ? (exerciseData?.learnerAnswer ?? exerciseData?.answer ?? '') : localExerciseAnswer}
+                    onChange={(e) => {
+                        const v = e.target.value;
+                        if (onExerciseUpdate && exerciseData) {
+                            onExerciseUpdate({
+                                ...exerciseData,
+                                learnerAnswer: v,
+                                timestamp: Date.now()
+                            });
+                        } else {
+                            setLocalExerciseAnswer(v);
+                        }
+                    }}
+                    placeholder="Type your answer here..."
+                    style={{
+                        flex: 1,
+                        minHeight: 'clamp(80px, 15vh, 150px)',
+                        padding: 'clamp(0.75rem, 1.5vh, 1rem)',
+                        fontSize: 'clamp(0.875rem, 1.8vw, 1rem)',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontFamily: 'inherit',
+                        fontWeight: '500',
+                        resize: 'none',
+                        backgroundColor: '#ffffff',
+                        outline: 'none',
+                        lineHeight: '1.6',
+                        transition: 'border-color 0.2s',
+                        boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                        e.target.style.borderColor = '#e5e7eb';
+                        e.target.style.boxShadow = 'none';
+                    }}
+                />
+            </div>
+        </div>
+    );
+};
+
+ExerciseOverlay.propTypes = {
+    exerciseData: PropTypes.object,
+    showExercise: PropTypes.bool,
+    onExerciseUpdate: PropTypes.func,
+    sessionType: PropTypes.string
 };
 
 /**
@@ -2589,6 +2789,9 @@ export const AttendeeUpperSection = ({
                     onToggleCamera={onToggleCamera}
                     onLeaveSession={onLeaveSession}
                     showControls={showVideoControls}
+                    // Prompt text display
+                    promptText={promptText}
+                    defaultPromptText={defaultPromptText}
                     // prompt toggle wiring
                     isPromptOpen={isPromptOpen}
                     onTogglePrompt={() => {

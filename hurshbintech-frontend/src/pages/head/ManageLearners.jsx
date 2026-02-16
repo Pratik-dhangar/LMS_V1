@@ -117,7 +117,7 @@ const ManageLearners = () => {
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
-<button
+            <button
               onClick={() => navigate("/admin/dashboard")}
               className="back-button"
             >
@@ -136,9 +136,9 @@ const ManageLearners = () => {
             </button>
             <div>
               <h1 className="page-title">
-              Manage HurshBin Learners
-            </h1>
-            <p className="page-description">View and manage all registered learners</p>
+                Manage HurshBin Learners
+              </h1>
+              <p className="page-description">View and manage all registered learners</p>
             </div>
           </div>
 
@@ -269,7 +269,7 @@ const ManageLearners = () => {
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditLearner(learner.id)}
-                              className="app-modal-btn app-modal-btn--primary btn-icon"
+                              className="app-modal-btn app-modal-btn--primary"
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile

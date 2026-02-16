@@ -39,6 +39,7 @@ import {
   AttendeeWaitingModal,
   usePromptAnimation,
   useBulbGlowAnimation,
+  ExerciseOverlay,
   attendeeSessionStyles
 } from '../../components/session/AttendeeSessionLayout';
 
@@ -1841,6 +1842,14 @@ const LearnerSession = () => {
             syncedIsRunning={syncedIsRunning}
             stopwatch={stopwatch}
             Whiteboard={Whiteboard}
+          />
+
+          {/* Exercise Overlay - Displays question/answer on top of whiteboard */}
+          <ExerciseOverlay
+            exerciseData={exerciseData}
+            showExercise={!!exerciseData && (!!exerciseData.question || !!exerciseData.qaItems?.length)}
+            onExerciseUpdate={handleExerciseAnswerChange}
+            sessionType="learner"
           />
         </AttendeeWhiteboardSection>
 

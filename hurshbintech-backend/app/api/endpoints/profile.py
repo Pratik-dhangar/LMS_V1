@@ -2,21 +2,23 @@
 Profile endpoints for all user types
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+import logging
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_admin
 from app.db.session import get_db
 from app.models.user_model import (
-    Admin,
     CoachProfile,
     HeadProfile,
     LearnerProfile,
     TrainerProfile,
+    User,
 )
 from app.schemas.user import (
     AdminResponse,
+    AdminUpdate,
     CoachResponse,
     HeadResponse,
     LearnerResponse,
@@ -33,7 +35,7 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 async def get_user_profile(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        User | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
     from app.models.user_model import User
@@ -70,9 +72,6 @@ async def get_user_profile(
     elif isinstance(current_user, HeadProfile):
         logger.info("Direct HeadProfile")
         return HeadResponse.from_orm_with_user(current_user)
-    elif isinstance(current_user, Admin):
-        logger.info("Direct Admin")
-        return AdminResponse.model_validate(current_user)
     elif isinstance(current_user, TrainerProfile):
         logger.info("Direct TrainerProfile")
         return TrainerResponse.from_orm_with_user(current_user)
@@ -92,7 +91,7 @@ async def get_user_profile(
 async def get_my_subscriptions(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        User | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
     """Get all subscriptions for the current learner"""
@@ -127,3 +126,37 @@ async def get_my_subscriptions(
     subscriptions = await crud.subscription_crud.get_subscriptions_by_learner(db, current_user.user_id)
     logger.info(f"Found {len(subscriptions)} subscriptions for learner {current_user.user_id}")
     return subscriptions
+
+
+# Update admin profile
+@router.put("/admin/update", response_model=AdminResponse)
+async def update_admin_profile(
+    admin_update: AdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Update admin profile information"""
+    
+    from app.models.user_model import User
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Ensure we're working with a User object
+        if not isinstance(current_admin, User):
+            raise HTTPException(status_code=500, detail="Invalid admin user object")
+        
+        updated_admin = await crud.user_crud.update_admin_profile(
+            db, current_admin.id, admin_update
+        )
+        if not updated_admin:
+            raise HTTPException(status_code=404, detail="Admin not found")
+        
+        logger.info(f"Admin profile updated: {updated_admin.id}")
+        return AdminResponse.model_validate(updated_admin)
+    except ValueError as e:
+        logger.warning(f"Validation error updating admin: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating admin profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update admin profile")

@@ -30,6 +30,7 @@ from app.models.user_model import (
 )
 from app.models.vlog_model import Vlog
 from app.models.about_us_model import AboutUs, AboutUsStatus
+from app.models.vendor_model import Vendor
 from app.models.ecommerce_model import (
     Product,
     ProductCategory,
@@ -87,6 +88,7 @@ __all__ = [
     "Vlog",
     "AboutUs",
     "AboutUsStatus",
+    "Vendor",
     "Product",
     "ProductCategory",
     "AgeGroup",

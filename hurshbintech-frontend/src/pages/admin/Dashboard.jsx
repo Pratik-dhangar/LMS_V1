@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package, Mail } from 'lucide-react';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package, Mail, UserCircle } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
@@ -9,6 +9,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const menuItems = [
+    { id: '0.1', title: 'My Profile', description: 'View and manage your profile and vendors', icon: UserCircle, color: 'violet', onClick: () => navigate('/admin/profile') },
     { id: '1.1', title: 'Manage HurshBin Heads', description: 'Register and manage HurshBin Heads', icon: Users2, color: 'blue', onClick: () => navigate('/admin/manage-heads') },
     { id: '1.2', title: 'View HurshBin Trainers', description: 'View and manage HurshBin Trainers', icon: GraduationCap, color: 'green', onClick: () => navigate('/admin/view-trainers') },
     { id: '1.3', title: 'Manage Learning Content', description: 'View and manage learning content', icon: BookOpen, color: 'purple', onClick: () => navigate('/admin/learning-content') },
