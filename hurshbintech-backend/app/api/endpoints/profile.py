@@ -82,7 +82,11 @@ async def get_user_profile(
 
         # Fetch the appropriate profile based on role
         # First check if profile is already loaded via relationship
-        if current_user.role == UserRole.HEAD:
+        if current_user.role == UserRole.ADMIN:
+            # Admin users are stored directly in the users table, no separate profile table
+            logger.info(f"Admin user - using User object directly (id: {current_user.id}, email: {current_user.email})")
+            # Keep current_user as is - it's already a User object with ADMIN role
+        elif current_user.role == UserRole.HEAD:
             if hasattr(current_user, 'head_profile') and current_user.head_profile:
                 current_user = current_user.head_profile
             else:
@@ -136,6 +140,9 @@ async def get_user_profile(
         result = HeadResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, Admin):
         result = AdminResponse.model_validate(current_user)
+    elif isinstance(current_user, User) and current_user.role == UserRole.ADMIN:
+        # Admin users are User objects with ADMIN role (not Admin model instances)
+        result = AdminResponse.model_validate(current_user)
     elif isinstance(current_user, TrainerProfile):
         result = TrainerResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, CoachProfile):
@@ -143,7 +150,7 @@ async def get_user_profile(
     elif isinstance(current_user, LearnerProfile):
         result = LearnerResponse.from_orm_with_user(current_user)
     else:
-        logger.error(f"Unhandled case - Type: {type(current_user).__name__}")
+        logger.error(f"Unhandled case - Type: {type(current_user).__name__}, Role: {getattr(current_user, 'role', 'N/A')}")
         raise HTTPException(status_code=500, detail="Unable to determine profile type")
 
     # Cache for 15 minutes
