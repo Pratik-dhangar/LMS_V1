@@ -58,10 +58,52 @@ class AdminResponse(BaseModel):
     id: int
     name: str
     email: str
+    contact_number: Optional[str] = None
     role: str
     passcode: str
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
+    @classmethod
+    def from_orm(cls, obj):
+        """Handle role conversion from Enum"""
+        if hasattr(obj, 'role'):
+            role_value = obj.role.value if hasattr(obj.role, 'value') else str(obj.role)
+            return super().model_validate({
+                'id': obj.id,
+                'name': obj.name,
+                'email': obj.email,
+                'contact_number': obj.contact_number,
+                'role': role_value,
+                'passcode': obj.passcode,
+                'created_at': obj.created_at,
+                'updated_at': getattr(obj, 'updated_at', None),
+            })
+        return super().from_orm(obj)
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUpdate(BaseModel):
+    """Schema for updating admin profile"""
+    name: Optional[str] = None
+    email: Optional[str] = None
+    contact_number: Optional[str] = None
+
+
+class AdminProfileResponse(BaseModel):
+    """Schema for admin profile with vendor management"""
+    id: int
+    name: str
+    email: str
+    contact_number: Optional[str] = None
+    role: str
+    passcode: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    vendors_count: int = 0
+    
     class Config:
         from_attributes = True
 

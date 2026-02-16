@@ -482,7 +482,7 @@ const EditHead = () => {
               <button
                 type="submit"
                 disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--primary btn-icon"
+                className="app-modal-btn app-modal-btn--primary "
               >
                 {saving ? (
                   <>
@@ -518,7 +518,7 @@ const EditHead = () => {
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--danger btn-icon"
+                className="app-modal-btn app-modal-btn--danger"
               >
                 <svg
                   className="icon-sm"
