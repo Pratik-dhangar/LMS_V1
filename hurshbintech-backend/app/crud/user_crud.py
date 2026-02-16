@@ -29,6 +29,7 @@ from app.schemas.user import (
     LearnerUpdate,
     TrainerCreate,
     TrainerUpdate,
+    AdminUpdate,
 )
 from app.core.security import hash_password, verify_password, encrypt_passcode
 
@@ -145,6 +146,57 @@ async def get_admin_by_passcode(db: AsyncSession, passcode: str) -> Admin | None
         logger.debug(f"Found admin with ID: {admin.id}")
     else:
         logger.debug("No admin found with provided passcode")
+    return admin
+
+
+# Get admin by ID
+async def get_admin_by_id(db: AsyncSession, admin_id: int) -> Admin | None:
+    logger.debug(f"Querying admin by ID: {admin_id}")
+    result = await db.execute(select(Admin).where(Admin.id == admin_id))
+    admin = result.scalar_one_or_none()
+    if admin:
+        logger.debug(f"Found admin with ID: {admin.id}")
+    else:
+        logger.debug(f"No admin found with ID: {admin_id}")
+    return admin
+
+
+# Update admin profile
+async def update_admin_profile(db: AsyncSession, admin_id: int, update_data: "AdminUpdate") -> User | None:
+    """Update admin user profile"""
+    logger.debug(f"Updating admin profile: {admin_id}")
+    
+    # Get user with admin role
+    result = await db.execute(
+        select(User).where(User.id == admin_id, User.role == UserRole.ADMIN)
+    )
+    admin = result.scalar_one_or_none()
+    
+    if not admin:
+        logger.warning(f"Admin not found: {admin_id}")
+        return None
+    
+    # Check if new email already exists (if being changed)
+    if update_data.email and update_data.email != admin.email:
+        existing = await db.execute(select(User).where(User.email == update_data.email))
+        if existing.scalar_one_or_none():
+            raise ValueError(f"Email {update_data.email} already exists")
+    
+    # Check if new contact number already exists (if being changed)
+    if update_data.contact_number and update_data.contact_number != admin.contact_number:
+        existing = await db.execute(select(User).where(User.contact_number == update_data.contact_number))
+        if existing.scalar_one_or_none():
+            raise ValueError(f"Contact number {update_data.contact_number} already exists")
+    
+    # Update fields
+    update_items = update_data.model_dump(exclude_unset=True)
+    for field, value in update_items.items():
+        if value is not None:
+            setattr(admin, field, value)
+    
+    await db.commit()
+    await db.refresh(admin)
+    logger.info(f"Updated admin profile: {admin_id}")
     return admin
 
 
@@ -823,6 +875,7 @@ async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
 
     # Import necessary models
     from app.models.user_model import Appointment, LearnerReferenceData
+    from app.models.program_assignment_model import ProgramAssignment
     from sqlalchemy import update, delete
     
     # Get the user_id before deleting
@@ -839,12 +892,29 @@ async def delete_learner(db: AsyncSession, learner_id: int) -> str | bool:
         .where(Appointment.user_id == user_id)
         .values(user_id=None, user_role=None)
     )
+    # Delete any program assignments tied to this learner to avoid FK nullification
+    await db.execute(
+        delete(ProgramAssignment).where(ProgramAssignment.learner_id == learner_id)
+    )
     
-    await db.flush()  # Ensure all updates are done before deleting
+    # Expunge learner from session to prevent SQLAlchemy from tracking relationship cascades
+    db.expunge_all()
     
-    # Delete user (will cascade to learner profile due to relationship)
-    user = learner.user
-    await db.delete(user)
+    # Now delete the user and learner profile using raw SQL to avoid ORM cascading issues
+    from sqlalchemy import text
+    
+    # Delete learner profile first
+    await db.execute(
+        text("DELETE FROM learner_profiles WHERE user_id = :user_id"),
+        {"user_id": user_id}
+    )
+    
+    # Delete user record
+    await db.execute(
+        text("DELETE FROM users WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    
     await db.commit()
     return "Learner deleted successfully"
 

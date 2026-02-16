@@ -276,14 +276,14 @@ const ManageTrainers = () => {
                           <td className="table-primary-td table-primary-td-center">
                             {trainer.date_of_joining
                               ? new Date(
-                                  trainer.date_of_joining
-                                ).toLocaleDateString()
+                                trainer.date_of_joining
+                              ).toLocaleDateString()
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditTrainer(trainer.id)}
-                              className="app-modal-btn app-modal-btn--primary btn-icon"
+                              className="app-modal-btn app-modal-btn--primary"
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile
