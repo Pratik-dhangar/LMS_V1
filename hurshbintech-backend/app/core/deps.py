@@ -15,6 +15,7 @@ from sqlalchemy.orm import joinedload
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user_model import (
+    Admin,
     CoachProfile,
     HeadProfile,
     LearnerProfile,

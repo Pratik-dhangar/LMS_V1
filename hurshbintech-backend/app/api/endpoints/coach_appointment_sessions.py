@@ -250,6 +250,14 @@ async def end_coach_session(
     try:
         ended_session = await coach_appointment_session_crud.end_session(db, session_id, session_end.notes)
 
+        # Clean up whiteboard state for ended session
+        try:
+            from app.crud import whiteboard_crud
+            await whiteboard_crud.cleanup_session_state(db, session_id)
+            logger.info(f"✅ Cleaned up whiteboard state for ended coach session {session_id}")
+        except Exception as e:
+            logger.error(f"Error cleaning up whiteboard state for coach session {session_id}: {str(e)}")
+
         # Broadcast session end to all participants via WebSocket
         if session_id in active_connections:
             end_message = {

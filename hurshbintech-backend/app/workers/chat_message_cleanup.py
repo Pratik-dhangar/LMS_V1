@@ -20,40 +20,41 @@ logger = logging.getLogger(__name__)
 async def cleanup_old_messages():
     """
     Delete chat messages older than 7 days.
-    
+
     This job should be run daily via cron or scheduler.
-    
+
     Process:
     1. Find all messages older than 7 days
     2. Delete associated files from storage (if any)
     3. Delete messages from database
     4. Log results
-    
+
     Returns:
         dict: Summary of cleanup operation
     """
     retention_days = 7
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
-    
+    # Use timezone-naive datetime to match database func.now() behavior
+    cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+
     deleted_count = 0
     failed_count = 0
     files_deleted = 0
-    
-    logger.info(f"Starting chat message cleanup for messages older than {cutoff_date}")
-    
+
+    logger.info(f"Starting chat message cleanup for messages older than {cutoff_date} UTC")
+
     try:
         # Get database session
         async with AsyncSessionLocal() as db:
-            # Find messages older than 7 days
+            # Find messages older than 7 days (not soft-deleted)
             query = select(Message).where(
                 Message.created_at < cutoff_date,
                 Message.is_deleted == False
             )
-            
+
             result = await db.execute(query)
             messages = result.scalars().all()
-            
-            logger.info(f"Found {len(messages)} messages to delete")
+
+            logger.info(f"Found {len(messages)} messages to delete (created before {cutoff_date})")
             
             # Process each message
             for message in messages:

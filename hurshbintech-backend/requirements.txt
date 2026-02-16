@@ -20,6 +20,7 @@ slowapi>=0.1.9
 aiohttp>=3.9.0
 reportlab>=4.0.0
 APScheduler>=3.10.4
+redis>=5.0.0  # Redis async client for caching
 
 # Testing dependencies
 pytest

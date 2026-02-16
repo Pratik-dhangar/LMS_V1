@@ -1303,6 +1303,75 @@ const Whiteboard = ({
                 // console.log('[Whiteboard] Items unselected by instructor');
                 setSelectedItems([]);
             };
+
+            // Handle whiteboard state restoration on reconnection
+            whiteboardService.onWhiteboardRestore = (restoredState) => {
+                console.log('[Whiteboard] 🔄 Restoring whiteboard state:', restoredState);
+                
+                try {
+                    // Restore drawing strokes
+                    if (restoredState.drawings && restoredState.drawings.length > 0) {
+                        console.log(`[Whiteboard] Restoring ${restoredState.drawings.length} drawing strokes`);
+                        normalizedPathsRef.current = restoredState.drawings;
+                        
+                        // Redraw all strokes on canvas after a short delay to ensure canvas is ready
+                        setTimeout(() => {
+                            const canvas = canvasRef.current;
+                            if (canvas) {
+                                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                                const dpr = window.devicePixelRatio || 1;
+                                
+                                // Clear and reset canvas dimensions
+                                canvas.width = canvas.offsetWidth * dpr;
+                                canvas.height = canvas.offsetHeight * dpr;
+                                ctx.scale(dpr, dpr);
+                                
+                                // Replay all paths
+                                console.log('[Whiteboard] Replaying', normalizedPathsRef.current.length, 'paths');
+                                replayPaths(normalizedPathsRef.current, ctx, canvas);
+                                console.log('[Whiteboard] ✅ Drawing restoration complete');
+                            } else {
+                                console.warn('[Whiteboard] ⚠️ Canvas not ready for restoration');
+                            }
+                        }, 100);
+                    }
+                    
+                    // Restore canvas items (separate buckets from regular items)
+                    if (restoredState.items && restoredState.items.length > 0) {
+                        console.log(`[Whiteboard] Restoring ${restoredState.items.length} canvas items`);
+                        
+                        const bucketItems = [];
+                        const regularItems = [];
+                        
+                        restoredState.items.forEach(item => {
+                            if (item.type === 'bucket') {
+                                bucketItems.push(item);
+                            } else {
+                                regularItems.push(item);
+                            }
+                        });
+                        
+                        console.log(`[Whiteboard] - ${bucketItems.length} buckets`);
+                        console.log(`[Whiteboard] - ${regularItems.length} regular items (images/text)`);
+                        
+                        // Restore buckets
+                        if (bucketItems.length > 0) {
+                            setBuckets(bucketItems);
+                            console.log('[Whiteboard] ✅ Buckets restored');
+                        }
+                        
+                        // Restore regular canvas items
+                        if (regularItems.length > 0) {
+                            setCanvasItems(regularItems);
+                            console.log('[Whiteboard] ✅ Canvas items restored');
+                        }
+                    }
+                    
+                    console.log('[Whiteboard] ✅ Whiteboard state restoration initiated');
+                } catch (error) {
+                    console.error('[Whiteboard] ❌ Error restoring whiteboard state:', error);
+                }
+            };
         }
 
         // Handle window resize - replay normalized paths to preserve drawings
@@ -1352,6 +1421,7 @@ const Whiteboard = ({
                 whiteboardService.onBucketUpdate = null;
                 whiteboardService.onMediaControl = null;
                 whiteboardService.onItemsUnselected = null;
+                whiteboardService.onWhiteboardRestore = null;
             }
             window.removeEventListener('resize', handleResize);
         };

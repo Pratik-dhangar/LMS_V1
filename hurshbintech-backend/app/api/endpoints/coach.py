@@ -3,6 +3,8 @@ Coach endpoints - Profile picture upload, appointments, and sessions
 Accessible by coaches and their heads
 """
 
+import hashlib
+import json
 import logging
 import os
 import uuid
@@ -23,6 +25,7 @@ from app.db.session import get_db
 from app.models.learning_content_model import LearningContent
 from app.models.user_model import CoachProfile, User, UserRole, Appointment, AppointmentStatus
 from app.services.email_service import EmailService
+from app.services.cache_service import cache_service
 from app.utils.s3_utils import convert_s3_url_to_signed
 from app.schemas.user import (
     AppointmentCreate,
@@ -350,7 +353,7 @@ async def get_coach_appointments(
 ):
     """Get all appointments for the current coach with user details"""
     appointments = await coach_crud.get_appointments_by_coach(db, current_coach.id)
-    
+
     # Add user name and new column data to each appointment
     result = []
     for apt in appointments:
@@ -373,9 +376,9 @@ async def get_coach_appointments(
             "created_at": apt.created_at.isoformat() if apt.created_at else None,
             "updated_at": apt.updated_at.isoformat() if apt.updated_at else None,
         }
-        
+
         response = AppointmentResponse(**apt_dict)
-        
+
         # Convert S3 URLs to signed URLs if using S3
         if settings.USE_S3:
             if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
@@ -384,9 +387,9 @@ async def get_coach_appointments(
                 response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
             if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
                 response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
-        
+
         result.append(response)
-    
+
     return result
 
 
@@ -863,6 +866,7 @@ async def create_session(
 ):
     """Create a new coach session"""
     session = await coach_crud.create_coach_session(db, session_data, current_coach.id)
+    
     return CoachSessionResponse.from_orm(session)
 
 
@@ -873,7 +877,9 @@ async def get_coach_sessions(
 ):
     """Get all sessions for the current coach"""
     sessions = await coach_crud.get_coach_sessions(db, current_coach.id)
-    return [CoachSessionResponse.from_orm(session) for session in sessions]
+    result = [CoachSessionResponse.from_orm(session) for session in sessions]
+
+    return result
 
 
 @router.get("/sessions/{session_id}", response_model=CoachSessionResponse)
@@ -897,7 +903,9 @@ async def get_session_details(
             detail="Not authorized to view this session",
         )
 
-    return CoachSessionResponse.from_orm(session)
+    result = CoachSessionResponse.from_orm(session)
+
+    return result
 
 
 @router.patch("/sessions/{session_id}", response_model=CoachSessionResponse)
@@ -923,6 +931,7 @@ async def update_session(
         )
 
     updated = await coach_crud.update_coach_session(db, session_id, session_update)
+    
     return CoachSessionResponse.from_orm(updated)
 
 

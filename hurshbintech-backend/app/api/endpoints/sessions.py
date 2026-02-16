@@ -2,6 +2,7 @@
 Training Session Endpoints - Video conferencing sessions
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timezone
@@ -30,6 +31,7 @@ from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, U
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
 from app.utils.s3_utils import S3Manager
 from app.services.recording_storage import get_recording_storage
+from app.services.cache_service import cache_service
 
 # Import SessionUpdate schema
 from app.schemas.session import SessionUpdate
@@ -86,13 +88,13 @@ async def get_all_sessions(
     from app.crud.session_crud import get_all_sessions_by_head
 
     sessions = await get_all_sessions_by_head(db, current_head.user_id)
-    
+
     # Build responses with notes and reports
     responses = []
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
-    
+
     return responses
 
 
@@ -327,6 +329,7 @@ async def get_trainer_sessions_list(
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
+
     return responses
 
 
@@ -336,8 +339,8 @@ async def start_training_session(
     db: AsyncSession = Depends(get_db),
     current_trainer: TrainerProfile = Depends(get_current_trainer),
 ):
-    """Start a scheduled session"""
-    logger.info(f"Trainer {current_trainer.user_id} starting session {session_id}")
+    """Start a scheduled session or rejoin an active session"""
+    logger.info(f"Trainer {current_trainer.user_id} starting/rejoining session {session_id}")
 
     session = await session_crud.get_session_by_id(db, session_id)
 
@@ -347,8 +350,15 @@ async def start_training_session(
     if session.trainer_id != current_trainer.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to start this session")
 
+    # Allow rejoining active/in_progress sessions
+    if session.status in ["in_progress", "active"]:
+        logger.info(f"Trainer rejoining active session {session_id} (status: {session.status})")
+        return await build_session_response(db, session)
+    
+    # Start session if in scheduled state
     if session.status != "scheduled":
-        raise HTTPException(status_code=400, detail="Session is not in scheduled state")
+        logger.warning(f"Cannot start session {session_id}: current status is '{session.status}'")
+        raise HTTPException(status_code=400, detail=f"Session cannot be started. Current status: {session.status}")
 
     started_session = await session_crud.start_session(db, session_id)
 
@@ -373,7 +383,19 @@ async def end_training_session(
     if session.trainer_id != current_trainer.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to end this session")
 
+    # Store session details before ending for cache invalidation
+    head_id = session.created_by_id
+    learner_id = session.learner_id
+
     ended_session = await session_crud.end_session(db, session_id, session_end.notes)
+
+    # Clean up whiteboard state for ended session
+    try:
+        from app.crud import whiteboard_crud
+        await whiteboard_crud.cleanup_session_state(db, session_id)
+        logger.info(f"✅ Cleaned up whiteboard state for ended session {session_id}")
+    except Exception as e:
+        logger.error(f"Error cleaning up whiteboard state for session {session_id}: {str(e)}")
 
     # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
     try:
@@ -429,6 +451,10 @@ async def delete_training_session(
             status_code=400,
             detail=f"Cannot delete {session.status} session. Only scheduled sessions can be deleted.",
         )
+
+    # Store session details before deletion for cache invalidation
+    trainer_id = session.trainer_id
+    learner_id = session.learner_id
 
     success = await session_crud.delete_session(db, session_id)
 
@@ -493,6 +519,7 @@ async def get_learner_sessions_list(
     for s in sessions:
         response = await build_session_response(db, s)
         responses.append(response)
+
     return responses
 
 
@@ -514,7 +541,8 @@ async def join_training_session(
         raise HTTPException(status_code=403, detail="Not authorized to join this session")
 
     if session.status != "active":
-        raise HTTPException(status_code=400, detail="Session is not active")
+        logger.warning(f"Learner {current_learner.user_id} cannot join session {session_id}: current status is '{session.status}', expected 'active'")
+        raise HTTPException(status_code=400, detail=f"Session is not active. Current status: {session.status}")
 
     return {"message": "Joined session successfully"}
 

@@ -15,6 +15,7 @@ from app.core.deps import get_current_admin, get_db
 from app.crud.about_us_crud import about_us_crud
 from app.models.user_model import User
 from app.schemas.about_us import AboutUsCreate, AboutUsUpdate, AboutUsResponse
+from app.services.cache_service import cache_service
 from app.utils.s3_utils import S3Manager
 
 logger = logging.getLogger(__name__)
@@ -249,6 +250,10 @@ async def create_about_us(
         )
 
         about_us = await about_us_crud.create_about_us(db, about_us_data, current_admin.id)
+        
+        # Invalidate about us caches
+        await cache_service.invalidate_about_us()
+        
         return convert_about_us_response(about_us)
 
     except Exception as e:
@@ -393,6 +398,9 @@ async def update_about_us(
                 detail="About Us page not found"
             )
 
+        # Invalidate about us caches
+        await cache_service.invalidate_about_us()
+
         return convert_about_us_response(about_us)
 
     except HTTPException:
@@ -415,6 +423,10 @@ async def delete_about_us(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="About Us page not found"
         )
+    
+    # Invalidate about us caches
+    await cache_service.invalidate_about_us()
+    
     return None
 
 
@@ -452,6 +464,9 @@ async def delete_featured_image_endpoint(
         update_data = AboutUsUpdate(featured_image_url=None)
         await about_us_crud.update_about_us(db, about_us_id, update_data)
         
+        # Invalidate about us caches
+        await cache_service.invalidate_about_us()
+        
         logger.info(f"Deleted featured image for About Us ID {about_us_id}: {image_url}")
         return None
         
@@ -474,8 +489,18 @@ async def get_public_about_us(
     language_code: str = "en",
     db: AsyncSession = Depends(get_db),
 ):
-    """Get published About Us page (Public)"""
+    """Get published About Us page (Public) - Cached for 1 hour"""
     logger.info(f"Fetching published About Us for language: {language_code}")
+    
+    cache_key = cache_service.key_about_us(language_code)
+    
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return AboutUsResponse(**cached_data)
+    
+    logger.debug(f"Cache MISS: {cache_key}")
     about_us = await about_us_crud.get_published_about_us(db, language_code)
     
     if not about_us:
@@ -491,4 +516,9 @@ async def get_public_about_us(
         )
     
     logger.info(f"Returning published About Us for language: {language_code}")
-    return convert_about_us_response(about_us)
+    response = convert_about_us_response(about_us)
+    
+    # Cache response for 1 hour
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_ABOUT_US)
+    
+    return response

@@ -2,6 +2,8 @@
 Admin CRUD endpoints - Manage Heads and Coaches
 """
 
+import hashlib
+import json
 from typing import List, Optional
 from pathlib import Path
 from datetime import date, datetime
@@ -33,6 +35,7 @@ from app.schemas.subscription import (
     SubscriptionPackageUpdate,
     SubscriptionPackageResponse,
 )
+from app.services.cache_service import cache_service
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
@@ -338,6 +341,9 @@ async def update_head_profile(
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logger.error(f"Failed to upload reference file {filename_str}: {str(e)}")
                 # Continue with other files
+    
+    # Invalidate user profile cache for this head
+    await cache_service.invalidate_user_profile(updated_head.user_id)
     
     return HeadResponse.from_orm_with_user(updated_head)
 
@@ -807,6 +813,9 @@ async def update_coach_profile(
                 # Log error but don't fail
                 filename_str = getattr(ref_file, 'filename', 'unknown')
                 logging.warning(f"Failed to upload reference file {filename_str}: {str(e)}")
+    
+    # Invalidate coach profile caches
+    await cache_service.invalidate_coach_profile(coach_id)
     
     return CoachResponse.from_orm_with_user(updated_coach)
 
@@ -1451,6 +1460,14 @@ async def create_subscription_package(
 ):
     """Create a new subscription package (Admin)"""
     package = await subscription_crud.create_package(db, package_data, current_admin.id)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after creation")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return package
 
 
@@ -1461,7 +1478,29 @@ async def get_all_subscription_packages(
     current_admin: User = Depends(get_current_admin),
 ):
     """Get all subscription packages (Admin)"""
+    filters_data = {"active_only": active_only}
+    filters_hash = hashlib.md5(json.dumps(filters_data, sort_keys=True).encode()).hexdigest()
+    cache_key = f"subscription:packages:{filters_hash}"
+
+    try:
+        # Try cache first
+        cached_data = await cache_service.get(cache_key)
+        if cached_data:
+            logger.debug(f"Cache HIT: {cache_key}")
+            return [SubscriptionPackageResponse(**item) for item in cached_data]
+    except Exception as e:
+        logger.warning(f"Cache retrieval failed for subscription packages: {e}")
+
+    logger.debug(f"Cache MISS: {cache_key}")
     packages = await subscription_crud.get_all_packages(db, active_only)
+
+    try:
+        # Cache for 1 hour - convert SQLAlchemy models to dicts
+        packages_data = [SubscriptionPackageResponse.model_validate(p).model_dump() for p in packages]
+        await cache_service.set(cache_key, packages_data, ttl=cache_service.TTL_SUBSCRIPTION_PACKAGES)
+    except Exception as e:
+        logger.warning(f"Cache storage failed for subscription packages: {e}")
+
     return packages
 
 
@@ -1492,6 +1531,14 @@ async def update_subscription_package(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     updated_package = await subscription_crud.update_package(db, package_id, package_data)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after update")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return updated_package
 
 
@@ -1507,5 +1554,13 @@ async def delete_subscription_package(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
     await subscription_crud.soft_delete_package(db, package_id)
+    
+    # Invalidate subscription package caches
+    try:
+        await cache_service.delete_pattern("subscription:packages:*")
+        logger.info("Invalidated subscription package caches after deletion")
+    except Exception as e:
+        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+    
     return None
 

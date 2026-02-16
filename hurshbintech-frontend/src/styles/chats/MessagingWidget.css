@@ -37,6 +37,35 @@
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* Unread notification dot on collapsed avatar */
+.messaging-collapsed-avatar {
+  position: relative;
+}
+
+.messaging-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: inline-block;
+}
+
+/* Unread notification dot next to header title */
+.messaging-unread-dot-header {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .messaging-collapsed-avatar {
   width: 2.25rem;
   height: 2.25rem;
@@ -502,6 +531,33 @@
   font-size: 0.75rem;
   color: #10b981;
   margin: 0;
+}
+
+/* Disappearing Messages Alert Banner */
+.chat-alert-banner {
+  background: #fef3c7;
+  border-top: 1px solid #fbbf24;
+  border-bottom: 1px solid #fbbf24;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #78350f;
+  font-size: 0.8125rem;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.chat-alert-banner svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+  color: #f59e0b;
+}
+
+.chat-alert-banner span {
+  font-weight: 500;
 }
 
 /* Messages Area */

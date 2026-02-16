@@ -14,13 +14,24 @@ services:
       # Connects to the 'db-pwa' service defined below
       - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@db-pwa:5432/hurshbintechdb_pwa
       - ENVIRONMENT=production
+      # Redis Configuration (Docker service)
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis-pwa
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=Password12#$
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:
-      - db-pwa
+      redis-pwa:
+        condition: service_healthy
+      db-pwa:
+        condition: service_started
     # SSL Command
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem
     restart: unless-stopped
+    networks:
+      - pwa-network
 
   # 2. PWA Frontend
   frontend-pwa:
@@ -41,6 +52,8 @@ services:
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped
+    networks:
+      - pwa-network
 
   # 3. PWA Database (A fresh, separate DB container)
   db-pwa:
@@ -53,8 +66,39 @@ services:
     volumes:
       - pwa_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - pwa-network
 
-  # 4. ✅ TURN Server for WebRTC (Fixes video connections behind NAT)
+  # 4. Redis Cache (256MB limit with LRU eviction)
+  redis-pwa:
+    image: redis:7-alpine
+    container_name: hurshbintech-redis-pwa
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_pwa_data:/data
+    ports:
+      - "6379:6379"  # Expose for monitoring (optional, can be removed in production)
+    networks:
+      - pwa-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Memory and CPU limits (prevents resource exhaustion)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Max 50% of one CPU core
+          memory: 320M       # 256MB for Redis + 64MB overhead
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # 5. ✅ TURN Server for WebRTC (Fixes video connections behind NAT)
   coturn:
     image: coturn/coturn:latest
     container_name: hurshbintech-coturn
@@ -74,3 +118,8 @@ services:
 
 volumes:
   pwa_postgres_data:
+  redis_pwa_data:
+
+networks:
+  pwa-network:
+    driver: bridge

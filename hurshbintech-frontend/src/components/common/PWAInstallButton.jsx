@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Check } from 'lucide-react';
 import usePWAInstall from '../../hooks/usePWAInstall.js';
-import './PWAInstallButton.css';
-
+import '../../styles/common/PWAInstallButton.css';
 const PWAInstallButton = () => {
     const { canInstall, installApp } = usePWAInstall();
     const [isInstalling, setIsInstalling] = useState(false);
