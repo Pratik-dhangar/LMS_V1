@@ -144,6 +144,17 @@ class CacheService:
         self._failure_count += 1
         self._half_open_probe_in_progress = False  # Reset probe guard
         
+        # Check for specific Redis OOM (Out of Memory) errors
+        error_str = str(error).lower()
+        if "oom" in error_str or "out of memory" in error_str or "maxmemory" in error_str:
+            logger.critical(
+                f"🔴 REDIS OOM ERROR: Memory limit reached! ({context}): {error}\n"
+                f"Redis is evicting keys automatically (LRU policy). Application continues normally."
+            )
+            # OOM is expected behavior with LRU - don't trip circuit breaker
+            self._failure_count = 0  # Reset failures - this is not a connection issue
+            return
+        
         if self._failure_count >= self._failure_threshold:
             if self._circuit_opened_at is None:
                 # First time tripping the circuit
@@ -492,6 +503,87 @@ class CacheService:
         """Invalidate specific user profile cache"""
         await self.delete(self.key_user_profile_me(user_id))
         logger.info(f"Invalidated user profile cache: {user_id}")
+    
+    # ========== Monitoring & Health Checks ==========
+    
+    async def get_health_stats(self) -> Optional[Dict[str, Any]]:
+        """
+        Get Redis health statistics for monitoring
+        
+        Returns:
+            Dict with memory usage, keys count, eviction stats, or None if Redis unavailable
+        """
+        if not self.enabled or not self.redis_client or self._is_circuit_open():
+            return {
+                "status": "disabled" if not self.enabled else "circuit_open",
+                "enabled": self.enabled,
+                "circuit_breaker": {
+                    "failure_count": self._failure_count,
+                    "threshold": self._failure_threshold,
+                    "is_open": self._is_circuit_open()
+                }
+            }
+        
+        try:
+            info = await self.redis_client.info()
+            memory_info = await self.redis_client.info("memory")
+            stats_info = await self.redis_client.info("stats")
+            
+            # Extract key metrics
+            used_memory_mb = memory_info.get("used_memory", 0) / (1024 * 1024)
+            max_memory_mb = memory_info.get("maxmemory", 0) / (1024 * 1024)
+            memory_usage_pct = (used_memory_mb / max_memory_mb * 100) if max_memory_mb > 0 else 0
+            
+            health_data = {
+                "status": "healthy",
+                "enabled": True,
+                "memory": {
+                    "used_mb": round(used_memory_mb, 2),
+                    "max_mb": round(max_memory_mb, 2),
+                    "usage_percent": round(memory_usage_pct, 2),
+                    "fragmentation_ratio": memory_info.get("mem_fragmentation_ratio", 0),
+                },
+                "keys": {
+                    "total": info.get("db0", {}).get("keys", 0) if isinstance(info.get("db0"), dict) else 0,
+                },
+                "eviction": {
+                    "evicted_keys": stats_info.get("evicted_keys", 0),
+                    "policy": memory_info.get("maxmemory_policy", "unknown"),
+                },
+                "connections": {
+                    "connected_clients": info.get("connected_clients", 0),
+                    "rejected_connections": stats_info.get("rejected_connections", 0),
+                },
+                "circuit_breaker": {
+                    "failure_count": self._failure_count,
+                    "threshold": self._failure_threshold,
+                    "is_open": False,
+                }
+            }
+            
+            # Log warning if memory usage is high
+            if memory_usage_pct > 90:
+                logger.warning(
+                    f"⚠️ Redis memory usage HIGH: {memory_usage_pct:.1f}% "
+                    f"({used_memory_mb:.1f}MB / {max_memory_mb:.1f}MB). "
+                    f"Evicted keys: {stats_info.get('evicted_keys', 0)}"
+                )
+            
+            self._record_success()
+            return health_data
+            
+        except Exception as e:
+            self._record_failure(e, context="GET HEALTH STATS")
+            logger.error(f"Failed to get Redis health stats: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "circuit_breaker": {
+                    "failure_count": self._failure_count,
+                    "threshold": self._failure_threshold,
+                    "is_open": self._is_circuit_open()
+                }
+            }
 
 
 # Global cache service instance
