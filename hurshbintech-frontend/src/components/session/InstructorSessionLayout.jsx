@@ -1396,82 +1396,9 @@ export const setupAttendeeWhiteboardCallbacks = ({
             }
         };
 
-        // Item updates from instructor
-        whiteboardService.onItemUpdate = (data) => {
-            // console.log('[AttendeeSession] Item update received:', data);
-            if (data?.id && data?.type) {
-                // Check if item is targeted to specific learner
-                if (data.targetLearnerId) {
-                    const targetId = String(data.targetLearnerId);
-                    const myId = String(sessionInfo?.learner_id || '');
-
-                    if (myId && targetId !== myId) {
-                        // console.log('[AttendeeSession] Item not for this learner, ignoring');
-                        return;
-                    }
-                }
-
-                setCanvasItems(prev => {
-                    const existingIndex = prev.findIndex(item => item.id === data.id);
-                    let processedData = { ...data };
-
-                    // Handle bucket-relative items
-                    if (data.isRelativeToContainer && data.inBucket && buckets) {
-                        const bucket = buckets.find(b => b.id === data.inBucket);
-                        if (bucket) {
-                            const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
-                            const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
-                            const pixelOffsetX = (data.x || 0) * bucketWidth;
-                            const pixelOffsetY = (data.y || 0) * bucketHeight;
-
-                            let itemWidth = data.width;
-                            let itemHeight = data.height;
-                            if (data.width && data.width >= 0 && data.width <= 1) {
-                                itemWidth = data.width * bucketWidth;
-                            }
-                            if (data.height && data.height >= 0 && data.height <= 1) {
-                                itemHeight = data.height * bucketHeight;
-                            }
-
-                            processedData = {
-                                ...processedData,
-                                x: bucket.x + pixelOffsetX,
-                                y: bucket.y + pixelOffsetY,
-                                width: itemWidth,
-                                height: itemHeight
-                            };
-                        }
-                    } else if (whiteboardCanvasRef?.current && denormalizeItem) {
-                        // Denormalize coordinates for non-bucket items
-                        const isNormalized = (
-                            data.x !== undefined && data.x >= 0 && data.x <= 1 &&
-                            data.y !== undefined && data.y >= 0 && data.y <= 1 &&
-                            data.width !== undefined && data.width >= 0 && data.width <= 1 &&
-                            data.height !== undefined && data.height >= 0 && data.height <= 1
-                        );
-
-                        if (isNormalized) {
-                            const denormalized = denormalizeItem(processedData, whiteboardCanvasRef.current);
-                            processedData = {
-                                ...processedData,
-                                x: denormalized.x,
-                                y: denormalized.y,
-                                width: denormalized.width,
-                                height: denormalized.height
-                            };
-                        }
-                    }
-
-                    if (existingIndex >= 0) {
-                        const updated = [...prev];
-                        updated[existingIndex] = { ...updated[existingIndex], ...processedData };
-                        return updated;
-                    } else {
-                        return [...prev, processedData];
-                    }
-                });
-            }
-        };
+        // Note: onItemUpdate is handled by Whiteboard component directly (Whiteboard.jsx)
+        // It uses `data.normalized` flag + denormalizeItem() for precise coordinate mapping.
+        // Do NOT set whiteboardService.onItemUpdate here — it would overwrite the working handler.
     }
 
     // Erase pen and clear canvas

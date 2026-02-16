@@ -1360,10 +1360,32 @@ const Whiteboard = ({
                             console.log('[Whiteboard] ✅ Buckets restored');
                         }
                         
-                        // Restore regular canvas items
+                        // Restore regular canvas items — denormalize coordinates if needed
                         if (regularItems.length > 0) {
-                            setCanvasItems(regularItems);
-                            console.log('[Whiteboard] ✅ Canvas items restored');
+                            const canvas = canvasRef.current;
+                            const processedItems = regularItems.map(item => {
+                                // Check if coordinates are normalized (0-1 range) from item_update persistence
+                                const isNormalized = item.normalized === true || (
+                                    item.x !== undefined && item.x >= 0 && item.x <= 1 &&
+                                    item.y !== undefined && item.y >= 0 && item.y <= 1 &&
+                                    item.width !== undefined && item.width >= 0 && item.width <= 1 &&
+                                    item.height !== undefined && item.height >= 0 && item.height <= 1
+                                );
+                                
+                                if (isNormalized && canvas) {
+                                    const denormalized = denormalizeItem(item, canvas);
+                                    console.log('[Whiteboard] Denormalized restored item:', { 
+                                        id: item.id, 
+                                        from: { x: item.x, y: item.y }, 
+                                        to: { x: denormalized.x, y: denormalized.y } 
+                                    });
+                                    return { ...denormalized, normalized: false };
+                                }
+                                return item;
+                            });
+                            
+                            setCanvasItems(processedItems);
+                            console.log('[Whiteboard] ✅ Canvas items restored (', processedItems.length, 'items)');
                         }
                     }
                     
