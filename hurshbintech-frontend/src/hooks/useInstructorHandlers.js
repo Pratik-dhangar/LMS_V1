@@ -172,7 +172,12 @@ export const useInstructorHandlers = ({
     }, [toolAccess, setToolAccess, whiteboardService, setTool]);
 
     const addBucket = useCallback(() => {
-        utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 1200, 600, whiteboardCanvasRef);
+        // Use actual canvas dimensions if available, fallback to defaults
+        const canvas = whiteboardCanvasRef?.current;
+        const dpr = window.devicePixelRatio || 1;
+        const canvasWidth = canvas ? canvas.width / dpr : 1200;
+        const canvasHeight = canvas ? canvas.height / dpr : 600;
+        utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, canvasWidth, canvasHeight, whiteboardCanvasRef);
     }, [buckets, setBuckets, whiteboardService, bucketColor, whiteboardCanvasRef]);
 
     const eraseAllPen = useCallback(() => {
