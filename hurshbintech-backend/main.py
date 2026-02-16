@@ -51,6 +51,7 @@ from app.api.endpoints.cart import router as cart_router
 from app.api.endpoints.ecommerce import router as ecommerce_router
 from app.api.endpoints.Chat.chat import router as chat_router
 from app.api.endpoints.Communication.webinar import router as webinar_router
+from app.api.endpoints.vendors import router as vendors_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.request_logging import RequestLoggingMiddleware
@@ -218,6 +219,9 @@ app.include_router(products_router, prefix="/api")  # Admin product management
 app.include_router(store_router, prefix="/api")  # Public catalog browsing
 app.include_router(cart_router, prefix="/api")  # Cart management
 app.include_router(ecommerce_router, prefix="/api")  # Orders & payments
+
+# ✅ Vendor Management routers
+app.include_router(vendors_router, prefix="/api")
 
 # ✅ Chat router (REST + WebSocket)
 app.include_router(chat_router)  # Chat has its own /api/chat prefix

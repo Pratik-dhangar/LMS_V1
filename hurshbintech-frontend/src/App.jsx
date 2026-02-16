@@ -32,6 +32,7 @@ import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
 import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
 import AdminContacts from './pages/admin/AdminContacts';
+import AdminProfile from './pages/admin/AdminProfile';
 
 
 // Head Pages
@@ -238,6 +239,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProfile />
               </ProtectedRoute>
             }
           />

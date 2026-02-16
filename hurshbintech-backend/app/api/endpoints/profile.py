@@ -9,10 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import List
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_admin
 from app.db.session import get_db
 from app.models.user_model import (
-    Admin,
     CoachProfile,
     HeadProfile,
     LearnerProfile,
@@ -22,6 +21,7 @@ from app.models.user_model import (
 )
 from app.schemas.user import (
     AdminResponse,
+    AdminUpdate,
     CoachResponse,
     HeadResponse,
     LearnerResponse,
@@ -155,7 +155,7 @@ async def get_user_profile(
 async def get_my_subscriptions(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        User | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
     """Get all subscriptions for the current learner"""
@@ -247,3 +247,37 @@ async def get_my_subscriptions(
     await cache_service.set(cache_key, subscription_data, ttl=cache_service.TTL_USER_SUBSCRIPTIONS)
 
     return subscriptions
+
+
+# Update admin profile
+@router.put("/admin/update", response_model=AdminResponse)
+async def update_admin_profile(
+    admin_update: AdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Update admin profile information"""
+    
+    from app.models.user_model import User
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Ensure we're working with a User object
+        if not isinstance(current_admin, User):
+            raise HTTPException(status_code=500, detail="Invalid admin user object")
+        
+        updated_admin = await crud.user_crud.update_admin_profile(
+            db, current_admin.id, admin_update
+        )
+        if not updated_admin:
+            raise HTTPException(status_code=404, detail="Admin not found")
+        
+        logger.info(f"Admin profile updated: {updated_admin.id}")
+        return AdminResponse.model_validate(updated_admin)
+    except ValueError as e:
+        logger.warning(f"Validation error updating admin: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating admin profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update admin profile")
