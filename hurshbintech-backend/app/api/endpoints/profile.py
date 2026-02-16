@@ -12,6 +12,7 @@ from typing import List
 from app.core.deps import get_current_user, get_current_admin
 from app.db.session import get_db
 from app.models.user_model import (
+    Admin,
     CoachProfile,
     HeadProfile,
     LearnerProfile,

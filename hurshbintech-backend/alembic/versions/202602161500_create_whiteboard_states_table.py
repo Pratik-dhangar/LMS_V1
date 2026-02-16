@@ -1,7 +1,7 @@
 """create_whiteboard_states_table
 
 Revision ID: 202602161500
-Revises: 202602141430
+Revises: 202602151200
 Create Date: 2026-02-16 15:00:00.000000
 
 This migration creates the whiteboard_states table for persisting whiteboard canvas state across reconnections:
@@ -19,7 +19,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '202602161500'
-down_revision: Union[str, Sequence[str], None] = '202602141430'
+down_revision: Union[str, Sequence[str], None] = '202602151200'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
