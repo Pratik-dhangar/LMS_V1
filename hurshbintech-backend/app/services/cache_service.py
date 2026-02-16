@@ -213,9 +213,9 @@ class CacheService:
             value = await self.redis_client.get(key)
             self._record_success()
             if value:
-                logger.debug(f"Cache HIT: {key}")
+                logger.info(f"Cache HIT: {key}")
                 return self._deserialize(value)
-            logger.debug(f"Cache MISS: {key}")
+            logger.info(f"Cache MISS: {key}")
             return None
         except Exception as e:
             self._record_failure(e, context=f"GET {key}")
@@ -252,7 +252,7 @@ class CacheService:
                 await self.redis_client.set(key, serialized_value)
             
             self._record_success()
-            logger.debug(f"Cache SET: {key} (base TTL: {ttl}s, actual: {final_ttl}s)")
+            logger.info(f"Cache SET: {key} (base TTL: {ttl}s, actual: {final_ttl}s)")
             return True
         except Exception as e:
             self._record_failure(e, context=f"SET {key}")
@@ -266,7 +266,7 @@ class CacheService:
         try:
             deleted = await self.redis_client.delete(key)
             self._record_success()
-            logger.debug(f"Cache DELETE: {key} (deleted: {deleted})")
+            logger.info(f"Cache DELETE: {key} (deleted: {deleted})")
             return deleted > 0
         except Exception as e:
             self._record_failure(e, context=f"DELETE {key}")

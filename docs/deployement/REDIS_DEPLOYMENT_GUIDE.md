@@ -1,5 +1,18 @@
 # Redis Deployment Guide for EC2 with Docker
 
+
+
+# Terminal 1: Monitor all Redis commands
+docker exec hurshbintech-redis-pwa redis-cli -a "Password12#$" MONITOR
+
+# Terminal 2: Watch memory stats every 2s
+watch -n 2 'docker exec hurshbintech-redis-pwa redis-cli INFO memory | grep -E "used_memory|evicted_keys|keyspace"'
+
+# Terminal 3: Watch backend cache logs
+docker logs -f hurshbintech-backend-pwa | grep -i cache
+
+
+
 ## Overview
 This guide covers deploying Redis as a Docker container for caching in production, with proper memory limits, automatic eviction, and crash prevention.
 
