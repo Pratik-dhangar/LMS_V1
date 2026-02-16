@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 import os
 import uuid
@@ -13,6 +15,7 @@ from app.core.deps import get_current_admin_user, get_db
 from app.crud.vlog_crud import VlogCRUD
 from app.models.user_model import User
 from app.schemas.vlog import Vlog, VlogCreate, VlogUpdate, VlogListResponse
+from app.services.cache_service import cache_service
 from app.utils.s3_utils import S3Manager
 
 logger = logging.getLogger(__name__)
@@ -60,12 +63,24 @@ def get_public_url(file_url: str) -> str:
         return file_url
 
 
-def convert_vlog_response(vlog: Vlog) -> Vlog:
-    """Convert S3 URLs in vlog response to public HTTPS URLs (no expiration)"""
-    vlog.file_url = get_public_url(vlog.file_url)
-    if vlog.thumbnail_url:
-        vlog.thumbnail_url = get_public_url(vlog.thumbnail_url)
-    return vlog
+def convert_vlog_response(vlog) -> Vlog:
+    """Convert S3 URLs in vlog response to public HTTPS URLs (no expiration)
+
+    Args:
+        vlog: SQLAlchemy Vlog model from database
+
+    Returns:
+        Pydantic Vlog schema with converted URLs
+    """
+    # Convert SQLAlchemy model to Pydantic model
+    pydantic_vlog = Vlog.model_validate(vlog)
+
+    # Modify URLs to use public HTTPS (Pydantic v2 models are mutable by default)
+    pydantic_vlog.file_url = get_public_url(pydantic_vlog.file_url)
+    if pydantic_vlog.thumbnail_url:
+        pydantic_vlog.thumbnail_url = get_public_url(pydantic_vlog.thumbnail_url)
+
+    return pydantic_vlog
 
 
 def validate_video_file(file: UploadFile):
@@ -236,6 +251,10 @@ async def create_vlog(
     )
 
     created_vlog = await vlog_crud.create_vlog(db, vlog_data)
+    
+    # Invalidate vlog caches
+    await cache_service.invalidate_vlogs()
+    
     return convert_vlog_response(created_vlog)
 
 
@@ -261,8 +280,21 @@ async def get_public_vlogs(
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all published vlogs (Public endpoint)"""
+    """Get all published vlogs (Public endpoint) - Cached for 15 minutes"""
     try:
+        # Generate cache key from filters
+        filters = {"page": page, "per_page": per_page, "search": search, "status": "published"}
+        filters_str = json.dumps(filters, sort_keys=True)
+        filters_hash = hashlib.md5(filters_str.encode()).hexdigest()
+        cache_key = cache_service.key_vlogs_list(filters_hash)
+        
+        # Try cache first
+        cached_data = await cache_service.get(cache_key)
+        if cached_data:
+            logger.debug(f"Cache HIT: {cache_key}")
+            return VlogListResponse(**cached_data)
+        
+        logger.debug(f"Cache MISS: {cache_key}")
         skip = (page - 1) * per_page
         vlogs = await vlog_crud.get_vlogs(db, skip=skip, limit=per_page)
         
@@ -280,13 +312,18 @@ async def get_public_vlogs(
         total = len(vlogs) if search else await vlog_crud.count_vlogs(db, status_filter="published")
         total_pages = ceil(total / per_page) if per_page > 0 else 0
         
-        return VlogListResponse(
+        response = VlogListResponse(
             vlogs=[convert_vlog_response(v) for v in vlogs],
             total=total,
             page=page,
             per_page=per_page,
             total_pages=total_pages
         )
+        
+        # Cache response for 15 minutes
+        await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_VLOGS_LIST)
+        
+        return response
     except Exception as e:
         logger.error(f"Error fetching public vlogs: {str(e)}")
         raise HTTPException(
@@ -300,7 +337,16 @@ async def get_public_vlog(
     vlog_id: int,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a specific vlog by ID (Public endpoint)"""
+    """Get a specific vlog by ID (Public endpoint) - Cached for 30 minutes"""
+    cache_key = cache_service.key_vlog_detail(vlog_id)
+    
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return Vlog(**cached_data)
+    
+    logger.debug(f"Cache MISS: {cache_key}")
     vlog = await vlog_crud.get_vlog(db, vlog_id)
     if not vlog:
         raise HTTPException(
@@ -308,7 +354,12 @@ async def get_public_vlog(
             detail="Vlog not found"
         )
     
-    return convert_vlog_response(vlog)
+    response = convert_vlog_response(vlog)
+    
+    # Cache response for 30 minutes
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_VLOG_DETAIL)
+    
+    return response
 
 
 @router.get("/{vlog_id}", response_model=Vlog)
@@ -397,6 +448,9 @@ async def update_vlog(
     vlog_update = VlogUpdate(**update_data)
     updated_vlog = await vlog_crud.update_vlog(db, vlog_id, vlog_update)
 
+    # Invalidate vlog caches (detail and lists)
+    await cache_service.invalidate_vlog(vlog_id)
+
     return convert_vlog_response(updated_vlog)
 
 
@@ -416,4 +470,8 @@ async def delete_vlog(
     # Delete database record
     if not await vlog_crud.delete_vlog(db, vlog_id):
         raise HTTPException(status_code=404, detail="Vlog not found")
+    
+    # Invalidate vlog caches
+    await cache_service.invalidate_vlog(vlog_id)
+    
     return None

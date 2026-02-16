@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
+import { useAuth } from '../../context/AuthContext';
 import UnifiedChatPage from '../../pages/chat/UnifiedChatPage';
 import MessagingWidget from './MessagingWidget';
 import '../../styles/components/chat/chatWidget.css';
@@ -16,16 +17,9 @@ import '../../styles/components/chat/chatWidget.css';
 const ChatIconWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCounts, connectChat, disconnectChat } = useChat();
+  const { unreadCounts } = useChat();
+  const { user } = useAuth();
   const [showChatModal, setShowChatModal] = useState(false);
-
-  // Connect/disconnect chat when modal is shown/hidden (mobile only)
-  useEffect(() => {
-    if (showChatModal) {
-      connectChat();
-      return () => disconnectChat();
-    }
-  }, [showChatModal, connectChat, disconnectChat]);
 
   // Pages where chat icon should NOT be shown
   const hiddenPages = [
@@ -57,6 +51,10 @@ const ChatIconWidget = () => {
   const shouldHide = hiddenPages.some(page => location.pathname.includes(page)) || 
                      (isSessionPage && !isAllowedSessionPage);
 
+  if (!user) {
+    return null;
+  }
+
   if (shouldHide) {
     return null;
   }
@@ -84,11 +82,9 @@ const ChatIconWidget = () => {
         >
           <MessageCircle size={30} />
           
-          {/* Unread Badge */}
+          {/* Unread Badge - Red dot */}
           {totalUnread > 0 && (
-            <span className="chat-widget-badge">
-              {totalUnread > 99 ? '99+' : totalUnread}
-            </span>
+            <span className="chat-widget-badge-dot" />
           )}
         </button>
       </div>

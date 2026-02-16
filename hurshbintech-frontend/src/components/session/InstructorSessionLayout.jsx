@@ -1642,7 +1642,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onAnimationPopped = null;
             whiteboardService.onItemRemove = null;
-            whiteboardService.onItemUpdate = null;
+            // Note: onItemUpdate is handled by Whiteboard component, not here
             whiteboardService.onErasePen = null;
             whiteboardService.onClearCanvas = null;
             whiteboardService.onBucketAdded = null;

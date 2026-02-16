@@ -16,6 +16,7 @@
   border-bottom-right-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
   min-height: 300px;
+  height: 300px; /* Fixed height to prevent layout shifts */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -26,6 +27,7 @@
 @media (max-width: 768px) {
   .home-hero {
     min-height: 280px;
+    height: 280px; /* Fixed height for tablets */
     padding: 1.5rem 1rem;
   }
 }
@@ -33,6 +35,7 @@
 @media (max-width: 480px) {
   .home-hero {
     min-height: 240px;
+    height: 240px; /* Fixed height for mobile */
     padding: 1.25rem 0.75rem;
   }
 }
