@@ -1,0 +1,98 @@
+services:
+  # 1. PWA Backend
+  backend-pwa:
+    image: yourusername/hurshbin-backend:prod
+    container_name: hurshbintech-backend-pwa
+    ports:
+      - "8000:8000"  # Backend on port 8000
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@db-pwa:5432/hurshbintechdb_pwa
+      - ENVIRONMENT=production
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis-pwa  # Service name, not container name
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=Password12#$
+    volumes:
+      - ~/certs:/app/certs:ro
+    depends_on:
+      - redis-pwa
+      - db-pwa
+    # SSL Command
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem
+    restart: unless-stopped
+    networks:
+      - pwa-network
+
+  # 2. PWA Frontend (Clean URL)
+  frontend-pwa:
+    image: yourusername/hurshbin-frontend:prod
+    container_name: hurshbintech-frontend-pwa
+    ports:
+      - "443:443"  # HTTPS on standard port (no port in URL)
+    volumes:
+      - ~/certs:/app/certs:ro
+    restart: unless-stopped
+    networks:
+      - pwa-network
+
+  # 3. PWA Database
+  db-pwa:
+    image: postgres:15
+    container_name: hurshbintech-db-pwa
+    environment:
+      POSTGRES_USER: hurshbinuser
+      POSTGRES_PASSWORD: hurshbintech
+      POSTGRES_DB: hurshbintechdb_pwa
+    volumes:
+      - pwa_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - pwa-network
+
+  # 4. Redis Cache (Inline config - no file needed)
+  redis-pwa:
+    image: redis:7-alpine
+    container_name: hurshbintech-redis-pwa
+    restart: unless-stopped
+    # Inline configuration (no redis.conf file dependency)
+    command: redis-server --requirepass "Password12#$" --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_pwa_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - pwa-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Password12#$", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # 5. TURN Server for WebRTC
+  coturn:
+    image: coturn/coturn:latest
+    container_name: hurshbintech-coturn
+    restart: unless-stopped
+    network_mode: "host"
+    command: 
+      - -n 
+      - --log-file=stdout 
+      - --min-port=49152 
+      - --max-port=65535 
+      - --realm=tech.hurshbin.com
+      - --user=hurshbin:SecureTurnPass2024!
+      - --lt-cred-mech 
+      - --fingerprint 
+      - --external-ip=103.192.199.59
+      - --listening-port=3478
+
+volumes:
+  pwa_postgres_data:
+  redis_pwa_data:
+
+networks:
+  pwa-network:
+    driver: bridge
