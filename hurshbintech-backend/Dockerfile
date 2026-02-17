@@ -33,8 +33,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create uploads directory (optional if using S3)
-RUN mkdir -p uploads/learning_content uploads/vlogs
+# ---------------------------------------------------
+# SECURITY: Compile to Bytecode & Remove Source Files
+# ---------------------------------------------------
+# 1. Compile all .py files to .pyc
+RUN python -m compileall -b
+# 2. Delete original .py files (keep main.py for uvicorn entrypoint)
+RUN find . -type f -name "*.py" -not -name "main.py" -delete
+# ---------------------------------------------------
 
 # Expose port
 EXPOSE 8000

@@ -25,13 +25,23 @@ class S3Manager:
         """Initialize S3 client"""
         self.bucket_name = bucket_name
         self.region = region
+        
+        # Support S3-compatible services (Neev Cloud, MinIO, etc.)
+        endpoint_url = os.getenv("S3_ENDPOINT_URL")
+        
         self.s3_client = boto3.client(
             "s3",
             region_name=region,
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=endpoint_url,  # Use custom endpoint if provided
         )
-        self.s3_url = f"https://{bucket_name}.s3.{region}.amazonaws.com"
+        
+        # Build S3 URL based on endpoint
+        if endpoint_url:
+            self.s3_url = f"{endpoint_url}/{bucket_name}"
+        else:
+            self.s3_url = f"https://{bucket_name}.s3.{region}.amazonaws.com"
 
     def upload_file(
         self,
