@@ -245,7 +245,7 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Start writing...' }) =
             Link.configure({
                 openOnClick: false,
                 HTMLAttributes: {
-                    class: 'text-blue-600 underline',
+                    class: 'text-amber-700 underline',
                 },
             }),
             TextAlign.configure({

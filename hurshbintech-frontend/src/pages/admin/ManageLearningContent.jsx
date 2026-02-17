@@ -568,8 +568,8 @@ const ManageLearningContent = () => {
                       {uploading && (
                         <div className="mt-2">
                           <div className="animate-pulse flex space-x-2 items-center">
-                            <div className="h-2 bg-blue-400 rounded flex-1"></div>
-                            <span className="text-sm text-blue-600">
+                            <div className="h-2 bg-amber-400 rounded flex-1"></div>
+                            <span className="text-sm text-amber-700">
                               Uploading...
                             </span>
                           </div>

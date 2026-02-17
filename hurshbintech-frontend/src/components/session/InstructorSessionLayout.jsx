@@ -712,7 +712,7 @@ export const REACTION_SVG_ASSETS = {
         {
             type: 'svg',
             src: '/reactions/04_pastel_lavender.svg',
-            alt: 'Realistic Blue Balloon'
+            alt: 'Realistic Gold Balloon'
         },
         {
             type: 'svg',
@@ -758,7 +758,7 @@ export const WB_BUTTON_STYLES = {
 export const BUCKET_COLORS = [
     { name: 'Brown', hex: '#6D5A3F' },
     { name: 'Red', hex: '#ec221a' },
-    { name: 'Blue', hex: '#5B7B9F' },
+    { name: 'Gold', hex: '#db9d32' },
     { name: 'Yellow', hex: '#F4D394' },
     { name: 'Brown', hex: '#8A7666' },
     { name: 'Orange', hex: '#E8944C' }

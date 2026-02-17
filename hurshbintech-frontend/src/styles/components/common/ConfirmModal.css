@@ -55,7 +55,7 @@
 }
 
 .confirm-modal-icon.primary svg {
-  color: #2563eb;
+  color: #b8790a;
 }
 
 .confirm-modal-header-text h3 {
@@ -122,11 +122,11 @@
 }
 
 .confirm-modal-confirm-btn.primary {
-  background-color: #2563eb;
+  background-color: #b8790a;
 }
 
 .confirm-modal-confirm-btn.primary:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: #9c6a08;
 }
 
 .confirm-modal-confirm-btn:disabled {

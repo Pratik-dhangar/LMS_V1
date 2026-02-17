@@ -112,12 +112,12 @@ const LearningContent = () => {
             <img
               src={fullUrl}
               alt={title}
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh', 
-                objectFit: 'contain', 
-                borderRadius: '0.5rem', 
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' 
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                objectFit: 'contain',
+                borderRadius: '0.5rem',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
               }}
               onLoad={handleLoad}
               onError={handleError}
@@ -131,11 +131,11 @@ const LearningContent = () => {
             <video
               src={fullUrl}
               controls
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh', 
-                borderRadius: '0.5rem', 
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' 
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                borderRadius: '0.5rem',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
               }}
               onLoadedData={handleLoad}
               onError={handleError}
@@ -166,12 +166,12 @@ const LearningContent = () => {
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <iframe
               src={fullUrl}
-              style={{ 
-                width: '100%', 
-                height: '70vh', 
-                border: '1px solid #e5e7eb', 
-                borderRadius: '0.5rem', 
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' 
+              style={{
+                width: '100%',
+                height: '70vh',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
               }}
               title={title}
               onLoad={handleLoad}
@@ -193,14 +193,14 @@ const LearningContent = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 padding: '0.5rem 1rem',
-                background: '#2563eb',
+                background: '#db9d32',
                 color: '#ffffff',
                 borderRadius: '0.5rem',
                 textDecoration: 'none',
                 transition: 'background-color 0.2s'
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = '#1d4ed8'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#2563eb'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#db9d32'}
             >
               Open in New Tab
             </a>
@@ -225,20 +225,20 @@ const LearningContent = () => {
           </div>
 
           {/* Learning Contents */}
-          <div style={{ 
-            marginTop: '2.5rem', 
-            background: '#ffffff', 
-            borderRadius: '0.75rem', 
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
-            padding: '1.5rem' 
+          <div style={{
+            marginTop: '2.5rem',
+            background: '#ffffff',
+            borderRadius: '0.75rem',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+            padding: '1.5rem'
           }}>
-            <h2 style={{ 
-              fontSize: '1.25rem', 
-              fontWeight: '700', 
-              color: '#1f2937', 
-              borderBottom: '1px solid #e5e7eb', 
-              paddingBottom: '0.75rem', 
-              marginBottom: '1rem' 
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '700',
+              color: '#1f2937',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '0.75rem',
+              marginBottom: '1rem'
             }}>
               Learning Content ({learningContents.length})
             </h2>
@@ -276,13 +276,13 @@ const LearningContent = () => {
                         {content.title || 'Untitled Content'}
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                        <span style={{ 
-                          fontSize: '0.75rem', 
-                          color: '#4b5563', 
-                          background: '#ffffff', 
-                          padding: '0.25rem 0.5rem', 
-                          borderRadius: '0.25rem', 
-                          border: '1px solid #e5e7eb' 
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: '#4b5563',
+                          background: '#ffffff',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          border: '1px solid #e5e7eb'
                         }}>
                           {content.content_type || 'Unknown Type'}
                         </span>
@@ -292,33 +292,33 @@ const LearningContent = () => {
                           </span>
                         )}
                         {content.from_program && (
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            color: '#7c3aed', 
-                            background: '#f5f3ff', 
-                            padding: '0.25rem 0.5rem', 
-                            borderRadius: '0.25rem' 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: '#7c3aed',
+                            background: '#f5f3ff',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem'
                           }}>
                             📚 From Program
                           </span>
                         )}
                         {!content.from_program && (
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            color: '#059669', 
-                            background: '#d1fae5', 
-                            padding: '0.25rem 0.5rem', 
-                            borderRadius: '0.25rem' 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: '#059669',
+                            background: '#d1fae5',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem'
                           }}>
                             ✨ Extra Material
                           </span>
                         )}
                       </div>
                       {content.description && (
-                        <p style={{ 
-                          fontSize: '0.75rem', 
-                          color: '#6b7280', 
-                          marginTop: '0.25rem', 
+                        <p style={{
+                          fontSize: '0.75rem',
+                          color: '#6b7280',
+                          marginTop: '0.25rem',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'

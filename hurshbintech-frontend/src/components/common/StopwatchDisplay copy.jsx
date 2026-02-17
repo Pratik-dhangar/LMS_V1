@@ -110,8 +110,8 @@ const StopwatchDisplay = ({
 
             {/* Time Breakdown */}
             <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="bg-blue-50 border border-blue-200 rounded p-2 text-center">
-                    <div className={`font-mono font-bold text-blue-600 ${currentSize.time}`}>
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-center">
+                    <div className={`font-mono font-bold text-amber-700 ${currentSize.time}`}>
                         {formattedTime.hours}
                     </div>
                     <div className={`text-[10px] text-gray-600 uppercase mt-1 ${currentSize.label}`}>
@@ -178,7 +178,7 @@ const StopwatchDisplay = ({
                     <div className="flex gap-2">
                         <button
                             onClick={handleSetTimeClick}
-                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-2 py-1 rounded-lg text-sm transition-colors"
+                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold px-2 py-1 rounded-lg text-sm transition-colors"
                         >
                             ✓ Set
                         </button>

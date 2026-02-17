@@ -56,7 +56,7 @@ const HeadSessionNotesModal = ({ session, onClose, onSuccess }) => {
         <div className="app-modal-overlay">
             <div className="app-modal-container" style={{ maxWidth: '768px' }}>
                 {/* Modal Header */}
-                <div className="app-modal-header app-modal-header--primary modal-header-blue">
+                <div className="app-modal-header app-modal-header--primary modal-header-gold">
                     <div className="app-modal-header-content">
                         <h2 className="app-modal-title">👔 Head Session Notes</h2>
                         <p className="app-modal-subtitle">{session.learner_name} - {session.trainer_name}</p>

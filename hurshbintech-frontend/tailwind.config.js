@@ -15,9 +15,9 @@ export default {
       // Custom colors matching our CSS variables
       colors: {
         primary: {
-          DEFAULT: '#2563eb',
-          dark: '#1e40af',
-          light: '#60a5fa',
+          DEFAULT: '#db9d32',
+          dark: '#b8790a',
+          light: '#f0c566',
         },
         secondary: {
           DEFAULT: '#667eea',

@@ -13,9 +13,9 @@
   --breakpoint-desktop-min: 1367px;
 
   /* Colors - Primary Palette */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1e40af;
-  --color-primary-light: #60a5fa;
+  --color-primary: #db9d32;
+  --color-primary-dark: #9c6a08;
+  --color-primary-light: #f0c566;
   --color-secondary: #667eea;
   --color-secondary-dark: #764ba2;
 
@@ -23,7 +23,7 @@
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-info: #3b82f6;
+  --color-info: #db9d32;
 
   /* Colors - Neutrals */
   --color-gray-50: #f9fafb;
@@ -144,7 +144,7 @@ canvas {
 svg {
   max-width: 100%;
   height: auto;
-  
+
 }
 
 /* Responsive container */

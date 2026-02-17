@@ -40,7 +40,7 @@
 
 .error-state-button {
   padding: 0.5rem 1.5rem;
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: white;
   border-radius: 0.5rem;
   font-weight: 500;
@@ -50,5 +50,5 @@
 }
 
 .error-state-button:hover {
-  background-color: #1d4ed8;
+  background-color: #9c6a08;
 }

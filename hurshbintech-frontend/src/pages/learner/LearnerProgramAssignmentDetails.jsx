@@ -312,7 +312,7 @@ const LearnerProgramAssignmentDetails = () => {
   const getStatusBadge = (status) => {
     const statusColors = {
       NEW: "gray",
-      IN_PROGRESS: "blue",
+      IN_PROGRESS: "amber",
       SUBMITTED: "green",
       LATE_SUBMITTED: "orange",
       REVIEWED: "purple",

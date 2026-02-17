@@ -37,7 +37,7 @@
 }
 
 .admin-stat-value-blue {
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .admin-stat-value-green {
@@ -64,7 +64,7 @@
     grid-column: 1 / -1;
     text-align: center;
     padding: 2rem;
-    color: #2563eb;
+    color: #b8790a;
     font-size: 1.125rem;
     font-weight: 500;
     background: white;
