@@ -133,11 +133,16 @@ async def save_canvas_item(
         existing_item = result.scalar_one_or_none()
         
         if existing_item:
-            # Update existing item
+            # MERGE new data with existing data to preserve fields like src, title, type, etc.
+            # This is critical because item_update messages only contain position data,
+            # while the original image/bucket record has src, fileUrl, thumbnail, etc.
+            merged_data = {**existing_item.data, **item_data}
+            
+            # Update existing item with merged data
             stmt = update(WhiteboardState).where(
                 WhiteboardState.id == existing_item.id
             ).values(
-                data=item_data,
+                data=merged_data,
                 is_active=True,
                 updated_at=datetime.utcnow()
             )
