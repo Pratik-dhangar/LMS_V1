@@ -49,7 +49,7 @@ const SessionsManager = () => {
         const now = new Date();
         const scheduled = new Date(session.session_date);
         const sessionTime = session.session_time || '10am';
-        
+
         const timeParts = sessionTime.match(/(\d+)(am|pm)/i);
         if (timeParts) {
           let hours = parseInt(timeParts[1]);
@@ -58,10 +58,10 @@ const SessionsManager = () => {
           if (meridiem === 'am' && hours === 12) hours = 0;
           scheduled.setHours(hours, 0, 0, 0);
         }
-        
+
         const durationMs = 60 * 60 * 1000;
         const sessionEndTime = new Date(scheduled.getTime() + durationMs);
-        
+
         if (now >= sessionEndTime) {
           return 'expired';
         }
@@ -74,7 +74,7 @@ const SessionsManager = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      scheduled: 'bg-blue-100 text-blue-800',
+      scheduled: 'bg-yellow-100 text-amber-800',
       active: 'bg-green-100 text-green-800',
       ended: 'bg-gray-100 text-gray-800',
       cancelled: 'bg-red-100 text-red-800',

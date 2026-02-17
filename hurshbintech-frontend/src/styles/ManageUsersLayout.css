@@ -752,7 +752,7 @@
 .sessions-count {
     font-size: 1rem;
     font-weight: 600;
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .form-file-input {
@@ -836,7 +836,7 @@
 
 /* View Button for Receipt */
 .file-view-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #db9d32 0%, #b8790a 100%);
     color: white;
     border: none;
     border-radius: 0.5rem;
@@ -852,7 +852,7 @@
 }
 
 .file-view-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #b8790a 0%, #9c6a08 100%);
     box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
     transform: translateY(-1px);
 }
@@ -891,7 +891,7 @@
 .receipt-download-btn {
     display: inline-block;
     margin-top: 1.5rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #db9d32 0%, #b8790a 100%);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -905,7 +905,7 @@
 }
 
 .receipt-download-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #b8790a 0%, #9c6a08 100%);
     box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
     transform: translateY(-2px);
 }
@@ -945,7 +945,7 @@
 .info-icon {
     width: 1.5rem;
     height: 1.5rem;
-    color: #3b82f6;
+    color: #db9d32;
     flex-shrink: 0;
     margin-top: 0.125rem;
 }

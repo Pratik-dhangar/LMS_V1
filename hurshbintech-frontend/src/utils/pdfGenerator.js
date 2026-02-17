@@ -153,7 +153,7 @@ export const generateProgressReportPDF = (data, options = {}) => {
         const boxStartY = currentY;
 
         // Total Sessions
-        doc.setFillColor(52, 152, 219); // Blue
+        doc.setFillColor(219, 157, 50); // Gold
         doc.roundedRect(margin, boxStartY, boxWidth, boxHeight, 3, 3, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(20);

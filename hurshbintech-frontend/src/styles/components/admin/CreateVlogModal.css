@@ -71,7 +71,7 @@
 
 .create-vlog-submit-btn {
   padding: 0.5rem 1rem;
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: white;
   border-radius: 0.375rem;
   border: none;
@@ -79,7 +79,7 @@
 }
 
 .create-vlog-submit-btn:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: #9c6a08;
 }
 
 .create-vlog-submit-btn:disabled,

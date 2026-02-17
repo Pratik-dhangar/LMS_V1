@@ -197,7 +197,7 @@
 .schedule-session .search-input:focus {
   outline: none;
   ring: 2px;
-  ring-color: #60a5fa;
+  ring-color: #f0c566;
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
 }

@@ -374,7 +374,7 @@ const Exercise = ({
                                             }
                                         }}
                                         placeholder="Response will appear here..."
-                                        className="bg-blue-50 border border-blue-300 rounded p-2 w-full text-gray-700"
+                                        className="bg-yellow-50 border border-yellow-300 rounded p-2 w-full text-gray-700"
                                         style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto', resize: 'none' }}
                                     />
                                 </div>

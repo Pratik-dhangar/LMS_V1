@@ -225,7 +225,7 @@
 }
 
 .sidebar-toggle-button {
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: #ffffff;
   padding: 0.75rem;
   border-radius: 9999px;
@@ -251,7 +251,7 @@
 }
 
 .sidebar-toggle-button:hover {
-  background-color: #1d4ed8;
+  background-color: #9c6a08;
   transform: scale(1.05);
 }
 

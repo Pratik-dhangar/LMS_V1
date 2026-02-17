@@ -26,7 +26,6 @@ const AdminContacts = () => {
 
     const [loading, setLoading] = useState(true);
     const [contacts, setContacts] = useState([]);
-    const [stats, setStats] = useState(null);
     const [pagination, setPagination] = useState({
         skip: 0,
         limit: 10,
@@ -52,14 +51,11 @@ const AdminContacts = () => {
         is_resolved: false,
     });
 
-    // Fetch contacts and stats
+    // Fetch contacts
     const fetchData = async (skip = 0) => {
         try {
             setLoading(true);
-            const [contactsData, statsData] = await Promise.all([
-                contactService.getAdminContacts(skip, pagination.limit, filters),
-                contactService.getContactStats(),
-            ]);
+            const contactsData = await contactService.getAdminContacts(skip, pagination.limit, filters);
 
             setContacts(contactsData.data);
             setPagination({
@@ -67,7 +63,6 @@ const AdminContacts = () => {
                 limit: contactsData.limit,
                 total: contactsData.total,
             });
-            setStats(statsData);
         } catch (error) {
             console.error("Error fetching contacts:", error);
             toast.error("Failed to load contacts");
@@ -211,27 +206,7 @@ const AdminContacts = () => {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            {stats && (
-                <div className="contact-stats-container">
-                    <div className="stat-card stat-total">
-                        <div className="stat-number">{stats.total_contacts}</div>
-                        <div className="stat-label">Total Contacts</div>
-                    </div>
-                    <div className="stat-card stat-new">
-                        <div className="stat-number">{stats.new_contacts}</div>
-                        <div className="stat-label">New Contacts</div>
-                    </div>
-                    <div className="stat-card stat-unresolved">
-                        <div className="stat-number">{stats.unresolved_contacts}</div>
-                        <div className="stat-label">Unresolved</div>
-                    </div>
-                    <div className="stat-card stat-replied">
-                        <div className="stat-number">{stats.replied_contacts}</div>
-                        <div className="stat-label">Replied</div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Filters */}
             <div className="filter-section">

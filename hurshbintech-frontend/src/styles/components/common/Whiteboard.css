@@ -5,7 +5,7 @@
 
 :root {
     --color-baby-rose: #8A7666;
-    --color-baby-blue: #7ae7ff;
+    --color-baby-blue: #f0c566;
     --color-baby-lilac: #b37bff;
 }
 
@@ -1844,13 +1844,13 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .text-message {
-    background-color: #2563eb;
+    background-color: #b8790a;
     color: white;
     padding: 1rem 1.5rem;
     border-radius: 0.5rem;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     animation: fadeIn 0.3s ease-out;
-    border: 2px solid #60a5fa;
+    border: 2px solid #f0c566;
     opacity: 0.95;
 }
 
@@ -1978,7 +1978,7 @@ input[type="range"]::-webkit-slider-thumb {
     right: 0;
     width: 1rem;
     height: 1rem;
-    background-color: #3b82f6;
+    background-color: #db9d32;
     border: 2px solid white;
     cursor: se-resize;
 }

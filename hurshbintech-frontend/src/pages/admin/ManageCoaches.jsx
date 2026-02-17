@@ -280,7 +280,7 @@ const ViewConsultants = () => {
                           <td className="table-primary-td table-primary-td-center">
                             <button
                               onClick={() => handleEditCoach(consultant.id)}
-                              className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
+                              className="app-modal-btn app-modal-btn--primary btn-sm "
                             >
                               <Edit3 className="table-primary-icon-sm" />
                               Edit Profile

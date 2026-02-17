@@ -532,7 +532,7 @@ const AssignedPrograms = () => {
                           {isInProgress && (
                             <button
                               style={{
-                                background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                                background: 'linear-gradient(to right, #db9d32, #b8790a)',
                                 color: '#ffffff',
                                 padding: '0.625rem 1.5rem',
                                 borderRadius: '0.5rem',
@@ -544,8 +544,8 @@ const AssignedPrograms = () => {
                                 transition: 'all 0.2s'
                               }}
                               onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563eb, #1d4ed8)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3b82f6, #2563eb)'}
+                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #b8790a, #9c6a08)'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #db9d32, #b8790a)'}
                             >
                               Continue
                             </button>

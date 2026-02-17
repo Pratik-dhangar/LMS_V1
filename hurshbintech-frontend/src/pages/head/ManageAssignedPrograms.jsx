@@ -220,7 +220,7 @@ const ManageAssignedPrograms = () => {
                             <td className="table-primary-td">{row.program_title}</td>
                             <td className="table-primary-td table-primary-td-center">
                               <button
-                                className="app-modal-btn app-modal-btn--danger btn-icon"
+                                className="app-modal-btn app-modal-btn--danger "
                                 onClick={() => handleRemove(row.id)}
                               >
                                 <Trash2 className="table-primary-icon-sm" />

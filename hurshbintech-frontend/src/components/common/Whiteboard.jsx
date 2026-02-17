@@ -561,20 +561,20 @@ const Whiteboard = ({
             selectionColor = bucketColorOverride;
             gradientAccent = bucketColorOverride + '99'; // Add transparency to the bucket color
         }
-        // Trainer/Coach selections (blue)
+        // Trainer/Coach selections (gold)
         else if (isSelectedByTrainer) {
-            selectionColor = '#007bff';
-            gradientAccent = 'rgba(0, 123, 255, 0.65)';
+            selectionColor = '#db9d32';
+            gradientAccent = 'rgba(219, 157, 50, 0.65)';
         }
         // Remote learner selections (brown)
         else if (isSelectedByRemoteLearner) {
             selectionColor = 'var(--color-baby-rose, #8A7666)';
             gradientAccent = 'rgba(138, 118, 102, 0.65)';
         }
-        // Learner's own selections (blue)
+        // Learner's own selections (gold)
         else if (isSelectedByLearner) {
-            selectionColor = 'var(--color-baby-blue, #7ae7ff)';
-            gradientAccent = 'rgba(122, 231, 255, 0.65)';
+            selectionColor = 'var(--color-baby-blue, #f0c566)';
+            gradientAccent = 'rgba(240, 197, 102, 0.65)';
         }
 
         if (!selectionColor) return {};
@@ -1405,25 +1405,25 @@ const Whiteboard = ({
             // Handle whiteboard state restoration on reconnection
             whiteboardService.onWhiteboardRestore = (restoredState) => {
                 console.log('[Whiteboard] 🔄 Restoring whiteboard state:', restoredState);
-                
+
                 try {
                     // Restore drawing strokes
                     if (restoredState.drawings && restoredState.drawings.length > 0) {
                         console.log(`[Whiteboard] Restoring ${restoredState.drawings.length} drawing strokes`);
                         normalizedPathsRef.current = restoredState.drawings;
-                        
+
                         // Redraw all strokes on canvas after a short delay to ensure canvas is ready
                         setTimeout(() => {
                             const canvas = canvasRef.current;
                             if (canvas) {
                                 const ctx = canvas.getContext('2d', { willReadFrequently: true });
                                 const dpr = window.devicePixelRatio || 1;
-                                
+
                                 // Clear and reset canvas dimensions
                                 canvas.width = canvas.offsetWidth * dpr;
                                 canvas.height = canvas.offsetHeight * dpr;
                                 ctx.scale(dpr, dpr);
-                                
+
                                 // Replay all paths
                                 console.log('[Whiteboard] Replaying', normalizedPathsRef.current.length, 'paths');
                                 replayPaths(normalizedPathsRef.current, ctx, canvas);
@@ -1433,14 +1433,14 @@ const Whiteboard = ({
                             }
                         }, 100);
                     }
-                    
+
                     // Restore canvas items (separate buckets from regular items)
                     if (restoredState.items && restoredState.items.length > 0) {
                         console.log(`[Whiteboard] Restoring ${restoredState.items.length} canvas items`);
-                        
+
                         const bucketItems = [];
                         const regularItems = [];
-                        
+
                         restoredState.items.forEach(item => {
                             if (item.type === 'bucket') {
                                 bucketItems.push(item);
@@ -1448,7 +1448,7 @@ const Whiteboard = ({
                                 regularItems.push(item);
                             }
                         });
-                        
+
                         console.log(`[Whiteboard] - ${bucketItems.length} buckets`);
                         console.log(`[Whiteboard] - ${regularItems.length} regular items (images/text)`);
                         
@@ -1526,7 +1526,7 @@ const Whiteboard = ({
                             console.log('[Whiteboard] ✅ Canvas items restored (', processedItems.length, 'items)');
                         }
                     }
-                    
+
                     console.log('[Whiteboard] ✅ Whiteboard state restoration initiated');
                 } catch (error) {
                     console.error('[Whiteboard] ❌ Error restoring whiteboard state:', error);

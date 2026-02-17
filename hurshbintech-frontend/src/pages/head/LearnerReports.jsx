@@ -159,7 +159,7 @@ const LearnerReports = () => {
           <div className="statistics-summary">
             <h3 className="statistics-title">Overall Statistics</h3>
             <div className="statistics-grid">
-              <div className="stat-card stat-card-blue">
+              <div className="stat-card stat-card-info">
                 <div className="stat-value">{statistics.total_reports}</div>
                 <div className="stat-label">Total Reports</div>
               </div>

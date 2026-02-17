@@ -110,7 +110,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="premature_weeks"
             value={formData.premature_weeks}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
             placeholder="e.g., 36 weeks"
           />
         </div>
@@ -136,7 +136,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="overdue_duration"
             value={formData.overdue_duration}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
             placeholder="e.g., 2 weeks"
           />
         </div>
@@ -161,7 +161,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="caesarean_type"
             value={formData.caesarean_type}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
           >
             <option value="">Select type</option>
             <option value="ELECTIVE">Elective</option>
@@ -225,7 +225,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
           name="conception_type"
           value={formData.conception_type}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
         >
           <option value="">Select conception type</option>
           <option value="natural">Natural</option>
@@ -256,7 +256,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="adoption_age"
             value={formData.adoption_age}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
             placeholder="e.g., 6 months"
           />
         </div>
@@ -282,7 +282,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
             name="incubator_reason"
             value={formData.incubator_reason}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
             placeholder="Enter reason"
           />
         </div>
@@ -308,7 +308,7 @@ const DeliveryHistorySection = ({ formData, handleChange }) => {
           value={formData.delivery_other_details}
           onChange={handleChange}
           rows="4"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"
           placeholder="Enter any additional delivery history details..."
         />
       </div>
