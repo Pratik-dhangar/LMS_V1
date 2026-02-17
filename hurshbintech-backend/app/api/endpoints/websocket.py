@@ -7,6 +7,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.core.config import settings
 from app.utils.s3_utils import S3Manager
+from app.db.session import AsyncSessionLocal
+from app.crud import whiteboard_crud
 
 router = APIRouter()
 
@@ -374,6 +376,133 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                 logger.error(f"Error notifying peer about disconnection: {e}")
 
 
+async def persist_whiteboard_event(message: Dict, session_id: str, role: str):
+    """
+    Persist whiteboard events to database for state recovery on reconnection.
+    Handles: draw, image, text_added, bucket_added, item_update, item_remove, erase_pen, clear_canvas
+    """
+    try:
+        msg_type = message.get("type")
+        data = message.get("data", {})
+        
+        # Log all whiteboard events for debugging
+        logger.info(f"[WHITEBOARD] persist_whiteboard_event - type: {msg_type}, role: {role}, session: {session_id}")
+        
+        # Only persist events from controllers (trainer/coach), not from participants
+        # This prevents duplicate saves when both sides send the same event
+        controller_roles = ["trainer", "coach"]
+        if role not in controller_roles:
+            logger.debug(f"[WHITEBOARD] Skipping persistence for non-controller role: {role}")
+            return
+        
+        async with AsyncSessionLocal() as db:
+            if msg_type == "draw":
+                # Transform draw data from flat structure to normalized path structure
+                # Input: {prevX, prevY, currX, currY, color, strokeNorm, tool}
+                # Output: {segments: [{prev: {x, y}, curr: {x, y}}], strokeNorm, color, tool, timestamp}
+                timestamp = int(datetime.utcnow().timestamp() * 1000)
+                normalized_stroke = {
+                    "segments": [{
+                        "prev": {"x": data.get("prevX"), "y": data.get("prevY")},
+                        "curr": {"x": data.get("currX"), "y": data.get("currY")}
+                    }],
+                    "strokeNorm": data.get("strokeNorm", data.get("lineWidth", 0.005)),
+                    "color": data.get("color", "#000000"),
+                    "tool": data.get("tool", "pen"),
+                    "timestamp": timestamp
+                }
+                item_id = f"stroke_{timestamp}"
+                logger.debug(f"[WHITEBOARD] Saving drawing stroke {item_id} for session {session_id}")
+                await whiteboard_crud.save_drawing_stroke(db, session_id, item_id, normalized_stroke)
+                
+            elif msg_type == "image":
+                # Save canvas item (image/video/PDF)
+                # The 'image' type is used for all media items (images, videos, PDFs)
+                item_id = data.get("id")
+                if not item_id:
+                    # Generate ID if not provided
+                    item_id = f"img_{int(datetime.utcnow().timestamp() * 1000)}"
+                else:
+                    # Convert to string (frontend may send integer IDs)
+                    item_id = str(item_id)
+                
+                data["id"] = item_id
+                
+                # Ensure type field is set (from frontend data or default to 'image')
+                if "type" not in data:
+                    data["type"] = "image"
+                
+                logger.info(f"[WHITEBOARD] 🔵 ABOUT TO SAVE image/media item {item_id} (type: {data.get('type')}) for session {session_id}")
+                logger.debug(f"[WHITEBOARD] Image data keys: {list(data.keys())}")
+                result = await whiteboard_crud.save_canvas_item(db, session_id, item_id, data)
+                logger.info(f"[WHITEBOARD] 🔵 SAVE RESULT for image {item_id}: {'SUCCESS' if result else 'FAILED'}")
+                
+            elif msg_type in ["text_added", "text_box_added"]:
+                # Save text item
+                item_id = data.get("id", f"text_{int(datetime.utcnow().timestamp() * 1000)}")
+                # Convert to string (frontend may send integer IDs)
+                item_id = str(item_id)
+                data["id"] = item_id
+                logger.info(f"[WHITEBOARD] 🟢 ABOUT TO SAVE text item {item_id} for session {session_id}")
+                result = await whiteboard_crud.save_canvas_item(db, session_id, item_id, data)
+                logger.info(f"[WHITEBOARD] 🟢 SAVE RESULT for text {item_id}: {'SUCCESS' if result else 'FAILED'}")
+                
+            elif msg_type in ["bucket_added", "bucket_update"]:
+                # Save bucket
+                item_id = data.get("id")
+                if not item_id:
+                    item_id = f"bucket_{int(datetime.utcnow().timestamp() * 1000)}"
+                else:
+                    # Convert to string (frontend sends integer IDs for buckets)
+                    item_id = str(item_id)
+                
+                data["id"] = item_id
+                
+                # Add type field to identify as bucket during restoration
+                data["type"] = "bucket"
+                    
+                logger.info(f"[WHITEBOARD] 🟣 ABOUT TO SAVE bucket {item_id} for session {session_id}")
+                logger.debug(f"[WHITEBOARD] Bucket data keys: {list(data.keys())}")
+                result = await whiteboard_crud.save_canvas_item(db, session_id, item_id, data)
+                logger.info(f"[WHITEBOARD] 🟣 SAVE RESULT for bucket {item_id}: {'SUCCESS' if result else 'FAILED'}")
+                
+            elif msg_type == "item_update":
+                # Update existing canvas item
+                item_id = data.get("id")
+                if item_id:
+                    # Convert to string (frontend may send integer IDs)
+                    item_id = str(item_id)
+                    data["id"] = item_id
+                    logger.info(f"[WHITEBOARD] 🟡 ABOUT TO UPDATE item {item_id} for session {session_id}")
+                    result = await whiteboard_crud.save_canvas_item(db, session_id, item_id, data)
+                    logger.info(f"[WHITEBOARD] 🟡 UPDATE RESULT for item {item_id}: {'SUCCESS' if result else 'FAILED'}")
+                    
+            elif msg_type == "item_remove":
+                # Remove canvas item (soft delete)
+                item_id = data.get("id")
+                if item_id:
+                    # Convert to string (frontend may send integer IDs)
+                    item_id = str(item_id)
+                    await whiteboard_crud.remove_canvas_item(db, session_id, item_id)
+                    
+            elif msg_type == "erase_pen":
+                # Erase drawing strokes
+                stroke_ids = data.get("eraseIds", [])
+                if stroke_ids:
+                    # Convert stroke IDs to format used in database
+                    db_stroke_ids = [f"stroke_{sid}" if not str(sid).startswith("stroke_") else str(sid) for sid in stroke_ids]
+                    await whiteboard_crud.erase_drawing_strokes(db, session_id, db_stroke_ids)
+                    
+            elif msg_type == "clear_canvas":
+                # Clear entire canvas
+                await whiteboard_crud.clear_canvas(db, session_id)
+                logger.info(f"[WHITEBOARD] Cleared canvas for session {session_id}")
+                
+    except Exception as e:
+        logger.error(f"[WHITEBOARD] Error persisting whiteboard event: {e}")
+        # Don't raise - continue with forwarding even if persistence fails
+
+
 @router.websocket("/ws/whiteboard/{session_id}")
 async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
     """
@@ -433,6 +562,22 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
             }
         )
 
+        # Restore whiteboard state for reconnecting users
+        try:
+            async with AsyncSessionLocal() as db:
+                whiteboard_state = await whiteboard_crud.get_session_state(db, session_id)
+                if whiteboard_state and (whiteboard_state["drawings"] or whiteboard_state["items"]):
+                    logger.info(
+                        f"[WHITEBOARD] Restoring state for {role} in session {session_id}: "
+                        f"{len(whiteboard_state['drawings'])} drawings, {len(whiteboard_state['items'])} items"
+                    )
+                    await websocket.send_json({
+                        "type": "whiteboard_restore",
+                        "data": whiteboard_state
+                    })
+        except Exception as e:
+            logger.error(f"[WHITEBOARD] Error restoring whiteboard state: {e}")
+
         # Determine participant role (learner for training sessions, client/guest for coach sessions)
         participant_roles = ["learner", "client", "guest"]
         
@@ -458,9 +603,13 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                     logger.debug(f"[WHITEBOARD] Received pong from {role} in session {session_id}")
                     continue
 
-                logger.debug(
-                    f"[WHITEBOARD] Received message from {role} in session {session_id}: {message.get('type')}"
+                msg_type = message.get('type')
+                logger.info(
+                    f"[WHITEBOARD] Message from {role}: type={msg_type}, session={session_id}"
                 )
+                # Log full message for image, bucket, and item events
+                if msg_type in ['image', 'bucket_added', 'bucket_update', 'item_update', 'item_remove']:
+                    logger.info(f"[WHITEBOARD] Full message for {msg_type}: {message}")
 
                 if message.get("type") == "media_control":
                     # Handle media control events
@@ -490,6 +639,9 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                                 except Exception as e:
                                     logger.error(f"[WHITEBOARD] Error sending background_music_volume to {other_role}: {e}")
                 else:
+                    # Persist whiteboard events to database before forwarding
+                    await persist_whiteboard_event(message, session_id, role)
+                    
                     # Forward draw/clear/item_update messages to the other participant(s)
                     # Map roles to their counterparts (coach can have both client and guest, trainer broadcasts to learner and observer)
                     role_mapping = {

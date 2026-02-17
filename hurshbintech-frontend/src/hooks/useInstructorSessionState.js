@@ -53,7 +53,7 @@ export const useInstructorSessionState = (role = 'trainer') => {
     const [canvasItems, setCanvasItems] = useState([]);
     const [remoteSelectedItemIds, setRemoteSelectedItemIds] = useState([]);
     const [buckets, setBuckets] = useState([]);
-    const [bucketColor, setBucketColor] = useState('#8B6F47');
+    const [bucketColor, setBucketColor] = useState('#6D5A3F');
     const [youtubePopups, setYoutubePopups] = useState([]);
 
     // Drawing tools

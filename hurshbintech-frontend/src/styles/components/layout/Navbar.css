@@ -30,6 +30,25 @@
     order: 1;
 }
 
+.navbar-logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-logo {
+    height: 3rem;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.navbar-logo:hover {
+    opacity: 1;
+}
+
 .navbar-title {
     color: #ffffff;
     font-size: 1.3rem;
@@ -69,7 +88,7 @@
 }
 
 .navbar-btn {
-    
+
     color: white;
     border: 1px solid #ffffff;
     padding: 0.5rem 1rem;
@@ -136,8 +155,8 @@
         padding: 1.25rem 1.75rem;
     }
 
-    .navbar-title {
-        font-size: 1.5rem;
+    .navbar-logo {
+        height: 3.5rem;
     }
 }
 
@@ -146,9 +165,8 @@
         padding: 1.5rem 2rem;
     }
 
-    .navbar-title {
-        font-size: 1.8rem;
-        
+    .navbar-logo {
+        height: 3.75rem;
     }
 
     /* Keep hamburger menu on medium screens */
@@ -163,8 +181,8 @@
     .navbar-actions-desktop {
         display: none;
     }
-    
-    .navbar-brand{
+
+    .navbar-brand {
         gap: 2rem;
     }
 
@@ -182,12 +200,11 @@
         padding: 1.75rem 2rem;
     }
 
-    .navbar-title {
-        font-size: 1.9rem;
-        
+    .navbar-logo {
+        height: 4.25rem;
     }
-    
-    .navbar-brand{
+
+    .navbar-brand {
         gap: 8rem;
     }
 
@@ -211,8 +228,5 @@
     .navbar-mobile-menu {
         display: none;
     }
-    
+
 }
-
-  
-

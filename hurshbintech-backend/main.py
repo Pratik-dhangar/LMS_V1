@@ -26,6 +26,7 @@ from app.api.endpoints.assigned_trainings import router as assigned_trainings_ro
 from app.api.endpoints.auth import router as auth_router
 from app.api.endpoints.blogs import router as blogs_router
 from app.api.endpoints.booking import router as booking_router
+from app.api.endpoints.contact import router as contact_router
 from app.api.endpoints.coach import router as coach_router
 from app.api.endpoints.coach_appointment_sessions import router as coach_sessions_router
 from app.api.endpoints.guest_sessions import router as guest_sessions_router
@@ -50,6 +51,7 @@ from app.api.endpoints.cart import router as cart_router
 from app.api.endpoints.ecommerce import router as ecommerce_router
 from app.api.endpoints.Chat.chat import router as chat_router
 from app.api.endpoints.Communication.webinar import router as webinar_router
+from app.api.endpoints.vendors import router as vendors_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.request_logging import RequestLoggingMiddleware
@@ -65,6 +67,7 @@ limiter = Limiter(key_func=get_remote_address)
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.chat_message_cleanup import cleanup_old_messages
 from app.workers.subscription_tasks import process_ended_sessions_task
+from app.services.cache_service import cache_service
 
 scheduler = AsyncIOScheduler()
 
@@ -72,10 +75,13 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     """
     Startup and shutdown logic for the application.
-    Manages the background scheduler lifecycle.
+    Manages the background scheduler lifecycle and Redis cache connection.
     """
     # STARTUP
     try:
+        # Initialize Redis cache
+        await cache_service.connect()
+        
         if not scheduler.running:
             # Schedule chat message cleanup daily at 3 AM
             scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
@@ -92,6 +98,9 @@ async def lifespan(app: FastAPI):
     
     # SHUTDOWN
     try:
+        # Disconnect Redis
+        await cache_service.disconnect()
+        
         if scheduler.running:
             scheduler.shutdown(wait=False)
             logger.info("✅ Background scheduler shut down gracefully")
@@ -152,6 +161,7 @@ else:
         "http://127.0.0.1:3001",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8000",
+        "*", 
     ]
     
     app.add_middleware(
@@ -194,6 +204,7 @@ app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
+app.include_router(contact_router, prefix="/api", tags=["contact"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments
@@ -208,6 +219,9 @@ app.include_router(products_router, prefix="/api")  # Admin product management
 app.include_router(store_router, prefix="/api")  # Public catalog browsing
 app.include_router(cart_router, prefix="/api")  # Cart management
 app.include_router(ecommerce_router, prefix="/api")  # Orders & payments
+
+# ✅ Vendor Management routers
+app.include_router(vendors_router, prefix="/api")
 
 # ✅ Chat router (REST + WebSocket)
 app.include_router(chat_router)  # Chat has its own /api/chat prefix

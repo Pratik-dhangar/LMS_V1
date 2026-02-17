@@ -3,9 +3,10 @@
  * Global state management for chat functionality
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../AuthContext';
 import chatApi from '../../api/services/chat/chatApi';
+import { useAppBadge } from '../../hooks/chat/useAppBadge';
 
 const ChatContext = createContext();
 
@@ -45,7 +46,16 @@ export const ChatProvider = ({ children }) => {
   const heartbeatIntervalRef = useRef(null);
   const isConnectingRef = useRef(false);
   const shouldReconnectRef = useRef(false);
-  const activeConnectionsRef = useRef(0); // Track number of active chat components
+
+  // ============ PWA APP BADGE ============
+  
+  // Calculate total unread count across all conversations
+  const totalUnreadCount = useMemo(() => {
+    return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+  }, [unreadCounts]);
+
+  // Update PWA app icon badge when unread count changes
+  useAppBadge(totalUnreadCount);
 
   // ============ CONVERSATIONS ============
 
@@ -540,35 +550,42 @@ export const ChatProvider = ({ children }) => {
 
   // ============ INITIALIZATION ============
 
-  // Manual connection/disconnection for chat pages
-  const connectChat = useCallback(() => {
-    activeConnectionsRef.current += 1;
-    console.log('[ChatContext] Active connections:', activeConnectionsRef.current);
-    
-    if (user && activeConnectionsRef.current === 1) {
-      // Only connect if this is the first active connection
+  // Auto-connect WebSocket when user is authenticated
+  useEffect(() => {
+    if (user) {
+      console.log('[ChatContext] User authenticated, connecting chat...');
       loadConversations();
       loadAllUsers();
       connectWebSocket();
+    } else {
+      console.log('[ChatContext] User not authenticated, disconnecting chat...');
+      disconnectWebSocket();
     }
-  }, [user, loadConversations, loadAllUsers, connectWebSocket]);
+
+    // Cleanup on user logout or unmount
+    return () => {
+      if (!user) {
+        disconnectWebSocket();
+      }
+    };
+  }, [user, loadConversations, loadAllUsers, connectWebSocket, disconnectWebSocket]);
+
+  // Legacy methods for backward compatibility (now no-ops since connection is automatic)
+  const connectChat = useCallback(() => {
+    console.log('[ChatContext] connectChat called (legacy - connection is automatic)');
+    // Connection is now automatic when user is logged in
+    // Just ensure data is loaded
+    if (user && conversations.length === 0) {
+      loadConversations();
+      loadAllUsers();
+    }
+  }, [user, conversations.length, loadConversations, loadAllUsers]);
 
   const disconnectChat = useCallback(() => {
-    activeConnectionsRef.current = Math.max(0, activeConnectionsRef.current - 1);
-    console.log('[ChatContext] Active connections:', activeConnectionsRef.current);
-    
-    // Only disconnect if no more active connections
-    if (activeConnectionsRef.current === 0) {
-      disconnectWebSocket();
-    }
-  }, [disconnectWebSocket]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnectWebSocket();
-    };
-  }, [disconnectWebSocket]);
+    console.log('[ChatContext] disconnectChat called (legacy - connection remains active)');
+    // Connection remains active as long as user is logged in
+    // This is kept for backward compatibility but does nothing
+  }, []);
 
   const value = {
     // State

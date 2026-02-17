@@ -259,7 +259,7 @@
 }
 
 .modern-form-btn-primary:hover:not(:disabled) {
-  background: #c28d2d;
+  background: #c98d1e;
   box-shadow: 0 6px 20px rgba(219, 157, 50, 0.4);
   transform: translateY(-2px);
 }
@@ -295,9 +295,19 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .modern-form-error-icon {
@@ -332,8 +342,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modern-form-overlay-content {
@@ -352,6 +367,7 @@
     opacity: 0;
     transform: scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -369,7 +385,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .modern-form-overlay-title {
@@ -402,9 +420,11 @@
   0% {
     transform: scale(0);
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
@@ -515,7 +535,7 @@
 }
 
 .reference-btn-upload:hover {
-  background: #c28d2d;
+  background: #c98d1e;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(219, 157, 50, 0.3);
 }
@@ -598,7 +618,7 @@
 }
 
 .reference-btn-view:hover {
-  background: #c28d2d;
+  background: #c98d1e;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(219, 157, 50, 0.3);
 }
@@ -708,9 +728,9 @@
 }
 
 /* Full Width Grid Item */
-.coach-grid-layout > div:nth-child(3),
-.coach-grid-layout > div:nth-child(4),
-.coach-grid-layout > div:nth-child(5) {
+.coach-grid-layout>div:nth-child(3),
+.coach-grid-layout>div:nth-child(4),
+.coach-grid-layout>div:nth-child(5) {
   grid-column: 1 / -1;
 }
 
@@ -801,9 +821,9 @@
     gap: 1.5rem;
   }
 
-  .coach-grid-layout > div:nth-child(3),
-  .coach-grid-layout > div:nth-child(4),
-  .coach-grid-layout > div:nth-child(5) {
+  .coach-grid-layout>div:nth-child(3),
+  .coach-grid-layout>div:nth-child(4),
+  .coach-grid-layout>div:nth-child(5) {
     grid-column: 1;
   }
 }

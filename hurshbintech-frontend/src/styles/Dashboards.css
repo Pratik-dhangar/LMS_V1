@@ -78,7 +78,7 @@
 }
 
 .stat-value-blue {
-    color: #2563eb;
+    color: #db9d32;
 }
 
 .stat-value-green {
@@ -93,7 +93,7 @@
     grid-column: 1 / -1;
     text-align: center;
     padding: 2rem;
-    color: #2563eb;
+    color: #b8790a;
     font-size: 1.125rem;
     font-weight: 500;
     background: white;
@@ -159,7 +159,7 @@
 
 .menu-item:hover {
     background: #f3f4f6;
-    border-color: #3b82f6;
+    border-color: #db9d32;
 }
 
 .menu-item-text {

@@ -310,7 +310,7 @@ const Exercise = ({
                                 <textarea
                                     value={question}
                                     onChange={(e) => setQuestion(e.target.value)}
-                                    placeholder="Enter the question for the learner"
+                                    placeholder="Enter the question"
                                     className="form-textarea"
                                 />
                             </div>
@@ -336,7 +336,7 @@ const Exercise = ({
                                 title="Open Comments Tool - Share notes with learner"
                             >
                                 <span>💬</span>
-                                <span>Comments</span>
+                                <span>Response</span>
                             </button>
                         </div>
                     </div>
@@ -373,8 +373,8 @@ const Exercise = ({
                                                 commentDebounceTimer.current = null;
                                             }
                                         }}
-                                        placeholder="Learner comments will appear here..."
-                                        className="bg-blue-50 border border-blue-300 rounded p-2 w-full text-gray-700"
+                                        placeholder="Response will appear here..."
+                                        className="bg-yellow-50 border border-yellow-300 rounded p-2 w-full text-gray-700"
                                         style={{ minHeight: '60px', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', maxHeight: '100px', overflowY: 'auto', resize: 'none' }}
                                     />
                                 </div>
@@ -456,7 +456,7 @@ const Exercise = ({
                                 ref={answerTextareaRef}
                                 value={answer || ''}
                                 onChange={(e) => setAnswer(e.target.value)}
-                                placeholder="Learner's answer will appear here..."
+                                placeholder="Answer will appear here..."
                                 className="answer-input"
                                 style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
                                 disabled={false}

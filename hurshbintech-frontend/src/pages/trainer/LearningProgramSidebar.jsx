@@ -50,7 +50,7 @@ const LearningProgramSidebar = ({
 
   return (
     <div className="sidebar-container">
-      <div className="sidebar-header sidebar-header-blue">
+      <div className="sidebar-header sidebar-header-gold">
         📋 Learning Program
       </div>
 
@@ -125,7 +125,7 @@ const LearningProgramSidebar = ({
         </div>
 
         <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
-        <div className="meter-container meter-container-blue">
+        <div className="meter-container meter-container-gold">
           <div className="meter-buttons">
             {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
               <div

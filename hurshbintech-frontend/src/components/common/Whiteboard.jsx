@@ -398,6 +398,9 @@ const Whiteboard = ({
     // Media control state management
     const mediaControl = useMediaControl();
 
+    // Keep bucketsRef in sync with buckets prop for use inside stale closures
+    useEffect(() => { bucketsRef.current = buckets; }, [buckets]);
+
     // Debug log for feedback message
     useEffect(() => {
         if (feedbackMessage) {
@@ -438,7 +441,44 @@ const Whiteboard = ({
         }
     }, [isVideoItem, isPdfItem, mediaControl]);
 
+    /**
+     * Compute the grid position for an item inside a bucket.
+     * Items in buckets are arranged in a grid: 40px items, 8px gap, 10px padding, 76px header.
+     * This ensures items are always correctly positioned relative to their bucket
+     * regardless of canvas size or normalization differences.
+     */
+    const computeBucketItemPosition = useCallback((bucket, itemIndex) => {
+        const paddingX = 10;
+        const headerHeight = 76; // rim + padding + label + margin + gap
+        const itemSize = 40;
+        const gap = 8;
+        const cols = Math.max(1, Math.floor((bucket.width - paddingX * 2) / (itemSize + gap)));
+        const row = Math.floor(itemIndex / cols);
+        const col = itemIndex % cols;
+        return {
+            x: bucket.x + paddingX + col * (itemSize + gap),
+            y: bucket.y + headerHeight + row * (itemSize + gap)
+        };
+    }, []);
+
+    /**
+     * Reposition all items inside a bucket using the grid layout.
+     * Call this whenever a bucket moves to ensure items stay inside.
+     */
+    const repositionItemsInBucket = useCallback((items, bucket) => {
+        let idx = 0;
+        return items.map(item => {
+            if (String(item.inBucket) === String(bucket.id)) {
+                const pos = computeBucketItemPosition(bucket, idx);
+                idx++;
+                return { ...item, x: pos.x, y: pos.y, width: 40, height: 40 };
+            }
+            return item;
+        });
+    }, [computeBucketItemPosition]);
+
     const canvasRef = useRef(null);
+    const bucketsRef = useRef(buckets); // Keep ref in sync for use in stale closures
     const prevPosRef = useRef({ x: 0, y: 0 });
     // const animationFrameRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -521,20 +561,20 @@ const Whiteboard = ({
             selectionColor = bucketColorOverride;
             gradientAccent = bucketColorOverride + '99'; // Add transparency to the bucket color
         }
-        // Trainer/Coach selections (blue)
+        // Trainer/Coach selections (gold)
         else if (isSelectedByTrainer) {
-            selectionColor = '#007bff';
-            gradientAccent = 'rgba(0, 123, 255, 0.65)';
+            selectionColor = '#db9d32';
+            gradientAccent = 'rgba(219, 157, 50, 0.65)';
         }
-        // Remote learner selections (pink/rose)
+        // Remote learner selections (brown)
         else if (isSelectedByRemoteLearner) {
-            selectionColor = 'var(--color-baby-rose, #ff86c1)';
-            gradientAccent = 'rgba(255, 164, 199, 0.65)';
+            selectionColor = 'var(--color-baby-rose, #8A7666)';
+            gradientAccent = 'rgba(138, 118, 102, 0.65)';
         }
-        // Learner's own selections (blue)
+        // Learner's own selections (gold)
         else if (isSelectedByLearner) {
-            selectionColor = 'var(--color-baby-blue, #7ae7ff)';
-            gradientAccent = 'rgba(122, 231, 255, 0.65)';
+            selectionColor = 'var(--color-baby-blue, #f0c566)';
+            gradientAccent = 'rgba(240, 197, 102, 0.65)';
         }
 
         if (!selectionColor) return {};
@@ -997,19 +1037,45 @@ const Whiteboard = ({
                 console.log('[Whiteboard] onImage received:', { id: data.id, src: data.src, x: data.x, y: data.y });
                 setCanvasItems(prev => {
                     console.log('[Whiteboard] Current canvasItems before adding:', prev.length);
-                    const exists = prev.find(item => item.id === data.id);
+                    const exists = prev.find(item => String(item.id) === String(data.id));
                     if (!exists) {
-                        // Denormalize item bounds if they're normalized (0..1 range)
-                        const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
-                        const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                        let itemX, itemY, itemW, itemH;
+
+                        if (data.inBucket) {
+                            // Items inside buckets: position using grid layout relative to LOCAL bucket
+                            // This avoids independent normalization/denormalization mismatch
+                            const bucket = bucketsRef.current.find(b => String(b.id) === String(data.inBucket));
+                            if (bucket) {
+                                const existingBucketItems = prev.filter(i => String(i.inBucket) === String(data.inBucket));
+                                const pos = computeBucketItemPosition(bucket, existingBucketItems.length);
+                                itemX = pos.x;
+                                itemY = pos.y;
+                            } else {
+                                // Bucket not found yet, fall back to denormalized coords
+                                const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                                const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                                itemX = bounds.x;
+                                itemY = bounds.y;
+                            }
+                            itemW = 40;
+                            itemH = 40;
+                        } else {
+                            // Free items: denormalize from 0-1 range to local canvas pixels
+                            const isNormalized = data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1;
+                            const bounds = isNormalized ? denormalizeItem(data, canvasRef.current) : data;
+                            itemX = bounds.x;
+                            itemY = bounds.y;
+                            itemW = bounds.width;
+                            itemH = bounds.height;
+                        }
 
                         const newItem = {
                             id: data.id,
                             src: data.src,
-                            x: bounds.x,
-                            y: bounds.y,
-                            width: bounds.width,
-                            height: bounds.height,
+                            x: itemX,
+                            y: itemY,
+                            width: itemW,
+                            height: itemH,
                             title: data.title,
                             type: data.type,
                             inBucket: data.inBucket || null, // Include bucket association
@@ -1025,9 +1091,9 @@ const Whiteboard = ({
                         // If item is in a bucket, add to bucket's items list and trigger animation
                         if (data.inBucket) {
                             setBuckets(prevBuckets => prevBuckets.map(bucket => {
-                                if (bucket.id === data.inBucket) {
+                                if (String(bucket.id) === String(data.inBucket)) {
                                     const items = bucket.items || [];
-                                    if (!items.includes(data.id)) {
+                                    if (!items.some(id => String(id) === String(data.id))) {
                                         return { ...bucket, items: [...items, data.id] };
                                     }
                                 }
@@ -1082,8 +1148,8 @@ const Whiteboard = ({
                 // Handle bucket removal
                 if (data.removed_from_bucket) {
                     setBuckets(prev => prev.map(bucket =>
-                        bucket.id === data.removed_from_bucket
-                            ? { ...bucket, items: (bucket.items || []).filter(id => id !== data.id) }
+                        String(bucket.id) === String(data.removed_from_bucket)
+                            ? { ...bucket, items: (bucket.items || []).filter(id => String(id) !== String(data.id)) }
                             : bucket
                     ));
                 }
@@ -1091,9 +1157,9 @@ const Whiteboard = ({
                 // Handle bucket addition - just track the item in bucket
                 if (data.inBucket) {
                     setBuckets(prev => prev.map(bucket => {
-                        if (bucket.id === data.inBucket) {
+                        if (String(bucket.id) === String(data.inBucket)) {
                             const items = bucket.items || [];
-                            if (!items.includes(data.id)) {
+                            if (!items.some(id => String(id) === String(data.id))) {
                                 return { ...bucket, items: [...items, data.id] };
                             }
                         }
@@ -1107,32 +1173,51 @@ const Whiteboard = ({
                     console.log('[Whiteboard] Looking for item:', data.id);
 
                     const updated = prev.map(item => {
-                        if (item.id === data.id) {
+                        if (String(item.id) === String(data.id)) {
                             console.log('[Whiteboard] Found item to update:', { id: item.id, currentX: item.x, currentY: item.y });
 
                             let finalX, finalY, finalWidth, finalHeight;
+                            const targetInBucket = data.inBucket !== undefined ? data.inBucket : item.inBucket;
 
-                            // Determine if we need to denormalize (default to true for backward compatibility)
-                            const needsDenormalization = data.normalized !== false;
-
-                            if (needsDenormalization) {
-                                // Denormalize coordinates from 0-1 range to canvas pixels
-                                const denormalized = denormalizeItem(data, canvasRef.current);
-                                finalX = data.x !== undefined ? denormalized.x : item.x;
-                                finalY = data.y !== undefined ? denormalized.y : item.y;
-                                finalWidth = data.width !== undefined ? denormalized.width : item.width;
-                                finalHeight = data.height !== undefined ? denormalized.height : item.height;
-                                console.log('[Whiteboard] Denormalized:', {
-                                    from: { x: data.x, y: data.y, w: data.width, h: data.height },
-                                    to: { x: finalX, y: finalY, w: finalWidth, h: finalHeight }
-                                });
+                            if (targetInBucket) {
+                                // Items inside buckets: position using grid layout relative to LOCAL bucket
+                                // This avoids normalization/denormalization mismatch between canvases
+                                const bucket = bucketsRef.current.find(b => String(b.id) === String(targetInBucket));
+                                if (bucket) {
+                                    // Count items already in this bucket (before this one)
+                                    const bucketItems = prev.filter(i => String(i.inBucket) === String(targetInBucket) && String(i.id) !== String(data.id));
+                                    const pos = computeBucketItemPosition(bucket, bucketItems.length);
+                                    finalX = pos.x;
+                                    finalY = pos.y;
+                                } else {
+                                    // Bucket not found, fall back to denormalized coords
+                                    const needsDenormalization = data.normalized !== false;
+                                    if (needsDenormalization) {
+                                        const denormalized = denormalizeItem(data, canvasRef.current);
+                                        finalX = data.x !== undefined ? denormalized.x : item.x;
+                                        finalY = data.y !== undefined ? denormalized.y : item.y;
+                                    } else {
+                                        finalX = data.x !== undefined ? data.x : item.x;
+                                        finalY = data.y !== undefined ? data.y : item.y;
+                                    }
+                                }
+                                finalWidth = 40;
+                                finalHeight = 40;
                             } else {
-                                // Use pixel coordinates directly (items in buckets or already in pixel space)
-                                finalX = data.x !== undefined ? data.x : item.x;
-                                finalY = data.y !== undefined ? data.y : item.y;
-                                finalWidth = data.width !== undefined ? data.width : item.width;
-                                finalHeight = data.height !== undefined ? data.height : item.height;
-                                console.log('[Whiteboard] Using pixel coordinates directly:', { x: finalX, y: finalY, w: finalWidth, h: finalHeight });
+                                // Free items: denormalize from 0-1 range to canvas pixels
+                                const needsDenormalization = data.normalized !== false;
+                                if (needsDenormalization) {
+                                    const denormalized = denormalizeItem(data, canvasRef.current);
+                                    finalX = data.x !== undefined ? denormalized.x : item.x;
+                                    finalY = data.y !== undefined ? denormalized.y : item.y;
+                                    finalWidth = data.width !== undefined ? denormalized.width : item.width;
+                                    finalHeight = data.height !== undefined ? denormalized.height : item.height;
+                                } else {
+                                    finalX = data.x !== undefined ? data.x : item.x;
+                                    finalY = data.y !== undefined ? data.y : item.y;
+                                    finalWidth = data.width !== undefined ? data.width : item.width;
+                                    finalHeight = data.height !== undefined ? data.height : item.height;
+                                }
                             }
 
                             const updatedItem = {
@@ -1153,7 +1238,7 @@ const Whiteboard = ({
                         return item;
                     });
 
-                    const foundItem = updated.find(i => i.id === data.id);
+                    const foundItem = updated.find(i => String(i.id) === String(data.id));
                     if (foundItem) {
                         console.log('[Whiteboard] Updated item in array:', { id: foundItem.id, x: foundItem.x, y: foundItem.y });
                     } else {
@@ -1168,65 +1253,78 @@ const Whiteboard = ({
 
             whiteboardService.onItemRemove = (data) => {
                 // console.log('[Whiteboard] Item removed:', data);
-                setCanvasItems(prev => prev.filter(item => item.id !== data.id));
+                setCanvasItems(prev => prev.filter(item => String(item.id) !== String(data.id)));
             };
 
             /* Inline video/media handler moved to consolidated onMediaControl handler below. */
 
             whiteboardService.onBucketAdded = (data) => {
                 // console.log('[Whiteboard] Bucket added:', data);
-                // Add bucket directly - no normalization/denormalization needed
-                // Buckets use absolute pixel positioning as overlay elements
+                // Denormalize bucket coordinates from 0-1 range to local canvas pixels
+                let processedData = data;
+                if (data.normalized && canvasRef.current) {
+                    processedData = { ...denormalizeItem(data, canvasRef.current), normalized: false };
+                }
                 setBuckets(prev => {
-                    const exists = prev.find(bucket => bucket.id === data.id);
+                    const exists = prev.find(bucket => String(bucket.id) === String(processedData.id));
                     if (!exists) {
-                        return [...prev, data];
+                        return [...prev, processedData];
                     }
                     return prev;
                 });
             };
 
             whiteboardService.onBucketUpdate = (data) => {
-                // console.log('[Whiteboard] Bucket updated:', data);
-                if (data.removed) {
-                    // Remove all items inside the bucket
-                    // Use items array if provided (more reliable), otherwise fallback to inBucket property
-                    if (data.items && data.items.length > 0) {
-                        setCanvasItems(prev => prev.filter(item => !data.items.includes(item.id)));
+                console.log('[Whiteboard] Bucket updated:', data);
+                // Denormalize bucket coordinates from 0-1 range to local canvas pixels
+                let processedData = data;
+                if (data.normalized && canvasRef.current) {
+                    processedData = { ...denormalizeItem(data, canvasRef.current), normalized: false };
+                    console.log('[Whiteboard] Denormalized bucket:', { from: { x: data.x, y: data.y }, to: { x: processedData.x, y: processedData.y } });
+                }
+
+                if (processedData.removed) {
+                    // Remove all items inside the bucket — use String() for type-safe comparison
+                    // (bucket IDs may be numbers locally but strings from backend)
+                    const bucketIdStr = String(processedData.id);
+                    if (processedData.items && processedData.items.length > 0) {
+                        const itemIdStrs = processedData.items.map(id => String(id));
+                        setCanvasItems(prev => prev.filter(item => !itemIdStrs.includes(String(item.id))));
                     } else {
-                        setCanvasItems(prev => prev.filter(item => item.inBucket !== data.id));
+                        setCanvasItems(prev => prev.filter(item => String(item.inBucket) !== bucketIdStr));
                     }
 
                     // Remove bucket
-                    setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
+                    setBuckets(prev => prev.filter(bucket => String(bucket.id) !== bucketIdStr));
                 } else {
-                    // Calculate delta before updating bucket
-                    setBuckets(prev => {
-                        const oldBucket = prev.find(b => b.id === data.id);
+                    // Move bucket and reposition child items using grid layout.
+                    // Grid-based positioning is immune to normalization/denormalization mismatch
+                    // because item positions are derived from the LOCAL bucket position.
+                    const updatedBucketData = {
+                        x: processedData.x,
+                        y: processedData.y,
+                        width: processedData.width,
+                        height: processedData.height,
+                    };
 
-                        // If bucket moved, also move all items inside it
-                        if (oldBucket && (oldBucket.x !== data.x || oldBucket.y !== data.y)) {
-                            const dx = data.x - oldBucket.x;
-                            const dy = data.y - oldBucket.y;
+                    // Update bucket state first
+                    setBuckets(prev => prev.map(bucket =>
+                        String(bucket.id) === String(processedData.id)
+                            ? {
+                                ...bucket,
+                                ...updatedBucketData,
+                                label: processedData.label !== undefined ? processedData.label : bucket.label,
+                                color: processedData.color !== undefined ? processedData.color : bucket.color,
+                            }
+                            : bucket
+                    ));
 
-                            // Move items that belong to this bucket - do this OUTSIDE setBuckets
-                            setCanvasItems(prevItems => prevItems.map(item => {
-                                if (item.inBucket === data.id) {
-                                    return {
-                                        ...item,
-                                        x: item.x + dx,
-                                        y: item.y + dy
-                                    };
-                                }
-                                return item;
-                            }));
-                        }
-
-                        // Update bucket position
-                        return prev.map(bucket =>
-                            bucket.id === data.id ? { ...bucket, ...data } : bucket
-                        );
-                    });
+                    // Reposition all items inside the bucket using grid layout
+                    // Items are placed at fixed grid positions relative to the bucket,
+                    // so they always stay inside regardless of canvas size.
+                    setCanvasItems(prevItems =>
+                        repositionItemsInBucket(prevItems, { id: processedData.id, ...updatedBucketData })
+                    );
                 }
             };
 
@@ -1298,6 +1396,142 @@ const Whiteboard = ({
                     }
                 }
             };
+
+            whiteboardService.onItemsUnselected = (data) => {
+                // console.log('[Whiteboard] Items unselected by instructor');
+                setSelectedItems([]);
+            };
+
+            // Handle whiteboard state restoration on reconnection
+            whiteboardService.onWhiteboardRestore = (restoredState) => {
+                console.log('[Whiteboard] 🔄 Restoring whiteboard state:', restoredState);
+
+                try {
+                    // Restore drawing strokes
+                    if (restoredState.drawings && restoredState.drawings.length > 0) {
+                        console.log(`[Whiteboard] Restoring ${restoredState.drawings.length} drawing strokes`);
+                        normalizedPathsRef.current = restoredState.drawings;
+
+                        // Redraw all strokes on canvas after a short delay to ensure canvas is ready
+                        setTimeout(() => {
+                            const canvas = canvasRef.current;
+                            if (canvas) {
+                                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                                const dpr = window.devicePixelRatio || 1;
+
+                                // Clear and reset canvas dimensions
+                                canvas.width = canvas.offsetWidth * dpr;
+                                canvas.height = canvas.offsetHeight * dpr;
+                                ctx.scale(dpr, dpr);
+
+                                // Replay all paths
+                                console.log('[Whiteboard] Replaying', normalizedPathsRef.current.length, 'paths');
+                                replayPaths(normalizedPathsRef.current, ctx, canvas);
+                                console.log('[Whiteboard] ✅ Drawing restoration complete');
+                            } else {
+                                console.warn('[Whiteboard] ⚠️ Canvas not ready for restoration');
+                            }
+                        }, 100);
+                    }
+
+                    // Restore canvas items (separate buckets from regular items)
+                    if (restoredState.items && restoredState.items.length > 0) {
+                        console.log(`[Whiteboard] Restoring ${restoredState.items.length} canvas items`);
+
+                        const bucketItems = [];
+                        const regularItems = [];
+
+                        restoredState.items.forEach(item => {
+                            if (item.type === 'bucket') {
+                                bucketItems.push(item);
+                            } else {
+                                regularItems.push(item);
+                            }
+                        });
+
+                        console.log(`[Whiteboard] - ${bucketItems.length} buckets`);
+                        console.log(`[Whiteboard] - ${regularItems.length} regular items (images/text)`);
+                        
+                        // Restore buckets — denormalize coordinates if needed
+                        if (bucketItems.length > 0) {
+                            const canvas = canvasRef.current;
+                            const processedBuckets = bucketItems.map(bucket => {
+                                const isNormalized = bucket.normalized === true || (
+                                    bucket.x !== undefined && bucket.x >= 0 && bucket.x <= 1 &&
+                                    bucket.y !== undefined && bucket.y >= 0 && bucket.y <= 1 &&
+                                    bucket.width !== undefined && bucket.width >= 0 && bucket.width <= 1 &&
+                                    bucket.height !== undefined && bucket.height >= 0 && bucket.height <= 1
+                                );
+                                if (isNormalized && canvas) {
+                                    return { ...denormalizeItem(bucket, canvas), normalized: false };
+                                }
+                                return bucket;
+                            });
+                            setBuckets(processedBuckets);
+                            console.log('[Whiteboard] ✅ Buckets restored');
+                        }
+                        
+                        // Restore regular canvas items — denormalize coordinates if needed
+                        if (regularItems.length > 0) {
+                            const canvas = canvasRef.current;
+                            
+                            // First, denormalize free items normally
+                            // For items in buckets, use grid layout relative to their (already restored) bucket
+                            const processedBucketsForLookup = bucketItems.length > 0
+                                ? bucketItems.map(bucket => {
+                                    const isNormalized = bucket.normalized === true || (
+                                        bucket.x >= 0 && bucket.x <= 1 && bucket.y >= 0 && bucket.y <= 1 &&
+                                        bucket.width >= 0 && bucket.width <= 1 && bucket.height >= 0 && bucket.height <= 1
+                                    );
+                                    return (isNormalized && canvas) ? { ...denormalizeItem(bucket, canvas), normalized: false } : bucket;
+                                })
+                                : [];
+
+                            // Track how many items per bucket so we can assign grid positions
+                            const bucketItemCounts = {};
+
+                            const processedItems = regularItems.map(item => {
+                                if (item.inBucket) {
+                                    // Position using grid layout relative to the local bucket
+                                    const bucket = processedBucketsForLookup.find(b => String(b.id) === String(item.inBucket));
+                                    if (bucket) {
+                                        const idx = bucketItemCounts[String(item.inBucket)] || 0;
+                                        bucketItemCounts[String(item.inBucket)] = idx + 1;
+                                        const pos = computeBucketItemPosition(bucket, idx);
+                                        return { ...item, x: pos.x, y: pos.y, width: 40, height: 40, normalized: false };
+                                    }
+                                }
+
+                                // Free items: denormalize normally
+                                const isNormalized = item.normalized === true || (
+                                    item.x !== undefined && item.x >= 0 && item.x <= 1 &&
+                                    item.y !== undefined && item.y >= 0 && item.y <= 1 &&
+                                    item.width !== undefined && item.width >= 0 && item.width <= 1 &&
+                                    item.height !== undefined && item.height >= 0 && item.height <= 1
+                                );
+                                
+                                if (isNormalized && canvas) {
+                                    const denormalized = denormalizeItem(item, canvas);
+                                    console.log('[Whiteboard] Denormalized restored item:', { 
+                                        id: item.id, 
+                                        from: { x: item.x, y: item.y }, 
+                                        to: { x: denormalized.x, y: denormalized.y } 
+                                    });
+                                    return { ...denormalized, normalized: false };
+                                }
+                                return item;
+                            });
+                            
+                            setCanvasItems(processedItems);
+                            console.log('[Whiteboard] ✅ Canvas items restored (', processedItems.length, 'items)');
+                        }
+                    }
+
+                    console.log('[Whiteboard] ✅ Whiteboard state restoration initiated');
+                } catch (error) {
+                    console.error('[Whiteboard] ❌ Error restoring whiteboard state:', error);
+                }
+            };
         }
 
         // Handle window resize - replay normalized paths to preserve drawings
@@ -1346,6 +1580,8 @@ const Whiteboard = ({
                 whiteboardService.onBucketAdded = null;
                 whiteboardService.onBucketUpdate = null;
                 whiteboardService.onMediaControl = null;
+                whiteboardService.onItemsUnselected = null;
+                whiteboardService.onWhiteboardRestore = null;
             }
             window.removeEventListener('resize', handleResize);
         };
@@ -1638,13 +1874,14 @@ const Whiteboard = ({
 
     const removeBucket = (bucketId) => {
         // Get all items that are inside this bucket (from canvasItems, not bucket.items)
-        const childItems = canvasItems.filter(item => item.inBucket === bucketId);
+        // Use String() for type-safe comparison (IDs may be numbers locally, strings from backend)
+        const childItems = canvasItems.filter(item => String(item.inBucket) === String(bucketId));
 
         // Remove all items inside the bucket locally
-        setCanvasItems(prev => prev.filter(item => item.inBucket !== bucketId));
+        setCanvasItems(prev => prev.filter(item => String(item.inBucket) !== String(bucketId)));
 
         // Remove the bucket itself
-        setBuckets(prev => prev.filter(b => b.id !== bucketId));
+        setBuckets(prev => prev.filter(b => String(b.id) !== String(bucketId)));
 
         // Send individual item_remove for each child item first
         // This is the most reliable way - onItemRemove is never overridden
@@ -1659,14 +1896,14 @@ const Whiteboard = ({
     const removeItemFromBucket = (itemId, bucketId) => {
         // Remove item from bucket's items array
         setBuckets(prev => prev.map(bucket =>
-            bucket.id === bucketId
-                ? { ...bucket, items: (bucket.items || []).filter(id => id !== itemId) }
+            String(bucket.id) === String(bucketId)
+                ? { ...bucket, items: (bucket.items || []).filter(id => String(id) !== String(itemId)) }
                 : bucket
         ));
 
         // Update the item to remove inBucket property and restore original size
         setCanvasItems(prev => prev.map(item => {
-            if (item.id === itemId) {
+            if (String(item.id) === String(itemId)) {
                 return {
                     ...item,
                     inBucket: null,
@@ -1725,18 +1962,22 @@ const Whiteboard = ({
     const handleBucketLabelBlur = () => {
         if (editingBucketId) {
             const updatedBuckets = buckets.map(bucket =>
-                bucket.id === editingBucketId
+                String(bucket.id) === String(editingBucketId)
                     ? { ...bucket, label: editingBucketLabel }
                     : bucket
             );
             setBuckets(updatedBuckets);
 
-            // Send update to other participants - include items array for full sync
-            const updatedBucket = updatedBuckets.find(b => b.id === editingBucketId);
+            // Send update to other participants - normalize coords for cross-canvas sync
+            const updatedBucket = updatedBuckets.find(b => String(b.id) === String(editingBucketId));
             if (updatedBucket) {
+                const canvas = canvasRef.current;
+                const bucketToSend = canvas
+                    ? { ...normalizeItem(updatedBucket, canvas), normalized: true }
+                    : updatedBucket;
                 whiteboardService?.send('bucket_update', {
-                    ...updatedBucket,
-                    items: updatedBucket.items || [] // Ensure items array is included
+                    ...bucketToSend,
+                    items: updatedBucket.items || []
                 });
             }
 
@@ -2063,9 +2304,9 @@ const Whiteboard = ({
                 y: selectedItem.y + dy
             };
 
-            // Also move items inside this bucket
+            // Also move items inside this bucket (use String() for type-safe comparison)
             const updatedItems = canvasItems.map(item => {
-                if (item.inBucket === selectedItem.id) {
+                if (String(item.inBucket) === String(selectedItem.id)) {
                     return {
                         ...item,
                         x: item.x + dx,
@@ -2080,7 +2321,7 @@ const Whiteboard = ({
             if (now - dragStateUpdateTimeRef.current > 16) {
                 setCanvasItems(updatedItems);
                 setBuckets(prev => prev.map(bucket =>
-                    bucket.id === selectedItem.id ? updatedBucket : bucket
+                    String(bucket.id) === String(selectedItem.id) ? updatedBucket : bucket
                 ));
                 setSelectedItems([updatedBucket]);
                 dragStateUpdateTimeRef.current = now;
@@ -2090,10 +2331,14 @@ const Whiteboard = ({
             if (now - lastNetworkUpdateRef.current > 50) {
                 // Send only bucket update - items will be moved automatically on learner side by delta
                 // This prevents race conditions where item updates override bucket movement
-                const currentBucket = buckets.find(b => b.id === selectedItem.id);
+                const currentBucket = buckets.find(b => String(b.id) === String(selectedItem.id));
+                const canvas = canvasRef.current;
+                const bucketToSend = canvas
+                    ? { ...normalizeItem(updatedBucket, canvas), normalized: true }
+                    : updatedBucket;
                 whiteboardService?.send('bucket_update', {
-                    ...updatedBucket,
-                    items: currentBucket?.items || [] // Include items array for full sync
+                    ...bucketToSend,
+                    items: currentBucket?.items || []
                 });
 
                 // Don't send individual item updates when dragging bucket
@@ -2146,7 +2391,7 @@ const Whiteboard = ({
             // If item should be in a bucket
             if (foundBucket) {
                 // Only process if not already in this bucket
-                if (updatedItem.inBucket !== foundBucket.id) {
+                if (String(updatedItem.inBucket) !== String(foundBucket.id)) {
                     // Save original dimensions before shrinking
                     if (!updatedItem.originalWidth) {
                         updatedItem.originalWidth = updatedItem.width;
@@ -2163,7 +2408,7 @@ const Whiteboard = ({
                     const bucketStartY = foundBucket.y + 76; // Start below rim (20px) + padding (12px) + label (~28px) + label margin (12px) + gap (4px)
 
                     // Get current number of items in bucket for grid arrangement
-                    const currentBucket = buckets.find(b => b.id === foundBucket.id);
+                    const currentBucket = buckets.find(b => String(b.id) === String(foundBucket.id));
                     const itemsInBucket = (currentBucket?.items || []).length;
 
                     // Arrange items in a grid pattern (rows and columns)
@@ -2183,15 +2428,15 @@ const Whiteboard = ({
                     if (updatedItem.inBucket) {
                         // Remove from old bucket
                         setBuckets(prev => prev.map(b =>
-                            b.id === updatedItem.inBucket
-                                ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
+                            String(b.id) === String(updatedItem.inBucket)
+                                ? { ...b, items: (b.items || []).filter(id => String(id) !== String(currentItem.id)) }
                                 : b
                         ));
                     }
 
                     // Add to new bucket
                     setBuckets(prev => prev.map(b =>
-                        b.id === foundBucket.id && !(b.items || []).includes(currentItem.id)
+                        String(b.id) === String(foundBucket.id) && !(b.items || []).some(id => String(id) === String(currentItem.id))
                             ? { ...b, items: [...(b.items || []), currentItem.id] }
                             : b
                     ));
@@ -2218,16 +2463,18 @@ const Whiteboard = ({
                     setCanvasItems(finalItems);
 
                     // Send final position to other participants immediately
+                    // Always normalize coordinates for cross-canvas compatibility
+                    const normalizedDropItem = normalizeItem(updatedItem, canvasRef.current);
                     whiteboardService?.sendItemUpdate({
                         id: currentItem.id,
-                        x: updatedItem.x,
-                        y: updatedItem.y,
-                        width: updatedItem.width,
-                        height: updatedItem.height,
+                        x: normalizedDropItem.x,
+                        y: normalizedDropItem.y,
+                        width: normalizedDropItem.width,
+                        height: normalizedDropItem.height,
                         inBucket: updatedItem.inBucket,
                         originalWidth: updatedItem.originalWidth,
                         originalHeight: updatedItem.originalHeight,
-                        normalized: false  // Pixel coordinates for bucket items
+                        normalized: true
                     });
 
                     // Redraw canvas after drop
@@ -2238,8 +2485,8 @@ const Whiteboard = ({
                 // Handle item leaving bucket - restore to normal size
                 // Remove from old bucket
                 setBuckets(prev => prev.map(b =>
-                    b.id === updatedItem.inBucket
-                        ? { ...b, items: (b.items || []).filter(id => id !== currentItem.id) }
+                    String(b.id) === String(updatedItem.inBucket)
+                        ? { ...b, items: (b.items || []).filter(id => String(id) !== String(currentItem.id)) }
                         : b
                 ));
                 updatedItem.inBucket = null;
@@ -2263,35 +2510,19 @@ const Whiteboard = ({
             // Throttle network updates to every 50ms for smooth performance
             const now = Date.now();
             if (now - lastNetworkUpdateRef.current > 50) {
-                // Send absolute pixel coordinates for items in buckets, normalized for items outside
-                if (updatedItem.inBucket) {
-                    // Send pixel coordinates directly for bucket items
-                    whiteboardService?.sendItemUpdate({
-                        id: currentItem.id,
-                        x: updatedItem.x,
-                        y: updatedItem.y,
-                        width: updatedItem.width,
-                        height: updatedItem.height,
-                        inBucket: updatedItem.inBucket,
-                        originalWidth: updatedItem.originalWidth,
-                        originalHeight: updatedItem.originalHeight,
-                        normalized: false  // Pixel coordinates
-                    });
-                } else {
-                    // Normalize item bounds for network transmission (items outside buckets)
-                    const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
-                    whiteboardService?.sendItemUpdate({
-                        id: currentItem.id,
-                        x: normalizedItem.x,
-                        y: normalizedItem.y,
-                        width: normalizedItem.width,
-                        height: normalizedItem.height,
-                        inBucket: null,
-                        originalWidth: updatedItem.originalWidth,
-                        originalHeight: updatedItem.originalHeight,
-                        normalized: true  // Normalized coordinates (0-1 range)
-                    });
-                }
+                // Always normalize item bounds for network transmission
+                const normalizedItem = normalizeItem(updatedItem, canvasRef.current);
+                whiteboardService?.sendItemUpdate({
+                    id: currentItem.id,
+                    x: normalizedItem.x,
+                    y: normalizedItem.y,
+                    width: normalizedItem.width,
+                    height: normalizedItem.height,
+                    inBucket: updatedItem.inBucket || null,
+                    originalWidth: updatedItem.originalWidth,
+                    originalHeight: updatedItem.originalHeight,
+                    normalized: true
+                });
                 lastNetworkUpdateRef.current = now;
             }
             // No need to update prevPosRef - we use absolute cursor position with stored offset
@@ -2317,7 +2548,7 @@ const Whiteboard = ({
                 const now = Date.now();
                 if (now - dragStateUpdateTimeRef.current > 16) {
                     setBuckets(prev => prev.map(bucket =>
-                        bucket.id === selectedItem.id ? updatedBucket : bucket
+                        String(bucket.id) === String(selectedItem.id) ? updatedBucket : bucket
                     ));
                     setSelectedItems([updatedBucket]);
                     dragStateUpdateTimeRef.current = now;
@@ -2325,11 +2556,15 @@ const Whiteboard = ({
 
                 // Throttle network updates to every 50ms
                 if (now - lastNetworkUpdateRef.current > 50) {
-                    // Send bucket with pixel coordinates and items array (no normalization needed for overlay elements)
-                    const currentBucket = buckets.find(b => b.id === selectedItem.id);
+                    // Normalize bucket coordinates for cross-canvas sync
+                    const currentBucket = buckets.find(b => String(b.id) === String(selectedItem.id));
+                    const canvas = canvasRef.current;
+                    const bucketToSend = canvas
+                        ? { ...normalizeItem(updatedBucket, canvas), normalized: true }
+                        : updatedBucket;
                     whiteboardService?.send('bucket_update', {
-                        ...updatedBucket,
-                        items: currentBucket?.items || [] // Include items array for full sync
+                        ...bucketToSend,
+                        items: currentBucket?.items || []
                     });
                     lastNetworkUpdateRef.current = now;
                 }
@@ -2613,14 +2848,15 @@ const Whiteboard = ({
                 return updated;
             });
 
-            // Send image data to other participants
+            // Send image data to other participants (always normalize for cross-canvas compatibility)
+            const normalizedNewItem = normalizeItem(newItem, canvasRef.current);
             whiteboardService?.sendImage({
                 id: newItem.id,
                 src: newItem.src,
-                x: newItem.x,
-                y: newItem.y,
-                width: newItem.width,
-                height: newItem.height,
+                x: normalizedNewItem.x,
+                y: normalizedNewItem.y,
+                width: normalizedNewItem.width,
+                height: normalizedNewItem.height,
                 title: newItem.title,
                 type: newItem.type,
                 inBucket: newItem.inBucket,
@@ -2636,7 +2872,11 @@ const Whiteboard = ({
             if (droppedBucket) {
                 const updatedBucket = buckets.find(b => b.id === droppedBucket.id);
                 if (updatedBucket) {
-                    whiteboardService?.send('bucket_update', updatedBucket);
+                    const canvas = canvasRef.current;
+                    const bucketToSend = canvas
+                        ? { ...normalizeItem(updatedBucket, canvas), normalized: true }
+                        : updatedBucket;
+                    whiteboardService?.send('bucket_update', bucketToSend);
                 }
             }
 
@@ -2657,15 +2897,16 @@ const Whiteboard = ({
 
         setCanvasItems(prev => [...prev, newItem]);
 
-        // Send image data to other participants
+        // Send image data to other participants (always normalize)
         if (newItem.src) {
+            const normalizedInternalItem = normalizeItem(newItem, canvasRef.current);
             whiteboardService?.sendImage({
                 id: newItem.id,
                 src: newItem.src,
-                x: newItem.x,
-                y: newItem.y,
-                width: newItem.width,
-                height: newItem.height,
+                x: normalizedInternalItem.x,
+                y: normalizedInternalItem.y,
+                width: normalizedInternalItem.width,
+                height: normalizedInternalItem.height,
                 title: newItem.title,
                 type: newItem.type,
                 fileUrl: newItem.fileUrl,

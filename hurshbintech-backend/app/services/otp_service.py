@@ -74,7 +74,7 @@ class GuestOTPService:
             if not is_within_limit:
                 raise HTTPException(
                     status_code=429,
-                    detail="Too many OTP requests. Maximum 3 OTPs per day allowed. Please try again tomorrow."
+                    detail="Too many OTP requests. Maximum 10 OTPs per day allowed. Please try again tomorrow."
                 )
         
         # Generate 6-digit OTP

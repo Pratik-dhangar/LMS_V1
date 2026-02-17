@@ -116,7 +116,7 @@ export const useAttendeeSessionState = () => {
     // Meter states (synced from instructor)
     const [promptMeter, setPromptMeter] = useState(null);
     const [reinforcementMeter, setReinforcementMeter] = useState(null);
-    const [bucketColor, setBucketColor] = useState('#8B6F47'); // Default bucket color (Brown)
+    const [bucketColor, setBucketColor] = useState('#6D5A3F'); // Default bucket color (Brown)
 
     // Prompt text (synced from instructor)
     const [promptText, setPromptText] = useState('[Prompts from instructor will appear here]');
@@ -239,25 +239,12 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         setKeyboardMode(true);
     };
 
-    // Bucket management
-    wbService.onBucketAdded = (data) => {
-        console.log('[AttendeeSession] Bucket added:', data);
-        setBuckets(prev => {
-            const exists = prev.find(bucket => bucket.id === data.id);
-            return exists ? prev : [...prev, data];
-        });
-    };
-
-    wbService.onBucketUpdate = (data) => {
-        console.log('[AttendeeSession] Bucket updated:', data);
-        if (data.removed) {
-            setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-        } else {
-            setBuckets(prev => prev.map(bucket =>
-                bucket.id === data.id ? { ...bucket, ...data } : bucket
-            ));
-        }
-    };
+    // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+    // Whiteboard.jsx's useEffect sets comprehensive handlers that:
+    // 1. Denormalize coordinates from 0-1 range to local canvas pixels
+    // 2. Reposition child items when bucket moves (offset-based)
+    // 3. Use String() for type-safe ID comparisons
+    // Do NOT set wbService.onBucketAdded or wbService.onBucketUpdate here — it would overwrite the working handlers.
 
     // Floating animations
     wbService.onFloatingAnimations = (data) => {
@@ -431,7 +418,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
     // Bucket Color Sync (from instructor)
     wbService.onBucketColorChange = (data) => {
         console.log('[AttendeeSession] Bucket color update:', data);
-        setBucketColor(data.color || '#8B6F47');
+        setBucketColor(data.color || '#6D5A3F');
     };
 
     // Comments from instructor
@@ -456,7 +443,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         onBackgroundMusic: !!wbService.onBackgroundMusic,
         onBackgroundMusicVolume: !!wbService.onBackgroundMusicVolume,
         onToolAccess: !!wbService.onToolAccess,
-        onBucketAdded: !!wbService.onBucketAdded,
+        // onBucketAdded handled by Whiteboard.jsx
         onAnimationPopped: !!wbService.onAnimationPopped,
         onPromptMeterUpdate: !!wbService.onPromptMeterUpdate
     });

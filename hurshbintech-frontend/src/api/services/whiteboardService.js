@@ -10,6 +10,7 @@ class WhiteboardService {
         this.onItemUpdate = null;
         this.onToolAccess = null; // New callback for tool access messages
         this.onItemSelected = null; // New callback for item selection
+        this.onItemsUnselected = null; // New callback for items unselected by instructor
         this.onPromptUpdate = null; // New callback for prompt updates from voice input
         this.onTextAdded = null; // New callback for text added to whiteboard
         this.onBucketAdded = null; // New callback for bucket added
@@ -38,6 +39,8 @@ class WhiteboardService {
         this.onExerciseClosed = null; // New callback for exercise closed by trainer
         this.onCommentUpdate = null; // New callback for comment updates
         this.onCommentsToggle = null; // New callback for comments tool toggle
+        this._onWhiteboardRestore = null; // Internal callback holder
+        this._restorationBuffer = null; // Buffer for restoration message if received before callback is set
     }
 
     initialize() {
@@ -108,6 +111,12 @@ class WhiteboardService {
                     }
                     break;
 
+                case 'items_unselected':
+                    if (this.onItemsUnselected) {
+                        this.onItemsUnselected(message.data);
+                    }
+                    break;
+
                 case 'prompt_update':
                     if (this.onPromptUpdate) {
                         this.onPromptUpdate(message.data);
@@ -127,9 +136,9 @@ class WhiteboardService {
                     break;
 
                 case 'bucket_update':
-                    // console.log('[WhiteboardService] Received bucket_update:', message.data);
+                    console.log('[WhiteboardService] Received bucket_update:', message.data);
                     if (this.onBucketUpdate) {
-                        // console.log('[WhiteboardService] Calling onBucketUpdate callback');
+                        console.log('[WhiteboardService] Calling onBucketUpdate callback');
                         try {
                             // Pass all data including items array for removal
                             this.onBucketUpdate(message.data);
@@ -138,7 +147,7 @@ class WhiteboardService {
                             // console.error('[WhiteboardService] ❌ Error in onBucketUpdate callback:', error);
                         }
                     } else {
-                        // console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
+                        console.log('[WhiteboardService] ❌ onBucketUpdate callback NOT set!');
                     }
                     break;
 
@@ -302,6 +311,25 @@ class WhiteboardService {
                     }
                     break;
 
+                case 'whiteboard_restore':
+                    console.log('[WhiteboardService] 🔄 Received whiteboard state restoration:', message.data);
+                    console.log('[WhiteboardService] Drawings count:', message.data?.drawings?.length || 0);
+                    console.log('[WhiteboardService] Items count:', message.data?.items?.length || 0);
+                    if (message.data?.drawings?.length > 0) {
+                        console.log('[WhiteboardService] First drawing sample:', message.data.drawings[0]);
+                    }
+                    if (message.data?.items?.length > 0) {
+                        console.log('[WhiteboardService] First item sample:', message.data.items[0]);
+                    }
+                    if (this._onWhiteboardRestore) {
+                        console.log('[WhiteboardService] ✅ Calling onWhiteboardRestore callback immediately...');
+                        this._onWhiteboardRestore(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ onWhiteboardRestore callback NOT set yet - buffering message');
+                        this._restorationBuffer = message.data;
+                    }
+                    break;
+
                 case 'ping':
                     // Respond to server heartbeat ping with pong
                     this.ws.send(JSON.stringify({
@@ -427,6 +455,36 @@ class WhiteboardService {
             }));
         } else {
             // console.warn(`[WhiteboardService] Cannot send ${type} - WebSocket not ready (exists: ${!!this.ws}, readyState: ${this.ws?.readyState}, OPEN: ${WebSocket.OPEN})`);
+        }
+    }
+
+    /**
+     * Getter for onWhiteboardRestore callback
+     * @returns {Function|null} The restoration callback function
+     */
+    get onWhiteboardRestore() {
+        return this._onWhiteboardRestore;
+    }
+
+    /**
+     * Setter for onWhiteboardRestore callback
+     * Sets the callback and delivers any buffered restoration message
+     * @param {Function} callback The restoration callback function
+     */
+    set onWhiteboardRestore(callback) {
+        console.log('[WhiteboardService] Setting onWhiteboardRestore callback');
+        this._onWhiteboardRestore = callback;
+        
+        // If there's a buffered restoration message, deliver it now
+        if (this._restorationBuffer && callback) {
+            console.log('[WhiteboardService] 📤 Delivering buffered restoration message');
+            setTimeout(() => {
+                if (this._onWhiteboardRestore && this._restorationBuffer) {
+                    this._onWhiteboardRestore(this._restorationBuffer);
+                    this._restorationBuffer = null; // Clear buffer after delivery
+                    console.log('[WhiteboardService] ✅ Buffered restoration delivered and cleared');
+                }
+            }, 0); // Use setTimeout to ensure callback is fully registered
         }
     }
 

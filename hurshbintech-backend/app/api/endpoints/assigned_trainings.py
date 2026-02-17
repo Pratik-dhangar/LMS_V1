@@ -2,6 +2,7 @@
 Assigned Training endpoints - Admin CRUD and user viewing
 """
 
+import hashlib
 from typing import List, Optional
 import logging
 import mimetypes
@@ -27,6 +28,7 @@ from app.schemas.assigned_training import (
 )
 from app.core.config import settings
 from app.utils.s3_utils import S3Manager
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Assigned Trainings"])
@@ -568,7 +570,18 @@ async def list_assigned_trainings(
     current_admin: User = Depends(get_current_admin),
 ):
     """Get all assigned trainings with pagination (Admin only)"""
-    
+    # Try cache first
+    filters_data = {"skip": skip, "limit": limit, "active_only": active_only, "search": search}
+    filters_hash = hashlib.md5(json.dumps(filters_data, sort_keys=True).encode()).hexdigest()
+    cache_key = f"assigned_trainings:admin:{filters_hash}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return AssignedTrainingListResponse(**cached_data)
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     trainings, total = await assigned_training_crud.get_assigned_trainings(
         db,
         skip=skip,
@@ -576,19 +589,24 @@ async def list_assigned_trainings(
         active_only=active_only,
         search=search,
     )
-    
+
     # Convert S3 URLs to public URLs
     converted_trainings = [
-        convert_training_urls(AssignedTrainingResponse.from_orm(t)) 
+        convert_training_urls(AssignedTrainingResponse.from_orm(t))
         for t in trainings
     ]
-    
-    return AssignedTrainingListResponse(
+
+    response = AssignedTrainingListResponse(
         items=converted_trainings,
         total=total,
         skip=skip,
         limit=limit,
     )
+
+    # Cache for 10 minutes
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_ASSIGNED_TRAININGS)
+
+    return response
 
 
 @router.get("/admin/assigned-trainings/{training_id}", response_model=AssignedTrainingResponse)
@@ -682,10 +700,21 @@ async def get_my_assigned_trainings(
     current_user: User = Depends(get_current_user),
 ):
     """Get trainings assigned to the current user based on their role"""
-    
+    # Try cache first
+    filters_data = {"user_id": current_user.id, "skip": skip, "limit": limit}
+    filters_hash = hashlib.md5(json.dumps(filters_data, sort_keys=True).encode()).hexdigest()
+    cache_key = f"assigned_trainings:user:{filters_hash}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return AssignedTrainingListResponse(**cached_data)
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
     # Determine user role (ensure it's a string)
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
-    
+
     trainings, total = await assigned_training_crud.get_trainings_for_user(
         db,
         user_role=user_role,
@@ -693,35 +722,40 @@ async def get_my_assigned_trainings(
         limit=limit,
         active_only=True,
     )
-    
+
     # Enrich trainings with user-specific progress data
     enriched_trainings = []
     for training in trainings:
         training_response = AssignedTrainingResponse.from_orm(training)
-        
+
         # Get user's specific assignment status
         user_assignment = await assigned_training_user_crud.get_user_assignment(
             db,
             training.id,
             current_user.id,
         )
-        
+
         if user_assignment:
             training_response.user_status = user_assignment.status
             training_response.user_progress = user_assignment.progress
             training_response.user_started_at = user_assignment.started_at
             training_response.user_completed_at = user_assignment.completed_at
-        
+
         # Convert S3 URLs to public URLs
         training_response = convert_training_urls(training_response)
         enriched_trainings.append(training_response)
-    
-    return AssignedTrainingListResponse(
+
+    response = AssignedTrainingListResponse(
         items=enriched_trainings,
         total=total,
         skip=skip,
         limit=limit,
     )
+
+    # Cache for 10 minutes
+    await cache_service.set(cache_key, response.model_dump(), ttl=cache_service.TTL_ASSIGNED_TRAININGS)
+
+    return response
 
 
 @router.get("/assigned-trainings/{training_id}", response_model=AssignedTrainingResponse)

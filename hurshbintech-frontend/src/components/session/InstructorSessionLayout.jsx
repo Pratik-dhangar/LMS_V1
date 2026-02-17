@@ -38,6 +38,7 @@ import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Emoji from '../common/Emoji';
 import Whiteboard from '../common/Whiteboard';
+import { normalizeItem } from '../../utils/drawingSync';
 import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
@@ -702,17 +703,17 @@ export const REACTION_SVG_ASSETS = {
         {
             type: 'svg',
             src: '/reactions/02_pastel_mint.svg',
-            alt: 'Realistic Pink Balloon'
+            alt: 'Realistic Mint Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/03_pastel_pink.svg',
-            alt: 'Realistic Red Balloon'
+            src: '/reactions/03_pastel_brown.svg',
+            alt: 'Realistic Brown Balloon'
         },
         {
             type: 'svg',
             src: '/reactions/04_pastel_lavender.svg',
-            alt: 'Realistic Blue Balloon'
+            alt: 'Realistic Gold Balloon'
         },
         {
             type: 'svg',
@@ -756,11 +757,11 @@ export const WB_BUTTON_STYLES = {
  * Default bucket colors for whiteboard
  */
 export const BUCKET_COLORS = [
-    { name: 'Brown', hex: '#8B6F47' },
+    { name: 'Brown', hex: '#6D5A3F' },
     { name: 'Red', hex: '#ec221a' },
-    { name: 'Blue', hex: '#5B7B9F' },
+    { name: 'Gold', hex: '#db9d32' },
     { name: 'Yellow', hex: '#F4D394' },
-    { name: 'Pink', hex: '#E8A8C7' },
+    { name: 'Brown', hex: '#8A7666' },
     { name: 'Orange', hex: '#E8944C' }
 ];
 
@@ -823,29 +824,9 @@ export const initializeWhiteboardService = ({
         const wbService = new WhiteboardService(wsBaseUrl, sessionId, role);
         wbService.initialize();
 
-        if (setBuckets) {
-            wbService.onBucketAdded = (data) => {
-                // console.log(`[InstructorSession] Bucket added:`, data);
-                setBuckets(prev => {
-                    const exists = prev.find(bucket => bucket.id === data.id);
-                    if (!exists) {
-                        return [...prev, data];
-                    }
-                    return prev;
-                });
-            };
-
-            wbService.onBucketUpdate = (data) => {
-                // console.log(`[InstructorSession] Bucket updated:`, data);
-                if (data.removed) {
-                    setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-                } else {
-                    setBuckets(prev => prev.map(bucket =>
-                        bucket.id === data.id ? { ...bucket, ...data } : bucket
-                    ));
-                }
-            };
-        }
+        // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+        // Whiteboard.jsx handlers include denormalization, delta-based child item movement, and String() comparisons.
+        // Do NOT set them here — it would overwrite the working handlers.
 
         if (setFloatingAnimations) {
             wbService.onFloatingAnimations = (data) => {
@@ -1144,6 +1125,14 @@ export const setupInstructorWhiteboardCallbacks = ({
         }
     };
 
+    // Item unselection by instructor (confirmation from attendee)
+    whiteboardService.onItemsUnselected = (data) => {
+        // console.log('[InstructorSession] Items unselected confirmation received');
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds([]);
+        }
+    };
+
     // Animation pop events from participant
     whiteboardService.onAnimationPopped = (data) => {
         // console.log('[InstructorSession] Animation popped by participant:', data);
@@ -1203,30 +1192,9 @@ export const setupInstructorWhiteboardCallbacks = ({
         };
     }
 
-    // Bucket management (already set in initializeWhiteboardService but keeping for completeness)
-    if (setBuckets) {
-        whiteboardService.onBucketAdded = (data) => {
-            // console.log('[InstructorSession] Bucket added:', data);
-            setBuckets(prev => {
-                const exists = prev.find(bucket => bucket.id === data.id);
-                if (!exists) {
-                    return [...prev, data];
-                }
-                return prev;
-            });
-        };
-
-        whiteboardService.onBucketUpdate = (data) => {
-            // console.log('[InstructorSession] Bucket updated:', data);
-            if (data.removed) {
-                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-            } else {
-                setBuckets(prev => prev.map(bucket =>
-                    bucket.id === data.id ? { ...bucket, ...data } : bucket
-                ));
-            }
-        };
-    }
+    // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+    // Whiteboard.jsx handlers include denormalization, delta-based child item movement, and String() comparisons.
+    // Do NOT set them here — it would overwrite the working handlers.
 
     // Floating animations
     if (setFloatingAnimations) {
@@ -1255,11 +1223,11 @@ export const setupInstructorWhiteboardCallbacks = ({
     return () => {
         if (whiteboardService) {
             whiteboardService.onItemSelected = null;
+            whiteboardService.onItemsUnselected = null;
             whiteboardService.onAnimationPopped = null;
             whiteboardService.onExerciseAnswerUpdate = null;
             whiteboardService.onExerciseResponse = null;
-            whiteboardService.onBucketAdded = null;
-            whiteboardService.onBucketUpdate = null;
+            // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component — don't nullify
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onErasePen = null;
         }
@@ -1383,86 +1351,13 @@ export const setupAttendeeWhiteboardCallbacks = ({
         whiteboardService.onItemRemove = (data) => {
             // console.log('[AttendeeSession] Item remove received:', data);
             if (data?.id) {
-                setCanvasItems(prev => prev.filter(item => item.id !== data.id));
+                setCanvasItems(prev => prev.filter(item => String(item.id) !== String(data.id)));
             }
         };
 
-        // Item updates from instructor
-        whiteboardService.onItemUpdate = (data) => {
-            // console.log('[AttendeeSession] Item update received:', data);
-            if (data?.id && data?.type) {
-                // Check if item is targeted to specific learner
-                if (data.targetLearnerId) {
-                    const targetId = String(data.targetLearnerId);
-                    const myId = String(sessionInfo?.learner_id || '');
-
-                    if (myId && targetId !== myId) {
-                        // console.log('[AttendeeSession] Item not for this learner, ignoring');
-                        return;
-                    }
-                }
-
-                setCanvasItems(prev => {
-                    const existingIndex = prev.findIndex(item => item.id === data.id);
-                    let processedData = { ...data };
-
-                    // Handle bucket-relative items
-                    if (data.isRelativeToContainer && data.inBucket && buckets) {
-                        const bucket = buckets.find(b => b.id === data.inBucket);
-                        if (bucket) {
-                            const bucketWidth = data.bucketDimensions?.width || bucket.width || 80;
-                            const bucketHeight = data.bucketDimensions?.height || bucket.height || 80;
-                            const pixelOffsetX = (data.x || 0) * bucketWidth;
-                            const pixelOffsetY = (data.y || 0) * bucketHeight;
-
-                            let itemWidth = data.width;
-                            let itemHeight = data.height;
-                            if (data.width && data.width >= 0 && data.width <= 1) {
-                                itemWidth = data.width * bucketWidth;
-                            }
-                            if (data.height && data.height >= 0 && data.height <= 1) {
-                                itemHeight = data.height * bucketHeight;
-                            }
-
-                            processedData = {
-                                ...processedData,
-                                x: bucket.x + pixelOffsetX,
-                                y: bucket.y + pixelOffsetY,
-                                width: itemWidth,
-                                height: itemHeight
-                            };
-                        }
-                    } else if (whiteboardCanvasRef?.current && denormalizeItem) {
-                        // Denormalize coordinates for non-bucket items
-                        const isNormalized = (
-                            data.x !== undefined && data.x >= 0 && data.x <= 1 &&
-                            data.y !== undefined && data.y >= 0 && data.y <= 1 &&
-                            data.width !== undefined && data.width >= 0 && data.width <= 1 &&
-                            data.height !== undefined && data.height >= 0 && data.height <= 1
-                        );
-
-                        if (isNormalized) {
-                            const denormalized = denormalizeItem(processedData, whiteboardCanvasRef.current);
-                            processedData = {
-                                ...processedData,
-                                x: denormalized.x,
-                                y: denormalized.y,
-                                width: denormalized.width,
-                                height: denormalized.height
-                            };
-                        }
-                    }
-
-                    if (existingIndex >= 0) {
-                        const updated = [...prev];
-                        updated[existingIndex] = { ...updated[existingIndex], ...processedData };
-                        return updated;
-                    } else {
-                        return [...prev, processedData];
-                    }
-                });
-            }
-        };
+        // Note: onItemUpdate is handled by Whiteboard component directly (Whiteboard.jsx)
+        // It uses `data.normalized` flag + denormalizeItem() for precise coordinate mapping.
+        // Do NOT set whiteboardService.onItemUpdate here — it would overwrite the working handler.
     }
 
     // Erase pen and clear canvas
@@ -1484,43 +1379,9 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
     }
 
-    // Bucket management
-    if (setBuckets) {
-        whiteboardService.onBucketAdded = (data) => {
-            // console.log('[AttendeeSession] Bucket added:', data);
-            setBuckets(prev => {
-                const exists = prev.find(bucket => bucket.id === data.id);
-                if (!exists) {
-                    return [...prev, data];
-                }
-                return prev;
-            });
-        };
-
-        whiteboardService.onBucketUpdate = (data) => {
-            if (data.removed) {
-                setBuckets(prev => prev.filter(bucket => bucket.id !== data.id));
-            } else if (buckets) {
-                setBuckets(prev => prev.map(bucket => {
-                    if (bucket.id === data.id) {
-                        const deltaX = (data.x || 0) - (bucket.x || 0);
-                        const deltaY = (data.y || 0) - (bucket.y || 0);
-
-                        if (setCanvasItems && Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
-                            setCanvasItems(items => items.map(item =>
-                                item.inBucket === data.id
-                                    ? { ...item, x: item.x + deltaX, y: item.y + deltaY }
-                                    : item
-                            ));
-                        }
-
-                        return { ...bucket, ...data };
-                    }
-                    return bucket;
-                }));
-            }
-        };
-    }
+    // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component directly (Whiteboard.jsx)
+    // It uses denormalizeItem() for precise coordinate mapping across different canvas sizes.
+    // Do NOT set whiteboardService.onBucketAdded or onBucketUpdate here — it would overwrite the working handlers.
 
     // YouTube popups
     if (setYoutubePopups) {
@@ -1633,11 +1494,10 @@ export const setupAttendeeWhiteboardCallbacks = ({
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onAnimationPopped = null;
             whiteboardService.onItemRemove = null;
-            whiteboardService.onItemUpdate = null;
+            // Note: onItemUpdate is handled by Whiteboard component, not here
             whiteboardService.onErasePen = null;
             whiteboardService.onClearCanvas = null;
-            whiteboardService.onBucketAdded = null;
-            whiteboardService.onBucketUpdate = null;
+            // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component, not here
             whiteboardService.onYoutubePopupCreated = null;
             whiteboardService.onYoutubePopupClosed = null;
             whiteboardService.onBackgroundMusic = null;
@@ -1763,7 +1623,7 @@ export const clearAllCanvas = ({
 /**
  * Add a new bucket to the canvas
  */
-export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#8B6F47', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
+export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucketColor = '#6D5A3F', canvasWidth = 1200, canvasHeight = 600, canvasRef = null) => {
     const BUCKET_WIDTH = 150;
     const BUCKET_HEIGHT = 150;
     const PADDING = 20;
@@ -1837,7 +1697,14 @@ export const addBucket = (existingBuckets, setBuckets, whiteboardService, bucket
     setBuckets(prev => [...prev, newBucket]);
 
     if (whiteboardService) {
-        whiteboardService.sendBucketAdded(newBucket);
+        // Normalize bucket coordinates to 0-1 range for cross-canvas sync
+        const canvas = canvasRef?.current;
+        if (canvas) {
+            const normalizedBucket = normalizeItem(newBucket, canvas);
+            whiteboardService.sendBucketAdded({ ...normalizedBucket, normalized: true });
+        } else {
+            whiteboardService.sendBucketAdded(newBucket);
+        }
     }
 
     return newBucket;
@@ -2529,7 +2396,7 @@ export const handleToolClick = ({
             break;
 
         default:
-            // console.log('[InstructorSession] Unknown tool:', tool);
+        // console.log('[InstructorSession] Unknown tool:', tool);
     }
 };
 
@@ -2753,6 +2620,7 @@ export const InstructorSessionPage = ({
     canvasItems,
     setCanvasItems,
     remoteSelectedItemIds,
+    setRemoteSelectedItemIds,
     feedbackMessage,
     waitingMessage,
     floatingAnimations,
@@ -3112,6 +2980,9 @@ export const InstructorSessionPage = ({
                         sessionNotes={sessionNotes}
                         handleNotesChange={handleNotesChange}
                         handleClearNotes={handleClearNotes}
+                        canvasItems={canvasItems}
+                        remoteSelectedItemIds={remoteSelectedItemIds}
+                        setRemoteSelectedItemIds={setRemoteSelectedItemIds}
                     />
                 </div>
 
@@ -3256,11 +3127,93 @@ export const WhiteboardTools = ({
     showSessionNotes = false,
     sessionNotes = '',
     handleNotesChange = null,
-    handleClearNotes = null
+    handleClearNotes = null,
+    canvasItems = [],
+    remoteSelectedItemIds = [],
+    setRemoteSelectedItemIds = null
 }) => {
+    // Handler to unselect specific item selected by attendee
+    const handleUnselectItem = (itemId) => {
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => id !== itemId));
+        }
+        // Send unselect message to attendee through whiteboard service
+        if (whiteboardService) {
+            whiteboardService.send('items_unselected', { itemIds: [] });
+        }
+    };
+
+    // Handler to unselect all items selected by attendee
+    const handleUnselectAll = () => {
+        if (setRemoteSelectedItemIds) {
+            setRemoteSelectedItemIds([]);
+        }
+        // Send unselect message to attendee through whiteboard service
+        if (whiteboardService) {
+            whiteboardService.send('items_unselected', { itemIds: [] });
+        }
+    };
+
+    // Get selected items details from canvasItems
+    const getSelectedItemDetails = () => {
+        if (!remoteSelectedItemIds || remoteSelectedItemIds.length === 0) return [];
+        return canvasItems.filter((item) => remoteSelectedItemIds.includes(item.id));
+    };
+
+    const selectedItems = getSelectedItemDetails();
     return (
         <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
-            {/* Drawing tool buttons */}
+            {/* Attendee Selected Content Display & Unselect Controls */}
+            {selectedItems.length > 0 && (
+                <div style={{ width: '100%', backgroundColor: '#D4C4B7', padding: 'clamp(0.75rem, 1.5vw, 1rem)', borderRadius: '8px', marginBottom: 'clamp(0.5rem, 1vw, 0.75rem)', border: '2px solid #6D5A3F' }}>
+                    <div style={{ fontSize: 'clamp(0.625rem, 1.2vw, 0.875rem)', fontWeight: 'bold', marginBottom: '8px', color: '#4A382A', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <span>📌 Attendee Selected Content ({selectedItems.length})</span>
+                        <button
+                            onClick={handleUnselectAll}
+                            style={{
+                                backgroundColor: '#6D5A3F',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                fontSize: 'clamp(0.625rem, 1vw, 0.75rem)',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            🗑️ Unselect All
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {selectedItems.map((item) => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid #6D5A3F', fontSize: 'clamp(0.625rem, 1vw, 0.75rem)' }}>
+                                <span style={{ flex: 1, marginRight: '8px', color: '#1f2937', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {item.title || `Item #${item.id?.toString().slice(0, 8)}`}
+                                </span>
+                                <button
+                                    onClick={() => handleUnselectItem(item.id)}
+                                    style={{
+                                        backgroundColor: '#B39B85',
+                                        color: '#4A382A',
+                                        border: 'none',
+                                        padding: '3px 6px',
+                                        borderRadius: '3px',
+                                        fontSize: 'clamp(0.5rem, 0.9vw, 0.625rem)',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    title="Remove this item from selection"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="flex" style={{ gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}>
                 <button
                     onClick={() => {

@@ -114,7 +114,7 @@ export const useInstructorHandlers = ({
             bubble: { type: 'svg', src: '/reactions/realistic-bubble.svg', alt: 'Bubble' },
             balloon: [
                 { type: 'svg', src: '/reactions/02_pastel_mint.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/03_pastel_pink.svg', alt: 'Balloon' },
+                { type: 'svg', src: '/reactions/03_pastel_brown.svg', alt: 'Balloon' },
                 { type: 'svg', src: '/reactions/04_pastel_lavender.svg', alt: 'Balloon' },
                 { type: 'svg', src: '/reactions/05_pastel_peach.svg', alt: 'Balloon' },
                 { type: 'svg', src: '/reactions/06_pastel_coral.svg', alt: 'Balloon' },
@@ -172,7 +172,12 @@ export const useInstructorHandlers = ({
     }, [toolAccess, setToolAccess, whiteboardService, setTool]);
 
     const addBucket = useCallback(() => {
-        utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, 1200, 600, whiteboardCanvasRef);
+        // Use actual canvas dimensions if available, fallback to defaults
+        const canvas = whiteboardCanvasRef?.current;
+        const dpr = window.devicePixelRatio || 1;
+        const canvasWidth = canvas ? canvas.width / dpr : 1200;
+        const canvasHeight = canvas ? canvas.height / dpr : 600;
+        utilAddBucket(buckets, setBuckets, whiteboardService, bucketColor, canvasWidth, canvasHeight, whiteboardCanvasRef);
     }, [buckets, setBuckets, whiteboardService, bucketColor, whiteboardCanvasRef]);
 
     const eraseAllPen = useCallback(() => {

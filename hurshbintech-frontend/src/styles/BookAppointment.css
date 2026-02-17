@@ -35,7 +35,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -68,7 +68,7 @@
 .coach-card:hover {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   transform: translateY(-4px);
-  border-color: #3b82f6;
+  border-color: #db9d32;
 }
 
 .coach-card-content {
@@ -378,7 +378,7 @@
 
 .field-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #db9d32;
   ring: 2px;
   ring-color: rgba(59, 130, 246, 0.3);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -408,12 +408,12 @@
 }
 
 .session-type-card:hover {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   background: #f9fafb;
 }
 
 .session-type-card.selected {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   background: #eff6ff;
 }
 
@@ -452,7 +452,7 @@
   right: 0.75rem;
   width: 1.5rem;
   height: 1.5rem;
-  color: #3b82f6;
+  color: #db9d32;
 }
 
 /* Payment Section */
@@ -541,7 +541,7 @@
 }
 
 .file-upload-area:hover {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   background: #eff6ff;
 }
 
@@ -634,7 +634,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 2rem;
-  background: #3b82f6;
+  background: #db9d32;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -645,7 +645,7 @@
 }
 
 .btn-confirm:hover:not(:disabled) {
-  background: #2563eb;
+  background: #b8790a;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
@@ -665,8 +665,11 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
+
 /* ============================================
    MY APPOINTMENTS PAGE STYLES
    ============================================ */
@@ -839,9 +842,9 @@
 }
 
 .appointment-status-badge.bg-blue-100 {
-  background: #dbeafe;
-  color: #1e40af;
-  border-color: #bfdbfe;
+  background: #fef3e2;
+  color: #9C4D0B;
+  border-color: #fce8c3;
 }
 
 .appointment-status-badge.bg-gray-100 {
@@ -901,7 +904,7 @@
 
 .filter-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   background: white;
 }
@@ -932,11 +935,11 @@
   margin-top: 1rem;
   padding: 0.75rem 1rem;
   background: white;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #db9d32;
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1e40af;
+  color: #9c6a08;
 }
 
 /* ============================================
@@ -951,7 +954,7 @@
 .coach-card-unavailable:hover {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   transform: translateY(-4px);
-  border-color: #3b82f6;
+  border-color: #db9d32;
 }
 
 /* Greyscale effect for unavailable coach avatar */

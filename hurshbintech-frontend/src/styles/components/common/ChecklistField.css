@@ -57,13 +57,13 @@
 .checklist-checkbox {
   width: 1rem;
   height: 1rem;
-  color: #2563eb;
+  color: #b8790a;
   border-color: #d1d5db;
   border-radius: 0.25rem;
 }
 
 .checklist-checkbox:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #db9d32;
   outline-offset: 2px;
 }
 

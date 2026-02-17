@@ -99,6 +99,33 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
+/* Disappearing Messages Alert Banner */
+.chat-alert-banner {
+    background: #fef3c7;
+    border-top: 1px solid #fbbf24;
+    border-bottom: 1px solid #fbbf24;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #78350f;
+    font-size: 0.8125rem;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 10;
+}
+
+.chat-alert-banner svg {
+    flex-shrink: 0;
+    opacity: 0.9;
+    color: #f59e0b;
+}
+
+.chat-alert-banner span {
+    font-weight: 500;
+}
+
 .chat-window-actions {
     display: flex;
     align-items: center;

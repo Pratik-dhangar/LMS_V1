@@ -10,7 +10,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background: linear-gradient(135deg, #9c6a08 0%, #db9d32 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -23,7 +23,7 @@
 }
 
 .pwa-install-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #b8790a 100%);
     box-shadow: 0 6px 12px rgba(30, 64, 175, 0.3);
     transform: translateY(-2px);
 }
@@ -106,10 +106,10 @@
 /* Dark mode support (optional) */
 @media (prefers-color-scheme: dark) {
     .pwa-install-button {
-        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+        background: linear-gradient(135deg, #b8790a 0%, #f0c566 100%);
     }
 
     .pwa-install-button:hover:not(:disabled) {
-        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #9c6a08 0%, #db9d32 100%);
     }
 }

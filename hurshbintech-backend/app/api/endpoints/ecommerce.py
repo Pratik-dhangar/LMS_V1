@@ -1,5 +1,7 @@
 """API endpoints for E-Commerce Orders and Payments
 """
+import hashlib
+import json
 import logging
 from datetime import datetime
 from typing import Optional
@@ -21,6 +23,7 @@ from app.schemas.ecommerce import (
 from app.utils.s3_utils import S3Manager
 from app.utils.file_handler import upload_file
 from app.services.email_service import EmailService
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -207,10 +210,21 @@ async def get_orders(
     current_user: User = Depends(get_current_user)
 ):
     """Get user's orders with optional status filter"""
+    # Try cache first
+    filters_data = {"user_id": current_user.id, "status": status, "page": page, "limit": limit}
+    filters_hash = hashlib.md5(json.dumps(filters_data, sort_keys=True).encode()).hexdigest()
+    cache_key = f"orders:list:{filters_hash}"
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return OrderListResponse(**cached_data)
+
+    logger.debug(f"Cache MISS: {cache_key}")
     orders, total = await ecommerce_crud.get_orders_by_user(db, current_user.id, status, page, limit)
-    
+
     total_pages = (total + limit - 1) // limit
-    
+
     orders_response = [
         {
             "order_id": order.id,
@@ -242,8 +256,8 @@ async def get_orders(
         }
         for order in orders
     ]
-    
-    return {
+
+    response = {
         "orders": orders_response,
         "pagination": {
             "total": total,
@@ -253,6 +267,11 @@ async def get_orders(
         }
     }
 
+    # Cache for 10 minutes
+    await cache_service.set(cache_key, response, ttl=cache_service.TTL_ORDER)
+
+    return response
+
 
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
@@ -261,16 +280,24 @@ async def get_order(
     current_user: User = Depends(get_current_user)
 ):
     """Get order details"""
+    # Try cache first
+    cache_key = f"order:detail:{order_id}:{current_user.id}"
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return OrderResponse(**cached_data)
+
+    logger.debug(f"Cache MISS: {cache_key}")
     order = await ecommerce_crud.get_order_by_id(db, order_id)
-    
+
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    
+
     # Verify order belongs to user
     if order.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
-    
-    return {
+
+    response = {
         "order_id": order.id,
         "order_number": order.order_number,
         "status": order.status.value if isinstance(order.status, OrderStatus) else order.status,
@@ -298,6 +325,11 @@ async def get_order(
         "created_at": order.created_at,
         "updated_at": order.updated_at
     }
+
+    # Cache for 10 minutes
+    await cache_service.set(cache_key, response, ttl=cache_service.TTL_ORDER)
+
+    return response
 
 
 @router.post("/{order_id}/payment-receipt", response_model=PaymentReceiptResponse, status_code=status.HTTP_201_CREATED)

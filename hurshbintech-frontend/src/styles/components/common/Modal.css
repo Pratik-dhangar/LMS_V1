@@ -21,6 +21,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -43,6 +44,7 @@
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -87,7 +89,7 @@
 }
 
 .app-modal-header--blue {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
 }
 
 .app-modal-header--green {
@@ -96,6 +98,15 @@
 
 .app-modal-header--red {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+/* Modal Header Custom Classes */
+.modal-header-blue {
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
+}
+
+.modal-header-gold {
+  background: linear-gradient(135deg, #db9d32 0%, #b8790a 100%) !important;
 }
 
 .app-modal-header--purple {
@@ -260,7 +271,7 @@
   .app-modal-form-grid--2 {
     grid-template-columns: repeat(2, 1fr) !important;
   }
-  
+
   .app-modal-form-grid--3 {
     grid-template-columns: repeat(3, 1fr) !important;
   }
@@ -348,6 +359,22 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Icon-only button variant - compact sizing for tables and action cells */
+.app-modal-btn.btn-icon {
+  padding: 0.4rem 0.5rem !important;
+  min-width: 2rem !important;
+  min-height: 2rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.app-modal-btn.btn-icon svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
 /* ============================================
    SEARCH COMPONENTS IN MODALS
    ============================================ */
@@ -427,6 +454,15 @@
   font-size: 0.875rem !important;
   color: #6b7280 !important;
   margin-top: 0.75rem !important;
+}
+
+/* Actions container - prevents button wrapping and ensures consistent spacing */
+.actions-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* ============================================
@@ -541,7 +577,7 @@
 }
 
 .app-modal-content-card--selected {
-  border-color: #3b82f6 !important;
+  border-color: #db9d32 !important;
   background-color: #eff6ff !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
@@ -654,7 +690,7 @@
 .app-modal-checkbox {
   width: 1rem !important;
   height: 1rem !important;
-  color: #2563eb !important;
+  color: #b8790a !important;
   border-radius: 0.25rem !important;
   cursor: pointer !important;
 }
@@ -687,7 +723,7 @@
     padding: 0.5rem !important;
     align-items: flex-start !important;
   }
-  
+
   .app-modal-container {
     margin: 0.5rem auto !important;
     max-height: calc(100vh - 1rem) !important;
@@ -704,7 +740,7 @@
   .app-modal-subtitle {
     font-size: 0.75rem !important;
   }
-  
+
   .app-modal-content {
     padding: 1rem !important;
     max-height: calc(100vh - 180px) !important;
@@ -724,21 +760,21 @@
   .app-modal-form-grid--3 {
     grid-template-columns: 1fr !important;
   }
-  
+
   .app-modal-content-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;
   }
-  
+
   .app-modal-content-card {
     padding: 0.5rem !important;
   }
-  
+
   .app-modal-content-thumbnail,
   .app-modal-content-icon-container {
     height: 60px !important;
   }
-  
+
   .app-modal-content-icon {
     font-size: 1.5rem !important;
   }

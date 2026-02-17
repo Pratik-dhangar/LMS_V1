@@ -35,7 +35,7 @@
 .training-card-type {
     display: inline-block;
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 0.25rem 0.75rem;
@@ -86,7 +86,7 @@
 }
 
 .training-card-action-btn.edit:hover {
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .training-card-action-btn.delete:hover {
@@ -104,7 +104,7 @@
 }
 
 .training-card-title:hover {
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 /* Card Description */
@@ -170,7 +170,7 @@
 
 .training-card-status.in-progress {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .training-card-status.completed {

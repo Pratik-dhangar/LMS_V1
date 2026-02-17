@@ -213,7 +213,7 @@ const ManageLearningGoals = () => {
                         <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleEdit(goal)}
-                            className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
+                            className="app-modal-btn app-modal-btn--primary btn-sm "
                           >
                             <svg
                               className="table-primary-icon-sm"
@@ -234,7 +234,7 @@ const ManageLearningGoals = () => {
                         <td className="table-primary-td table-primary-td-center">
                           <button
                             onClick={() => handleDelete(goal.id)}
-                            className="app-modal-btn app-modal-btn--danger btn-sm btn-icon"
+                            className="app-modal-btn app-modal-btn--danger btn-sm "
                           >
                             <svg
                               className="table-primary-icon-sm"

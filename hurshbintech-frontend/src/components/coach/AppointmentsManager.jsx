@@ -105,7 +105,7 @@ const AppointmentsManager = () => {
       // Create FormData for file upload
       const submitData = new FormData();
       submitData.append('rejection_reason', rejectReason);
-      
+
       if (refundReceipt) {
         submitData.append('refund_receipt', refundReceipt);
       }
@@ -148,22 +148,22 @@ const AppointmentsManager = () => {
       // Convert status to lowercase to match backend enum values
       const statusValue = newStatus.toLowerCase();
       const response = await coachService.updateAppointmentStatus(appointmentId, statusValue);
-      
+
       // Use the ACTUAL status returned by backend (e.g., for GUEST_INTENT → VERIFICATION_PENDING)
       const actualStatus = response.status || statusValue;
-      
+
       // Update local state with actual status from backend response
-      setAppointments(prev => 
-        prev.map(apt => 
+      setAppointments(prev =>
+        prev.map(apt =>
           apt.id === appointmentId ? { ...apt, status: actualStatus } : apt
         )
       );
-      
+
       // Update selected appointment if modal is open
       if (selectedAppointment?.id === appointmentId) {
         setSelectedAppointment(prev => ({ ...prev, status: actualStatus }));
       }
-      
+
       // Show appropriate success message based on actual status
       const statusMessage = actualStatus === 'VERIFICATION_PENDING' ? 'Payment link sent' : `Appointment ${actualStatus}`;
       toast.success(`${statusMessage} successfully!`);
@@ -178,17 +178,17 @@ const AppointmentsManager = () => {
   const handleStartSession = async (appointment) => {
     try {
       setUpdating(true);
-      
+
       // First check if session already exists for this appointment
       console.log('Checking for existing session for appointment:', appointment.id);
       const coachSessions = await coachSessionService.getCoachSessions();
       const existingSession = coachSessions.find(s => s.appointment_id === appointment.id);
-      
+
       let session;
       if (existingSession) {
         console.log('Found existing session:', existingSession);
         session = existingSession;
-        
+
         // If session is scheduled, start it
         if (session.status === 'scheduled') {
           console.log('Starting existing session:', session.session_id);
@@ -203,14 +203,14 @@ const AppointmentsManager = () => {
         console.log('Creating new session for appointment:', appointment.id);
         session = await coachSessionService.createSessionFromAppointment(appointment.id);
         console.log('Session created:', session);
-        
+
         // Start the newly created session
         console.log('Starting session:', session.session_id);
         const startedSession = await coachSessionService.startSession(session.session_id);
         console.log('Session started:', startedSession);
         session = startedSession;
       }
-      
+
       // Navigate to coach session page
       toast.success('Joining session...');
       navigate(`/coach/session/${session.session_id}`);
@@ -229,27 +229,27 @@ const AppointmentsManager = () => {
     // 1. Appointment is CONFIRMED
     // 2. Current time is within appointment time range (e.g., ±30 minutes)
     if (appointment.status?.toUpperCase() !== 'CONFIRMED') return false;
-    
+
     const now = new Date();
     const appointmentDate = new Date(appointment.scheduled_date);
-    
+
     // Extract hour from time string (e.g., "10am" -> 10)
     const timeMatch = appointment.scheduled_time?.match(/(\d+)(am|pm)/i);
     if (!timeMatch) return false;
-    
+
     let hour = parseInt(timeMatch[1]);
     const period = timeMatch[2].toLowerCase();
-    
+
     // Convert to 24-hour format
     if (period === 'pm' && hour !== 12) hour += 12;
     if (period === 'am' && hour === 12) hour = 0;
-    
+
     appointmentDate.setHours(hour, 0, 0, 0);
-    
+
     // Allow starting 30 minutes before and up to 2 hours after scheduled time
     const startWindow = new Date(appointmentDate.getTime() - 30 * 60 * 1000); // 30 min before
     const endWindow = new Date(appointmentDate.getTime() + 120 * 60 * 1000); // 2 hours after
-    
+
     return now >= startWindow && now <= endWindow;
   };
 
@@ -262,20 +262,20 @@ const AppointmentsManager = () => {
   const isAppointmentCompleted = (appointment) => {
     // Check if status is COMPLETED
     if (appointment.status?.toUpperCase() === 'COMPLETED') return true;
-    
+
     // Don't mark REJECTED or CANCELLED appointments as completed
     const status = appointment.status?.toUpperCase();
     if (status === 'REJECTED' || status === 'CANCELLED' || status === 'NO_SHOW') {
       return false;
     }
-    
+
     // Check if scheduled date has passed
     const appointmentDateTime = new Date(appointment.scheduled_date);
     const now = new Date();
-    
+
     // Set appointment date to end of day for comparison
     appointmentDateTime.setHours(23, 59, 59, 999);
-    
+
     return now > appointmentDateTime;
   };
 
@@ -333,7 +333,7 @@ const AppointmentsManager = () => {
       {/* Header */}
       {/* <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">My Appointments</h2>
-        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg">
+        <div className="flex items-center gap-2 text-amber-700 bg-yellow-50 p-3 rounded-lg">
           <AlertCircle className="icon-sm" />
           <p className="text-sm">
             Appointments are scheduled by other users (Heads, Trainers, Learners). You cannot create appointments yourself.
@@ -418,7 +418,7 @@ const AppointmentsManager = () => {
               {appointments.length === 0 ? 'No appointments scheduled yet' : 'No appointments match your filters'}
             </p>
             <p className="empty-state-description text-gray-600">
-              {appointments.length === 0 
+              {appointments.length === 0
                 ? 'When other users schedule appointments with you, they will appear here'
                 : 'Try adjusting your filter criteria'
               }
@@ -426,7 +426,7 @@ const AppointmentsManager = () => {
             {appointments.length > 0 && (
               <button
                 onClick={clearFilters}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="mt-4 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
               >
                 Clear Filters
               </button>
@@ -448,30 +448,30 @@ const AppointmentsManager = () => {
 
                   {/* Date */}
                   <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="icon-sm text-blue-600" />
+                    <Calendar className="icon-sm text-amber-700" />
                     <span className="font-semibold">
-                      {new Date(apt.scheduled_date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        year: 'numeric', 
+                      {new Date(apt.scheduled_date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
                         month: 'short',
-                        day: 'numeric' 
+                        day: 'numeric'
                       })}
                     </span>
                   </div>
-                  
+
                   {/* Time */}
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="icon-sm text-gray-500" />
                     <span className="text-gray-700">{apt.scheduled_time}</span>
                   </div>
-                  
+
                   {/* User Name */}
                   <div className="flex items-center gap-2 mb-3">
                     <User className="icon-sm text-green-600" />
                     <span className="text-gray-700 font-medium">{apt.guest_name || apt.user_name || 'Unknown User'}</span>
                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">{apt.user_role || (apt.guest_name ? 'Guest' : '')}</span>
                   </div>
-                  
+
                   {/* Status Badge */}
                   <div className="mt-2">
                     <span className={`status-badge status-${isAppointmentCompleted(apt) ? 'completed' : (apt.status || 'scheduled')} text-xs bg-gray-300`}>
@@ -479,7 +479,7 @@ const AppointmentsManager = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-2">
                   {/* Start Session Button - Only for CONFIRMED appointments that are not completed */}
@@ -487,18 +487,17 @@ const AppointmentsManager = () => {
                     <button
                       onClick={() => handleStartSession(apt)}
                       disabled={!isSessionStartable(apt) || updating}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
-                        isSessionStartable(apt) && !updating
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap ${isSessionStartable(apt) && !updating
                           ? 'bg-green-600 text-white hover:bg-green-700'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
+                        }`}
                       title={!isSessionStartable(apt) ? 'Session can be started 30 minutes before scheduled time' : 'Start video session now'}
                     >
                       <Video className="w-4 h-4" />
                       {updating ? 'Starting...' : 'Start Session'}
                     </button>
                   )}
-                  
+
                   {/* View Details Button */}
                   <button
                     onClick={() => handleViewDetails(apt)}
@@ -554,7 +553,7 @@ const AppointmentsManager = () => {
                       Guest Email
                     </label>
                     <p className="detail-value">
-                      <a href={`mailto:${selectedAppointment.guest_email}`} className="text-blue-600 hover:underline">
+                      <a href={`mailto:${selectedAppointment.guest_email}`} className="text-amber-700 hover:underline">
                         {selectedAppointment.guest_email}
                       </a>
                     </p>
@@ -565,7 +564,7 @@ const AppointmentsManager = () => {
                       Guest Phone
                     </label>
                     <p className="detail-value">
-                      <a href={`tel:${selectedAppointment.guest_phone}`} className="text-blue-600 hover:underline">
+                      <a href={`tel:${selectedAppointment.guest_phone}`} className="text-amber-700 hover:underline">
                         {selectedAppointment.guest_phone}
                       </a>
                     </p>
@@ -580,11 +579,11 @@ const AppointmentsManager = () => {
                   Date
                 </label>
                 <p className="detail-value">
-                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </p>
               </div>
@@ -674,7 +673,7 @@ const AppointmentsManager = () => {
             <div className="app-modal-footer">
               {!isAppointmentCompleted(selectedAppointment) && (selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
                 <>
-                  <button 
+                  <button
                     onClick={handleOpenRejectModal}
                     className="app-modal-btn app-modal-btn--secondary"
                     disabled={updating}
@@ -682,7 +681,7 @@ const AppointmentsManager = () => {
                     <XCircle className="w-4 h-4" />
                     {updating ? 'Updating...' : 'Reject'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleStatusUpdate(selectedAppointment.id, 'CONFIRMED')}
                     className="app-modal-btn app-modal-btn--primary"
                     disabled={updating}
@@ -723,9 +722,9 @@ const AppointmentsManager = () => {
                 <p className="text-sm text-gray-600 mb-1">Appointment for:</p>
                 <p className="font-semibold">{selectedAppointment.user_name || 'Unknown User'}</p>
                 <p className="text-sm text-gray-600">
-                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
+                  {new Date(selectedAppointment.scheduled_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
                     year: 'numeric'
                   })} at {selectedAppointment.scheduled_time}
                 </p>
@@ -752,7 +751,7 @@ const AppointmentsManager = () => {
               {/* Refund Receipt Upload */}
               <div className="app-modal-form-field">
                 <label className="app-modal-form-label">Refund Receipt (Optional)</label>
-                
+
                 {!refundPreview ? (
                   <label className="file-upload-area">
                     <input

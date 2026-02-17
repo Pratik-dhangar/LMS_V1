@@ -31,7 +31,7 @@ export const getPlatformIcon = (platform) => {
  */
 export const getPlatformColorClass = (platform) => {
   const colors = {
-    zoom: 'bg-blue-100 text-blue-700 border-blue-300',
+    zoom: 'bg-yellow-100 text-amber-800 border-amber-300',
     google_meet: 'bg-teal-100 text-teal-700 border-teal-300',
     microsoft_teams: 'bg-purple-100 text-purple-700 border-purple-300',
     webex: 'bg-cyan-100 text-cyan-700 border-cyan-300',
@@ -39,7 +39,7 @@ export const getPlatformColorClass = (platform) => {
     gotomeeting: 'bg-orange-100 text-orange-700 border-orange-300',
     jitsi: 'bg-indigo-100 text-indigo-700 border-indigo-300',
     whereby: 'bg-violet-100 text-violet-700 border-violet-300',
-    bluejeans: 'bg-blue-100 text-blue-700 border-blue-300',
+    bluejeans: 'bg-yellow-100 text-amber-800 border-amber-300',
     other: 'bg-gray-100 text-gray-700 border-gray-300'
   };
   return colors[platform] || 'bg-gray-100 text-gray-700 border-gray-300';

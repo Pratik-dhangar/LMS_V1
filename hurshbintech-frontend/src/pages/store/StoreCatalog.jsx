@@ -171,7 +171,7 @@ const StoreCatalog = () => {
     const tagColors = {
       Recommended: "bg-green-600",
       Bestseller: "bg-red-500",
-      New: "bg-blue-500",
+      New: "bg-amber-600",
     };
     const tag = tags[0];
     return (

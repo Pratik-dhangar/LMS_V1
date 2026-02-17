@@ -84,7 +84,7 @@ const FeedbackPage = () => {
     };
 
     const statusColor = {
-        'SUBMITTED': '#3b82f6',
+        'SUBMITTED': '#db9d32',
         'LATE_SUBMITTED': '#f59e0b',
         'REVIEWED': '#10b981',
         'RESUBMISSION_REQUIRED': '#ef4444'

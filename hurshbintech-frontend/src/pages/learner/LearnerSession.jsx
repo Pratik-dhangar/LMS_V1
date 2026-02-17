@@ -39,6 +39,7 @@ import {
   AttendeeWaitingModal,
   usePromptAnimation,
   useBulbGlowAnimation,
+  ExerciseOverlay,
   attendeeSessionStyles
 } from '../../components/session/AttendeeSessionLayout';
 
@@ -636,9 +637,24 @@ const LearnerSession = () => {
       if (distance < 0) {
         clearInterval(interval);
         setTimeLeft('00:00');
-        setTimeExpired(true);
         toast.info('Session time has ended.');
-        cleanup(); // Auto-end session
+
+        // Auto-end session and redirect
+        try {
+          if (webRTC?.localStream) {
+            webRTC.localStream.getTracks().forEach(track => track.stop());
+          }
+          webRTC?.close();
+          whiteboardService?.close();
+          clearSessionActivity(sessionId, 'learner');
+        } catch (error) {
+          console.error('[LearnerSession] Error during cleanup:', error);
+        }
+
+        // Redirect to dashboard after cleanup
+        setTimeout(() => {
+          navigate('/learner/dashboard');
+        }, 500);
         return;
       }
 
@@ -655,7 +671,7 @@ const LearnerSession = () => {
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionInfo]);
+  }, [sessionInfo, navigate, webRTC, whiteboardService, sessionId]);
 
   // Auto check for session end
   useEffect(() => {
@@ -1826,6 +1842,14 @@ const LearnerSession = () => {
             syncedIsRunning={syncedIsRunning}
             stopwatch={stopwatch}
             Whiteboard={Whiteboard}
+          />
+
+          {/* Exercise Overlay - Displays question/answer on top of whiteboard */}
+          <ExerciseOverlay
+            exerciseData={exerciseData}
+            showExercise={!!exerciseData && (!!exerciseData.question || !!exerciseData.qaItems?.length)}
+            onExerciseUpdate={handleExerciseAnswerChange}
+            sessionType="learner"
           />
         </AttendeeWhiteboardSection>
 

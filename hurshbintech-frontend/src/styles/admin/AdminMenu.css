@@ -251,7 +251,7 @@
     left: 0;
     width: 100%;
     height: 3px;
-    background: #2563eb;
+    background: #b8790a;
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.3s ease;
@@ -260,7 +260,7 @@
 .admin-menu-item:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
-    border-color: #2563eb;
+    border-color: #b8790a;
 }
 
 .admin-menu-item:hover::before {

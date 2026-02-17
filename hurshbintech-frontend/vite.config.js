@@ -65,7 +65,32 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              // 2. Handle API Calls - EXCLUDE admin endpoints from caching
+              // 2. Real-time API endpoints - NEVER cache (always fetch fresh)
+              urlPattern: ({ url }) => {
+                const path = url.pathname;
+                
+                // Session & Training endpoints (real-time)
+                const isSessionsApi = path.includes('/api/sessions');
+                const isCoachSessionsApi = path.includes('/api/coaches/sessions');
+                const isAssignedTrainings = path.includes('/api/assigned-trainings');
+                
+                // Communication & Scheduling (real-time)
+                const isWebinars = path.includes('/api/communication/webinars');
+                const isAppointments = path.includes('/api/appointments');
+                
+                // Session mutations (start, end, cancel, join, leave)
+                const isSessionMutation = path.includes('/sessions/') && 
+                  (path.endsWith('/start') || path.endsWith('/end') || 
+                   path.endsWith('/cancel') || path.endsWith('/join') || 
+                   path.endsWith('/leave'));
+                
+                return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || 
+                       isWebinars || isAppointments || isSessionMutation;
+              },
+              handler: 'NetworkOnly', // No caching - always fetch fresh
+            },
+            {
+              // 3. Handle API Calls - EXCLUDE admin endpoints from caching
               urlPattern: ({ url }) => {
                 const isApi = url.pathname.startsWith('/api');
                 const isAdminApi = url.pathname.includes('/admin/');
@@ -80,12 +105,9 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              // 2b. Admin API calls - Always fetch fresh, no cache
+              // 4. Admin API calls - Always fetch fresh, no cache
               urlPattern: ({ url }) => url.pathname.includes('/admin/'),
               handler: 'NetworkOnly',
-              options: {
-                cacheName: 'admin-api-no-cache'
-              }
             },
             {
               // 3. Fallback for other local assets
@@ -98,7 +120,11 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        devOptions: { enabled: true, type: 'module' }
+        devOptions: { 
+          enabled: true, 
+          type: 'module',
+          suppressWarnings: false
+        }
       })
     );
   } else {

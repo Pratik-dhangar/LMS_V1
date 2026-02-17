@@ -148,7 +148,7 @@ const LearnerDashboard = () => {
                           fontSize: '13px',
                           fontWeight: '600',
                           backgroundColor: '#dbeafe',
-                          color: '#1e40af'
+                          color: '#9c6a08'
                         }}>
                           Status: {mySubscription.status}
                         </div>

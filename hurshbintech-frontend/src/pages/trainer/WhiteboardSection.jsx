@@ -19,8 +19,30 @@ const WhiteboardSection = ({
   currentMessage,
   setCurrentMessage,
   sendMessage,
-  handleSaveSession
+  handleSaveSession,
+  setRemoteSelectedItemIds
 }) => {
+  // Handler to unselect specific item selected by attendee
+  const handleUnselectItem = (itemId) => {
+    if (setRemoteSelectedItemIds) {
+      setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => id !== itemId));
+    }
+  };
+
+  // Handler to unselect all items selected by attendee
+  const handleUnselectAll = () => {
+    if (setRemoteSelectedItemIds) {
+      setRemoteSelectedItemIds([]);
+    }
+  };
+
+  // Get selected items details from canvasItems
+  const getSelectedItemDetails = () => {
+    if (!learnerSelectedItemIds || learnerSelectedItemIds.length === 0) return [];
+    return canvasItems.filter((item) => learnerSelectedItemIds.includes(item.id));
+  };
+
+  const selectedItems = getSelectedItemDetails();
   return (
     <div className="min-h-[450px] relative">
       {/* Whiteboard component - keep logic intact */}
@@ -40,19 +62,19 @@ const WhiteboardSection = ({
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px', color: '#1a202c' }}><Emoji emoji="🛠️" size="sm" /> Whiteboard Tools</div>
 
         {/* Learner Tool Access Controls */}
-        <div style={{ backgroundColor: '#eff6ff', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #3b82f6' }}>
-          <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '16px', color: '#1e40af' }}><Emoji emoji="👥" size="sm" /> Learner Tool Access & Exercise Tools</div>
+        <div style={{ backgroundColor: '#fffbf0', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #db9d32' }}>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '16px', color: '#9c6a08' }}><Emoji emoji="👥" size="sm" /> Learner Tool Access & Exercise Tools</div>
 
           {/* Select Tool */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
             <span style={{ fontSize: '12px' }}><Emoji emoji="✋" size="sm" /> Select</span>
-            <button onClick={() => handleToolClick('✋ Select')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
+            <button onClick={() => handleToolClick('✋ Select')} style={{ backgroundColor: '#db9d32', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
           {/* Drag Tool */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
             <span style={{ fontSize: '12px' }}><Emoji emoji="↔️" size="sm" /> Drag</span>
-            <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
+            <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#db9d32', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
           {/* EXERCISE TOOL */}
@@ -73,6 +95,55 @@ const WhiteboardSection = ({
             <button onClick={() => handleToolClick('📝 Fill Blanks')} style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '16px', whiteSpace: 'nowrap' }}><Emoji emoji="✨" size="sm" /> CREATE</button>
           </div>
         </div>
+
+        {/* Attendee Selected Content Display & Unselect Controls */}
+        {selectedItems.length > 0 && (
+          <div style={{ backgroundColor: '#D4C4B7', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #6D5A3F' }}>
+            <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '12px', color: '#4A382A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span><Emoji emoji="📌" size="sm" /> Attendee Selected Content ({selectedItems.length})</span>
+              <button
+                onClick={handleUnselectAll}
+                style={{
+                  backgroundColor: '#6D5A3F',
+                  color: 'white',
+                  border: 'none',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                <Emoji emoji="🗑️" size="sm" /> Unselect All
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {selectedItems.map((item) => (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #6D5A3F', fontSize: '11px' }}>
+                  <span style={{ flex: 1, marginRight: '8px', color: '#1f2937' }}>
+                    {item.title || `Item #${item.id?.toString().slice(0, 8)}`}
+                  </span>
+                  <button
+                    onClick={() => handleUnselectItem(item.id)}
+                    style={{
+                      backgroundColor: '#B39B85',
+                      color: '#4A382A',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Other Trainer Tools */}
         <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '12px', color: '#1a202c' }}><Emoji emoji="🎨" size="sm" /> Trainer Tools (Click to use)</div>
@@ -111,7 +182,7 @@ const WhiteboardSection = ({
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input type="text" value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="Type message..." style={{ flex: '1', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '12px' }} />
-            <button onClick={sendMessage} style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Send</button>
+            <button onClick={sendMessage} style={{ padding: '8px 16px', backgroundColor: '#db9d32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Send</button>
           </div>
         </div>
 

@@ -69,6 +69,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=True)  # Good for password resets
+    contact_number = Column(String(20), nullable=True, unique=True, index=True)  # Admin contact number
     passcode = Column(
         String(255), unique=True, nullable=False, index=True
     )  # Encrypted passcode (Fernet) - decrypt via API for admin display
@@ -78,6 +79,7 @@ class User(Base):
     role = Column(SAEnum(UserRole), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # --- One-to-One Relationships to Profiles ---
     # A user will only have ONE of these relationships active, based on their role.
@@ -127,9 +129,11 @@ class Admin(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
+    contact_number = Column(String(20), nullable=True, unique=True, index=True)
     role = Column(String(20), default="admin")
     passcode = Column(String(20), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 # HeadProfile user model (renamed from Head)

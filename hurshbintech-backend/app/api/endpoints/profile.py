@@ -2,11 +2,14 @@
 Profile endpoints for all user types
 """
 
-from fastapi import APIRouter, Depends
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+from typing import List
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_admin
 from app.db.session import get_db
 from app.models.user_model import (
     Admin,
@@ -14,17 +17,22 @@ from app.models.user_model import (
     HeadProfile,
     LearnerProfile,
     TrainerProfile,
+    User,
+    UserRole,
 )
 from app.schemas.user import (
     AdminResponse,
+    AdminUpdate,
     CoachResponse,
     HeadResponse,
     LearnerResponse,
     TrainerResponse,
 )
 from app.schemas.subscription import LearnerSubscriptionResponse
+from app.services.cache_service import cache_service
 from app import crud
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
@@ -33,76 +41,134 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 async def get_user_profile(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile | User
     ) = Depends(get_current_user),
 ):
-    from app.models.user_model import User
-    from fastapi import HTTPException
-    import logging
-    
-    logger = logging.getLogger(__name__)
-    logger.info(f"get_user_profile called - Type: {type(current_user).__name__}")
-    
-    # Handle User objects with profiles loaded (from get_current_user)
-    if isinstance(current_user, User):
-        role_str = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
-        logger.info(f"User object with role: {role_str}")
-        
-        if role_str.lower() == 'head' and hasattr(current_user, 'head_profile') and current_user.head_profile:
-            logger.info("Returning HeadResponse")
-            return HeadResponse.from_orm_with_user(current_user.head_profile, current_user)
-        elif role_str.lower() == 'trainer' and hasattr(current_user, 'trainer_profile') and current_user.trainer_profile:
-            logger.info("Returning TrainerResponse")
-            return TrainerResponse.from_orm_with_user(current_user.trainer_profile, current_user)
-        elif role_str.lower() == 'coach' and hasattr(current_user, 'coach_profile') and current_user.coach_profile:
-            logger.info(f"Returning CoachResponse with profile ID: {current_user.coach_profile.id}")
-            return CoachResponse.from_orm_with_user(current_user.coach_profile, current_user)
-        elif role_str.lower() == 'learner' and hasattr(current_user, 'learner_profile') and current_user.learner_profile:
-            logger.info("Returning LearnerResponse")
-            return LearnerResponse.from_orm_with_user(current_user.learner_profile, current_user)
-        elif role_str.lower() == 'admin':
-            logger.info("Returning AdminResponse")
-            return AdminResponse.model_validate(current_user)
-        else:
-            logger.error(f"No profile found for user role: {role_str}")
-            raise HTTPException(status_code=404, detail=f"Profile not found for role: {role_str}")
-    # Handle profile objects directly (from specific get_current_* dependencies)
-    elif isinstance(current_user, HeadProfile):
-        logger.info("Direct HeadProfile")
-        return HeadResponse.from_orm_with_user(current_user)
+    """Get current user profile - Cached for 15 minutes (user-specific)"""
+    # Get user_id for cache key (handle different profile types)
+    if isinstance(current_user, Admin):
+        user_id = current_user.id
+    elif isinstance(current_user, User):
+        # Base User object - need to get profile based on role
+        user_id = current_user.id
+    else:
+        user_id = current_user.user_id if hasattr(current_user, 'user_id') else current_user.id
+
+    cache_key = cache_service.key_user_profile_me(user_id)
+
+    # Try cache first
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        # Return appropriate response type based on cached role (case-insensitive)
+        role = cached_data.get('role', '').lower()
+        if role == 'head':
+            return HeadResponse(**cached_data)
+        elif role == 'admin':
+            return AdminResponse(**cached_data)
+        elif role == 'trainer':
+            return TrainerResponse(**cached_data)
+        elif role == 'coach':
+            return CoachResponse(**cached_data)
+        elif role == 'learner':
+            return LearnerResponse(**cached_data)
+        return cached_data
+
+    logger.debug(f"Cache MISS: {cache_key}")
+
+    # If current_user is base User type, fetch or extract the appropriate profile
+    if isinstance(current_user, User) and not isinstance(current_user, (Admin, HeadProfile, TrainerProfile, CoachProfile, LearnerProfile)):
+        logger.info(f"Base User object received for role: {current_user.role}")
+
+        # Fetch the appropriate profile based on role
+        # First check if profile is already loaded via relationship
+        if current_user.role == UserRole.ADMIN:
+            # Admin users are stored directly in the users table, no separate profile table
+            logger.info(f"Admin user - using User object directly (id: {current_user.id}, email: {current_user.email})")
+            # Keep current_user as is - it's already a User object with ADMIN role
+        elif current_user.role == UserRole.HEAD:
+            if hasattr(current_user, 'head_profile') and current_user.head_profile:
+                current_user = current_user.head_profile
+            else:
+                result = await db.execute(
+                    select(HeadProfile)
+                    .options(joinedload(HeadProfile.user))
+                    .where(HeadProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.TRAINER:
+            if hasattr(current_user, 'trainer_profile') and current_user.trainer_profile:
+                current_user = current_user.trainer_profile
+            else:
+                result = await db.execute(
+                    select(TrainerProfile)
+                    .options(joinedload(TrainerProfile.user))
+                    .where(TrainerProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.COACH:
+            if hasattr(current_user, 'coach_profile') and current_user.coach_profile:
+                current_user = current_user.coach_profile
+            else:
+                result = await db.execute(
+                    select(CoachProfile)
+                    .options(joinedload(CoachProfile.user))
+                    .where(CoachProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+        elif current_user.role == UserRole.LEARNER:
+            if hasattr(current_user, 'learner_profile') and current_user.learner_profile:
+                current_user = current_user.learner_profile
+            else:
+                result = await db.execute(
+                    select(LearnerProfile)
+                    .options(joinedload(LearnerProfile.user))
+                    .where(LearnerProfile.user_id == current_user.id)
+                )
+                profile = result.scalar_one_or_none()
+                if profile:
+                    current_user = profile
+
+    # Generate response based on user type
+    if isinstance(current_user, HeadProfile):
+        result = HeadResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, Admin):
-        logger.info("Direct Admin")
-        return AdminResponse.model_validate(current_user)
+        result = AdminResponse.from_orm(current_user)
+    elif isinstance(current_user, User) and current_user.role == UserRole.ADMIN:
+        # Admin users are User objects with ADMIN role (not Admin model instances)
+        result = AdminResponse.from_orm(current_user)
     elif isinstance(current_user, TrainerProfile):
-        logger.info("Direct TrainerProfile")
-        return TrainerResponse.from_orm_with_user(current_user)
+        result = TrainerResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, CoachProfile):
-        logger.info(f"Direct CoachProfile with ID: {current_user.id}")
-        return CoachResponse.from_orm_with_user(current_user)
+        result = CoachResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, LearnerProfile):
-        logger.info("Direct LearnerProfile")
-        return LearnerResponse.from_orm_with_user(current_user)
-    
-    # Should never reach here
-    logger.error(f"Unhandled case - Type: {type(current_user).__name__}")
-    raise HTTPException(status_code=500, detail="Unable to determine profile type")
+        result = LearnerResponse.from_orm_with_user(current_user)
+    else:
+        logger.error(f"Unhandled case - Type: {type(current_user).__name__}, Role: {getattr(current_user, 'role', 'N/A')}")
+        raise HTTPException(status_code=500, detail="Unable to determine profile type")
+
+    # Cache for 15 minutes
+    await cache_service.set(cache_key, result.model_dump(), ttl=cache_service.TTL_USER_PROFILE_ME)
+
+    return result
 
 
 @router.get("/me/subscriptions", response_model=List[LearnerSubscriptionResponse])
 async def get_my_subscriptions(
     db: AsyncSession = Depends(get_db),
     current_user: (
-        Admin | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
+        User | HeadProfile | TrainerProfile | CoachProfile | LearnerProfile
     ) = Depends(get_current_user),
 ):
     """Get all subscriptions for the current learner"""
-    import logging
-    from sqlalchemy import select
-    from app.models.user_model import User
-    
-    logger = logging.getLogger(__name__)
     logger.info(f"User accessing subscriptions - Type: {type(current_user).__name__}, ID: {current_user.id if hasattr(current_user, 'id') else 'N/A'}")
-    
+
     # If current_user is base User type, fetch the LearnerProfile
     if isinstance(current_user, User) and not isinstance(current_user, LearnerProfile):
         # Fetch learner profile
@@ -110,20 +176,120 @@ async def get_my_subscriptions(
             select(LearnerProfile).where(LearnerProfile.user_id == current_user.id)
         )
         learner_profile = result.scalar_one_or_none()
-        
+
         if not learner_profile:
-            from fastapi import HTTPException, status
             logger.warning(f"User {current_user.id} is not a learner")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only learners can access this endpoint")
-        
+
         current_user = learner_profile
-    
+
     if not isinstance(current_user, LearnerProfile):
-        from fastapi import HTTPException, status
         logger.warning(f"Non-learner tried to access endpoint: {type(current_user).__name__}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Only learners can access this endpoint. Your role: {type(current_user).__name__}")
+
+    # Try cache first
+    cache_key = f"subscription:user:{current_user.user_id}"
+    cached_data = await cache_service.get(cache_key)
+    
+    if cached_data:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return [LearnerSubscriptionResponse(**item) for item in cached_data]
+
+    logger.debug(f"Cache MISS: {cache_key}")
     
     # Use user_id instead of profile id for subscription lookup
     subscriptions = await crud.subscription_crud.get_subscriptions_by_learner(db, current_user.user_id)
     logger.info(f"Found {len(subscriptions)} subscriptions for learner {current_user.user_id}")
+
+    # Cache for 15 minutes - convert SQLAlchemy models to dicts
+    subscription_data = []
+    for sub in subscriptions:
+        # Extract learner name from relationship
+        learner_name = None
+        if sub.learner and hasattr(sub.learner, 'name'):
+            learner_name = sub.learner.name
+        
+        # Extract head name from relationship
+        head_name = None
+        if sub.current_head and hasattr(sub.current_head, 'name'):
+            head_name = sub.current_head.name
+        
+        # Create dict with all fields including relationship data
+        sub_dict = {
+            "id": sub.id,
+            "learner_id": sub.learner_id,
+            "learner_name": learner_name,
+            "package_id": sub.package_id,
+            "created_by_head_id": sub.created_by_head_id,
+            "current_head_id": sub.current_head_id,
+            "head_name": head_name,
+            "package_name": sub.package_name,
+            "package_sessions": sub.package_sessions,
+            "package_validity_days": sub.package_validity_days,
+            "package_original_price": float(sub.package_original_price),
+            "start_date": sub.start_date,
+            "expiry_date": sub.expiry_date,
+            "status": sub.status.value if hasattr(sub.status, 'value') else sub.status,
+            "sessions_total": sub.sessions_total,
+            "sessions_completed": sub.sessions_completed,
+            "sessions_remaining": sub.sessions_remaining,
+            "discount_applied": float(sub.discount_applied),
+            "discount_code_id": sub.discount_code_id,
+            "applied_by_head_id": sub.applied_by_head_id,
+            "net_price_paid": float(sub.net_price_paid),
+            "paused_at": sub.paused_at,
+            "paused_duration_days": sub.paused_duration_days,
+            "frozen_at": sub.frozen_at,
+            "frozen_duration_days": sub.frozen_duration_days,
+            "renewed_from_subscription_id": sub.renewed_from_subscription_id,
+            "renewed_to_subscription_id": sub.renewed_to_subscription_id,
+            "refund_amount": float(sub.refund_amount) if sub.refund_amount else None,
+            "refund_type": sub.refund_type.value if sub.refund_type and hasattr(sub.refund_type, 'value') else sub.refund_type,
+            "refund_date": sub.refund_date,
+            "refund_reason": sub.refund_reason,
+            "created_at": sub.created_at,
+            "updated_at": sub.updated_at,
+        }
+        subscription_data.append(sub_dict)
+    
+    await cache_service.set(cache_key, subscription_data, ttl=cache_service.TTL_USER_SUBSCRIPTIONS)
+
     return subscriptions
+
+
+# Update admin profile
+@router.put("/admin/update", response_model=AdminResponse)
+async def update_admin_profile(
+    admin_update: AdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Update admin profile information"""
+    
+    from app.models.user_model import User
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Ensure we're working with a User object
+        if not isinstance(current_admin, User):
+            raise HTTPException(status_code=500, detail="Invalid admin user object")
+        
+        updated_admin = await crud.user_crud.update_admin_profile(
+            db, current_admin.id, admin_update
+        )
+        if not updated_admin:
+            raise HTTPException(status_code=404, detail="Admin not found")
+        
+        # Invalidate cached profile
+        cache_key = cache_service.key_user_profile_me(current_admin.id)
+        await cache_service.delete(cache_key)
+        
+        logger.info(f"Admin profile updated: {updated_admin.id}")
+        return AdminResponse.from_orm(updated_admin)
+    except ValueError as e:
+        logger.warning(f"Validation error updating admin: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating admin profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update admin profile")

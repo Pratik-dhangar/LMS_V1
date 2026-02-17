@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Loader from "../components/common/Loader";
+import Spinner from "../components/common/Spinner";
+import { CoachSkeleton, ServiceCardsSkeleton, ContentSectionSkeleton } from "../components/common/SkeletonLoader";
 import PWAInstallButton from '../components/common/PWAInstallButton';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
@@ -22,36 +23,28 @@ const Home = () => {
   const [featuredCoach, setFeaturedCoach] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [vlogs, setVlogs] = useState([]);
+  const [loadingCoach, setLoadingCoach] = useState(false);
+  const [loadingBlogs, setLoadingBlogs] = useState(false);
+  const [loadingVlogs, setLoadingVlogs] = useState(false);
   const [visibleSections, setVisibleSections] = useState(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFullBio, setShowFullBio] = useState(false);
   const sectionRefs = useRef({});
+  const blogsRef = useRef(null);
+  const vlogsRef = useRef(null);
+  const coachRef = useRef(null);
+  const fetchFnsRef = useRef({});
 
+  // Fetch About Us content first (critical)
   const fetchAboutUs = useCallback(async () => {
     try {
       setLoading(true);
       const data = await aboutUsService.getPublicAboutUs('en');
       console.log('About Us data:', data);
-      console.log('Featured coach ID:', data?.featured_coach_id);
       setAboutUs(data);
-
-      // Fetch featured coach if featured_coach_id exists
-      if (data && data.featured_coach_id) {
-        try {
-          console.log('Fetching coach with ID:', data.featured_coach_id);
-          const allCoaches = await bookingService.getAvailableCoaches();
-          const coach = allCoaches.find(c => c.id === data.featured_coach_id);
-          console.log('Fetched coach:', coach);
-          setFeaturedCoach(coach || null);
-        } catch (err) {
-          console.error('Error fetching featured coach:', err);
-          setFeaturedCoach(null);
-        }
-      } else {
-        console.log('No featured_coach_id found in about us data');
-      }
+      // Coach will be lazy-loaded by Intersection Observer when section becomes visible
     } catch (err) {
       if (err?.response?.status !== 404) {
         console.error('Error fetching About Us:', err);
@@ -62,32 +55,133 @@ const Home = () => {
     }
   }, []);
 
-  const fetchBlogs = useCallback(async () => {
+  // Lazy load featured coach when section becomes visible
+  const fetchFeaturedCoach = useCallback(async (coachId) => {
+    if (!coachId || featuredCoach) return;
+    
     try {
+      setLoadingCoach(true);
+      console.log('Fetching coach with ID:', coachId);
+      const allCoaches = await bookingService.getAvailableCoaches();
+      const coach = allCoaches.find(c => c.id === coachId);
+      console.log('Fetched coach:', coach);
+      setFeaturedCoach(coach || null);
+    } catch (err) {
+      console.error('Error fetching featured coach:', err);
+      setFeaturedCoach(null);
+    } finally {
+      setLoadingCoach(false);
+    }
+  }, [featuredCoach]);
+
+  // Lazy load blogs when section becomes visible
+  const fetchBlogs = useCallback(async () => {
+    if (blogs.length > 0) return; // Already loaded
+    
+    try {
+      setLoadingBlogs(true);
       const response = await blogService.getPublicBlogs({ page: 1, per_page: 3 });
       setBlogs(response.blogs || []);
     } catch (err) {
       console.error('Error fetching blogs:', err);
       setBlogs([]);
+    } finally {
+      setLoadingBlogs(false);
     }
-  }, []);
+  }, [blogs.length]);
 
+  // Lazy load vlogs when section becomes visible
   const fetchVlogs = useCallback(async () => {
+    if (vlogs.length > 0) return; // Already loaded
+    
     try {
+      setLoadingVlogs(true);
       const response = await vlogService.getPublicVlogs({ page: 1, per_page: 3 });
       setVlogs(response.vlogs || []);
     } catch (err) {
       console.error('Error fetching vlogs:', err);
       setVlogs([]);
+    } finally {
+      setLoadingVlogs(false);
     }
-  }, []);
+  }, [vlogs.length]);
 
+  // Load critical content on mount
   useEffect(() => {
-    fetchAboutUs();
-    fetchBlogs();
-    fetchVlogs();
-  }, [fetchAboutUs, fetchBlogs, fetchVlogs]);
+    let cancelled = false;
+    
+    const loadData = async () => {
+      if (!cancelled) {
+        await fetchAboutUs();
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchAboutUs]);
 
+  // Fetch featured coach when aboutUs data loads with featured_coach_id
+  useEffect(() => {
+    if (aboutUs?.featured_coach_id && !featuredCoach && !loadingCoach) {
+      // Check if coach section is already in viewport or near it
+      if (coachRef.current) {
+        const rect = coachRef.current.getBoundingClientRect();
+        const isNearViewport = rect.top < window.innerHeight + 200; // 200px before viewport
+        
+        if (isNearViewport) {
+          fetchFeaturedCoach(aboutUs.featured_coach_id);
+        }
+      }
+    }
+  }, [aboutUs?.featured_coach_id, featuredCoach, loadingCoach, fetchFeaturedCoach]);
+
+  // Keep fetch functions in a ref so the observer effect doesn't re-run when they change
+  useEffect(() => {
+    fetchFnsRef.current = { fetchFeaturedCoach, fetchBlogs, fetchVlogs };
+  }, [fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
+
+  // Intersection Observer for lazy loading below-the-fold content
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '200px', // Start loading 200px before entering viewport
+      threshold: 0,
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (entry.target === coachRef.current) {
+            // Check for featured_coach_id whenever the section is visible
+            if (aboutUs?.featured_coach_id) {
+              fetchFnsRef.current.fetchFeaturedCoach(aboutUs.featured_coach_id);
+            }
+          }
+          if (entry.target === blogsRef.current) {
+            fetchFnsRef.current.fetchBlogs();
+          }
+          if (entry.target === vlogsRef.current) {
+            fetchFnsRef.current.fetchVlogs();
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe lazy load sections
+    const refs = [coachRef.current, blogsRef.current, vlogsRef.current].filter(Boolean);
+    refs.forEach(ref => observer.observe(ref));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [aboutUs?.featured_coach_id]);
+
+  // Scroll indicator (removed duplicate coach fetch useEffect)
   useEffect(() => {
     const handleScroll = () => {
       const scrolled = window.scrollY;
@@ -301,8 +395,8 @@ const Home = () => {
 
       {/* About Us Content */}
       {loading ? (
-        <div className="about-loading">
-          <Loader />
+        <div className="about-loading" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Spinner />
         </div>
       ) : aboutUs ? (
         <main id="about-section" className="about-main">
@@ -339,67 +433,71 @@ const Home = () => {
           </section> */}
 
           {/* Custom Coach Profile Section */}
-          {featuredCoach && (
-            <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
-              <div className="custom-coach-container">
-                {/* Coach Profile Picture */}
-                <div className="custom-coach-image-wrapper">
-                  {featuredCoach.profile_picture_url ? (
-                    <img
-                      src={getFileUrl(featuredCoach.profile_picture_url)}
-                      alt={featuredCoach.name}
-                      className="custom-coach-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div
-                    className="custom-coach-image-placeholder"
-                    style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
-                  >
-                    {featuredCoach.name?.charAt(0).toUpperCase()}
-                  </div>
-                </div>
-
-                {/* Coach Details */}
-                <div className="custom-coach-content">
-                  <h2 id="coach-heading" className="custom-coach-name">
-                    {featuredCoach.name}
-                  </h2>
-                  <div className={`custom-coach-bio-wrapper ${showFullBio ? 'expanded' : ''}`}>
-                    <p className="custom-coach-bio">
-                      Binal Shah is a child development and behaviour modification consultant based in Mumbai.
-                      She has several degrees and honours to her credit in the field of child development,
-                      education, psychology, and behaviour modification. She has been working in the field of
-                      training and rehabilitation for 18 years. Binal Shah has vast experience training kids
-                      who have delays and difficulties in various areas of development, from physical, language,
-                      communication, emotional to behaviour and learning.
-                    </p>
-                    <button
-                      className="custom-coach-read-more"
-                      onClick={() => setShowFullBio(!showFullBio)}
+          <div ref={coachRef} style={{ minHeight: '100px' }}>
+            {loadingCoach ? (
+              <CoachSkeleton />
+            ) : featuredCoach ? (
+              <section id="featured-coach-section" className="custom-coach-section" aria-labelledby="coach-heading">
+                <div className="custom-coach-container">
+                  {/* Coach Profile Picture */}
+                  <div className="custom-coach-image-wrapper">
+                    {featuredCoach.profile_picture_url ? (
+                      <img
+                        src={getFileUrl(featuredCoach.profile_picture_url)}
+                        alt={featuredCoach.name}
+                        className="custom-coach-image"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="custom-coach-image-placeholder" 
+                      style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
                     >
-                      {showFullBio ? 'Read Less' : 'Read More'}
+                      {featuredCoach.name?.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+
+                  {/* Coach Details */}
+                  <div className="custom-coach-content">
+                    <h2 id="coach-heading" className="custom-coach-name">
+                      {featuredCoach.name}
+                    </h2>
+                    <div className={`custom-coach-bio-wrapper ${showFullBio ? 'expanded' : ''}`}>
+                      <p className="custom-coach-bio">
+                        Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
+                        She has several degrees and honours to her credit in the field of child development, 
+                        education, psychology, and behaviour modification. She has been working in the field of 
+                        training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
+                        who have delays and difficulties in various areas of development, from physical, language, 
+                        communication, emotional to behaviour and learning.
+                      </p>
+                      <button 
+                        className="custom-coach-read-more"
+                        onClick={() => setShowFullBio(!showFullBio)}
+                      >
+                        {showFullBio ? 'Read Less' : 'Read More'}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          navigate('/guest-booking', { state: { coach: featuredCoach } });
+                        } else {
+                          navigate(`/book-appointment/${featuredCoach.id}`, { state: { coach: featuredCoach } });
+                        }
+                      }}
+                      className="btn-primary"
+                    >
+                      Book Appointment
                     </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        navigate('/guest-booking', { state: { coach: featuredCoach } });
-                      } else {
-                        navigate(`/book-appointment/${featuredCoach.id}`, { state: { coach: featuredCoach } });
-                      }
-                    }}
-                    className="btn-primary"
-                  >
-                    Book Appointment
-                  </button>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            ) : null}
+          </div>
 
           {/* Introduction Section */}
           {aboutUs.intro_content && (
@@ -505,184 +603,134 @@ const Home = () => {
         </main>
       ) : null}
 
-      {/* Vlogs Section */}
-      {vlogs.length > 0 && (
-        <section id="vlogs-section" className="home-vlogs-section">
-          <div className="home-vlogs-container">
-            <div className="home-section-header">
-              <h2 className="home-section-title">Latest Vlogs</h2>
-              <p className="home-section-subtitle">Video content and tutorials</p>
-            </div>
-            <div className="home-vlogs-grid">
-              {vlogs.map((vlog, index) => (
-                <article
-                  key={vlog.id}
-                  className="home-vlog-card"
-                  onClick={() => navigate(`/vlogs/${vlog.id}`)}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  {/* Thumbnail */}
-                  <div className="home-vlog-thumbnail-wrapper">
-                    {vlog.thumbnail_url ? (
-                      <img
-                        src={vlog.thumbnail_url}
-                        alt={vlog.title}
-                        className="home-vlog-thumbnail"
-                      />
-                    ) : (
-                      <div className="home-vlog-placeholder">🎥</div>
-                    )}
-                    <div className="home-vlog-play-icon">▶</div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="home-vlog-content">
-                    <h3 className="home-vlog-title">{vlog.title}</h3>
-                    {vlog.description && (
-                      <p className="home-vlog-description">
-                        {truncateText(vlog.description, 100)}
-                      </p>
-                    )}
-                    <div className="home-vlog-footer">
-                      <span className="home-vlog-date">
-                        📅 {formatDate(vlog.created_at)}
-                      </span>
-                      <span className="home-vlog-watch">Watch now →</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="home-section-view-all">
-              <button
-                onClick={() => navigate('/vlogs')}
-                className="home-view-all-btn"
-              >
-                View All Vlogs →
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Blogs Section */}
-      {blogs.length > 0 && (
-        <section id="blogs-section" className="home-blogs-section">
-          <div className="home-blogs-container">
-            <div className="home-section-header">
-              <h2 className="home-section-title">Latest Blogs</h2>
-              <p className="home-section-subtitle">Educational articles and insights</p>
-            </div>
-            <div className="home-blogs-grid">
-              {blogs.map((blog, index) => (
-                <article
-                  key={blog.id}
-                  className="home-blog-card"
-                  onClick={() => navigate(`/blogs/${blog.slug}`)}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  {/* Featured Image */}
-                  <div className="home-blog-image-wrapper">
-                    {blog.featured_image_url ? (
-                      <img
-                        src={blog.featured_image_url}
-                        alt={blog.title}
-                        className="home-blog-image"
-                      />
-                    ) : (
-                      <div className="home-blog-placeholder">📝</div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="home-blog-content">
-                    <h3 className="home-blog-title">{blog.title}</h3>
-                    {blog.excerpt && (
-                      <p className="home-blog-excerpt">
-                        {truncateText(blog.excerpt, 120)}
-                      </p>
-                    )}
-                    <div className="home-blog-footer">
-                      <span className="home-blog-date">
-                        📅 {formatDate(blog.created_at)}
-                      </span>
-                      <span className="home-blog-read-more">Read more →</span>
+      <div ref={blogsRef} style={{ minHeight: '600px' }}>
+        {loadingBlogs ? (
+          <ContentSectionSkeleton count={3} />
+        ) : blogs.length > 0 ? (
+          <section id="blogs-section" className="home-blogs-section">
+            <div className="home-blogs-container">
+              <div className="home-section-header">
+                <h2 className="home-section-title">Latest Blogs</h2>
+                <p className="home-section-subtitle">Educational articles and insights</p>
+              </div>
+              <div className="home-blogs-grid">
+                {blogs.map((blog, index) => (
+                  <article
+                    key={blog.id}
+                    className="home-blog-card"
+                    onClick={() => navigate(`/blogs/${blog.slug}`)}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {/* Featured Image */}
+                    <div className="home-blog-image-wrapper">
+                      {blog.featured_image_url ? (
+                        <img
+                          src={blog.featured_image_url}
+                          alt={blog.title}
+                          className="home-blog-image"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="home-blog-placeholder">📝</div>
+                      )}
                     </div>
-                  </div>
-                </article>
-              ))}
+
+                    {/* Content */}
+                    <div className="home-blog-content">
+                      <h3 className="home-blog-title">{blog.title}</h3>
+                      {blog.excerpt && (
+                        <p className="home-blog-excerpt">
+                          {truncateText(blog.excerpt, 120)}
+                        </p>
+                      )}
+                      <div className="home-blog-footer">
+                        <span className="home-blog-date">
+                          📅 {formatDate(blog.created_at)}
+                        </span>
+                        <span className="home-blog-read-more">Read more →</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="home-section-view-all">
+                <button
+                  onClick={() => navigate('/blogs')}
+                  className="home-view-all-btn"
+                >
+                  View All Blogs →
+                </button>
+              </div>
             </div>
-            <div className="home-section-view-all">
-              <button
-                onClick={() => navigate('/blogs')}
-                className="home-view-all-btn"
-              >
-                View All Blogs →
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        ) : null}
+      </div>
 
       {/* Vlogs Section */}
-      {vlogs.length > 0 && (
-        <section id="vlogs-section" className="home-vlogs-section">
-          <div className="home-vlogs-container">
-            <div className="home-section-header">
-              <h2 className="home-section-title">Latest Vlogs</h2>
-              <p className="home-section-subtitle">Video content and tutorials</p>
-            </div>
-            <div className="home-vlogs-grid">
-              {vlogs.map((vlog, index) => (
-                <article
-                  key={vlog.id}
-                  className="home-vlog-card"
-                  onClick={() => navigate(`/vlogs/${vlog.id}`)}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  {/* Thumbnail */}
-                  <div className="home-vlog-thumbnail-wrapper">
-                    {vlog.thumbnail_url ? (
-                      <img
-                        src={vlog.thumbnail_url}
-                        alt={vlog.title}
-                        className="home-vlog-thumbnail"
-                      />
-                    ) : (
-                      <div className="home-vlog-placeholder">🎥</div>
-                    )}
-                    <div className="home-vlog-play-icon">▶</div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="home-vlog-content">
-                    <h3 className="home-vlog-title">{vlog.title}</h3>
-                    {vlog.description && (
-                      <p className="home-vlog-description">
-                        {truncateText(vlog.description, 100)}
-                      </p>
-                    )}
-                    <div className="home-vlog-footer">
-                      <span className="home-vlog-date">
-                        📅 {formatDate(vlog.created_at)}
-                      </span>
-                      <span className="home-vlog-watch">Watch now →</span>
+      <div ref={vlogsRef} style={{ minHeight: '600px' }}>
+        {loadingVlogs ? (
+          <ContentSectionSkeleton count={3} />
+        ) : vlogs.length > 0 ? (
+          <section id="vlogs-section" className="home-vlogs-section">
+            <div className="home-vlogs-container">
+              <div className="home-section-header">
+                <h2 className="home-section-title">Latest Vlogs</h2>
+                <p className="home-section-subtitle">Video content and tutorials</p>
+              </div>
+              <div className="home-vlogs-grid">
+                {vlogs.map((vlog, index) => (
+                  <article
+                    key={vlog.id}
+                    className="home-vlog-card"
+                    onClick={() => navigate(`/vlogs/${vlog.id}`)}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {/* Thumbnail */}
+                    <div className="home-vlog-thumbnail-wrapper">
+                      {vlog.thumbnail_url ? (
+                        <img
+                          src={vlog.thumbnail_url}
+                          alt={vlog.title}
+                          className="home-vlog-thumbnail"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="home-vlog-placeholder">🎥</div>
+                      )}
+                      <div className="home-vlog-play-icon">▶</div>
                     </div>
-                  </div>
-                </article>
-              ))}
+
+                    {/* Content */}
+                    <div className="home-vlog-content">
+                      <h3 className="home-vlog-title">{vlog.title}</h3>
+                      {vlog.description && (
+                        <p className="home-vlog-description">
+                          {truncateText(vlog.description, 100)}
+                        </p>
+                      )}
+                      <div className="home-vlog-footer">
+                        <span className="home-vlog-date">
+                          📅 {formatDate(vlog.created_at)}
+                        </span>
+                        <span className="home-vlog-watch">Watch now →</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="home-section-view-all">
+                <button
+                  onClick={() => navigate('/vlogs')}
+                  className="home-view-all-btn"
+                >
+                  View All Vlogs →
+                </button>
+              </div>
             </div>
-            <div className="home-section-view-all">
-              <button
-                onClick={() => navigate('/vlogs')}
-                className="home-view-all-btn"
-              >
-                View All Vlogs →
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        ) : null}
+      </div>
 
       {/* Scroll to Top Button */}
       {showScrollTop && (
