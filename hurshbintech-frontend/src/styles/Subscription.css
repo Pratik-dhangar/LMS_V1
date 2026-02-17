@@ -25,8 +25,8 @@
 }
 
 .stat-card-total {
-    background-color: #dbeafe;
-    border-color: #3b82f6;
+    background-color: #fef3e2;
+    border-color: #db9d32;
 }
 
 .stat-card-revenue {
@@ -58,7 +58,7 @@
 }
 
 .stat-card-icon-total {
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .stat-card-icon-revenue {
@@ -84,7 +84,7 @@
 }
 
 .stat-card-value-total {
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .stat-card-value-revenue {
@@ -109,7 +109,7 @@
 }
 
 .stat-card-label-total {
-    color: #1d4ed8;
+    color: #9c6a08;
 }
 
 .stat-card-label-revenue {
@@ -222,7 +222,7 @@
 }
 
 .card-info-icon-blue {
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .card-info-icon-green {
@@ -329,12 +329,12 @@
 }
 
 .btn-blue {
-    background-color: #3b82f6;
+    background-color: #db9d32;
     color: #ffffff;
 }
 
 .btn-blue:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .btn-slate {
@@ -374,7 +374,7 @@
 
 .status-badge-frozen {
     background-color: #dbeafe;
-    color: #3b82f6;
+    color: #db9d32;
 }
 
 .status-badge-expired {
@@ -486,7 +486,7 @@
 
 .receipt-notes-label {
     font-size: 0.75rem;
-    color: #1e40af;
+    color: #9c6a08;
     font-weight: 600;
     margin: 0 0 0.25rem 0;
 }
@@ -554,9 +554,9 @@
 }
 
 .filter-button-active {
-    background-color: #3b82f6;
+    background-color: #db9d32;
     color: #ffffff;
-    border-color: #3b82f6;
+    border-color: #db9d32;
 }
 
 /* Form Elements */
@@ -573,7 +573,7 @@
 .form-select:focus,
 .form-input:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #db9d32;
 }
 
 .form-checkbox-label {
@@ -769,7 +769,7 @@
 
 .retry-button {
     padding: 0.625rem 1.25rem;
-    background-color: #3b82f6;
+    background-color: #db9d32;
     color: #ffffff;
     border: none;
     border-radius: 0.5rem;
@@ -780,7 +780,7 @@
 }
 
 .retry-button:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .empty-state {
@@ -852,7 +852,7 @@
     border-radius: 0.5rem;
     margin-bottom: 0.9375rem;
     font-size: 0.875rem;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .info-text {

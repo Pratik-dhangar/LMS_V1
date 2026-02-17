@@ -1,4 +1,4 @@
-﻿/* AssignedTrainingsList.css - Styling for user trainings list page */
+/* AssignedTrainingsList.css - Styling for user trainings list page */
 
 .trainings-grid {
     display: grid;
@@ -49,7 +49,7 @@
 
 .stat-icon.in-progress {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .stat-icon.not-started {
@@ -222,7 +222,7 @@
 .detail-loading .loading-spinner {
     width: 40px;
     height: 40px;
-    color: #3b82f6;
+    color: #db9d32;
     animation: spin 1s linear infinite;
 }
 
@@ -251,7 +251,7 @@
 .training-type-badge {
     display: inline-block;
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 0.25rem 0.75rem;
@@ -300,7 +300,7 @@
     background: #f9fafb;
     padding: 1rem;
     border-radius: 6px;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #db9d32;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -352,7 +352,7 @@
 
 .status-badge.in-progress {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .status-badge.not-started {
@@ -386,12 +386,12 @@
 }
 
 .detail-btn.primary {
-    background-color: #3b82f6;
+    background-color: #db9d32;
     color: white;
 }
 
 .detail-btn.primary:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .detail-btn.secondary {
@@ -523,12 +523,12 @@
 }
 
 .detail-html-content a {
-    color: #3b82f6;
+    color: #db9d32;
     text-decoration: underline;
 }
 
 .detail-html-content a:hover {
-    color: #2563eb;
+    color: #b8790a;
 }
 
 .detail-html-content pre {
@@ -572,7 +572,7 @@
 }
 
 .detail-file-item .file-icon {
-    color: #3b82f6;
+    color: #db9d32;
     flex-shrink: 0;
 }
 
@@ -586,7 +586,7 @@
 
 .detail-file-item .file-download-btn {
     padding: 0.5rem 1rem;
-    background: #3b82f6;
+    background: #db9d32;
     color: white;
     border-radius: 4px;
     text-decoration: none;
@@ -597,7 +597,7 @@
 }
 
 .detail-file-item .file-download-btn:hover {
-    background: #2563eb;
+    background: #b8790a;
 }
 
 /* Responsive adjustments */

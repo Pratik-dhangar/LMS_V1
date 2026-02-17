@@ -47,6 +47,14 @@
     flex-shrink: 0;
 }
 
+.sidebar-header-blue {
+    background: #7a2c2c;
+}
+
+.sidebar-header-gold {
+    background: linear-gradient(135deg, #db9d32 0%, #b8790a 100%);
+}
+
 /* ==============================
    SCROLLABLE CONTENT WRAPPER
    ============================== */
@@ -174,9 +182,16 @@
 }
 
 .meter-container-blue {
-    border: 1px solid #1e88e5;
+    border: 1px solid #db9d32;
     border-radius: 6px;
     padding: 12px;
+}
+
+.meter-container-gold {
+    border: 2px solid #db9d32;
+    border-radius: 6px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(219, 157, 50, 0.05) 0%, rgba(184, 121, 10, 0.02) 100%);
 }
 
 .meter-buttons {

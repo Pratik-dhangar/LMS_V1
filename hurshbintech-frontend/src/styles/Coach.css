@@ -27,12 +27,12 @@
 }
 
 .coach-tab:hover {
-  color: #2563eb;
+  color: #b8790a;
 }
 
 .coach-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: #b8790a;
+  border-bottom-color: #b8790a;
 }
 
 /* Form Styling */
@@ -78,7 +78,7 @@
 .coach-form-group select:focus,
 .coach-form-group textarea:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: #b8790a;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -111,12 +111,12 @@
 }
 
 .coach-btn-primary {
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: white;
 }
 
 .coach-btn-primary:hover {
-  background-color: #1e40af;
+  background-color: #9c6a08;
 }
 
 .coach-btn-success {
@@ -162,7 +162,7 @@
 
 .coach-status-scheduled {
   background-color: #dbeafe;
-  color: #1e40af;
+  color: #9c6a08;
 }
 
 .coach-status-confirmed {
@@ -266,7 +266,7 @@
 .coach-file-input-label {
   display: inline-block;
   padding: 0.75rem 1.5rem;
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: white;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -275,7 +275,7 @@
 }
 
 .coach-file-input-label:hover {
-  background-color: #1e40af;
+  background-color: #9c6a08;
 }
 
 .coach-file-input-help {
@@ -388,7 +388,7 @@
 
 .status-scheduled {
   background-color: #dbeafe;
-  color: #1e40af;
+  color: #9c6a08;
 }
 
 .status-completed {
@@ -412,7 +412,7 @@
 }
 
 .pill-button.active {
-  background-color: #2563eb;
+  background-color: #b8790a;
   color: white;
 }
 

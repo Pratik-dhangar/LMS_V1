@@ -221,7 +221,7 @@
 }
 
 .role-filter-btn-active {
-    background: #2563eb;
+    background: #b8790a;
     color: #ffffff;
 }
 
@@ -284,7 +284,7 @@
 /* Role Badge Colors */
 .role-badge-learner {
     background: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
     border-color: #93c5fd;
 }
 
@@ -500,7 +500,7 @@
 
 .status-scheduled {
     background: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 .status-completed {

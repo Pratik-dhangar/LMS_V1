@@ -35,7 +35,7 @@
 
 .form-input:focus {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.07);
-    border-color: #3b82f6;
+    border-color: #db9d32;
 }
 
 .checkbox-list {
@@ -69,7 +69,7 @@
 /* Selected state */
 .checkbox-list-item.selected {
     background: linear-gradient(90deg, rgba(59, 130, 246, 0.04), rgba(59, 130, 246, 0.02));
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid #b8790a;
 }
 
 .checkbox-list-content {

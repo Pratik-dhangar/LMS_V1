@@ -219,7 +219,7 @@ const ManageBlogs = () => {
                                                     {blog.status === 'published' && (
                                                         <button
                                                             onClick={() => handleViewPublic(blog)}
-                                                            className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
+                                                            className="app-modal-btn app-modal-btn--primary btn-sm "
                                                         >
                                                             <svg
                                                                 className="table-primary-icon-sm"
@@ -247,7 +247,7 @@ const ManageBlogs = () => {
                                                 <td className="table-primary-td table-primary-td-center">
                                                     <button
                                                         onClick={() => handleEdit(blog)}
-                                                        className="app-modal-btn app-modal-btn--primary btn-sm btn-icon"
+                                                        className="app-modal-btn app-modal-btn--primary btn-sm "
                                                     >
                                                         <svg
                                                             className="table-primary-icon-sm"
@@ -268,7 +268,7 @@ const ManageBlogs = () => {
                                                 <td className="table-primary-td table-primary-td-center">
                                                     <button
                                                         onClick={() => handleDeleteClick(blog)}
-                                                        className="app-modal-btn app-modal-btn--danger btn-sm btn-icon"
+                                                        className="app-modal-btn app-modal-btn--danger btn-sm "
                                                     >
                                                         <svg
                                                             className="table-primary-icon-sm"

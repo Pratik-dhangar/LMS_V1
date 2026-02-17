@@ -189,7 +189,7 @@
 
 .payment-verification-status-badge.delivered {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #9c6a08;
 }
 
 /* Actions Cell */
@@ -346,12 +346,12 @@
 }
 
 .payment-verification-btn-delivered {
-    background-color: #0ea5e9;
+    background-color: #e8944c;
     color: white;
 }
 
 .payment-verification-btn-delivered:hover:not(:disabled) {
-    background-color: #0284c7;
+    background-color: #db9d32;
 }
 
 .payment-verification-btn-approve {
@@ -512,7 +512,7 @@
 .payment-verification-pdf-link {
     display: inline-block;
     padding: 0.5rem 1rem;
-    background-color: #3b82f6;
+    background-color: #db9d32;
     color: white;
     text-decoration: none;
     border-radius: 0.375rem;
@@ -521,7 +521,7 @@
 }
 
 .payment-verification-pdf-link:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .payment-verification-receipt-image {
@@ -604,7 +604,7 @@
 
 .payment-verification-textarea:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #db9d32;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 

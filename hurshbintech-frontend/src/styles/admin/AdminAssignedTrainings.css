@@ -184,7 +184,7 @@
 .form-textarea:focus,
 .form-select:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #db9d32;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -228,7 +228,7 @@
 }
 
 .role-checkbox:hover {
-    border-color: #3b82f6;
+    border-color: #db9d32;
     background-color: #eff6ff;
 }
 
@@ -238,7 +238,7 @@
 }
 
 .role-checkbox input:checked+span {
-    color: #3b82f6;
+    color: #db9d32;
     font-weight: 600;
 }
 
@@ -373,7 +373,7 @@
 
 .search-input:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #db9d32;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 

@@ -62,19 +62,19 @@ const WhiteboardSection = ({
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px', color: '#1a202c' }}><Emoji emoji="🛠️" size="sm" /> Whiteboard Tools</div>
 
         {/* Learner Tool Access Controls */}
-        <div style={{ backgroundColor: '#eff6ff', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #3b82f6' }}>
-          <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '16px', color: '#1e40af' }}><Emoji emoji="👥" size="sm" /> Learner Tool Access & Exercise Tools</div>
+        <div style={{ backgroundColor: '#fffbf0', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '2px solid #db9d32' }}>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '16px', color: '#9c6a08' }}><Emoji emoji="👥" size="sm" /> Learner Tool Access & Exercise Tools</div>
 
           {/* Select Tool */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
             <span style={{ fontSize: '12px' }}><Emoji emoji="✋" size="sm" /> Select</span>
-            <button onClick={() => handleToolClick('✋ Select')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
+            <button onClick={() => handleToolClick('✋ Select')} style={{ backgroundColor: '#db9d32', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
           {/* Drag Tool */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #d1d5db' }}>
             <span style={{ fontSize: '12px' }}><Emoji emoji="↔️" size="sm" /> Drag</span>
-            <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
+            <button onClick={() => handleToolClick('↔️ Drag')} style={{ backgroundColor: '#db9d32', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>TOGGLE</button>
           </div>
 
           {/* EXERCISE TOOL */}
@@ -182,7 +182,7 @@ const WhiteboardSection = ({
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input type="text" value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="Type message..." style={{ flex: '1', padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '12px' }} />
-            <button onClick={sendMessage} style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Send</button>
+            <button onClick={sendMessage} style={{ padding: '8px 16px', backgroundColor: '#db9d32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Send</button>
           </div>
         </div>
 

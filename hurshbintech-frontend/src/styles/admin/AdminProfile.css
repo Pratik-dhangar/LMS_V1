@@ -592,7 +592,7 @@
 
 .vendor-card:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border-color: #2563eb;
+    border-color: #b8790a;
     transform: translateY(-2px);
 }
 

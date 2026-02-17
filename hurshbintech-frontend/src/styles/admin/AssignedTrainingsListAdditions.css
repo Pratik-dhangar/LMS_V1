@@ -66,12 +66,12 @@
 }
 
 .detail-html-content a {
-    color: #3b82f6;
+    color: #db9d32;
     text-decoration: underline;
 }
 
 .detail-html-content a:hover {
-    color: #2563eb;
+    color: #b8790a;
 }
 
 .detail-html-content pre {
@@ -115,7 +115,7 @@
 }
 
 .detail-file-item .file-icon {
-    color: #3b82f6;
+    color: #db9d32;
     flex-shrink: 0;
 }
 
@@ -129,7 +129,7 @@
 
 .detail-file-item .file-download-btn {
     padding: 0.5rem 1rem;
-    background: #3b82f6;
+    background: #db9d32;
     color: white;
     border-radius: 4px;
     text-decoration: none;
@@ -140,7 +140,7 @@
 }
 
 .detail-file-item .file-download-btn:hover {
-    background: #2563eb;
+    background: #b8790a;
 }
 
 /* Responsive adjustments */

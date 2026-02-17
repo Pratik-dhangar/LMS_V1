@@ -47,11 +47,11 @@ const ProgramGraphView = () => {
       const processedData = data.map((session) => {
         const sessionTime = session.session_date
           ? new Date(session.session_date).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })
           : "N/A";
 
         return {
@@ -164,9 +164,9 @@ const ProgramGraphView = () => {
               {entry.name}:{" "}
               {
                 entry.payload[
-                  entry.dataKey === "prompt_value"
-                    ? "prompt_meter"
-                    : "reinforcement_meter"
+                entry.dataKey === "prompt_value"
+                  ? "prompt_meter"
+                  : "reinforcement_meter"
                 ]
               }{" "}
               ({entry.value}/100)
@@ -299,7 +299,7 @@ const ProgramGraphView = () => {
                   />
                   <Bar
                     dataKey="prompt_value"
-                    fill="#3b82f6"
+                    fill="#db9d32"
                     name="Prompt Level"
                     radius={[8, 8, 0, 0]}
                   />
@@ -363,8 +363,8 @@ const ProgramGraphView = () => {
                           (e.currentTarget.style.backgroundColor = "#f9fafb")
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor =
-                            "transparent")
+                        (e.currentTarget.style.backgroundColor =
+                          "transparent")
                         }
                       >
                         <td style={{ padding: "12px" }}>
@@ -389,7 +389,7 @@ const ProgramGraphView = () => {
                               padding: "4px 12px",
                               borderRadius: "6px",
                               backgroundColor: "#dbeafe",
-                              color: "#1e40af",
+                              color: "#9c6a08",
                               fontWeight: "600",
                             }}
                           >

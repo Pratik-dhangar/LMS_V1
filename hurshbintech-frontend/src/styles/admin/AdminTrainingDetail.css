@@ -213,7 +213,7 @@
 }
 
 .html-content a {
-    color: #3b82f6;
+    color: #db9d32;
     text-decoration: none;
 }
 
@@ -276,11 +276,11 @@
 }
 
 .file-link.view {
-    background-color: #3b82f6;
+    background-color: #db9d32;
 }
 
 .file-link.view:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .file-link.download {
@@ -292,7 +292,7 @@
 }
 
 .file-link.view:hover {
-    background-color: #2563eb;
+    background-color: #b8790a;
 }
 
 .file-link.download {

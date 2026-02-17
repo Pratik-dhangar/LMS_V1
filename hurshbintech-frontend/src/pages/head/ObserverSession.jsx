@@ -34,11 +34,11 @@ const ObserverSession = () => {
   // -----------------------------------------------------------
   useEffect(() => {
     let isMounted = true; // Track if component is still mounted
-    
+
     const initialize = async () => {
       try {
         console.log('[ObserverSession] Initializing observer for session:', sessionId);
-        
+
         // 1. Initialize Video Conference Service (observer mode - no sending)
         const videoService = new VideoConferenceService(
           WS_BASE_URL,
@@ -46,7 +46,7 @@ const ObserverSession = () => {
           'observer',
           true // isObserver flag - prevents camera/mic access
         );
-        
+
         // ✅ FIX: Store in ref immediately for cleanup safety
         webRTCRef.current = videoService;
 
@@ -90,13 +90,13 @@ const ObserverSession = () => {
           if (!isMounted) return;
           console.log('[ObserverSession] Trainer stopped screen share or disconnected');
           toast.info('Trainer has stopped the session');
-          
+
           // Close connection and navigate back
           if (webRTCRef.current) {
             webRTCRef.current.close();
             webRTCRef.current = null;
           }
-          
+
           setTimeout(() => {
             navigate('/head/manage-sessions');
           }, 1500);
@@ -106,7 +106,7 @@ const ObserverSession = () => {
         // Pass user data to be sent to trainer
         const observerUserData = user ? { id: user.id, name: user.name } : null;
         await videoService.initialize(observerUserData);
-        
+
         if (isMounted) {
           setLoading(false);
           console.log('[ObserverSession] Initialization complete');
@@ -198,11 +198,10 @@ const ObserverSession = () => {
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
             <span className="text-white font-semibold text-sm">Observing Session</span>
           </div>
-          <span className={`text-xs px-2 py-1 rounded ${
-            connectionStatus === 'Connected' 
-              ? 'bg-green-600 text-white' 
+          <span className={`text-xs px-2 py-1 rounded ${connectionStatus === 'Connected'
+              ? 'bg-green-600 text-white'
               : 'bg-yellow-600 text-white'
-          }`}>
+            }`}>
             {connectionStatus}
           </span>
         </div>
@@ -215,7 +214,7 @@ const ObserverSession = () => {
           >
             {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
-          
+
           <button
             onClick={handleLeave}
             className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
@@ -227,7 +226,7 @@ const ObserverSession = () => {
       </div>
 
       {/* Full-Screen Video Container - Fills remaining viewport */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 bg-black relative overflow-hidden flex items-center justify-center p-4"
       >
@@ -242,8 +241,8 @@ const ObserverSession = () => {
                 className="w-full h-full object-contain"
                 style={{ backgroundColor: '#000' }}
               />
-              
-             
+
+
             </div>
           </div>
         ) : (
@@ -253,10 +252,10 @@ const ObserverSession = () => {
             <p className="text-sm text-gray-400 mb-4">
               The trainer has been prompted to share their screen
             </p>
-            <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 text-left">
-              <p className="text-xs text-blue-300 mb-2">🔒 Browser Security Note:</p>
+            <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4 text-left">
+              <p className="text-xs text-yellow-300 mb-2">🔒 Browser Security Note:</p>
               <p className="text-xs text-gray-300">
-                Screen sharing requires the trainer to approve the browser permission dialog. 
+                Screen sharing requires the trainer to approve the browser permission dialog.
                 This happens automatically - they just need to click "Share" in the prompt.
               </p>
             </div>

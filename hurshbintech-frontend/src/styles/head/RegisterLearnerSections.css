@@ -1,6 +1,4 @@
-RegisterLearner Section Styles
-
-.register-learner-section {
+RegisterLearner Section Styles .register-learner-section {
   margin-bottom: 2rem;
 }
 
@@ -51,7 +49,7 @@ RegisterLearner Section Styles
 }
 
 .register-learner-input:focus {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -75,7 +73,7 @@ RegisterLearner Section Styles
 }
 
 .register-learner-textarea:focus {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -111,11 +109,11 @@ RegisterLearner Section Styles
 .register-learner-radio-input {
   width: 1rem;
   height: 1rem;
-  color: #2563eb;
+  color: #b8790a;
 }
 
 .register-learner-radio-input:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #db9d32;
   outline-offset: 2px;
 }
 
@@ -256,7 +254,7 @@ RegisterLearner Section Styles
 
 .register-learner-input:focus,
 .register-learner-select:focus {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -285,7 +283,7 @@ RegisterLearner Section Styles
 }
 
 .register-learner-textarea:focus {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -319,7 +317,7 @@ RegisterLearner Section Styles
   width: 1rem;
   height: 1rem;
   cursor: pointer;
-  accent-color: #3b82f6;
+  accent-color: #db9d32;
 }
 
 .register-learner-checkbox-label {
@@ -353,7 +351,7 @@ RegisterLearner Section Styles
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
-  accent-color: #3b82f6;
+  accent-color: #db9d32;
 }
 
 .register-learner-radio-text {
@@ -381,7 +379,7 @@ RegisterLearner Section Styles
 }
 
 .register-learner-file-upload:hover {
-  border-color: #3b82f6;
+  border-color: #db9d32;
   background: #eff6ff;
 }
 
@@ -458,7 +456,7 @@ RegisterLearner Section Styles
 .register-learner-btn-submit {
   padding: 0.625rem 2rem;
   border: none;
-  background: #3b82f6;
+  background: #db9d32;
   color: white;
   border-radius: 0.375rem;
   font-weight: 700;
@@ -468,7 +466,7 @@ RegisterLearner Section Styles
 }
 
 .register-learner-btn-submit:hover {
-  background: #2563eb;
+  background: #b8790a;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 

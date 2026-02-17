@@ -89,7 +89,7 @@
 }
 
 .app-modal-header--blue {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
 }
 
 .app-modal-header--green {
@@ -98,6 +98,15 @@
 
 .app-modal-header--red {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+/* Modal Header Custom Classes */
+.modal-header-blue {
+  background: linear-gradient(135deg, #db9d32 0%, #c98d1e 100%) !important;
+}
+
+.modal-header-gold {
+  background: linear-gradient(135deg, #db9d32 0%, #b8790a 100%) !important;
 }
 
 .app-modal-header--purple {
@@ -568,7 +577,7 @@
 }
 
 .app-modal-content-card--selected {
-  border-color: #3b82f6 !important;
+  border-color: #db9d32 !important;
   background-color: #eff6ff !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
@@ -681,7 +690,7 @@
 .app-modal-checkbox {
   width: 1rem !important;
   height: 1rem !important;
-  color: #2563eb !important;
+  color: #b8790a !important;
   border-radius: 0.25rem !important;
   cursor: pointer !important;
 }
