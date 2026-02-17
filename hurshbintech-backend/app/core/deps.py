@@ -153,13 +153,6 @@ async def get_current_user(
                 .where(User.id == user_id, User.role == UserRole.TRAINER)
             )
             user = result.scalar_one_or_none()
-        elif role_upper == "CONSULTANT":
-            result = await db.execute(
-                select(User)
-                .options(joinedload(User.consultant_profile))
-                .where(User.id == user_id, User.role == UserRole.CONSULTANT)
-            )
-            user = result.scalar_one_or_none()
         elif role_upper == "LEARNER":
             result = await db.execute(
                 select(User)

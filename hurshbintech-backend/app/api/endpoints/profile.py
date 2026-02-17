@@ -60,8 +60,8 @@ async def get_user_profile(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        # Return appropriate response type based on cached role
-        role = cached_data.get('role')
+        # Return appropriate response type based on cached role (case-insensitive)
+        role = cached_data.get('role', '').lower()
         if role == 'head':
             return HeadResponse(**cached_data)
         elif role == 'admin':
@@ -139,10 +139,10 @@ async def get_user_profile(
     if isinstance(current_user, HeadProfile):
         result = HeadResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, Admin):
-        result = AdminResponse.model_validate(current_user)
+        result = AdminResponse.from_orm(current_user)
     elif isinstance(current_user, User) and current_user.role == UserRole.ADMIN:
         # Admin users are User objects with ADMIN role (not Admin model instances)
-        result = AdminResponse.model_validate(current_user)
+        result = AdminResponse.from_orm(current_user)
     elif isinstance(current_user, TrainerProfile):
         result = TrainerResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, CoachProfile):
@@ -281,8 +281,12 @@ async def update_admin_profile(
         if not updated_admin:
             raise HTTPException(status_code=404, detail="Admin not found")
         
+        # Invalidate cached profile
+        cache_key = cache_service.key_user_profile_me(current_admin.id)
+        await cache_service.delete(cache_key)
+        
         logger.info(f"Admin profile updated: {updated_admin.id}")
-        return AdminResponse.model_validate(updated_admin)
+        return AdminResponse.from_orm(updated_admin)
     except ValueError as e:
         logger.warning(f"Validation error updating admin: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
