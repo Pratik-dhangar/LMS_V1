@@ -64,6 +64,14 @@ class AdminResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+    @field_validator('role', mode='before')
+    @classmethod
+    def convert_role_enum(cls, v):
+        """Convert UserRole enum to lowercase string"""
+        if hasattr(v, 'value'):
+            return v.value.lower()
+        return str(v).lower()
+
     @classmethod
     def from_orm(cls, obj):
         """Handle role conversion from Enum"""
@@ -74,7 +82,7 @@ class AdminResponse(BaseModel):
                 'name': obj.name,
                 'email': obj.email,
                 'contact_number': obj.contact_number,
-                'role': role_value,
+                'role': role_value.lower(),
                 'passcode': obj.passcode,
                 'created_at': obj.created_at,
                 'updated_at': getattr(obj, 'updated_at', None),
