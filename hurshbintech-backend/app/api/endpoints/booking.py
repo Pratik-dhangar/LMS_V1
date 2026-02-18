@@ -604,7 +604,7 @@ async def guest_upload_payment(
         Appointment.upload_token_expires_at > datetime.utcnow()
     )
     result = await db.execute(stmt)
-    appointment = result.scalar_one_or_none()
+    appointment = result.unique().scalar_one_or_none()
     
     if not appointment:
         raise HTTPException(status_code=401, detail="Invalid or expired upload token")

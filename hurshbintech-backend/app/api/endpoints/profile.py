@@ -145,6 +145,34 @@ async def get_user_profile(
         result = CoachResponse.from_orm_with_user(current_user)
     elif isinstance(current_user, LearnerProfile):
         result = LearnerResponse.from_orm_with_user(current_user)
+    elif isinstance(current_user, User) and current_user.role == UserRole.HEAD:
+        # Handle User objects with HEAD role - use fetched profile_obj
+        if profile_obj and isinstance(profile_obj, HeadProfile):
+            result = HeadResponse.from_orm_with_user(profile_obj)
+        else:
+            logger.error(f"HEAD profile not found for user {current_user.id}")
+            raise HTTPException(status_code=500, detail="HEAD profile not found")
+    elif isinstance(current_user, User) and current_user.role == UserRole.TRAINER:
+        # Handle User objects with TRAINER role - use fetched profile_obj
+        if profile_obj and isinstance(profile_obj, TrainerProfile):
+            result = TrainerResponse.from_orm_with_user(profile_obj)
+        else:
+            logger.error(f"TRAINER profile not found for user {current_user.id}")
+            raise HTTPException(status_code=500, detail="TRAINER profile not found")
+    elif isinstance(current_user, User) and current_user.role == UserRole.COACH:
+        # Handle User objects with COACH role - use fetched profile_obj
+        if profile_obj and isinstance(profile_obj, CoachProfile):
+            result = CoachResponse.from_orm_with_user(profile_obj)
+        else:
+            logger.error(f"COACH profile not found for user {current_user.id}")
+            raise HTTPException(status_code=500, detail="COACH profile not found")
+    elif isinstance(current_user, User) and current_user.role == UserRole.LEARNER:
+        # Handle User objects with LEARNER role - use fetched profile_obj
+        if profile_obj and isinstance(profile_obj, LearnerProfile):
+            result = LearnerResponse.from_orm_with_user(profile_obj)
+        else:
+            logger.error(f"LEARNER profile not found for user {current_user.id}")
+            raise HTTPException(status_code=500, detail="LEARNER profile not found")
     else:
         logger.error(f"Unhandled case - Type: {type(current_user).__name__}, Role: {getattr(current_user, 'role', 'N/A')}")
         raise HTTPException(status_code=500, detail="Unable to determine profile type")
