@@ -11,6 +11,7 @@ const ProductDetail = () => {
     const [product, setProduct] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
+    const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
         loadProduct();
@@ -32,10 +33,21 @@ const ProductDetail = () => {
 
     const handleAddToCart = async () => {
         try {
+            // Trigger animation
+            setIsAnimating(true);
+
             await cartService.addToCart({ product_id: productId, quantity });
             toast.success('Added to cart!');
-            navigate('/store/cart');
+
+            // Keep animation for a bit then navigate
+            setTimeout(() => {
+                setIsAnimating(false);
+                navigate('/store/cart');
+            }, 600);
         } catch (error) {
+            // Remove animation on error
+            setIsAnimating(false);
+
             if (error.response?.status === 401) {
                 toast.info('Please login to add items to cart');
                 navigate('/login');
@@ -57,6 +69,25 @@ const ProductDetail = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f5f6fa', padding: '30px 20px' }}>
+            <style>{`
+                @keyframes addToCartPulse {
+                    0% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
+                    }
+                    50% {
+                        transform: scale(1.05);
+                    }
+                    100% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 15px rgba(39, 174, 96, 0);
+                    }
+                }
+                
+                .add-to-cart-animating {
+                    animation: addToCartPulse 0.6s ease-out !important;
+                }
+            `}</style>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 {/* Breadcrumb */}
                 <div style={{ marginBottom: '20px', fontSize: '13px', color: '#7f8c8d' }}>
@@ -221,6 +252,7 @@ const ProductDetail = () => {
                             <button
                                 onClick={handleAddToCart}
                                 disabled={!product.stock_available}
+                                className={isAnimating ? 'add-to-cart-animating' : ''}
                                 style={{
                                     width: '100%',
                                     padding: '14px',
@@ -231,7 +263,8 @@ const ProductDetail = () => {
                                     fontSize: '16px',
                                     fontWeight: '600',
                                     cursor: product.stock_available ? 'pointer' : 'not-allowed',
-                                    margin: '15px 0'
+                                    margin: '15px 0',
+                                    transition: 'all 0.3s ease'
                                 }}
                             >
                                 {product.stock_available ? '🛒 Add to Cart' : 'Out of Stock'}

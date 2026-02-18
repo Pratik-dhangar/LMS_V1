@@ -142,17 +142,17 @@ async def get_current_user(
         if role_upper == "HEAD":
             result = await db.execute(
                 select(User)
-                .options(joinedload(User.head_profile))
+                .options(joinedload(User.head_profile).joinedload(HeadProfile.reference_data))
                 .where(User.id == user_id, User.role == UserRole.HEAD)
             )
-            user = result.scalar_one_or_none()
+            user = result.unique().scalar_one_or_none()
         elif role_upper == "TRAINER":
             result = await db.execute(
                 select(User)
-                .options(joinedload(User.trainer_profile))
+                .options(joinedload(User.trainer_profile).joinedload(TrainerProfile.reference_data))
                 .where(User.id == user_id, User.role == UserRole.TRAINER)
             )
-            user = result.scalar_one_or_none()
+            user = result.unique().scalar_one_or_none()
         elif role_upper == "CONSULTANT":
             result = await db.execute(
                 select(User)
@@ -163,10 +163,10 @@ async def get_current_user(
         elif role_upper == "LEARNER":
             result = await db.execute(
                 select(User)
-                .options(joinedload(User.learner_profile))
+                .options(joinedload(User.learner_profile).joinedload(LearnerProfile.reference_data))
                 .where(User.id == user_id, User.role == UserRole.LEARNER)
             )
-            user = result.scalar_one_or_none()
+            user = result.unique().scalar_one_or_none()
         elif role_upper == "COACH":
             result = await db.execute(
                 select(User)

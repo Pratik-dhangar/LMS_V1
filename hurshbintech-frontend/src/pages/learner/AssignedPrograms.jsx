@@ -15,6 +15,8 @@ const AssignedPrograms = () => {
   const [learningPrograms, setLearningPrograms] = useState([]);
   const [groupedPrograms, setGroupedPrograms] = useState({});
   const [loadingPrograms, setLoadingPrograms] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -41,12 +43,33 @@ const AssignedPrograms = () => {
       }
 
       if (Array.isArray(data)) {
+        // Status priority order: IN_PROGRESS -> NEW -> COMPLETED
+        const statusPriority = {
+          'IN_PROGRESS': 1,
+          'NEW': 2,
+          'COMPLETED': 3
+        };
+
         const sortedData = data.sort((a, b) => {
-          const titleA = (a.assignment_title || a.program_name || a.name || '').toLowerCase();
-          const titleB = (b.assignment_title || b.program_name || b.name || '').toLowerCase();
-          return titleA.localeCompare(titleB);
+          const statusA = a.completion_status || 'NEW';
+          const statusB = b.completion_status || 'NEW';
+
+          const priorityA = statusPriority[statusA] || 4;
+          const priorityB = statusPriority[statusB] || 4;
+
+          // First, sort by status priority
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+          }
+
+          // Then, sort by date (newest first)
+          const dateA = new Date(a.start_date || a.assigned_at || 0);
+          const dateB = new Date(b.start_date || b.assigned_at || 0);
+          return dateB - dateA; // Descending order (newest first)
         });
+
         setLearningPrograms(sortedData);
+        setCurrentPage(1); // Reset to first page when data updates
 
         const grouped = sortedData.reduce((acc, prog) => {
           const title = prog.assignment_title;
@@ -168,6 +191,20 @@ const AssignedPrograms = () => {
     } finally {
       setSubmittingProgram(false);
     }
+  };
+
+  // Calculate pagination
+  const flatteneduniquePrograms = learningPrograms.filter((prog, index, self) =>
+    index === self.findIndex((p) => p.assignment_title === prog.assignment_title)
+  );
+  const totalPages = Math.ceil(flatteneduniquePrograms.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPrograms = flatteneduniquePrograms.slice(startIndex, endIndex);
+
+  const handleItemsPerPageChange = (newSize) => {
+    setItemsPerPage(newSize);
+    setCurrentPage(1); // Reset to first page when changing page size
   };
 
   return (
@@ -369,203 +406,364 @@ const AssignedPrograms = () => {
             ) : learningPrograms.length === 0 ? (
               <p style={{ color: '#6b7280' }}>No home programs assigned yet.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {Object.entries(groupedPrograms).map(([titleKey, programsList]) => {
-                  const firstProg = programsList[0];
-                  const completionStatus = firstProg.completion_status || 'NEW';
-                  const hasFinalFeedback = firstProg.final_feedback_rating && firstProg.final_feedback_rating > 0;
-                  const isSubmitted = completionStatus === 'COMPLETED';
-                  const needsResubmission = isSubmitted && hasFinalFeedback;
-                  const isInProgress = completionStatus === 'IN_PROGRESS';
-                  const isNotStarted = completionStatus === 'NEW';
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {paginatedPrograms.map((program) => {
+                    const titleKey = program.assignment_title;
+                    const completionStatus = program.completion_status || 'NEW';
+                    const hasFinalFeedback = program.final_feedback_rating && program.final_feedback_rating > 0;
+                    const isSubmitted = completionStatus === 'COMPLETED';
+                    const needsResubmission = isSubmitted && hasFinalFeedback;
+                    const isInProgress = completionStatus === 'IN_PROGRESS';
+                    const isNotStarted = completionStatus === 'NEW';
 
-                  return (
-                    <div
-                      key={titleKey}
-                      className="program-card-container"
-                      style={{
-                        padding: '1.25rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e5e7eb',
-                        background: '#f9fafb',
-                        transition: 'background-color 0.2s',
-                        position: 'relative'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#f9fafb'}
-                    >
-                      <div className="program-card-layout" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                        <div className="program-card-info" style={{ flex: 1 }}>
-                          <h3 style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
-                            📌 {titleKey}
-                          </h3>
+                    return (
+                      <div
+                        key={program.id}
+                        className="program-card-container"
+                        style={{
+                          padding: '1.25rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e5e7eb',
+                          background: '#f9fafb',
+                          transition: 'background-color 0.2s',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      >
+                        <div className="program-card-layout" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                          <div className="program-card-info" style={{ flex: 1 }}>
+                            <h3 style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.5rem' }}>
+                              📌 {titleKey}
+                            </h3>
 
-                          {/* Programs List */}
-                          <div style={{ marginBottom: '.75rem' }}>
-                            <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
-                            <div style={{ marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              {firstProg.program_names && firstProg.program_names.length > 0 ? (
-                                firstProg.program_names.map((name, idx) => (
-                                  <p key={idx} style={{ fontSize: '0.875rem', color: '#374151' }}>
-                                    • {name}
+                            {/* Programs List */}
+                            <div style={{ marginBottom: '.75rem' }}>
+                              <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
+                              <div style={{ marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                {program.program_names && program.program_names.length > 0 ? (
+                                  program.program_names.map((name, idx) => (
+                                    <p key={idx} style={{ fontSize: '0.875rem', color: '#374151' }}>
+                                      • {name}
+                                    </p>
+                                  ))
+                                ) : (
+                                  <p style={{ fontSize: '0.875rem', color: '#374151' }}>
+                                    • {program.program_name || 'Untitled Program'}
                                   </p>
-                                ))
-                              ) : (
-                                <p style={{ fontSize: '0.875rem', color: '#374151' }}>
-                                  • {firstProg.program_name || 'Untitled Program'}
-                                </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Timeline Info */}
+                            <div className="program-timeline" style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                              fontSize: '0.75rem',
+                              color: '#4b5563',
+                              marginTop: '0.5rem',
+                              paddingTop: '0.5rem',
+                              borderTop: '1px solid #e5e7eb'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span>📅 Start:</span>
+                                <span>{new Date(program.start_date || program.assigned_at).toLocaleDateString()}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span>⏰ Deadline:</span>
+                                <span style={{ fontWeight: '600' }}>{new Date(program.end_date).toLocaleDateString()}</span>
+                              </div>
+                              {program.duration_days && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span>⏱️ Duration:</span>
+                                  <span>{program.duration_days} days</span>
+                                </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Timeline Info */}
-                          <div className="program-timeline" style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.25rem',
-                            fontSize: '0.75rem',
-                            color: '#4b5563',
-                            marginTop: '0.5rem',
-                            paddingTop: '0.5rem',
-                            borderTop: '1px solid #e5e7eb'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span>📅 Start:</span>
-                              <span>{new Date(firstProg.start_date || firstProg.assigned_at).toLocaleDateString()}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span>⏰ Deadline:</span>
-                              <span style={{ fontWeight: '600' }}>{new Date(firstProg.end_date).toLocaleDateString()}</span>
-                            </div>
-                            {firstProg.duration_days && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span>⏱️ Duration:</span>
-                                <span>{firstProg.duration_days} days</span>
-                              </div>
+                          <div className="program-card-actions" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginLeft: '1rem', flexShrink: 0 }}>
+                            {/* Show Remarks button when final feedback exists */}
+                            {hasFinalFeedback && (
+                              <button
+                                style={{
+                                  background: 'linear-gradient(to right, #f59e0b, #ea580c)',
+                                  color: '#ffffff',
+                                  padding: '0.625rem 1.25rem',
+                                  borderRadius: '0.5rem',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                  transition: 'all 0.2s',
+                                  position: 'relative'
+                                }}
+                                onClick={() => {
+                                  setSelectedFeedback({
+                                    rating: program.final_feedback_rating,
+                                    remarks: program.final_feedback_remarks,
+                                    programName: titleKey,
+                                    givenAt: program.final_feedback_given_at
+                                  });
+                                  setShowFeedbackModal(true);
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #c2410c)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #ea580c)'}
+                              >
+                                <span style={{ fontSize: '1rem' }}>💬</span>
+                                <span>Remarks</span>
+                              </button>
+                            )}
+
+                            {/* Show Submit button only for IN_PROGRESS */}
+                            {isInProgress && (
+                              <button
+                                style={{
+                                  background: 'linear-gradient(to right, #10b981, #059669)',
+                                  color: '#ffffff',
+                                  padding: '0.625rem 1.5rem',
+                                  borderRadius: '0.5rem',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => handleOpenSubmitModal(program)}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10b981, #059669)'}
+                              >
+                                Submit
+                              </button>
+                            )}
+
+                            {/* Button Logic Based on Status */}
+                            {isNotStarted && (
+                              <button
+                                style={{
+                                  background: 'linear-gradient(to right, #f59e0b, #d97706)',
+                                  color: '#ffffff',
+                                  padding: '0.625rem 1.5rem',
+                                  borderRadius: '0.5rem',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => handleStartProgram(program.id)}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
+                              >
+                                Start
+                              </button>
+                            )}
+
+                            {isInProgress && (
+                              <button
+                                style={{
+                                  background: 'linear-gradient(to right, #db9d32, #b8790a)',
+                                  color: '#ffffff',
+                                  padding: '0.625rem 1.5rem',
+                                  borderRadius: '0.5rem',
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => navigate(`/learner/program-assignment/${program.id}`)}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #b8790a, #9c6a08)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #db9d32, #b8790a)'}
+                              >
+                                Continue
+                              </button>
+                            )}
+
+                            {isSubmitted && (
+                              <button
+                                className="btn-primary"
+                                onClick={() => navigate(`/learner/program-assignment/${program.id}`)}
+
+                              >
+                                View
+                              </button>
                             )}
                           </div>
                         </div>
-
-                        <div className="program-card-actions" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end', marginLeft: '1rem', flexShrink: 0 }}>
-                          {/* Show Remarks button when final feedback exists */}
-                          {hasFinalFeedback && (
-                            <button
-                              style={{
-                                background: 'linear-gradient(to right, #f59e0b, #ea580c)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.25rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s',
-                                position: 'relative'
-                              }}
-                              onClick={() => {
-                                setSelectedFeedback({
-                                  rating: firstProg.final_feedback_rating,
-                                  remarks: firstProg.final_feedback_remarks,
-                                  programName: titleKey,
-                                  givenAt: firstProg.final_feedback_given_at
-                                });
-                                setShowFeedbackModal(true);
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #c2410c)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #ea580c)'}
-                            >
-                              <span style={{ fontSize: '1rem' }}>💬</span>
-                              <span>Remarks</span>
-                            </button>
-                          )}
-
-                          {/* Show Submit button only for IN_PROGRESS or RESUBMISSION_REQUIRED */}
-                          {(isInProgress || needsResubmission) && (
-                            <button
-                              style={{
-                                background: 'linear-gradient(to right, #10b981, #059669)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => handleOpenSubmitModal(firstProg)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10b981, #059669)'}
-                            >
-                              Submit
-                            </button>
-                          )}
-
-                          {/* Button Logic Based on Status */}
-                          {isNotStarted && (
-                            <button
-                              style={{
-                                background: 'linear-gradient(to right, #f59e0b, #d97706)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => handleStartProgram(firstProg.id)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
-                            >
-                              Start
-                            </button>
-                          )}
-
-                          {isInProgress && (
-                            <button
-                              style={{
-                                background: 'linear-gradient(to right, #db9d32, #b8790a)',
-                                color: '#ffffff',
-                                padding: '0.625rem 1.5rem',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                border: 'none',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #b8790a, #9c6a08)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #db9d32, #b8790a)'}
-                            >
-                              Continue
-                            </button>
-                          )}
-
-                          {isSubmitted && (
-                            <button
-                              className="btn-primary"
-                              onClick={() => navigate(`/learner/program-assignment/${firstProg.id}`)}
-
-                            >
-                              View
-                            </button>
-                          )}
-                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination Controls */}
+                {learningPrograms.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    marginTop: '2rem',
+                    paddingTop: '1.5rem',
+                    borderTop: '1px solid #e5e7eb',
+                    flexWrap: 'wrap'
+                  }}>
+                    {/* Items Per Page Selector */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}>
+                      <label style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#4b5563'
+                      }}>
+                        List per page:
+                      </label>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          border: '1px solid #d1d5db',
+                          background: '#ffffff',
+                          color: '#374151',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#9ca3af'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={30}>30</option>
+                      </select>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Pagination Info and Controls */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      {/* Previous Button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          border: '1px solid #d1d5db',
+                          background: currentPage === 1 ? '#f3f4f6' : '#ffffff',
+                          color: currentPage === 1 ? '#9ca3af' : '#374151',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage > 1) {
+                            e.currentTarget.style.background = '#f9fafb';
+                            e.currentTarget.style.borderColor = '#9ca3af';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = currentPage === 1 ? '#f3f4f6' : '#ffffff';
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }}
+                      >
+                        ← Previous
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            style={{
+                              width: '2rem',
+                              height: '2rem',
+                              padding: '0',
+                              borderRadius: '0.375rem',
+                              border: pageNum === currentPage ? '2px solid #d97706' : '1px solid #d1d5db',
+                              background: pageNum === currentPage ? '#d97706' : '#ffffff',
+                              color: pageNum === currentPage ? '#ffffff' : '#374151',
+                              fontSize: '0.875rem',
+                              fontWeight: pageNum === currentPage ? '600' : '500',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (pageNum !== currentPage) {
+                                e.currentTarget.style.background = '#d1d5db';
+                                e.currentTarget.style.borderColor = '#d1d5db';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = pageNum === currentPage ? '#d97706' : '#ffffff';
+                              e.currentTarget.style.borderColor = pageNum === currentPage ? '#d97706' : '#d1d5db';
+                            }}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Next Button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          border: '1px solid #d1d5db',
+                          background: currentPage === totalPages ? '#f3f4f6' : '#ffffff',
+                          color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage < totalPages) {
+                            e.currentTarget.style.background = '#f9fafb';
+                            e.currentTarget.style.borderColor = '#9ca3af';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = currentPage === totalPages ? '#f3f4f6' : '#ffffff';
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+
+                    {/* Page Info */}
+                    <span style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280'
+                    }}>
+                      Page {currentPage} of {totalPages} ({flatteneduniquePrograms.length} total)
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

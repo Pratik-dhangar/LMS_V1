@@ -2797,16 +2797,16 @@ export const InstructorSessionPage = ({
             {/* Info bar */}
             {showInfoBar && (
                 <div className="session-info-banner">
-                    <span className="session-info-text">
+                    {/* <span className="session-info-text">
                         <strong>ℹ️ Session Active:</strong> All interactions are being recorded. Audio prompts via mic will be converted to text for prompter (not audible to {participantType}).
-                    </span>
+                    </span> 
                     <button
                         onClick={() => setShowInfoBar(false)}
                         className="text-gray-600 hover:text-gray-800 font-bold text-lg ml-2 sm:ml-4"
                         title="Close"
                     >
                         ×
-                    </button>
+                    </button> */}
                 </div>
             )}
 
