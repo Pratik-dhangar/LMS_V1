@@ -67,6 +67,21 @@ if settings.USE_S3:
         logger.error(f"Failed to initialize S3 manager: {str(e)}")
 
 
+def convert_s3_file_url(file_url: str) -> str:
+    """
+    Convert S3 URL (s3://bucket/key) to backend proxy URL for CORS-safe access.
+    Returns local paths unchanged. Returns None/empty unchanged.
+    """
+    if not file_url:
+        return file_url
+    if file_url.startswith('http://') or file_url.startswith('https://'):
+        return file_url
+    if settings.USE_S3 and file_url.startswith('s3://'):
+        s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+        return f"/api/content/learning-content/s3-files/{s3_key}"
+    return file_url
+
+
 def get_attachment_type_from_file(filename: str) -> AttachmentType:
     """Determine attachment type from filename"""
     ext = filename.lower().split('.')[-1]
@@ -384,8 +399,8 @@ async def get_assignment_details(
                             title=ca.content.title,
                             description=ca.content.description,
                             content_type=ca.content.content_type.value,
-                            file_url=ca.content.file_url if hasattr(ca.content, 'file_url') else None,
-                            thumbnail_url=ca.content.thumbnail_url if hasattr(ca.content, 'thumbnail_url') else None,
+                            file_url=convert_s3_file_url(ca.content.file_url) if hasattr(ca.content, 'file_url') else None,
+                            thumbnail_url=convert_s3_file_url(ca.content.thumbnail_url) if hasattr(ca.content, 'thumbnail_url') else None,
                         ),
                         completion_status=completion_status,
                         assigned_at=ca.assigned_at,
@@ -476,8 +491,8 @@ async def get_program_contents_for_head(
             title=pc.content.title,
             description=pc.content.description,
             content_type=pc.content.content_type.value,
-            file_url=pc.content.file_url,
-            thumbnail_url=pc.content.thumbnail_url,
+            file_url=convert_s3_file_url(pc.content.file_url),
+            thumbnail_url=convert_s3_file_url(pc.content.thumbnail_url),
             sequence_order=pc.sequence_order
         )
         for pc in contents
@@ -605,7 +620,7 @@ async def update_assignment(
                         content_title=ca.content.title if hasattr(ca.content, 'title') else "",
                         content_type=ca.content.content_type.value if hasattr(ca.content, 'content_type') else "unknown",
                         completion_status=ca.completion_status if hasattr(ca, 'completion_status') else ContentCompletionStatus.NEW.value,
-                        file_url=ca.content.file_url if hasattr(ca.content, 'file_url') else None,
+                        file_url=convert_s3_file_url(ca.content.file_url) if hasattr(ca.content, 'file_url') else None,
                     )
                 )
     except Exception as e:
@@ -1424,7 +1439,7 @@ async def get_my_learning_contents(
         assignments = await learner_content_assignment_crud.get_assignments_by_learner(db, current_user.id)
         logger.info(f"Found {len(assignments)} content assignments for learner {current_user.id}")
         
-        # Convert S3 URLs to public URLs if using S3
+        # Convert S3 URLs to public URLs (no expiration, accessible to all users)
         result = []
         for assignment in assignments:
             try:
@@ -1432,15 +1447,21 @@ async def get_my_learning_contents(
                 file_url = content.file_url
                 thumbnail_url = content.thumbnail_url
                 
-                # Convert S3 URLs to public HTTP URLs
+                # Convert S3 URLs to public HTTP URLs (permanent access)
                 if settings.USE_S3 and s3_manager:
                     if file_url and file_url.startswith("s3://"):
                         s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-                        file_url = s3_manager.get_public_url(s3_key)
+                        try:
+                            file_url = s3_manager.get_public_url(s3_key)
+                        except Exception as e:
+                            logger.warning(f"Failed to get public URL for {s3_key}: {str(e)}")
                     
                     if thumbnail_url and thumbnail_url.startswith("s3://"):
                         s3_key = thumbnail_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-                        thumbnail_url = s3_manager.get_public_url(s3_key)
+                        try:
+                            thumbnail_url = s3_manager.get_public_url(s3_key)
+                        except Exception as e:
+                            logger.warning(f"Failed to get public URL for thumbnail {s3_key}: {str(e)}")
                 
                 content_type_str = content.content_type.value if hasattr(content.content_type, 'value') else str(content.content_type)
                 

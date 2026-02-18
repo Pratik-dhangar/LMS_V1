@@ -216,19 +216,42 @@ class S3Manager:
             logger.error(f"Error generating signed URL: {str(e)}")
             raise
 
-    def get_public_url(self, s3_key: str) -> str:
+    def get_public_url(self, s3_key: str, expiration_seconds: int = 86400) -> str:
         """
-        Get public/signed URL for S3 object
-        - If public access is configured, returns direct S3 URL
-        - Otherwise, returns signed URL valid for 1 hour
+        Get accessible URL for S3 object using presigned URLs.
+        
+        Generates a presigned URL with 24-hour expiration by default.
+        This works with PRIVATE buckets - no public access policy needed.
+        
+        URLs are regenerated on each API call, so expiration is not an issue
+        for normal usage. Cached responses (10min TTL) will still have valid
+        URLs since 24h >> 10min.
+        
+        Used for learning content, media files that multiple users 
+        (admins, heads, trainers, coaches, learners, guests) need to access
+        simultaneously during sessions.
+        
+        Args:
+            s3_key: S3 object key (e.g., 'uploads/learning-content/file.jpg')
+            expiration_seconds: URL expiration in seconds (default: 86400 = 24 hours)
+        
+        Returns:
+            Presigned HTTPS URL accessible without AWS credentials
         """
         try:
-            # Try to generate a signed URL (works even without public access)
-            return self.generate_signed_url(s3_key, expiration_seconds=3600)
-        except Exception as e:
-            logger.warning(f"Could not generate signed URL: {str(e)}")
-            # Fallback to direct S3 URL (will work only if bucket is public)
-            return f"{self.s3_url}/{s3_key}"
+            presigned_url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                ExpiresIn=expiration_seconds
+            )
+            logger.info(f"Generated presigned URL for: {s3_key} (expires in {expiration_seconds}s)")
+            return presigned_url
+        except ClientError as e:
+            logger.error(f"Error generating presigned URL for {s3_key}: {str(e)}")
+            # Fallback to direct URL if presigning fails
+            direct_url = f"{self.s3_url}/{s3_key}"
+            logger.warning(f"Falling back to direct URL: {direct_url}")
+            return direct_url
 
     def create_s3_folders(self) -> bool:
         """Create standard folder structure in S3"""
@@ -311,27 +334,30 @@ async def upload_to_s3(file: "UploadFile", s3_path: str) -> str:
         logger.error(f"Failed to upload {s3_path} to S3: {str(e)}")
         raise
 
-def convert_s3_url_to_signed(file_url: str, bucket_name: str = None, region: str = "ap-south-1") -> str:
+def convert_s3_url_to_accessible(file_url: str, bucket_name: str = None, region: str = "ap-south-1") -> str:
     """
-    Convert s3://bucket/key format URL to signed URL
+    Convert s3://bucket/key format URL to an accessible presigned URL.
+    
+    This is the standard utility for converting database-stored S3 URLs
+    (s3://bucket/key format) to browser-accessible HTTPS presigned URLs.
     
     Args:
-        file_url: S3 URL in s3://bucket/key format or local path
+        file_url: S3 URL in s3://bucket/key format, or local/http path
         bucket_name: S3 bucket name (uses settings.S3_BUCKET_NAME if not provided)
         region: AWS region (default: ap-south-1)
     
     Returns:
-        Signed URL or original path if not S3
+        Presigned HTTPS URL (24h expiration) or original path if not S3
     """
     try:
         if not file_url:
             return file_url
             
-        # If it's already a signed/public URL, return as-is
+        # If it's already an HTTP/HTTPS URL, return as-is
         if file_url.startswith('http://') or file_url.startswith('https://'):
             return file_url
         
-        # If it's not an S3 URL, return as-is
+        # If it's not an S3 URL, return as-is (local path)
         if not file_url.startswith('s3://'):
             return file_url
         
@@ -342,12 +368,12 @@ def convert_s3_url_to_signed(file_url: str, bucket_name: str = None, region: str
         # Extract S3 key from s3://bucket/key format
         s3_key = file_url.replace(f"s3://{bucket}/", "")
         
-        # Generate signed URL
+        # Generate presigned URL (24h expiration)
         manager = S3Manager(bucket, region)
-        signed_url = manager.get_public_url(s3_key)
+        presigned_url = manager.get_public_url(s3_key)
         
-        logger.info(f"Converted S3 URL to signed URL: {file_url} -> [signed]")
-        return signed_url
+        logger.info(f"Converted S3 URL to presigned URL: {file_url} -> [presigned]")
+        return presigned_url
         
     except Exception as e:
         logger.warning(f"Error converting S3 URL {file_url}: {str(e)}")

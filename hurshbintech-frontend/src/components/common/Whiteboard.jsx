@@ -716,7 +716,20 @@ const Whiteboard = ({
             let fullUrl = content.file_url;
             let fileUrl = fullUrl;
 
-            if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
+            if (fullUrl.startsWith('s3://')) {
+                // Route S3 URLs through backend proxy (avoids CORS)
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const parts = fullUrl.replace('s3://', '').split('/');
+                const key = parts.slice(1).join('/');
+                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fileUrl = fullUrl;
+            } else if (fullUrl.startsWith('/api/')) {
+                // Backend proxy URL from API response
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const backendUrl = apiBaseUrl.replace('/api', '');
+                fullUrl = `${backendUrl}${fullUrl}`;
+                fileUrl = fullUrl;
+            } else if (!fullUrl.startsWith('http')) {
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
@@ -2751,11 +2764,21 @@ const Whiteboard = ({
             let fullUrl = droppedData.url;
             let fileUrl = fullUrl; // Store canonical fileUrl for learning content API
 
-            // Only prepend backend URL if it's a relative path
-            // Presigned URLs (starting with https://s3.amazonaws.com) should be used as-is
-            if (!fullUrl.startsWith('http') && !fullUrl.startsWith('s3://')) {
+            // Handle S3 URLs through backend proxy (avoids CORS)
+            if (fullUrl.startsWith('s3://')) {
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const parts = fullUrl.replace('s3://', '').split('/');
+                const key = parts.slice(1).join('/');
+                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fileUrl = fullUrl;
+            } else if (fullUrl.startsWith('/api/')) {
+                // Backend proxy URL from API response
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const backendUrl = apiBaseUrl.replace('/api', '');
+                fullUrl = `${backendUrl}${fullUrl}`;
+                fileUrl = fullUrl;
+            } else if (!fullUrl.startsWith('http')) {
                 // It's a relative URL like /uploads/learning_content/file.png
-                // Use the same backend URL that the frontend uses
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
                 fullUrl = `${backendUrl}${fullUrl}`;
