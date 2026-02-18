@@ -5,7 +5,7 @@ Coach Appointment Session Schemas - Pydantic models for validation
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class CoachSessionCreate(BaseModel):
@@ -62,6 +62,16 @@ class CoachSessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer("scheduled_date", "started_at", "ended_at", "recording_uploaded_at", "created_at", "updated_at")
+    def serialize_datetime(self, dt: Optional[datetime], _info):
+        """Always serialize as UTC with Z suffix so JavaScript parses correctly regardless of client timezone."""
+        if dt is None:
+            return None
+        # Strip tzinfo if present (DB stores naive UTC), then append Z so JS treats as UTC
+        if dt.tzinfo is not None:
+            dt = dt.replace(tzinfo=None)
+        return dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
     class Config:
         from_attributes = True
 
@@ -79,6 +89,15 @@ class CoachSessionListItem(BaseModel):
     session_type: Optional[str]
     recording_status: Optional[str]
     created_at: datetime
+
+    @field_serializer("scheduled_date", "created_at")
+    def serialize_datetime(self, dt: Optional[datetime], _info):
+        """Always serialize as UTC with Z suffix so JavaScript parses correctly regardless of client timezone."""
+        if dt is None:
+            return None
+        if dt.tzinfo is not None:
+            dt = dt.replace(tzinfo=None)
+        return dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
 
     class Config:
         from_attributes = True
