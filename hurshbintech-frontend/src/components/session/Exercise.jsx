@@ -486,24 +486,39 @@ const Exercise = ({
     const renderLearnerView = () => {
         if (mode === 'waiting' && exerciseCreated) {
             return (
-                <div className="exercise-container learner-view">
-                    {/* <h3>Exercise</h3> */}
+                <div className="exercise-container learner-view learner-clean">
+                    {/* Clean minimal view: only question and answer, no extra UI */}
                     <div className="exercise-display">
-                        <div className="exercise-section">
-                            <h4>Question:</h4>
-                            <div className="exercise-content">{question}</div>
+                        {/* Question Section */}
+                        <div className="exercise-section question-section">
+                            <label className="section-label">Question</label>
+                            <div className="exercise-content question-display">
+                                {question}
+                            </div>
                         </div>
 
+                        {/* Answer Section */}
                         <div className="exercise-section answer-input-section">
-                            <h4>Your Answer:</h4>
+                            <label className="section-label">Your Answer</label>
                             <textarea
                                 ref={answerTextareaRef}
                                 value={answer || ''}
                                 onChange={(e) => handleAnswerChange(e.target.value)}
                                 onBlur={(e) => handleAnswerBlur(e.target.value)}
-                                placeholder="Click to focus or start typing..."
-                                className="answer-input"
-                                style={{ backgroundColor: '#f9f9f9', cursor: 'text' }}
+                                placeholder="Type your answer here..."
+                                className="answer-input answer-textarea"
+                                style={{
+                                    backgroundColor: '#ffffff',
+                                    cursor: 'text',
+                                    border: '1px solid #e5e7eb',
+                                    padding: '0.75rem',
+                                    borderRadius: '0.5rem',
+                                    fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                    minHeight: '120px',
+                                    fontFamily: 'inherit',
+                                    lineHeight: '1.5',
+                                    resize: 'vertical'
+                                }}
                             />
                         </div>
                     </div>
@@ -511,13 +526,7 @@ const Exercise = ({
             );
         }
 
-        return (
-            <div className="exercise-container learner-empty">
-                <div className="empty-state">
-                    <p>Waiting for trainer to start an exercise...</p>
-                </div>
-            </div>
-        );
+        return null;
     };
 
     // ============================================
