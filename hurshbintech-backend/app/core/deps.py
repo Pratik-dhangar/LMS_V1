@@ -152,7 +152,7 @@ async def get_current_user(
                 .options(joinedload(User.trainer_profile).joinedload(TrainerProfile.reference_data))
                 .where(User.id == user_id, User.role == UserRole.TRAINER)
             )
-            user = result.scalar_one_or_none()
+            user = result.unique().scalar_one_or_none()
         elif role_upper == "LEARNER":
             result = await db.execute(
                 select(User)
@@ -221,7 +221,7 @@ async def get_current_head(
             .join(User, HeadProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.HEAD)
         )
-        head = result.scalar_one_or_none()
+        head = result.unique().scalar_one_or_none()
 
         if head is None:
             raise HTTPException(
@@ -267,7 +267,7 @@ async def get_current_trainer(
             .join(User, TrainerProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.TRAINER)
         )
-        trainer = result.scalar_one_or_none()
+        trainer = result.unique().scalar_one_or_none()
 
         if trainer is None:
             raise HTTPException(
@@ -313,7 +313,7 @@ async def get_current_learner(
             .join(User, LearnerProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.LEARNER)
         )
-        learner = result.scalar_one_or_none()
+        learner = result.unique().scalar_one_or_none()
 
         if learner is None:
             raise HTTPException(
@@ -359,7 +359,7 @@ async def get_current_coach(
             .join(User, CoachProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.COACH)
         )
-        coach = result.scalar_one_or_none()
+        coach = result.unique().scalar_one_or_none()
 
         if coach is None:
             raise HTTPException(
@@ -453,7 +453,7 @@ async def get_current_trainer_optional(
             .join(User, TrainerProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.TRAINER)
         )
-        trainer = result.scalar_one_or_none()
+        trainer = result.unique().scalar_one_or_none()
 
         return trainer
 
@@ -493,7 +493,7 @@ async def get_current_coach_optional(
             .join(User, CoachProfile.user_id == User.id)
             .where(User.id == user_id, User.role == UserRole.COACH)
         )
-        coach = result.scalar_one_or_none()
+        coach = result.unique().scalar_one_or_none()
 
         return coach
 

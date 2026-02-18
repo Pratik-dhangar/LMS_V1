@@ -143,6 +143,17 @@ async def checkout(
         recipient_email = order_data.email or current_user.email
         recipient_name = current_user.name
         
+        logger.info(f"Checkout: Order created {order.order_number} for user {current_user.id}")
+        logger.info(f"Checkout: Email being sent to - {recipient_email}, Name - {recipient_name}")
+        
+        # Validate email before sending
+        if not recipient_email:
+            logger.error(f"Checkout: No email found for user {current_user.id}. order_data.email={order_data.email}, current_user.email={current_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is required for checkout. Please provide an email address."
+            )
+        
         # Prepare items for email
         order_items = [
             {
@@ -168,6 +179,8 @@ async def checkout(
             upi_details=payment_details if order_data.payment_method == "UPI_QR" else None,
             bank_details=payment_details if order_data.payment_method == "BANK_TRANSFER" else None,
         )
+        
+        logger.info(f"Checkout: Order confirmation email sent successfully to {recipient_email}")
         
         # Build response
         items_response = [
@@ -195,6 +208,7 @@ async def checkout(
             "created_at": order.created_at
         }
     except Exception as e:
+        logger.error(f"Checkout: Error creating order for user {current_user.id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create order: {str(e)}"

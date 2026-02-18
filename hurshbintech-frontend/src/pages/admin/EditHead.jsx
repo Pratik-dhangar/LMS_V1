@@ -154,13 +154,13 @@ const EditHead = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     // If it's already a full URL (http/https), open directly
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       window.open(filePath, "_blank");
       return;
     }
-    
+
     // Otherwise, construct URL with backend base
     const apiBaseUrl =
       import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";
@@ -178,7 +178,7 @@ const EditHead = () => {
 
     if (!formData.contact_no.trim()) {
       newErrors.contact_no = "Contact number is required";
-    } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact_no)) {
+    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_no)) {
       newErrors.contact_no = "Invalid contact number format";
     }
 
@@ -355,188 +355,188 @@ const EditHead = () => {
           {/* Form */}
           <div className="modern-form-card">
             <form onSubmit={handleSubmit}>
-            {/* Basic Information */}
-            <BasicInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              {/* Basic Information */}
+              <BasicInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            {/* Professional Information */}
-            <ProfessionalInfoSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Professional Information */}
+              <ProfessionalInfoSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Personal Details */}
-            <PersonalDetailsSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Personal Details */}
+              <PersonalDetailsSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Performance & Feedback */}
-            <PerformanceFeedbackSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Performance & Feedback */}
+              <PerformanceFeedbackSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Reference Data Upload */}
-            <div className="modern-form-section">
-              <h2 className="modern-form-section-title">Reference Data</h2>
-              <p className="modern-form-section-description">
-                Upload and manage reference documents, images, videos, or other materials
-              </p>
-              <div className="reference-data-section">
-                <div className="reference-data-upload-area">
-                  <label htmlFor="reference_files">
-                    Upload Reference Data (Documents, Images, Videos, Links)
-                  </label>
-                  <input
-                    type="file"
-                    id="reference_files"
-                    multiple
-                    onChange={handleFileChange}
-                    className="form-file-input"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                    style={{ display: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('reference_files').click()}
-                    className="reference-btn-upload"
-                  >
-                    Upload Files
-                  </button>
-                  <p className="reference-data-help-text">
-                    Supported formats: PDF, DOCX, Images, Videos
-                  </p>
-                </div>
+              {/* Reference Data Upload */}
+              <div className="modern-form-section">
+                <h2 className="modern-form-section-title">Reference Data</h2>
+                <p className="modern-form-section-description">
+                  Upload and manage reference documents, images, videos, or other materials
+                </p>
+                <div className="reference-data-section">
+                  <div className="reference-data-upload-area">
+                    <label htmlFor="reference_files">
+                      Upload Reference Data (Documents, Images, Videos, Links)
+                    </label>
+                    <input
+                      type="file"
+                      id="reference_files"
+                      multiple
+                      onChange={handleFileChange}
+                      className="form-file-input"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('reference_files').click()}
+                      className="reference-btn-upload"
+                    >
+                      Upload Files
+                    </button>
+                    <p className="reference-data-help-text">
+                      Supported formats: PDF, DOCX, Images, Videos
+                    </p>
+                  </div>
 
-                {/* Existing Reference Files */}
-                {existingReferenceFiles.length > 0 && (
-                  <div className="reference-existing-files">
-                    <h4 className="reference-files-title">
-                      Existing Reference Files
-                    </h4>
-                    <div className="reference-files-list">
-                      {existingReferenceFiles.map((file) => (
-                        <div key={file.id} className="reference-file-item">
-                          <span className="reference-file-name">
-                            {file.file_name ||
-                              file.description ||
-                              "Unnamed File"}
-                          </span>
-                          <div className="reference-file-actions">
+                  {/* Existing Reference Files */}
+                  {existingReferenceFiles.length > 0 && (
+                    <div className="reference-existing-files">
+                      <h4 className="reference-files-title">
+                        Existing Reference Files
+                      </h4>
+                      <div className="reference-files-list">
+                        {existingReferenceFiles.map((file) => (
+                          <div key={file.id} className="reference-file-item">
+                            <span className="reference-file-name">
+                              {file.file_name ||
+                                file.description ||
+                                "Unnamed File"}
+                            </span>
+                            <div className="reference-file-actions">
+                              <button
+                                type="button"
+                                onClick={(e) => handleViewFile(file.file_path, e)}
+                                className="reference-btn-view"
+                              >
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExistingFile(file.id)}
+                                className="reference-btn-remove"
+                                title="Delete file"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New File List */}
+                  {referenceFiles.length > 0 && (
+                    <div className="reference-new-files">
+                      <h4 className="reference-files-title">New Files to Upload</h4>
+                      <div className="reference-files-list">
+                        {referenceFiles.map((file, index) => (
+                          <div key={index} className="reference-file-item">
+                            <span className="reference-file-name">{file.name}</span>
                             <button
                               type="button"
-                              onClick={(e) => handleViewFile(file.file_path, e)}
-                              className="reference-btn-view"
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteExistingFile(file.id)}
+                              onClick={() => removeFile(index)}
                               className="reference-btn-remove"
                               title="Delete file"
                             >
                               <Trash2 size={20} />
                             </button>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* New File List */}
-                {referenceFiles.length > 0 && (
-                  <div className="reference-new-files">
-                    <h4 className="reference-files-title">New Files to Upload</h4>
-                    <div className="reference-files-list">
-                      {referenceFiles.map((file, index) => (
-                        <div key={index} className="reference-file-item">
-                          <span className="reference-file-name">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="reference-btn-remove"
-                            title="Delete file"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Notes & Messages */}
-            <NotesSection formData={formData} handleChange={handleChange} />
+              {/* Notes & Messages */}
+              <NotesSection formData={formData} handleChange={handleChange} />
 
-          {/* Action Buttons */}
+              {/* Action Buttons */}
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--primary "
-              >
-                {saving ? (
-                  <>
-                    <div className="btn-spinner"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="icon-sm"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Save Changes
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/admin/manage-heads")}
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--danger"
-              >
-                <svg
-                  className="icon-sm"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--primary "
                 >
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Delete Head
-              </button>
-            </div>
-          </form>
+                  {saving ? (
+                    <>
+                      <div className="btn-spinner"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="icon-sm"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/manage-heads")}
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--danger"
+                >
+                  <svg
+                    className="icon-sm"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Delete Head
+                </button>
+              </div>
+            </form>
           </div>
-          
+
         </div>
       </main>
     </div>

@@ -12,7 +12,7 @@ from app.core.deps import get_db
 from app.core.config import settings
 from app.crud import product_crud
 from app.schemas.product import (
-    ProductResponse, ProductCatalogResponse, ProductFilters
+    ProductResponse, ProductCatalogResponse, ProductFilters, ProductListItem
 )
 from app.utils.s3_utils import S3Manager
 from app.services.cache_service import cache_service
@@ -122,18 +122,42 @@ async def browse_products(
     try:
         products, total = await product_crud.get_catalog_products(db, filters)
         
-        # Convert S3 URLs to public URLs for all products
+        # Convert ORM objects to Pydantic models and handle S3 URLs
+        product_list = []
         for product in products:
-            if hasattr(product, 'image_url') and product.image_url:
-                product.image_url = get_public_url(product.image_url)
-            if hasattr(product, 'thumbnail_url') and product.thumbnail_url:
-                product.thumbnail_url = get_public_url(product.thumbnail_url)
+            # Convert ORM to Pydantic model
+            product_dict = {
+                'id': product.id,
+                'name': product.name,
+                'description': product.description,
+                'price': product.price,
+                'discount_percentage': product.discount_percentage,
+                'final_price': product.final_price,
+                'image_url': get_public_url(product.image_url) if product.image_url else None,
+                'thumbnail_url': get_public_url(product.thumbnail_url) if product.thumbnail_url else None,
+                'tags': product.tags,
+                'category': product.category,
+                'age_groups': product.age_groups,
+                'stock_available': product.stock_available,
+            }
+            product_list.append(ProductListItem(**product_dict))
         
         # Calculate pagination info
         total_pages = (total + filters.limit - 1) // filters.limit
         
-        response_data = {
-            "products": products,
+        response_data = ProductCatalogResponse(
+            products=product_list,
+            pagination={
+                "total": total,
+                "page": filters.page,
+                "limit": filters.limit,
+                "pages": total_pages
+            }
+        )
+        
+        # Cache the response for 5 minutes (convert to dict for caching)
+        cached_response = {
+            "products": [p.model_dump() for p in product_list],
             "pagination": {
                 "total": total,
                 "page": filters.page,
@@ -141,9 +165,7 @@ async def browse_products(
                 "pages": total_pages
             }
         }
-        
-        # Cache the response for 5 minutes
-        await cache_service.set(cache_key, response_data, cache_service.TTL_PRODUCT_CATALOG)
+        await cache_service.set(cache_key, cached_response, cache_service.TTL_PRODUCT_CATALOG)
         
         return response_data
     except Exception as e:
