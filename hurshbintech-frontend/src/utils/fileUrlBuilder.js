@@ -23,6 +23,17 @@ export const getFileUrl = (s3PathOrUrl) => {
 
     // Check if it's already an HTTPS URL
     if (s3PathOrUrl.startsWith('https://') || s3PathOrUrl.startsWith('http://')) {
+        // If it's a direct S3 URL, proxy it through backend to avoid CORS
+        const S3_DOMAINS = ['s3-api.neevcloud.com', 'amazonaws.com'];
+        if (S3_DOMAINS.some(domain => s3PathOrUrl.includes(domain))) {
+            try {
+                const urlObj = new URL(s3PathOrUrl);
+                const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
+                if (key) {
+                    return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+                }
+            } catch (_) { /* fall through */ }
+        }
         return s3PathOrUrl;
     }
 

@@ -5,7 +5,7 @@ Handles one-on-one sessions created from appointments
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -260,7 +260,7 @@ async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSe
         # Start the session
         session.status = "active"
         if not session.started_at:  # Only set if not already set
-            session.started_at = datetime.now()
+            session.started_at = datetime.now(timezone.utc)
         
         await db.commit()
         await db.refresh(session)

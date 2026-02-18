@@ -482,6 +482,15 @@ class CoachResponse(BaseModel):
         # Use plaintext passcode if available (during creation), otherwise use encrypted version
         passcode = getattr(profile, 'plaintext_passcode', user.passcode)
 
+        # Convert profile_picture_url: s3:// -> backend proxy URL to avoid CORS
+        raw_pic_url = getattr(profile, 'profile_picture_url', None)
+        if raw_pic_url and raw_pic_url.startswith('s3://'):
+            from app.core.config import settings
+            s3_key = raw_pic_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            converted_pic_url = f"/api/content/learning-content/s3-files/{s3_key}"
+        else:
+            converted_pic_url = raw_pic_url
+
         data = {
             "id": profile.id,
             "user_id": user.id,
@@ -513,13 +522,14 @@ class CoachResponse(BaseModel):
                     "availability_days",
                     "time_slots",
                     "specialization",
-                    "profile_picture_url",
                     "is_available",
                     "unavailable_until",
                     "unavailable_reason",
                 ]
                 if hasattr(profile, field)
             },
+            # Use converted profile picture URL (proxy URL to avoid CORS)
+            "profile_picture_url": converted_pic_url,
             # Reference data
             "reference_data": [
                 ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])

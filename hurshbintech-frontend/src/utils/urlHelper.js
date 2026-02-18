@@ -30,8 +30,20 @@ const getBackendBaseUrl = () => {
 export const getFileUrl = (url) => {
   if (!url) return null;
 
-  // If it's already an absolute URL, return as-is
+  // If it's a direct Neev Cloud / S3-compatible URL, proxy it through backend to avoid CORS
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    const S3_DOMAINS = ['s3-api.neevcloud.com', 'amazonaws.com'];
+    if (S3_DOMAINS.some(domain => url.includes(domain))) {
+      // Extract key after bucket name in the URL path and route through proxy
+      try {
+        const urlObj = new URL(url);
+        // Remove the leading '/' and any query params to get the S3 key
+        const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
+        if (key) {
+          return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+        }
+      } catch (_) { /* fall through */ }
+    }
     return url;
   }
 
