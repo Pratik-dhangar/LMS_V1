@@ -77,7 +77,7 @@ const AdminProfile = () => {
             setLoading(true);
             // Fetch admin profile from API to get the latest data
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/profile/me/user`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/profile/me/user`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ const AdminProfile = () => {
 
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/profile/admin/update`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/profile/admin/update`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

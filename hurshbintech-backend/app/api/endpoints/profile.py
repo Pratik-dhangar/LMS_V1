@@ -64,9 +64,9 @@ async def get_user_profile(
     # Try cache first
     cached_data = await cache_service.get(cache_key)
     if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}, email: {cached_data.get('email', 'NO_EMAIL')}")
-        # Return appropriate response type based on cached role
-        role = cached_data.get('role')
+        logger.debug(f"Cache HIT: {cache_key}")
+        # Return appropriate response type based on cached role (case-insensitive)
+        role = cached_data.get('role', '').lower()
         if role == 'head':
             return HeadResponse(**cached_data)
         elif role == 'admin':
@@ -132,21 +132,19 @@ async def get_user_profile(
         user_obj = user_obj.scalar_one()
 
     # Generate response based on user type
-    if isinstance(current_user, HeadProfile) or (isinstance(profile_obj, HeadProfile)):
-        logger.info(f"Returning HeadResponse for user {user_id}, email: {user_obj.email if user_obj else 'N/A'}")
-        result = HeadResponse.from_orm_with_user(profile_obj or current_user, user_obj)
-    elif isinstance(current_user, Admin) or (isinstance(current_user, User) and current_user.role == UserRole.ADMIN):
-        logger.info(f"Returning AdminResponse for user {user_id}, email: {current_user.email if hasattr(current_user, 'email') else 'N/A'}")
-        result = AdminResponse.model_validate(current_user)
-    elif isinstance(current_user, TrainerProfile) or (isinstance(profile_obj, TrainerProfile)):
-        logger.info(f"Returning TrainerResponse for user {user_id}, email: {user_obj.email if user_obj else 'N/A'}")
-        result = TrainerResponse.from_orm_with_user(profile_obj or current_user, user_obj)
-    elif isinstance(current_user, CoachProfile) or (isinstance(profile_obj, CoachProfile)):
-        logger.info(f"Returning CoachResponse for user {user_id}, email: {user_obj.email if user_obj else 'N/A'}")
-        result = CoachResponse.from_orm_with_user(profile_obj or current_user, user_obj)
-    elif isinstance(current_user, LearnerProfile) or (isinstance(profile_obj, LearnerProfile)):
-        logger.info(f"Returning LearnerResponse for user {user_id}, email: {user_obj.email if user_obj else 'N/A'}")
-        result = LearnerResponse.from_orm_with_user(profile_obj or current_user, user_obj)
+    if isinstance(current_user, HeadProfile):
+        result = HeadResponse.from_orm_with_user(current_user)
+    elif isinstance(current_user, Admin):
+        result = AdminResponse.from_orm(current_user)
+    elif isinstance(current_user, User) and current_user.role == UserRole.ADMIN:
+        # Admin users are User objects with ADMIN role (not Admin model instances)
+        result = AdminResponse.from_orm(current_user)
+    elif isinstance(current_user, TrainerProfile):
+        result = TrainerResponse.from_orm_with_user(current_user)
+    elif isinstance(current_user, CoachProfile):
+        result = CoachResponse.from_orm_with_user(current_user)
+    elif isinstance(current_user, LearnerProfile):
+        result = LearnerResponse.from_orm_with_user(current_user)
     else:
         logger.error(f"Unhandled case - Type: {type(current_user).__name__}, Role: {getattr(current_user, 'role', 'N/A')}")
         raise HTTPException(status_code=500, detail="Unable to determine profile type")
@@ -282,8 +280,12 @@ async def update_admin_profile(
         if not updated_admin:
             raise HTTPException(status_code=404, detail="Admin not found")
         
+        # Invalidate cached profile
+        cache_key = cache_service.key_user_profile_me(current_admin.id)
+        await cache_service.delete(cache_key)
+        
         logger.info(f"Admin profile updated: {updated_admin.id}")
-        return AdminResponse.model_validate(updated_admin)
+        return AdminResponse.from_orm(updated_admin)
     except ValueError as e:
         logger.warning(f"Validation error updating admin: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
