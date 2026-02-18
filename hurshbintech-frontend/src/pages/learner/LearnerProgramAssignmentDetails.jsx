@@ -691,29 +691,31 @@ const LearnerProgramAssignmentDetails = () => {
             </div>
 
             {/* Complete Assignment or Submit More Proof button at the end */}
-            {/* Upload Proof Button */}
-            <div style={{ marginTop: "2rem", textAlign: "center" }}>
-              <button
-                type="button"
-                className="btn btn-complete"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openProofModal();
-                }}
-                style={{
-                  padding: "12px 30px",
-                  backgroundColor: "#10B981",
-                  color: "white",
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  fontSize: "1rem",
-                }}
-              >
-                📤 Submit Proof of Work
-              </button>
-            </div>
+            {/* Upload Proof Button - Only show if assignment is not COMPLETED */}
+            {assignment?.completion_status !== 'COMPLETED' && (
+              <div style={{ marginTop: "2rem", textAlign: "center" }}>
+                <button
+                  type="button"
+                  className="btn btn-complete"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openProofModal();
+                  }}
+                  style={{
+                    padding: "12px 30px",
+                    backgroundColor: "#10B981",
+                    color: "white",
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    fontSize: "1rem",
+                  }}
+                >
+                  📤 Submit Proof of Work
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

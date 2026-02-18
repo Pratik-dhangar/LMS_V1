@@ -710,6 +710,7 @@ class LearnerResponse(BaseModel):
     email: Optional[str] = None  # From User
     passcode: str
     age: Optional[int] = None
+    contact_no: Optional[str] = None  # Contact number
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[List[str]] = None  # Return list to frontend
@@ -793,6 +794,7 @@ class LearnerResponse(BaseModel):
             "user_id": user.id,
             "name": user.name,
             "email": user.email,
+            "contact_no": user.contact_number,  # Get contact_number from User
             "passcode": passcode,
             "created_at": user.created_at,
             "updated_at": profile.updated_at,

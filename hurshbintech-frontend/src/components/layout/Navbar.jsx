@@ -84,7 +84,7 @@ const Navbar = () => {
                 className={`navbar-btn ${roleNav.isActive ? "active" : ""}`}
                 onClick={() => handleNavigate(roleNav.path)}
               >
-                {roleNav.label}
+                Dashboard
               </button>
             )}
 
@@ -98,14 +98,16 @@ const Navbar = () => {
               Book Appointment
             </button>
 
-            {/* Contact Us */}
-            <button
-              className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
-              onClick={() => handleNavigate("/contact-us")}
-            >
-              <Mail className="w-4 h-4" />
-              Contact Us
-            </button>
+            {/* Contact Us - Only on landing page */}
+            {location.pathname === "/" && (
+              <button
+                className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
+                onClick={() => handleNavigate("/contact-us")}
+              >
+                <Mail className="w-4 h-4" />
+                Contact Us
+              </button>
+            )}
 
             {/* Assigned Learning - for authenticated users */}
             {user && (
@@ -186,7 +188,7 @@ const Navbar = () => {
                 className={`navbar-btn ${roleNav.isActive ? "active" : ""}`}
                 onClick={() => handleNavigate(roleNav.path)}
               >
-                {roleNav.label}
+                Dashboard
               </button>
             )}
 
@@ -200,14 +202,16 @@ const Navbar = () => {
               Book Appointment
             </button>
 
-            {/* Contact Us */}
-            <button
-              className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
-              onClick={() => handleNavigate("/contact-us")}
-            >
-              <Mail className="w-4 h-4" />
-              Contact Us
-            </button>
+            {/* Contact Us - Only on landing page */}
+            {location.pathname === "/" && (
+              <button
+                className={`navbar-btn ${location.pathname === "/contact-us" ? "active" : ""}`}
+                onClick={() => handleNavigate("/contact-us")}
+              >
+                <Mail className="w-4 h-4" />
+                Contact Us
+              </button>
+            )}
 
             {/* Assigned Learning - for authenticated users */}
             {user && (

@@ -24,7 +24,8 @@ const Checkout = () => {
         delivery_city: '',
         delivery_pincode: '',
         payment_method: 'UPI_QR',
-        email: ''
+        email: '',
+        contact_number: ''
     });
 
     useEffect(() => {
@@ -34,17 +35,42 @@ const Checkout = () => {
 
     const loadUserData = async () => {
         try {
-            const response = await axiosInstance.get('/profile');
+            console.log('Loading user data from /profile/me/user...');
+            const response = await axiosInstance.get('/profile/me/user');
+            console.log('✅ Successfully got response:', response.status);
+            console.log('User data response:', response.data);
+            console.log('Email value:', response.data.email);
+            console.log('Email type:', typeof response.data.email);
+            console.log('Full response structure:', JSON.stringify(response.data, null, 2));
+
             setCurrentUser(response.data);
-            setFormData(prev => ({
-                ...prev,
-                email: response.data.email || ''
-            }));
+
+            // Debug the formData update
+            const emailValue = response.data.email || '';
+            console.log('Setting email in formData to:', emailValue);
+
+            setFormData(prev => {
+                const updated = {
+                    ...prev,
+                    email: emailValue,
+                    contact_number: response.data.contact_no || ''
+                };
+                console.log('Updated formData:', updated);
+                return updated;
+            });
+
             if (response.data.email) {
+                console.log('Email verified - setting badge');
                 setEmailVerified(true);
+            } else {
+                console.log('No email in response - emailVerified remains false');
             }
         } catch (error) {
-            console.error('Error loading user data:', error);
+            console.error('❌ Error loading user data:', error);
+            console.error('Error status:', error.response?.status);
+            console.error('Error response:', error.response?.data);
+            console.error('Full error:', error);
+            // Continue without user data - email field will be empty
         }
     };
 
@@ -74,6 +100,13 @@ const Checkout = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Update email verification status when email is changed by user
+        if (name === 'email' && currentUser && value !== currentUser.email) {
+            setEmailVerified(false);
+        } else if (name === 'email' && currentUser && value === currentUser.email) {
+            setEmailVerified(true);
+        }
     };
 
     const handleFileChange = (e) => {
@@ -103,6 +136,10 @@ const Checkout = () => {
         }
         if (!formData.email) {
             toast.error('Please provide your email address');
+            return;
+        }
+        if (!formData.contact_number) {
+            toast.error('Please provide your contact number');
             return;
         }
         // Validate email format
@@ -191,24 +228,46 @@ const Checkout = () => {
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                     <Mail size={20} style={{ color: emailVerified ? '#28a745' : '#ff9800', marginTop: '2px' }} />
                                     <div style={{ flex: 1 }}>
-                                        <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
-                                            📧 Email for Payment Instructions
-                                        </h4>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                                                Email for Payment Instructions
+                                            </h4>
+                                            {/* {emailVerified && (
+                                                // <span style={{
+                                                //     display: 'inline-block',
+                                                //     background: '#28a745',
+                                                //     color: 'white',
+                                                //     padding: '4px 8px',
+                                                //     borderRadius: '4px',
+                                                //     fontSize: '11px',
+                                                //     fontWeight: '600'
+                                                // }}>
+                                                //     ✓ From Database
+                                                // </span>
+                                            )} */}
+                                        </div>
                                         <input
                                             type="email"
                                             name="email"
                                             value={formData.email}
                                             onChange={handleInputChange}
                                             placeholder="your.email@example.com"
+                                            required
                                             style={{
                                                 width: '100%',
                                                 padding: '12px',
                                                 border: `2px solid ${emailVerified ? '#28a745' : '#ffc107'}`,
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
-                                                background: 'white'
+                                                background: 'white',
+                                                boxSizing: 'border-box'
                                             }}
                                         />
+                                        {/* <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#666' }}>
+                                            {emailVerified
+                                                ? '✓ Email from your account'
+                                                : 'Please enter your email address'}
+                                        </p> */}
                                     </div>
                                 </div>
                             </div>
@@ -283,6 +342,25 @@ const Checkout = () => {
                                                 }}
                                             />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                            Contact Number *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="contact_number"
+                                            value={formData.contact_number}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter your contact number"
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '6px',
+                                                fontSize: '14px'
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>

@@ -1888,7 +1888,7 @@ export const AttendeeMetricsPanel = ({
             {/* Row 1: P and R side by side */}
             <div style={{
                 display: 'flex',
-                height : '0.1rem',
+                height: '0.1rem',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -2187,7 +2187,7 @@ export const AttendeePromptPanel = ({
                 }}>
                     <div style={{
                         fontSize: 'clamp(0.625rem, 1.5vw, 0.875rem)',
-                        fontWeight: '600',
+                        fontWeight: 'bold',
                         color: '#6b7280',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05rem',
@@ -2213,6 +2213,7 @@ export const AttendeePromptPanel = ({
                             border: '0.0625rem solid #d1d5db',
                             borderRadius: 'clamp(0.25rem, 0.8vw, 0.375rem)',
                             fontFamily: 'inherit',
+                            fontWeight: 'bold',
                             resize: 'none',
                             backgroundColor: '#ffffff'
                         }}
@@ -2220,8 +2221,8 @@ export const AttendeePromptPanel = ({
                 </div>
             )}
 
-            {/* Answer Box (Exercise) - Shows when instructor gives access (only for guest/client, not learner) */}
-            {showExercise && exerciseData && sessionType !== 'learner' && (
+            {/* Answer Box (Exercise) - Shows when instructor gives access to all session types */}
+            {showExercise && exerciseData && (
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -2419,8 +2420,8 @@ AttendeeVideoPanel.propTypes = {
 
 /**
  * Exercise Overlay Component
- * Displays question and answer box overlaid on whiteboard
- * Used by learner session to save space
+ * For Learner Sessions: Positioned at top of whiteboard with clean UI (question + answer only)
+ * For Other Sessions: Centered modal with question and answer box
  */
 export const ExerciseOverlay = ({
     exerciseData = null,
@@ -2436,6 +2437,12 @@ export const ExerciseOverlay = ({
 
     if (!showExercise || !exerciseData) return null;
 
+    // For Learner Sessions: Exercise shown in middle panel (AttendeePromptPanel), not in whiteboard overlay
+    if (sessionType === 'learner') {
+        return null;
+    }
+
+    // For Other Sessions (Guest, Client): Centered modal in whiteboard
     return (
         <div style={{
             position: 'absolute',
@@ -2456,8 +2463,6 @@ export const ExerciseOverlay = ({
             overflow: 'auto',
             animation: 'slideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}>
-
-
             {/* Question Section */}
             <div style={{
                 display: 'flex',
