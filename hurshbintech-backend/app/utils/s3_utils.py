@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 
 import boto3
 import cv2
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from PIL import Image
 
@@ -29,12 +30,17 @@ class S3Manager:
         # Support S3-compatible services (Neev Cloud, MinIO, etc.)
         endpoint_url = os.getenv("S3_ENDPOINT_URL")
         
+        # Force path-style addressing for S3-compatible services
+        # (virtual-host style won't work with custom endpoints)
+        s3_config = Config(s3={"addressing_style": "path"}) if endpoint_url else None
+        
         self.s3_client = boto3.client(
             "s3",
             region_name=region,
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            endpoint_url=endpoint_url,  # Use custom endpoint if provided
+            endpoint_url=endpoint_url,
+            config=s3_config,
         )
         
         # Build S3 URL based on endpoint

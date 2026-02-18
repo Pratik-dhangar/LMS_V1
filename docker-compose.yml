@@ -20,8 +20,8 @@ services:
     depends_on:
       - redis-pwa
       - db-pwa
-    # SSL Command
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem
+    # SSL Command (includes alembic migrations before starting uvicorn)
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem"
     restart: unless-stopped
     networks:
       - pwa-network
