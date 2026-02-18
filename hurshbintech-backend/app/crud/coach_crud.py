@@ -63,7 +63,7 @@ async def get_appointment_by_id(db: AsyncSession, appointment_id: int) -> Appoin
         .options(joinedload(Appointment.coach), joinedload(Appointment.user))
         .where(Appointment.id == appointment_id)
     )
-    return result.scalar_one_or_none()
+    return result.unique().scalar_one_or_none()
 
 
 async def get_appointments_by_coach(db: AsyncSession, coach_id: int) -> list[Appointment]:

@@ -749,6 +749,7 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
     new_user = User(
         name=learner_data.name, 
         email=learner_data.email,
+        contact_number=learner_data.contact_number,
         passcode=encrypted_passcode, 
         passcode_hash=passcode_hash, 
         role=UserRole.LEARNER, 
@@ -851,6 +852,9 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
     
     if "email" in update_data:
         learner.user.email = update_data.pop("email")
+    
+    if "contact_number" in update_data:
+        learner.user.contact_number = update_data.pop("contact_number")
 
     # Convert enum objects to their string values for database storage
     for field, value in update_data.items():

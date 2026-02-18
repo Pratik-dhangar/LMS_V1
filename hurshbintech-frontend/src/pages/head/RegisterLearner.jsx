@@ -27,6 +27,7 @@ const RegisterLearner = () => {
     // Personal details
     name: '',
     email: '',
+    contact_number: '',
     age: '',
     dob: '',
     date_of_assessment: '',

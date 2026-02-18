@@ -539,6 +539,7 @@ class LearnerCreate(BaseModel):
     # --- Personal details ---
     name: str  # Name is required
     email: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
     dob: Optional[date] = None
@@ -625,6 +626,7 @@ class LearnerUpdate(BaseModel):
     # --- Personal details ---
     name: Optional[str] = None
     email: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number
     age: Optional[int] = None
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None

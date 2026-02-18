@@ -81,7 +81,7 @@ const RegisterHead = () => {
 
     if (!formData.contact_no.trim()) {
       newErrors.contact_no = "Contact number is required";
-    } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact_no)) {
+    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_no)) {
       newErrors.contact_no = "Invalid contact number format";
     }
 
@@ -329,73 +329,73 @@ const RegisterHead = () => {
           {/* Form Card */}
           <div className="modern-form-card">
             <form onSubmit={handleSubmit}>
-            {/* Basic Information */}
-            <BasicInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              {/* Basic Information */}
+              <BasicInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            {/* Professional Information */}
-            <ProfessionalInfoSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Professional Information */}
+              <ProfessionalInfoSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Personal Details */}
-            <PersonalDetailsSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Personal Details */}
+              <PersonalDetailsSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Performance & Feedback */}
-            <PerformanceFeedbackSection
-              formData={formData}
-              handleChange={handleChange}
-            />
+              {/* Performance & Feedback */}
+              <PerformanceFeedbackSection
+                formData={formData}
+                handleChange={handleChange}
+              />
 
-            {/* Reference Data Upload */}
-            <FormSection 
-              title="Reference Data"
-              description="Upload documents, images, videos, or other reference materials"
-            >
-              <div className="modern-form-grid-full">
-                <FormFileUpload
-                  label="Upload Reference Data"
-                  name="reference_files"
-                  files={referenceFiles}
-                  onChange={handleFileChange}
-                  onRemove={removeFile}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                  multiple={true}
-                  helpText="Supported formats: PDF, DOCX, Images, Videos"
-                />
+              {/* Reference Data Upload */}
+              <FormSection
+                title="Reference Data"
+                description="Upload documents, images, videos, or other reference materials"
+              >
+                <div className="modern-form-grid-full">
+                  <FormFileUpload
+                    label="Upload Reference Data"
+                    name="reference_files"
+                    files={referenceFiles}
+                    onChange={handleFileChange}
+                    onRemove={removeFile}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                    multiple={true}
+                    helpText="Supported formats: PDF, DOCX, Images, Videos"
+                  />
+                </div>
+              </FormSection>
+
+              {/* Notes & Messages */}
+              <NotesSection formData={formData} handleChange={handleChange} />
+
+              {/* Submit Button */}
+              <div className="modern-form-actions">
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/manage-heads")}
+                  className="modern-form-btn modern-form-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="modern-form-btn modern-form-btn-primary"
+                >
+                  {loading ? "Registering..." : "Register Head"}
+                </button>
               </div>
-            </FormSection>
-
-            {/* Notes & Messages */}
-            <NotesSection formData={formData} handleChange={handleChange} />
-
-            {/* Submit Button */}
-            <div className="modern-form-actions">
-              <button
-                type="button"
-                onClick={() => navigate("/admin/manage-heads")}
-                className="modern-form-btn modern-form-btn-secondary"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                disabled={loading} 
-                className="modern-form-btn modern-form-btn-primary"
-              >
-                {loading ? "Registering..." : "Register Head"}
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
-      </div>
       </main>
     </div>
   );
