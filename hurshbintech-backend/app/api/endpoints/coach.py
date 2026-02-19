@@ -26,7 +26,7 @@ from app.models.learning_content_model import LearningContent
 from app.models.user_model import CoachProfile, User, UserRole, Appointment, AppointmentStatus
 from app.services.email_service import EmailService
 from app.services.cache_service import cache_service
-from app.utils.s3_utils import convert_s3_url_to_signed
+from app.utils.s3_utils import convert_s3_url_to_accessible
 from app.schemas.user import (
     AppointmentCreate,
     AppointmentResponse,
@@ -382,11 +382,11 @@ async def get_coach_appointments(
         # Convert S3 URLs to signed URLs if using S3
         if settings.USE_S3:
             if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
-                response.payment_screenshot_url = convert_s3_url_to_signed(response.payment_screenshot_url)
+                response.payment_screenshot_url = convert_s3_url_to_accessible(response.payment_screenshot_url)
             if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
-                response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
+                response.payment_receipt_url = convert_s3_url_to_accessible(response.payment_receipt_url)
             if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
-                response.refund_receipt_url = convert_s3_url_to_signed(response.refund_receipt_url)
+                response.refund_receipt_url = convert_s3_url_to_accessible(response.refund_receipt_url)
 
         result.append(response)
 
@@ -434,9 +434,9 @@ async def get_appointment_details(
     # Convert S3 URLs to signed URLs if using S3
     if settings.USE_S3:
         if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
-            response.payment_screenshot_url = convert_s3_url_to_signed(response.payment_screenshot_url)
+            response.payment_screenshot_url = convert_s3_url_to_accessible(response.payment_screenshot_url)
         if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
-            response.payment_receipt_url = convert_s3_url_to_signed(response.payment_receipt_url)
+            response.payment_receipt_url = convert_s3_url_to_accessible(response.payment_receipt_url)
     
     return response
 

@@ -260,7 +260,7 @@ async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSe
         # Start the session
         session.status = "active"
         if not session.started_at:  # Only set if not already set
-            session.started_at = datetime.now()
+            session.started_at = datetime.utcnow()
         
         await db.commit()
         await db.refresh(session)

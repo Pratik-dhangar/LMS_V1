@@ -108,7 +108,7 @@ async def authenticate_guest_session(
         appointment_id=appointment.id,
         guest_email=appointment.guest_email,
         guest_name=appointment.guest_name,
-        started_at=session.started_at.isoformat() if session.started_at else None
+        started_at=session.started_at.strftime("%Y-%m-%dT%H:%M:%SZ") if session.started_at else None
     )
 
 

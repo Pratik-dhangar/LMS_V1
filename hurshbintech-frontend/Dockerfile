@@ -23,8 +23,8 @@ RUN echo "=== Checking index.html ===" && \
     echo "=== End diagnostic ==="
 
 # Accept build arguments for Vite
-ARG VITE_API_BASE_URL=https://43.204.218.16:8000/api
-ARG VITE_WS_URL=wss://43.204.218.16:8000
+ARG VITE_API_BASE_URL=https://tech.hurshbin.com:8000/api
+ARG VITE_WS_URL=wss://tech.hurshbin.com:8000
 ARG VITE_GOOGLE_CLIENT_ID
 
 ARG VITE_ENABLE_PWA=false
@@ -43,18 +43,27 @@ RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 # -------------------------
 FROM nginx:alpine
 
+# ENV_TYPE selects which nginx config to use:
+#   prod (default) -> nginx/prod.conf  (port 443, tech.hurshbin.com, Neev S3)
+#   uat            -> nginx/uat.conf   (port 3000, localhost, AWS S3)
+ARG ENV_TYPE=prod
+
 # Remove default nginx content
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy built frontend from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 3000
+# Copy all nginx configs, then select the correct one based on ENV_TYPE
+COPY nginx/ /tmp/nginx/
+RUN cp /tmp/nginx/${ENV_TYPE}.conf /etc/nginx/conf.d/default.conf && rm -rf /tmp/nginx
 
-# Health check
+# Expose both ports (nginx only listens on whichever the conf defines)
+EXPOSE 3000 443
+
+# Health check works for both UAT (3000) and Prod (443)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+CMD wget --no-verbose --tries=1 --spider --no-check-certificate https://localhost:3000/health || \
+    wget --no-verbose --tries=1 --spider --no-check-certificate https://localhost:443/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

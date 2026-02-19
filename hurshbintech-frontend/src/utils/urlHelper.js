@@ -1,9 +1,9 @@
 /**
  * URL Helper utilities for handling S3 and local file URLs
+ * S3 URLs are converted to presigned URLs via backend proxy.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.lumesoftai.in:8001';
-const MEDIA_PROXY_URL = import.meta.env.VITE_MEDIA_PROXY_URL || 'https://hurshbin.lumesoftai.in:3001';
 
 /**
  * Get backend base URL (without /api prefix)
@@ -18,32 +18,54 @@ const getBackendBaseUrl = () => {
 
 /**
  * Convert S3 URLs or local paths to accessible URLs
+ * 
+ * S3 URLs are routed through backend proxy which generates presigned URLs
+ * with 24-hour expiration. All user roles can access the same content.
+ * 
  * Handles:
- * - s3://bucket/key -> https://media-proxy/s3/bucket/key
- * - /uploads/path -> https://backend-base/uploads/path (without /api)
- * - https://... -> returns as is
+ * - s3://bucket/key -> backend proxy (generates presigned URL)
+ * - /uploads/path -> https://backend-base/uploads/path
+ * - https://... -> returns as-is (already valid presigned URL)
  */
 export const getFileUrl = (url) => {
   if (!url) return null;
 
-  // If it's already an absolute URL, return as-is
+  // If it's a direct Neev Cloud / S3-compatible URL, proxy it through backend to avoid CORS
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    const S3_DOMAINS = ['s3-api.neevcloud.com', 'amazonaws.com'];
+    if (S3_DOMAINS.some(domain => url.includes(domain))) {
+      // Extract key after bucket name in the URL path and route through proxy
+      try {
+        const urlObj = new URL(url);
+        // Remove the leading '/' and any query params to get the S3 key
+        const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
+        if (key) {
+          return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+        }
+      } catch (_) { /* fall through */ }
+    }
     return url;
   }
 
   // Handle S3 URLs (s3://bucket/key format)
   if (url.startsWith('s3://')) {
-    // Convert s3://bucket/key to https://media-proxy/s3/bucket/key
-    const s3Path = url.replace('s3://', '');
-    return `${MEDIA_PROXY_URL}/s3/${s3Path}`;
+    // Route through backend proxy which streams S3 content (avoids CORS)
+    const parts = url.replace('s3://', '').split('/');
+    const key = parts.slice(1).join('/');
+    return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
   }
 
-  // Handle local uploads paths (/uploads/...) - use backend base URL without /api
+  // Handle backend proxy URLs (from API responses: /api/content/learning-content/s3-files/...)
+  if (url.startsWith('/api/')) {
+    return `${getBackendBaseUrl()}${url}`;
+  }
+
+  // Handle local uploads paths (/uploads/...)
   if (url.startsWith('/uploads/')) {
     return `${getBackendBaseUrl()}${url}`;
   }
 
-  // Default: assume it's a local path with /api prefix needed (for API responses)
+  // Default: assume it's a local path and prepend backend URL
   return `${API_BASE_URL}${url}`;
 };
 

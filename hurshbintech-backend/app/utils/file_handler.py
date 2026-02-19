@@ -37,7 +37,8 @@ async def upload_file(
     if settings.USE_S3:
         # Upload to S3 (non-async call, but wrapped in async function for consistency)
         try:
-            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
+            # Pass region so Neev Cloud (us-east-1) and AWS (ap-south-1) both work correctly
+            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME, region=settings.AWS_REGION)
             s3_path = s3_manager.upload_file(
                 file_content=file_content,
                 folder=folder,
