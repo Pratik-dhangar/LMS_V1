@@ -409,7 +409,7 @@ const Home = () => {
             {aboutUs.featured_image_url ? (
               <>
                 <img
-                  src={aboutUs.featured_image_url}
+                  src={getFileUrl(aboutUs.featured_image_url)}
                   alt="About Us Hero"
                   loading="eager"
                   className="about-hero-image"
@@ -626,7 +626,7 @@ const Home = () => {
                     <div className="home-blog-image-wrapper">
                       {blog.featured_image_url ? (
                         <img
-                          src={blog.featured_image_url}
+                          src={getFileUrl(blog.featured_image_url)}
                           alt={blog.title}
                           className="home-blog-image"
                           loading="lazy"
@@ -690,7 +690,7 @@ const Home = () => {
                     <div className="home-vlog-thumbnail-wrapper">
                       {vlog.thumbnail_url ? (
                         <img
-                          src={vlog.thumbnail_url}
+                          src={getFileUrl(vlog.thumbnail_url)}
                           alt={vlog.title}
                           className="home-vlog-thumbnail"
                           loading="lazy"

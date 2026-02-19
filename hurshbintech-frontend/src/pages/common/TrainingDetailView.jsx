@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { ArrowLeft, AlertCircle, Loader2, Eye } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/animations.css";
 import "../../styles/admin/AdminTrainingDetail.css";
 
@@ -161,7 +162,7 @@ const TrainingDetailView = () => {
                     {training.featured_image_url && (
                         <div className="featured-image-section">
                             <img
-                                src={training.featured_image_url}
+                                src={getFileUrl(training.featured_image_url)}
                                 alt={training.title}
                                 className="featured-image"
                             />

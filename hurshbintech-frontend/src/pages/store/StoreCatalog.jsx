@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import storeService from "../../api/services/ecommerce/storeService";
 import cartService from "../../api/services/ecommerce/cartService";
 import { toast } from "react-toastify";
+import { getFileUrl } from "../../utils/urlHelper";
 
 
 
@@ -679,7 +680,7 @@ const StoreCatalog = () => {
                           >
                             {product.thumbnail_url || product.image_url ? (
                               <img
-                                src={product.thumbnail_url || product.image_url}
+                                src={getFileUrl(product.thumbnail_url || product.image_url)}
                                 alt={product.name}
                                 style={{
                                   width: "100%",

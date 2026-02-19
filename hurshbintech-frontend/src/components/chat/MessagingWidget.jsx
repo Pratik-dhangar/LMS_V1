@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import { getFileUrl } from '../../utils/urlHelper';
 import EmojiPicker from './EmojiPicker';
 import ImageModal from './ImageModal';
 import '../../styles/chats/MessagingWidget.css';
@@ -657,17 +658,17 @@ const MessagingWidget = () => {
                             {message.message_type === 'IMAGE' ? (
                               <div className="messaging-file-media">
                                 <img
-                                  src={message.file_url}
+                                  src={getFileUrl(message.file_url)}
                                   alt={message.file_name}
                                   className="messaging-message-thumbnail"
-                                  onClick={() => setImageModal({ url: message.file_url, name: message.file_name })}
+                                  onClick={() => setImageModal({ url: getFileUrl(message.file_url), name: message.file_name })}
                                   title="Click to view full size"
                                 />
                                 <button
                                   className="messaging-file-download-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDownload(message.file_url, message.file_name);
+                                    handleDownload(getFileUrl(message.file_url), message.file_name);
                                   }}
                                   title="Download image"
                                 >
@@ -676,10 +677,10 @@ const MessagingWidget = () => {
                               </div>
                             ) : message.message_type === 'VIDEO' ? (
                               <div className="messaging-file-media">
-                                <video src={message.file_url} controls />
+                                <video src={getFileUrl(message.file_url)} controls />
                                 <button
                                   className="messaging-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download video"
                                 >
                                   <Download size={16} />
@@ -687,10 +688,10 @@ const MessagingWidget = () => {
                               </div>
                             ) : message.message_type === 'AUDIO' ? (
                               <div className="messaging-file-media">
-                                <audio src={message.file_url} controls />
+                                <audio src={getFileUrl(message.file_url)} controls />
                                 <button
                                   className="messaging-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download audio"
                                 >
                                   <Download size={16} />
@@ -699,7 +700,7 @@ const MessagingWidget = () => {
                             ) : (
                               <div className="messaging-file-document">
                                 <a
-                                  href={message.file_url}
+                                  href={getFileUrl(message.file_url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -708,7 +709,7 @@ const MessagingWidget = () => {
                                 </a>
                                 <button
                                   className="messaging-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download file"
                                 >
                                   <Download size={16} />

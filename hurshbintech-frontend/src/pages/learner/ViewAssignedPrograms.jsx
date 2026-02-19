@@ -367,7 +367,7 @@ const ViewAssignedPrograms = () => {
                           <div key={`content-${content.id}`} className="content-item">
                             <span className="content-order">{index + 1}</span>
                             {content.thumbnail_url && (
-                              <img src={content.thumbnail_url} alt="" className="content-thumbnail" />
+                              <img src={getFileUrl(content.thumbnail_url)} alt="" className="content-thumbnail" />
                             )}
                             <div className="content-info">
                               <div className="content-title">
@@ -455,7 +455,7 @@ const ViewAssignedPrograms = () => {
                         {attachments.map((attachment) => (
                           <div key={attachment.id} className="attachment-card">
                             {attachment.thumbnail_url && (
-                              <img src={attachment.thumbnail_url} alt="" className="attachment-thumbnail" />
+                              <img src={getFileUrl(attachment.thumbnail_url)} alt="" className="attachment-thumbnail" />
                             )}
                             <div className="attachment-info">
                               <div className="attachment-name">{attachment.file_name}</div>

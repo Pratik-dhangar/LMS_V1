@@ -20,6 +20,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=Password12#$
+      # CORS: allow the UAT frontend (port 3001) to reach the UAT backend (port 8001)
+      - FRONTEND_URL=https://hurshbin.lumesoftai.in:3001
+      - BACKEND_CORS_ORIGINS=https://hurshbin.lumesoftai.in:3001
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:
