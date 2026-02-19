@@ -4,6 +4,7 @@ import { FaSearch, FaCalendar, FaPlay } from 'react-icons/fa';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import vlogService from '../../api/services/vlogService';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/pages/VlogList.css';
 
@@ -173,7 +174,7 @@ const VlogList = () => {
                                             <div className="vlog-card-image">
                                                 {vlog.thumbnail_url ? (
                                                     <img
-                                                        src={vlog.thumbnail_url}
+                                                        src={getFileUrl(vlog.thumbnail_url)}
                                                         alt={vlog.title}
                                                         className="vlog-card-img"
                                                     />

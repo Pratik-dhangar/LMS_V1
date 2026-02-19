@@ -134,45 +134,46 @@ async def validation_exception_handler(request, exc):
 
 
 # ✅ CORS Configuration
-# For development: accept localhost origins
-# For production: use specific BACKEND_CORS_ORIGINS from settings
+# Always allow FRONTEND_URL + any explicit BACKEND_CORS_ORIGINS.
+# This ensures the frontend origin (e.g. :3001) can always reach the backend (:8001),
+# regardless of which deployment environment is active (local, EC2, Neev Cloud).
 import re
 
+_cors_origins: list[str] = []
+
+# Add explicit production origins from settings
 if settings.BACKEND_CORS_ORIGINS:
-    # Production: use specific origins from settings
-    allowed_origins = settings.BACKEND_CORS_ORIGINS
-    logger.info(f"CORS allowed origins (from settings): {allowed_origins}")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-else:
-    # Development mode: accept localhost and local network origins
-    logger.info("CORS: Development mode - allowing localhost and local network origins")
-    
-    development_origins = [
+    _cors_origins.extend(settings.BACKEND_CORS_ORIGINS)
+    logger.info(f"CORS: added BACKEND_CORS_ORIGINS: {settings.BACKEND_CORS_ORIGINS}")
+
+# Always add FRONTEND_URL so the PWA frontend can reach the API regardless of port
+if settings.FRONTEND_URL and settings.FRONTEND_URL not in _cors_origins:
+    _cors_origins.append(settings.FRONTEND_URL)
+    logger.info(f"CORS: added FRONTEND_URL: {settings.FRONTEND_URL}")
+
+# Development / no-config fallback — allow localhost on common ports
+if not _cors_origins:
+    _cors_origins = [
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:8080",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
-        "http://127.0.0.1:8080",
         "http://127.0.0.1:8000",
-        "*", 
+        "*",
     ]
-    
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=development_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
+    logger.info("CORS: no origins configured — using development fallback (localhost + *)")
+
+logger.info(f"CORS final allowed origins: {_cors_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 # ✅ REQUEST LOGGING
 # Log all requests with timing and correlation IDs
 app.add_middleware(RequestLoggingMiddleware)

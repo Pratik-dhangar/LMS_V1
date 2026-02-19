@@ -4,6 +4,7 @@ import { FaSearch, FaCalendar, FaUser } from "react-icons/fa";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
 import blogService from "../../api/services/blogService";
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/pages/BlogList.css";
 
@@ -169,7 +170,7 @@ const BlogList = () => {
                       <div className="blog-card-image">
                         {blog.featured_image_url ? (
                           <img
-                            src={blog.featured_image_url}
+                            src={getFileUrl(blog.featured_image_url)}
                             alt={blog.title}
                             className="blog-card-img"
                           />

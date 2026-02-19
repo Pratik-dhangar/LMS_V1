@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import vlogService from '../../api/services/vlogService';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
+import { getFileUrl } from '../../utils/urlHelper';
 
 
 const ViewVlogs = () => {
@@ -41,7 +42,7 @@ const ViewVlogs = () => {
           >
             <div className="card-image-wrapper">
               <img
-                src={vlog.thumbnail_url}
+                src={getFileUrl(vlog.thumbnail_url)}
                 alt={vlog.title}
                 className="card-image"
               />
@@ -69,7 +70,7 @@ const ViewVlogs = () => {
 
             <div className="video-wrapper">
               <video
-                src={selectedVlog.file_url}
+                src={getFileUrl(selectedVlog.file_url)}
                 controls
                 className="video-player"
               >

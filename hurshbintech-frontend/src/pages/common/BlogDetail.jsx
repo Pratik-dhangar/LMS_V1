@@ -4,6 +4,7 @@ import { FaCalendar, FaUser, FaArrowLeft } from 'react-icons/fa';
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import blogService from '../../api/services/blogService';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/pages/BlogList.css';
 
@@ -102,7 +103,7 @@ const BlogDetail = () => {
                     {blog.featured_image_url && (
                         <div className="blog-detail-featured-image">
                             <img
-                                src={blog.featured_image_url}
+                                src={getFileUrl(blog.featured_image_url)}
                                 alt={blog.title}
                                 className="blog-detail-featured-img"
                                 onClick={() => handleImageClick(blog.featured_image_url)}
