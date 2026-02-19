@@ -338,24 +338,36 @@ const LearnerProgramAssignmentDetails = () => {
   const getFileUrl = (fileUrl) => {
     if (!fileUrl) return "";
 
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://43.204.218.16:8000/api";
+    const BACKEND_URL = API_BASE_URL.replace('/api', '');
+
+    // Handle full URLs (already accessible)
+    if (fileUrl.startsWith("https://") || fileUrl.startsWith("http://")) {
+      return fileUrl;
+    }
+
     // Handle malformed URLs like http://uploads/...
     if (
       fileUrl.startsWith("http://uploads/") ||
       fileUrl.startsWith("https://uploads/")
     ) {
-      // Extract the uploads/... part
       const match = fileUrl.match(/uploads\/.+/);
       return match ? `/${match[0]}` : fileUrl;
     }
 
-    if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://"))
-      return fileUrl;
-
+    // Handle S3 URLs - route through backend proxy (avoids CORS)
     if (fileUrl.startsWith("s3://")) {
-      const key = fileUrl.replace("s3://", "").split("/").slice(1).join("/");
-      return `/s3/${key}`;
+      const parts = fileUrl.replace("s3://", "").split("/");
+      const key = parts.slice(1).join("/");
+      return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
     }
 
+    // Handle backend proxy URLs from API responses (/api/content/...)
+    if (fileUrl.startsWith("/api/")) {
+      return `${BACKEND_URL}${fileUrl}`;
+    }
+
+    // Handle local relative paths
     if (fileUrl.startsWith("/")) return fileUrl;
 
     // For relative paths like 'uploads/learning_content/...'

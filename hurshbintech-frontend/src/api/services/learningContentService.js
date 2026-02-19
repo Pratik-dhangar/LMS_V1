@@ -1,7 +1,7 @@
 import api from '../axios';
 
 const learningContentService = {
-  // Upload file
+  // Upload file (supports large videos up to 100MB - 5 min timeout)
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -9,18 +9,32 @@ const learningContentService = {
     const response = await api.post('/content/learning-content/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      timeout: 200000, // 3 minutes for large video uploads
     });
     return response.data;
   },
 
-  // Get file URL (prepend backend base URL)
+  // Get file URL - handles S3 URLs, proxy URLs, local paths, and full URLs
   getFileUrl: (fileUrl) => {
     if (!fileUrl) return '';
-    // If already a full URL, return as is
+    // If already a full URL (presigned or direct), return as is
     if (fileUrl.startsWith('http')) return fileUrl;
-    // Remove /api prefix if present and add backend URL
-    const cleanUrl = fileUrl.startsWith('/api') ? fileUrl.replace('/api', '') : fileUrl;
+    // Handle S3 URLs (s3://bucket/key) - convert to backend proxy for signed access
+    if (fileUrl.startsWith('s3://')) {
+      const parts = fileUrl.replace('s3://', '').split('/');
+      const key = parts.slice(1).join('/');
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+      return `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+    }
+    // Handle backend proxy URLs (already have /api prefix from backend response)
+    if (fileUrl.startsWith('/api/')) {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+      const backendUrl = apiBaseUrl.replace('/api', '');
+      return `${backendUrl}${fileUrl}`;
+    }
+    // Handle other paths
+    const cleanUrl = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
     const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
     return `${backendUrl}${cleanUrl}`;

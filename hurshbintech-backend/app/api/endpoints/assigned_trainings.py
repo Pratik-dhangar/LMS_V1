@@ -498,6 +498,10 @@ async def create_training_with_files(
             )
             logger.info(f"Training {training.id} updated with {len(uploaded_files)} files")
         
+        # Invalidate all assigned trainings caches (admin + user views)
+        await cache_service.delete_pattern("assigned_trainings:*")
+        logger.info(f"Cache invalidated after creating training {training.id}")
+        
         return AssignedTrainingResponse.from_orm(training)
         
     except json.JSONDecodeError as e:
@@ -550,6 +554,11 @@ async def create_assigned_training(
         )
         
         logger.info(f"Created training {training.id} with S3/local files stored")
+        
+        # Invalidate all assigned trainings caches (admin + user views)
+        await cache_service.delete_pattern("assigned_trainings:*")
+        logger.info(f"Cache invalidated after creating training {training.id}")
+        
         return AssignedTrainingResponse.from_orm(training)
         
     except Exception as e:
@@ -652,6 +661,9 @@ async def update_assigned_training(
     
     updated_training = await assigned_training_crud.update_assigned_training(db, training_id, **update_data)
     
+    # Invalidate all assigned trainings caches
+    await cache_service.delete_pattern("assigned_trainings:*")
+    
     return AssignedTrainingResponse.from_orm(updated_training)
 
 
@@ -688,6 +700,9 @@ async def delete_assigned_training(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Assigned training not found",
         )
+    
+    # Invalidate all assigned trainings caches
+    await cache_service.delete_pattern("assigned_trainings:*")
 
 
 # ========== USER ENDPOINTS (Read and Mark Complete) ==========

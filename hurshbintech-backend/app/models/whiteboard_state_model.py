@@ -4,9 +4,8 @@ Whiteboard State Model - For persisting whiteboard canvas state across reconnect
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Index
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Index
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.session import Base
@@ -19,10 +18,10 @@ class WhiteboardState(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     
-    # Link to training session
+    # Session identifier - works for both training sessions and coach appointment sessions
+    # No FK constraint: session_id can reference training_sessions OR coach_appointment_sessions
     session_id = Column(
         String(100),
-        ForeignKey("training_sessions.session_id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
@@ -44,13 +43,6 @@ class WhiteboardState(Base):
     
     # Soft delete flag - when items are deleted or canvas is cleared, mark inactive instead of hard delete
     is_active = Column(Boolean, default=True, nullable=False, index=True)
-    
-    # Relationship to training session
-    training_session = relationship(
-        "TrainingSession",
-        foreign_keys=[session_id],
-        primaryjoin="WhiteboardState.session_id == TrainingSession.session_id"
-    )
     
     # Composite index for efficient queries
     __table_args__ = (

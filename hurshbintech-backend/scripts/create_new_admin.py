@@ -8,7 +8,7 @@ from app.models.user_model import User
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-NEW_EMAIL = "admin2@pwa.com"
+NEW_EMAIL = "hurshbin@gmail.com"
 RAW_PASSWORD = "123456"
 
 
@@ -30,8 +30,9 @@ async def create_new_admin():
 
         # Create new admin user
         new_admin = User(
-            name="New PWA Admin",
+            name="Binal Shah",
             email=NEW_EMAIL,
+            contact_number="9920528752",
             passcode=encrypt_passcode(RAW_PASSWORD),
             passcode_hash=hash_password(RAW_PASSWORD),
             role="ADMIN",

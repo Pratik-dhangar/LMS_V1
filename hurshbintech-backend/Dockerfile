@@ -33,8 +33,28 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create uploads directory (optional if using S3)
-RUN mkdir -p uploads/learning_content uploads/vlogs
+# ---------------------------------------------------
+# SECURITY: Compile to Bytecode (opt-in via SECURE_BUILD)
+#   UAT:  docker-compose.uat.yml passes SECURE_BUILD=false (source preserved for debugging)
+#   Prod: docker build --build-arg SECURE_BUILD=true ... (source stripped, bytecode only)
+# ---------------------------------------------------
+ARG SECURE_BUILD=false
+
+RUN if [ "$SECURE_BUILD" = "true" ]; then \
+        echo "[SECURE_BUILD] Compiling to bytecode and stripping source..." && \
+        python -m compileall -b . && \
+        find . -type f -name "*.py" \
+            -not -name "main.py" \
+            -not -name "__init__.py" \
+            -not -path "./alembic/*" \
+            -not -path "./scripts/*" \
+            -delete && \
+        echo "[SECURE_BUILD] Done."; \
+    else \
+        echo "[SECURE_BUILD=false] Source preserved."; \
+    fi
+
+# ---------------------------------------------------
 
 # Expose port
 EXPOSE 8000

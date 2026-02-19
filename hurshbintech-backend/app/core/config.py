@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION: str = "ap-south-1"
     S3_BUCKET_NAME: str = "hurshbintech-media-bucket"
+    S3_ENDPOINT_URL: Optional[str] = None  # For S3-compatible services (e.g., Neev Cloud)
     
     # Recording Storage Configuration
     # Options: "local" (stores in /var/recordings) or "s3" (uploads to S3)

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getFileUrl } from '../../utils/urlHelper';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import headService from '../../api/services/headService';
 import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
@@ -45,6 +46,7 @@ const EditCoach = () => {
 
   const [existingReferenceData, setExistingReferenceData] = useState([]);
   const [existingProfilePicture, setExistingProfilePicture] = useState(null);
+  const [showPictureModal, setShowPictureModal] = useState(false);
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -200,10 +202,7 @@ const EditCoach = () => {
       e.stopPropagation();
     }
     if (existingProfilePicture) {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
-      const backendUrl = apiBaseUrl.replace('/api', '');
-      const fullUrl = `${backendUrl}${existingProfilePicture}`;
-      window.open(fullUrl, '_blank');
+      setShowPictureModal(true);
     }
   };
 
@@ -364,6 +363,45 @@ const EditCoach = () => {
 
   return (
     <div className="page-container">
+      {/* Profile Picture Preview Modal */}
+      {showPictureModal && existingProfilePicture && (
+        <div
+          onClick={() => setShowPictureModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative', background: '#fff',
+              borderRadius: '12px', padding: '12px',
+              maxWidth: '90vw', maxHeight: '90vh',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <button
+              onClick={() => setShowPictureModal(false)}
+              style={{
+                position: 'absolute', top: '8px', right: '8px',
+                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                width: '32px', height: '32px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+              }}
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={getFileUrl(existingProfilePicture)}
+              alt="Profile Picture"
+              style={{ display: 'block', maxWidth: '400px', maxHeight: '400px', borderRadius: '8px', objectFit: 'contain' }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         show={showDeleteConfirm}
