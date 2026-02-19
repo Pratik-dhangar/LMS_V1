@@ -419,14 +419,19 @@ class CacheService:
     
     async def invalidate_product_catalogs(self):
         """Invalidate all product catalog caches (after product update)"""
-        await self.delete_pattern("products:catalog:*")
-        logger.info("Invalidated product catalog cache")
+        deleted = await self.delete_pattern("products:catalog:*")
+        logger.info(f"Invalidated product catalog cache (deleted {deleted} keys)")
+        if deleted == 0:
+            logger.warning("No product catalog cache keys were deleted - Redis may be unreachable or pattern had no matches")
     
     async def invalidate_product(self, product_id: str):
         """Invalidate specific product detail and all catalogs"""
-        await self.delete(self.key_product_detail(product_id))
-        await self.invalidate_product_catalogs()
-        logger.info(f"Invalidated product cache: {product_id}")
+        try:
+            await self.delete(self.key_product_detail(product_id))
+            await self.invalidate_product_catalogs()
+            logger.info(f"✅ Invalidated product cache: {product_id}")
+        except Exception as e:
+            logger.error(f"❌ Error invalidating product cache {product_id}: {str(e)}", exc_info=True)
     
     async def invalidate_learning_content(self, content_id: Optional[int] = None):
         """Invalidate learning content cache (all or specific)"""
