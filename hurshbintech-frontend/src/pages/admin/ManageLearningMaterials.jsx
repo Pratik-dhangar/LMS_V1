@@ -4,7 +4,7 @@ import axios from '../../api/axios';
 import { toast } from 'react-toastify';
 import { Plus, Edit, Trash2, X, Upload, ArrowLeft } from 'lucide-react';
 import SearchBar from '../../components/common/SearchBar';
-import { getFileUrl } from '../../utils/fileUrlBuilder';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/admin/index.css';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/Table.css';
