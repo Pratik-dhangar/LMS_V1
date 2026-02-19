@@ -120,13 +120,15 @@ class ChatFileService:
         # Upload file
         if settings.USE_S3 and s3_manager:
             # Upload to S3 - Production
-            s3_key = f"uploads/chats/{conversation_id}/{safe_filename}"
             try:
-                file_url = s3_manager.upload_file(
-                    file_content=content,
-                    s3_key=s3_key,
+                s3_key = s3_manager.upload_file(
+                    content,
+                    folder=f"chats/{conversation_id}",
+                    filename=safe_filename,
                     content_type=mime_type
                 )
+                # Store as s3:// URI so get_public_url can generate presigned URL
+                file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
                 logger.info(f"Uploaded chat file to S3: {s3_key}")
             except Exception as e:
                 logger.error(f"Error uploading file to S3: {e}")
