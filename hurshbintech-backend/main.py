@@ -20,6 +20,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 # Import all routers
+from app.api.endpoints.media import router as media_router
 from app.api.endpoints.about_us import router as about_us_router
 from app.api.endpoints.admin import router as admin_router
 from app.api.endpoints.assigned_trainings import router as assigned_trainings_router
@@ -187,6 +188,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # ✅ Include routers WITH prefix
 app.include_router(health_router, prefix="/api")  # Health check endpoint
+app.include_router(media_router, prefix="/api")  # Generic S3 media proxy
 app.include_router(auth_router, prefix="/api")
 app.include_router(booking_router, prefix="/api/booking")
 app.include_router(guest_sessions_router, prefix="/api")  # Public guest session endpoints

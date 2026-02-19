@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { toast } from "react-toastify";
 import programAssignmentService from "../../api/services/programAssignmentService";
+import { getFileUrl } from "../../utils/urlHelper";
 
 import '../../styles/ManageUsersLayout.css';
 
@@ -465,7 +466,7 @@ const ViewAssignedPrograms = () => {
                             </div>
                             <div className="attachment-actions">
                               <a
-                                href={attachment.file_path}
+                                href={getFileUrl(attachment.file_path)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="app-modal-btn app-modal-btn--primary btn-sm"

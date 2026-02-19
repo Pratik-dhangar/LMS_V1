@@ -79,8 +79,8 @@ class CacheService:
                 encoding="utf-8",
                 decode_responses=True,
                 socket_keepalive=True,
-                socket_connect_timeout=2,  # Fast fail — don't block requests for 10s on Redis outage
-                socket_timeout=2,          # Also limit per-command timeout
+                socket_connect_timeout=5,  # Fast fail — don't block requests for 10s on Redis outage
+                socket_timeout=5,          # Also limit per-command timeout
                 retry_on_timeout=True,
                 max_connections=50,
                 health_check_interval=30

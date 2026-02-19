@@ -721,7 +721,7 @@ const Whiteboard = ({
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
-                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
@@ -2769,7 +2769,7 @@ const Whiteboard = ({
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
-                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response

@@ -47,9 +47,11 @@ class ReferenceDataSchema(BaseModel):
     @field_validator('file_path', mode='after')
     @classmethod
     def convert_s3_to_public_url(cls, v):
-        """Convert S3 URLs to public HTTPS URLs using existing helper"""
-        from app.utils.s3_utils import convert_s3_url_to_accessible
-        return convert_s3_url_to_accessible(v)
+        """Convert S3 URLs to permanent backend proxy URLs"""
+        if not v or not v.startswith('s3://'):
+            return v
+        from app.utils.s3_utils import convert_s3_url_to_proxy
+        return convert_s3_url_to_proxy(v)
 
 
 # ============ ADMIN SCHEMAS ============
@@ -485,9 +487,8 @@ class CoachResponse(BaseModel):
         # Convert profile_picture_url: s3:// -> backend proxy URL to avoid CORS
         raw_pic_url = getattr(profile, 'profile_picture_url', None)
         if raw_pic_url and raw_pic_url.startswith('s3://'):
-            from app.core.config import settings
-            s3_key = raw_pic_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            converted_pic_url = f"/api/content/learning-content/s3-files/{s3_key}"
+            from app.utils.s3_utils import convert_s3_url_to_proxy
+            converted_pic_url = convert_s3_url_to_proxy(raw_pic_url)
         else:
             converted_pic_url = raw_pic_url
 
