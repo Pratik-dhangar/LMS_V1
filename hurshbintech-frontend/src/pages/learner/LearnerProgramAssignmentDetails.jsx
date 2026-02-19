@@ -359,10 +359,10 @@ const LearnerProgramAssignmentDetails = () => {
     if (fileUrl.startsWith("s3://")) {
       const parts = fileUrl.replace("s3://", "").split("/");
       const key = parts.slice(1).join("/");
-      return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+      return `${API_BASE_URL}/media/s3/${key}`;
     }
 
-    // Handle backend proxy URLs from API responses (/api/content/...)
+    // Handle backend proxy URLs from API responses (/api/media/s3/...)
     if (fileUrl.startsWith("/api/")) {
       return `${BACKEND_URL}${fileUrl}`;
     }

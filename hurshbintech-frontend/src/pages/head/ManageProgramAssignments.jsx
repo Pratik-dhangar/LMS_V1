@@ -5,6 +5,7 @@ import programAssignmentService from '../../api/services/programAssignmentServic
 import headService from '../../api/services/headService';
 import learningProgramsService from '../../api/services/learningProgramsService';
 import learningContentService from '../../api/services/learningContentService';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/components/common/Modal.css';
 import '../../styles/ManageProgramAssignments.css';
 import '../../styles/Table.css';
@@ -1711,7 +1712,7 @@ const ManageProgramAssignments = () => {
                           </div>
                           <div className="mpa-attachment-actions">
                             <a
-                              href={attachment.file_path}
+                              href={getFileUrl(attachment.file_path)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="mpa-btn-primary mpa-btn-sm"

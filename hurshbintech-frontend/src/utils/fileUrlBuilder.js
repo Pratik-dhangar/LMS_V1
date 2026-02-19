@@ -30,7 +30,7 @@ export const getFileUrl = (s3PathOrUrl) => {
                 const urlObj = new URL(s3PathOrUrl);
                 const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
                 if (key) {
-                    return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+                    return `${API_BASE_URL}/media/s3/${key}`;
                 }
             } catch (_) { /* fall through */ }
         }
@@ -47,10 +47,10 @@ export const getFileUrl = (s3PathOrUrl) => {
         // Route through backend proxy which streams S3 content (avoids CORS)
         const parts = s3PathOrUrl.replace('s3://', '').split('/');
         const key = parts.slice(1).join('/');
-        return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+        return `${API_BASE_URL}/media/s3/${key}`;
     }
 
-    // Handle backend proxy URLs (from API responses: /api/content/...)
+    // Handle backend proxy URLs (from API responses: /api/media/s3/...)
     if (s3PathOrUrl.startsWith('/api/')) {
         return `${BACKEND_URL}${s3PathOrUrl}`;
     }

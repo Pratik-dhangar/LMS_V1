@@ -25,7 +25,7 @@ const learningContentService = {
       const parts = fileUrl.replace('s3://', '').split('/');
       const key = parts.slice(1).join('/');
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
-      return `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+      return `${apiBaseUrl}/media/s3/${key}`;
     }
     // Handle backend proxy URLs (already have /api prefix from backend response)
     if (fileUrl.startsWith('/api/')) {

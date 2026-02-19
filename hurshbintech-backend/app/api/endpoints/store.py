@@ -14,7 +14,7 @@ from app.crud import product_crud
 from app.schemas.product import (
     ProductResponse, ProductCatalogResponse, ProductFilters, ProductListItem
 )
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import convert_s3_url_to_proxy, s3_key_to_proxy
 from app.services.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
@@ -22,28 +22,15 @@ router = APIRouter(prefix="/store", tags=["Store - Public"])
 
 
 def get_public_url(file_path: Optional[str]) -> Optional[str]:
-    """Convert S3 key or local path to public URL"""
+    """Convert S3 key or path to permanent backend proxy URL"""
     if not file_path:
         return None
-    
-    # If it's already a full HTTP URL, return as-is
     if file_path.startswith("http"):
         return file_path
-    
-    # If using S3, convert the S3 key to a public URL
     if settings.USE_S3:
-        try:
-            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
-            public_url = s3_manager.get_public_url(file_path)
-            logger.info(f"Store: Converted S3 path {file_path} to public URL")
-            return public_url
-        except Exception as e:
-            logger.warning(f"Store: Error converting S3 URL for {file_path}: {str(e)}", exc_info=True)
-            # Fallback to direct URL construction
-            fallback_url = f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
-            return fallback_url
-    
-    # For local storage, return the path as-is (will be served by static handler)
+        if file_path.startswith("s3://"):
+            return convert_s3_url_to_proxy(file_path)
+        return s3_key_to_proxy(file_path)
     return file_path
 
 
