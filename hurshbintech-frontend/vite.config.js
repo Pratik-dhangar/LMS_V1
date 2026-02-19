@@ -92,9 +92,13 @@ export default defineConfig(({ mode }) => {
                   (path.endsWith('/start') || path.endsWith('/end') || 
                    path.endsWith('/cancel') || path.endsWith('/join') || 
                    path.endsWith('/leave'));
+
+                // Program assignment learner data — content can be added/modified at any time
+                const isProgramAssignmentLearner = path.includes('/program-assignments/learner/');
                 
                 return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || 
-                       isWebinars || isAppointments || isSessionMutation;
+                       isWebinars || isAppointments || isSessionMutation ||
+                       isProgramAssignmentLearner;
               },
               handler: 'NetworkOnly', // No caching - always fetch fresh
             },

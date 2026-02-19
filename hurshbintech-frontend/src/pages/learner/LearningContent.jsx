@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import programAssignmentService from "../../api/services/programAssignmentService";
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/ManageUsersLayout.css";
 
 const LearningContent = () => {
@@ -87,7 +88,7 @@ const LearningContent = () => {
     if (!selectedContent) return null;
 
     const { content_type, file_url, title } = selectedContent;
-    const fullUrl = file_url?.startsWith('http') ? file_url : file_url;
+    const fullUrl = getFileUrl(file_url);
 
     const handleLoad = () => {
       setContentLoading(false);
@@ -399,7 +400,7 @@ const LearningContent = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
                 <a
-                  href={selectedContent?.file_url?.startsWith('http') ? selectedContent.file_url : selectedContent?.file_url}
+                  href={getFileUrl(selectedContent?.file_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
