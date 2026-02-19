@@ -839,6 +839,7 @@ async def download_invoice(
             region_name=os.getenv("AWS_REGION", "ap-south-1"),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=os.getenv("S3_ENDPOINT_URL"),
         )
         
         # Generate presigned URL valid for 1 hour
@@ -900,6 +901,7 @@ async def download_invoice_admin(
             region_name=os.getenv("AWS_REGION", "ap-south-1"),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url=os.getenv("S3_ENDPOINT_URL"),
         )
         
         # Generate presigned URL valid for 1 hour

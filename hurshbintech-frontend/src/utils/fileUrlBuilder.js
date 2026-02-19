@@ -1,36 +1,62 @@
 /**
  * Build file URLs based on storage type (local vs S3)
- * Handles both local storage (uploads/) and S3 storage seamlessly
+ * Handles both local storage (uploads/) and S3 storage with presigned URL access
+ * 
+ * S3 URLs are routed through the backend which generates presigned URLs
+ * with 24-hour expiration. All user roles can access the same content.
  */
 
 /**
  * Get the correct URL for a file path
  * - If path is a local path (starts with uploads/), serves via backend
- * - If path is an S3 path or S3 URL, returns S3 URL
+ * - If path is an S3 URL (s3://bucket/key), routes through backend proxy for signed access
+ * - If path is already HTTPS, uses directly (presigned URL from backend)
  * 
- * @param {string} s3PathOrUrl - The file path from database (e.g., "uploads/receipts/uuid/file.jpg" or "s3_key_path")
+ * @param {string} s3PathOrUrl - The file path from database (e.g., "uploads/receipts/uuid/file.jpg" or "s3://bucket/key")
  * @returns {string} - The full URL to access the file
  */
 export const getFileUrl = (s3PathOrUrl) => {
     if (!s3PathOrUrl) return null;
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+    const BACKEND_URL = API_BASE_URL.replace('/api', ''); // Remove /api suffix for static file serving
 
-    // Check if it's a local storage path
-    if (s3PathOrUrl.startsWith('uploads/')) {
-        // Local storage - serve through backend
-        return `${API_BASE_URL}/${s3PathOrUrl}`;
-    }
-
-    // Check if it's already an S3 URL
-    if (s3PathOrUrl.startsWith('https://')) {
+    // Check if it's already an HTTPS URL
+    if (s3PathOrUrl.startsWith('https://') || s3PathOrUrl.startsWith('http://')) {
+        // If it's a direct S3 URL, proxy it through backend to avoid CORS
+        const S3_DOMAINS = ['s3-api.neevcloud.com', 'amazonaws.com'];
+        if (S3_DOMAINS.some(domain => s3PathOrUrl.includes(domain))) {
+            try {
+                const urlObj = new URL(s3PathOrUrl);
+                const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
+                if (key) {
+                    return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+                }
+            } catch (_) { /* fall through */ }
+        }
         return s3PathOrUrl;
     }
 
-    // Otherwise, it's an S3 key path - build S3 URL
-    const bucketName = import.meta.env.REACT_APP_S3_BUCKET_NAME || 'hurshbintech-media-bucket';
-    const awsRegion = import.meta.env.REACT_APP_AWS_REGION || 'ap-south-1';
-    return `https://${bucketName}.s3.${awsRegion}.amazonaws.com/${s3PathOrUrl}`;
+    // Check if it's a local storage path
+    if (s3PathOrUrl.startsWith('uploads/')) {
+        return `${BACKEND_URL}/${s3PathOrUrl}`;
+    }
+
+    // Check if it's an S3 URL format (s3://bucket/key)
+    if (s3PathOrUrl.startsWith('s3://')) {
+        // Route through backend proxy which streams S3 content (avoids CORS)
+        const parts = s3PathOrUrl.replace('s3://', '').split('/');
+        const key = parts.slice(1).join('/');
+        return `${API_BASE_URL}/content/learning-content/s3-files/${key}`;
+    }
+
+    // Handle backend proxy URLs (from API responses: /api/content/...)
+    if (s3PathOrUrl.startsWith('/api/')) {
+        return `${BACKEND_URL}${s3PathOrUrl}`;
+    }
+
+    // Default: treat as local path and prepend backend URL
+    return `${BACKEND_URL}/${s3PathOrUrl}`;
 };
 
 /**

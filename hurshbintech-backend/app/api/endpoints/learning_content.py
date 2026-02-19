@@ -5,8 +5,9 @@ import uuid
 from pathlib import Path
 from typing import List
 
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -83,15 +84,19 @@ def get_file_category(filename: str) -> str:
 async def save_upload_file(upload_file: UploadFile) -> dict:
     """Save uploaded file to S3 or local storage"""
     try:
+        logger.info(f"Starting upload for file: {upload_file.filename}")
+        
         # Read file content
         file_content = await upload_file.read()
         file_size = len(file_content)
+        logger.info(f"File read successfully: {file_size} bytes")
 
         # Validate file size (max 500MB for videos, 50MB for others)
         file_category = get_file_category(upload_file.filename)
         max_size = 500 * 1024 * 1024 if file_category == "video" else 50 * 1024 * 1024
 
         if file_size > max_size:
+            logger.error(f"File size {file_size} exceeds limit {max_size}")
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"File size exceeds {max_size / (1024*1024):.0f}MB limit",
@@ -99,22 +104,27 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
         content_type = get_content_type(upload_file.filename)
         file_category = get_file_category(upload_file.filename)
+        logger.info(f"File category: {file_category}, content type: {content_type}")
 
         if settings.USE_S3:
             # Upload to S3
+            logger.info(f"Uploading {file_category} file to S3...")
             s3_key = s3_manager.upload_file(
                 file_content,
                 folder="learning-content",
                 filename=f"{uuid.uuid4()}{os.path.splitext(upload_file.filename)[1]}",
                 content_type=content_type,
             )
+            logger.info(f"File uploaded to S3 successfully: {s3_key}")
 
             # Generate and upload thumbnail
             thumbnail_s3_key = None
             if file_category in ["image", "video"]:
                 try:
+                    logger.info(f"Generating thumbnail for {file_category}...")
                     thumbnail_bytes = s3_manager.generate_thumbnail(file_content, file_category)
                     if thumbnail_bytes:
+                        logger.info(f"Thumbnail generated ({len(thumbnail_bytes)} bytes)")
                         thumbnail_filename = f"{uuid.uuid4()}_thumbnail.jpg"
                         thumbnail_s3_key = s3_manager.upload_file(
                             thumbnail_bytes,
@@ -122,8 +132,11 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
                             filename=thumbnail_filename,
                             content_type="image/jpeg",
                         )
+                        logger.info(f"Thumbnail uploaded to S3: {thumbnail_s3_key}")
+                    else:
+                        logger.warning(f"Thumbnail generation returned None")
                 except Exception as e:
-                    logger.warning(f"Failed to generate thumbnail: {str(e)}")
+                    logger.warning(f"Failed to generate thumbnail: {str(e)}", exc_info=True)
 
             file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             thumbnail_url = (
@@ -142,12 +155,15 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
         else:
             # Local storage fallback
+            logger.info("Using local storage fallback")
             file_extension = os.path.splitext(upload_file.filename)[1].lower()
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = UPLOAD_DIR / unique_filename
 
             with open(file_path, "wb") as buffer:
                 buffer.write(file_content)
+            
+            logger.info(f"File saved locally: {file_path}")
 
             return {
                 "file_url": f"/uploads/learning_content/{unique_filename}",
@@ -159,7 +175,7 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving upload file: {str(e)}")
+        logger.error(f"Error saving upload file: {str(e)}", exc_info=True)
         raise
 
 
@@ -185,25 +201,32 @@ def delete_file(file_url: str) -> bool:
 
 def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to public HTTPS URL via Nginx proxy (permanent access, no expiration)
+    Convert S3 URL to backend proxy URL for CORS-safe access.
+    
+    Returns a URL pointing to the backend's /s3-files/ proxy endpoint
+    which streams content from S3. This avoids CORS issues since the
+    browser only communicates with the same-origin backend.
 
     Args:
         file_url: S3 URL (s3://bucket/key) or local path
 
     Returns:
-        Public HTTPS URL through Nginx proxy that never expires until file is deleted
+        Backend proxy URL or original local path
     """
     try:
         if settings.USE_S3 and file_url.startswith("s3://"):
-            # Extract S3 key and generate Nginx proxy URL
+            # Extract S3 key and return proxy URL
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key)
-            return public_url
+            # Return relative URL that goes through backend proxy
+            # Frontend/nginx will route /api/content/learning-content/s3-files/... to this backend
+            proxy_url = f"/api/content/learning-content/s3-files/{s3_key}"
+            logger.debug(f"Converted S3 URL to proxy URL: {file_url} -> {proxy_url}")
+            return proxy_url
         else:
             # Return local path as-is (backend serves it)
             return file_url
     except Exception as e:
-        logger.error(f"Error generating public URL: {str(e)}")
+        logger.error(f"Error generating proxy URL: {str(e)}")
         return file_url  # Fallback to original URL
 
 
@@ -229,6 +252,84 @@ async def serve_file(filename: str):
     return FileResponse(file_path)
 
 
+@router.get("/s3-files/{file_key:path}")
+async def serve_s3_file(file_key: str):
+    """
+    Stream S3 file content through backend proxy.
+    
+    This avoids CORS issues by serving S3 content from the same origin
+    as the frontend. The backend fetches from S3 using credentials and
+    streams the content directly to the browser.
+    
+    Args:
+        file_key: S3 object key (e.g., uploads/learning-content/filename.jpg)
+    
+    Returns:
+        StreamingResponse with file content from S3
+    """
+    try:
+        if not settings.USE_S3 or not s3_manager:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="S3 is not enabled"
+            )
+        
+        # Validate the file key to prevent directory traversal
+        if not file_key or file_key.startswith("..") or file_key.startswith("/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file key"
+            )
+        
+        # Fetch the object directly from S3
+        s3_response = s3_manager.s3_client.get_object(
+            Bucket=s3_manager.bucket_name,
+            Key=file_key
+        )
+        
+        content_type = s3_response.get('ContentType', 'application/octet-stream')
+        content_length = s3_response.get('ContentLength', 0)
+        
+        logger.info(f"Streaming S3 file: {file_key} ({content_type}, {content_length} bytes)")
+        
+        # Stream the S3 object body directly to the client
+        return StreamingResponse(
+            s3_response['Body'],
+            media_type=content_type,
+            headers={
+                'Content-Length': str(content_length),
+                'Cache-Control': 'public, max-age=86400',  # Cache 24h in browser
+                'Access-Control-Allow-Origin': '*',
+            }
+        )
+    
+    except s3_manager.s3_client.exceptions.NoSuchKey:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found in S3"
+        )
+    except ClientError as e:
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code in ('NoSuchKey', '404', 'NotFound'):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found in S3"
+            )
+        logger.error(f"S3 client error for {file_key}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to serve file"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error streaming S3 file {file_key}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to serve file"
+        )
+
+
 # ============ ADMIN ENDPOINTS ============#
 
 
@@ -245,14 +346,16 @@ async def upload_file(
         file.file.seek(0)  # Reset to start
 
         if file_size > max_size:
+            logger.error(f"Upload rejected: file too large ({file_size} > {max_size})")
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail="File size exceeds 100MB limit",
             )
 
+        logger.info(f"Processing upload: {file.filename} ({file_size} bytes)")
         file_info = await save_upload_file(file)
 
-        # Convert S3 URLs to public HTTPS URLs via Nginx proxy
+        # Convert S3 URLs to public URLs (no expiration, accessible to all users)
         file_url = get_public_url(file_info["file_url"])
         thumbnail_url = (
             get_public_url(file_info.get("thumbnail_url"))
@@ -260,6 +363,7 @@ async def upload_file(
             else None
         )
 
+        logger.info(f"Upload completed successfully for: {file.filename}")
         return {
             "message": "File uploaded successfully",
             "file_url": file_url,
@@ -271,6 +375,7 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"File upload failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload failed: {str(e)}",
@@ -497,7 +602,8 @@ async def get_all_contents_trainer(
     
     logger.debug(f"Cache MISS: {cache_key}")
     contents = await learning_content_crud.get_all_learning_contents(db)
-    result = [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    responses = [LearningContentResponse.from_orm_with_users(c) for c in contents]
+    result = [convert_response_urls(r) for r in responses]
     
     # Cache for 10 minutes
     await cache_service.set(cache_key, [r.model_dump() for r in result], ttl=cache_service.TTL_LEARNING_CONTENT)
@@ -517,7 +623,8 @@ async def get_content_by_id_trainer(
     if not content:
         raise HTTPException(status_code=404, detail="Content not found")
 
-    return LearningContentResponse.from_orm_with_users(content)
+    response = LearningContentResponse.from_orm_with_users(content)
+    return convert_response_urls(response)
 
 
 @router.patch("/trainer/{content_id}", response_model=LearningContentResponse)

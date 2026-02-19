@@ -5,9 +5,9 @@ services:
       context: ./hurshbintech-backend
       dockerfile: Dockerfile
     container_name: hurshbintech-backend-pwa
-    # Map AWS Port 8001 -> Container Port 8000
+    # Map host port 8000 -> Container port 8000
     ports:
-      - "8001:8000"
+      - "8000:8000"
     env_file:
       - ./hurshbintech-backend/.env.production
     environment:
@@ -33,22 +33,21 @@ services:
     networks:
       - pwa-network
 
-  # 2. PWA Frontend
+  # 2. PWA Frontend (Clean URL - port 443)
   frontend-pwa:
     build:
       context: ./hurshbintech-frontend
       dockerfile: Dockerfile
       args:
-        # POINT TO THE PUBLIC IP + NEW BACKEND PORT (8001)
-        - VITE_API_BASE_URL=https://hurshbin.lumesoftai.in:8001/api
-        - VITE_WS_URL=wss://hurshbin.lumesoftai.in:8001
+        - VITE_API_BASE_URL=https://tech.hurshbin.com:8000/api
+        - VITE_WS_URL=wss://tech.hurshbin.com:8000
         - ENVIRONMENT=production
         - VITE_ENABLE_PWA=true
         - VITE_GOOGLE_CLIENT_ID=594243784455-qehgec7ij9lqnvo38jumb5m29ttv4gck.apps.googleusercontent.com
     container_name: hurshbintech-frontend-pwa
-    # Map AWS Port 3001 -> Container Port 3000
+    # Map host 443 -> Container 443 (removes port from URL)
     ports:
-      - "3001:3000"
+      - "443:443"
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped
@@ -109,11 +108,11 @@ services:
       - --log-file=stdout 
       - --min-port=49152 
       - --max-port=65535 
-      - --realm=hurshbin.lumesoftai.in
+      - --realm=tech.hurshbin.com
       - --user=hurshbin:SecureTurnPass2024!
       - --lt-cred-mech 
       - --fingerprint 
-      - --external-ip=43.204.218.16
+      - --external-ip=103.192.199.59
       - --listening-port=3478
 
 volumes:

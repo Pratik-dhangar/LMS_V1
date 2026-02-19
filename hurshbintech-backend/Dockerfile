@@ -33,8 +33,26 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create uploads directory (optional if using S3)
-RUN mkdir -p uploads/learning_content uploads/vlogs
+# ---------------------------------------------------
+# SECURITY: Compile to Bytecode (The SAFE Way)
+# ---------------------------------------------------
+
+# 1. Compile all .py files to .pyc (Legacy mode: puts .pyc next to .py)
+RUN python -m compileall -b .
+
+# 2. Delete source files BUT keep critical entry points:
+# - main.py       (Entry point for Uvicorn)
+# - __init__.py   (REQUIRED for Python to see folders as packages)
+# - alembic/*.py  (Migrations need raw source)
+# - scripts/*.py  (Admin/seed scripts need raw source)
+RUN find . -type f -name "*.py" \
+    -not -name "main.py" \
+    -not -name "__init__.py" \
+    -not -path "./alembic/*" \
+    -not -path "./scripts/*" \
+    -delete
+
+# ---------------------------------------------------
 
 # Expose port
 EXPOSE 8000
