@@ -1270,7 +1270,7 @@ const ManageProgramAssignments = () => {
                   <div key={content.content_id} className="mpa-content-preview-item">
                     <div className="mpa-content-preview-order">{index + 1}</div>
                     {content.thumbnail_url && (
-                      <img src={content.thumbnail_url} alt="" className="mpa-content-preview-thumbnail" />
+                      <img src={getFileUrl(content.thumbnail_url)} alt="" className="mpa-content-preview-thumbnail" />
                     )}
                     <div className="mpa-content-preview-info">
                       <div className="mpa-content-preview-title">{content.content_title}</div>
@@ -1621,7 +1621,7 @@ const ManageProgramAssignments = () => {
                         <div key={assignment.id} className="mpa-content-item">
                           <span className="mpa-content-order">{index + 1}</span>
                           {assignment.learning_content?.thumbnail_url && (
-                            <img src={assignment.learning_content.thumbnail_url} alt="" className="mpa-content-thumbnail" />
+                            <img src={getFileUrl(assignment.learning_content.thumbnail_url)} alt="" className="mpa-content-thumbnail" />
                           )}
                           <div className="mpa-content-info">
                             <div className="mpa-content-title">
@@ -1698,7 +1698,7 @@ const ManageProgramAssignments = () => {
                       {attachments.map((attachment) => (
                         <div key={attachment.id} className="mpa-attachment-card">
                           {attachment.thumbnail_url && (
-                            <img src={attachment.thumbnail_url} alt="" className="mpa-attachment-thumbnail" />
+                            <img src={getFileUrl(attachment.thumbnail_url)} alt="" className="mpa-attachment-thumbnail" />
                           )}
                           <div className="mpa-attachment-info">
                             <div className="mpa-attachment-name">{attachment.file_name}</div>

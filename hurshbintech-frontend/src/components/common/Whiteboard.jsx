@@ -20,6 +20,7 @@ import {
     denormalizeItem,
     recalculateItemBoundsOnResize
 } from '../../utils/drawingSync';
+import { getFileUrl as resolveMediaUrl } from '../../utils/urlHelper';
 // Fill-in-the-blanks removed
 
 // Memoized Video Overlay Component
@@ -761,7 +762,7 @@ const Whiteboard = ({
             // For non-video items, add to canvas
             const newItem = {
                 id: Date.now(),
-                src: content.thumbnail_url ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'https://43.204.218.16:8000'}${content.thumbnail_url}` : fullUrl,
+                src: content.thumbnail_url ? resolveMediaUrl(content.thumbnail_url) : fullUrl,
                 x: x - 50,
                 y: y - 50,
                 width: 100,
@@ -2824,7 +2825,7 @@ const Whiteboard = ({
             // For non-video items, add to canvas as overlay
             const newItem = {
                 id: Date.now(),
-                src: droppedData.thumbnail || fullUrl,
+                src: droppedData.thumbnail ? resolveMediaUrl(droppedData.thumbnail) : fullUrl,
                 x: x - 50,
                 y: y - 50,
                 width: droppedBucket ? 40 : 100,  // Shrink if in bucket

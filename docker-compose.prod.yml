@@ -15,6 +15,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=Password12#$
+      # CORS: allow the Prod frontend (port 443 = standard HTTPS) to reach the backend (port 8000)
+      - FRONTEND_URL=https://tech.hurshbin.com
+      - BACKEND_CORS_ORIGINS=https://tech.hurshbin.com
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:

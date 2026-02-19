@@ -98,7 +98,12 @@ async def proxy_s3_file(file_key: str):
         return FileResponse(
             path=str(local_path),
             media_type=content_type or "application/octet-stream",
-            headers={"Cache-Control": "public, max-age=3600"},
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            },
         )
 
     # -----------------------------------------------------------------------
@@ -126,6 +131,9 @@ async def proxy_s3_file(file_key: str):
             headers={
                 "Content-Length": str(content_length),
                 "Cache-Control": "public, max-age=86400",  # 24 h browser cache
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
             },
         )
 
