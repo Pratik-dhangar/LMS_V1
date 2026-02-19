@@ -34,23 +34,25 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # ---------------------------------------------------
-# SECURITY: Compile to Bytecode (The SAFE Way)
+# SECURITY: Compile to Bytecode (opt-in via SECURE_BUILD)
+#   UAT:  docker-compose.uat.yml passes SECURE_BUILD=false (source preserved for debugging)
+#   Prod: docker build --build-arg SECURE_BUILD=true ... (source stripped, bytecode only)
 # ---------------------------------------------------
+ARG SECURE_BUILD=false
 
-# 1. Compile all .py files to .pyc (Legacy mode: puts .pyc next to .py)
-RUN python -m compileall -b .
-
-# 2. Delete source files BUT keep critical entry points:
-# - main.py       (Entry point for Uvicorn)
-# - __init__.py   (REQUIRED for Python to see folders as packages)
-# - alembic/*.py  (Migrations need raw source)
-# - scripts/*.py  (Admin/seed scripts need raw source)
-RUN find . -type f -name "*.py" \
-    -not -name "main.py" \
-    -not -name "__init__.py" \
-    -not -path "./alembic/*" \
-    -not -path "./scripts/*" \
-    -delete
+RUN if [ "$SECURE_BUILD" = "true" ]; then \
+        echo "[SECURE_BUILD] Compiling to bytecode and stripping source..." && \
+        python -m compileall -b . && \
+        find . -type f -name "*.py" \
+            -not -name "main.py" \
+            -not -name "__init__.py" \
+            -not -path "./alembic/*" \
+            -not -path "./scripts/*" \
+            -delete && \
+        echo "[SECURE_BUILD] Done."; \
+    else \
+        echo "[SECURE_BUILD=false] Source preserved."; \
+    fi
 
 # ---------------------------------------------------
 
