@@ -28,7 +28,7 @@ from app.schemas.coach_session import (
     CoachSessionUpdate,
 )
 from app.services.recording_storage import get_recording_storage
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -54,9 +54,7 @@ def get_public_url(file_url: str) -> str:
     """Convert S3 URL to public HTTPS URL via Nginx proxy"""
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
-            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key)
-            return public_url
+            return convert_s3_url_to_proxy(file_url)
         else:
             return file_url
     except Exception as e:

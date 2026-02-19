@@ -25,7 +25,7 @@ from app.schemas.guest_booking import GuestIntentResponse, GuestPaymentUploadRes
 from app.crud import user_crud, coach_crud
 from app.services.cache_service import cache_service
 from app.services.email_service import EmailService
-from app.utils.s3_utils import convert_s3_url_to_accessible
+from app.utils.s3_utils import convert_s3_url_to_proxy
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,15 +54,14 @@ async def get_available_coaches(
     # Convert responses first
     responses = [CoachResponse.from_orm_with_user(coach) for coach in coaches]
     
-    # Convert S3 profile pictures to signed URLs BEFORE caching
-    # This way cached data already has signed URLs (valid for cache TTL)
+    # Convert S3 profile pictures to permanent proxy URLs before caching.
+    # Proxy URLs never expire, so the cached data remains valid indefinitely.
     if settings.USE_S3:
         for coach_response in responses:
             if coach_response.profile_picture_url and coach_response.profile_picture_url.startswith('s3://'):
-                coach_response.profile_picture_url = convert_s3_url_to_accessible(coach_response.profile_picture_url)
-    
-    # Cache responses with signed URLs for 30 minutes
-    # Note: S3 signed URLs are valid for 1 hour by default, so 30min cache is safe
+                coach_response.profile_picture_url = convert_s3_url_to_proxy(coach_response.profile_picture_url)
+
+    # Cache responses with proxy URLs — no expiry concern unlike presigned URLs
     await cache_service.set(cache_key, [r.model_dump() for r in responses], ttl=cache_service.TTL_COACH_PROFILES)
     
     return responses
@@ -313,14 +312,14 @@ async def get_my_appointments(
             updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
         )
 
-        # Convert S3 URLs to signed URLs if using S3
+        # Convert S3 URLs to permanent proxy URLs
         if settings.USE_S3:
             if response.payment_screenshot_url and response.payment_screenshot_url.startswith('s3://'):
-                response.payment_screenshot_url = convert_s3_url_to_accessible(response.payment_screenshot_url)
+                response.payment_screenshot_url = convert_s3_url_to_proxy(response.payment_screenshot_url)
             if response.payment_receipt_url and response.payment_receipt_url.startswith('s3://'):
-                response.payment_receipt_url = convert_s3_url_to_accessible(response.payment_receipt_url)
+                response.payment_receipt_url = convert_s3_url_to_proxy(response.payment_receipt_url)
             if response.refund_receipt_url and response.refund_receipt_url.startswith('s3://'):
-                response.refund_receipt_url = convert_s3_url_to_accessible(response.refund_receipt_url)
+                response.refund_receipt_url = convert_s3_url_to_proxy(response.refund_receipt_url)
 
         responses.append(response)
 

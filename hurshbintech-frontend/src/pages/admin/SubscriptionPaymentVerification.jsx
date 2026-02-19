@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { getFileUrl } from "../../utils/urlHelper";
 import {
   FileText,
   CheckCircle,
@@ -262,7 +263,7 @@ const SubscriptionPaymentVerification = () => {
                     <div className="card-actions">
                       {receipt.file_path && (
                         <a
-                          href={receipt.file_path}
+                          href={getFileUrl(receipt.file_path)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-primary btn-flex-1"

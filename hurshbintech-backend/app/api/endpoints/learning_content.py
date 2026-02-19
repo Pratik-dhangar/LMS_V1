@@ -7,7 +7,7 @@ from typing import List
 
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -21,7 +21,7 @@ from app.schemas.learning_content import (
     LearningContentUpdate,
 )
 from app.services.cache_service import cache_service
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/learning-content", tags=["Learning Content"])
@@ -201,33 +201,15 @@ def delete_file(file_url: str) -> bool:
 
 def get_public_url(file_url: str) -> str:
     """
-    Convert S3 URL to backend proxy URL for CORS-safe access.
-    
-    Returns a URL pointing to the backend's /s3-files/ proxy endpoint
-    which streams content from S3. This avoids CORS issues since the
-    browser only communicates with the same-origin backend.
-
-    Args:
-        file_url: S3 URL (s3://bucket/key) or local path
-
-    Returns:
-        Backend proxy URL or original local path
+    Convert S3 URL to a permanent backend proxy URL.
     """
     try:
-        if settings.USE_S3 and file_url.startswith("s3://"):
-            # Extract S3 key and return proxy URL
-            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            # Return relative URL that goes through backend proxy
-            # Frontend/nginx will route /api/content/learning-content/s3-files/... to this backend
-            proxy_url = f"/api/content/learning-content/s3-files/{s3_key}"
-            logger.debug(f"Converted S3 URL to proxy URL: {file_url} -> {proxy_url}")
-            return proxy_url
-        else:
-            # Return local path as-is (backend serves it)
-            return file_url
+        if settings.USE_S3 and file_url and file_url.startswith("s3://"):
+            return convert_s3_url_to_proxy(file_url)
+        return file_url
     except Exception as e:
         logger.error(f"Error generating proxy URL: {str(e)}")
-        return file_url  # Fallback to original URL
+        return file_url
 
 
 def convert_response_urls(response: LearningContentResponse) -> LearningContentResponse:
@@ -253,81 +235,12 @@ async def serve_file(filename: str):
 
 
 @router.get("/s3-files/{file_key:path}")
-async def serve_s3_file(file_key: str):
+async def serve_s3_file_legacy(file_key: str):
     """
-    Stream S3 file content through backend proxy.
-    
-    This avoids CORS issues by serving S3 content from the same origin
-    as the frontend. The backend fetches from S3 using credentials and
-    streams the content directly to the browser.
-    
-    Args:
-        file_key: S3 object key (e.g., uploads/learning-content/filename.jpg)
-    
-    Returns:
-        StreamingResponse with file content from S3
+    Legacy alias — redirects to the generic media proxy.
+    Kept for backward compatibility with any s3-files URLs already stored in the database.
     """
-    try:
-        if not settings.USE_S3 or not s3_manager:
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail="S3 is not enabled"
-            )
-        
-        # Validate the file key to prevent directory traversal
-        if not file_key or file_key.startswith("..") or file_key.startswith("/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid file key"
-            )
-        
-        # Fetch the object directly from S3
-        s3_response = s3_manager.s3_client.get_object(
-            Bucket=s3_manager.bucket_name,
-            Key=file_key
-        )
-        
-        content_type = s3_response.get('ContentType', 'application/octet-stream')
-        content_length = s3_response.get('ContentLength', 0)
-        
-        logger.info(f"Streaming S3 file: {file_key} ({content_type}, {content_length} bytes)")
-        
-        # Stream the S3 object body directly to the client
-        return StreamingResponse(
-            s3_response['Body'],
-            media_type=content_type,
-            headers={
-                'Content-Length': str(content_length),
-                'Cache-Control': 'public, max-age=86400',  # Cache 24h in browser
-                'Access-Control-Allow-Origin': '*',
-            }
-        )
-    
-    except s3_manager.s3_client.exceptions.NoSuchKey:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found in S3"
-        )
-    except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code', '')
-        if error_code in ('NoSuchKey', '404', 'NotFound'):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="File not found in S3"
-            )
-        logger.error(f"S3 client error for {file_key}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to serve file"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error streaming S3 file {file_key}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to serve file"
-        )
+    return RedirectResponse(url=f"/api/media/s3/{file_key}", status_code=301)
 
 
 # ============ ADMIN ENDPOINTS ============#

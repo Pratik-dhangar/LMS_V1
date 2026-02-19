@@ -340,6 +340,47 @@ async def upload_to_s3(file: "UploadFile", s3_path: str) -> str:
         logger.error(f"Failed to upload {s3_path} to S3: {str(e)}")
         raise
 
+def s3_key_to_proxy(s3_key: str) -> str:
+    """
+    Convert a bare S3 object key to a permanent backend proxy URL.
+
+    This is the single source of truth for the proxy URL prefix.
+    All other helpers and endpoints must call this function instead of
+    constructing the URL manually.
+
+    Args:
+        s3_key: S3 object key, e.g. "uploads/profile_pictures/coach_1.jpg"
+
+    Returns:
+        Relative proxy URL: /api/media/s3/{s3_key}
+    """
+    return f"/api/media/s3/{s3_key}"
+
+
+def convert_s3_url_to_proxy(file_url: str, bucket_name: str = None) -> str:
+    """
+    Convert s3://bucket/key URL to a permanent backend proxy URL.
+
+    Unlike presigned URLs, proxy URLs never expire. The browser fetches the
+    file through /api/media/s3/{key} which streams it from S3 using
+    server-side credentials.
+
+    Args:
+        file_url: S3 URL in s3://bucket/key format, or any other path
+        bucket_name: Override bucket name (uses settings.S3_BUCKET_NAME if None)
+
+    Returns:
+        Relative proxy URL: /api/media/s3/{key}
+        or original path if not an s3:// URL
+    """
+    if not file_url or not file_url.startswith('s3://'):
+        return file_url
+    from app.core.config import settings as _settings
+    bucket = bucket_name or _settings.S3_BUCKET_NAME
+    s3_key = file_url.replace(f"s3://{bucket}/", "")
+    return s3_key_to_proxy(s3_key)
+
+
 def convert_s3_url_to_accessible(file_url: str, bucket_name: str = None, region: str = None) -> str:
     """
     Convert s3://bucket/key format URL to an accessible presigned URL.

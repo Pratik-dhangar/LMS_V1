@@ -49,7 +49,7 @@ from app.schemas.program_assignment_schema import (
     ContentAssignmentWithFeedback,
     FinalFeedbackSubmit,
 )
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy, s3_key_to_proxy
 from app.core.config import settings
 from pathlib import Path
 import uuid
@@ -77,8 +77,7 @@ def convert_s3_file_url(file_url: str) -> str:
     if file_url.startswith('http://') or file_url.startswith('https://'):
         return file_url
     if settings.USE_S3 and file_url.startswith('s3://'):
-        s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-        return f"/api/content/learning-content/s3-files/{s3_key}"
+        return convert_s3_url_to_proxy(file_url)
     return file_url
 
 
@@ -820,7 +819,7 @@ async def upload_attachment(
                 filename=file.filename,
                 content_type=file.content_type or "application/octet-stream"
             )
-            file_path = s3_manager.get_public_url(s3_key)
+            file_path = s3_key_to_proxy(s3_key)
             
             # Generate thumbnail for images and videos
             if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
@@ -836,7 +835,7 @@ async def upload_attachment(
                             filename=f"thumb_{file.filename}",
                             content_type="image/jpeg"
                         )
-                        thumbnail_url = s3_manager.get_public_url(thumbnail_key)
+                        thumbnail_url = s3_key_to_proxy(thumbnail_key)
                 except Exception as e:
                     logger.warning(f"Failed to generate thumbnail: {str(e)}")
         
@@ -1450,18 +1449,10 @@ async def get_my_learning_contents(
                 # Convert S3 URLs to public HTTP URLs (permanent access)
                 if settings.USE_S3 and s3_manager:
                     if file_url and file_url.startswith("s3://"):
-                        s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-                        try:
-                            file_url = s3_manager.get_public_url(s3_key)
-                        except Exception as e:
-                            logger.warning(f"Failed to get public URL for {s3_key}: {str(e)}")
-                    
+                        file_url = convert_s3_url_to_proxy(file_url)
+
                     if thumbnail_url and thumbnail_url.startswith("s3://"):
-                        s3_key = thumbnail_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-                        try:
-                            thumbnail_url = s3_manager.get_public_url(s3_key)
-                        except Exception as e:
-                            logger.warning(f"Failed to get public URL for thumbnail {s3_key}: {str(e)}")
+                        thumbnail_url = convert_s3_url_to_proxy(thumbnail_url)
                 
                 content_type_str = content.content_type.value if hasattr(content.content_type, 'value') else str(content.content_type)
                 
@@ -1859,7 +1850,7 @@ async def upload_my_attachment(
                 filename=file.filename,
                 content_type=file.content_type or "application/octet-stream"
             )
-            file_path = s3_manager.get_public_url(s3_key)
+            file_path = s3_key_to_proxy(s3_key)
             
             # Generate thumbnail for images and videos
             if file_type in [AttachmentType.IMAGE, AttachmentType.VIDEO]:
@@ -1875,7 +1866,7 @@ async def upload_my_attachment(
                             filename=f"thumb_{file.filename}",
                             content_type="image/jpeg"
                         )
-                        thumbnail_url = s3_manager.get_public_url(thumbnail_key)
+                        thumbnail_url = s3_key_to_proxy(thumbnail_key)
                 except Exception as e:
                     logger.warning(f"Failed to generate thumbnail: {str(e)}")
         
