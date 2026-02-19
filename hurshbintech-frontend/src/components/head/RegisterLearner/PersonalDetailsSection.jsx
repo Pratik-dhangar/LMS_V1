@@ -44,6 +44,23 @@ const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
           {errors.email && <p className="register-error-text">{errors.email}</p>}
         </div>
 
+        {/* Contact Number */}
+        <div>
+          <label htmlFor="contact_number" className="register-field-label">
+            Contact Number
+          </label>
+          <input
+            type="tel"
+            id="contact_number"
+            name="contact_number"
+            value={formData.contact_number}
+            onChange={handleChange}
+            className={`register-input ${errors.contact_number ? 'register-input-error' : ''}`}
+            placeholder="Enter contact number"
+          />
+          {errors.contact_number && <p className="register-error-text">{errors.contact_number}</p>}
+        </div>
+
         {/* Age */}
         <div>
           <label htmlFor="age" className="register-field-label">

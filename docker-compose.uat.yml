@@ -1,25 +1,28 @@
 services:
-  # 1. PWA Backend
+  # 1. PWA Backend (UAT - builds from source on EC2)
   backend-pwa:
     build:
       context: ./hurshbintech-backend
       dockerfile: Dockerfile
+      args:
+        - SECURE_BUILD=false
     container_name: hurshbintech-backend-pwa
-    # Map host port 8000 -> Container port 8000
+    # Map host port 8001 -> Container port 8000
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - ./hurshbintech-backend/.env.production
     environment:
-      # Connects to the 'db-pwa' service defined below
       - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@db-pwa:5432/hurshbintechdb_pwa
       - ENVIRONMENT=production
-      # Redis Configuration (Docker service)
       - REDIS_ENABLED=true
       - REDIS_HOST=redis-pwa
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=Password12#$
+      # CORS: allow the UAT frontend (port 3001) to reach the UAT backend (port 8001)
+      - FRONTEND_URL=https://hurshbin.lumesoftai.in:3001
+      - BACKEND_CORS_ORIGINS=["https://hurshbin.lumesoftai.in:3001"]
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:
@@ -27,34 +30,34 @@ services:
         condition: service_healthy
       db-pwa:
         condition: service_started
-    # SSL Command
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem
     restart: unless-stopped
     networks:
       - pwa-network
 
-  # 2. PWA Frontend (Clean URL - port 443)
+  # 2. PWA Frontend (UAT - builds from source on EC2, port 3001)
   frontend-pwa:
     build:
       context: ./hurshbintech-frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=https://tech.hurshbin.com:8000/api
-        - VITE_WS_URL=wss://tech.hurshbin.com:8000
+        - VITE_API_BASE_URL=https://hurshbin.lumesoftai.in:8001/api
+        - VITE_WS_URL=wss://hurshbin.lumesoftai.in:8001
         - ENVIRONMENT=production
         - VITE_ENABLE_PWA=true
         - VITE_GOOGLE_CLIENT_ID=594243784455-qehgec7ij9lqnvo38jumb5m29ttv4gck.apps.googleusercontent.com
+        - ENV_TYPE=uat
     container_name: hurshbintech-frontend-pwa
-    # Map host 443 -> Container 443 (removes port from URL)
+    # Map host port 3001 -> Container port 3000
     ports:
-      - "443:443"
+      - "3001:3000"
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped
     networks:
       - pwa-network
 
-  # 3. PWA Database (A fresh, separate DB container)
+  # 3. PWA Database
   db-pwa:
     image: postgres:15
     container_name: hurshbintech-db-pwa
@@ -68,7 +71,7 @@ services:
     networks:
       - pwa-network
 
-  # 4. Redis Cache (256MB limit with LRU eviction)
+  # 4. Redis Cache (file-mounted config)
   redis-pwa:
     image: redis:7-alpine
     container_name: hurshbintech-redis-pwa
@@ -78,7 +81,7 @@ services:
       - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_pwa_data:/data
     ports:
-      - "6379:6379"  # Expose for monitoring (optional, can be removed in production)
+      - "6379:6379"
     networks:
       - pwa-network
     healthcheck:
@@ -87,32 +90,31 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-    # Memory and CPU limits (prevents resource exhaustion)
     deploy:
       resources:
         limits:
-          cpus: '0.5'        # Max 50% of one CPU core
-          memory: 320M       # 256MB for Redis + 64MB overhead
+          cpus: '0.5'
+          memory: 320M
         reservations:
           cpus: '0.25'
           memory: 128M
 
-  # 5. ✅ TURN Server for WebRTC (Fixes video connections behind NAT)
+  # 5. TURN Server for WebRTC (UAT - EC2)
   coturn:
     image: coturn/coturn:latest
     container_name: hurshbintech-coturn
     restart: unless-stopped
     network_mode: "host"
-    command: 
-      - -n 
-      - --log-file=stdout 
-      - --min-port=49152 
-      - --max-port=65535 
-      - --realm=tech.hurshbin.com
+    command:
+      - -n
+      - --log-file=stdout
+      - --min-port=49152
+      - --max-port=65535
+      - --realm=hurshbin.lumesoftai.in
       - --user=hurshbin:SecureTurnPass2024!
-      - --lt-cred-mech 
-      - --fingerprint 
-      - --external-ip=103.192.199.59
+      - --lt-cred-mech
+      - --fingerprint
+      - --external-ip=43.204.218.16
       - --listening-port=3478
 
 volumes:

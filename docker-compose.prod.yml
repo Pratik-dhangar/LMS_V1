@@ -1,37 +1,39 @@
 services:
-  # 1. PWA Backend
+  # 1. PWA Backend (Prod - pulls pre-built image from Docker Hub)
   backend-pwa:
     image: lumesoftai/hurshbin-backend:prod
     container_name: hurshbintech-backend-pwa
     ports:
-      - "8000:8000"  # Backend on port 8000
+      - "8000:8000"
     env_file:
       - .env
     environment:
       - DATABASE_URL=postgresql://hurshbinuser:hurshbintech@db-pwa:5432/hurshbintechdb_pwa
       - ENVIRONMENT=production
       - REDIS_ENABLED=true
-      - REDIS_HOST=redis-pwa  # Service name, not container name
+      - REDIS_HOST=redis-pwa
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=Password12#$
+      # CORS: allow the Prod frontend (port 443 = standard HTTPS) to reach the backend (port 8000)
+      - FRONTEND_URL=https://tech.hurshbin.com
+      - BACKEND_CORS_ORIGINS=["https://tech.hurshbin.com"]
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:
       - redis-pwa
       - db-pwa
-    # SSL Command (includes alembic migrations before starting uvicorn)
     command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem"
     restart: unless-stopped
     networks:
       - pwa-network
 
-  # 2. PWA Frontend (Clean URL)
+  # 2. PWA Frontend (Prod - pulls pre-built image, clean URL port 443)
   frontend-pwa:
     image: lumesoftai/hurshbin-frontend:prod
     container_name: hurshbintech-frontend-pwa
     ports:
-      - "443:443"  # HTTPS on standard port (no port in URL)
+      - "443:443"
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped
@@ -52,12 +54,11 @@ services:
     networks:
       - pwa-network
 
-  # 4. Redis Cache (Inline config - no file needed)
+  # 4. Redis Cache (inline config - no file dependency)
   redis-pwa:
     image: redis:7-alpine
     container_name: hurshbintech-redis-pwa
     restart: unless-stopped
-    # Inline configuration (no redis.conf file dependency)
     command: redis-server --requirepass "Password12#$" --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_pwa_data:/data
@@ -71,21 +72,21 @@ services:
       timeout: 3s
       retries: 3
 
-  # 5. TURN Server for WebRTC
+  # 5. TURN Server for WebRTC (Prod - Neev Cloud)
   coturn:
     image: coturn/coturn:latest
     container_name: hurshbintech-coturn
     restart: unless-stopped
     network_mode: "host"
-    command: 
-      - -n 
-      - --log-file=stdout 
-      - --min-port=49152 
-      - --max-port=65535 
+    command:
+      - -n
+      - --log-file=stdout
+      - --min-port=49152
+      - --max-port=65535
       - --realm=tech.hurshbin.com
       - --user=hurshbin:SecureTurnPass2024!
-      - --lt-cred-mech 
-      - --fingerprint 
+      - --lt-cred-mech
+      - --fingerprint
       - --external-ip=103.192.199.59
       - --listening-port=3478
 

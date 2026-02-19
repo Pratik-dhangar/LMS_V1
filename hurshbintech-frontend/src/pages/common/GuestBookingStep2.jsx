@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Clock, User, Phone, Shield, Loader } from 'lucide-
 import { toast } from 'react-toastify';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/GuestBooking.css';
 import '../../styles/ManageUsersLayout.css';
 
@@ -348,7 +349,7 @@ const GuestBookingStep2 = () => {
                           >
                             {coach.profile_picture_url && (
                               <img 
-                                src={coach.profile_picture_url} 
+                                src={getFileUrl(coach.profile_picture_url)} 
                                 alt={coach.name}
                                 className="coach-card-image"
                               />
@@ -372,7 +373,7 @@ const GuestBookingStep2 = () => {
                       <div className="coach-card selected" style={{ cursor: 'default', maxWidth: '400px' }}>
                         {preSelectedCoach.profile_picture_url && (
                           <img 
-                            src={preSelectedCoach.profile_picture_url} 
+                            src={getFileUrl(preSelectedCoach.profile_picture_url)} 
                             alt={preSelectedCoach.name}
                             className="coach-card-image"
                           />

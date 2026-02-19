@@ -4,6 +4,7 @@ import { FaCalendar, FaArrowLeft, FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaE
 import Loader from '../../components/common/Loader';
 import ErrorState from '../../components/common/ErrorState';
 import vlogService from '../../api/services/vlogService';
+import { getFileUrl } from '../../utils/urlHelper';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/pages/VlogList.css';
 
@@ -225,13 +226,13 @@ const VlogDetail = () => {
                             <video
                                 ref={videoRef}
                                 className="vlog-detail-video"
-                                poster={vlog.thumbnail_url}
+                                poster={getFileUrl(vlog.thumbnail_url)}
                                 onTimeUpdate={handleTimeUpdate}
                                 onLoadedMetadata={handleLoadedMetadata}
                                 onEnded={() => setIsPlaying(false)}
                                 onClick={togglePlay}
                             >
-                                <source src={vlog.file_url} type="video/mp4" />
+                                <source src={getFileUrl(vlog.file_url)} type="video/mp4" />
                                 Your browser does not support the video tag.
                             </video>
 

@@ -20,7 +20,7 @@ from app.schemas.ecommerce import (
     PaymentReceiptResponse, OrderApprove, OrderReject, OrderApprovalResponse,
     OrderWithUserResponse, OrderAuditLogList
 )
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import convert_s3_url_to_proxy, s3_key_to_proxy
 from app.utils.file_handler import upload_file
 from app.services.email_service import EmailService
 from app.services.cache_service import cache_service
@@ -31,28 +31,15 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
 def get_public_url(file_path: Optional[str]) -> Optional[str]:
-    """Convert S3 key or local path to public URL"""
+    """Convert S3 key or path to permanent backend proxy URL"""
     if not file_path:
         return None
-    
-    # If it's already a full HTTP URL, return as-is
     if file_path.startswith("http"):
         return file_path
-    
-    # If using S3, convert the S3 key to a public URL
     if settings.USE_S3:
-        try:
-            s3_manager = S3Manager(bucket_name=settings.S3_BUCKET_NAME)
-            public_url = s3_manager.get_public_url(file_path)
-            logger.info(f"Orders: Converted S3 path {file_path} to public URL")
-            return public_url
-        except Exception as e:
-            logger.warning(f"Orders: Error converting S3 URL for {file_path}: {str(e)}", exc_info=True)
-            # Fallback to direct URL construction
-            fallback_url = f"https://{settings.S3_BUCKET_NAME}.s3.ap-south-1.amazonaws.com/{file_path}"
-            return fallback_url
-    
-    # For local storage, return the path as-is (will be served by static handler)
+        if file_path.startswith("s3://"):
+            return convert_s3_url_to_proxy(file_path)
+        return s3_key_to_proxy(file_path)
     return file_path
 
 
@@ -143,6 +130,17 @@ async def checkout(
         recipient_email = order_data.email or current_user.email
         recipient_name = current_user.name
         
+        logger.info(f"Checkout: Order created {order.order_number} for user {current_user.id}")
+        logger.info(f"Checkout: Email being sent to - {recipient_email}, Name - {recipient_name}")
+        
+        # Validate email before sending
+        if not recipient_email:
+            logger.error(f"Checkout: No email found for user {current_user.id}. order_data.email={order_data.email}, current_user.email={current_user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is required for checkout. Please provide an email address."
+            )
+        
         # Prepare items for email
         order_items = [
             {
@@ -168,6 +166,8 @@ async def checkout(
             upi_details=payment_details if order_data.payment_method == "UPI_QR" else None,
             bank_details=payment_details if order_data.payment_method == "BANK_TRANSFER" else None,
         )
+        
+        logger.info(f"Checkout: Order confirmation email sent successfully to {recipient_email}")
         
         # Build response
         items_response = [
@@ -195,6 +195,7 @@ async def checkout(
             "created_at": order.created_at
         }
     except Exception as e:
+        logger.error(f"Checkout: Error creating order for user {current_user.id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create order: {str(e)}"

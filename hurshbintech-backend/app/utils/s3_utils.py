@@ -22,13 +22,19 @@ logger = logging.getLogger(__name__)
 class S3Manager:
     """Manages S3 uploads and media processing"""
 
-    def __init__(self, bucket_name: str, region: str = "ap-south-1"):
-        """Initialize S3 client"""
+    def __init__(self, bucket_name: str, region: str = None):
+        """Initialize S3 client.
+        
+        Supports both AWS S3 and S3-compatible services (Neev Cloud, MinIO, etc.).
+        Region defaults to AWS_REGION env var, then falls back to ap-south-1.
+        Set S3_ENDPOINT_URL env var to point at a non-AWS endpoint.
+        """
         self.bucket_name = bucket_name
-        self.region = region
+        # Read region from env so UAT (ap-south-1) and Prod/Neev (us-east-1) work automatically
+        self.region = region or os.getenv("AWS_REGION", "ap-south-1")
         
         # Support S3-compatible services (Neev Cloud, MinIO, etc.)
-        endpoint_url = os.getenv("S3_ENDPOINT_URL")
+        endpoint_url = os.getenv("S3_ENDPOINT_URL") or None  # treat empty string as None
         
         # Force path-style addressing for S3-compatible services
         # (virtual-host style won't work with custom endpoints)
@@ -334,17 +340,59 @@ async def upload_to_s3(file: "UploadFile", s3_path: str) -> str:
         logger.error(f"Failed to upload {s3_path} to S3: {str(e)}")
         raise
 
-def convert_s3_url_to_accessible(file_url: str, bucket_name: str = None, region: str = "ap-south-1") -> str:
+def s3_key_to_proxy(s3_key: str) -> str:
+    """
+    Convert a bare S3 object key to a permanent backend proxy URL.
+
+    This is the single source of truth for the proxy URL prefix.
+    All other helpers and endpoints must call this function instead of
+    constructing the URL manually.
+
+    Args:
+        s3_key: S3 object key, e.g. "uploads/profile_pictures/coach_1.jpg"
+
+    Returns:
+        Relative proxy URL: /api/media/s3/{s3_key}
+    """
+    return f"/api/media/s3/{s3_key}"
+
+
+def convert_s3_url_to_proxy(file_url: str, bucket_name: str = None) -> str:
+    """
+    Convert s3://bucket/key URL to a permanent backend proxy URL.
+
+    Unlike presigned URLs, proxy URLs never expire. The browser fetches the
+    file through /api/media/s3/{key} which streams it from S3 using
+    server-side credentials.
+
+    Args:
+        file_url: S3 URL in s3://bucket/key format, or any other path
+        bucket_name: Override bucket name (uses settings.S3_BUCKET_NAME if None)
+
+    Returns:
+        Relative proxy URL: /api/media/s3/{key}
+        or original path if not an s3:// URL
+    """
+    if not file_url or not file_url.startswith('s3://'):
+        return file_url
+    from app.core.config import settings as _settings
+    bucket = bucket_name or _settings.S3_BUCKET_NAME
+    s3_key = file_url.replace(f"s3://{bucket}/", "")
+    return s3_key_to_proxy(s3_key)
+
+
+def convert_s3_url_to_accessible(file_url: str, bucket_name: str = None, region: str = None) -> str:
     """
     Convert s3://bucket/key format URL to an accessible presigned URL.
     
-    This is the standard utility for converting database-stored S3 URLs
-    (s3://bucket/key format) to browser-accessible HTTPS presigned URLs.
+    Works with both AWS S3 and S3-compatible services (Neev Cloud).
+    Region and endpoint are read from env vars (AWS_REGION, S3_ENDPOINT_URL)
+    so no code changes are needed when switching between environments.
     
     Args:
         file_url: S3 URL in s3://bucket/key format, or local/http path
         bucket_name: S3 bucket name (uses settings.S3_BUCKET_NAME if not provided)
-        region: AWS region (default: ap-south-1)
+        region: AWS region — if None, reads from AWS_REGION env var
     
     Returns:
         Presigned HTTPS URL (24h expiration) or original path if not S3
@@ -364,12 +412,14 @@ def convert_s3_url_to_accessible(file_url: str, bucket_name: str = None, region:
         from app.core.config import settings
         
         bucket = bucket_name or settings.S3_BUCKET_NAME
+        # region=None lets S3Manager read AWS_REGION from env automatically
+        resolved_region = region or os.getenv("AWS_REGION", "ap-south-1")
         
         # Extract S3 key from s3://bucket/key format
         s3_key = file_url.replace(f"s3://{bucket}/", "")
         
         # Generate presigned URL (24h expiration)
-        manager = S3Manager(bucket, region)
+        manager = S3Manager(bucket, resolved_region)
         presigned_url = manager.get_public_url(s3_key)
         
         logger.info(f"Converted S3 URL to presigned URL: {file_url} -> [presigned]")

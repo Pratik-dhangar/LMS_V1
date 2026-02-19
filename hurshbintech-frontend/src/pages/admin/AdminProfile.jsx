@@ -552,14 +552,14 @@ const AdminProfile = () => {
                                                         />
                                                     </div>
                                                     <div className="form-group">
-                                                        <label htmlFor="tax_id">Tax ID</label>
+                                                        <label htmlFor="tax_id">GST No.</label>
                                                         <input
                                                             type="text"
                                                             id="tax_id"
                                                             name="tax_id"
                                                             value={formData.tax_id}
                                                             onChange={handleFormChange}
-                                                            placeholder="Enter tax ID"
+                                                            placeholder="Enter GST No. "
                                                             className="form-input"
                                                         />
                                                     </div>

@@ -86,7 +86,7 @@ async def create_coach_session(
         .where(CoachSession.id == new_session.id)
         .options(joinedload(CoachSession.participants))
     )
-    session_with_participants = result.scalar_one()
+    session_with_participants = result.unique().scalar_one()
     
     logger.info(f"Created coach session with {len(participants)} participants")
     return session_with_participants
@@ -126,7 +126,7 @@ async def get_coach_session_by_id(
         .where(CoachSession.id == session_id)
         .options(joinedload(CoachSession.participants))
     )
-    session = result.scalar_one_or_none()
+    session = result.unique().scalar_one_or_none()
     
     if session:
         logger.info(f"Found coach session: {session.id}")

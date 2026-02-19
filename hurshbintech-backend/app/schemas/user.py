@@ -47,9 +47,11 @@ class ReferenceDataSchema(BaseModel):
     @field_validator('file_path', mode='after')
     @classmethod
     def convert_s3_to_public_url(cls, v):
-        """Convert S3 URLs to public HTTPS URLs using existing helper"""
-        from app.utils.s3_utils import convert_s3_url_to_accessible
-        return convert_s3_url_to_accessible(v)
+        """Convert S3 URLs to permanent backend proxy URLs"""
+        if not v or not v.startswith('s3://'):
+            return v
+        from app.utils.s3_utils import convert_s3_url_to_proxy
+        return convert_s3_url_to_proxy(v)
 
 
 # ============ ADMIN SCHEMAS ============
@@ -485,9 +487,8 @@ class CoachResponse(BaseModel):
         # Convert profile_picture_url: s3:// -> backend proxy URL to avoid CORS
         raw_pic_url = getattr(profile, 'profile_picture_url', None)
         if raw_pic_url and raw_pic_url.startswith('s3://'):
-            from app.core.config import settings
-            s3_key = raw_pic_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            converted_pic_url = f"/api/content/learning-content/s3-files/{s3_key}"
+            from app.utils.s3_utils import convert_s3_url_to_proxy
+            converted_pic_url = convert_s3_url_to_proxy(raw_pic_url)
         else:
             converted_pic_url = raw_pic_url
 
@@ -549,6 +550,7 @@ class LearnerCreate(BaseModel):
     # --- Personal details ---
     name: str  # Name is required
     email: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
     dob: Optional[date] = None
@@ -635,6 +637,7 @@ class LearnerUpdate(BaseModel):
     # --- Personal details ---
     name: Optional[str] = None
     email: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number
     age: Optional[int] = None
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None
@@ -720,6 +723,7 @@ class LearnerResponse(BaseModel):
     email: Optional[str] = None  # From User
     passcode: str
     age: Optional[int] = None
+    contact_no: Optional[str] = None  # Contact number
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[List[str]] = None  # Return list to frontend
@@ -803,6 +807,7 @@ class LearnerResponse(BaseModel):
             "user_id": user.id,
             "name": user.name,
             "email": user.email,
+            "contact_no": user.contact_number,  # Get contact_number from User
             "passcode": passcode,
             "created_at": user.created_at,
             "updated_at": profile.updated_at,

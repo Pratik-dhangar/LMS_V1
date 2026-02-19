@@ -20,6 +20,7 @@ import {
     denormalizeItem,
     recalculateItemBoundsOnResize
 } from '../../utils/drawingSync';
+import { getFileUrl as resolveMediaUrl } from '../../utils/urlHelper';
 // Fill-in-the-blanks removed
 
 // Memoized Video Overlay Component
@@ -721,7 +722,7 @@ const Whiteboard = ({
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
-                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
@@ -761,7 +762,7 @@ const Whiteboard = ({
             // For non-video items, add to canvas
             const newItem = {
                 id: Date.now(),
-                src: content.thumbnail_url ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'https://43.204.218.16:8000'}${content.thumbnail_url}` : fullUrl,
+                src: content.thumbnail_url ? resolveMediaUrl(content.thumbnail_url) : fullUrl,
                 x: x - 50,
                 y: y - 50,
                 width: 100,
@@ -2769,7 +2770,7 @@ const Whiteboard = ({
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
-                fullUrl = `${apiBaseUrl}/content/learning-content/s3-files/${key}`;
+                fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
@@ -2824,7 +2825,7 @@ const Whiteboard = ({
             // For non-video items, add to canvas as overlay
             const newItem = {
                 id: Date.now(),
-                src: droppedData.thumbnail || fullUrl,
+                src: droppedData.thumbnail ? resolveMediaUrl(droppedData.thumbnail) : fullUrl,
                 x: x - 50,
                 y: y - 50,
                 width: droppedBucket ? 40 : 100,  // Shrink if in bucket

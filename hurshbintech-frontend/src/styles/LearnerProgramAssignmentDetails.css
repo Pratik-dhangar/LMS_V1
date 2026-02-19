@@ -61,7 +61,7 @@
 
 .page-container {
     min-height: 100vh;
-    background: #f7fafc;
+    /* background: #f7fafc; */
 }
 
 .page-main {

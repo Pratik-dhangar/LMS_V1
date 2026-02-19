@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import storeService from "../../api/services/ecommerce/storeService";
 import cartService from "../../api/services/ecommerce/cartService";
 import { toast } from "react-toastify";
+import { getFileUrl } from "../../utils/urlHelper";
 
 
 
@@ -15,6 +16,7 @@ const StoreCatalog = () => {
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  const [animatingProducts, setAnimatingProducts] = useState(new Set());
 
   const [filters, setFilters] = useState({
     search: "",
@@ -126,9 +128,30 @@ const StoreCatalog = () => {
 
   const handleAddToCart = async (productId) => {
     try {
+      // Trigger animation
+      setAnimatingProducts(prev => new Set(prev).add(productId));
+
       await cartService.addToCart({ product_id: productId, quantity: 1 });
       loadCartCount();
+
+      toast.success('Item added to cart!');
+
+      // Remove animation after it completes
+      setTimeout(() => {
+        setAnimatingProducts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(productId);
+          return newSet;
+        });
+      }, 600);
     } catch (error) {
+      // Remove animation on error
+      setAnimatingProducts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+
       if (error.response?.status === 401) {
         toast.info("Please login to add items to cart");
         navigate("/login");
@@ -185,6 +208,36 @@ const StoreCatalog = () => {
 
   return (
     <div className="page-container">
+      <style>{`
+        @keyframes addToCartPulse {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 15px rgba(39, 174, 96, 0);
+          }
+        }
+        
+        @keyframes cartFly {
+          0% {
+            opacity: 1;
+            transform: translate(0, 0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(50px, -50px) scale(0.5);
+          }
+        }
+        
+        .add-to-cart-animating {
+          animation: addToCartPulse 0.6s ease-out !important;
+        }
+      `}</style>
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
@@ -627,7 +680,7 @@ const StoreCatalog = () => {
                           >
                             {product.thumbnail_url || product.image_url ? (
                               <img
-                                src={product.thumbnail_url || product.image_url}
+                                src={getFileUrl(product.thumbnail_url || product.image_url)}
                                 alt={product.name}
                                 style={{
                                   width: "100%",
@@ -738,6 +791,7 @@ const StoreCatalog = () => {
                               handleAddToCart(product.id);
                             }}
                             disabled={!product.stock_available}
+                            className={animatingProducts.has(product.id) ? 'add-to-cart-animating' : ''}
                             style={{
                               width: "100%",
                               padding: "10px",
@@ -753,6 +807,7 @@ const StoreCatalog = () => {
                                 ? "pointer"
                                 : "not-allowed",
                               marginTop: "10px",
+                              transition: 'all 0.3s ease',
                             }}
                           >
                             {product.stock_available

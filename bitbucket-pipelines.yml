@@ -44,8 +44,8 @@ definitions:
         name: Validate Docker Compose & Dockerfiles
         script:
           # Validate docker-compose syntax
-          - docker-compose -f docker-compose-pwa.yml config -q
-          - echo "docker-compose-pwa.yml is valid"
+          - docker-compose -f docker-compose.uat.yml config -q
+          - echo "docker-compose.uat.yml is valid"
           # Validate Dockerfiles syntax
           - docker run --rm -i hadolint/hadolint < hurshbintech-backend/Dockerfile || true
           - docker run --rm -i hadolint/hadolint < hurshbintech-frontend/Dockerfile || true
@@ -71,9 +71,9 @@ definitions:
                 git checkout uat-pwa &&
                 git pull origin uat-pwa &&
                 echo "🔧 Rebuilding backend..." &&
-                docker-compose -f docker-compose-pwa.yml up -d --build --force-recreate backend-pwa &&
+                docker-compose -f docker-compose.uat.yml up -d --build --force-recreate backend-pwa &&
                 echo "🔧 Rebuilding frontend..." &&
-                docker-compose -f docker-compose-pwa.yml up -d --build --force-recreate frontend-pwa &&
+                docker-compose -f docker-compose.uat.yml up -d --build --force-recreate frontend-pwa &&
                 echo "🗄️ Running database migrations..." &&
                 docker exec hurshbintech-backend-pwa alembic upgrade head &&
                 echo "🧹 Cleaning up unused Docker images..." &&
@@ -87,7 +87,6 @@ definitions:
 # Pipeline Triggers
 # =============================================================================
 pipelines:
-  # ONLY trigger on pushes to uat-pwa branch
   branches:
     uat-pwa:
       - parallel:
@@ -95,3 +94,14 @@ pipelines:
           - step: *check-frontend
           - step: *validate-docker
       - step: *deploy-to-ec2
+
+    # prod-pwa: validate only — actual deploy happens manually from laptop
+    prod-pwa:
+      - parallel:
+          - step: *check-backend
+          - step: *check-frontend
+          - step:
+              name: Validate Prod Docker Compose
+              script:
+                - docker-compose -f docker-compose.prod.yml config -q
+                - echo "docker-compose.prod.yml is valid"

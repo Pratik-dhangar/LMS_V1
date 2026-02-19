@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getFileUrl } from '../../utils/urlHelper';
 import { 
   ArrowLeft, 
   Send, 
@@ -657,17 +658,17 @@ const UnifiedChatPage = ({ isModal = false }) => {
                             {message.message_type === 'IMAGE' ? (
                               <div className="chat-file-media">
                                 <img
-                                  src={message.file_url}
+                                  src={getFileUrl(message.file_url)}
                                   alt={message.file_name}
                                   className="chat-message-thumbnail"
-                                  onClick={() => setImageModal({ url: message.file_url, name: message.file_name })}
+                                  onClick={() => setImageModal({ url: getFileUrl(message.file_url), name: message.file_name })}
                                   title="Click to view full size"
                                 />
                                 <button
                                   className="chat-file-download-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDownload(message.file_url, message.file_name);
+                                    handleDownload(getFileUrl(message.file_url), message.file_name);
                                   }}
                                   title="Download image"
                                 >
@@ -676,10 +677,10 @@ const UnifiedChatPage = ({ isModal = false }) => {
                               </div>
                             ) : message.message_type === 'VIDEO' ? (
                               <div className="chat-file-media">
-                                <video src={message.file_url} controls />
+                                <video src={getFileUrl(message.file_url)} controls />
                                 <button
                                   className="chat-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download video"
                                 >
                                   <Download size={16} />
@@ -687,10 +688,10 @@ const UnifiedChatPage = ({ isModal = false }) => {
                               </div>
                             ) : message.message_type === 'AUDIO' ? (
                               <div className="chat-file-media">
-                                <audio src={message.file_url} controls />
+                                <audio src={getFileUrl(message.file_url)} controls />
                                 <button
                                   className="chat-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download audio"
                                 >
                                   <Download size={16} />
@@ -699,7 +700,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                             ) : (
                               <div className="chat-file-document">
                                 <a
-                                  href={message.file_url}
+                                  href={getFileUrl(message.file_url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -708,7 +709,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                                 </a>
                                 <button
                                   className="chat-file-download-btn"
-                                  onClick={() => handleDownload(message.file_url, message.file_name)}
+                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
                                   title="Download file"
                                 >
                                   <Download size={16} />

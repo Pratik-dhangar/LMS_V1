@@ -78,11 +78,14 @@ define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
    * See https://goo.gl/S9QRab
    */
   workbox.precacheAndRoute([{
+    "url": "suppress-warnings.js",
+    "revision": "0e05294fed0a81386845d09a1192d272"
+  }, {
     "url": "registerSW.js",
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.ll1d4q1e748"
+    "revision": "0.s7ou68l05tg"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -102,6 +105,18 @@ define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
   workbox.registerRoute(({
     url
   }) => {
+    const path = url.pathname;
+    const isSessionsApi = path.includes("/api/sessions");
+    const isCoachSessionsApi = path.includes("/api/coaches/sessions");
+    const isAssignedTrainings = path.includes("/api/assigned-trainings");
+    const isWebinars = path.includes("/api/communication/webinars");
+    const isAppointments = path.includes("/api/appointments");
+    const isSessionMutation = path.includes("/sessions/") && (path.endsWith("/start") || path.endsWith("/end") || path.endsWith("/cancel") || path.endsWith("/join") || path.endsWith("/leave"));
+    return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || isWebinars || isAppointments || isSessionMutation;
+  }, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
+  }) => {
     const isApi = url.pathname.startsWith("/api");
     const isAdminApi = url.pathname.includes("/admin/");
     return isApi && !isAdminApi;
@@ -116,10 +131,7 @@ define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
   }), 'GET');
   workbox.registerRoute(({
     url
-  }) => url.pathname.includes("/admin/"), new workbox.NetworkOnly({
-    "cacheName": "admin-api-no-cache",
-    plugins: []
-  }), 'GET');
+  }) => url.pathname.includes("/admin/"), new workbox.NetworkOnly(), 'GET');
   workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif|webp)$/, new workbox.CacheFirst({
     "cacheName": "static-image-cache",
     plugins: [new workbox.ExpirationPlugin({

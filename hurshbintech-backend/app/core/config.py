@@ -6,8 +6,10 @@ Handles database connection string with password encoding
 """
 
 import os
+import json
 from typing import List, Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -35,7 +37,30 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False  # Disable SQL logging in production
 
     # CORS for backend origin settings
+    # Accepts any of these formats:
+    #   JSON array:        ["https://example.com","https://example.com:3001"]
+    #   Comma-separated:   https://example.com,https://example.com:3001
+    #   Single URL:        https://example.com
     BACKEND_CORS_ORIGINS: List[str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            # Try JSON array first
+            if v.startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Fall back to comma-separated
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
     
     # Frontend URL for email links (environment-specific)
     FRONTEND_URL: str = "http://localhost:3000"  # Default to local port 3000

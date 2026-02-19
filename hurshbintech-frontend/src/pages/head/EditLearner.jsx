@@ -27,6 +27,7 @@ const EditLearner = () => {
     // Personal details
     name: "",
     email: "",
+    contact_number: "",
     age: "",
     dob: "",
     date_of_assessment: "",
@@ -114,6 +115,7 @@ const EditLearner = () => {
       const formattedData = {
         name: data.name || "",
         email: data.email || "",
+        contact_number: data.contact_no || "",
         age: data.age || "",
         dob: data.dob ? new Date(data.dob).toISOString().split("T")[0] : "",
         date_of_assessment: data.date_of_assessment
@@ -261,13 +263,13 @@ const EditLearner = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     // If it's already a full URL (http/https), open directly
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       window.open(filePath, "_blank");
       return;
     }
-    
+
     // Otherwise, construct URL with backend base
     const apiBaseUrl =
       import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";

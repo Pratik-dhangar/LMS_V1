@@ -144,10 +144,10 @@ const ContactUs = () => {
 
                         <div className="social-links">
                             <a
-                                href="#"
+                                href="https://www.instagram.com/hurshbin_mumbai?igsh=d3E0YXhuaTAwZGd3   "
                                 className="social-icon"
                                 title="Follow us on Instagram"
-                                onClick={(e) => e.preventDefault()}
+                                target="_blank"
                             >
                                 <FaInstagram />
                             </a>

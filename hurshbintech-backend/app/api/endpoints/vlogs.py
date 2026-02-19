@@ -16,7 +16,7 @@ from app.crud.vlog_crud import VlogCRUD
 from app.models.user_model import User
 from app.schemas.vlog import Vlog, VlogCreate, VlogUpdate, VlogListResponse
 from app.services.cache_service import cache_service
-from app.utils.s3_utils import S3Manager
+from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,10 +52,8 @@ def get_public_url(file_url: str) -> str:
         Public HTTPS URL through Nginx proxy that never expires until file is deleted
     """
     try:
-        if settings.USE_S3 and file_url.startswith("s3://"):
-            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key)
-            return public_url
+        if settings.USE_S3 and file_url and file_url.startswith("s3://"):
+            return convert_s3_url_to_proxy(file_url)
         else:
             return file_url
     except Exception as e:

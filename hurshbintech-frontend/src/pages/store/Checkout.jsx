@@ -24,7 +24,8 @@ const Checkout = () => {
         delivery_city: '',
         delivery_pincode: '',
         payment_method: 'UPI_QR',
-        email: ''
+        email: '',
+        contact_number: ''
     });
 
     useEffect(() => {
@@ -34,17 +35,87 @@ const Checkout = () => {
 
     const loadUserData = async () => {
         try {
-            const response = await axiosInstance.get('/profile');
-            setCurrentUser(response.data);
-            setFormData(prev => ({
-                ...prev,
-                email: response.data.email || ''
-            }));
-            if (response.data.email) {
+            console.log('Loading user data from /profile/me/user...');
+            let userData = await axiosInstance.get('/profile/me/user');
+            console.log('✅ Successfully got response:', userData.status);
+            console.log('User data response:', userData.data);
+
+            let email = userData.data.email || '';
+            let contact_number = userData.data.contact_no || '';
+
+            // If email or contact_number is missing, check respective profile pages
+            if (!email || !contact_number) {
+                console.log('Email or contact_number missing, checking profile pages...');
+
+                if (user && user.role) {
+                    try {
+                        // Try to fetch from role-specific profile endpoint
+                        const profileEndpoints = [
+                            `/profile/${user.role}/me`,
+                            `/${user.role}/profile/me`,
+                            `/profile/me/${user.role}`,
+                            `/${user.role}/profile`
+                        ];
+
+                        let profileData = null;
+                        for (const endpoint of profileEndpoints) {
+                            try {
+                                console.log(`Trying endpoint: ${endpoint}`);
+                                const response = await axiosInstance.get(endpoint);
+                                profileData = response.data;
+                                console.log(`✅ Found profile data from ${endpoint}:`, profileData);
+                                break;
+                            } catch (err) {
+                                console.log(`✗ Endpoint ${endpoint} failed`);
+                                continue;
+                            }
+                        }
+
+                        if (profileData) {
+                            // Update email if not found in users table
+                            if (!email && profileData.email) {
+                                email = profileData.email;
+                                console.log('Email found in profile page:', email);
+                            }
+                            // Update contact_number if not found in users table
+                            if (!contact_number && (profileData.contact_no || profileData.contact_number || profileData.phone)) {
+                                contact_number = profileData.contact_no || profileData.contact_number || profileData.phone;
+                                console.log('Contact number found in profile page:', contact_number);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching from profile pages:', error);
+                    }
+                }
+            }
+
+            setCurrentUser(userData.data);
+
+            console.log('Final email:', email);
+            console.log('Final contact_number:', contact_number);
+
+            setFormData(prev => {
+                const updated = {
+                    ...prev,
+                    email: email,
+                    contact_number: contact_number
+                };
+                console.log('Updated formData:', updated);
+                return updated;
+            });
+
+            if (email) {
+                console.log('Email verified - setting badge');
                 setEmailVerified(true);
+            } else {
+                console.log('No email found - emailVerified remains false');
             }
         } catch (error) {
-            console.error('Error loading user data:', error);
+            console.error('❌ Error loading user data:', error);
+            console.error('Error status:', error.response?.status);
+            console.error('Error response:', error.response?.data);
+            console.error('Full error:', error);
+            // Continue without user data - email field will be empty
         }
     };
 
@@ -74,6 +145,13 @@ const Checkout = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Update email verification status when email is changed by user
+        if (name === 'email' && currentUser && value !== currentUser.email) {
+            setEmailVerified(false);
+        } else if (name === 'email' && currentUser && value === currentUser.email) {
+            setEmailVerified(true);
+        }
     };
 
     const handleFileChange = (e) => {
@@ -103,6 +181,10 @@ const Checkout = () => {
         }
         if (!formData.email) {
             toast.error('Please provide your email address');
+            return;
+        }
+        if (!formData.contact_number) {
+            toast.error('Please provide your contact number');
             return;
         }
         // Validate email format
@@ -191,24 +273,46 @@ const Checkout = () => {
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                     <Mail size={20} style={{ color: emailVerified ? '#28a745' : '#ff9800', marginTop: '2px' }} />
                                     <div style={{ flex: 1 }}>
-                                        <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
-                                            📧 Email for Payment Instructions
-                                        </h4>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
+                                                Email for Payment Instructions
+                                            </h4>
+                                            {/* {emailVerified && (
+                                                // <span style={{
+                                                //     display: 'inline-block',
+                                                //     background: '#28a745',
+                                                //     color: 'white',
+                                                //     padding: '4px 8px',
+                                                //     borderRadius: '4px',
+                                                //     fontSize: '11px',
+                                                //     fontWeight: '600'
+                                                // }}>
+                                                //     ✓ From Database
+                                                // </span>
+                                            )} */}
+                                        </div>
                                         <input
                                             type="email"
                                             name="email"
                                             value={formData.email}
                                             onChange={handleInputChange}
                                             placeholder="your.email@example.com"
+                                            required
                                             style={{
                                                 width: '100%',
                                                 padding: '12px',
                                                 border: `2px solid ${emailVerified ? '#28a745' : '#ffc107'}`,
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
-                                                background: 'white'
+                                                background: 'white',
+                                                boxSizing: 'border-box'
                                             }}
                                         />
+                                        {/* <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#666' }}>
+                                            {emailVerified
+                                                ? '✓ Email from your account'
+                                                : 'Please enter your email address'}
+                                        </p> */}
                                     </div>
                                 </div>
                             </div>
@@ -283,6 +387,25 @@ const Checkout = () => {
                                                 }}
                                             />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                            Contact Number *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="contact_number"
+                                            value={formData.contact_number}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter your contact number"
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '6px',
+                                                fontSize: '14px'
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>

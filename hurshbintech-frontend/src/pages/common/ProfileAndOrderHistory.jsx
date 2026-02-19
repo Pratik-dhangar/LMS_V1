@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import orderService from "../../api/services/ecommerce/orderService";
 import { ArrowLeft } from 'lucide-react';
+import { getFileUrl } from "../../utils/urlHelper";
 import "../../styles/ManageUsersLayout.css";
 
 const ProfileAndOrderHistory = () => {
@@ -449,13 +450,15 @@ const ProfileAndOrderHistory = () => {
                             )}
 
                             {/* Receipt Section - Show if payment uploaded/rejected */}
-                            {selectedOrderDetails.receipt_url && (
+                            {selectedOrderDetails.receipt_url && (() => {
+                                const resolvedReceiptUrl = getFileUrl(selectedOrderDetails.receipt_url);
+                                return (
                                 <div>
                                     <label className="text-sm font-semibold text-gray-600 block mb-3">📸 Payment Receipt</label>
                                     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                         {selectedOrderDetails.receipt_url.toLowerCase().endsWith('.pdf') ? (
                                             <a
-                                                href={selectedOrderDetails.receipt_url}
+                                                href={resolvedReceiptUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-[#DB9D32] hover:text-[#9C4D0B] font-semibold flex items-center gap-2"
@@ -464,18 +467,19 @@ const ProfileAndOrderHistory = () => {
                                             </a>
                                         ) : (
                                             <img
-                                                src={selectedOrderDetails.receipt_url}
+                                                src={resolvedReceiptUrl}
                                                 alt="Receipt"
                                                 className="max-w-full h-auto rounded-lg cursor-pointer hover:scale-105 transition-transform duration-200"
                                                 onClick={() => {
-                                                    setPreviewReceiptUrl(selectedOrderDetails.receipt_url);
+                                                    setPreviewReceiptUrl(resolvedReceiptUrl);
                                                     setShowReceiptPreview(true);
                                                 }}
                                             />
                                         )}
                                     </div>
                                 </div>
-                            )}
+                                );
+                            })()}
 
                             {/* Delivery Address */}
                             {selectedOrderDetails.delivery_address && (

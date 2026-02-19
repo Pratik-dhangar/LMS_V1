@@ -19,6 +19,7 @@ from app.crud.blog_crud import blog_crud
 from app.models.user_model import User
 from app.schemas.blog import BlogCreate, BlogUpdate, BlogResponse, BlogListResponse
 from app.services.cache_service import cache_service
+from app.utils.s3_utils import convert_s3_url_to_proxy
 from app.utils.s3_utils import S3Manager
 
 logger = logging.getLogger(__name__)
@@ -44,14 +45,11 @@ MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
 
 
 def get_public_url(file_url: str) -> str:
-    """Convert S3 URL to public HTTPS URL via Nginx proxy"""
+    """Convert S3 URL to permanent backend proxy URL (no expiration)"""
     try:
         if settings.USE_S3 and file_url and file_url.startswith("s3://"):
-            s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
-            public_url = s3_manager.get_public_url(s3_key)
-            return public_url
-        else:
-            return file_url
+            return convert_s3_url_to_proxy(file_url)
+        return file_url
     except Exception as e:
         logger.error(f"Error generating public URL: {str(e)}")
         return file_url
