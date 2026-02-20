@@ -549,8 +549,10 @@ async def update_product(
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     
-    # Invalidate product caches
+    # Invalidate product caches (always clear catalogs when updating)
+    logger.info(f"Product {product_id} updated. Visibility: {product.visibility}. Invalidating caches...")
     await cache_service.invalidate_product(str(product_id))
+    logger.info(f"Product {product_id} cache invalidated successfully")
     
     return product
 
