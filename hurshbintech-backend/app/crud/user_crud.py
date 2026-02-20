@@ -223,12 +223,6 @@ async def get_head_by_passcode(db: AsyncSession, passcode: str):
     return result.scalar_one_or_none()
 
 
-async def get_head_by_contact(db: AsyncSession, contact_no: str):
-    """Get head profile by contact number"""
-    result = await db.execute(select(HeadProfile).where(HeadProfile.contact_no == contact_no))
-    return result.scalar_one_or_none()
-
-
 async def get_all_heads(db: AsyncSession):
     """Get all head profiles with user data"""
     result = await db.execute(
@@ -268,7 +262,6 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
         user_id=new_user.id,
         age=head_data.age,
         address=head_data.address,
-        contact_no=head_data.contact_no,
         qualification=head_data.qualification,
         experience=head_data.experience,
         date_of_joining=head_data.date_of_joining,
@@ -396,12 +389,6 @@ async def get_trainer_by_passcode(db: AsyncSession, passcode: str):
     return result.scalar_one_or_none()
 
 
-async def get_trainer_by_contact(db: AsyncSession, contact_no: str):
-    """Get trainer profile by contact number"""
-    result = await db.execute(select(TrainerProfile).where(TrainerProfile.contact_no == contact_no))
-    return result.scalar_one_or_none()
-
-
 async def get_trainers_by_head(db: AsyncSession, head_id: int):
     """Get all trainers created by a specific head"""
     result = await db.execute(
@@ -448,7 +435,6 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
         user_id=new_user.id,
         age=trainer_data.age,
         address=trainer_data.address,
-        contact_no=trainer_data.contact_no,
         qualification=trainer_data.qualification,
         experience=trainer_data.experience,
         date_of_joining=trainer_data.date_of_joining,
@@ -553,15 +539,6 @@ async def get_coach_by_passcode(db: AsyncSession, passcode: str):
     return result.scalar_one_or_none()
 
 
-# Get coach by contact number
-async def get_coach_by_contact(db: AsyncSession, contact_no: str):
-    """Get coach profile by contact number"""
-    result = await db.execute(
-        select(CoachProfile).where(CoachProfile.contact_no == contact_no)
-    )
-    return result.scalar_one_or_none()
-
-
 # Get coaches by head
 async def get_coaches_by_head(db: AsyncSession, head_id: int):
     """Get all coaches in the system (all heads can see all coaches)"""
@@ -605,7 +582,6 @@ async def create_coach(
         user_id=new_user.id,
         age=coach_data.age,
         address=coach_data.address,
-        contact_no=coach_data.contact_no,
         qualification=coach_data.qualification,
         experience=coach_data.experience,
         date_of_joining=coach_data.date_of_joining,

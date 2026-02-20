@@ -25,7 +25,7 @@ const EditHead = () => {
     email: "",
     age: "",
     address: "",
-    contact_no: "",
+    contact_number: "",
     qualification: "",
     experience: "",
     date_of_joining: "",
@@ -68,7 +68,7 @@ const EditHead = () => {
         email: data.email || "",
         age: data.age || "",
         address: data.address || "",
-        contact_no: data.contact_no || "",
+        contact_number: data.contact_number || "",
         qualification: data.qualification || "",
         experience: data.experience || "",
         date_of_joining: data.date_of_joining
@@ -176,10 +176,10 @@ const EditHead = () => {
       newErrors.name = "Name is required";
     }
 
-    if (!formData.contact_no.trim()) {
-      newErrors.contact_no = "Contact number is required";
-    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_no)) {
-      newErrors.contact_no = "Invalid contact number format";
+    if (!formData.contact_number.trim()) {
+      newErrors.contact_number = "Contact number is required";
+    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_number)) {
+      newErrors.contact_number = "Invalid contact number format";
     }
 
     if (

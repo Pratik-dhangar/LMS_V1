@@ -50,7 +50,7 @@ async def create_new_head(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(...),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -72,13 +72,16 @@ async def create_new_head(
 ):
     """Create a new head with optional reference data file uploads"""
 
-    # Check if contact number already exists
-    existing_head = await user_crud.get_head_by_contact(db, contact_no)
-    if existing_head:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists with this contact number",
+    # Check if contact number already exists in Users table
+    if contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
         )
+        if existing_user.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already exists with this contact number",
+            )
 
     # Convert date_of_joining from string to date object if provided
     date_of_joining_obj = None
@@ -97,7 +100,7 @@ async def create_new_head(
         email=email,
         age=age,
         address=address,
-        contact_no=contact_no,
+        contact_number=contact_number,  # Now stored in Users table
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -115,6 +118,12 @@ async def create_new_head(
 
     # Create head
     new_head = await user_crud.create_head(db, head_data, current_admin.id)
+    
+    # Update User record with contact_number
+    if contact_number:
+        new_head.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(new_head.user)
     
     # Handle reference files upload
     if reference_files:
@@ -205,7 +214,7 @@ async def update_head_profile(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -232,10 +241,12 @@ async def update_head_profile(
     if not head:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Head not found")
 
-    # If updating contact number, check for duplicates
-    if contact_no and contact_no != head.contact_no:
-        existing = await user_crud.get_head_by_contact(db, contact_no)
-        if existing:
+    # If updating contact number, check for duplicates in Users table
+    if contact_number and contact_number != head.user.contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -262,8 +273,7 @@ async def update_head_profile(
         update_dict['age'] = age
     if address is not None:
         update_dict['address'] = address
-    if contact_no is not None:
-        update_dict['contact_no'] = contact_no
+    # Note: contact_number is handled separately below (update User table)
     if qualification is not None:
         update_dict['qualification'] = qualification
     if experience is not None:
@@ -293,6 +303,12 @@ async def update_head_profile(
 
     head_update = HeadUpdate(**update_dict)
     updated_head = await user_crud.update_head(db, head_id, head_update)
+    
+    # Update User record with contact_number
+    if contact_number is not None:
+        updated_head.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(updated_head.user)
     
     # Handle reference files upload
     if reference_files:
@@ -445,7 +461,7 @@ async def create_new_coach(
     name: str = Form(...),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -471,13 +487,16 @@ async def create_new_coach(
 ):
     """Create a new coach with optional file uploads (profile picture and reference data)"""
     
-    # Check if contact number already exists
-    existing_coach = await user_crud.get_coach_by_contact(db, contact_no)
-    if existing_coach:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists with this contact number",
+    # Check if contact number already exists in Users table
+    if contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
         )
+        if existing_user.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already exists with this contact number",
+            )
 
     # Handle profile picture upload
     profile_picture_path = None
@@ -497,7 +516,7 @@ async def create_new_coach(
             )
         
         file_extension = profile_picture_url.filename.split(".")[-1]
-        filename = f"coach_profile_{contact_no}.{file_extension}"
+        filename = f"coach_profile_{name}_{int(datetime.now().timestamp())}.{file_extension}"
         
         try:
             if settings.USE_S3:
@@ -543,7 +562,7 @@ async def create_new_coach(
         name=name,
         age=age,
         address=address,
-        contact_no=contact_no,
+        contact_number=contact_number,  # Now stored in Users table
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -555,6 +574,12 @@ async def create_new_coach(
 
     # Create coach in database (admin only)
     new_coach = await user_crud.create_coach(db, coach_data)
+    
+    # Update User record with contact_number
+    if contact_number:
+        new_coach.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(new_coach.user)
     
     # Handle reference files upload
     if reference_files:
@@ -635,7 +660,7 @@ async def update_coach_profile(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -666,10 +691,12 @@ async def update_coach_profile(
     if not coach:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
 
-    # If updating contact number, check for duplicates
-    if contact_no and contact_no != coach.contact_no:
-        existing = await user_crud.get_coach_by_contact(db, contact_no)
-        if existing:
+    # If updating contact number, check for duplicates in Users table
+    if contact_number and contact_number != coach.user.contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -734,29 +761,48 @@ async def update_coach_profile(
             )
 
     # Prepare update data - only include profile_picture_url if a new file was uploaded
-    update_dict = {
-        "name": name,
-        "email": email,
-        "age": age,
-        "address": address,
-        "contact_no": contact_no,
-        "qualification": qualification,
-        "experience": experience,
-        "date_of_joining": date_of_joining_obj,
-        "experience_with_hurshbin": experience_with_hurshbin,
-        "interest": interest,
-        "self_description": self_description,
-        "future_vision": future_vision,
-        "number_of_sessions_done": number_of_sessions_done,
-        "head_description": head_description,
-        "learners_guardian_description": learners_guardian_description,
-        "input_at_hurshbin": input_at_hurshbin,
-        "note_box": note_box,
-        "message_box": message_box,
-        "availability_days": availability_days,
-        "time_slots": time_slots,
-        "specialization": specialization,
-    }
+    update_dict = {}
+    if name is not None:
+        update_dict["name"] = name
+    if email is not None:
+        update_dict["email"] = email
+    if age is not None:
+        update_dict["age"] = age
+    if address is not None:
+        update_dict["address"] = address
+    # Note: contact_number is handled separately below (update User table)
+    if qualification is not None:
+        update_dict["qualification"] = qualification
+    if experience is not None:
+        update_dict["experience"] = experience
+    if date_of_joining_obj is not None:
+        update_dict["date_of_joining"] = date_of_joining_obj
+    if experience_with_hurshbin is not None:
+        update_dict["experience_with_hurshbin"] = experience_with_hurshbin
+    if interest is not None:
+        update_dict["interest"] = interest
+    if self_description is not None:
+        update_dict["self_description"] = self_description
+    if future_vision is not None:
+        update_dict["future_vision"] = future_vision
+    if number_of_sessions_done is not None:
+        update_dict["number_of_sessions_done"] = number_of_sessions_done
+    if head_description is not None:
+        update_dict["head_description"] = head_description
+    if learners_guardian_description is not None:
+        update_dict["learners_guardian_description"] = learners_guardian_description
+    if input_at_hurshbin is not None:
+        update_dict["input_at_hurshbin"] = input_at_hurshbin
+    if note_box is not None:
+        update_dict["note_box"] = note_box
+    if message_box is not None:
+        update_dict["message_box"] = message_box
+    if availability_days is not None:
+        update_dict["availability_days"] = availability_days
+    if time_slots is not None:
+        update_dict["time_slots"] = time_slots
+    if specialization is not None:
+        update_dict["specialization"] = specialization
     
     # Only include profile_picture_url if a new file was actually uploaded
     if profile_picture_path is not None:
@@ -765,6 +811,12 @@ async def update_coach_profile(
     coach_update = CoachUpdate(**update_dict)
 
     updated_coach = await user_crud.update_coach(db, coach_id, coach_update)
+    
+    # Update User record with contact_number
+    if contact_number is not None:
+        updated_coach.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(updated_coach.user)
     
     # Handle reference files upload
     if reference_files:

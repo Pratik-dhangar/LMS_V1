@@ -24,7 +24,7 @@ const EditCoach = () => {
     email: '',
     age: '',
     address: '',
-    contact_no: '',
+    contact_number: '',
     qualification: '',
     experience: '',
     date_of_joining: '',
@@ -71,7 +71,7 @@ const EditCoach = () => {
         email: coach.email || '',
         age: coach.age || '',
         address: coach.address || '',
-        contact_no: coach.contact_no || '',
+        contact_number: coach.contact_number || '',
         qualification: coach.qualification || '',
         experience: coach.experience || '',
         date_of_joining: coach.date_of_joining || '',
@@ -172,13 +172,13 @@ const EditCoach = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     // If it's already a full URL (http/https), open directly
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       window.open(filePath, '_blank');
       return;
     }
-    
+
     // Otherwise, construct URL with backend base
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.102:8000/api';
     const backendUrl = apiBaseUrl.replace('/api', '');
@@ -237,10 +237,10 @@ const EditCoach = () => {
       newErrors.name = 'Name is required';
     }
 
-    if (!formData.contact_no.trim()) {
-      newErrors.contact_no = 'Contact number is required';
-    } else if (!/^\d{10}$/.test(formData.contact_no.replace(/\D/g, ''))) {
-      newErrors.contact_no = 'Please enter a valid 10-digit phone number';
+    if (!formData.contact_number.trim()) {
+      newErrors.contact_number = 'Contact number is required';
+    } else if (!/^\d{10}$/.test(formData.contact_number.replace(/\D/g, ''))) {
+      newErrors.contact_number = 'Please enter a valid 10-digit phone number';
     }
 
     if (!formData.date_of_joining) {
@@ -418,7 +418,7 @@ const EditCoach = () => {
       <main className="page-main">
         <div className="page-content">
           {/* Header */}
-           <div className="page-header">
+          <div className="page-header">
             <button
               onClick={() => navigate('/admin/manage-coaches')}
               className="back-button"
@@ -430,9 +430,9 @@ const EditCoach = () => {
             </button>
             <div>
               <h1 className="page-title">
-              Edit Coach Profile
-            </h1>
-            <p className="page-description">Update profile information for {formData.name}</p>
+                Edit Coach Profile
+              </h1>
+              <p className="page-description">Update profile information for {formData.name}</p>
             </div>
           </div>
 
@@ -448,304 +448,304 @@ const EditCoach = () => {
           {/* Form */}
           <div className="modern-form-card">
             <form onSubmit={handleSubmit} >
-            <BasicInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-              section="coach"
-            />
+              <BasicInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+                section="coach"
+              />
 
-            <ProfessionalInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <ProfessionalInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            <PersonalDetailsSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <PersonalDetailsSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            {/* Coach-Specific Fields */}
-            <section className="coach-specific-section">
-              <h2 className="coach-specific-title">Coach-Specific Information</h2>
+              {/* Coach-Specific Fields */}
+              <section className="coach-specific-section">
+                <h2 className="coach-specific-title">Coach-Specific Information</h2>
 
-              <div className="coach-grid-layout">
-                {/* Availability Days - Multi Select */}
-                <div className="coach-field-group">
-                  <label className="coach-field-label">
-                    Availability Days <span className="required-indicator">*</span>
-                  </label>
-                  <div className="coach-checkbox-group">
-                    {DAYS_OF_WEEK.map(day => (
-                      <div key={day} className="coach-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`day_${day}`}
-                          checked={formData.availability_days.includes(day)}
-                          onChange={() => handleMultiSelect('availability_days', day)}
-                          className="coach-checkbox-input"
-                        />
-                        <label htmlFor={`day_${day}`} className="coach-checkbox-label">{day}</label>
-                      </div>
-                    ))}
-                  </div>
-                  {formData.availability_days.length > 0 && (
-                    <p className="coach-selected-hint">Selected: {formData.availability_days.join(', ')}</p>
-                  )}
-                </div>
-
-                {/* Time Slots - Multi Select */}
-                <div className="coach-field-group">
-                  <label className="coach-field-label">
-                    Time Slots <span className="required-indicator">*</span>
-                  </label>
-                  <div className="coach-checkbox-group">
-                    {TIME_SLOT_OPTIONS.map(slot => (
-                      <div key={slot} className="coach-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`slot_${slot}`}
-                          checked={formData.time_slots.includes(slot)}
-                          onChange={() => handleMultiSelect('time_slots', slot)}
-                          className="coach-checkbox-input"
-                        />
-                        <label htmlFor={`slot_${slot}`} className="coach-checkbox-label">{slot}</label>
-                      </div>
-                    ))}
-                  </div>
-                  {formData.time_slots.length > 0 && (
-                    <p className="coach-selected-hint">Selected: {formData.time_slots.join(', ')}</p>
-                  )}
-                </div>
-
-                {/* Specialization */}
-                <div className="coach-field-group">
-                  <label htmlFor="specialization" className="coach-field-label">Specialization</label>
-                  <textarea
-                    id="specialization"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleChange}
-                    placeholder="Coach's area of specialization"
-                    className="app-modal-form-textarea"
-                    rows="3"
-                  />
-                </div>
-
-                {/* Profile Picture */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="profile_picture_url" className="app-modal-form-label">Profile Picture</label>
-                  <input
-                    type="file"
-                    id="profile_picture_url"
-                    onChange={handleProfileImageChange}
-                    className="form-file-input"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('profile_picture_url').click()}
-                    className="reference-btn-upload"
-                  >
-                    Upload Image
-                  </button>
-                  <p className="reference-data-help-text">Supported formats: JPG, PNG, GIF</p>
-
-                  {/* Existing Profile Picture */}
-                  {existingProfilePicture && (
-                    <div className="reference-existing-files">
-                      <h4 className="reference-files-title">Current Profile Picture</h4>
-                      <div className="reference-files-list">
-                        <div className="reference-file-item">
-                          <span className="reference-file-name">Profile Picture</span>
-                          <div className="reference-file-actions">
-                            <button
-                              type="button"
-                              onClick={(e) => handleViewProfilePicture(e)}
-                              className="reference-btn-view"
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleDeleteProfilePicture}
-                              className="reference-btn-remove"
-                              title="Delete picture"
-                            >
-                              <Trash2 size={20} />
-                            </button>
-                          </div>
+                <div className="coach-grid-layout">
+                  {/* Availability Days - Multi Select */}
+                  <div className="coach-field-group">
+                    <label className="coach-field-label">
+                      Availability Days <span className="required-indicator">*</span>
+                    </label>
+                    <div className="coach-checkbox-group">
+                      {DAYS_OF_WEEK.map(day => (
+                        <div key={day} className="coach-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`day_${day}`}
+                            checked={formData.availability_days.includes(day)}
+                            onChange={() => handleMultiSelect('availability_days', day)}
+                            className="coach-checkbox-input"
+                          />
+                          <label htmlFor={`day_${day}`} className="coach-checkbox-label">{day}</label>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  )}
+                    {formData.availability_days.length > 0 && (
+                      <p className="coach-selected-hint">Selected: {formData.availability_days.join(', ')}</p>
+                    )}
+                  </div>
 
-                  {/* New Profile Picture to Upload */}
-                  {formData.profile_picture_url && (
-                    <div className="reference-new-files">
-                      <h4 className="reference-files-title">New Profile Picture to Upload</h4>
-                      <div className="reference-files-list">
-                        <div className="reference-file-item">
-                          <span className="reference-file-name">✓ {formData.profile_picture_url.name}</span>
+                  {/* Time Slots - Multi Select */}
+                  <div className="coach-field-group">
+                    <label className="coach-field-label">
+                      Time Slots <span className="required-indicator">*</span>
+                    </label>
+                    <div className="coach-checkbox-group">
+                      {TIME_SLOT_OPTIONS.map(slot => (
+                        <div key={slot} className="coach-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`slot_${slot}`}
+                            checked={formData.time_slots.includes(slot)}
+                            onChange={() => handleMultiSelect('time_slots', slot)}
+                            className="coach-checkbox-input"
+                          />
+                          <label htmlFor={`slot_${slot}`} className="coach-checkbox-label">{slot}</label>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  )}
-                </div>
+                    {formData.time_slots.length > 0 && (
+                      <p className="coach-selected-hint">Selected: {formData.time_slots.join(', ')}</p>
+                    )}
+                  </div>
 
-                {/* Reference Data */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="reference_files" className="app-modal-form-label">Reference Data</label>
-                  <input
-                    type="file"
-                    id="reference_files"
-                    multiple
-                    onChange={handleFileChange}
-                    className="form-file-input"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                    style={{ display: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('reference_files').click()}
-                    className="reference-btn-upload"
-                  >
-                    Upload Files
-                  </button>
-                  <p className="reference-data-help-text">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
+                  {/* Specialization */}
+                  <div className="coach-field-group">
+                    <label htmlFor="specialization" className="coach-field-label">Specialization</label>
+                    <textarea
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      placeholder="Coach's area of specialization"
+                      className="app-modal-form-textarea"
+                      rows="3"
+                    />
+                  </div>
 
-                  {/* Existing Reference Files */}
-                  {existingReferenceData.length > 0 && (
-                    <div className="reference-existing-files">
-                      <h4 className="reference-files-title">Existing Reference Files</h4>
-                      <div className="reference-files-list">
-                        {existingReferenceData.map((file) => (
-                          <div key={file.id} className="reference-file-item">
-                            <span className="reference-file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                  {/* Profile Picture */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label htmlFor="profile_picture_url" className="app-modal-form-label">Profile Picture</label>
+                    <input
+                      type="file"
+                      id="profile_picture_url"
+                      onChange={handleProfileImageChange}
+                      className="form-file-input"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('profile_picture_url').click()}
+                      className="reference-btn-upload"
+                    >
+                      Upload Image
+                    </button>
+                    <p className="reference-data-help-text">Supported formats: JPG, PNG, GIF</p>
+
+                    {/* Existing Profile Picture */}
+                    {existingProfilePicture && (
+                      <div className="reference-existing-files">
+                        <h4 className="reference-files-title">Current Profile Picture</h4>
+                        <div className="reference-files-list">
+                          <div className="reference-file-item">
+                            <span className="reference-file-name">Profile Picture</span>
                             <div className="reference-file-actions">
                               <button
                                 type="button"
-                                onClick={(e) => handleViewFile(file.file_path, e)}
+                                onClick={(e) => handleViewProfilePicture(e)}
                                 className="reference-btn-view"
                               >
                                 View
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeleteExistingFile(file.id)}
+                                onClick={handleDeleteProfilePicture}
+                                className="reference-btn-remove"
+                                title="Delete picture"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New Profile Picture to Upload */}
+                    {formData.profile_picture_url && (
+                      <div className="reference-new-files">
+                        <h4 className="reference-files-title">New Profile Picture to Upload</h4>
+                        <div className="reference-files-list">
+                          <div className="reference-file-item">
+                            <span className="reference-file-name">✓ {formData.profile_picture_url.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reference Data */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label htmlFor="reference_files" className="app-modal-form-label">Reference Data</label>
+                    <input
+                      type="file"
+                      id="reference_files"
+                      multiple
+                      onChange={handleFileChange}
+                      className="form-file-input"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('reference_files').click()}
+                      className="reference-btn-upload"
+                    >
+                      Upload Files
+                    </button>
+                    <p className="reference-data-help-text">Documents, Images, Videos, Links (PDF, DOCX, Images, Videos)</p>
+
+                    {/* Existing Reference Files */}
+                    {existingReferenceData.length > 0 && (
+                      <div className="reference-existing-files">
+                        <h4 className="reference-files-title">Existing Reference Files</h4>
+                        <div className="reference-files-list">
+                          {existingReferenceData.map((file) => (
+                            <div key={file.id} className="reference-file-item">
+                              <span className="reference-file-name">{file.file_name || file.description || 'Unnamed File'}</span>
+                              <div className="reference-file-actions">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleViewFile(file.file_path, e)}
+                                  className="reference-btn-view"
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteExistingFile(file.id)}
+                                  className="reference-btn-remove"
+                                  title="Delete file"
+                                >
+                                  <Trash2 size={20} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New File List */}
+                    {referenceFiles.length > 0 && (
+                      <div className="reference-new-files">
+                        <h4 className="reference-files-title">New Files to Upload</h4>
+                        <div className="reference-files-list">
+                          {referenceFiles.map((file, index) => (
+                            <div key={index} className="reference-file-item">
+                              <span className="reference-file-name">{file.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
                                 className="reference-btn-remove"
                                 title="Delete file"
                               >
                                 <Trash2 size={20} />
                               </button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {/* New File List */}
-                  {referenceFiles.length > 0 && (
-                    <div className="reference-new-files">
-                      <h4 className="reference-files-title">New Files to Upload</h4>
-                      <div className="reference-files-list">
-                        {referenceFiles.map((file, index) => (
-                          <div key={index} className="reference-file-item">
-                            <span className="reference-file-name">{file.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="reference-btn-remove"
-                              title="Delete file"
-                            >
-                              <Trash2 size={20} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <PerformanceFeedbackSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <PerformanceFeedbackSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            <NotesSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <NotesSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-             {/* Action Buttons */}
+              {/* Action Buttons */}
 
-            <div className="form-actions">
-              <button
-                type="submit"
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--primary "
-              >
-                {saving ? (
-                  <>
-                    <div className="btn-spinner"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="icon-sm"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Save Changes
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/admin/manage-heads")}
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={saving || deleting}
-                className="app-modal-btn app-modal-btn--danger"
-              >
-                <svg
-                  className="icon-sm"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--primary "
                 >
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Delete Coach
-              </button>
-            </div>
-          </form>
+                  {saving ? (
+                    <>
+                      <div className="btn-spinner"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="icon-sm"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/manage-heads")}
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={saving || deleting}
+                  className="app-modal-btn app-modal-btn--danger"
+                >
+                  <svg
+                    className="icon-sm"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Delete Coach
+                </button>
+              </div>
+            </form>
           </div>
-          
+
         </div>
       </main>
     </div>
