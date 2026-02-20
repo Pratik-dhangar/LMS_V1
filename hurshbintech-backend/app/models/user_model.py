@@ -151,7 +151,6 @@ class HeadProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique per trainer/consultant
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)
@@ -198,7 +197,6 @@ class TrainerProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)
@@ -247,7 +245,6 @@ class CoachProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)

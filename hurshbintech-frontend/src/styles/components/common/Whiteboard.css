@@ -781,13 +781,13 @@ input[type="range"]::-webkit-slider-thumb {
     }
 }
 
-/* Feedback bubble styling for young children - gentle pastel tones */
+/* Feedback  styling for young children - gentle pastel tones */
 .feedback-bubble {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #808080;
+    background: #db9d32;
     color: #FFFFFF;
     /* white text for readability on dark background */
     padding: 28px 40px;
@@ -813,13 +813,13 @@ input[type="range"]::-webkit-slider-thumb {
     padding: 0 4px;
 }
 
-/* Waiting bubble styling - similar to feedback but with spinner */
+/* Waitingstyling - similar to feedback but with spinner */
 .waiting-bubble {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #808080;
+    background: #db9d32;
     color: #FFFFFF;
     padding: 28px 40px;
     border-radius: 22px;
@@ -1804,7 +1804,7 @@ input[type="range"]::-webkit-slider-thumb {
    ADDITIONAL UTILITY STYLES FOR OVERLAYS AND INDICATORS
    ============================================================================ */
 
-/* Stopwatch overlay (top right corner for mechanical clock) */
+/* Stopwatch overlay (top right corner for digital clock) */
 .stopwatch-overlay {
     position: absolute;
     top: 12px;

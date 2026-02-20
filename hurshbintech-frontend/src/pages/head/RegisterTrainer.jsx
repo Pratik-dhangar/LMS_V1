@@ -23,7 +23,7 @@ const RegisterTrainer = () => {
     email: "",
     age: "",
     address: "",
-    contact_no: "",
+    contact_number: "",
     qualification: "",
     experience: "",
     date_of_joining: "",
@@ -82,10 +82,10 @@ const RegisterTrainer = () => {
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.contact_no.trim()) {
-      newErrors.contact_no = "Contact number is required";
-    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_no)) {
-      newErrors.contact_no = "Invalid contact number format";
+    if (!formData.contact_number.trim()) {
+      newErrors.contact_number = "Contact number is required";
+    } else if (!/^[A-Za-z0-9\+\s\-()]+$/.test(formData.contact_number)) {
+      newErrors.contact_number = "Invalid contact number format";
     }
 
     if (!formData.age) {

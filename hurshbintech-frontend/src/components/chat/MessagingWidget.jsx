@@ -56,6 +56,7 @@ const MessagingWidget = () => {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set());
 
@@ -282,6 +283,11 @@ const MessagingWidget = () => {
     } catch (error) {
       console.error('Download failed:', error);
     }
+  };
+
+  // Emoji selection
+  const handleEmojiSelect = (emoji) => {
+    setMessageInput(prev => prev + emoji);
   };
 
   // Handle create group
@@ -772,9 +778,10 @@ const MessagingWidget = () => {
                 <Paperclip size={18} />
               </button>
               <button
+                ref={emojiButtonRef}
                 type="button"
                 className="messaging-input-btn"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={() => setShowEmojiPicker(prev => !prev)}
               >
                 <Smile size={18} />
               </button>
@@ -802,6 +809,15 @@ const MessagingWidget = () => {
                 <div className="messaging-uploading-spinner"></div>
                 <span>Uploading...</span>
               </div>
+            )}
+
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <EmojiPicker
+                onEmojiSelect={handleEmojiSelect}
+                onClose={() => setShowEmojiPicker(false)}
+                buttonRef={emojiButtonRef}
+              />
             )}
           </div>
         )}

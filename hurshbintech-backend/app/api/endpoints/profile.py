@@ -61,25 +61,26 @@ async def get_user_profile(
 
     cache_key = cache_service.key_user_profile_me(user_id)
 
+    # TEMPORARILY DISABLED CACHE - FOR DEBUGGING
     # Try cache first
-    cached_data = await cache_service.get(cache_key)
-    if cached_data:
-        logger.debug(f"Cache HIT: {cache_key}")
-        # Return appropriate response type based on cached role (case-insensitive)
-        role = cached_data.get('role', '').lower()
-        if role == 'head':
-            return HeadResponse(**cached_data)
-        elif role == 'admin':
-            return AdminResponse(**cached_data)
-        elif role == 'trainer':
-            return TrainerResponse(**cached_data)
-        elif role == 'coach':
-            return CoachResponse(**cached_data)
-        elif role == 'learner':
-            return LearnerResponse(**cached_data)
-        return cached_data
+    # cached_data = await cache_service.get(cache_key)
+    # if cached_data:
+    #     logger.debug(f"Cache HIT: {cache_key}")
+    #     # Return appropriate response type based on cached role (case-insensitive)
+    #     role = cached_data.get('role', '').lower()
+    #     if role == 'head':
+    #         return HeadResponse(**cached_data)
+    #     elif role == 'admin':
+    #         return AdminResponse(**cached_data)
+    #     elif role == 'trainer':
+    #         return TrainerResponse(**cached_data)
+    #     elif role == 'coach':
+    #         return CoachResponse(**cached_data)
+    #     elif role == 'learner':
+    #         return LearnerResponse(**cached_data)
+    #     return cached_data
 
-    logger.debug(f"Cache MISS: {cache_key}")
+    logger.debug(f"Cache DISABLED - Fetching fresh data for: {cache_key}")
 
     # Extract profile if we have a User object
     profile_obj = None
@@ -105,71 +106,77 @@ async def get_user_profile(
         logger.info(f"Profile not loaded via relationship, fetching from DB for user {current_user.id}")
         if current_user.role == UserRole.HEAD:
             result = await db.execute(
-                select(HeadProfile).where(HeadProfile.user_id == current_user.id).options(selectinload(HeadProfile.reference_data))
+                select(HeadProfile).where(HeadProfile.user_id == current_user.id).options(selectinload(HeadProfile.user), selectinload(HeadProfile.reference_data))
             )
             profile_obj = result.scalar_one_or_none()
         elif current_user.role == UserRole.TRAINER:
             result = await db.execute(
-                select(TrainerProfile).where(TrainerProfile.user_id == current_user.id).options(selectinload(TrainerProfile.reference_data))
+                select(TrainerProfile).where(TrainerProfile.user_id == current_user.id).options(selectinload(TrainerProfile.user), selectinload(TrainerProfile.reference_data))
             )
             profile_obj = result.scalar_one_or_none()
         elif current_user.role == UserRole.COACH:
             result = await db.execute(
-                select(CoachProfile).where(CoachProfile.user_id == current_user.id).options(selectinload(CoachProfile.reference_data))
+                select(CoachProfile).where(CoachProfile.user_id == current_user.id).options(selectinload(CoachProfile.user), selectinload(CoachProfile.reference_data))
             )
             profile_obj = result.scalar_one_or_none()
         elif current_user.role == UserRole.LEARNER:
             result = await db.execute(
-                select(LearnerProfile).where(LearnerProfile.user_id == current_user.id).options(selectinload(LearnerProfile.reference_data))
+                select(LearnerProfile).where(LearnerProfile.user_id == current_user.id).options(selectinload(LearnerProfile.user), selectinload(LearnerProfile.reference_data))
             )
             profile_obj = result.scalar_one_or_none()
 
     # Ensure user_obj is available for response generation
     if user_obj is None and profile_obj is not None:
-        user_obj = await db.execute(
+        result = await db.execute(
             select(User).where(User.id == profile_obj.user_id)
         )
-        user_obj = user_obj.scalar_one()
+        user_obj = result.scalar_one()
+    elif user_obj is None and isinstance(current_user, (HeadProfile, TrainerProfile, CoachProfile, LearnerProfile)):
+        # current_user is a profile object, fetch its user
+        result = await db.execute(
+            select(User).where(User.id == current_user.user_id)
+        )
+        user_obj = result.scalar_one()
 
     # Generate response based on user type
     if isinstance(current_user, HeadProfile):
-        result = HeadResponse.from_orm_with_user(current_user)
+        result = HeadResponse.from_orm_with_user(current_user, user_obj)
     elif isinstance(current_user, Admin):
         result = AdminResponse.from_orm(current_user)
     elif isinstance(current_user, User) and current_user.role == UserRole.ADMIN:
         # Admin users are User objects with ADMIN role (not Admin model instances)
         result = AdminResponse.from_orm(current_user)
     elif isinstance(current_user, TrainerProfile):
-        result = TrainerResponse.from_orm_with_user(current_user)
+        result = TrainerResponse.from_orm_with_user(current_user, user_obj)
     elif isinstance(current_user, CoachProfile):
-        result = CoachResponse.from_orm_with_user(current_user)
+        result = CoachResponse.from_orm_with_user(current_user, user_obj)
     elif isinstance(current_user, LearnerProfile):
-        result = LearnerResponse.from_orm_with_user(current_user)
+        result = LearnerResponse.from_orm_with_user(current_user, user_obj)
     elif isinstance(current_user, User) and current_user.role == UserRole.HEAD:
         # Handle User objects with HEAD role - use fetched profile_obj
         if profile_obj and isinstance(profile_obj, HeadProfile):
-            result = HeadResponse.from_orm_with_user(profile_obj)
+            result = HeadResponse.from_orm_with_user(profile_obj, user_obj)
         else:
             logger.error(f"HEAD profile not found for user {current_user.id}")
             raise HTTPException(status_code=500, detail="HEAD profile not found")
     elif isinstance(current_user, User) and current_user.role == UserRole.TRAINER:
         # Handle User objects with TRAINER role - use fetched profile_obj
         if profile_obj and isinstance(profile_obj, TrainerProfile):
-            result = TrainerResponse.from_orm_with_user(profile_obj)
+            result = TrainerResponse.from_orm_with_user(profile_obj, user_obj)
         else:
             logger.error(f"TRAINER profile not found for user {current_user.id}")
             raise HTTPException(status_code=500, detail="TRAINER profile not found")
     elif isinstance(current_user, User) and current_user.role == UserRole.COACH:
         # Handle User objects with COACH role - use fetched profile_obj
         if profile_obj and isinstance(profile_obj, CoachProfile):
-            result = CoachResponse.from_orm_with_user(profile_obj)
+            result = CoachResponse.from_orm_with_user(profile_obj, user_obj)
         else:
             logger.error(f"COACH profile not found for user {current_user.id}")
             raise HTTPException(status_code=500, detail="COACH profile not found")
     elif isinstance(current_user, User) and current_user.role == UserRole.LEARNER:
         # Handle User objects with LEARNER role - use fetched profile_obj
         if profile_obj and isinstance(profile_obj, LearnerProfile):
-            result = LearnerResponse.from_orm_with_user(profile_obj)
+            result = LearnerResponse.from_orm_with_user(profile_obj, user_obj)
         else:
             logger.error(f"LEARNER profile not found for user {current_user.id}")
             raise HTTPException(status_code=500, detail="LEARNER profile not found")
@@ -177,11 +184,12 @@ async def get_user_profile(
         logger.error(f"Unhandled case - Type: {type(current_user).__name__}, Role: {getattr(current_user, 'role', 'N/A')}")
         raise HTTPException(status_code=500, detail="Unable to determine profile type")
 
-    # Log the response for debugging
-    logger.info(f"Profile endpoint returning - ID: {result.id}, Email: {result.email}, Name: {result.name}")
+    # Log the response for debugging - including email and contact_number
+    logger.info(f"Profile endpoint returning - ID: {result.id}, Email: {result.email}, Contact: {getattr(result, 'contact_number', 'N/A')}, Name: {result.name}")
     
+    # TEMPORARILY DISABLED CACHE - FOR DEBUGGING
     # Cache for 15 minutes
-    await cache_service.set(cache_key, result.model_dump(), ttl=cache_service.TTL_USER_PROFILE_ME)
+    # await cache_service.set(cache_key, result.model_dump(), ttl=cache_service.TTL_USER_PROFILE_ME)
 
     return result
 

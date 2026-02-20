@@ -302,6 +302,16 @@ const TrainerSession = () => {
     handleEndSession: handlers.handleEndSession,
   });
 
+  // Sync stopwatch state to learner when it becomes 0 (reset)
+  React.useEffect(() => {
+    if (stopwatch?.elapsedTime === 0 && state.whiteboardService) {
+      state.whiteboardService.send('stopwatch_sync', {
+        elapsedTime: 0,
+        isRunning: false
+      });
+    }
+  }, [stopwatch?.elapsedTime, state.whiteboardService]);
+
   // Loading state
   if (state.loading) {
     return (

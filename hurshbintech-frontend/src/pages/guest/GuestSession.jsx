@@ -10,7 +10,6 @@ import Whiteboard from '../../components/common/Whiteboard';
 import Exercise from '../../components/session/Exercise';
 import { useMediaControl } from '../../context/MediaControlContext';
 import sessionService from '../../api/services/sessionService';
-import { markSessionActive } from '../../utils/sessionActivityTracker';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
 import {
   useAttendeeSessionState,
@@ -104,7 +103,6 @@ const GuestSession = () => {
 
   const authAttemptedRef = useRef(false);
   const pollingIntervalRef = useRef(null);
-  const restrictionAlertShownRef = useRef(false);
   const mediaControl = useMediaControl();
 
   // Use shared animation hooks
@@ -300,6 +298,7 @@ const GuestSession = () => {
       // Initialize WebRTC and Whiteboard with the session_id
       try {
         await initializeAttendeeServices(WS_BASE_URL, sessionData.session_id, 'guest', sessionState);
+        setShowWaitingModal(false);
         setLoading(false);
       } catch (err) {
         const errMsg = err.response?.data?.detail || err.message || '';
@@ -340,17 +339,6 @@ const GuestSession = () => {
       const session = await sessionService.getSessionDetails(sessionIdInternal);
       setSessionInfo(session);
 
-      const sessionCheck = markSessionActive(sessionIdInternal, 'guest');
-      if (!sessionCheck.success) {
-        if (!restrictionAlertShownRef.current) {
-          restrictionAlertShownRef.current = true;
-          toast.error(sessionCheck.message);
-          navigate('/');
-        }
-        setRetrying(false);
-        return;
-      }
-
       await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
       setShowWaitingModal(false);
       setLoading(false);
@@ -390,17 +378,6 @@ const GuestSession = () => {
             setTimeout(async () => {
               setRetrying(true);
               try {
-                const sessionCheck = markSessionActive(sessionInfo.session_id, 'guest');
-                if (!sessionCheck.success) {
-                  if (!restrictionAlertShownRef.current) {
-                    restrictionAlertShownRef.current = true;
-                    toast.error(sessionCheck.message);
-                    navigate('/');
-                  }
-                  setRetrying(false);
-                  return;
-                }
-
                 await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
                 setShowWaitingModal(false);
                 setLoading(false);

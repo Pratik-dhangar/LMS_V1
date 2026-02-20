@@ -43,6 +43,7 @@ import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
 import StopwatchDisplay from '../common/StopwatchDisplay';
+import { playFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
 
 /**
  * Session Header for Instructor
@@ -1309,18 +1310,34 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Feedback messages from instructor
     if (setFeedbackMessage) {
         whiteboardService.onFeedbackMessage = (data) => {
-            // console.log('[AttendeeSession] Feedback message received:', data);
-            setFeedbackMessage(data.text || '');
-            setTimeout(() => setFeedbackMessage(''), 3000);
+            console.log('[AttendeeSession] Feedback message received:', data);
+            const message = data.text || '';
+            setFeedbackMessage(message);
+            // Play feedback sound on attendee side when receiving feedback
+            try {
+                console.log('[AttendeeSession] Playing feedback sound for:', message);
+                playFeedbackSound(message);
+            } catch (error) {
+                console.error('[AttendeeSession] Error playing feedback sound:', error);
+            }
+            setTimeout(() => setFeedbackMessage(''), 4000);
         };
     }
 
     // Waiting messages from instructor
     if (setWaitingMessage) {
         whiteboardService.onWaitingMessage = (data) => {
-            // console.log('[AttendeeSession] Waiting message received:', data);
-            setWaitingMessage(data.text || '');
-            setTimeout(() => setWaitingMessage(''), 3000);
+            console.log('[AttendeeSession] Waiting message received:', data);
+            const message = data.text || '';
+            setWaitingMessage(message);
+            // Play waiting sound on attendee side when receiving waiting message
+            try {
+                console.log('[AttendeeSession] Playing waiting sound for:', message);
+                playFeedbackSound(message);
+            } catch (error) {
+                console.error('[AttendeeSession] Error playing waiting sound:', error);
+            }
+            setTimeout(() => setWaitingMessage(''), 4000);
         };
     }
 
@@ -1328,6 +1345,17 @@ export const setupAttendeeWhiteboardCallbacks = ({
     if (setFloatingAnimations) {
         whiteboardService.onFloatingAnimations = (data) => {
             setFloatingAnimations(prev => [...prev, ...data.animations]);
+            // Play floating animation sound on attendee side when receiving animations
+            data.animations?.forEach(animation => {
+                if (animation.type) {
+                    try {
+                        console.log('[AttendeeSession] Playing animation sound for:', animation.type);
+                        playFloatingAnimationSound(animation.type);
+                    } catch (error) {
+                        console.error('[AttendeeSession] Error playing animation sound:', error);
+                    }
+                }
+            });
             setTimeout(() => {
                 setFloatingAnimations(prev =>
                     prev.filter(a => !data.animations.find(na => na.id === a.id))
@@ -2245,9 +2273,12 @@ export const sendFeedbackMessage = ({
     message,
     setFeedbackMessage,
     whiteboardService,
-    duration = 3000
+    duration = 4000
 }) => {
     setFeedbackMessage(message);
+
+    // Play feedback sound when sending message to attendee
+    playFeedbackSound(message);
 
     if (whiteboardService) {
         whiteboardService.send('feedback_message', {
@@ -2279,6 +2310,9 @@ export const sendWaitingMessage = ({
     duration = 5000
 }) => {
     setWaitingMessage(message);
+
+    // Play waiting sound when sending waiting message to attendee
+    playFeedbackSound(message);
 
     if (whiteboardService) {
         whiteboardService.send('waiting_message', {
@@ -2321,7 +2355,7 @@ export const handleToolClick = ({
                 message: 'Good Job!',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2330,7 +2364,7 @@ export const handleToolClick = ({
                 message: 'Wow!',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2339,7 +2373,7 @@ export const handleToolClick = ({
                 message: 'Doing Well',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2348,7 +2382,7 @@ export const handleToolClick = ({
                 message: 'Thank You',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2357,7 +2391,7 @@ export const handleToolClick = ({
                 message: 'Loved it',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2366,7 +2400,7 @@ export const handleToolClick = ({
                 message: 'Relax',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2375,7 +2409,7 @@ export const handleToolClick = ({
                 message: 'Please Wait...',
                 setWaitingMessage,
                 whiteboardService,
-                duration: 5000
+                duration: 3000
             });
             break;
 
@@ -2874,8 +2908,10 @@ export const InstructorSessionPage = ({
                                 clearCanvasTrigger={clearCanvasTrigger}
                                 erasePenTrigger={erasePenTrigger}
                                 redrawCanvasTrigger={redrawCanvasTrigger}
-                                stopwatchFormattedTime={stopwatch?.isRunning ? stopwatch.formattedTime : null}
+                                stopwatchFormattedTime={stopwatch?.elapsedTime > 0 ? stopwatch.formattedTime : null}
                                 stopwatchIsRunning={stopwatch?.isRunning}
+                                onStopwatchReset={() => stopwatch.reset()}
+                                isInstructor={true}
                                 toolActive={toolActive}
                                 onYoutubeDropped={handleYoutubeDropped}
                                 canvasRefForParent={whiteboardCanvasRef}
@@ -3015,7 +3051,10 @@ export const InstructorSessionPage = ({
                                 onStart={stopwatch.start}
                                 onPause={stopwatch.pause}
                                 onResume={stopwatch.resume}
-                                onReset={stopwatch.reset}
+                                onReset={() => {
+                                    stopwatch.reset();
+                                    setShowStopwatch(false);
+                                }}
                                 onSetTime={stopwatch.setTime}
                                 showControls={true}
                                 size="xs"

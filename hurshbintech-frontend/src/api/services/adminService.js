@@ -11,7 +11,7 @@ const adminService = {
    * @returns {Promise} 
    */
   createHead: async (headData) => {
-    console.log('Creating new head:', { name: headData.name, contactNo: headData.contact_no });
+    console.log('Creating new head:', { name: headData.name, contactNumber: headData.contact_number });
     const response = await axiosInstance.post('/admin/heads', headData);
     console.log('Head created successfully:', { id: response.data.id, passcode: response.data.passcode });
     return response.data;

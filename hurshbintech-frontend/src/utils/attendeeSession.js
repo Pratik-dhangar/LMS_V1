@@ -29,6 +29,7 @@ import VideoConferenceService from '../api/services/videoConferenceService';
 import WhiteboardService from '../api/services/whiteboardService';
 import WhiteboardToolsService from '../api/services/WhiteboardToolsService';
 import { playPopSound } from '../components/session/InstructorSessionLayout';
+import { playFeedbackSound, playFloatingAnimationSound } from './feedbackSounds';
 
 // ============================================================================
 // CONSTANTS
@@ -251,6 +252,18 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         console.log('[AttendeeSession] Floating animations received:', data);
         setFloatingAnimations(prev => [...prev, ...data.animations]);
 
+        // Play floating animation sound on attendee side when receiving animations
+        data.animations?.forEach(animation => {
+            if (animation.type) {
+                try {
+                    console.log('[AttendeeSession] Playing animation sound for:', animation.type);
+                    playFloatingAnimationSound(animation.type);
+                } catch (error) {
+                    console.error('[AttendeeSession] Error playing animation sound:', error);
+                }
+            }
+        });
+
         // Auto-remove after 13 seconds
         setTimeout(() => {
             setFloatingAnimations(prevAnims =>
@@ -330,16 +343,34 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
 
     // Feedback and waiting messages
     wbService.onFeedbackMessage = (data) => {
-        setFeedbackMessage(data.text || '');
+        console.log('[AttendeeSession] Feedback message received:', data);
+        const message = data.text || '';
+        setFeedbackMessage(message);
+        // Play feedback sound on attendee side when receiving feedback
+        try {
+            console.log('[AttendeeSession] Playing feedback sound for:', message);
+            playFeedbackSound(message);
+        } catch (error) {
+            console.error('[AttendeeSession] Error playing feedback sound:', error);
+        }
         if (data.text) {
-            setTimeout(() => setFeedbackMessage(''), 3000);
+            setTimeout(() => setFeedbackMessage(''), 4000);
         }
     };
 
     wbService.onWaitingMessage = (data) => {
-        setWaitingMessage(data.text || '');
+        console.log('[AttendeeSession] Waiting message received:', data);
+        const message = data.text || '';
+        setWaitingMessage(message);
+        // Play waiting sound on attendee side when receiving waiting message
+        try {
+            console.log('[AttendeeSession] Playing waiting sound for:', message);
+            playFeedbackSound(message);
+        } catch (error) {
+            console.error('[AttendeeSession] Error playing waiting sound:', error);
+        }
         if (data.text) {
-            setTimeout(() => setWaitingMessage(''), 5000);
+            setTimeout(() => setWaitingMessage(''), 4000);
         }
     };
 
