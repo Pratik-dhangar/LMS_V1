@@ -13,8 +13,9 @@ import React, { useMemo } from 'react';
  * @param {Function} onReset - Callback for reset button
  * @param {Function} onSetTime - Callback for setting time (hours, minutes, seconds)
  * @param {boolean} showControls - Show control buttons (default: true)
+ * @param {boolean} isInstructor - Show instructor-only controls like reset button (default: false)
  * @param {string} size - Size variant: 'sm', 'md', 'lg' (default: 'md')
- * @param {string} variant - Display variant: 'compact', 'standard', 'mechanical' (default: 'standard')
+ * @param {string} variant - Display variant: 'compact', 'standard', 'mechanical', 'digital' (default: 'standard')
  */
 const StopwatchDisplay = ({
     formattedTime = { hours: '00', minutes: '00', seconds: '00', display: '00:00:00' },
@@ -25,6 +26,7 @@ const StopwatchDisplay = ({
     onReset = () => { },
     onSetTime = () => { },
     showControls = true,
+    isInstructor = false,
     size = 'md',
     variant = 'standard'
 }) => {
@@ -97,6 +99,75 @@ const StopwatchDisplay = ({
     };
 
     const currentSize = sizeClasses[size] || sizeClasses.md;
+
+    // ==================== DIGITAL VARIANT ====================
+    if (variant === 'digital') {
+        const sizeConfig = {
+            xs: { svg: 'w-16 h-16', text: 'text-lg' },
+            sm: { svg: 'w-24 h-24', text: 'text-2xl' },
+            md: { svg: 'w-32 h-32', text: 'text-4xl' },
+            lg: { svg: 'w-48 h-48', text: 'text-6xl' }
+        };
+
+        const config = sizeConfig[size] || sizeConfig.md;
+
+        return (
+            <div className="flex flex-col items-center justify-center gap-3">
+                <svg
+                    className={`${config.svg}`}
+                    viewBox="0 0 500 500"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    {/* Outer rounded rectangle background */}
+                    <rect
+                        x="50"
+                        y="50"
+                        width="400"
+                        height="400"
+                        rx="80"
+                        ry="80"
+                        fill="#A7D8E8"
+                    />
+
+                    {/* Inner circle */}
+                    <circle
+                        cx="250"
+                        cy="250"
+                        r="160"
+                        fill="#FFF9E3"
+                        stroke="#FFF"
+                        strokeWidth="8"
+                    />
+
+                    {/* Digital time display */}
+                    <text
+                        x="250"
+                        y="280"
+                        fontFamily="Verdana, Arial, sans-serif"
+                        fontWeight="900"
+                        fontSize="85"
+                        textAnchor="middle"
+                        fill="#4E342E"
+                    >
+                        {`${formattedTime.minutes}:${formattedTime.seconds}`}
+                    </text>
+
+                    {/* Running indicator dot */}
+                    {isRunning && (
+                        <circle cx="250" cy="420" r="8" fill="#E74C3C" opacity="0.8">
+                            <animate
+                                attributeName="opacity"
+                                values="0.3;1;0.3"
+                                dur="1.5s"
+                                repeatCount="indefinite"
+                            />
+                        </circle>
+                    )}
+                </svg>
+
+            </div>
+        );
+    }
 
     // ==================== MECHANICAL/ANALOG VARIANT ====================
     if (variant === 'mechanical') {
@@ -240,15 +311,7 @@ const StopwatchDisplay = ({
 
 
             {/* Time Breakdown */}
-            <div className="grid grid-cols-3 gap-2 mb-4 w-full">
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-center">
-                    <div className={`font-mono font-bold text-amber-700 ${currentSize.time}`}>
-                        {formattedTime.hours}
-                    </div>
-                    <div className={`text-[10px] text-gray-600 uppercase mt-1 ${currentSize.label}`}>
-                        Hours
-                    </div>
-                </div>
+            <div className="grid grid-cols-2 gap-2 mb-4 w-full">
                 <div className="bg-purple-50 border border-purple-200 rounded p-2 text-center">
                     <div className={`font-mono font-bold text-purple-600 ${currentSize.time}`}>
                         {formattedTime.minutes}
@@ -271,18 +334,7 @@ const StopwatchDisplay = ({
             {showSetTime && !isRunning && (
                 <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-4 w-full">
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Set Time</h4>
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                        <div>
-                            <label className="block text-xs text-gray-600 mb-1">Hours</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="99"
-                                value={inputHours}
-                                onChange={(e) => setInputHours(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-center font-mono text-sm"
-                            />
-                        </div>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                         <div>
                             <label className="block text-xs text-gray-600 mb-1">Minutes</label>
                             <input
@@ -341,21 +393,19 @@ const StopwatchDisplay = ({
                             >
                                 ⏸️ Pause
                             </button>
-                            <button
-                                onClick={onResume}
-                                className={`flex-1 min-w-[70px] bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
-                            >
-                                ▶️ Resume
-                            </button>
+
                         </>
                     )}
-
+                    {/* Reset Button */}
                     <button
                         onClick={onReset}
-                        className={`flex-1 min-w-[70px] bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors ${currentSize.button}`}
+                        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors text-xs"
+                        title="Reset timer and close clock"
                     >
                         🔄 Reset
                     </button>
+
+
 
                     {!isRunning && (
                         <button

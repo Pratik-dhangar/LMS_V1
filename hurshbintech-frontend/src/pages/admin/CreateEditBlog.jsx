@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { getFileUrl } from "../../utils/urlHelper";
 import RichTextEditor from "../../components/RichTextEditor";
 import blogService from "../../api/services/blogService";
 import "../../styles/admin/AdminEditVlog.css";
@@ -41,7 +42,7 @@ const CreateEditBlog = () => {
         status: blog.status,
       });
       if (blog.featured_image_url) {
-        setFeaturedImagePreview(blog.featured_image_url);
+        setFeaturedImagePreview(getFileUrl(blog.featured_image_url));
       }
     } catch (err) {
       console.error("Error fetching blog:", err);

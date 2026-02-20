@@ -35,87 +35,41 @@ const Checkout = () => {
 
     const loadUserData = async () => {
         try {
-            console.log('Loading user data from /profile/me/user...');
-            let userData = await axiosInstance.get('/profile/me/user');
-            console.log('✅ Successfully got response:', userData.status);
-            console.log('User data response:', userData.data);
+            // Fetch user profile data from Users table via profile endpoint
+            const response = await axiosInstance.get('/profile/me/user');
 
-            let email = userData.data.email || '';
-            let contact_number = userData.data.contact_no || '';
-
-            // If email or contact_number is missing, check respective profile pages
-            if (!email || !contact_number) {
-                console.log('Email or contact_number missing, checking profile pages...');
-
-                if (user && user.role) {
-                    try {
-                        // Try to fetch from role-specific profile endpoint
-                        const profileEndpoints = [
-                            `/profile/${user.role}/me`,
-                            `/${user.role}/profile/me`,
-                            `/profile/me/${user.role}`,
-                            `/${user.role}/profile`
-                        ];
-
-                        let profileData = null;
-                        for (const endpoint of profileEndpoints) {
-                            try {
-                                console.log(`Trying endpoint: ${endpoint}`);
-                                const response = await axiosInstance.get(endpoint);
-                                profileData = response.data;
-                                console.log(`✅ Found profile data from ${endpoint}:`, profileData);
-                                break;
-                            } catch (err) {
-                                console.log(`✗ Endpoint ${endpoint} failed`);
-                                continue;
-                            }
-                        }
-
-                        if (profileData) {
-                            // Update email if not found in users table
-                            if (!email && profileData.email) {
-                                email = profileData.email;
-                                console.log('Email found in profile page:', email);
-                            }
-                            // Update contact_number if not found in users table
-                            if (!contact_number && (profileData.contact_no || profileData.contact_number || profileData.phone)) {
-                                contact_number = profileData.contact_no || profileData.contact_number || profileData.phone;
-                                console.log('Contact number found in profile page:', contact_number);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error fetching from profile pages:', error);
-                    }
-                }
+            if (!response.data) {
+                console.warn('No user data returned from API');
+                return;
             }
 
-            setCurrentUser(userData.data);
+            // Extract email and contact_number directly from response
+            const userEmail = response.data.email || '';
+            const userContactNumber = response.data.contact_number || '';
 
-            console.log('Final email:', email);
-            console.log('Final contact_number:', contact_number);
+            console.log('=== USER DATA FETCHED ===');
+            console.log('Email:', userEmail);
+            console.log('Contact Number:', userContactNumber);
+            console.log('========================');
 
-            setFormData(prev => {
-                const updated = {
-                    ...prev,
-                    email: email,
-                    contact_number: contact_number
-                };
-                console.log('Updated formData:', updated);
-                return updated;
-            });
+            // Update form data with fetched values
+            setFormData(prevData => ({
+                ...prevData,
+                email: userEmail,
+                contact_number: userContactNumber
+            }));
 
-            if (email) {
-                console.log('Email verified - setting badge');
+            // Set email verification status
+            if (userEmail) {
                 setEmailVerified(true);
-            } else {
-                console.log('No email found - emailVerified remains false');
             }
+
+            // Store user data in state
+            setCurrentUser(response.data);
+
         } catch (error) {
-            console.error('❌ Error loading user data:', error);
-            console.error('Error status:', error.response?.status);
-            console.error('Error response:', error.response?.data);
-            console.error('Full error:', error);
-            // Continue without user data - email field will be empty
+            console.error('Failed to load user data:', error);
+            toast.error('Could not load user information');
         }
     };
 

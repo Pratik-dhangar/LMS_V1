@@ -551,15 +551,7 @@ const ChatWindowPage = () => {
                   ref={emojiButtonRef}
                   type="button"
                   className="chat-input-emoji-btn"
-                  onClick={() => {
-                    if (isMobile) {
-                      // On mobile, focus input and let native emoji keyboard open
-                      document.querySelector('.chat-input-field')?.focus();
-                    } else {
-                      // On desktop/tablet, toggle emoji picker
-                      setShowEmojiPicker(!showEmojiPicker);
-                    }
-                  }}
+                  onClick={() => setShowEmojiPicker(prev => !prev)}
                   title="Emoji"
                 >
                   <Smile size={20} />
@@ -584,8 +576,8 @@ const ChatWindowPage = () => {
               </div>
             )}
 
-            {/* Emoji Picker - Desktop/Tablet Only */}
-            {!isMobile && showEmojiPicker && (
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
               <EmojiPicker
                 onEmojiSelect={handleEmojiSelect}
                 onClose={() => setShowEmojiPicker(false)}

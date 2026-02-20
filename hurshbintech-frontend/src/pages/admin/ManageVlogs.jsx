@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import vlogService from "../../api/services/vlogService";
+import { getFileUrl } from "../../utils/urlHelper";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
@@ -70,12 +71,6 @@ const ManageVlogs = () => {
       (vlog.vlog_type &&
         vlog.vlog_type.toLowerCase().includes(activeSearchQuery.toLowerCase()))
   );
-
-  const getFullUrl = (url) => {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    return `http://127.0.0.1:8000${url}`;
-  };
 
   const formatFileSize = (size) => {
     if (!size) return "N/A";
@@ -182,7 +177,7 @@ const ManageVlogs = () => {
                   <div className="admin-content-preview">
                     {vlog.thumbnail_url ? (
                       <img
-                        src={getFullUrl(vlog.thumbnail_url)}
+                        src={getFileUrl(vlog.thumbnail_url)}
                         alt={vlog.title}
                         style={{
                           width: "100%",
@@ -244,7 +239,7 @@ const ManageVlogs = () => {
                     {/* Action Buttons */}
                     <div className="admin-content-actions">
                       <a
-                        href={getFullUrl(vlog.file_url)}
+                        href={getFileUrl(vlog.file_url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="app-modal-btn app-modal-btn--secondary btn-sm"

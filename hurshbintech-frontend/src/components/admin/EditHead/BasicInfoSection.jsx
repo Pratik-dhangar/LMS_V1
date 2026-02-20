@@ -10,7 +10,7 @@ import FormSection from '../../common/FormSection';
  * @param {function} handleChange
  */
 const BasicInfoSection = ({ formData, errors, handleChange }) => (
-  <FormSection 
+  <FormSection
     title="Basic Information"
     description="Enter the essential details of the Candidate"
   >
@@ -51,13 +51,13 @@ const BasicInfoSection = ({ formData, errors, handleChange }) => (
 
       <InputField
         label="Contact Number"
-        name="contact_no"
+        name="contact_number"
         type="tel"
-        value={formData.contact_no}
+        value={formData.contact_number}
         onChange={handleChange}
         required
         placeholder="+91-8928765220"
-        error={errors.contact_no}
+        error={errors.contact_number}
       />
 
       <InputField

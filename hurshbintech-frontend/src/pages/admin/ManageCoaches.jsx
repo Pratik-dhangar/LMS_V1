@@ -60,8 +60,8 @@ const ViewConsultants = () => {
         (consultant) =>
           consultant.name.toLowerCase().includes(lowerQuery) ||
           consultant.passcode.toLowerCase().includes(lowerQuery) ||
-          (consultant.contact_no &&
-            consultant.contact_no.toLowerCase().includes(lowerQuery))
+          (consultant.contact_number &&
+            consultant.contact_number.toLowerCase().includes(lowerQuery))
       );
       setFilteredConsultants(filtered);
     }
@@ -268,13 +268,13 @@ const ViewConsultants = () => {
                             </div>
                           </td>
                           <td className="table-primary-td">
-                            {consultant.contact_no || "N/A"}
+                            {consultant.contact_number || "N/A"}
                           </td>
                           <td className="table-primary-td">
                             {consultant.date_of_joining
                               ? new Date(
-                                  consultant.date_of_joining
-                                ).toLocaleDateString()
+                                consultant.date_of_joining
+                              ).toLocaleDateString()
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">

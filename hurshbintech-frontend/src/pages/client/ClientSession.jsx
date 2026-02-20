@@ -5,7 +5,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
-import { markSessionActive } from '../../utils/sessionActivityTracker';
 import Whiteboard from '../../components/common/Whiteboard';
 import Exercise from '../../components/session/Exercise';
 import MessageList from '../../components/common/MessageList';
@@ -98,7 +97,6 @@ const ClientSession = () => {
   const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
 
   const pollingIntervalRef = useRef(null);
-  const restrictionAlertShownRef = useRef(false);
 
   // Use shared animation hooks
   const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
@@ -397,17 +395,6 @@ const ClientSession = () => {
       const session = await coachSessionService.getSessionDetails(sessionId);
       setSessionInfo(session);
 
-      const sessionCheck = markSessionActive(sessionId, 'client');
-      if (!sessionCheck.success) {
-        if (!restrictionAlertShownRef.current) {
-          restrictionAlertShownRef.current = true;
-          toast.error(sessionCheck.message);
-          navigate('/my-appointments');
-        }
-        setRetrying(false);
-        return;
-      }
-
       await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
       setShowWaitingModal(false);
       setLoading(false);
@@ -441,17 +428,6 @@ const ClientSession = () => {
           setTimeout(async () => {
             setRetrying(true);
             try {
-              const sessionCheck = markSessionActive(sessionId, 'client');
-              if (!sessionCheck.success) {
-                if (!restrictionAlertShownRef.current) {
-                  restrictionAlertShownRef.current = true;
-                  toast.error(sessionCheck.message);
-                  navigate('/my-appointments');
-                }
-                setRetrying(false);
-                return;
-              }
-
               await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
               setShowWaitingModal(false);
               setLoading(false);

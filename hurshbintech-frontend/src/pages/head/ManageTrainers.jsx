@@ -102,8 +102,8 @@ const ManageTrainers = () => {
         (trainer) =>
           trainer.name.toLowerCase().includes(lowerQuery) ||
           trainer.passcode.toLowerCase().includes(lowerQuery) ||
-          (trainer.contact_no &&
-            trainer.contact_no.toLowerCase().includes(lowerQuery))
+          (trainer.contact_number &&
+            trainer.contact_number.toLowerCase().includes(lowerQuery))
       );
       setFilteredTrainers(filtered);
     }
@@ -271,7 +271,7 @@ const ManageTrainers = () => {
                             </div>
                           </td>
                           <td className="table-primary-td table-primary-td-center">
-                            {trainer.contact_no || "N/A"}
+                            {trainer.contact_number || "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">
                             {trainer.date_of_joining

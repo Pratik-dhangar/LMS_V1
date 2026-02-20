@@ -39,8 +39,8 @@ const ManageHeads = () => {
         (head) =>
           head.name.toLowerCase().includes(searchLower) ||
           head.passcode.toLowerCase().includes(searchLower) ||
-          (head.contact_no &&
-            head.contact_no.toLowerCase().includes(searchLower))
+          (head.contact_number &&
+            head.contact_number.toLowerCase().includes(searchLower))
       );
       setFilteredHeads(filtered);
     }
@@ -266,13 +266,13 @@ const ManageHeads = () => {
                             </div>
                           </td>
                           <td className="table-primary-td">
-                            {head.contact_no || "N/A"}
+                            {head.contact_number || "N/A"}
                           </td>
                           <td className="table-primary-td">
                             {head.date_of_joining
                               ? new Date(
-                                  head.date_of_joining
-                                ).toLocaleDateString()
+                                head.date_of_joining
+                              ).toLocaleDateString()
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">

@@ -386,6 +386,8 @@ const Whiteboard = ({
     redrawCanvasTrigger = 0,
     stopwatchFormattedTime = null,
     stopwatchIsRunning = false,
+    onStopwatchReset = () => { },
+    isInstructor = false,
     toolActive = false,
     textBoxes = [],
     onTextBoxChange = () => { },
@@ -532,7 +534,7 @@ const Whiteboard = ({
         }
     }, [isTrainer]);
 
-    // Control stopwatch visibility - show when running, hide when reset or time completes
+    // Control stopwatch visibility - show when time is set, hide only when reset
     useEffect(() => {
         // If stopwatch data is null, hide immediately (reset)
         if (!stopwatchFormattedTime) {
@@ -540,14 +542,9 @@ const Whiteboard = ({
             return;
         }
 
-        // If stopwatch is running, show it
-        if (stopwatchIsRunning) {
-            setShowStopwatch(true);
-        } else {
-            // If not running, hide it
-            setShowStopwatch(false);
-        }
-    }, [stopwatchIsRunning, stopwatchFormattedTime]);
+        // Show stopwatch as long as it has been initialized (running or paused)
+        setShowStopwatch(true);
+    }, [stopwatchFormattedTime]);
 
     const getSelectionStyles = (isSelectedByTrainer, isSelectedByLearner, isSelectedByRemoteLearner, bucketColorOverride = null) => {
         if (!isSelectedByTrainer && !isSelectedByLearner && !isSelectedByRemoteLearner) {
@@ -1465,7 +1462,7 @@ const Whiteboard = ({
 
                         console.log(`[Whiteboard] - ${bucketItems.length} buckets`);
                         console.log(`[Whiteboard] - ${regularItems.length} regular items (images/text)`);
-                        
+
                         // Restore buckets — denormalize coordinates if needed
                         if (bucketItems.length > 0) {
                             const canvas = canvasRef.current;
@@ -1484,11 +1481,11 @@ const Whiteboard = ({
                             setBuckets(processedBuckets);
                             console.log('[Whiteboard] ✅ Buckets restored');
                         }
-                        
+
                         // Restore regular canvas items — denormalize coordinates if needed
                         if (regularItems.length > 0) {
                             const canvas = canvasRef.current;
-                            
+
                             // First, denormalize free items normally
                             // For items in buckets, use grid layout relative to their (already restored) bucket
                             const processedBucketsForLookup = bucketItems.length > 0
@@ -1523,19 +1520,19 @@ const Whiteboard = ({
                                     item.width !== undefined && item.width >= 0 && item.width <= 1 &&
                                     item.height !== undefined && item.height >= 0 && item.height <= 1
                                 );
-                                
+
                                 if (isNormalized && canvas) {
                                     const denormalized = denormalizeItem(item, canvas);
-                                    console.log('[Whiteboard] Denormalized restored item:', { 
-                                        id: item.id, 
-                                        from: { x: item.x, y: item.y }, 
-                                        to: { x: denormalized.x, y: denormalized.y } 
+                                    console.log('[Whiteboard] Denormalized restored item:', {
+                                        id: item.id,
+                                        from: { x: item.x, y: item.y },
+                                        to: { x: denormalized.x, y: denormalized.y }
                                     });
                                     return { ...denormalized, normalized: false };
                                 }
                                 return item;
                             });
-                            
+
                             setCanvasItems(processedItems);
                             console.log('[Whiteboard] ✅ Canvas items restored (', processedItems.length, 'items)');
                         }
@@ -3199,7 +3196,7 @@ const Whiteboard = ({
                 </div>
             )}
 
-            {/* Stopwatch Display - Top Right Corner - Mechanical Analog Clock Style */}
+            {/* Stopwatch Display - Top Right Corner - Digital Clock Style */}
             {showStopwatch && stopwatchFormattedTime && (
                 <div className="stopwatch-overlay">
                     <div className="stopwatch-overlay-inner">
@@ -3207,9 +3204,11 @@ const Whiteboard = ({
                             <StopwatchDisplay
                                 formattedTime={stopwatchFormattedTime}
                                 isRunning={stopwatchIsRunning}
+                                onReset={onStopwatchReset}
+                                isInstructor={isInstructor}
                                 showControls={false}
                                 size="md"
-                                variant="mechanical"
+                                variant="digital"
                             />
                         </div>
                     </div>

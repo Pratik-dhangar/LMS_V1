@@ -115,7 +115,7 @@ const EditLearner = () => {
       const formattedData = {
         name: data.name || "",
         email: data.email || "",
-        contact_number: data.contact_no || "",
+        contact_number: data.contact_number || "",
         age: data.age || "",
         dob: data.dob ? new Date(data.dob).toISOString().split("T")[0] : "",
         date_of_assessment: data.date_of_assessment
