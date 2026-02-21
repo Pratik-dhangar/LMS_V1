@@ -599,7 +599,7 @@ const SubscriptionRecords = () => {
                                   <a
                                     href={
                                       inq.payment_receipt_url.startsWith('s3://')
-                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media?key=${encodeURIComponent(inq.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
+                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(inq.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
                                         : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${inq.payment_receipt_url}`
                                     }
                                     target="_blank"
