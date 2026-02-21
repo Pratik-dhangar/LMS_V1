@@ -185,6 +185,22 @@ const SubscriptionRecords = () => {
     }
   };
 
+  const handleDeleteInquiry = async (inquiryId) => {
+    if (!window.confirm('Are you sure you want to delete this inquiry? This action cannot be undone.')) {
+      return;
+    }
+    setUpdatingInquiry(inquiryId);
+    try {
+      await publicSubscriptionService.deleteInquiry(inquiryId);
+      toast.success("Inquiry deleted successfully");
+      fetchInquiries();
+    } catch (err) {
+      toast.error("Failed to delete inquiry");
+    } finally {
+      setUpdatingInquiry(null);
+    }
+  };
+
   const handleExportCsv = async () => {
     setExportingCsv(true);
     try {
@@ -623,17 +639,17 @@ const SubscriptionRecords = () => {
                               </td>
                               <td className="table-primary-td table-primary-td-center">
                                 <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                  {inq.review_status !== 'REVIEWED' && (
+                                  {inq.review_status === 'NEW' && (
                                     <button
                                       className="btn btn-primary"
                                       style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
                                       disabled={updatingInquiry === inq.id}
                                       onClick={() => handleUpdateInquiryStatus(inq.id, 'REVIEWED')}
                                     >
-                                      <CheckCircle size={12} /> Reviewed
+                                      <CheckCircle size={12} /> Review
                                     </button>
                                   )}
-                                  {inq.review_status !== 'PROCESSED' && (
+                                  {inq.review_status === 'REVIEWED' && (
                                     <button
                                       className="btn"
                                       style={{
@@ -644,7 +660,21 @@ const SubscriptionRecords = () => {
                                       disabled={updatingInquiry === inq.id}
                                       onClick={() => handleUpdateInquiryStatus(inq.id, 'PROCESSED')}
                                     >
-                                      ✓ Processed
+                                      ✓ Proceed
+                                    </button>
+                                  )}
+                                  {inq.review_status === 'PROCESSED' && (
+                                    <button
+                                      className="btn"
+                                      style={{
+                                        fontSize: '0.72rem', padding: '0.25rem 0.5rem',
+                                        background: '#ef4444', color: '#fff', border: 'none',
+                                        borderRadius: '0.375rem', cursor: 'pointer',
+                                      }}
+                                      disabled={updatingInquiry === inq.id}
+                                      onClick={() => handleDeleteInquiry(inq.id)}
+                                    >
+                                      🗑 Delete
                                     </button>
                                   )}
                                 </div>

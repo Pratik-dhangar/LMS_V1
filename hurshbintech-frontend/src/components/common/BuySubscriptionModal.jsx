@@ -454,7 +454,7 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     <p className="bsm-payment-detail-title">Scan QR Code to Pay</p>
                                     <div className="bsm-qr-wrapper">
                                         <img
-                                            src="/upi-qr.png"
+                                            src="../public/upi-qr.png"
                                             alt="UPI QR Code"
                                             className="bsm-qr-img"
                                             onError={(e) => {
@@ -462,10 +462,6 @@ const BuySubscriptionModal = ({ onClose }) => {
                                                 e.target.nextSibling.style.display = 'flex';
                                             }}
                                         />
-                                        <div className="bsm-qr-placeholder" style={{ display: 'none' }}>
-                                            <p>📷 QR Code</p>
-                                            <small>Place your <code>upi-qr.png</code> in the <code>public/</code> folder</small>
-                                        </div>
                                     </div>
                                     <p className="bsm-payment-note">
                                         After payment, upload your payment screenshot below.

@@ -2532,3 +2532,265 @@ class EmailService:
             html_body=html_body,
             email_type="webinar_invitation",
         )
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # Subscription Inquiry Confirmation Email - sent to learner when admin reviews/approves
+    # ────────────────────────────────────────────────────────────────────────────
+    @staticmethod
+    async def send_subscription_inquiry_approved(
+        recipient_email: str,
+        recipient_name: str,
+        inquiry_data: dict,
+    ) -> bool:
+        """
+        Send subscription inquiry confirmation email to learner after admin review.
+        inquiry_data should contain: email, contact_number, age, date_of_birth, date_of_assessment, 
+                                     package_name, package_price, payment_method, payment_receipt_filename
+        """
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+        
+        subject = "Subscription Inquiry Confirmation - HurshBintech"
+        
+        # Format dates
+        dob_display = inquiry_data.get('date_of_birth', '')
+        if dob_display:
+            try:
+                dob_display = datetime.fromisoformat(dob_display).strftime('%d %b %Y')
+            except:
+                pass
+        
+        doa_display = inquiry_data.get('date_of_assessment', '')
+        if doa_display:
+            try:
+                doa_display = datetime.fromisoformat(doa_display).strftime('%d %b %Y')
+            except:
+                pass
+        
+        price_display = inquiry_data.get('package_price', '')
+        if price_display:
+            try:
+                price_display = f"₹ {float(price_display):,.2f}"
+            except:
+                pass
+        
+        payment_method_display = inquiry_data.get('payment_method', '')
+        if payment_method_display == 'UPI':
+            payment_method_display = '📱 UPI'
+        elif payment_method_display == 'BANK_TRANSFER':
+            payment_method_display = '🏦 Bank Transfer'
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 650px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f5f5f5;
+                    }}
+                    .header {{
+                        background: linear-gradient(135deg, #5c1e1e 0%, #8b2e2e 100%);
+                        padding: 25px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-size: 28px;
+                        font-weight: 600;
+                    }}
+                    .header p {{
+                        margin: 5px 0 0 0;
+                        font-size: 14px;
+                        opacity: 0.95;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .greeting {{
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                        color: #2c3e50;
+                    }}
+                    .section {{
+                        margin: 25px 0;
+                    }}
+                    .section-title {{
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #5c1e1e;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #5c1e1e;
+                        margin-bottom: 15px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }}
+                    .detail-row {{
+                        display: flex;
+                        margin: 12px 0;
+                        padding: 10px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                    }}
+                    .detail-label {{
+                        font-weight: 600;
+                        width: 40%;
+                        color: #5c1e1e;
+                    }}
+                    .detail-value {{
+                        width: 60%;
+                        color: #374151;
+                        word-break: break-word;
+                    }}
+                    .detail-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .status-box {{
+                        background-color: #f0fdf4;
+                        border-left: 4px solid #10b981;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .status-box p {{
+                        margin: 0;
+                        color: #065f46;
+                        font-size: 14px;
+                    }}
+                    .next-steps {{
+                        background-color: #fef3c7;
+                        border-left: 4px solid #f59e0b;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .next-steps p {{
+                        margin: 8px 0;
+                        color: #92400e;
+                        font-size: 14px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    .link {{
+                        color: #5c1e1e;
+                        text-decoration: none;
+                        font-weight: 600;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Subscription Inquiry Received</h1>
+                        <p>Thank you for your interest in HurshBintech programs</p>
+                    </div>
+                    
+                    <div class="content">
+                        <div class="greeting">
+                            <p>Hi <strong>{recipient_name}</strong>,</p>
+                            <p>Thank you! Your subscription inquiry has been confirmed and approved. Below is a summary of all the information you submitted for our records.</p>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">📋 Learner Information</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Full Name</span>
+                                <span class="detail-value">{recipient_name}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Email</span>
+                                <span class="detail-value">{inquiry_data.get('email', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Contact Number</span>
+                                <span class="detail-value">{inquiry_data.get('contact_number', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Age</span>
+                                <span class="detail-value">{inquiry_data.get('age', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Date of Birth</span>
+                                <span class="detail-value">{dob_display or '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Assessment Date</span>
+                                <span class="detail-value">{doa_display or '—'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">💳 Package & Payment Details</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Package Name</span>
+                                <span class="detail-value">{inquiry_data.get('package_name', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Package Price</span>
+                                <span class="detail-value"><strong>{price_display or '—'}</strong></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Payment Method</span>
+                                <span class="detail-value">{payment_method_display or '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Receipt Status</span>
+                                <span class="detail-value">{('✅ Uploaded' if inquiry_data.get('payment_receipt_filename') else '⏳ Pending')}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-box">
+                            <p><strong>✓ Status: Confirmed</strong></p>
+                            <p>Your inquiry has been reviewed and approved! Our enrollment team will contact you at the email or phone number provided within 1-2 business days to complete your registration.</p>
+                        </div>
+                        
+                        <div class="next-steps">
+                            <p><strong>What happens next?</strong></p>
+                            <p>1. We will confirm your payment receipt</p>
+                            <p>2. Our enrollment team will arrange a call to finalize your details</p>
+                            <p>3. You'll receive access to your program and learning materials</p>
+                        </div>
+                        
+                        <div class="section">
+                            <p style="font-size: 14px; color: #6b7280;">
+                                If you have any questions or need to update your information, please reply to this email or contact us directly. Keep this email for your reference as it contains a summary of your inquiry.
+                            </p>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated confirmation email from HurshBintech.</p>
+                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="subscription_inquiry_approved",
+        )

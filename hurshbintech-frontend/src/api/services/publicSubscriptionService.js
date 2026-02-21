@@ -77,6 +77,16 @@ const publicSubscriptionService = {
     },
 
     /**
+     * Admin: delete a subscription inquiry from the database.
+     */
+    deleteInquiry: async (inquiryId) => {
+        const response = await axiosInstance.delete(
+            `/admin/subscription-inquiries/${inquiryId}`,
+        );
+        return response.data;
+    },
+
+    /**
      * Admin: trigger CSV export download.
      * Opens the export URL in a new tab – the browser handles the file download.
      */

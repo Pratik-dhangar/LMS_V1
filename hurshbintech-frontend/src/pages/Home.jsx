@@ -388,14 +388,15 @@ const Home = () => {
             About Us
           </button>
           <span className="hero-nav-divider">|</span>
-          <PWAInstallButton />
-          <span className="hero-nav-divider">|</span>
           <button
             className="hero-nav-link hero-buy-subscription-btn"
             onClick={() => setShowSubscriptionModal(true)}
           >
             Buy Subscription
           </button>
+          <span className="hero-nav-divider">|</span>
+          <PWAInstallButton />
+          
         </div>
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
