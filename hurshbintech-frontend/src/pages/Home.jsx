@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/common/Spinner";
 import { CoachSkeleton, ServiceCardsSkeleton, ContentSectionSkeleton } from "../components/common/SkeletonLoader";
 import PWAInstallButton from '../components/common/PWAInstallButton';
+import BuySubscriptionModal from '../components/common/BuySubscriptionModal';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
@@ -31,6 +32,7 @@ const Home = () => {
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFullBio, setShowFullBio] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const sectionRefs = useRef({});
   const blogsRef = useRef(null);
   const vlogsRef = useRef(null);
@@ -58,7 +60,7 @@ const Home = () => {
   // Lazy load featured coach when section becomes visible
   const fetchFeaturedCoach = useCallback(async (coachId) => {
     if (!coachId || featuredCoach) return;
-    
+
     try {
       setLoadingCoach(true);
       console.log('Fetching coach with ID:', coachId);
@@ -77,7 +79,7 @@ const Home = () => {
   // Lazy load blogs when section becomes visible
   const fetchBlogs = useCallback(async () => {
     if (blogs.length > 0) return; // Already loaded
-    
+
     try {
       setLoadingBlogs(true);
       const response = await blogService.getPublicBlogs({ page: 1, per_page: 3 });
@@ -93,7 +95,7 @@ const Home = () => {
   // Lazy load vlogs when section becomes visible
   const fetchVlogs = useCallback(async () => {
     if (vlogs.length > 0) return; // Already loaded
-    
+
     try {
       setLoadingVlogs(true);
       const response = await vlogService.getPublicVlogs({ page: 1, per_page: 3 });
@@ -109,15 +111,15 @@ const Home = () => {
   // Load critical content on mount
   useEffect(() => {
     let cancelled = false;
-    
+
     const loadData = async () => {
       if (!cancelled) {
         await fetchAboutUs();
       }
     };
-    
+
     loadData();
-    
+
     return () => {
       cancelled = true;
     };
@@ -130,7 +132,7 @@ const Home = () => {
       if (coachRef.current) {
         const rect = coachRef.current.getBoundingClientRect();
         const isNearViewport = rect.top < window.innerHeight + 200; // 200px before viewport
-        
+
         if (isNearViewport) {
           fetchFeaturedCoach(aboutUs.featured_coach_id);
         }
@@ -387,6 +389,13 @@ const Home = () => {
           </button>
           <span className="hero-nav-divider">|</span>
           <PWAInstallButton />
+          <span className="hero-nav-divider">|</span>
+          <button
+            className="hero-nav-link hero-buy-subscription-btn"
+            onClick={() => setShowSubscriptionModal(true)}
+          >
+            Buy Subscription
+          </button>
         </div>
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
@@ -452,8 +461,8 @@ const Home = () => {
                         }}
                       />
                     ) : null}
-                    <div 
-                      className="custom-coach-image-placeholder" 
+                    <div
+                      className="custom-coach-image-placeholder"
                       style={{ display: featuredCoach.profile_picture_url ? 'none' : 'flex' }}
                     >
                       {featuredCoach.name?.charAt(0).toUpperCase()}
@@ -467,14 +476,14 @@ const Home = () => {
                     </h2>
                     <div className={`custom-coach-bio-wrapper ${showFullBio ? 'expanded' : ''}`}>
                       <p className="custom-coach-bio">
-                        Binal Shah is a child development and behaviour modification consultant based in Mumbai. 
-                        She has several degrees and honours to her credit in the field of child development, 
-                        education, psychology, and behaviour modification. She has been working in the field of 
-                        training and rehabilitation for 18 years. Binal Shah has vast experience training kids 
-                        who have delays and difficulties in various areas of development, from physical, language, 
+                        Binal Shah is a child development and behaviour modification consultant based in Mumbai.
+                        She has several degrees and honours to her credit in the field of child development,
+                        education, psychology, and behaviour modification. She has been working in the field of
+                        training and rehabilitation for 18 years. Binal Shah has vast experience training kids
+                        who have delays and difficulties in various areas of development, from physical, language,
                         communication, emotional to behaviour and learning.
                       </p>
-                      <button 
+                      <button
                         className="custom-coach-read-more"
                         onClick={() => setShowFullBio(!showFullBio)}
                       >
@@ -786,6 +795,11 @@ const Home = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Buy Subscription Modal */}
+      {showSubscriptionModal && (
+        <BuySubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
       )}
     </div>
   );

@@ -17,10 +17,14 @@ import {
   BarChart3,
   Edit3,
   Eye,
-  EyeOff
+  EyeOff,
+  ClipboardList,
+  CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import subscriptionService from "../../api/services/subscriptionService";
+import publicSubscriptionService from "../../api/services/publicSubscriptionService";
 import adminService from "../../api/services/adminService";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
@@ -32,6 +36,9 @@ const SubscriptionRecords = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // ── Active tab: "records" | "inquiries"
+  const [activeTab, setActiveTab] = useState("records");
+
   const [subscriptions, setSubscriptions] = useState([]);
   const [filteredSubscriptions, setFilteredSubscriptions] = useState([]);
   const [heads, setHeads] = useState([]);
@@ -41,6 +48,15 @@ const SubscriptionRecords = () => {
   const [error, setError] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
+
+  // ── Inquiry states
+  const [inquiries, setInquiries] = useState([]);
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState("");
+  const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  const [inquirySearchQuery, setInquirySearchQuery] = useState("");
+  const [filteredInquiries, setFilteredInquiries] = useState([]);
+  const [exportingCsv, setExportingCsv] = useState(false);
+  const [updatingInquiry, setUpdatingInquiry] = useState(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -114,6 +130,89 @@ const SubscriptionRecords = () => {
     } catch (err) {
       toast.error("Failed to load revenue data");
     }
+  };
+
+  // ── Inquiry helpers ──────────────────────────────────────────────────────
+
+  const fetchInquiries = async (status = inquiryStatusFilter) => {
+    try {
+      setInquiriesLoading(true);
+      const params = {};
+      if (status) params.review_status = status;
+      const data = await publicSubscriptionService.getAdminInquiries(params);
+      setInquiries(data);
+      setFilteredInquiries(data);
+    } catch (err) {
+      toast.error("Failed to load subscription inquiries");
+    } finally {
+      setInquiriesLoading(false);
+    }
+  };
+
+  const handleInquirySearch = (query) => {
+    setInquirySearchQuery(query);
+    const q = query.toLowerCase();
+    if (!q.trim()) {
+      setFilteredInquiries(inquiries);
+      return;
+    }
+    setFilteredInquiries(
+      inquiries.filter(
+        (i) =>
+          i.learner_name?.toLowerCase().includes(q) ||
+          i.email?.toLowerCase().includes(q) ||
+          i.contact_number?.toLowerCase().includes(q) ||
+          i.package_name?.toLowerCase().includes(q),
+      ),
+    );
+  };
+
+  const handleInquiryStatusFilterChange = (newStatus) => {
+    setInquiryStatusFilter(newStatus);
+    fetchInquiries(newStatus);
+  };
+
+  const handleUpdateInquiryStatus = async (inquiryId, newStatus) => {
+    setUpdatingInquiry(inquiryId);
+    try {
+      await publicSubscriptionService.updateInquiry(inquiryId, { review_status: newStatus });
+      toast.success(`Status updated to ${newStatus}`);
+      fetchInquiries();
+    } catch (err) {
+      toast.error("Failed to update status");
+    } finally {
+      setUpdatingInquiry(null);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setExportingCsv(true);
+    try {
+      await publicSubscriptionService.exportCsv(inquiryStatusFilter || null);
+      toast.success("CSV download started!");
+    } catch (err) {
+      toast.error("CSV export failed. Please try again.");
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
+  // Switch to inquiries tab and load data lazily
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "inquiries" && inquiries.length === 0 && !inquiriesLoading) {
+      fetchInquiries();
+    }
+  };
+
+  const getInquiryStatusBadge = (status) => {
+    const map = {
+      NEW: { cls: "status-badge status-badge-pending", label: "New" },
+      REVIEWED: { cls: "status-badge status-badge-active", label: "Reviewed" },
+      PROCESSED: { cls: "status-badge status-badge-paused", label: "Processed" },
+    };
+    const cfg = map[status] || map.NEW;
+    return <span className={cfg.cls}>{cfg.label}</span>;
   };
 
   const handleSearch = (query) => {
@@ -249,136 +348,316 @@ const SubscriptionRecords = () => {
             </div>
           </div>
 
-          {/* Filters and Search */}
-          <div className="search-section">
-            <SearchBar onSearch={handleSearch} placeholder="Search by learner, package, or HEAD..." />
-            <div className="filter-section">
-              <select
-                className="form-select"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAUSED">Paused</option>
-                <option value="EXPIRED">Expired</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-
-              <select
-                className="form-select"
-                value={headFilter}
-                onChange={(e) => setHeadFilter(e.target.value)}
-              >
-                <option value="">All HEADs</option>
-                {heads.map((head) => (
-                  <option key={head.id} value={head.user_id}>
-                    {head.name || `HEAD ${head.id}`}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* ── Tab Switcher ──────────────────────────────────────────── */}
+          <div className="sub-tab-bar">
+            <button
+              className={`sub-tab-btn ${activeTab === 'records' ? 'sub-tab-btn-active' : ''}`}
+              onClick={() => handleTabChange('records')}
+            >
+              <Package size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
+              Subscription Records
+            </button>
+            <button
+              className={`sub-tab-btn ${activeTab === 'inquiries' ? 'sub-tab-btn-active' : ''}`}
+              onClick={() => handleTabChange('inquiries')}
+            >
+              <ClipboardList size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
+              Subscription Inquiries
+            </button>
           </div>
 
-          {/* Loading State */}
-          {loading && (
-            <div className="loading-container">
-              <Loader2 className="spinner" size={48} />
-              <p>Loading subscription records...</p>
-            </div>
-          )}
+          {/* ── Records Tab ──────────────────────────────────────────── */}
+          {activeTab === 'records' && (
+            <>
+              {/* Filters and Search */}
+              <div className="search-section">
+                <SearchBar onSearch={handleSearch} placeholder="Search by learner, package, or HEAD..." />
+                <div className="filter-section">
+                  <select
+                    className="form-select"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="PAUSED">Paused</option>
+                    <option value="EXPIRED">Expired</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
 
-          {/* Error State */}
-          {error && (
-            <div className="error-container">
-              <AlertCircle size={48} />
-              <p>{error}</p>
-              <button onClick={fetchData} className="retry-button">
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Subscriptions Table */}
-          {!loading && !error && (
-            <div className="table-primary-container">
-              {filteredSubscriptions.length === 0 ? (
-                <div className="empty-state">
-                  <Users size={64} className="empty-state-icon" />
-                  <p className="empty-state-text">No subscription records found</p>
+                  <select
+                    className="form-select"
+                    value={headFilter}
+                    onChange={(e) => setHeadFilter(e.target.value)}
+                  >
+                    <option value="">All HEADs</option>
+                    {heads.map((head) => (
+                      <option key={head.id} value={head.user_id}>
+                        {head.name || `HEAD ${head.id}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
-                <div className="table-primary-wrapper">
-                  <table className="table-primary">
-                    <thead className="table-primary-header">
-                      <tr>
-                        <th className="table-primary-th table-primary-th-id">ID</th>
-                        <th className="table-primary-th">Learner</th>
-                        <th className="table-primary-th">Passcode</th>
-                        <th className="table-primary-th">Package</th>
-                        <th className="table-primary-th">HEAD</th>
-                        <th className="table-primary-th table-primary-th-center">Sessions</th>
-                        <th className="table-primary-th">Start Date</th>
-                        <th className="table-primary-th">Expiry Date</th>
-                        <th className="table-primary-th table-primary-th-right">Amount Paid</th>
-                        <th className="table-primary-th table-primary-th-center">Status</th>
-                        <th className="table-primary-th table-primary-th-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="table-primary-body">
-                      {filteredSubscriptions.map((sub) => (
-                        <tr key={sub.id} className="table-primary-row">
-                          <td className="table-primary-td table-primary-td-id">{sub.id}</td>
-                          <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
-                          <td className="table-primary-td">
-                            <div className="passcode-display-inline">
-                              <span className="table-primary-badge">
-                                {visiblePasscodes[sub.learner_id] ? visiblePasscodes[sub.learner_id] : '••••••'}
-                              </span>
-                              <button
-                                onClick={() => togglePasscodeVisibility(sub.learner_id)}
-                                className="table-primary-icon-btn"
-                                title={visiblePasscodes[sub.learner_id] ? 'Hide passcode' : 'Show passcode'}
-                              >
-                                {visiblePasscodes[sub.learner_id] ? (
-                                  <EyeOff className="table-primary-icon-sm" />
-                                ) : (
-                                  <Eye className="table-primary-icon-sm" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                          <td className="table-primary-td">{sub.package_name}</td>
-                          <td className="table-primary-td subscription-head-name" data-empty="Not assigned">{sub.head_name || `HEAD ${sub.head_id || 'N/A'}`}</td>
-                          <td className="table-primary-td table-primary-td-center">
-                            {sub.sessions_remaining} / {sub.sessions_total}
-                          </td>
-                          <td className="table-primary-td">{new Date(sub.start_date).toLocaleDateString()}</td>
-                          <td className="table-primary-td">
-                            {new Date(sub.expiry_date).toLocaleDateString()}
-                          </td>
-                          <td className="table-primary-td table-primary-td-right card-price">
-                            ₹{parseFloat(sub.net_price_paid).toLocaleString("en-IN")}
-                          </td>
-                          <td className="table-primary-td table-primary-td-center">{getStatusBadge(sub.status)}</td>
-                          <td className="table-primary-td table-primary-td-center">
-                            {["ACTIVE", "PAUSED", "FROZEN"].includes(sub.status) && (
-                              <button
-                                onClick={() => handleOpenAdjustModal(sub)}
-                                className="btn btn-primary"
-                              >
-                                <Edit3 size={14} />
-                                Adjust
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              </div>
+
+              {/* Loading State */}
+              {loading && (
+                <div className="loading-container">
+                  <Loader2 className="spinner" size={48} />
+                  <p>Loading subscription records...</p>
                 </div>
               )}
-            </div>
+
+              {/* Error State */}
+              {error && (
+                <div className="error-container">
+                  <AlertCircle size={48} />
+                  <p>{error}</p>
+                  <button onClick={fetchData} className="retry-button">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Subscriptions Table */}
+              {!loading && !error && (
+                <div className="table-primary-container">
+                  {filteredSubscriptions.length === 0 ? (
+                    <div className="empty-state">
+                      <Users size={64} className="empty-state-icon" />
+                      <p className="empty-state-text">No subscription records found</p>
+                    </div>
+                  ) : (
+                    <div className="table-primary-wrapper">
+                      <table className="table-primary">
+                        <thead className="table-primary-header">
+                          <tr>
+                            <th className="table-primary-th table-primary-th-id">ID</th>
+                            <th className="table-primary-th">Learner</th>
+                            <th className="table-primary-th">Passcode</th>
+                            <th className="table-primary-th">Package</th>
+                            <th className="table-primary-th">HEAD</th>
+                            <th className="table-primary-th table-primary-th-center">Sessions</th>
+                            <th className="table-primary-th">Start Date</th>
+                            <th className="table-primary-th">Expiry Date</th>
+                            <th className="table-primary-th table-primary-th-right">Amount Paid</th>
+                            <th className="table-primary-th table-primary-th-center">Status</th>
+                            <th className="table-primary-th table-primary-th-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="table-primary-body">
+                          {filteredSubscriptions.map((sub) => (
+                            <tr key={sub.id} className="table-primary-row">
+                              <td className="table-primary-td table-primary-td-id">{sub.id}</td>
+                              <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
+                              <td className="table-primary-td">
+                                <div className="passcode-display-inline">
+                                  <span className="table-primary-badge">
+                                    {visiblePasscodes[sub.learner_id] ? visiblePasscodes[sub.learner_id] : '••••••'}
+                                  </span>
+                                  <button
+                                    onClick={() => togglePasscodeVisibility(sub.learner_id)}
+                                    className="table-primary-icon-btn"
+                                    title={visiblePasscodes[sub.learner_id] ? 'Hide passcode' : 'Show passcode'}
+                                  >
+                                    {visiblePasscodes[sub.learner_id] ? (
+                                      <EyeOff className="table-primary-icon-sm" />
+                                    ) : (
+                                      <Eye className="table-primary-icon-sm" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="table-primary-td">{sub.package_name}</td>
+                              <td className="table-primary-td subscription-head-name" data-empty="Not assigned">{sub.head_name || `HEAD ${sub.head_id || 'N/A'}`}</td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {sub.sessions_remaining} / {sub.sessions_total}
+                              </td>
+                              <td className="table-primary-td">{new Date(sub.start_date).toLocaleDateString()}</td>
+                              <td className="table-primary-td">
+                                {new Date(sub.expiry_date).toLocaleDateString()}
+                              </td>
+                              <td className="table-primary-td table-primary-td-right card-price">
+                                ₹{parseFloat(sub.net_price_paid).toLocaleString("en-IN")}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">{getStatusBadge(sub.status)}</td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {["ACTIVE", "PAUSED", "FROZEN"].includes(sub.status) && (
+                                  <button
+                                    onClick={() => handleOpenAdjustModal(sub)}
+                                    className="btn btn-primary"
+                                  >
+                                    <Edit3 size={14} />
+                                    Adjust
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Inquiries Tab ─────────────────────────────────────────── */}
+          {activeTab === 'inquiries' && (
+            <>
+              {/* Inquiry toolbar */}
+              <div className="search-section">
+                <SearchBar
+                  onSearch={handleInquirySearch}
+                  placeholder="Search by name, email, package…"
+                />
+                <div className="filter-section">
+                  <select
+                    className="form-select"
+                    value={inquiryStatusFilter}
+                    onChange={(e) => handleInquiryStatusFilterChange(e.target.value)}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="NEW">New</option>
+                    <option value="REVIEWED">Reviewed</option>
+                    <option value="PROCESSED">Processed</option>
+                  </select>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleExportCsv}
+                    disabled={exportingCsv}
+                    title="Export all inquiries as CSV"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Download size={16} />
+                    {exportingCsv ? 'Exporting…' : 'Export CSV'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Loading */}
+              {inquiriesLoading && (
+                <div className="loading-container">
+                  <Loader2 className="spinner" size={48} />
+                  <p>Loading inquiries…</p>
+                </div>
+              )}
+
+              {/* Table */}
+              {!inquiriesLoading && (
+                <div className="table-primary-container">
+                  {filteredInquiries.length === 0 ? (
+                    <div className="empty-state">
+                      <ClipboardList size={64} className="empty-state-icon" />
+                      <p className="empty-state-text">No subscription inquiries found</p>
+                    </div>
+                  ) : (
+                    <div className="table-primary-wrapper">
+                      <table className="table-primary">
+                        <thead className="table-primary-header">
+                          <tr>
+                            <th className="table-primary-th table-primary-th-id">ID</th>
+                            <th className="table-primary-th">Learner Name</th>
+                            <th className="table-primary-th">Email</th>
+                            <th className="table-primary-th">Contact</th>
+                            <th className="table-primary-th table-primary-th-center">Age</th>
+                            <th className="table-primary-th">DOB</th>
+                            <th className="table-primary-th">Assessment Date</th>
+                            <th className="table-primary-th">Package</th>
+                            <th className="table-primary-th table-primary-th-right">Price (₹)</th>
+                            <th className="table-primary-th">Payment Method</th>
+                            <th className="table-primary-th table-primary-th-center">Receipt</th>
+                            <th className="table-primary-th table-primary-th-center">Status</th>
+                            <th className="table-primary-th">Submitted</th>
+                            <th className="table-primary-th table-primary-th-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="table-primary-body">
+                          {filteredInquiries.map((inq) => (
+                            <tr key={inq.id} className="table-primary-row">
+                              <td className="table-primary-td table-primary-td-id">{inq.id}</td>
+                              <td className="table-primary-td">{inq.learner_name}</td>
+                              <td className="table-primary-td">{inq.email}</td>
+                              <td className="table-primary-td">{inq.contact_number}</td>
+                              <td className="table-primary-td table-primary-td-center">{inq.age ?? '—'}</td>
+                              <td className="table-primary-td">
+                                {inq.date_of_birth ? new Date(inq.date_of_birth).toLocaleDateString('en-IN') : '—'}
+                              </td>
+                              <td className="table-primary-td">
+                                {inq.date_of_assessment ? new Date(inq.date_of_assessment).toLocaleDateString('en-IN') : '—'}
+                              </td>
+                              <td className="table-primary-td">{inq.package_name || '—'}</td>
+                              <td className="table-primary-td table-primary-td-right card-price">
+                                {inq.package_price ? `₹${parseFloat(inq.package_price).toLocaleString('en-IN')}` : '—'}
+                              </td>
+                              <td className="table-primary-td">
+                                {inq.payment_method === 'UPI' ? '📱 UPI' : inq.payment_method === 'BANK_TRANSFER' ? '🏦 Bank' : '—'}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {inq.payment_receipt_url ? (
+                                  <a
+                                    href={
+                                      inq.payment_receipt_url.startsWith('s3://')
+                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media?key=${encodeURIComponent(inq.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
+                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${inq.payment_receipt_url}`
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-primary"
+                                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                  >
+                                    <ExternalLink size={12} /> View
+                                  </a>
+                                ) : (
+                                  <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>No file</span>
+                                )}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {getInquiryStatusBadge(inq.review_status)}
+                              </td>
+                              <td className="table-primary-td" style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                                {new Date(inq.submitted_at).toLocaleDateString('en-IN', {
+                                  day: '2-digit', month: 'short', year: 'numeric',
+                                })}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                  {inq.review_status !== 'REVIEWED' && (
+                                    <button
+                                      className="btn btn-primary"
+                                      style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
+                                      disabled={updatingInquiry === inq.id}
+                                      onClick={() => handleUpdateInquiryStatus(inq.id, 'REVIEWED')}
+                                    >
+                                      <CheckCircle size={12} /> Reviewed
+                                    </button>
+                                  )}
+                                  {inq.review_status !== 'PROCESSED' && (
+                                    <button
+                                      className="btn"
+                                      style={{
+                                        fontSize: '0.72rem', padding: '0.25rem 0.5rem',
+                                        background: '#10b981', color: '#fff', border: 'none',
+                                        borderRadius: '0.375rem', cursor: 'pointer',
+                                      }}
+                                      disabled={updatingInquiry === inq.id}
+                                      onClick={() => handleUpdateInquiryStatus(inq.id, 'PROCESSED')}
+                                    >
+                                      ✓ Processed
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
