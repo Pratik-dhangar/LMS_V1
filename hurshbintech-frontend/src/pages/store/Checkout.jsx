@@ -395,14 +395,19 @@ const Checkout = () => {
                                         justifyContent: 'center'
                                     }}>
                                         <img
-                                            src="../public/upi-qr.png"
+                                            src="/upi-qr.jpeg"
                                             alt="UPI QR Code"
                                             className="bsm-qr-img"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
+                                                const placeholder = e.target.nextElementSibling;
+                                                if (placeholder) placeholder.style.display = 'flex';
                                             }}
                                         />
+                                        <div className="bsm-qr-placeholder">
+                                            <p>📱</p>
+                                            <span>QR Code file not found</span>
+                                        </div>
                                     </div>
                                 </div>
 

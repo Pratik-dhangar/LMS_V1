@@ -319,6 +319,7 @@
 }
 
 .bsm-qr-placeholder {
+    display: none;
     width: 200px;
     height: 200px;
     border: 2px dashed #d1d5db;
