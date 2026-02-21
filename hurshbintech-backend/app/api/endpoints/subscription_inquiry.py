@@ -26,6 +26,7 @@ from app.schemas.subscription import (
     PublicSubscriptionInquiryUpdate,
     SubscriptionPackageResponse,
 )
+from app.services.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +200,10 @@ async def update_subscription_inquiry(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
-    """Admin: update the review status and/or notes for a specific inquiry."""
+    """
+    Admin: update the review status and/or notes for a specific inquiry.
+    Sends confirmation email to learner when status is changed.
+    """
     inquiry = await subscription_crud.update_inquiry(
         db,
         inquiry_id=inquiry_id,
@@ -208,7 +212,52 @@ async def update_subscription_inquiry(
     )
     if not inquiry:
         raise HTTPException(status_code=404, detail="Inquiry not found.")
+    
+    # Send confirmation email when status is updated (especially REVIEWED or PROCESSED)
+    if update_data.review_status == "PROCESSED":
+        try:
+            inquiry_data = {
+                "email": inquiry.email,
+                "contact_number": inquiry.contact_number,
+                "age": inquiry.age,
+                "date_of_birth": inquiry.date_of_birth.isoformat() if inquiry.date_of_birth else None,
+                "date_of_assessment": inquiry.date_of_assessment.isoformat() if inquiry.date_of_assessment else None,
+                "package_name": inquiry.package_name,
+                "package_price": str(inquiry.package_price) if inquiry.package_price else None,
+                "payment_method": inquiry.payment_method,
+                "payment_receipt_filename": inquiry.payment_receipt_filename,
+            }
+            await EmailService.send_subscription_inquiry_approved(
+                recipient_email=inquiry.email,
+                recipient_name=inquiry.learner_name,
+                inquiry_data=inquiry_data,
+            )
+        except Exception as exc:
+            logger.error(f"Failed to send subscription inquiry confirmation email: {exc}")
+            # Don't fail the request if email fails; just log it
+    
     return inquiry
+
+
+@router.delete(
+    "/admin/subscription-inquiries/{inquiry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Admin - Subscription Inquiries"],
+)
+async def delete_subscription_inquiry(
+    inquiry_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Admin: delete a subscription inquiry from the database."""
+    inquiry = await subscription_crud.get_inquiry_by_id(db, inquiry_id)
+    if not inquiry:
+        raise HTTPException(status_code=404, detail="Inquiry not found.")
+    
+    # Delete the inquiry
+    await subscription_crud.delete_inquiry(db, inquiry_id)
+    logger.info(f"Admin {current_admin.name} deleted subscription inquiry {inquiry_id}")
+    return None
 
 
 @router.get(
