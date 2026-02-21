@@ -1327,3 +1327,88 @@ async def get_subscriptions_needing_reminders(
         )
     )
     return list(result.scalars().all())
+
+
+# ============ PUBLIC SUBSCRIPTION INQUIRY CRUD ============
+
+from app.models.subscription import PublicSubscriptionInquiry
+
+
+async def create_inquiry(
+    db: AsyncSession,
+    learner_name: str,
+    email: str,
+    contact_number: str,
+    age: Optional[int] = None,
+    date_of_birth=None,
+    date_of_assessment=None,
+    package_id: Optional[int] = None,
+    package_name: Optional[str] = None,
+    package_price=None,
+    payment_method: Optional[str] = None,
+    payment_receipt_url: Optional[str] = None,
+    payment_receipt_filename: Optional[str] = None,
+) -> PublicSubscriptionInquiry:
+    """Create a new public subscription inquiry record."""
+    inquiry = PublicSubscriptionInquiry(
+        learner_name=learner_name,
+        email=email,
+        contact_number=contact_number,
+        age=age,
+        date_of_birth=date_of_birth,
+        date_of_assessment=date_of_assessment,
+        package_id=package_id,
+        package_name=package_name,
+        package_price=package_price,
+        payment_method=payment_method,
+        payment_receipt_url=payment_receipt_url,
+        payment_receipt_filename=payment_receipt_filename,
+        review_status="NEW",
+    )
+    db.add(inquiry)
+    await db.commit()
+    await db.refresh(inquiry)
+    logger.info(f"New public subscription inquiry #{inquiry.id} from {email}")
+    return inquiry
+
+
+async def get_all_inquiries(
+    db: AsyncSession,
+    review_status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 200,
+) -> List[PublicSubscriptionInquiry]:
+    """Fetch all inquiries with optional status filter."""
+    query = select(PublicSubscriptionInquiry)
+    if review_status:
+        query = query.where(PublicSubscriptionInquiry.review_status == review_status)
+    query = query.order_by(desc(PublicSubscriptionInquiry.submitted_at)).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def get_inquiry_by_id(db: AsyncSession, inquiry_id: int) -> Optional[PublicSubscriptionInquiry]:
+    """Get a single inquiry by ID."""
+    result = await db.execute(
+        select(PublicSubscriptionInquiry).where(PublicSubscriptionInquiry.id == inquiry_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_inquiry(
+    db: AsyncSession,
+    inquiry_id: int,
+    review_status: Optional[str] = None,
+    admin_notes: Optional[str] = None,
+) -> Optional[PublicSubscriptionInquiry]:
+    """Update admin review status or notes for an inquiry."""
+    inquiry = await get_inquiry_by_id(db, inquiry_id)
+    if not inquiry:
+        return None
+    if review_status is not None:
+        inquiry.review_status = review_status
+    if admin_notes is not None:
+        inquiry.admin_notes = admin_notes
+    await db.commit()
+    await db.refresh(inquiry)
+    return inquiry

@@ -331,3 +331,51 @@ class SubscriptionEventLog(Base):
         Index('idx_event_subscription_type', 'subscription_id', 'event_type', 'created_at'),
         Index('idx_event_created', 'created_at'),
     )
+
+
+class PublicSubscriptionInquiry(Base):
+    """
+    Public inquiry for subscription purchase submitted via the landing page.
+    No authentication required – simply collects prospective learner information.
+    No subscription or learner account is created; this is purely a data-collection record.
+    """
+    __tablename__ = "public_subscription_inquiries"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Learner personal details
+    learner_name = Column(String(200), nullable=False)
+    email = Column(String(255), nullable=False)
+    contact_number = Column(String(50), nullable=False)
+    age = Column(Integer, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+
+    # Assessment date
+    date_of_assessment = Column(Date, nullable=True)
+
+    # Package & payment details (denormalised so we preserve history)
+    package_id = Column(Integer, ForeignKey("subscription_packages.id", ondelete="SET NULL"), nullable=True)
+    package_name = Column(String(200), nullable=True)
+    package_price = Column(Numeric(10, 2), nullable=True)
+    payment_method = Column(String(50), nullable=True)  # "UPI" | "BANK_TRANSFER"
+
+    # Payment receipt file
+    payment_receipt_url = Column(String(1024), nullable=True)
+    payment_receipt_filename = Column(String(500), nullable=True)
+
+    # Admin review
+    review_status = Column(String(50), nullable=False, default="NEW", server_default="NEW")
+    # Possible values: NEW, REVIEWED, PROCESSED
+    admin_notes = Column(Text, nullable=True)
+
+    # Timestamps
+    submitted_at = Column(DateTime, nullable=False, default=get_current_datetime, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=get_current_datetime, onupdate=get_current_datetime, server_default=func.now())
+
+    # Relationship (read-only reference)
+    package = relationship("SubscriptionPackage", foreign_keys=[package_id])
+
+    __table_args__ = (
+        Index('idx_inquiry_submitted_at', 'submitted_at'),
+        Index('idx_inquiry_review_status', 'review_status'),
+    )

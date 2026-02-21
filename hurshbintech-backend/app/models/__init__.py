@@ -59,6 +59,7 @@ from app.models.subscription import (
     DiscountType,
     RefundType,
     AdjustmentType,
+    PublicSubscriptionInquiry,
 )
 from app.models.whiteboard_state_model import WhiteboardState
 
@@ -116,5 +117,6 @@ __all__ = [
     "DiscountType",
     "RefundType",
     "AdjustmentType",
+    "PublicSubscriptionInquiry",
     "WhiteboardState",
 ]
