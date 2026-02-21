@@ -1412,3 +1412,13 @@ async def update_inquiry(
     await db.commit()
     await db.refresh(inquiry)
     return inquiry
+
+
+async def delete_inquiry(db: AsyncSession, inquiry_id: int) -> bool:
+    """Delete a subscription inquiry from the database."""
+    inquiry = await get_inquiry_by_id(db, inquiry_id)
+    if not inquiry:
+        return False
+    await db.delete(inquiry)
+    await db.commit()
+    return True
