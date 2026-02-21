@@ -454,14 +454,19 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     <p className="bsm-payment-detail-title">Scan QR Code to Pay</p>
                                     <div className="bsm-qr-wrapper">
                                         <img
-                                            src="../public/upi-qr.png"
+                                            src="/upi-qr.jpeg"
                                             alt="UPI QR Code"
                                             className="bsm-qr-img"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
+                                                const placeholder = e.target.nextElementSibling;
+                                                if (placeholder) placeholder.style.display = 'flex';
                                             }}
                                         />
+                                        <div className="bsm-qr-placeholder">
+                                            <p>📱</p>
+                                            <span>QR Code file not found</span>
+                                        </div>
                                     </div>
                                     <p className="bsm-payment-note">
                                         After payment, upload your payment screenshot below.
