@@ -50,6 +50,7 @@ from app.api.endpoints.products import router as products_router
 from app.api.endpoints.store import router as store_router
 from app.api.endpoints.cart import router as cart_router
 from app.api.endpoints.ecommerce import router as ecommerce_router
+from app.api.endpoints.subscription_inquiry import router as subscription_inquiry_router
 from app.api.endpoints.Chat.chat import router as chat_router
 from app.api.endpoints.Communication.webinar import router as webinar_router
 from app.api.endpoints.vendors import router as vendors_router
@@ -222,6 +223,7 @@ app.include_router(products_router, prefix="/api")  # Admin product management
 app.include_router(store_router, prefix="/api")  # Public catalog browsing
 app.include_router(cart_router, prefix="/api")  # Cart management
 app.include_router(ecommerce_router, prefix="/api")  # Orders & payments
+app.include_router(subscription_inquiry_router, prefix="/api")  # Public subscription inquiry form
 
 # ✅ Vendor Management routers
 app.include_router(vendors_router, prefix="/api")

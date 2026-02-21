@@ -1,6 +1,41 @@
 /* Subscription.css - Styles for subscription management pages */
 
-/* Stats Cards */
+/* ── Subscription Inquiry Tab Bar ─────────────────────────────────────── */
+.sub-tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.sub-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.sub-tab-btn:hover {
+    color: #5c1e1e;
+}
+
+.sub-tab-btn-active {
+    color: #5c1e1e;
+    border-bottom-color: #5c1e1e;
+}
+
+/* ── Stats Cards ──────────────────────────────────────────────────────── */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
