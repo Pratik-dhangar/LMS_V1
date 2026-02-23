@@ -7,6 +7,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
+from app.schemas.program_schema import ProgramInSession
+
 
 class SessionCreate(BaseModel):
     """Schema for creating a new session (by Head)"""
@@ -20,6 +22,7 @@ class SessionCreate(BaseModel):
     duration: int = Field(..., ge=15, le=240)
     content_ids: List[int] = Field(default_factory=list)  # IDs of learning content to attach
     goal_ids: List[int] = Field(default_factory=list)  # IDs of learning goals to attach
+    program_id: Optional[int] = None  # Optional program to link (goals/content auto-derived if provided)
 
 
 class SessionUpdate(BaseModel):
@@ -31,6 +34,7 @@ class SessionUpdate(BaseModel):
     duration: Optional[int] = Field(None, ge=15, le=240)
     content_ids: Optional[List[int]] = None  # IDs of learning content to attach
     goal_ids: Optional[List[int]] = None  # IDs of learning goals to attach
+    program_id: Optional[int] = None  # Optional program to link or update
 
 
 class SessionEnd(BaseModel):
@@ -101,6 +105,8 @@ class SessionResponse(BaseModel):
     recording_url: Optional[str] = None  # Playback URL for session recording
     recording_status: Optional[str] = None  # Status: pending, processing, completed, failed
     recording_uploaded_at: Optional[datetime] = None  # When recording was stored
+    # Program link
+    program: Optional[ProgramInSession] = None
     learning_contents: List[LearningContentInSession] = []
     learning_goals: List["LearningGoalInSession"] = []
     created_at: datetime

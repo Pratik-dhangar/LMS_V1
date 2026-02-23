@@ -1,3 +1,4 @@
+from app.models.program_model import Program
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.learning_goals_model import LearningGoals
@@ -79,6 +80,7 @@ __all__ = [
     "CoachSession",
     "CoachSessionParticipant",
     "CoachAppointmentSession",
+    "Program",
     "TrainingSession",
     "LearningContent",
     "LearningGoals",

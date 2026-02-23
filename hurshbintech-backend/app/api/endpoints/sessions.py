@@ -24,6 +24,7 @@ from app.core.deps import (
 )
 from app.crud import session_crud
 from app.db.session import get_db
+from app.models.program_model import Program
 from app.models.session_model import TrainingSession
 from app.models.session_notes_model import SessionNotes
 from app.models.session_report_model import SessionReport
@@ -113,6 +114,21 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "prompt_meter": report.prompt_meter,
                 "reinforcement_meter": report.reinforcement_meter
             }
+
+    # Load linked program (if any)
+    program_info = None
+    if session.program_id:
+        prog_result = await db.execute(
+            select(Program).where(Program.id == session.program_id)
+        )
+        prog = prog_result.scalar_one_or_none()
+        if prog:
+            program_info = {
+                "id": prog.id,
+                "name": prog.name,
+                "goal_ids": prog.goal_ids or [],
+                "content_ids": prog.content_ids or [],
+            }
     
     return SessionResponse(
         id=session.id,
@@ -133,7 +149,15 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
         updated_at=session.updated_at,
         # Fallback to 60 if duration is None in DB (for old sessions) — otherwise use stored value
         duration=session.duration if session.duration is not None else 60,
+        total_duration=session.total_duration,
+        session_start_time=session.session_start_time,
+        subscription_id=session.subscription_id,
+        session_counted=session.session_counted or False,
+        recording_url=session.recording_url,
+        recording_status=session.recording_status,
+        recording_uploaded_at=session.recording_uploaded_at,
         session_notes=session_notes_text,
+        program=program_info,
         learning_contents=[
             {
                 "id": content.id,
