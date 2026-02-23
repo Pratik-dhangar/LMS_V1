@@ -20,6 +20,7 @@ import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
 import { setupAttendeeWhiteboardCallbacks } from '../../components/session/InstructorSessionLayout';
+import IOSNavBar from '../../components/common/IOSNavBar';
 import '../../styles/components/common/sessionHeader.css';
 
 import {
@@ -1394,6 +1395,13 @@ const LearnerSession = () => {
             </div>
           </div>
         </div>
+
+        {/* iOS / PWA floating nav (back + refresh) */}
+        <IOSNavBar
+          onBack={() => navigate('/learner/dashboard')}
+          onRefresh={() => window.location.reload()}
+          position="bottom-right"
+        />
       </div>
     );
   }
@@ -1882,6 +1890,13 @@ const LearnerSession = () => {
 
         {/* Background Music Audio Element */}
         <audio ref={audioRef} crossOrigin="anonymous" />
+
+        {/* iOS / PWA floating nav (back + refresh) */}
+        <IOSNavBar
+          onBack={() => navigate('/learner/dashboard')}
+          onRefresh={() => window.location.reload()}
+          position="bottom-right"
+        />
       </div>
     </div>
   );

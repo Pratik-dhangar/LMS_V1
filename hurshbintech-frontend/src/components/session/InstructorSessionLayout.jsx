@@ -33,6 +33,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import IOSNavBar from '../common/IOSNavBar';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
@@ -3071,6 +3072,13 @@ export const InstructorSessionPage = ({
                     </div>
                 </div>
             </div>
+
+            {/* iOS / PWA floating nav (back + refresh) */}
+            <IOSNavBar
+                onBack={() => { window.location.href = dashboardPath; }}
+                onRefresh={() => window.location.reload()}
+                position="bottom-right"
+            />
 
             {/* Session Info Bar */}
             <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
