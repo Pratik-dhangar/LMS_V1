@@ -443,8 +443,8 @@ const MySessions = () => {
                             <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
                             {session.duration && <span>⏱️ {session.duration} min</span>}
                           </div>
-                          {session.program && (
-                            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>Program: {session.program}</p>
+                          {session.program?.name && (
+                            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>Program: {session.program.name}</p>
                           )}
                         </div>
 

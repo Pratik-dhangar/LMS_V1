@@ -5,7 +5,7 @@ Training Session Model - For video conferencing sessions
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from app.db.session import Base
 
@@ -75,6 +75,14 @@ class TrainingSession(Base):
     started_at = Column(DateTime)
     ended_at = Column(DateTime)
 
+    # Program link (optional) — set at scheduling time; governs which program's goals/content were used
+    program_id = Column(
+        Integer,
+        ForeignKey("programs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Session data
     notes = Column(Text)
     
@@ -98,6 +106,7 @@ class TrainingSession(Base):
     learning_goals = relationship(
         "LearningGoals", secondary=session_goal_association, backref="sessions"
     )
+    program = relationship("Program", foreign_keys=[program_id], back_populates="sessions")
 
     # Timestamps
     created_at = Column(
