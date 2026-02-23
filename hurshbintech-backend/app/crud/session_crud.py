@@ -12,6 +12,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goals_model import LearningGoals
+from app.models.program_model import Program
 from app.models.session_model import TrainingSession
 from app.schemas.session import SessionCreate
 
@@ -107,6 +108,34 @@ async def create_session(
     
     if active_subscription:
         new_session.subscription_id = active_subscription.id
+
+    # ── Program link ──────────────────────────────────────────────────────────
+    # If a program_id is supplied the program determines which goals are used.
+    # content_ids may be overridden by the caller; when they differ the program
+    # is patched so the next session can auto-populate the updated list.
+    if session_data.program_id:
+        program_result = await db.execute(
+            select(Program).where(Program.id == session_data.program_id)
+        )
+        program = program_result.scalar_one_or_none()
+        if program:
+            new_session.program_id = program.id
+            # Goals are always taken from the program (locked)
+            session_data = session_data.model_copy(
+                update={"goal_ids": program.goal_ids or []}
+            )
+            # Sync content back to the program if the caller provided a different list
+            incoming_content = session_data.content_ids
+            if incoming_content is not None and list(incoming_content) != list(program.content_ids or []):
+                from datetime import timezone as _tz
+                program.content_ids = list(incoming_content)
+                program.updated_at = datetime.now(_tz.utc).replace(tzinfo=None)
+            elif incoming_content is None or len(incoming_content) == 0:
+                # No content passed — use program's stored content
+                session_data = session_data.model_copy(
+                    update={"content_ids": program.content_ids or []}
+                )
+    # ─────────────────────────────────────────────────────────────────────────
 
     # Add learning content associations if provided (BEFORE commit)
     if session_data.content_ids:
@@ -337,6 +366,29 @@ async def update_session(
             if key == "scheduled_date" and value.tzinfo is not None:
                 value = value.replace(tzinfo=None)
             setattr(session, key, value)
+
+    # ── Program link (edit path) ───────────────────────────────────────────────
+    program_id = update_data.pop("program_id", None)
+    if program_id is None and content_ids is None and goal_ids is None:
+        # No program-related update; fall through to normal M:M update below
+        pass
+    if program_id is not None:
+        program_result = await db.execute(
+            select(Program).where(Program.id == program_id)
+        )
+        program = program_result.scalar_one_or_none()
+        if program:
+            session.program_id = program.id
+            # Goals always come from the program (locked)
+            goal_ids = program.goal_ids or []
+            # Sync content back to the program if caller provided a different list
+            if content_ids is not None and list(content_ids) != list(program.content_ids or []):
+                from datetime import timezone as _tz
+                program.content_ids = list(content_ids)
+                program.updated_at = datetime.utcnow()
+            elif content_ids is None or len(content_ids) == 0:
+                content_ids = program.content_ids or []
+    # ─────────────────────────────────────────────────────────────────────────
 
     # Update learning content associations if provided
     if content_ids is not None:

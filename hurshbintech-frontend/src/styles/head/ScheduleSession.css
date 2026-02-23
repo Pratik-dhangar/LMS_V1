@@ -483,12 +483,20 @@
 /* Input Group (for datetime + set button) */
 .schedule-session .input-group {
   display: flex;
+  flex-direction: row;
   gap: 0.5rem;
   align-items: stretch;
 }
 
 .schedule-session .input-group .modern-form-input {
   flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.schedule-session .input-group button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Responsive adjustments */

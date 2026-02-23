@@ -40,6 +40,7 @@ from app.api.endpoints.learning_goals import router as learning_goals_router
 # from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
 # from app.api.endpoints.learning_program_assignments import learner_router
 from app.api.endpoints.program_assignments import router as program_assignments_router
+from app.api.endpoints.programs import router as programs_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
 from app.api.endpoints.sessions import router as sessions_router
@@ -217,6 +218,9 @@ app.include_router(session_reports_router, prefix="/api/session-reports", tags=[
 
 # ✅ Program Assignments router (new - replaces old learning_program_assignments)
 app.include_router(program_assignments_router, prefix="/api")
+
+# ✅ Programs router (session-scoped goal+content containers)
+app.include_router(programs_router, prefix="/api")
 
 # ✅ E-Commerce routers
 app.include_router(products_router, prefix="/api")  # Admin product management
