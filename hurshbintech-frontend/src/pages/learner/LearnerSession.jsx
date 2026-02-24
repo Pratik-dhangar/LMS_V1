@@ -132,6 +132,8 @@ const LearnerSession = () => {
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for trainer to admit
+  const [admissionDenied, setAdmissionDenied] = useState(false); // Trainer rejected the join request
 
   // Use shared animation hooks
   const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
@@ -228,10 +230,28 @@ const LearnerSession = () => {
 
   // Set up remote video stream
   useEffect(() => {
+    if (remoteStream) {
+      // Clear admission gate as soon as any stream arrives (ref may not be mounted yet)
+      setAwaitingAdmission(false);
+    }
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, awaitingAdmission]);
+
+  // Detect admission rejection or removal from trainer via waiting_message signal
+  useEffect(() => {
+    if (waitingMessage === '__ADMISSION_REJECTED__') {
+      setAdmissionDenied(true);
+      setAwaitingAdmission(false);
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/learner/dashboard'), 2000);
+    } else if (waitingMessage === '__REMOVED_FROM_SESSION__') {
+      toast.warning('You have been removed from the session by the trainer.');
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/learner/dashboard'), 1500);
+    }
+  }, [waitingMessage, navigate]);
 
   // Learner-specific: Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
@@ -722,6 +742,7 @@ const LearnerSession = () => {
       await sessionService.joinSession(sessionId);
       await initializeWebRTC();
       setLoading(false);
+      setAwaitingAdmission(true); // Show awaiting-admission screen until trainer's offer arrives
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       setLoading(false);
@@ -759,6 +780,7 @@ const LearnerSession = () => {
       setShowWaitingModal(false);
       await initializeWebRTC();
       setLoading(false);
+      setAwaitingAdmission(true);
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       // Suppress 'Session is not active' toast while the waiting modal is shown
@@ -811,6 +833,7 @@ const LearnerSession = () => {
               setShowWaitingModal(false);
               await initializeWebRTC();
               setLoading(false);
+              setAwaitingAdmission(true);
             } catch (error) {
               const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
               setRetrying(false);
@@ -1402,6 +1425,44 @@ const LearnerSession = () => {
           onRefresh={() => window.location.reload()}
           position="bottom-right"
         />
+      </div>
+    );
+  }
+
+  // Admission denied by trainer
+  if (admissionDenied) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Request Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Your request to join the session was not accepted by the trainer.
+          </p>
+          <p className="text-sm text-gray-500">Redirecting you back to the dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting for trainer to admit
+  if (awaitingAdmission) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px', animation: 'bounce 1s infinite' }}>⏳</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Admission</h2>
+          <p className="text-gray-600 mb-2">
+            You have joined the session. Please wait for your trainer to admit you.
+          </p>
+          <p className="text-gray-600 mb-6">
+            <strong>{sessionInfo?.trainer_name ?? 'Your trainer'}</strong> will admit you shortly.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
+            <span>Waiting for admission...</span>
+          </div>
+        </div>
       </div>
     );
   }

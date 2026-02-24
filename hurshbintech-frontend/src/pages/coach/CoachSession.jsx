@@ -2,7 +2,7 @@
 // Uses shared InstructorSessionPage component and custom hooks
 // Manages Client connections with Learning Goals support
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
@@ -42,6 +42,9 @@ const CoachSession = () => {
   const mediaControl = useMediaControl();
   const { toggleListening, listening, transcript } = useVoiceInput();
   const { pageClassName, navbarClassName } = useAutoHideNavbar();
+
+  // Admit/reject state for client join requests
+  const [pendingAdmission, setPendingAdmission] = useState(null);
 
   // Cleanup function
   const cleanup = () => {
@@ -113,6 +116,11 @@ const CoachSession = () => {
         toast.error(`Video error: ${error.message}`);
       };
 
+      clientVideoService.onParticipantJoinRequest = () => {
+        const clientName = state.sessionInfo?.client_name || 'Client';
+        setPendingAdmission({ name: clientName });
+      };
+
       await clientVideoService.initialize();
       state.setVideoService(clientVideoService);
 
@@ -120,6 +128,28 @@ const CoachSession = () => {
       state.setCameraEnabled(clientVideoService.isCameraEnabled());
     } catch (error) {
       toast.error('Failed to initialize video conference');
+    }
+  };
+
+  // Admission modal handlers (coach)
+  const handleAdmitClient = () => {
+    setPendingAdmission(null);
+    if (state.videoService) state.videoService.admitParticipant();
+  };
+
+  const handleRejectClient = () => {
+    setPendingAdmission(null);
+    if (state.whiteboardService) {
+      state.whiteboardService.send('waiting_message', { text: '__ADMISSION_REJECTED__' });
+    }
+  };
+
+  // Remove client/guest from ongoing session
+  const handleRemoveClient = () => {
+    const clientName = state.sessionInfo?.client_name || 'Guest';
+    if (window.confirm(`Remove ${clientName} from the session?`)) {
+      state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
+      toast.info(`${clientName} has been removed from the session`);
     }
   };
 
@@ -284,7 +314,34 @@ const CoachSession = () => {
   const wbSmallBtnActive = WB_BUTTON_STYLES.smallActive;
 
   return (
-    <InstructorSessionPage
+    <>
+      {/* Client admission modal */}
+      {pendingAdmission && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '14px', padding: '36px 32px', maxWidth: '420px', width: '92%', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '52px', marginBottom: '12px' }}>🎓</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: '#1a1a2e' }}>Client Wants to Join</h2>
+            <p style={{ color: '#555', marginBottom: '28px', fontSize: '15px' }}>
+              <strong>{pendingAdmission.name}</strong> is requesting to join this session.
+            </p>
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+              <button
+                onClick={handleAdmitClient}
+                style={{ padding: '10px 28px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ✅ Admit
+              </button>
+              <button
+                onClick={handleRejectClient}
+                style={{ padding: '10px 28px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ❌ Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <InstructorSessionPage
       role="coach"
       participantName="Client"
       participantType="client"
@@ -301,6 +358,7 @@ const CoachSession = () => {
       handleToggleMic={handlers.handleToggleMic}
       handleToggleCamera={handlers.handleToggleCamera}
       handleFreeze={handlers.handleFreeze}
+      handleRemoveParticipant={handleRemoveClient}
       handleEndSession={handlers.handleEndSession}
       eraseAllPen={handlers.eraseAllPen}
       addBucket={handlers.addBucket}
@@ -411,6 +469,7 @@ const CoachSession = () => {
         />
       }
     />
+    </>
   );
 };
 

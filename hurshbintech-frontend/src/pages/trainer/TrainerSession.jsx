@@ -2,7 +2,7 @@
 // Uses shared InstructorSessionPage component and custom hooks
 // Manages Observer connections, Recording, and Learner-specific logic
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
@@ -41,6 +41,9 @@ const TrainerSession = () => {
   const mediaControl = useMediaControl();
   const { toggleListening, listening, transcript } = useVoiceInput();
   const { pageClassName, navbarClassName } = useAutoHideNavbar();
+
+  // Admit/reject state for learner join requests
+  const [pendingAdmission, setPendingAdmission] = useState(null);
 
   // Cleanup function
   const cleanup = () => {
@@ -128,6 +131,11 @@ const TrainerSession = () => {
         }
       };
 
+      learnerVideoService.onParticipantJoinRequest = () => {
+        const learnerName = state.sessionInfo?.learner_name || 'Learner';
+        setPendingAdmission({ name: learnerName });
+      };
+
       await learnerVideoService.initialize();
       state.setVideoService(learnerVideoService);
 
@@ -180,6 +188,28 @@ const TrainerSession = () => {
   const handleObserverModalOk = async () => {
     state.setShowObserverModal(false);
     await initializeObserverConnection();
+  };
+
+  // Admission modal handlers
+  const handleAdmitLearner = () => {
+    setPendingAdmission(null);
+    if (state.videoService) state.videoService.admitParticipant();
+  };
+
+  const handleRejectLearner = () => {
+    setPendingAdmission(null);
+    if (state.whiteboardService) {
+      state.whiteboardService.send('waiting_message', { text: '__ADMISSION_REJECTED__' });
+    }
+  };
+
+  // Remove learner from ongoing session
+  const handleRemoveLearner = () => {
+    const learnerName = state.sessionInfo?.learner_name || 'Learner';
+    if (window.confirm(`Remove ${learnerName} from the session?`)) {
+      state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
+      toast.info(`${learnerName} has been removed from the session`);
+    }
   };
 
   // Session report handler (Trainer only)
@@ -332,7 +362,34 @@ const TrainerSession = () => {
   const wbSmallBtnActive = WB_BUTTON_STYLES.smallActive;
 
   return (
-    <InstructorSessionPage
+    <>
+      {/* Learner admission modal */}
+      {pendingAdmission && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '14px', padding: '36px 32px', maxWidth: '420px', width: '92%', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '52px', marginBottom: '12px' }}>🎓</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: '#1a1a2e' }}>Learner Wants to Join</h2>
+            <p style={{ color: '#555', marginBottom: '28px', fontSize: '15px' }}>
+              <strong>{pendingAdmission.name}</strong> is requesting to join this session.
+            </p>
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+              <button
+                onClick={handleAdmitLearner}
+                style={{ padding: '10px 28px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ✅ Admit
+              </button>
+              <button
+                onClick={handleRejectLearner}
+                style={{ padding: '10px 28px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ❌ Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <InstructorSessionPage
       role="trainer"
       participantName="Learner"
       participantType="learner"
@@ -349,6 +406,7 @@ const TrainerSession = () => {
       handleToggleMic={handlers.handleToggleMic}
       handleToggleCamera={handlers.handleToggleCamera}
       handleFreeze={handlers.handleFreeze}
+      handleRemoveParticipant={handleRemoveLearner}
       handleEndSession={handlers.handleEndSession}
       eraseAllPen={handlers.eraseAllPen}
       addBucket={handlers.addBucket}
@@ -458,6 +516,7 @@ const TrainerSession = () => {
         />
       }
     />
+    </>
   );
 };
 

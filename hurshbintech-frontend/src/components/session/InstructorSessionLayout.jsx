@@ -2640,6 +2640,7 @@ export const InstructorSessionPage = ({
     handleToggleMic,
     handleToggleCamera,
     handleFreeze,
+    handleRemoveParticipant,
     handleEndSession,
     isFrozen,
 
@@ -3083,6 +3084,16 @@ export const InstructorSessionPage = ({
             {/* Session Info Bar */}
             <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
                 <div className="session-info-actions">
+                    {handleRemoveParticipant && (
+                        <button
+                            className="btn-end-session"
+                            onClick={handleRemoveParticipant}
+                            title={`Remove ${participantName} from session`}
+                            
+                        >
+                            🚫 <span className="xs:inline">Remove {participantName}</span>
+                        </button>
+                    )}
                     <button
                         className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
                         onClick={handleFreeze}

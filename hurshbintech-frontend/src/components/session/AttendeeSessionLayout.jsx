@@ -1874,138 +1874,98 @@ export const AttendeeMetricsPanel = ({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: isPromptOpen ? 'flex-start' : 'center',
             gap: 'clamp(0.5rem, 1.5vh, 0.75rem)',
             backgroundColor: 'white',
             borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
             padding: 'clamp(0.75rem, 2vh, 1rem)',
             boxShadow: '0 0.125rem 0.25rem rgba(0,0,0,0.1)',
             height: '100%',
-            overflow: 'visible',
+            overflow: 'hidden',
             boxSizing: 'border-box',
             position: 'relative'
         }}>
-            {/* Row 1: P and R side by side */}
+            {/* Row 1 + Prompt — stacked column, contained within panel */}
             <div style={{
-                display: 'flex',
-                height: '0.1rem',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'clamp(1rem, 3vw, 1.5rem)',
-                width: '100%',
-                flexShrink: 0
-            }}>
-                {/* Prompt Level */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
-                }}>
-                    <span style={{
-                        fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
-                        color: '#d97706',
-                        whiteSpace: 'nowrap'
-                    }}>P :</span>
-                    <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
-                        fontWeight: 'bold',
-                        color: '#d97706',
-                        whiteSpace: 'nowrap'
-                    }}>{promptMeter}</span>
-                </div>
-
-                {/* Reinforcement Level */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
-                }}>
-                    <span style={{
-                        fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
-                        color: '#16a34a',
-                        whiteSpace: 'nowrap'
-                    }}>R :</span>
-                    <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
-                        fontWeight: 'bold',
-                        color: '#16a34a',
-                        whiteSpace: 'nowrap'
-                    }}>{reinforcementMeter}</span>
-                </div>
-            </div>
-
-            {/* Row 2: Bulb with Dropdown Prompt */}
-            <div style={{
-                position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: '100%',
+                gap: '0.25rem',
                 flexShrink: 0,
-                // gap: '0.5rem',   
-                width: '100%'
             }}>
-                <span
-                    onClick={(e) => { if (onTogglePrompt) onTogglePrompt(); }}
-                    title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
-                    style={{
-                        fontSize: 'clamp(1rem, 1.6vw, 18rem)',
-                        filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
-                        animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                        transition: 'filter 0.3s ease, transform 0.15s ease',
+                {/* Row 1: R: value and Bulb side by side */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'clamp(0.5rem, 1.5vw, 0.75rem)',
+                    width: '100%',
+                    flexShrink: 0,
+                }}>
+                    {/* Reinforcement Level */}
+                    <div style={{
                         display: 'flex',
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        cursor: onTogglePrompt ? 'pointer' : 'default',
-                        transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)',
-                        zIndex: 100
-                    }}
-                >
-                    💡
-                </span>
+                        gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
+                    }}>
+                        <span style={{
+                            fontWeight: 'bold',
+                            fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
+                            color: '#16a34a',
+                            whiteSpace: 'nowrap'
+                        }}>R :</span>
+                        <span style={{
+                            fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
+                            fontWeight: 'bold',
+                            color: '#16a34a',
+                            whiteSpace: 'nowrap'
+                        }}>{reinforcementMeter}</span>
+                    </div>
 
-                {/* Prompt Box - Integrated into metrics panel */}
+                    {/* Bulb — right of R:, toggles prompt box */}
+                    <span
+                        onClick={() => { if (onTogglePrompt) onTogglePrompt(); }}
+                        title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
+                        style={{
+                            fontSize: 'clamp(1rem, 1.6vw, 1.25rem)',
+                            filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
+                            animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                            transition: 'filter 0.3s ease, transform 0.15s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            cursor: onTogglePrompt ? 'pointer' : 'default',
+                            transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)',
+                            userSelect: 'none'
+                        }}
+                    >
+                        💡
+                    </span>
+                </div>
+
+                {/* Prompt Box — in-flow below Row 1, stays inside panel */}
                 {isPromptOpen && (
                     <div style={{
                         width: '100%',
                         backgroundColor: '#ffffff',
                         borderRadius: '0.375rem',
-                        padding: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                        padding: 'clamp(0.4rem, 1.2vh, 0.6rem)',
                         border: promptText !== defaultPromptText ? '2px solid #fbbf24' : '1px solid #d1d5db',
                         boxShadow: promptText !== defaultPromptText
-                            ? '0 2px 8px rgba(251, 191, 36, 0.2)'
-                            : '0 1px 3px rgba(0, 0, 0, 0.08)',
+                            ? '0 2px 8px rgba(251, 191, 36, 0.25)'
+                            : '0 1px 4px rgba(0, 0, 0, 0.10)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
-                        minHeight: 'clamp(3.5rem, 9vh, 4.5rem)',
-                        maxHeight: 'clamp(6rem, 16vh, 5rem)',
+                        maxHeight: 'clamp(5rem, 14vh, 7rem)',
                         overflow: 'auto',
                         animation: 'slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        position: 'relative',
-                        gap: '0.25rem'
+                        boxSizing: 'border-box',
                     }}>
-                        {/* Small arrow pointing to bulb */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '-6px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '6px solid transparent',
-                            borderRight: '6px solid transparent',
-                            borderBottom: promptText !== defaultPromptText ? '6px solid #fbbf24' : '6px solid #d1d5db',
-                            zIndex: 1
-                        }} />
-
                         <p style={{
                             fontSize: 'clamp(0.65rem, 1.6vw, 0.8rem)',
                             color: promptText !== defaultPromptText ? '#1f2937' : '#6b7280',
@@ -2016,7 +1976,6 @@ export const AttendeeMetricsPanel = ({
                             fontWeight: promptText !== defaultPromptText ? '600' : '500',
                             wordWrap: 'break-word',
                             overflowWrap: 'break-word',
-                            hyphens: 'manual',
                             padding: '0.25rem 0.5rem',
                             width: '100%',
                             boxSizing: 'border-box',
@@ -2024,7 +1983,6 @@ export const AttendeeMetricsPanel = ({
                             wordBreak: 'break-word'
                         }}>
                             {promptText !== defaultPromptText ? promptText : 'Waiting...'}
-
                         </p>
                     </div>
                 )}
