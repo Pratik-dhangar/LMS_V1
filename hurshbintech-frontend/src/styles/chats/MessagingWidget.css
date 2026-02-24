@@ -728,6 +728,126 @@
   transform: scale(1.1);
 }
 
+/* Voice / Audio message player */
+.messaging-voice-player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 20px;
+  padding: 0.4rem 0.625rem;
+  width: 200px;
+  max-width: 200px;
+}
+
+.messaging-message.sent .messaging-voice-player {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.messaging-voice-play-btn {
+  background: #db9d32;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffffff;
+  transition: background 0.2s, transform 0.1s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.messaging-voice-play-btn:hover {
+  background: #c98d1e;
+  transform: scale(1.08);
+}
+
+.messaging-voice-play-btn.playing {
+  background: #e53935;
+}
+
+.messaging-voice-play-btn.playing:hover {
+  background: #c62828;
+}
+
+.messaging-voice-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.messaging-voice-progress-track {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.messaging-message.sent .messaging-voice-progress-track {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.messaging-voice-progress-fill {
+  height: 100%;
+  background: #db9d32;
+  border-radius: 2px;
+  transition: width 0.25s linear;
+}
+
+.messaging-message.sent .messaging-voice-progress-fill {
+  background: #ffffff;
+}
+
+.messaging-voice-timer {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: #555555;
+  line-height: 1;
+}
+
+.messaging-message.sent .messaging-voice-timer {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.messaging-voice-download-btn {
+  background: rgba(0, 0, 0, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #555555;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.messaging-message.sent .messaging-voice-download-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.messaging-voice-download-btn:hover {
+  background: rgba(0, 0, 0, 0.3);
+  color: #191919;
+  transform: scale(1.1);
+}
+
+.messaging-message.sent .messaging-voice-download-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
 .messaging-message-meta {
   display: flex;
   align-items: center;
@@ -920,6 +1040,108 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Voice Recording */
+.messaging-mic-btn {
+  background: transparent;
+  border: none;
+  color: #666666;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.messaging-mic-btn:hover:not(:disabled) {
+  background: #f3f2ef;
+  color: #db9d32;
+}
+
+.messaging-mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messaging-cancel-record-btn {
+  background: transparent;
+  border: none;
+  color: #999999;
+  padding: 0.375rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.messaging-cancel-record-btn:hover {
+  background: #fee2e2;
+  color: #e53935;
+}
+
+.messaging-recording-indicator {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: #fff3f3;
+  border: 1px solid #ffcdd2;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  min-width: 0;
+}
+
+.messaging-recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e53935;
+  flex-shrink: 0;
+  animation: recording-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
+.messaging-recording-text {
+  color: #e53935;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.messaging-recording-timer {
+  color: #666666;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+}
+
+.messaging-send-record-btn {
+  background: #db9d32;
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.messaging-send-record-btn:hover {
+  background: #c98d1e;
+  transform: scale(1.05);
 }
 
 /* Responsive Design */

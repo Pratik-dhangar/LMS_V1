@@ -540,7 +540,7 @@ const AssignedPrograms = () => {
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #059669, #047857)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #10b981, #059669)'}
                               >
-                                Submit
+                                Done
                               </button>
                             )}
 
