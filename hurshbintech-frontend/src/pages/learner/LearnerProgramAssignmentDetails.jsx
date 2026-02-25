@@ -588,7 +588,7 @@ const LearnerProgramAssignmentDetails = () => {
           <div className="assignment-details">
             <div className="programs-info">
               <p className="programs-label">
-                <strong>Programs in this Assignment:</strong>
+                <strong>Learning Goals in this Assignment:</strong>
               </p>
               {allPrograms && allPrograms.length > 0 ? (
                 <ul className="programs-list">
@@ -598,7 +598,7 @@ const LearnerProgramAssignmentDetails = () => {
                 </ul>
               ) : (
                 <p className="no-programs">
-                  No programs assigned to this assignment title yet.
+                  No programs assigned to this Home Program title yet.
                 </p>
               )}
             </div>

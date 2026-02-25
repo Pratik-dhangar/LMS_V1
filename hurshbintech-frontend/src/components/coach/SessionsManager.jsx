@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import coachService from '../../api/services/coachService';
+import coachSessionService from '../../api/services/coachSessionService';
 import { toast } from 'react-toastify';
 import SearchBar from '../common/SearchBar';
 import '../../styles/coach/SessionsManager.css';
@@ -59,10 +60,11 @@ const SessionsManager = () => {
           scheduled.setHours(hours, 0, 0, 0);
         }
 
-        const durationMs = 60 * 60 * 1000;
-        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+        // Expire at midnight of session day so coach can resume any time during the day
+        const midnight = new Date(scheduled);
+        midnight.setHours(23, 59, 59, 999);
 
-        if (now >= sessionEndTime) {
+        if (now > midnight) {
           return 'expired';
         }
       } catch (e) {
@@ -70,6 +72,66 @@ const SessionsManager = () => {
       }
     }
     return session.status;
+  };
+
+  // Allow starting up to 5 minutes early
+  const canStartSession = (session) => {
+    if (session.status !== 'scheduled') return false;
+    if (!session.session_date) return false;
+    try {
+      const now = new Date();
+      const scheduled = new Date(session.session_date);
+      const sessionTime = session.session_time || '10am';
+      const timeParts = sessionTime.match(/(\d+)(am|pm)/i);
+      if (timeParts) {
+        let hours = parseInt(timeParts[1]);
+        const meridiem = timeParts[2].toLowerCase();
+        if (meridiem === 'pm' && hours !== 12) hours += 12;
+        if (meridiem === 'am' && hours === 12) hours = 0;
+        scheduled.setHours(hours, 0, 0, 0);
+      }
+      const earlyStart = new Date(scheduled.getTime() - 5 * 60 * 1000);
+      return now >= earlyStart;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const getTimeUntilSession = (session) => {
+    if (!session.session_date) return null;
+    try {
+      const now = new Date();
+      const scheduled = new Date(session.session_date);
+      const sessionTime = session.session_time || '10am';
+      const timeParts = sessionTime.match(/(\d+)(am|pm)/i);
+      if (timeParts) {
+        let hours = parseInt(timeParts[1]);
+        const meridiem = timeParts[2].toLowerCase();
+        if (meridiem === 'pm' && hours !== 12) hours += 12;
+        if (meridiem === 'am' && hours === 12) hours = 0;
+        scheduled.setHours(hours, 0, 0, 0);
+      }
+      const earlyStart = new Date(scheduled.getTime() - 5 * 60 * 1000);
+      const diffMs = earlyStart.getTime() - now.getTime();
+      if (diffMs <= 0) return null;
+      const diffMins = Math.ceil(diffMs / 60000);
+      if (diffMins < 60) return `${diffMins}m`;
+      const diffHours = Math.floor(diffMins / 60);
+      const remMins = diffMins % 60;
+      return remMins > 0 ? `${diffHours}h ${remMins}m` : `${diffHours}h`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const handleStartSession = async (session) => {
+    try {
+      await coachSessionService.startSession(session.id);
+      navigate(`/coach/session/${session.id}`);
+    } catch (error) {
+      console.error('Error starting session:', error);
+      toast.error('Failed to start session');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -231,13 +293,34 @@ const SessionsManager = () => {
                           👁️ View
                         </button>
                         {getSessionStatus(session) === 'scheduled' && (
+                          <>
+                            <button
+                              onClick={() => navigate(`/coach/sessions/edit/${session.id}`)}
+                              className="app-modal-btn app-modal-btn--primary"
+                              title="Edit this session"
+                              style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleStartSession(session)}
+                              disabled={!canStartSession(session)}
+                              className="app-modal-btn app-modal-btn--success"
+                              title={!canStartSession(session) ? `Available in ${getTimeUntilSession(session) || '...'}` : 'Start this session'}
+                              style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap', opacity: canStartSession(session) ? 1 : 0.5, cursor: canStartSession(session) ? 'pointer' : 'not-allowed' }}
+                            >
+                              ▶ Start
+                            </button>
+                          </>
+                        )}
+                        {getSessionStatus(session) === 'active' && (
                           <button
-                            onClick={() => navigate(`/coach/sessions/edit/${session.id}`)}
-                            className="app-modal-btn app-modal-btn--primary"
-                            title="Edit this session"
+                            onClick={() => navigate(`/coach/session/${session.id}`)}
+                            className="app-modal-btn app-modal-btn--success"
+                            title="Resume active session"
                             style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
                           >
-                            ✏️ Edit
+                            ▶ Resume
                           </button>
                         )}
                       </div>

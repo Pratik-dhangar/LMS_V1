@@ -101,6 +101,7 @@ export const useAttendeeSessionState = () => {
     const [toolAccess, setToolAccess] = useState({
         select: false,
         drag: false,
+        draw: false,
         keyboard: false
     });
 
@@ -362,9 +363,12 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         console.log('[AttendeeSession] Waiting message received:', data);
         const message = data.text || '';
         setWaitingMessage(message);
-        // Play waiting sound on attendee side when receiving waiting message
+        // Control signals must NOT play sounds or auto-clear — let session page effects handle them
+        const isControlSignal = message === '__REMOVED_FROM_SESSION__' ||
+            message === '__ADMISSION_REJECTED__';
+        if (isControlSignal) return;
+        // Play waiting sound on attendee side when receiving a regular waiting message
         try {
-            console.log('[AttendeeSession] Playing waiting sound for:', message);
             playFeedbackSound(message);
         } catch (error) {
             console.error('[AttendeeSession] Error playing waiting sound:', error);
