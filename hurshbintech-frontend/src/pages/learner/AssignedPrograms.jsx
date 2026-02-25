@@ -440,7 +440,7 @@ const AssignedPrograms = () => {
 
                             {/* Programs List */}
                             <div style={{ marginBottom: '.75rem' }}>
-                              <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Programs:</p>
+                              <p style={{ fontSize: '1rem', color: '#4b5563', fontWeight: '600', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Learning Goals:</p>
                               <div style={{ marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 {program.program_names && program.program_names.length > 0 ? (
                                   program.program_names.map((name, idx) => (

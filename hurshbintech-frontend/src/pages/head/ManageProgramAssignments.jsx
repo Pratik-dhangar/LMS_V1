@@ -226,7 +226,7 @@ const ManageProgramAssignments = () => {
     }
 
     if (!formData.assignment_title || formData.assignment_title.trim() === '') {
-      return toast.error('Please enter an assignment title');
+      return toast.error('Please enter a home program title');
     }
 
     if (!formData.start_date || !formData.end_date) {
@@ -395,7 +395,7 @@ const ManageProgramAssignments = () => {
   const handleDeleteAssignmentTitle = async (titleAssignments) => {
     const programCount = titleAssignments.length;
     const confirmation = window.confirm(
-      `Delete this assignment title and all ${programCount} associated program${programCount > 1 ? 's' : ''}?\n\n⚠️ This will delete:\n- All program assignments under this title\n- All assigned content\n\nThis action cannot be undone.`
+      `Delete this home program title and all ${programCount} associated program${programCount > 1 ? 's' : ''}?\n\n⚠️ This will delete:\n- All program assignments under this title\n- All assigned content\n\nThis action cannot be undone.`
     );
 
     if (!confirmation) return;
@@ -449,7 +449,7 @@ const ManageProgramAssignments = () => {
     e.preventDefault();
 
     if (!formData.assignment_title || formData.assignment_title.trim() === '') {
-      return toast.error('Please enter an assignment title');
+      return toast.error('Please enter a home program title');
     }
 
     if (!formData.start_date || !formData.end_date) {
@@ -1000,7 +1000,7 @@ const ManageProgramAssignments = () => {
                 {/* Assignment Title */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Assignment Title <span className="mpa-form-required">*</span>
+                    Home Program Title <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="text"
@@ -1052,7 +1052,7 @@ const ManageProgramAssignments = () => {
                 {/* Program Selection */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Select Programs <span className="mpa-form-required">*</span>
+                    Learning Goals <span className="mpa-form-required">*</span>
                     <span className="mpa-form-hint">({formData.program_ids.length} selected)</span>
                   </label>
                   <input
@@ -1326,10 +1326,10 @@ const ManageProgramAssignments = () => {
 
             <form onSubmit={handleEditSubmit}>
               <div className="app-modal-content">
-                {/* Assignment Title */}
+                {/* Home Program Title */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Assignment Title <span className="mpa-form-required">*</span>
+                    Home Program Title <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="text"
@@ -1360,7 +1360,7 @@ const ManageProgramAssignments = () => {
 
                 {/* Programs Section */}
                 <div className="mpa-form-field">
-                  <label className="mpa-form-label">Programs <span className="mpa-form-required">*</span></label>
+                  <label className="mpa-form-label">Learning Goals <span className="mpa-form-required">*</span></label>
                   <div className="mpa-search-box">
                     <input
                       type="text"
@@ -1579,7 +1579,7 @@ const ManageProgramAssignments = () => {
                     </span>
                   </div>
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Home Programs:</span>
+                    <span className="mpa-detail-label">Learning Goals:</span>
                     <span className="mpa-detail-value">
                       {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
                         ? selectedAssignment.program_names.join(', ')
