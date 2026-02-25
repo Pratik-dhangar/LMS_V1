@@ -101,6 +101,7 @@ export const useAttendeeSessionState = () => {
     const [toolAccess, setToolAccess] = useState({
         select: false,
         drag: false,
+        draw: false,
         keyboard: false
     });
 

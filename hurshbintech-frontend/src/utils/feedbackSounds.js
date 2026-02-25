@@ -19,6 +19,12 @@ const FEEDBACK_SOUND_MAP = {
 // Cache for audio elements to avoid creating new ones each time
 const audioCache = new Map();
 
+// Cache for interval-based looping (keyed by sound file name)
+const loopIntervalCache = new Map();
+
+// Track which sound files are currently in 'active loop' mode
+const activeLoopSounds = new Set();
+
 /**
  * Get or create an audio element for a given sound file
  * Caches audio elements to improve performance
@@ -54,6 +60,10 @@ export const playFeedbackSound = (feedbackMessage) => {
         }
 
         const audio = getAudioElement(soundFile);
+
+        // Always ensure loop is off (defensive – in case a previous loop call is still cached)
+        audio.loop = false;
+        audio.onended = null;
 
         // Reset audio to beginning and play
         audio.currentTime = 0;
@@ -114,12 +124,107 @@ export const playFloatingAnimationSound = (animationType) => {
  */
 export const stopFeedbackSounds = () => {
     try {
+        // Deactivate all loop sounds and clear scheduled timeouts
+        activeLoopSounds.clear();
+        loopIntervalCache.forEach((timeoutId) => clearTimeout(timeoutId));
+        loopIntervalCache.clear();
+
         audioCache.forEach((audio) => {
+            audio.onended = null;
+            audio.loop = false;
             audio.pause();
             audio.currentTime = 0;
         });
     } catch (error) {
         console.error('[FeedbackSound] Error stopping audio:', error);
+    }
+};
+
+/**
+ * Play feedback sound on an interval (for persistent messages like "Please Wait...")
+ * Plays the sound immediately, then repeats every 7 seconds.
+ * @param {string} feedbackMessage - The feedback message text
+ * @returns {HTMLAudioElement|null} - The audio element, or null if not found
+ */
+export const playFeedbackSoundLoop = (feedbackMessage) => {
+    try {
+        const soundFile = FEEDBACK_SOUND_MAP[feedbackMessage];
+        if (!soundFile) return null;
+
+        // Stop any pre-existing interval or scheduled timeout for this sound
+        if (loopIntervalCache.has(soundFile)) {
+            clearTimeout(loopIntervalCache.get(soundFile));
+            loopIntervalCache.delete(soundFile);
+        }
+
+        const audio = getAudioElement(soundFile);
+
+        // Ensure native loop is OFF — use our own timed schedule instead
+        audio.loop = false;
+        audio.onended = null;
+        audio.pause();
+        audio.currentTime = 0;
+
+        // Mark this sound as actively looping
+        activeLoopSounds.add(soundFile);
+
+        // Recursive scheduler: play once, then 7 seconds after it ends, play again
+        const scheduleNextPlay = () => {
+            // Stop if this sound was deactivated
+            if (!activeLoopSounds.has(soundFile)) return;
+
+            audio.currentTime = 0;
+            const p = audio.play();
+            if (p !== undefined) {
+                p.catch(err => {
+                    console.warn(`[FeedbackSound] Could not play audio: ${soundFile}`, err);
+                });
+            }
+
+            // After playback ends, wait 7 seconds then play again
+            audio.onended = () => {
+                if (!activeLoopSounds.has(soundFile)) return;
+                const timeoutId = setTimeout(scheduleNextPlay, 7000);
+                loopIntervalCache.set(soundFile, timeoutId);
+            };
+        };
+
+        scheduleNextPlay();
+
+        return audio;
+    } catch (error) {
+        console.error('[FeedbackSound] Error playing interval feedback sound:', error);
+        return null;
+    }
+};
+
+/**
+ * Stop a specific feedback sound by message
+ * @param {string} feedbackMessage - The feedback message text
+ */
+export const stopFeedbackSound = (feedbackMessage) => {
+    try {
+        const soundFile = FEEDBACK_SOUND_MAP[feedbackMessage];
+        if (!soundFile) return;
+
+        // Remove from active set so the onended callback stops rescheduling
+        activeLoopSounds.delete(soundFile);
+
+        // Clear any pending timeout
+        if (loopIntervalCache.has(soundFile)) {
+            clearTimeout(loopIntervalCache.get(soundFile));
+            loopIntervalCache.delete(soundFile);
+        }
+
+        const audio = audioCache.get(soundFile);
+        if (audio) {
+            audio.onended = null;  // Remove the rescheduling handler
+            audio.loop = false;
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    } catch (error) {
+        console.error('[FeedbackSound] Error stopping specific audio:', error);
     }
 };
 
@@ -144,7 +249,14 @@ export const setFeedbackSoundVolume = (volume) => {
  */
 export const cleanupFeedbackSounds = () => {
     try {
+        // Deactivate all loop sounds and clear scheduled timeouts
+        activeLoopSounds.clear();
+        loopIntervalCache.forEach((timeoutId) => clearTimeout(timeoutId));
+        loopIntervalCache.clear();
+
         audioCache.forEach((audio) => {
+            audio.onended = null;
+            audio.loop = false;
             audio.pause();
             audio.src = '';
         });
@@ -156,6 +268,8 @@ export const cleanupFeedbackSounds = () => {
 
 export default {
     playFeedbackSound,
+    playFeedbackSoundLoop,
+    stopFeedbackSound,
     playFloatingAnimationSound,
     stopFeedbackSounds,
     setFeedbackSoundVolume,

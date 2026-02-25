@@ -44,7 +44,7 @@ import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
 import StopwatchDisplay from '../common/StopwatchDisplay';
-import { playFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
+import { playFeedbackSound, playFeedbackSoundLoop, stopFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
 
 /**
  * Session Header for Instructor
@@ -240,6 +240,7 @@ export const ToolAccessPanel = ({
     const tools = [
         { key: 'select', label: 'Select', icon: '🔍' },
         { key: 'drag', label: 'Drag', icon: '👆' },
+        { key: 'draw', label: 'Draw', icon: '✏️' },
         { key: 'keyboard', label: 'Keyboard', icon: '⌨️' }
     ];
 
@@ -1288,6 +1289,10 @@ export const setupAttendeeWhiteboardCallbacks = ({
                     setTool('select');
                 } else if (data.toolName === 'select' && data.enabled) {
                     setTool('select');
+                } else if (data.toolName === 'draw' && data.enabled) {
+                    setTool('pen');
+                } else if (data.toolName === 'draw' && !data.enabled) {
+                    setTool('select');
                 }
             }
         };
@@ -1331,14 +1336,29 @@ export const setupAttendeeWhiteboardCallbacks = ({
             console.log('[AttendeeSession] Waiting message received:', data);
             const message = data.text || '';
             setWaitingMessage(message);
-            // Play waiting sound on attendee side when receiving waiting message
-            try {
-                console.log('[AttendeeSession] Playing waiting sound for:', message);
-                playFeedbackSound(message);
-            } catch (error) {
-                console.error('[AttendeeSession] Error playing waiting sound:', error);
+
+            if (message) {
+                // Play waiting sound on attendee side
+                try {
+                    console.log('[AttendeeSession] Playing waiting sound for:', message, data.persistent ? '(persistent/loop)' : '(one-shot)');
+                    if (data.persistent) {
+                        // Persistent mode: loop the audio until instructor deactivates
+                        playFeedbackSoundLoop(message);
+                    } else {
+                        playFeedbackSound(message);
+                    }
+                } catch (error) {
+                    console.error('[AttendeeSession] Error playing waiting sound:', error);
+                }
+
+                // Only auto-remove for non-persistent (timed) messages
+                if (!data.persistent) {
+                    setTimeout(() => setWaitingMessage(''), 4000);
+                }
+            } else {
+                // Empty message = deactivation: stop looping audio
+                stopFeedbackSound('Please Wait...');
             }
-            setTimeout(() => setWaitingMessage(''), 4000);
         };
     }
 
@@ -1826,6 +1846,9 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
         updated.select = true;
     }
 
+    // When draw is disabled, no special cascading needed
+    // Draw is independent of select/drag
+
     setToolAccess(updated);
 
     if (whiteboardService) {
@@ -2303,36 +2326,66 @@ export const sendFeedbackMessage = ({
 
 /**
  * Send waiting message to participant
+ * Supports persistent mode (no auto-removal) for toggle behavior
  */
 export const sendWaitingMessage = ({
     message,
     setWaitingMessage,
     whiteboardService,
-    duration = 5000
+    duration = 5000,
+    persistent = false
 }) => {
     setWaitingMessage(message);
 
-    // Play waiting sound when sending waiting message to attendee
-    playFeedbackSound(message);
+    // Play waiting sound - loop if persistent, one-shot if timed
+    if (persistent) {
+        playFeedbackSoundLoop(message);
+    } else {
+        playFeedbackSound(message);
+    }
 
     if (whiteboardService) {
         whiteboardService.send('waiting_message', {
             text: message,
+            persistent: persistent,
             timestamp: Date.now()
         });
     }
 
-    setTimeout(() => {
-        setWaitingMessage('');
-        if (whiteboardService) {
-            whiteboardService.send('waiting_message', {
-                text: '',
-                timestamp: Date.now()
-            });
-        }
-    }, duration);
+    // Only auto-remove for non-persistent (timed) mode
+    if (!persistent) {
+        setTimeout(() => {
+            setWaitingMessage('');
+            if (whiteboardService) {
+                whiteboardService.send('waiting_message', {
+                    text: '',
+                    timestamp: Date.now()
+                });
+            }
+        }, duration);
+    }
 
-    // console.log('[InstructorSession] Waiting message sent:', message);
+    // console.log('[InstructorSession] Waiting message sent:', message, persistent ? '(persistent)' : `(${duration}ms)`);
+};
+
+/**
+ * Clear persistent waiting message from both whiteboards
+ */
+export const clearWaitingMessage = ({
+    setWaitingMessage,
+    whiteboardService
+}) => {
+    setWaitingMessage('');
+    stopFeedbackSound('Please Wait...');
+
+    if (whiteboardService) {
+        whiteboardService.send('waiting_message', {
+            text: '',
+            timestamp: Date.now()
+        });
+    }
+
+    // console.log('[InstructorSession] Waiting message cleared');
 };
 
 /**
@@ -2346,7 +2399,9 @@ export const handleToolClick = ({
     spawnFloatingAnimation,
     toggleLearnerToolAccess,
     whiteboardService,
-    REACTION_SVG_ASSETS
+    REACTION_SVG_ASSETS,
+    isWaitActive = false,
+    setIsWaitActive = null,
 }) => {
     // console.log('[InstructorSession] Tool clicked:', tool);
 
@@ -2406,12 +2461,21 @@ export const handleToolClick = ({
             break;
 
         case '⏳ Wait':
-            sendWaitingMessage({
-                message: 'Please Wait...',
-                setWaitingMessage,
-                whiteboardService,
-                duration: 3000
-            });
+            // Toggle behavior: first click activates persistent wait, second click deactivates
+            if (isWaitActive) {
+                // Deactivate - clear the waiting message
+                clearWaitingMessage({ setWaitingMessage, whiteboardService });
+                if (setIsWaitActive) setIsWaitActive(false);
+            } else {
+                // Activate - show persistent waiting message with looping audio
+                sendWaitingMessage({
+                    message: 'Please Wait...',
+                    setWaitingMessage,
+                    whiteboardService,
+                    persistent: true
+                });
+                if (setIsWaitActive) setIsWaitActive(true);
+            }
             break;
 
         case '🫧 Bubbles':
@@ -2748,6 +2812,7 @@ export const InstructorSessionPage = ({
 
     // Active icons
     activeIcons,
+    isWaitActive = false,
     handleToolClick,
 
     // Button styles
@@ -3002,6 +3067,7 @@ export const InstructorSessionPage = ({
                         showExercise={showExercise}
                         setShowExercise={setShowExercise}
                         activeIcons={activeIcons}
+                        isWaitActive={isWaitActive}
                         handleToolClick={handleToolClick}
                         wbBtnBase={wbBtnBase}
                         wbBtnActive={wbBtnActive}
@@ -3170,6 +3236,7 @@ export const WhiteboardTools = ({
     showExercise,
     setShowExercise,
     activeIcons,
+    isWaitActive = false,
     handleToolClick,
     wbBtnBase,
     wbBtnActive,
@@ -3193,7 +3260,7 @@ export const WhiteboardTools = ({
     // Handler to unselect specific item selected by attendee
     const handleUnselectItem = (itemId) => {
         if (setRemoteSelectedItemIds) {
-            setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => id !== itemId));
+            setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => String(id) !== String(itemId)));
         }
         // Send unselect message to attendee through whiteboard service
         if (whiteboardService) {
@@ -3215,7 +3282,7 @@ export const WhiteboardTools = ({
     // Get selected items details from canvasItems
     const getSelectedItemDetails = () => {
         if (!remoteSelectedItemIds || remoteSelectedItemIds.length === 0) return [];
-        return canvasItems.filter((item) => remoteSelectedItemIds.includes(item.id));
+        return canvasItems.filter((item) => remoteSelectedItemIds.some(id => String(id) === String(item.id)));
     };
 
     const selectedItems = getSelectedItemDetails();
@@ -3448,6 +3515,16 @@ export const WhiteboardTools = ({
                         <span>Drag</span>
                     </button>
 
+                    {/* Draw Tool Toggle */}
+                    <button
+                        onClick={() => toggleToolAccess('draw')}
+                        className={`${toolAccess.draw ? wbSmallBtnActive : wbSmallBtnBase}`}
+                        title={toolAccess.draw ? 'Click to disable Draw for learner' : 'Click to enable Draw for learner'}
+                    >
+                        <span>✏️</span>
+                        <span>Draw</span>
+                    </button>
+
                     {/* Exercise Tool Button */}
                     <button
                         onClick={() => setShowExercise(!showExercise)}
@@ -3529,17 +3606,20 @@ export const WhiteboardTools = ({
                         { label: 'Balloons', icon: '🎈' },
                         { label: 'Stars', icon: '⭐' },
                         { label: 'Wait', icon: '⏳' }
-                    ].map((t, i) => (
+                    ].map((t, i) => {
+                        const isActive = t.label === 'Wait' ? isWaitActive : activeIcons[t.label];
+                        return (
                         <button
                             key={i}
                             onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                            className={`${activeIcons[t.label] ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
-                            title={t.label}
+                            className={`${isActive ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
+                            title={t.label === 'Wait' ? (isWaitActive ? 'Click to deactivate Wait' : 'Click to activate Wait') : t.label}
                         >
                             <Emoji emoji={t.icon} size="base" className="inline-block" />
                             <span className="hidden sm:inline">{t.label}</span>
                         </button>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 

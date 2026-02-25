@@ -1323,6 +1323,102 @@ AttendeeMainLayout.propTypes = {
 };
 
 /**
+ * Draw Color Palette
+ * Shows 4 color options (black, green, red, yellow) when draw tool access is enabled
+ * Used by: LearnerSession, GuestSession, ClientSession
+ */
+export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor }) => {
+    if (!toolAccess?.draw) return null;
+
+    const colors = [
+        { value: '#000000', label: 'Black' },
+        { value: '#22c55e', label: 'Green' },
+        { value: '#ef4444', label: 'Red' },
+        { value: '#eab308', label: 'Yellow' }
+    ];
+
+    const isEraser = tool === 'eraser';
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            borderRadius: '24px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            zIndex: 35,
+            pointerEvents: 'auto'
+        }}>
+            {/* Pen / color buttons */}
+            {colors.map(c => {
+                const isActive = !isEraser && color === c.value;
+                return (
+                    <button
+                        key={c.value}
+                        onClick={() => { setTool('pen'); setColor(c.value); }}
+                        title={c.label}
+                        style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            backgroundColor: c.value,
+                            border: isActive ? '3px solid #3b82f6' : '2px solid #ccc',
+                            cursor: 'pointer',
+                            outline: isActive ? '2px solid #93c5fd' : 'none',
+                            outlineOffset: '1px',
+                            transition: 'all 0.15s ease',
+                            boxShadow: isActive ? '0 0 6px rgba(59,130,246,0.4)' : 'none',
+                            flexShrink: 0
+                        }}
+                    />
+                );
+            })}
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '22px', backgroundColor: '#d1d5db', flexShrink: 0 }} />
+
+            {/* Eraser button */}
+            <button
+                onClick={() => setTool(isEraser ? 'pen' : 'eraser')}
+                title={isEraser ? 'Switch to Pen' : 'Eraser'}
+                style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isEraser ? '#3b82f6' : '#f3f4f6',
+                    border: isEraser ? '2px solid #2563eb' : '2px solid #ccc',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontSize: '15px',
+                    flexShrink: 0
+                }}
+            >
+                <span style={{ filter: isEraser ? 'brightness(10)' : 'none' }}>🧹</span>
+            </button>
+        </div>
+    );
+};
+
+DrawColorPalette.propTypes = {
+    toolAccess: PropTypes.object,
+    tool: PropTypes.string,
+    setTool: PropTypes.func,
+    color: PropTypes.string,
+    setColor: PropTypes.func
+};
+
+/**
  * Attendee Whiteboard Section
  * Common nested div structure for whiteboard area
  * Used by all three session types (learner, guest, client)
@@ -1509,7 +1605,10 @@ export const AttendeeWhiteboardWithVideo = ({
             />
 
             {/* Whiteboard */}
-            <div className="w-full h-full">
+            <div className="w-full h-full" style={{ position: 'relative' }}>
+                {/* Floating color palette overlay - shown when draw access is enabled */}
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} />
+
                 <Whiteboard
                     whiteboardService={whiteboardService}
                     isTrainer={false}
@@ -1628,6 +1727,9 @@ export const LearnerWhiteboardWithVideo = ({
         <>
             {/* Whiteboard component */}
             <div className="w-full h-full" style={{ position: 'relative' }}>
+                {/* Floating color palette overlay - shown when draw access is enabled */}
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} />
+
                 <Whiteboard
                     canvasRefForParent={whiteboardCanvasRef}
                     whiteboardService={whiteboardService}

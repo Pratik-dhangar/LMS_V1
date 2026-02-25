@@ -256,7 +256,8 @@ const LearnerSession = () => {
   // Learner-specific: Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
     select: false,
-    drag: false
+    drag: false,
+    draw: false
   });
 
   // Learner-specific: Background music player ref

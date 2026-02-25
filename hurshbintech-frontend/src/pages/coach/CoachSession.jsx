@@ -220,6 +220,8 @@ const CoachSession = () => {
     setFeedbackMessage: state.setFeedbackMessage,
     setWaitingMessage: state.setWaitingMessage,
     setShowExercise: state.setShowExercise,
+    isWaitActive: state.isWaitActive,
+    setIsWaitActive: state.setIsWaitActive,
     setBackgroundMusicPlaying: state.setBackgroundMusicPlaying,
     setSelectedMusic: state.setSelectedMusic,
     setMusicVolume: state.setMusicVolume,
@@ -438,6 +440,7 @@ const CoachSession = () => {
       handleYoutubeDropped={handlers.handleYoutubeDropped}
       handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
       activeIcons={state.activeIcons}
+      isWaitActive={state.isWaitActive}
       handleToolClick={handlers.handleToolClick}
       wbBtnBase={wbBtnBase}
       wbBtnActive={wbBtnActive}

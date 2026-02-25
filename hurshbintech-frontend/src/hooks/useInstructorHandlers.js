@@ -64,6 +64,8 @@ export const useInstructorHandlers = ({
     setFeedbackMessage,
     setWaitingMessage,
     setShowExercise,
+    isWaitActive,
+    setIsWaitActive,
     setBackgroundMusicPlaying,
     setSelectedMusic,
     setMusicVolume,
@@ -153,8 +155,10 @@ export const useInstructorHandlers = ({
             toggleLearnerToolAccess: toggleToolAccess,
             whiteboardService,
             REACTION_SVG_ASSETS,
+            isWaitActive,
+            setIsWaitActive,
         });
-    }, [setActiveIcons, setFeedbackMessage, setWaitingMessage, setShowExercise, whiteboardService, toolAccess]);
+    }, [setActiveIcons, setFeedbackMessage, setWaitingMessage, setShowExercise, whiteboardService, toolAccess, isWaitActive, setIsWaitActive]);
 
     const handleAnimationPop = useCallback((animationId, poppedLeft, poppedTop) => {
         utilHandleAnimationPop({
