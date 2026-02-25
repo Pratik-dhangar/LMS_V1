@@ -356,7 +356,7 @@ const Whiteboard = ({
     isTrainer,
     canvasItems = [],
     setCanvasItems,
-    toolAccess = { select: false, drag: false },
+    toolAccess = { select: false, drag: false, draw: false },
     remoteSelectedItemIds = [],
     textMessages = [],
     setTextMessages = () => { },
@@ -1724,7 +1724,7 @@ const Whiteboard = ({
                 if (cachedImg && (isVideoItem(item) || isPdfItem(item))) {
                     // Determine if item is selected locally or remotely
                     const isSelectedByMe = selectedItems.some(si => si.id === item.id);
-                    const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
+                    const isSelectedByRemote = remoteSelectedItemIds.some(id => String(id) === String(item.id));
 
                     // Set border color and width based on who selected it
                     if (isSelectedByRemote) {
@@ -2198,11 +2198,11 @@ const Whiteboard = ({
             return;
         }
 
-        // Only trainer can draw
-        if (!isTrainer) return;
+        // Only trainer or learner with draw access can draw
+        if (!isTrainer && !toolAccess.draw) return;
 
-        // Check if drawing tool is active (pen or eraser)
-        if ((tool === 'pen' || tool === 'eraser') && !toolActive) {
+        // Check if drawing tool is active (pen or eraser) - for trainer, toolActive must be on
+        if (isTrainer && (tool === 'pen' || tool === 'eraser') && !toolActive) {
             return; // Tool not active, don't allow drawing
         }
 
@@ -2623,8 +2623,8 @@ const Whiteboard = ({
             return;
         }
 
-        // Drawing is only for trainer
-        if (!isTrainer) return;
+        // Drawing is only for trainer or learner with draw access
+        if (!isTrainer && !toolAccess.draw) return;
 
         // Check if drawing is active
         if (!isDrawing) return;
@@ -3418,7 +3418,7 @@ const Whiteboard = ({
                         {/* Render PDF Items as Overlays */}
                         {canvasItems.filter(item => isPdfItem(item)).map(item => {
                             const isSelectedByMe = selectedItems.some(si => si.id === item.id);
-                            const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
+                            const isSelectedByRemote = remoteSelectedItemIds.some(id => String(id) === String(item.id));
 
                             // If item is in a bucket, NO selection style - bucket outline is the ONLY boundary
                             let selectionStyle = {};
@@ -3551,7 +3551,7 @@ const Whiteboard = ({
                         {/* Render Image Items as Overlays */}
                         {canvasItems.filter(item => item.src && !isVideoItem(item) && !isPdfItem(item)).map(item => {
                             const isSelectedByMe = selectedItems.some(si => si.id === item.id);
-                            const isSelectedByRemote = remoteSelectedItemIds.includes(item.id);
+                            const isSelectedByRemote = remoteSelectedItemIds.some(id => String(id) === String(item.id));
 
                             // If item is in a bucket, NO selection style - bucket outline is the ONLY boundary
                             let selectionStyle = {};

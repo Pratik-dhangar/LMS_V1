@@ -127,17 +127,56 @@ const LearningProgramSidebar = ({
         <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
         <div className="meter-container meter-container-gold">
           <div className="meter-buttons">
-            {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
+            {['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'].map((p) => (
               <div
                 key={p}
-                className={`meter-button ${selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'}`}
+                className={`meter-button ${
+                  p === '0' || p === '100'
+                    ? ''
+                    : selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'
+                }`}
+                style={
+                  p === '0'
+                    ? {
+                        backgroundColor: selectedPromptLevel === '0' ? '#15803d' : '#16a34a',
+                        borderColor: '#16a34a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }
+                    : p === '100'
+                    ? {
+                        backgroundColor: selectedPromptLevel === '100' ? '#991b1b' : '#dc2626',
+                        borderColor: '#dc2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }
+                    : {}
+                }
+                title={p === '0' ? 'No prompt needed (0)' : p === '100' ? 'Full prompt needed (100)' : `Prompt level ${p}`}
                 onClick={() => {
                   const newValue = selectedPromptLevel === p ? null : p;
                   setSelectedPromptLevel(newValue);
                   webRTC && webRTC.sendPromptMeter(newValue);
                 }}
               >
-                {p}
+                {p === '0' ? (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                    <polyline
+                      points="1.5,7 5.5,11 12.5,3"
+                      stroke="#ffffff"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : p === '100' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                    <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round"/>
+                    <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round"/>
+                  </svg>
+                ) : p}
               </div>
             ))}
           </div>

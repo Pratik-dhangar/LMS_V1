@@ -742,6 +742,53 @@ const Home = () => {
         ) : null}
       </div>
 
+      {/* Social Float Buttons */}
+      <div className="social-float-container">
+        {/* WhatsApp */}
+        <a
+          href="https://wa.me/+918928765220"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="whatsapp-float-btn"
+          aria-label="Chat on WhatsApp"
+        >
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path
+              d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.504L4 29l7.697-1.816A11.94 11.94 0 0016 27c6.627 0 12-5.373 12-12S22.627 3 16 3z"
+              fill="#fff"
+            />
+            <path
+              d="M16 5.5C10.753 5.5 6.5 9.753 6.5 15c0 2.127.676 4.097 1.83 5.706l-1.2 4.412 4.527-1.185A9.462 9.462 0 0016 24.5c5.247 0 9.5-4.253 9.5-9.5S21.247 5.5 16 5.5zm5.414 13.583c-.225.633-1.322 1.211-1.816 1.258-.465.044-.9.208-3.033-.633-2.578-1.018-4.23-3.647-4.357-3.816-.127-.169-1.034-1.376-1.034-2.625s.654-1.865.886-2.12c.232-.253.506-.317.674-.317.169 0 .337.002.485.008.155.007.363-.059.568.433.211.507.716 1.75.779 1.878.063.127.105.274.021.443-.084.169-.127.274-.253.422-.127.148-.266.33-.38.443-.127.127-.258.264-.111.518.148.253.656 1.082 1.408 1.751.966.86 1.782 1.125 2.035 1.252.253.127.4.105.548-.063.148-.169.634-.739.803-.992.169-.253.337-.211.568-.127.232.084 1.472.695 1.724.822.253.127.422.19.485.295.063.106.063.612-.162 1.244z"
+              fill="#25D366"
+            />
+          </svg>
+        </a>
+
+        {/* Instagram */}
+        <a
+          href="https://www.instagram.com/binal_all_about_happychildhood?igsh=b3BtMjk2MjMyNnQz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="instagram-float-btn"
+          aria-label="Follow us on Instagram"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5.5" ry="5.5" fill="url(#ig-gradient)" />
+            <circle cx="12" cy="12" r="4.5" stroke="#fff" strokeWidth="1.8" />
+            <circle cx="17.5" cy="6.5" r="1.2" fill="#fff" />
+            <defs>
+              <radialGradient id="ig-gradient" cx="30%" cy="107%" r="150%">
+                <stop offset="0%" stopColor="#fdf497" />
+                <stop offset="5%" stopColor="#fdf497" />
+                <stop offset="45%" stopColor="#fd5949" />
+                <stop offset="60%" stopColor="#d6249f" />
+                <stop offset="90%" stopColor="#285AEB" />
+              </radialGradient>
+            </defs>
+          </svg>
+        </a>
+      </div>
+
       {/* Scroll to Top Button */}
       {showScrollTop && (
         <button

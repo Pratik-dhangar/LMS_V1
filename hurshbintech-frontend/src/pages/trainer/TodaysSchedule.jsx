@@ -123,18 +123,17 @@ const TodaysSchedule = () => {
       return 'ended';
     }
 
-    // Check if session is expired (regardless of status, check scheduled_date + duration)
+    // Check if session is expired — trainer/coach keep access until midnight of session day
     if (session.scheduled_date) {
       try {
         const now = new Date();
         const scheduled = new Date(session.scheduled_date);
 
-        // Calculate session end time based on duration
-        const durationMs = (session.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
-        const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+        // Expire at end of session day (midnight) so trainer can resume any time during the day
+        const midnight = new Date(scheduled);
+        midnight.setHours(23, 59, 59, 999);
 
-        // If current time is past the session end time (scheduled + duration), it's expired
-        if (now >= sessionEndTime) {
+        if (now > midnight) {
           return 'expired';
         }
       } catch (e) {
@@ -151,14 +150,15 @@ const TodaysSchedule = () => {
       return false;
     }
 
-    // Check if current time has reached the scheduled time
+    // Check if current time is within 5 minutes before (or after) the scheduled time
     if (session.scheduled_date) {
       try {
         const now = new Date();
         const scheduled = new Date(session.scheduled_date);
 
-        // Button is enabled only when current time >= scheduled_date
-        if (now >= scheduled) {
+        // Allow starting up to 5 minutes early
+        const earlyStart = new Date(scheduled.getTime() - 5 * 60 * 1000);
+        if (now >= earlyStart) {
           return true;
         }
       } catch (e) {
@@ -168,22 +168,25 @@ const TodaysSchedule = () => {
     return false;
   };
 
-  // Get time until session starts
+  // Get time until session can be started (5 min early window)
   const getTimeUntilSession = (session) => {
     if (!session.scheduled_date) return null;
     try {
       const now = new Date();
       const scheduled = new Date(session.scheduled_date);
-      const diffMs = scheduled.getTime() - now.getTime();
+      // Time until the 5-minute-early window opens
+      const earlyStart = new Date(scheduled.getTime() - 5 * 60 * 1000);
+      const diffMs = earlyStart.getTime() - now.getTime();
 
-      if (diffMs <= 0) return null; // Session time has arrived
+      if (diffMs <= 0) return null; // Early-start window has arrived
 
-      const diffMins = Math.floor(diffMs / 60000);
+      const diffMins = Math.ceil(diffMs / 60000);
       if (diffMins < 60) {
         return `${diffMins}m`;
       }
       const diffHours = Math.floor(diffMins / 60);
-      return `${diffHours}h`;
+      const remMins = diffMins % 60;
+      return remMins > 0 ? `${diffHours}h ${remMins}m` : `${diffHours}h`;
     } catch (e) {
       console.warn('Error calculating time until session:', e);
       return null;

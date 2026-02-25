@@ -98,6 +98,8 @@ const GuestSession = () => {
   const [authError, setAuthError] = useState(null);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for coach to admit
+  const [admissionDenied, setAdmissionDenied] = useState(false); // Coach rejected the join request
   const [showExercise, setShowExercise] = useState(false);
   const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
 
@@ -300,6 +302,7 @@ const GuestSession = () => {
         await initializeAttendeeServices(WS_BASE_URL, sessionData.session_id, 'guest', sessionState);
         setShowWaitingModal(false);
         setLoading(false);
+        setAwaitingAdmission(true); // Show awaiting-admission screen until coach's offer arrives
       } catch (err) {
         const errMsg = err.response?.data?.detail || err.message || '';
         if (err.response?.status === 400 && errMsg.includes('not active')) {
@@ -342,6 +345,7 @@ const GuestSession = () => {
       await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
       setShowWaitingModal(false);
       setLoading(false);
+      setAwaitingAdmission(true); // Show awaiting-admission screen until coach's offer arrives
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       if (!(error.response?.status === 400 && errorMessage.includes('not active'))) {
@@ -381,6 +385,7 @@ const GuestSession = () => {
                 await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
                 setShowWaitingModal(false);
                 setLoading(false);
+                setAwaitingAdmission(true); // Show awaiting-admission screen until coach's offer arrives
               } catch (error) {
                 setRetrying(false);
               }
@@ -409,13 +414,30 @@ const GuestSession = () => {
     };
   }, [showWaitingModal, sessionInfo, navigate]);
 
-  // Connect remote stream to video element
+  // Connect remote stream to video element; clear awaiting gate when stream arrives
   useEffect(() => {
+    if (remoteStream) {
+      setAwaitingAdmission(false);
+    }
     if (remoteStream && remoteVideoRef.current) {
       console.log('[GuestSession] Connecting remote stream to video element');
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, awaitingAdmission]);
+
+  // Detect admission rejection or removal from coach via waiting_message signal
+  useEffect(() => {
+    if (waitingMessage === '__ADMISSION_REJECTED__') {
+      setAdmissionDenied(true);
+      setAwaitingAdmission(false);
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/'), 2000);
+    } else if (waitingMessage === '__REMOVED_FROM_SESSION__') {
+      toast.warning('You have been removed from the session by the coach.');
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/'), 1500);
+    }
+  }, [waitingMessage, navigate]);
 
   // Countdown timer
   useEffect(() => {
@@ -535,6 +557,44 @@ const GuestSession = () => {
       <div className="loading-container">
         <div className="session-loader"></div>
         <p style={{ marginTop: '1rem', color: '#666' }}>Verifying session access...</p>
+      </div>
+    );
+  }
+
+  // Admission denied by coach
+  if (admissionDenied) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Your request to join the session was not accepted by the coach.
+          </p>
+          <p className="text-sm text-gray-500">Redirecting you back...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting for coach to admit
+  if (awaitingAdmission) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>⏳</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Admission</h2>
+          <p className="text-gray-600 mb-2">
+            You have joined the session. Please wait for your coach to admit you.
+          </p>
+          <p className="text-gray-600 mb-6">
+            <strong>{sessionInfo?.coach_name ?? 'Your coach'}</strong> will admit you shortly.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
+            <span>Waiting for admission...</span>
+          </div>
+        </div>
       </div>
     );
   }

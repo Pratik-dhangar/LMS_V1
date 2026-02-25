@@ -92,6 +92,8 @@ class VideoConferenceService {
         this.onReinforcementMeterUpdate = null;
         this.onPromptText = null;
         this.onFreeze = null;
+        this.onParticipantJoinRequest = null; // Called when learner/client announces presence (admit/reject flow)
+        this.pendingPeerReady = false; // True when waiting for instructor to admit the learner
     }
 
     /**
@@ -573,10 +575,34 @@ class VideoConferenceService {
 
                 case 'peer_ready':
                     // Trainer/Coach creates offer when learner/client is ready
-                    // console.log(`[VideoConference][${this.role}] Peer ready signal received, role check: ${this.role === 'trainer' || this.role === 'coach'}, hasCreatedOffer: ${this.hasCreatedOffer}`);
-                    if ((this.role === 'trainer' || this.role === 'coach') && !this.hasCreatedOffer) {
-                        // console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
-                        await this.createOffer();
+                    if (this.role === 'trainer' || this.role === 'coach') {
+                        const connState = this.peerConnection?.connectionState;
+                        // Allow (re)offer if: never offered yet, OR connection is dead (rejoin scenario)
+                        const needsFreshOffer = !this.hasCreatedOffer ||
+                            connState === 'closed' || connState === 'failed' ||
+                            connState === 'disconnected';
+                        if (needsFreshOffer) {
+                            // Rebuild peer connection if it is in a terminal state
+                            if (this.peerConnection && (connState === 'closed' || connState === 'failed')) {
+                                console.log(`[VideoConference][${this.role}] Rebuilding peer connection for rejoin...`);
+                                this.peerConnection.close();
+                                this.peerConnection = null;
+                                this.createPeerConnection();
+                                if (this.localStream) this.addLocalTracksToConnection();
+                            }
+                            // Reset offer + ICE state for a clean slate
+                            this.hasCreatedOffer = false;
+                            this.pendingPeerReady = false;
+                            this.pendingIceCandidates = [];
+                            if (this.onParticipantJoinRequest) {
+                                // Admit/reject flow — show modal to instructor
+                                this.pendingPeerReady = true;
+                                this.onParticipantJoinRequest(message);
+                            } else {
+                                console.log(`[VideoConference][${this.role}] Creating offer as initiator...`);
+                                await this.createOffer();
+                            }
+                        }
                     }
                     break;
 
@@ -614,15 +640,29 @@ class VideoConferenceService {
                     break;
 
                 case 'peer_disconnected':
-                    // Peer disconnected - observers should ignore this
+                    // Observers ignore peer disconnection
                     if (this.role === 'observer') {
                         console.log('[VideoConference][observer] Peer disconnected, but observer continues watching');
-                        // Don't close connection for observers
                         break;
                     }
-                    // For non-observers, handle peer disconnection
+                    // Notify the session page (clears remote stream UI, etc.)
                     if (this.onPeerDisconnected) {
                         this.onPeerDisconnected(message.role);
+                    }
+                    // Trainer/Coach: reset offer state and rebuild peer connection so the
+                    // next peer_ready (learner/client rejoin) creates a fresh offer without
+                    // requiring a page refresh.
+                    if (this.role === 'trainer' || this.role === 'coach') {
+                        console.log(`[VideoConference][${this.role}] Peer disconnected — resetting for potential rejoin...`);
+                        this.hasCreatedOffer = false;
+                        this.pendingPeerReady = false;
+                        this.pendingIceCandidates = [];
+                        if (this.peerConnection) {
+                            this.peerConnection.close();
+                            this.peerConnection = null;
+                        }
+                        this.createPeerConnection();
+                        if (this.localStream) this.addLocalTracksToConnection();
                     }
                     break;
 
@@ -670,6 +710,17 @@ class VideoConferenceService {
             }
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error handling signal:`, error);
+        }
+    }
+
+    /**
+     * Admit a pending learner/client after instructor approves the join request.
+     * Call this when instructor clicks "Admit" in the admission modal.
+     */
+    async admitParticipant() {
+        if (this.pendingPeerReady) {
+            this.pendingPeerReady = false;
+            await this.createOffer();
         }
     }
 
