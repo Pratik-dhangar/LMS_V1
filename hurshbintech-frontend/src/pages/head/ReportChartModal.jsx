@@ -25,11 +25,8 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
 
       data.forEach(group => {
         group.reports.forEach(report => {
-          // Convert prompt meter to numeric value
-          let promptValue = report.prompt_meter === 'I' ? 0 : parseInt(report.prompt_meter);
-
-          // Convert reinforcement meter to numeric value
-          let reinforcementValue = report.reinforcement_meter === 'Full' ? 100 : parseInt(report.reinforcement_meter);
+          // Convert prompt meter to numeric value ('I' and '0' = 0/✔, '100' = X, else int)
+          let promptValue = (report.prompt_meter === 'I' || report.prompt_meter === '0') ? 0 : parseInt(report.prompt_meter);
 
           // Format session start time
           const sessionTime = report.session_started_at
@@ -50,7 +47,6 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
             sessionTime: sessionTime,
             fullSessionTime: report.session_started_at || report.created_at,
             prompt: promptValue,
-            reinforcement: reinforcementValue,
             goals: report.session_goals && report.session_goals.length > 0
               ? report.session_goals.join(', ')
               : report.program_name,
@@ -78,7 +74,6 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
           <p className="font-bold text-sm mb-2">{data.sessionTime}</p>
           <p className="text-xs text-gray-700 mb-2"><strong>Goals:</strong> {data.goals}</p>
           <p className="text-xs text-[#DB9D32]"><strong>Prompt:</strong> {data.prompt}</p>
-          <p className="text-xs text-green-600"><strong>Reinforcement:</strong> {data.reinforcement}</p>
         </div>
       );
     }
@@ -154,7 +149,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
           ) : (
             <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">
-                📊 Session Progress - Prompt vs Reinforcement Meters
+                📊 Session Progress - Prompt Meter
               </h3>
               <ResponsiveContainer width="100%" height={500}>
                 <BarChart
@@ -184,12 +179,6 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
                     dataKey="prompt"
                     fill="#DB9D32"
                     name="Prompt Meter"
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="reinforcement"
-                    fill="#10b981"
-                    name="Reinforcement Meter"
                     radius={[8, 8, 0, 0]}
                   />
                 </BarChart>

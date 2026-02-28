@@ -432,18 +432,18 @@ const Checkout = () => {
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>Account Holder</td>
-                                                <td style={{ padding: '12px 0', color: '#2c3e50' }}>HurshBin Technologies Pvt Ltd</td>
+                                                <td style={{ padding: '12px 0', color: '#2c3e50' }}>HurshBin</td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>Account Number</td>
                                                 <td style={{ padding: '10px', color: '#2c3e50', fontFamily: 'monospace', background: '#f8f9fa' }}>
-                                                    1234567890123456
+                                                    50200034124439
                                                 </td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>IFSC Code</td>
                                                 <td style={{ padding: '10px', color: '#2c3e50', fontFamily: 'monospace', background: '#f8f9fa' }}>
-                                                    ICIC0000001
+                                                    HDFC0000538
                                                 </td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>

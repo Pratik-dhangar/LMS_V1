@@ -2794,3 +2794,324 @@ class EmailService:
             html_body=html_body,
             email_type="subscription_inquiry_approved",
         )
+
+    # ========== WELCOME / CREDENTIALS EMAILS ==========
+
+    @staticmethod
+    async def send_welcome_credentials(
+        recipient_email: str,
+        recipient_name: str,
+        role: str,
+        password: str,
+    ) -> bool:
+        """Send welcome email with auto-generated login credentials to a newly registered Trainer or Learner"""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+
+        role_display = role.capitalize()
+        subject = f"Welcome to HurshBintech – Your {role_display} Account is Ready"
+
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 24px 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-size: 22px;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                    }}
+                    .header p {{
+                        margin: 6px 0 0;
+                        font-size: 14px;
+                        opacity: 0.9;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }}
+                    .greeting {{
+                        font-size: 16px;
+                        margin-bottom: 16px;
+                        color: #2c3e50;
+                    }}
+                    .credentials-box {{
+                        background-color: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-left: 4px solid #41A67E;
+                        border-radius: 6px;
+                        padding: 20px 24px;
+                        margin: 24px 0;
+                    }}
+                    .credentials-box h3 {{
+                        margin: 0 0 14px 0;
+                        font-size: 15px;
+                        color: #41A67E;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }}
+                    .credential-row {{
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #e2e8f0;
+                    }}
+                    .credential-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .credential-label {{
+                        font-weight: 600;
+                        color: #555;
+                        font-size: 14px;
+                        min-width: 100px;
+                    }}
+                    .credential-value {{
+                        font-size: 14px;
+                        color: #1a202c;
+                        font-family: 'Courier New', Courier, monospace;
+                        word-break: break-all;
+                    }}
+                    .password-value {{
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #2d8b5e;
+                        letter-spacing: 3px;
+                        font-family: 'Courier New', Courier, monospace;
+                    }}
+                    .warning-box {{
+                        background-color: #fff8e7;
+                        border: 1px solid #f6cc57;
+                        border-radius: 6px;
+                        padding: 14px 18px;
+                        margin: 20px 0;
+                        font-size: 13px;
+                        color: #7d6007;
+                    }}
+                    .warning-box strong {{
+                        color: #5a4500;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    a.link {{
+                        color: #41A67E;
+                        text-decoration: none;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Welcome to HurshBintech!</h1>
+                        <p>Your {role_display} account has been created</p>
+                    </div>
+                    <div class="content">
+                        <p class="greeting">Dear <strong>{recipient_name}</strong>,</p>
+                        <p>
+                            We are pleased to inform you that your <strong>{role_display}</strong> account on
+                            <strong>HurshBintech Child Development Platform</strong> has been successfully created
+                            by your Head.
+                        </p>
+                        <p>Below are your login credentials. Please keep them safe and do not share them with anyone.</p>
+
+                        <div class="credentials-box">
+                            <h3>Your Login Credentials</h3>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td class="credential-label" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:600; color:#555; font-size:14px; width:110px;">Role</td>
+                                    <td class="credential-value" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size:14px; color:#1a202c;">{role_display}</td>
+                                </tr>
+                                <tr>
+                                    <td class="credential-label" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:600; color:#555; font-size:14px;">Email</td>
+                                    <td class="credential-value" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size:14px; color:#1a202c;">{recipient_email}</td>
+                                </tr>
+                                <tr>
+                                    <td class="credential-label" style="padding: 10px 0 6px; font-weight:600; color:#555; font-size:14px;">Password</td>
+                                    <td style="padding: 10px 0 6px;">
+                                        <span class="password-value">{password}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>⚠ Important:</strong> This is an auto-generated password. For your security,
+                            please log in and change your password immediately after your first sign-in.
+                            Never share your password with anyone.
+                        </div>
+
+                        <p>
+                            You can log in to the platform at:
+                            <a href="https://tech.hurshbin.com/" class="link">https://tech.hurshbin.com/</a>
+                        </p>
+
+                        <p>
+                            If you have any questions or need assistance, please contact your Head or
+                            reach out to our support team.
+                        </p>
+
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated credentials email from HurshBintech. Please do not reply.</p>
+                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="welcome_credentials",
+        )
+
+    # ============================================================
+    # VENDOR ORDER NOTIFICATION
+    # ============================================================
+
+    @staticmethod
+    async def send_vendor_order_notification(
+        vendor_email: str,
+        vendor_name: str,
+        order_number: str,
+        customer_name: str,
+        customer_email: str,
+        delivery_address: str,
+        delivery_city: str,
+        delivery_pincode: str,
+        items: list,  # [{"product_name": str, "quantity": int, "unit_price": float, "line_total": float}]
+        total_amount: float,
+    ) -> bool:
+        """Send order fulfilment notification to a vendor listing their assigned products."""
+
+        if not settings.ENABLE_EMAIL or not vendor_email:
+            logger.warning(f"Email sending disabled or no vendor email for {vendor_name}")
+            return False
+
+        subject = f"New Order Assignment #{order_number} – Action Required"
+
+        # Build items rows
+        items_rows = ""
+        for item in items:
+            items_rows += f"""
+            <tr>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">{item['product_name']}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">{item['quantity']}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">₹{float(item['unit_price']):.2f}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">₹{float(item['line_total']):.2f}</td>
+            </tr>"""
+
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }}
+                    .container {{ max-width: 620px; margin: 0 auto; padding: 10px; background-color: #f0f4ff; }}
+                    .header {{ background-color: #41A67E; padding: 24px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
+                    .content {{ background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }}
+                    .section-title {{ font-size: 15px; font-weight: 700; color: #41A67E; margin: 24px 0 8px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }}
+                    .info-grid {{ display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; font-size: 14px; }}
+                    .info-grid .label {{ font-weight: 600; color: #555; }}
+                    table {{ width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }}
+                    thead tr {{ background-color: #f3f4f6; }}
+                    th {{ padding: 10px 12px; text-align: left; color: #6b7280; font-weight: 600; }}
+                    .total-row td {{ padding: 12px; font-weight: 700; font-size: 15px; color: #111; }}
+                    .footer {{ text-align: center; margin-top: 24px; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin:0;font-size:22px;">New Order Assignment</h1>
+                        <p style="margin:6px 0 0;opacity:.9;">Order #{order_number}</p>
+                    </div>
+                    <div class="content">
+                        <p>Dear <strong>{vendor_name}</strong>,</p>
+                        <p>You have been assigned to fulfil the following products for order <strong>#{order_number}</strong>. Please process and ship them to the customer at the address below.</p>
+
+                        <p class="section-title">Customer Details</p>
+                        <div class="info-grid">
+                            <span class="label">Name:</span><span>{customer_name}</span>
+                            <span class="label">Email:</span><span>{customer_email}</span>
+                            <span class="label">Delivery Address:</span><span>{delivery_address}</span>
+                            <span class="label">City:</span><span>{delivery_city}</span>
+                            <span class="label">Pincode:</span><span>{delivery_pincode}</span>
+                        </div>
+
+                        <p class="section-title">Your Products to Fulfil</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th style="text-align:center;">Qty</th>
+                                    <th style="text-align:right;">Unit Price</th>
+                                    <th style="text-align:right;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items_rows}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row" style="background-color:#f9fafb;">
+                                    <td colspan="3" style="padding:12px;font-weight:700;">Total Amount</td>
+                                    <td style="padding:12px;text-align:right;font-weight:700;">₹{float(total_amount):.2f}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <p style="margin-top:24px;font-size:13px;color:#6b7280;">
+                            If you have any questions about this order, please contact our admin team.
+                        </p>
+
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated vendor notification. Please do not reply directly to this email.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=vendor_email,
+            recipient_name=vendor_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="vendor_order_notification",
+        )

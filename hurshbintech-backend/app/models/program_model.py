@@ -1,6 +1,6 @@
 """
 Program Model - Container for Learning Goals and Learning Content in session scheduling
-Goals are locked after creation; content is freely mutable.
+Program goals and content can be inherited by sessions, but sessions can override both.
 """
 
 from datetime import datetime, timezone
@@ -13,8 +13,8 @@ from app.db.session import Base
 
 class Program(Base):
     """
-    A Program bundles a fixed set of goals (locked at creation) with
-    a dynamic set of learning content (mutable at any time).
+    A Program bundles a set of goals and learning content that can be
+    inherited by sessions. Sessions can override both the goals and content.
     Scoped to a specific head + learner pair so the session scheduling
     dropdown stays focused.
     """

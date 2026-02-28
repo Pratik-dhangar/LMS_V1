@@ -117,6 +117,24 @@ const vendorService = {
             throw error.response?.data || error.message;
         }
     },
+
+    /**
+     * Send order items to selected vendors via email
+     * @param {string} orderId - UUID of the order
+     * @param {Array<{item_id: number, vendor_id: number}>} assignments
+     */
+    sendToVendors: async (orderId, assignments) => {
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/orders/admin/orders/${orderId}/send-to-vendors`,
+                { assignments },
+                { headers: getAuthHeaders() }
+            );
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
 };
 
 export default vendorService;

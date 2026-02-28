@@ -43,6 +43,7 @@ from app.api.endpoints.program_assignments import router as program_assignments_
 from app.api.endpoints.programs import router as programs_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
+from app.api.endpoints.learner_progress_reports import router as learner_progress_reports_router
 from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.vlogs import router as vlogs_router
@@ -211,6 +212,7 @@ app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
+app.include_router(learner_progress_reports_router, prefix="/api/learner-progress-reports", tags=["learner-progress-reports"])
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments
 # app.include_router(head_lp_router, prefix="/api")

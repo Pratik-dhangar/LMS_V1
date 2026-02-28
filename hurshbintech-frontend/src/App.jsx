@@ -33,6 +33,10 @@ import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
 import AdminContacts from './pages/admin/AdminContacts';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminVendors from './pages/admin/AdminVendors';
+import AdminManageLearners from './pages/admin/AdminManageLearners';
+import AdminLearnerProgramsView from './pages/admin/AdminLearnerProgramsView';
+import AdminProgramGraphView from './pages/admin/AdminProgramGraphView';
 
 
 // Head Pages
@@ -251,6 +255,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/admin/vendors"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminVendors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/register-head"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -457,6 +469,30 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminContacts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/manage-learners"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminManageLearners />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/learner-programs/:learnerId"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLearnerProgramsView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/learner/:learnerId/program/:programName"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProgramGraphView />
               </ProtectedRoute>
             }
           />

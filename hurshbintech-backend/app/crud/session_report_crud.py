@@ -1,7 +1,7 @@
 """Session Report CRUD Operations
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,24 @@ from app.models.session_report_model import SessionReport
 from app.models.session_model import TrainingSession
 from app.models.user_model import User
 from app.schemas.session_report import SessionReportCreate
+
+
+def _prompt_to_value(prompt_meter: str) -> int:
+    """Convert prompt_meter string to numeric value.
+    'I' and '0' (✔ no-prompt) -> 0, '100' (✗ full-prompt) -> 100, else int.
+    """
+    if prompt_meter in ("I", "0"):
+        return 0
+    return int(prompt_meter)
+
+
+def _reinforcement_to_value(reinforcement_meter: Optional[str]) -> Optional[int]:
+    """Convert reinforcement_meter string to numeric value, or None if not set."""
+    if reinforcement_meter is None:
+        return None
+    if reinforcement_meter == "Full":
+        return 100
+    return int(reinforcement_meter)
 
 
 async def create_session_report(
@@ -125,10 +143,11 @@ async def get_learner_report_statistics(db: AsyncSession, learner_id: int) -> Di
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Program breakdown
         program_breakdown[report.program_name] = program_breakdown.get(report.program_name, 0) + 1
@@ -228,10 +247,11 @@ async def get_overall_statistics(db: AsyncSession) -> Dict:
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Program breakdown
         program_breakdown[report.program_name] = program_breakdown.get(report.program_name, 0) + 1
@@ -280,16 +300,15 @@ async def get_program_statistics(db: AsyncSession, learner_id: int, program_name
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Progress over time
-        prompt_value = 0 if report.prompt_meter == "I" else int(report.prompt_meter)
-        reinforcement_value = (
-            100 if report.reinforcement_meter == "Full" else int(report.reinforcement_meter)
-        )
+        prompt_value = _prompt_to_value(report.prompt_meter)
+        reinforcement_value = _reinforcement_to_value(report.reinforcement_meter)
 
         progress_data.append(
             {
@@ -430,13 +449,9 @@ async def get_session_data_by_program(
     
     session_data = []
     for idx, (report, session) in enumerate(rows, start=1):
-        # Convert prompt meter to numeric value
-        prompt_value = 0 if report.prompt_meter == "I" else int(report.prompt_meter)
-        
-        # Convert reinforcement meter to numeric value
-        reinforcement_value = (
-            100 if report.reinforcement_meter == "Full" else int(report.reinforcement_meter)
-        )
+        # Convert prompt meter to numeric value (0/\u2714=0, 100/\u2717=100, else int)
+        prompt_value = _prompt_to_value(report.prompt_meter)
+        reinforcement_value = _reinforcement_to_value(report.reinforcement_meter)
         
         session_data.append({
             "session_number": idx,

@@ -159,6 +159,80 @@
     justify-content: center;
 }
 
+/* ── Vendor action icon buttons ── */
+.vendor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.vendor-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+    flex-shrink: 0;
+}
+
+.vendor-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.vendor-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Edit — amber */
+.vendor-btn--edit {
+    background: #db9d32;
+    color: #fff;
+}
+
+.vendor-btn--edit:hover {
+    background: #c98d1e;
+}
+
+/* Deactivate — neutral grey */
+.vendor-btn--deactivate {
+    background: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.vendor-btn--deactivate:hover {
+    background: #d1d5db;
+}
+
+/* Activate — green */
+.vendor-btn--activate {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.vendor-btn--activate:hover {
+    background: #a7f3d0;
+}
+
+/* Delete — red */
+.vendor-btn--delete {
+    background: #ef4444;
+    color: #fff;
+}
+
+.vendor-btn--delete:hover {
+    background: #dc2626;
+}
+
 .table-primary-icon-btn {
     display: flex;
     align-items: center;
