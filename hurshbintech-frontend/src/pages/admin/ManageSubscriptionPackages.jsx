@@ -189,7 +189,7 @@ const ManageSubscriptionPackages = () => {
                         </button>
 
                         <div>
-                            <h1 className="page-title">Manage Subscription Packages</h1>
+                            <h1 className="page-title">Manage Manage Learning Packages</h1>
                             <p className="page-description">
                                 Create and manage subscription packages for learners
                             </p>

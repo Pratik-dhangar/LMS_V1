@@ -391,7 +391,7 @@ const CreateAssignedTraining = () => {
                             >
                                 <path d="M15 19l-7-7 7-7"></path>
                             </svg>
-                            Back to Manage Trainings
+                            Back to Manage Learnings
                         </button>
                         <div>
                             <h1 className="page-title">Create Training</h1>

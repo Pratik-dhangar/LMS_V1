@@ -3,6 +3,26 @@ import ChecklistField from '../../common/ChecklistField';
 import '../../../styles/components/head/RegisterLearnerSections.css';
 
 const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
+
+  const handleDobChange = (e) => {
+    handleChange(e); // update dob in formData
+
+    const dob = e.target.value;
+    if (!dob) return;
+
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age >= 0) {
+      handleChange({ target: { name: 'age', value: age } });
+    }
+  };
+
   return (
     <div className="register-section">
       <h2 className="register-section-title">
@@ -61,24 +81,6 @@ const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
           {errors.contact_number && <p className="register-error-text">{errors.contact_number}</p>}
         </div>
 
-        {/* Age */}
-        <div>
-          <label htmlFor="age" className="register-field-label">
-            Age <span className="register-required">*</span>
-          </label>
-          <input
-            type="number"
-            id="age"
-            name="age"
-            value={formData.age}
-            onChange={handleChange}
-            className={`register-input ${errors.age ? 'register-input-error' : ''}`}
-            placeholder="Enter age"
-            min="0"
-          />
-          {errors.age && <p className="register-error-text">{errors.age}</p>}
-        </div>
-
         {/* DOB */}
         <div>
           <label htmlFor="dob" className="register-field-label">
@@ -89,11 +91,34 @@ const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
             id="dob"
             name="dob"
             value={formData.dob}
-            onChange={handleChange}
+            onChange={handleDobChange}
             className={`register-input ${errors.dob ? 'register-input-error' : ''}`}
           />
           {errors.dob && <p className="register-error-text">{errors.dob}</p>}
         </div>
+
+        {/* Age */}
+        <div>
+          <label htmlFor="age" className="register-field-label">
+            Age <span className="register-required">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              id="age"
+              name="age"
+              value={formData.age}
+              onChange={handleChange}
+              readOnly={!!formData.dob}
+              className={`register-input ${errors.age ? 'register-input-error' : ''} ${formData.dob ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              placeholder="Enter age"
+              min="0"
+            />
+          </div>
+          {errors.age && <p className="register-error-text">{errors.age}</p>}
+        </div>
+
+
 
         {/* Date of Assessment */}
         <div>

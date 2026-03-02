@@ -52,6 +52,7 @@ from app.schemas.subscription import (
 )
 from app.models.subscription import RefundType
 from app.services.cache_service import cache_service
+from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/head", tags=["Head Operations"])
 
@@ -194,7 +195,19 @@ async def create_new_trainer(
     
     # Refresh trainer to get the reference_data relationship
     await db.refresh(new_trainer, ['reference_data'])
-    
+
+    # Send welcome email with auto-generated credentials
+    if new_trainer.user.email and hasattr(new_trainer, 'plaintext_passcode') and new_trainer.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_trainer.user.email,
+                recipient_name=new_trainer.user.name,
+                role="Trainer",
+                password=new_trainer.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to trainer {new_trainer.user.email}: {email_exc}")
+
     return TrainerResponse.from_orm_with_user(new_trainer)
 
 
@@ -699,7 +712,19 @@ async def create_new_learner(
     
     # Refresh learner to load user relationship
     await db.refresh(new_learner, ['reference_data', 'user'])
-    
+
+    # Send welcome email with auto-generated credentials
+    if new_learner.user.email and hasattr(new_learner, 'plaintext_passcode') and new_learner.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_learner.user.email,
+                recipient_name=new_learner.user.name,
+                role="Learner",
+                password=new_learner.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to learner {new_learner.user.email}: {email_exc}")
+
     return LearnerResponse.from_orm_with_user(new_learner)
 
 
