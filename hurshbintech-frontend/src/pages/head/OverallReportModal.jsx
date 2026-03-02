@@ -56,7 +56,7 @@ const OverallReportModal = ({ statistics, onClose }) => {
                 {/* Header */}
                 <div className="app-modal-header app-modal-header--primary modal-header-teal">
                     <div>
-                        <h2 className="app-modal-title">📊 Overall Session Reports</h2>
+                        <h2 className="app-modal-title">📊 Overall Learning Progress</h2>
                         <p className="app-modal-subtitle">Statistics across all learners and programs</p>
                     </div>
                     <button

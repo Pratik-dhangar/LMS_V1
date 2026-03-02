@@ -110,9 +110,9 @@ async def create_session(
         new_session.subscription_id = active_subscription.id
 
     # ── Program link ──────────────────────────────────────────────────────────
-    # If a program_id is supplied the program determines which goals are used.
-    # content_ids may be overridden by the caller; when they differ the program
-    # is patched so the next session can auto-populate the updated list.
+    # If a program_id is supplied the program pre-loads goals and content.
+    # Both goals and content_ids may be overridden by the caller; when they differ
+    # the program is patched so the next session can auto-populate the updated list.
     if session_data.program_id:
         program_result = await db.execute(
             select(Program).where(Program.id == session_data.program_id)
@@ -120,10 +120,13 @@ async def create_session(
         program = program_result.scalar_one_or_none()
         if program:
             new_session.program_id = program.id
-            # Goals are always taken from the program (locked)
-            session_data = session_data.model_copy(
-                update={"goal_ids": program.goal_ids or []}
-            )
+            # Goals are pre-loaded from the program but can be edited by caller
+            incoming_goals = session_data.goal_ids
+            if incoming_goals is None or len(incoming_goals) == 0:
+                # No goals passed — use program's stored goals
+                session_data = session_data.model_copy(
+                    update={"goal_ids": program.goal_ids or []}
+                )
             # Sync content back to the program if the caller provided a different list
             incoming_content = session_data.content_ids
             if incoming_content is not None and list(incoming_content) != list(program.content_ids or []):
@@ -379,8 +382,9 @@ async def update_session(
         program = program_result.scalar_one_or_none()
         if program:
             session.program_id = program.id
-            # Goals always come from the program (locked)
-            goal_ids = program.goal_ids or []
+            # Goals are pre-loaded from the program but can be edited
+            if goal_ids is None or len(goal_ids) == 0:
+                goal_ids = program.goal_ids or []
             # Sync content back to the program if caller provided a different list
             if content_ids is not None and list(content_ids) != list(program.content_ids or []):
                 from datetime import timezone as _tz

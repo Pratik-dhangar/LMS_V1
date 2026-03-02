@@ -373,9 +373,8 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                         key={mode}
                                         type="button"
                                         onClick={() => handleProgramModeChange(mode)}
-                                        className={`app-modal-btn ${
-                                            programMode === mode ? 'app-modal-btn--primary' : 'app-modal-btn--secondary'
-                                        }`}
+                                        className={`app-modal-btn ${programMode === mode ? 'app-modal-btn--primary' : 'app-modal-btn--secondary'
+                                            }`}
                                         style={{ fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}
                                     >
                                         {mode === 'none' && 'No Program'}
@@ -412,9 +411,8 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                             <div
                                                                 key={prog.id}
                                                                 onClick={() => handleSelectExistingProgram(prog)}
-                                                                className={`dropdown-item ${
-                                                                    selectedProgramId === prog.id ? 'dropdown-item-selected' : ''
-                                                                }`}
+                                                                className={`dropdown-item ${selectedProgramId === prog.id ? 'dropdown-item-selected' : ''
+                                                                    }`}
                                                             >
                                                                 {prog.name}
                                                                 <span className="dropdown-item-meta">
@@ -488,12 +486,12 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                 <>
                                     {selectedProgramId ? (
                                         <p className="form-helper-text" style={{ marginBottom: '0.5rem' }}>
-                                            Goals are set by the selected program and cannot be changed.
+                                            Goals are pre-loaded from the selected program and can be edited.
                                         </p>
                                     ) : (
                                         <p className="form-helper-text">Choose learning goals for this session</p>
                                     )}
-                                    <div style={selectedProgramId ? { pointerEvents: 'none', opacity: 0.7 } : {}}>
+                                    <div>
                                         <div style={{ marginBottom: '1rem' }}>
                                             <div style={{ position: 'relative' }}>
                                                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={18} />
@@ -527,7 +525,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                             filteredGoals.map((goal) => (
                                                                 <tr key={goal.id} onClick={() => handleGoalToggle(goal.id)} className={`cursor-pointer hover:bg-gray-50 transition-colors ${formData.goal_ids.includes(goal.id) ? 'bg-[#fef3e2]' : ''}`}>
                                                                     <td className="px-4 py-3 whitespace-nowrap">
-                                                                        <input type="checkbox" checked={formData.goal_ids.includes(goal.id)} onChange={() => {}} className="h-4 w-4 text-[#DB9D32] rounded" />
+                                                                        <input type="checkbox" checked={formData.goal_ids.includes(goal.id)} onChange={() => { }} className="h-4 w-4 text-[#DB9D32] rounded" />
                                                                     </td>
                                                                     <td className="px-4 py-3"><div className="text-sm font-medium text-gray-900">{goal.goal}</div></td>
                                                                     <td className="px-4 py-3"><div className="text-sm text-gray-500">{goal.goal_description}</div></td>
@@ -575,45 +573,45 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto border rounded p-2" onScroll={handleContentGridScroll}>
                                         {filteredContents.length > 0 ? (
                                             <>
-                                            {filteredContents.slice(0, contentVisibleCount).map(content => {
-                                                const getContentIcon = (type) => {
-                                                    const icons = { image: '🖼️', pdf: '📄', video: '🎥', audio: '🎵', document: '📝' };
-                                                    return icons[type] || '📁';
-                                                };
-                                                const renderThumbnail = () => {
-                                                    if (content.content_type === 'image' || content.thumbnail_url) {
-                                                        const imageUrl = learningContentService.getFileUrl(content.content_type === 'image' ? content.file_url : content.thumbnail_url);
-                                                        return (
-                                                            <div className="relative w-full h-16 bg-gray-100 rounded overflow-hidden">
-                                                                <img src={imageUrl} alt={content.title} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }} />
-                                                                <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"><span className="text-2xl">{getContentIcon(content.content_type)}</span></div>
+                                                {filteredContents.slice(0, contentVisibleCount).map(content => {
+                                                    const getContentIcon = (type) => {
+                                                        const icons = { image: '🖼️', pdf: '📄', video: '🎥', audio: '🎵', document: '📝' };
+                                                        return icons[type] || '📁';
+                                                    };
+                                                    const renderThumbnail = () => {
+                                                        if (content.content_type === 'image' || content.thumbnail_url) {
+                                                            const imageUrl = learningContentService.getFileUrl(content.content_type === 'image' ? content.file_url : content.thumbnail_url);
+                                                            return (
+                                                                <div className="relative w-full h-16 bg-gray-100 rounded overflow-hidden">
+                                                                    <img src={imageUrl} alt={content.title} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }} />
+                                                                    <div className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"><span className="text-2xl">{getContentIcon(content.content_type)}</span></div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (<div className="w-full h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center"><span className="text-2xl">{getContentIcon(content.content_type)}</span></div>);
+                                                    };
+                                                    return (
+                                                        <div key={content.id} onClick={() => handleContentToggle(content.id)} className={`p-2 border rounded cursor-pointer transition-all relative ${formData.content_ids.includes(content.id) ? 'border-[#DB9D32] bg-[#fef3e2] shadow-md' : 'border-gray-300 hover:border-[#DB9D32] hover:shadow'}`}>
+                                                            {renderThumbnail()}
+                                                            <div className="mt-1.5">
+                                                                <h4 className="font-medium text-xs line-clamp-1" title={content.title}>{content.title}</h4>
+                                                                <p className="text-[10px] text-gray-500 uppercase mt-0.5">{content.content_type}</p>
                                                             </div>
-                                                        );
-                                                    }
-                                                    return (<div className="w-full h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center"><span className="text-2xl">{getContentIcon(content.content_type)}</span></div>);
-                                                };
-                                                return (
-                                                    <div key={content.id} onClick={() => handleContentToggle(content.id)} className={`p-2 border rounded cursor-pointer transition-all relative ${formData.content_ids.includes(content.id) ? 'border-[#DB9D32] bg-[#fef3e2] shadow-md' : 'border-gray-300 hover:border-[#DB9D32] hover:shadow'}`}>
-                                                        {renderThumbnail()}
-                                                        <div className="mt-1.5">
-                                                            <h4 className="font-medium text-xs line-clamp-1" title={content.title}>{content.title}</h4>
-                                                            <p className="text-[10px] text-gray-500 uppercase mt-0.5">{content.content_type}</p>
+                                                            <div className="absolute top-1 right-1">
+                                                                <input type="checkbox" checked={formData.content_ids.includes(content.id)} onChange={() => { }} className="h-3.5 w-3.5 text-[#DB9D32] rounded" />
+                                                            </div>
                                                         </div>
-                                                        <div className="absolute top-1 right-1">
-                                                            <input type="checkbox" checked={formData.content_ids.includes(content.id)} onChange={() => {}} className="h-3.5 w-3.5 text-[#DB9D32] rounded" />
-                                                        </div>
+                                                    );
+                                                })}
+                                                {filteredContents.length > contentVisibleCount && (
+                                                    <div className="col-span-full flex justify-center items-center py-3 text-sm text-gray-400 gap-2">
+                                                        <svg className="animate-spin h-4 w-4 text-[#DB9D32]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                        </svg>
+                                                        Loading more...
                                                     </div>
-                                                );
-                                            })}
-                                            {filteredContents.length > contentVisibleCount && (
-                                                <div className="col-span-full flex justify-center items-center py-3 text-sm text-gray-400 gap-2">
-                                                    <svg className="animate-spin h-4 w-4 text-[#DB9D32]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                    </svg>
-                                                    Loading more...
-                                                </div>
-                                            )}
+                                                )}
                                             </>
                                         ) : (
                                             <div className="col-span-full text-center text-gray-500 py-8">No content matches your search</div>
@@ -626,14 +624,14 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
 
                         {/* Submit Buttons */}
                         <div className="app-modal-footer">
-                             <button
+                            <button
                                 type="button"
                                 onClick={onClose}
                                 className="btn-secondary"
                                 disabled={loading}
                             >
                                 Cancel
-                            </button>   
+                            </button>
                             <button
                                 type="submit"
                                 className="btn-primary"
@@ -641,7 +639,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                             >
                                 {loading ? 'Updating...' : 'Save Changes'}
                             </button>
-                           
+
                         </div>
                     </form>
                 </div>

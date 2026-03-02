@@ -28,10 +28,10 @@ class SessionReport(Base):
     program_name = Column(String(500), nullable=False)
     prompt_meter = Column(
         String(10), nullable=False
-    )  # Values: 'I', '10', '20', '30', '40', '50', '60', '70', '80', '90'
+    )  # Values: '0'(✔/no prompt), '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'(✗/full prompt)
     reinforcement_meter = Column(
-        String(10), nullable=False
-    )  # Values: 'Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'
+        String(10), nullable=True
+    )  # Values: 'Full', '90', '80', '70', '60', '50', '40', '30', '20', '10' (optional, no longer required)
 
     # Relationships
     session = relationship("TrainingSession", backref="session_reports")

@@ -1,5 +1,5 @@
 """
-Session Reports API Endpoints
+Manage Learning Progress API Endpoints
 """
 
 from typing import List
@@ -120,11 +120,11 @@ async def get_learners_summary(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
-    Get all learners with report summaries (Head only)
+    Get all learners with report summaries (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads can access learner summaries"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads and admins can access learner summaries"
         )
 
     learners_data = await session_report_crud.get_all_learners_with_reports(db)
@@ -136,11 +136,11 @@ async def get_overall_statistics(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
-    Get overall statistics across all learners (Head only)
+    Get overall statistics across all learners (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads can access overall statistics"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads and admins can access overall statistics"
         )
 
     stats = await session_report_crud.get_overall_statistics(db)
@@ -153,12 +153,12 @@ async def get_unique_learners(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all unique learners from session reports (Head only)
+    Get all unique learners from session reports (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads and admins can access this endpoint",
         )
 
     learners = await session_report_crud.get_unique_learners_from_session_reports(db)
@@ -172,12 +172,12 @@ async def get_learner_programs(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all unique programs/goals for a specific learner (Head only)
+    Get all unique programs/goals for a specific learner (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads and admins can access this endpoint",
         )
 
     programs = await session_report_crud.get_programs_by_learner(db, learner_id)
@@ -197,10 +197,10 @@ async def get_program_session_data(
     """
     print(f"[get_program_session_data] learner_id={learner_id}, program_name={program_name}")
     
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads and admins can access this endpoint",
         )
 
     session_data = await session_report_crud.get_session_data_by_program(

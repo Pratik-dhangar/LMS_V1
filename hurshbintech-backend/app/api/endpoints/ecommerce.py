@@ -4,15 +4,16 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_current_admin, get_db
 from app.core.config import settings
-from app.crud import ecommerce_crud
+from app.crud import ecommerce_crud, vendor_crud
 from app.models.user_model import User
 from app.models.ecommerce_model import OrderStatus
 from app.schemas.ecommerce import (
@@ -979,3 +980,108 @@ async def mark_order_delivered(
             detail=f"Failed to mark order as delivered: {str(e)}"
         )
 
+
+# ============================================================
+# SEND ORDER ITEMS TO VENDORS VIA EMAIL
+# ============================================================
+
+class VendorItemAssignment(BaseModel):
+    item_id: UUID
+    vendor_id: int
+
+
+class SendToVendorsRequest(BaseModel):
+    assignments: List[VendorItemAssignment]
+
+
+@router.post("/admin/orders/{order_id}/send-to-vendors")
+async def send_order_to_vendors(
+    order_id: UUID,
+    body: SendToVendorsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """
+    Send assigned order items to the selected vendors via email.
+    Groups items by vendor and sends one email per vendor.
+    """
+    order = await ecommerce_crud.get_order_by_id(db, order_id)
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    await db.refresh(order, ["user", "items"])
+
+    # Build item map: item_id -> item object
+    item_map = {item.id: item for item in order.items}
+
+    # Group assignments by vendor_id
+    vendor_items: dict[int, list] = {}
+    for assignment in body.assignments:
+        if assignment.item_id not in item_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Item {assignment.item_id} not found in order",
+            )
+        vendor_items.setdefault(assignment.vendor_id, []).append(item_map[assignment.item_id])
+
+    if not vendor_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No item-vendor assignments provided",
+        )
+
+    customer_name = order.user.name if order.user else "Customer"
+    customer_email = order.customer_email or (order.user.email if order.user else "")
+
+    emails_sent = 0
+    errors = []
+
+    for vendor_id, items in vendor_items.items():
+        vendor = await vendor_crud.get_vendor(db, vendor_id)
+        if not vendor:
+            errors.append(f"Vendor {vendor_id} not found")
+            continue
+
+        item_dicts = [
+            {
+                "product_name": item.product_name,
+                "quantity": item.quantity,
+                "unit_price": float(item.unit_price),
+                "line_total": float(item.line_total),
+            }
+            for item in items
+        ]
+        vendor_total = sum(i["line_total"] for i in item_dicts)
+
+        try:
+            sent = await EmailService.send_vendor_order_notification(
+                vendor_email=vendor.email,
+                vendor_name=vendor.name,
+                order_number=order.order_number,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                delivery_address=order.delivery_address or "",
+                delivery_city=order.delivery_city or "",
+                delivery_pincode=order.delivery_pincode or "",
+                items=item_dicts,
+                total_amount=vendor_total,
+            )
+            if sent:
+                emails_sent += 1
+            else:
+                errors.append(f"Failed to send email to vendor {vendor.name}")
+        except Exception as e:
+            logger.error(f"Error sending email to vendor {vendor_id}: {str(e)}")
+            errors.append(f"Error sending to vendor {vendor.name}: {str(e)}")
+
+    if emails_sent == 0 and errors:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"All vendor emails failed: {'; '.join(errors)}",
+        )
+
+    return {
+        "message": f"Emails sent to {emails_sent} vendor(s)",
+        "emails_sent": emails_sent,
+        "errors": errors,
+    }

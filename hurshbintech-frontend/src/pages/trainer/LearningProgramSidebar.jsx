@@ -130,29 +130,28 @@ const LearningProgramSidebar = ({
             {['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'].map((p) => (
               <div
                 key={p}
-                className={`meter-button ${
-                  p === '0' || p === '100'
-                    ? ''
-                    : selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'
-                }`}
+                className={`meter-button ${p === '0' || p === '100'
+                  ? ''
+                  : selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'
+                  }`}
                 style={
                   p === '0'
                     ? {
-                        backgroundColor: selectedPromptLevel === '0' ? '#15803d' : '#16a34a',
-                        borderColor: '#16a34a',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }
+                      backgroundColor: selectedPromptLevel === '0' ? '#15803d' : '#16a34a',
+                      borderColor: '#16a34a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }
                     : p === '100'
-                    ? {
+                      ? {
                         backgroundColor: selectedPromptLevel === '100' ? '#991b1b' : '#dc2626',
                         borderColor: '#dc2626',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }
-                    : {}
+                      : {}
                 }
                 title={p === '0' ? 'No prompt needed (0)' : p === '100' ? 'Full prompt needed (100)' : `Prompt level ${p}`}
                 onClick={() => {
@@ -173,8 +172,8 @@ const LearningProgramSidebar = ({
                   </svg>
                 ) : p === '100' ? (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                    <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round"/>
-                    <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round"/>
+                    <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                    <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
                   </svg>
                 ) : p}
               </div>
@@ -187,6 +186,19 @@ const LearningProgramSidebar = ({
             </div>
           )} */}
         </div>
+        {/* Save Report Button */}
+        {selectedProgramId && selectedPromptLevel && (
+          <button
+            onClick={() => onSaveReport({
+              programId: selectedProgramId,
+              programName: selectedProgram?.goal || 'Unknown Program',
+              promptMeter: selectedPromptLevel
+            })}
+            className="btn-primary w-60 ml-3.5"
+          >
+            💾 Save Learning Progress
+          </button>
+        )}
 
         <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
         <div className="meter-container meter-container-green">
@@ -213,20 +225,7 @@ const LearningProgramSidebar = ({
           )} */}
         </div>
 
-        {/* Save Report Button */}
-        {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
-          <button
-            onClick={() => onSaveReport({
-              programId: selectedProgramId,
-              programName: selectedProgram?.goal || 'Unknown Program',
-              promptMeter: selectedPromptLevel,
-              reinforcementMeter: selectedReinforcementLevel
-            })}
-            className="btn-primary w-50 ml-3.5"
-          >
-            💾 Save Session Report
-          </button>
-        )}
+
 
 
         {/* Speech Section */}

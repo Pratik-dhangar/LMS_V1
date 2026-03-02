@@ -357,7 +357,7 @@ const SubscriptionRecords = () => {
             </button>
 
             <div>
-              <h1 className="page-title">Subscription Records & Analytics</h1>
+              <h1 className="page-title">Manage Learning Payment Records & Analytics</h1>
               <p className="page-description">
                 View all subscription records and analyze revenue trends
               </p>
@@ -371,7 +371,7 @@ const SubscriptionRecords = () => {
               onClick={() => handleTabChange('records')}
             >
               <Package size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              Subscription Records
+              Manage Learning Payment Records
             </button>
             <button
               className={`sub-tab-btn ${activeTab === 'inquiries' ? 'sub-tab-btn-active' : ''}`}
@@ -450,7 +450,6 @@ const SubscriptionRecords = () => {
                           <tr>
                             <th className="table-primary-th table-primary-th-id">ID</th>
                             <th className="table-primary-th">Learner</th>
-                            <th className="table-primary-th">Passcode</th>
                             <th className="table-primary-th">Package</th>
                             <th className="table-primary-th">HEAD</th>
                             <th className="table-primary-th table-primary-th-center">Sessions</th>
@@ -466,24 +465,6 @@ const SubscriptionRecords = () => {
                             <tr key={sub.id} className="table-primary-row">
                               <td className="table-primary-td table-primary-td-id">{sub.id}</td>
                               <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
-                              <td className="table-primary-td">
-                                <div className="passcode-display-inline">
-                                  <span className="table-primary-badge">
-                                    {visiblePasscodes[sub.learner_id] ? visiblePasscodes[sub.learner_id] : '••••••'}
-                                  </span>
-                                  <button
-                                    onClick={() => togglePasscodeVisibility(sub.learner_id)}
-                                    className="table-primary-icon-btn"
-                                    title={visiblePasscodes[sub.learner_id] ? 'Hide passcode' : 'Show passcode'}
-                                  >
-                                    {visiblePasscodes[sub.learner_id] ? (
-                                      <EyeOff className="table-primary-icon-sm" />
-                                    ) : (
-                                      <Eye className="table-primary-icon-sm" />
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
                               <td className="table-primary-td">{sub.package_name}</td>
                               <td className="table-primary-td subscription-head-name" data-empty="Not assigned">{sub.head_name || `HEAD ${sub.head_id || 'N/A'}`}</td>
                               <td className="table-primary-td table-primary-td-center">

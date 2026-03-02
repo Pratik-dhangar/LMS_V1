@@ -713,7 +713,15 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
     )
     if existing_user.scalar_one_or_none():
         raise ValueError(f"Email {learner_data.email} is already registered")
-    
+
+    # Check if contact number already exists
+    if learner_data.contact_number:
+        existing_contact = await db.execute(
+            select(User).where(User.contact_number == learner_data.contact_number)
+        )
+        if existing_contact.scalar_one_or_none():
+            raise ValueError(f"Contact number {learner_data.contact_number} is already registered")
+
     # Generate passcode if not provided
     passcode = learner_data.passcode or generate_passcode("LEARNER", learner_data.name)
 

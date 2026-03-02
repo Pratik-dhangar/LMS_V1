@@ -10,8 +10,10 @@ import {
   AlertCircle,
   FileUp,
   TrendingUp,
+  Mail,
 } from "lucide-react";
 import { getFileUrl } from "../../utils/fileUrlBuilder";
+import vendorService from "../../api/services/vendorService";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/admin/PaymentVerification.css";
 
@@ -28,10 +30,56 @@ const PaymentVerification = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showReceiptPreview, setShowReceiptPreview] = useState(false);
   const [previewReceiptUrl, setPreviewReceiptUrl] = useState("");
+  const [vendors, setVendors] = useState([]);
+  const [selectedVendors, setSelectedVendors] = useState({}); // { itemId: vendorId }
+  const [sendingToVendors, setSendingToVendors] = useState(false);
+  const [vendorEmailSent, setVendorEmailSent] = useState(null); // { count, names }
 
   useEffect(() => {
     loadPendingOrders();
+    loadVendors();
   }, [filter]);
+
+  const loadVendors = async () => {
+    try {
+      const data = await vendorService.getAllVendors(0, 200, true);
+      setVendors(data);
+    } catch (err) {
+      console.error("Failed to load vendors:", err);
+    }
+  };
+
+  const handleSendToVendors = async () => {
+    const assignments = Object.entries(selectedVendors)
+      .filter(([, vendorId]) => vendorId)
+      .map(([itemId, vendorId]) => ({ item_id: itemId, vendor_id: parseInt(vendorId) }));
+
+    if (assignments.length === 0) {
+      toast.warning("Please assign at least one vendor to a product first.");
+      return;
+    }
+
+    try {
+      setSendingToVendors(true);
+      const result = await vendorService.sendToVendors(selectedOrder.order_id, assignments);
+      if (result.errors?.length) {
+        result.errors.forEach((e) => toast.warning(e));
+      }
+      // Get vendor names for the success banner
+      const sentVendorIds = [...new Set(assignments.map((a) => parseInt(a.vendor_id)))];
+      const sentNames = sentVendorIds
+        .map((id) => vendors.find((v) => v.id === id)?.name)
+        .filter(Boolean);
+      setVendorEmailSent({ count: result.emails_sent, names: sentNames });
+      setTimeout(() => setVendorEmailSent(null), 4000);
+      setSelectedVendors({});
+    } catch (err) {
+      console.error("Failed to send to vendors:", err);
+      toast.error(err?.detail || "Failed to send emails to vendors.");
+    } finally {
+      setSendingToVendors(false);
+    }
+  };
 
   const loadPendingOrders = async () => {
     try {
@@ -199,457 +247,505 @@ const PaymentVerification = () => {
 
   return (
     <div className="page-main">
-        <div className="page-content">
-          <div className="page-header">
-            <button
-              onClick={() => navigate("/admin/dashboard")}
-              className="back-button"
+      <div className="page-content">
+        <div className="page-header">
+          <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="back-button"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M15 19l-7-7 7-7"></path>
-              </svg>
-              Back to Dashboard
-            </button>
-            {/* Left Side: Title and Subtitle */}
-            <div>
-              <h1 className="page-title">MarketPlace Orders</h1>
-            </div>
+              <path d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Dashboard
+          </button>
+          {/* Left Side: Title and Subtitle */}
+          <div>
+            <h1 className="page-title">MarketPlace Orders</h1>
           </div>
-
-          {/* Filters */}
-          <div className="payment-verification-filters">
-            {[
-              "ALL",
-              "PAYMENT_UPLOADED",
-              "PAYMENT_APPROVED",
-              "DELIVERED",
-              "PAYMENT_REJECTED",
-            ].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`payment-verification-filter-btn ${filter === status ? "active" : "inactive"
-                  }`}
-              >
-                {status === "ALL" && "All"}
-                {status === "PAYMENT_UPLOADED" && "Pending"}
-                {status === "PAYMENT_APPROVED" && "Approved"}
-                {status === "DELIVERED" && "Delivered"}
-                {status === "PAYMENT_REJECTED" && "Rejected"}
-              </button>
-            ))}
-          </div>
-
-          {/* Orders List */}
-          {loading ? (
-            <div className="payment-verification-loading">
-              Loading orders...
-            </div>
-          ) : orders.length === 0 ? (
-            <div className="payment-verification-empty">
-              <FileUp size={48} className="payment-verification-empty-icon" />
-              <p>No orders found</p>
-            </div>
-          ) : (
-            <div className="payment-verification-table-container">
-              <table className="payment-verification-table">
-                <thead>
-                  <tr>
-                    <th>Order #</th>
-                    <th>Status</th>
-                    <th>Amount</th>
-                    <th>Payment Method</th>
-                    <th>Items</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr
-                      key={order.order_id}
-                      className={`payment-verification-table-row ${order.status === "PAYMENT_REJECTED" ? "rejected-row" : ""
-                        }`}
-                    >
-                      <td className="payment-verification-order-number">
-                        #{order.order_number}
-                      </td>
-                      
-                      <td className="payment-verification-status">
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td className="payment-verification-amount">
-                        <span className="amount-value">
-                          {formatCurrency(order.total_amount)}
-                        </span>
-                      </td>
-                      <td className="payment-verification-method">
-                        {order.payment_method === "UPI_QR"
-                          ? "UPI QR"
-                          : "Bank Transfer"}
-                      </td>
-                      <td className="payment-verification-items">
-                        {order.items?.length || 0} products
-                      </td>
-                      <td className="payment-verification-date">
-                        {formatDate(order.created_at)}
-                      </td>
-                      <td className="payment-verification-actions-cell">
-                        <div className="payment-verification-actions">
-                          <button
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowDetails(true);
-                            }}
-                            className="payment-verification-btn payment-verification-btn-view"
-                            title="View Details"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          {order.status === "PAYMENT_APPROVED" && (
-                            <button
-                              onClick={() => handleMarkDelivered(order.order_id)}
-                              disabled={delivering}
-                              className="payment-verification-btn payment-verification-btn-delivered"
-                              title="Mark as Delivered"
-                            >
-                              <TrendingUp size={16} />
-                            </button>
-                          )}
-                          {order.status === "PAYMENT_UPLOADED" && (
-                            <>
-                              <button
-                                onClick={() => handleApprovePayment(order.order_id)}
-                                disabled={approving}
-                                className="payment-verification-btn payment-verification-btn-approve"
-                                title="Approve Payment"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleRejectPayment(order.order_id)}
-                                disabled={rejecting}
-                                className="payment-verification-btn payment-verification-btn-reject"
-                                title="Reject Payment"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
-        {/* Order Details Modal */}
-        {showDetails && selectedOrder && (
-          <div className="payment-verification-modal-overlay">
-            <div className="payment-verification-modal">
-              <h2 className="payment-verification-modal-title">
-                Order #{selectedOrder.order_number} Details
-              </h2>
-
-              {/* Customer Info */}
-              <div className="payment-verification-modal-section">
-                <h3 className="payment-verification-section-title">
-                  Customer Information
-                </h3>
-                <div className="payment-verification-section-content">
-                  <p>
-                    <strong>Name:</strong> {selectedOrder.user_name}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {selectedOrder.user_email}
-                  </p>
-                  <p>
-                    <strong>Delivery Address:</strong>{" "}
-                    {selectedOrder.delivery_address}
-                  </p>
-                  <p>
-                    <strong>City:</strong> {selectedOrder.delivery_city}
-                  </p>
-                  <p>
-                    <strong>Pincode:</strong> {selectedOrder.delivery_pincode}
-                  </p>
-                </div>
-              </div>
-
-              {/* Order Items */}
-              <div className="payment-verification-modal-section">
-                <h3 className="payment-verification-section-title">
-                  Order Items
-                </h3>
-                <div className="payment-verification-items-container">
-                  {selectedOrder.items?.map((item, idx) => (
-                    <div key={idx} className="payment-verification-item">
-                      <div className="payment-verification-item-header">
-                        <strong>{item.product_name}</strong>
-                        <span>x{item.quantity}</span>
-                      </div>
-                      <div className="payment-verification-item-details">
-                        <span>
-                          Unit Price: {formatCurrency(item.unit_price)}
-                        </span>
-                        <span>Subtotal: {formatCurrency(item.line_total)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Payment Summary */}
-              <div className="payment-verification-modal-section">
-                <h3 className="payment-verification-section-title">
-                  Payment Summary
-                </h3>
-                <div className="payment-verification-section-content">
-                  <div className="payment-verification-summary-row">
-                    <span>Subtotal:</span>
-                    <span>
-                      {formatCurrency(
-                        parseFloat(selectedOrder.total_amount) +
-                        parseFloat(selectedOrder.discount_total || 0)
-                      )}
-                    </span>
-                  </div>
-                  <div className="payment-verification-summary-row discount">
-                    <span>Discount:</span>
-                    <span>
-                      -{formatCurrency(selectedOrder.discount_total || 0)}
-                    </span>
-                  </div>
-                  <div className="payment-verification-summary-row total">
-                    <span>Total Amount:</span>
-                    <span>{formatCurrency(selectedOrder.total_amount)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Receipt Preview */}
-              <div className="payment-verification-modal-section">
-                <h3 className="payment-verification-section-title">
-                  Payment Receipt
-                </h3>
-                {selectedOrder.payment_receipt ? (
-                  <div className="payment-verification-receipt-container">
-                    {selectedOrder.payment_receipt.file_type?.toLowerCase() ===
-                      "pdf" ? (
-                      <div className="payment-verification-pdf-placeholder">
-                        <FileUp
-                          size={32}
-                          className="payment-verification-pdf-icon"
-                        />
-                        <p className="payment-verification-pdf-info">
-                          PDF Document
-                        </p>
-                        <p className="payment-verification-pdf-name">
-                          {selectedOrder.payment_receipt.file_name}
-                        </p>
-                        <a
-                          href={
-                            selectedOrder.payment_receipt.s3_path.startsWith(
-                              "http"
-                            )
-                              ? selectedOrder.payment_receipt.s3_path
-                              : getFileUrl(
-                                selectedOrder.payment_receipt.s3_path
-                              )
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="payment-verification-pdf-link"
-                        >
-                          Download PDF
-                        </a>
-                      </div>
-                    ) : (
-                      (() => {
-                        const receiptUrl =
-                          selectedOrder.payment_receipt?.s3_path;
-                        // Backend now returns full URLs, but handle both cases
-                        let imageUrl;
-                        if (
-                          receiptUrl.startsWith("https://") ||
-                          receiptUrl.startsWith("http://")
-                        ) {
-                          imageUrl = receiptUrl;
-                          console.log(
-                            "Payment Receipt: Using direct URL:",
-                            imageUrl
-                          );
-                        } else {
-                          imageUrl = getFileUrl(receiptUrl);
-                          console.log(
-                            "Payment Receipt: Converted path to URL:",
-                            imageUrl
-                          );
-                        }
-                        return (
-                          <img
-                            src={imageUrl}
-                            alt="Payment Receipt"
-                            onClick={() => {
-                              setPreviewReceiptUrl(imageUrl);
-                              setShowReceiptPreview(true);
-                            }}
-                            className="payment-verification-receipt-image"
-                            onError={(e) => {
-                              console.error(
-                                "Failed to load payment receipt image:",
-                                imageUrl
-                              );
-                              e.target.parentElement.innerHTML =
-                                '<div style="padding: 2rem; text-align: center; color: #6b7280;">Failed to load receipt image</div>';
-                            }}
-                          />
-                        );
-                      })()
-                    )}
-                    <div className="payment-verification-receipt-meta">
-                      <p>
-                        <strong>Uploaded:</strong>{" "}
-                        {new Date(
-                          selectedOrder.payment_receipt.uploaded_at
-                        ).toLocaleString()}
-                      </p>
-                      <p>
-                        <strong>File:</strong>{" "}
-                        {selectedOrder.payment_receipt.file_name}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="payment-verification-no-receipt">
-                    <AlertCircle
-                      size={20}
-                      className="payment-verification-no-receipt-icon"
-                    />
-                    <div>
-                      <p className="payment-verification-no-receipt-title">
-                        No Receipt Uploaded
-                      </p>
-                      <p className="payment-verification-no-receipt-text">
-                        Admin cannot verify or approve payment without a
-                        receipt.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Rejection Reason Input (for pending orders) */}
-              {selectedOrder.status === "PAYMENT_UPLOADED" && (
-                <div className="payment-verification-modal-section">
-                  <label className="payment-verification-input-label">
-                    Rejection Reason (if rejecting){" "}
-                    <span className="required">*</span>
-                  </label>
-                  <textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Enter reason for rejection..."
-                    className="payment-verification-textarea"
-                  />
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="payment-verification-modal-actions">
-                <button
-                  onClick={() => {
-                    setShowDetails(false);
-                    setSelectedOrder(null);
-                    setRejectionReason("");
-                  }}
-                  className="payment-verification-btn-close"
-                >
-                  Close
-                </button>
-                {selectedOrder.status === "PAYMENT_UPLOADED" && (
-                  <>
-                    <button
-                      onClick={() =>
-                        handleApprovePayment(selectedOrder.order_id)
-                      }
-                      disabled={approving || !selectedOrder.payment_receipt}
-                      title={
-                        !selectedOrder.payment_receipt
-                          ? "Receipt must be uploaded before approval"
-                          : ""
-                      }
-                      className="payment-verification-btn-modal-approve"
-                    >
-                      {approving
-                        ? "Approving..."
-                        : "Approve Payment & Proceed to Shipping"}
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleRejectPayment(selectedOrder.order_id)
-                      }
-                      disabled={
-                        rejecting ||
-                        !rejectionReason.trim() ||
-                        !selectedOrder.payment_receipt
-                      }
-                      title={
-                        !selectedOrder.payment_receipt
-                          ? "Receipt must be present for rejection"
-                          : ""
-                      }
-                      className="payment-verification-btn-modal-reject"
-                    >
-                      {rejecting ? "Rejecting..." : "Reject Payment"}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Receipt Preview Modal */}
-        {showReceiptPreview && previewReceiptUrl && (
-          <div
-            className="payment-verification-preview-overlay"
-            onClick={() => setShowReceiptPreview(false)}
-          >
-            <div
-              className="payment-verification-preview-container"
-              onClick={(e) => e.stopPropagation()}
+        {/* Filters */}
+        <div className="payment-verification-filters">
+          {[
+            "ALL",
+            "PAYMENT_UPLOADED",
+            "PAYMENT_APPROVED",
+            "DELIVERED",
+            "PAYMENT_REJECTED",
+          ].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`payment-verification-filter-btn ${filter === status ? "active" : "inactive"
+                }`}
             >
-              {/* Close Button - Top Right Corner */}
-              <button
-                onClick={() => setShowReceiptPreview(false)}
-                className="payment-verification-preview-close"
-                title="Close preview"
-              >
-                ✕
-              </button>
+              {status === "ALL" && "All"}
+              {status === "PAYMENT_UPLOADED" && "Pending"}
+              {status === "PAYMENT_APPROVED" && "Approved"}
+              {status === "DELIVERED" && "Delivered"}
+              {status === "PAYMENT_REJECTED" && "Rejected"}
+            </button>
+          ))}
+        </div>
 
-              {/* Receipt Image */}
-              <img
-                src={previewReceiptUrl}
-                alt="Receipt Preview"
-                className="payment-verification-preview-image"
-              />
-            </div>
+        {/* Orders List */}
+        {loading ? (
+          <div className="payment-verification-loading">
+            Loading orders...
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="payment-verification-empty">
+            <FileUp size={48} className="payment-verification-empty-icon" />
+            <p>No orders found</p>
+          </div>
+        ) : (
+          <div className="payment-verification-table-container">
+            <table className="payment-verification-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Items</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr
+                    key={order.order_id}
+                    className={`payment-verification-table-row ${order.status === "PAYMENT_REJECTED" ? "rejected-row" : ""
+                      }`}
+                  >
+                    <td className="payment-verification-order-number">
+                      #{order.order_number}
+                    </td>
+
+                    <td className="payment-verification-status">
+                      {getStatusBadge(order.status)}
+                    </td>
+                    <td className="payment-verification-amount">
+                      <span className="amount-value">
+                        {formatCurrency(order.total_amount)}
+                      </span>
+                    </td>
+                    <td className="payment-verification-method">
+                      {order.payment_method === "UPI_QR"
+                        ? "UPI QR"
+                        : "Bank Transfer"}
+                    </td>
+                    <td className="payment-verification-items">
+                      {order.items?.length || 0} products
+                    </td>
+                    <td className="payment-verification-date">
+                      {formatDate(order.created_at)}
+                    </td>
+                    <td className="payment-verification-actions-cell">
+                      <div className="payment-verification-actions">
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setShowDetails(true);
+                          }}
+                          className="payment-verification-btn payment-verification-btn-view"
+                          title="View Details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {order.status === "PAYMENT_APPROVED" && (
+                          <button
+                            onClick={() => handleMarkDelivered(order.order_id)}
+                            disabled={delivering}
+                            className="payment-verification-btn payment-verification-btn-delivered"
+                            title="Mark as Delivered"
+                          >
+                            <TrendingUp size={16} />
+                          </button>
+                        )}
+                        {order.status === "PAYMENT_UPLOADED" && (
+                          <>
+                            <button
+                              onClick={() => handleApprovePayment(order.order_id)}
+                              disabled={approving}
+                              className="payment-verification-btn payment-verification-btn-approve"
+                              title="Approve Payment"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRejectPayment(order.order_id)}
+                              disabled={rejecting}
+                              className="payment-verification-btn payment-verification-btn-reject"
+                              title="Reject Payment"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      {/* Order Details Modal */}
+      {showDetails && selectedOrder && (
+        <div className="payment-verification-modal-overlay">
+          <div className="payment-verification-modal">
+            <h2 className="payment-verification-modal-title">
+              Order #{selectedOrder.order_number} Details
+            </h2>
+
+            {/* Customer Info */}
+            <div className="payment-verification-modal-section">
+              <h3 className="payment-verification-section-title">
+                Customer Information
+              </h3>
+              <div className="payment-verification-section-content">
+                <p>
+                  <strong>Name:</strong> {selectedOrder.user_name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedOrder.user_email}
+                </p>
+                <p>
+                  <strong>Delivery Address:</strong>{" "}
+                  {selectedOrder.delivery_address}
+                </p>
+                <p>
+                  <strong>City:</strong> {selectedOrder.delivery_city}
+                </p>
+                <p>
+                  <strong>Pincode:</strong> {selectedOrder.delivery_pincode}
+                </p>
+              </div>
+            </div>
+
+            {/* Order Items */}
+            <div className="payment-verification-modal-section">
+              <h3 className="payment-verification-section-title">
+                Order Items
+              </h3>
+              <div className="payment-verification-items-container">
+                {selectedOrder.items?.map((item, idx) => (
+                  <div key={idx} className="payment-verification-item">
+                    <div className="payment-verification-item-header">
+                      <strong>{item.product_name}</strong>
+                      <span>x{item.quantity}</span>
+                    </div>
+                    <div className="payment-verification-item-details">
+                      <span>
+                        Unit Price: {formatCurrency(item.unit_price)}
+                      </span>
+                      <span>Subtotal: {formatCurrency(item.line_total)}</span>
+                    </div>
+                    {/* Vendor selector */}
+                    <div className="pv-vendor-select-row">
+                      <label className="pv-vendor-label">Assign Vendor:</label>
+                      <select
+                        className="pv-vendor-select"
+                        value={selectedVendors[item.id] || ""}
+                        onChange={(e) =>
+                          setSelectedVendors((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">— Select vendor —</option>
+                        {vendors.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name}{v.company_name ? ` (${v.company_name})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            <div className="payment-verification-modal-section">
+              <h3 className="payment-verification-section-title">
+                Payment Summary
+              </h3>
+              <div className="payment-verification-section-content">
+                <div className="payment-verification-summary-row">
+                  <span>Subtotal:</span>
+                  <span>
+                    {formatCurrency(
+                      parseFloat(selectedOrder.total_amount) +
+                      parseFloat(selectedOrder.discount_total || 0)
+                    )}
+                  </span>
+                </div>
+                <div className="payment-verification-summary-row discount">
+                  <span>Discount:</span>
+                  <span>
+                    -{formatCurrency(selectedOrder.discount_total || 0)}
+                  </span>
+                </div>
+                <div className="payment-verification-summary-row total">
+                  <span>Total Amount:</span>
+                  <span>{formatCurrency(selectedOrder.total_amount)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Receipt Preview */}
+            <div className="payment-verification-modal-section">
+              <h3 className="payment-verification-section-title">
+                Payment Receipt
+              </h3>
+              {selectedOrder.payment_receipt ? (
+                <div className="payment-verification-receipt-container">
+                  {selectedOrder.payment_receipt.file_type?.toLowerCase() ===
+                    "pdf" ? (
+                    <div className="payment-verification-pdf-placeholder">
+                      <FileUp
+                        size={32}
+                        className="payment-verification-pdf-icon"
+                      />
+                      <p className="payment-verification-pdf-info">
+                        PDF Document
+                      </p>
+                      <p className="payment-verification-pdf-name">
+                        {selectedOrder.payment_receipt.file_name}
+                      </p>
+                      <a
+                        href={
+                          selectedOrder.payment_receipt.s3_path.startsWith(
+                            "http"
+                          )
+                            ? selectedOrder.payment_receipt.s3_path
+                            : getFileUrl(
+                              selectedOrder.payment_receipt.s3_path
+                            )
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="payment-verification-pdf-link"
+                      >
+                        Download PDF
+                      </a>
+                    </div>
+                  ) : (
+                    (() => {
+                      const receiptUrl =
+                        selectedOrder.payment_receipt?.s3_path;
+                      // Backend now returns full URLs, but handle both cases
+                      let imageUrl;
+                      if (
+                        receiptUrl.startsWith("https://") ||
+                        receiptUrl.startsWith("http://")
+                      ) {
+                        imageUrl = receiptUrl;
+                        console.log(
+                          "Payment Receipt: Using direct URL:",
+                          imageUrl
+                        );
+                      } else {
+                        imageUrl = getFileUrl(receiptUrl);
+                        console.log(
+                          "Payment Receipt: Converted path to URL:",
+                          imageUrl
+                        );
+                      }
+                      return (
+                        <img
+                          src={imageUrl}
+                          alt="Payment Receipt"
+                          onClick={() => {
+                            setPreviewReceiptUrl(imageUrl);
+                            setShowReceiptPreview(true);
+                          }}
+                          className="payment-verification-receipt-image"
+                          onError={(e) => {
+                            console.error(
+                              "Failed to load payment receipt image:",
+                              imageUrl
+                            );
+                            e.target.parentElement.innerHTML =
+                              '<div style="padding: 2rem; text-align: center; color: #6b7280;">Failed to load receipt image</div>';
+                          }}
+                        />
+                      );
+                    })()
+                  )}
+                  <div className="payment-verification-receipt-meta">
+                    <p>
+                      <strong>Uploaded:</strong>{" "}
+                      {new Date(
+                        selectedOrder.payment_receipt.uploaded_at
+                      ).toLocaleString()}
+                    </p>
+                    <p>
+                      <strong>File:</strong>{" "}
+                      {selectedOrder.payment_receipt.file_name}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="payment-verification-no-receipt">
+                  <AlertCircle
+                    size={20}
+                    className="payment-verification-no-receipt-icon"
+                  />
+                  <div>
+                    <p className="payment-verification-no-receipt-title">
+                      No Receipt Uploaded
+                    </p>
+                    <p className="payment-verification-no-receipt-text">
+                      Admin cannot verify or approve payment without a
+                      receipt.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rejection Reason Input (for pending orders) */}
+            {selectedOrder.status === "PAYMENT_UPLOADED" && (
+              <div className="payment-verification-modal-section">
+                <label className="payment-verification-input-label">
+                  Rejection Reason (if rejecting){" "}
+                  <span className="required">*</span>
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection..."
+                  className="payment-verification-textarea"
+                />
+              </div>
+            )}
+
+            {/* Vendor Email Sent Banner */}
+            {vendorEmailSent && (
+              <div className="pv-email-sent-banner">
+                <div className="pv-email-sent-check">
+                  <svg viewBox="0 0 52 52" className="pv-checkmark">
+                    <circle className="pv-checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                    <path className="pv-checkmark-tick" fill="none" d="M14 27 l8 8 l16-16" />
+                  </svg>
+                </div>
+                <div className="pv-email-sent-text">
+                  <strong>Email{vendorEmailSent.count > 1 ? 's' : ''} sent successfully!</strong>
+                  <span>{vendorEmailSent.names.join(', ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="payment-verification-modal-actions">
+              <button
+                onClick={() => {
+                  setShowDetails(false);
+                  setSelectedOrder(null);
+                  setRejectionReason("");
+                  setSelectedVendors({});
+                  setVendorEmailSent(null);
+                }}
+                className="payment-verification-btn-close"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSendToVendors}
+                disabled={sendingToVendors || Object.values(selectedVendors).every((v) => !v)}
+                className="payment-verification-btn-send-vendor"
+                title="Send assigned products to vendor(s) via email"
+              >
+                <Mail size={16} style={{ marginRight: 6 }} />
+                {sendingToVendors ? "Sending..." : "Send to Vendors"}
+              </button>
+              {selectedOrder.status === "PAYMENT_UPLOADED" && (
+                <>
+                  <button
+                    onClick={() =>
+                      handleApprovePayment(selectedOrder.order_id)
+                    }
+                    disabled={approving || !selectedOrder.payment_receipt}
+                    title={
+                      !selectedOrder.payment_receipt
+                        ? "Receipt must be uploaded before approval"
+                        : ""
+                    }
+                    className="payment-verification-btn-modal-approve"
+                  >
+                    {approving
+                      ? "Approving..."
+                      : "Approve Payment & Proceed to Shipping"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleRejectPayment(selectedOrder.order_id)
+                    }
+                    disabled={
+                      rejecting ||
+                      !rejectionReason.trim() ||
+                      !selectedOrder.payment_receipt
+                    }
+                    title={
+                      !selectedOrder.payment_receipt
+                        ? "Receipt must be present for rejection"
+                        : ""
+                    }
+                    className="payment-verification-btn-modal-reject"
+                  >
+                    {rejecting ? "Rejecting..." : "Reject Payment"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Preview Modal */}
+      {showReceiptPreview && previewReceiptUrl && (
+        <div
+          className="payment-verification-preview-overlay"
+          onClick={() => setShowReceiptPreview(false)}
+        >
+          <div
+            className="payment-verification-preview-container"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button - Top Right Corner */}
+            <button
+              onClick={() => setShowReceiptPreview(false)}
+              className="payment-verification-preview-close"
+              title="Close preview"
+            >
+              ✕
+            </button>
+
+            {/* Receipt Image */}
+            <img
+              src={previewReceiptUrl}
+              alt="Receipt Preview"
+              className="payment-verification-preview-image"
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
