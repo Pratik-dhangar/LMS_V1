@@ -55,4 +55,5 @@ EC2 DEPLOYMENT (UAT) — docker-compose.uat.yml
     docker builder prune -a -f
     docker system prune -a -f
 
-
+15. to stop all running containers
+     docker compose -f docker-compose.uat.yml down
