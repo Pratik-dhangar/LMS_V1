@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_BASE_URL=https://hurshbin.lumesoftai.in:8001/api
-        - VITE_WS_URL=wss://hurshbin.lumesoftai.in
+        - VITE_WS_URL=wss://hurshbin.lumesoftai.in:8001
         - ENVIRONMENT=production
         - VITE_ENABLE_PWA=true
         - VITE_GOOGLE_CLIENT_ID=594243784455-qehgec7ij9lqnvo38jumb5m29ttv4gck.apps.googleusercontent.com
