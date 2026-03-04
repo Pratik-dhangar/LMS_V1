@@ -4,6 +4,10 @@ EC2 DEPLOYMENT (UAT) — docker-compose.uat.yml
 
 1. Login to EC2 as root user. Use Authy code for authentication.
 
+   IMPORTANT: System Nginx must be disabled — Docker container serves port 443 directly.
+   If system nginx ever starts and blocks port 443, run:
+     sudo systemctl stop nginx && sudo systemctl disable nginx
+
 2. Connect to EC2 instance - 'frontend-test-instance'
 
 3. cd hurshbintech-pwa
@@ -48,7 +52,7 @@ EC2 DEPLOYMENT (UAT) — docker-compose.uat.yml
     -- start
        docker compose -f docker-compose.uat.yml up -d coturn
 
-13. Verify nginx config loaded inside container (should show listen 3000 ssl and AWS S3)
+13. Verify nginx config loaded inside container (should show listen 443 ssl and server_name hurshbin.lumesoftai.in)
     docker exec hurshbintech-frontend-pwa cat /etc/nginx/conf.d/default.conf
 
 14. to clear unused docker images

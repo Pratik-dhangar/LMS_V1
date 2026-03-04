@@ -18,8 +18,19 @@ const learningContentService = {
   // Get file URL - handles S3 URLs, proxy URLs, local paths, and full URLs
   getFileUrl: (fileUrl) => {
     if (!fileUrl) return '';
-    // If already a full URL (presigned or direct), return as is
-    if (fileUrl.startsWith('http')) return fileUrl;
+    // If already a full URL, check if it's an old frontend-proxy S3 URL (e.g. :3001/s3/...)
+    // and rewrite to current frontend origin before returning
+    if (fileUrl.startsWith('http')) {
+      try {
+        const urlObj = new URL(fileUrl);
+        if (urlObj.pathname.startsWith('/s3/') &&
+            !urlObj.hostname.includes('amazonaws.com') &&
+            !urlObj.hostname.includes('neevcloud.com')) {
+          return `${window.location.origin}${urlObj.pathname}`;
+        }
+      } catch (_) { /* fall through */ }
+      return fileUrl;
+    }
     // Handle S3 URLs (s3://bucket/key) - convert to backend proxy for signed access
     if (fileUrl.startsWith('s3://')) {
       const parts = fileUrl.replace('s3://', '').split('/');
