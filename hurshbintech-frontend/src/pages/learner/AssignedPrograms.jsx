@@ -378,11 +378,11 @@ const AssignedPrograms = () => {
               Back to Dashboard
             </button>
             <h1 className="page-title">
-              Assigned Programs (Home Program)
+              Assigned Programs (Home Learning Program)
             </h1>
           </div>
 
-          {/* Assigned Home Programs */}
+          {/* Assigned Home Learning Programs */}
           <div style={{
             marginTop: '2.5rem',
             background: '#ffffff',
@@ -398,7 +398,7 @@ const AssignedPrograms = () => {
               paddingBottom: '0.75rem',
               marginBottom: '1rem'
             }}>
-              📚 Assigned Home Programs
+              📚 Assigned Home Learning Programs
             </h2>
 
             {loadingPrograms ? (

@@ -16,8 +16,10 @@ class LearnerProgressReportCreate(BaseModel):
     date_of_birth: Optional[date] = None
     date_of_report: date
     birth_history: Optional[str] = None
+    development_history: Optional[str] = None
+    learning_history: Optional[str] = None
 
-    # 9 Areas of Development
+    # Functional Development Overview through overall development
     attention_cooperation: Optional[str] = None
     sensory_integration_motor: Optional[str] = None
     speech_language_communication: Optional[str] = None
@@ -29,9 +31,11 @@ class LearnerProgressReportCreate(BaseModel):
     professional_development: Optional[str] = None
 
     # Summary
+    intervention_plan: Optional[str] = None
     recommendation: Optional[str] = None
     conclusion: Optional[str] = None
     report_created_by: Optional[str] = None
+    digital_signature: Optional[str] = None
 
 
 class LearnerProgressReportUpdate(BaseModel):
@@ -41,6 +45,8 @@ class LearnerProgressReportUpdate(BaseModel):
     date_of_birth: Optional[date] = None
     date_of_report: Optional[date] = None
     birth_history: Optional[str] = None
+    development_history: Optional[str] = None
+    learning_history: Optional[str] = None
 
     attention_cooperation: Optional[str] = None
     sensory_integration_motor: Optional[str] = None
@@ -52,9 +58,11 @@ class LearnerProgressReportUpdate(BaseModel):
     academic_readiness: Optional[str] = None
     professional_development: Optional[str] = None
 
+    intervention_plan: Optional[str] = None
     recommendation: Optional[str] = None
     conclusion: Optional[str] = None
     report_created_by: Optional[str] = None
+    digital_signature: Optional[str] = None
 
 
 class LearnerProgressReportResponse(BaseModel):
@@ -66,6 +74,8 @@ class LearnerProgressReportResponse(BaseModel):
     date_of_birth: Optional[date]
     date_of_report: date
     birth_history: Optional[str]
+    development_history: Optional[str]
+    learning_history: Optional[str]
 
     attention_cooperation: Optional[str]
     sensory_integration_motor: Optional[str]
@@ -77,9 +87,11 @@ class LearnerProgressReportResponse(BaseModel):
     academic_readiness: Optional[str]
     professional_development: Optional[str]
 
+    intervention_plan: Optional[str]
     recommendation: Optional[str]
     conclusion: Optional[str]
     report_created_by: Optional[str]
+    digital_signature: Optional[str]
 
     # S3 PDF URL (None on local dev, populated on deploy)
     pdf_url: Optional[str] = None

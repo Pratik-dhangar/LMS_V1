@@ -6,10 +6,11 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_current_user, get_db, get_current_head
 from app.crud import session_report_crud
-from app.models.user_model import User, UserRole
+from app.models.user_model import User, UserRole, HeadProfile
 from app.schemas.session_report import (
     LearnerReportSummary,
     SessionReportCreate,
@@ -154,6 +155,8 @@ async def get_unique_learners(
 ):
     """
     Get all unique learners from session reports (Head and Admin)
+    - HEAD: sees only their own learners
+    - ADMIN: sees all learners
     """
     if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
@@ -161,7 +164,22 @@ async def get_unique_learners(
             detail="Only heads and admins can access this endpoint",
         )
 
-    learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+    # If HEAD, only show learners created by this head
+    if current_user.role == UserRole.HEAD:
+        result = await db.execute(
+            select(HeadProfile).where(HeadProfile.user_id == current_user.id)
+        )
+        head_profile = result.scalar_one_or_none()
+        if not head_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Head profile not found",
+            )
+        learners = await session_report_crud.get_unique_learners_from_session_reports(db, head_id=head_profile.id)
+    else:
+        # ADMIN sees all learners
+        learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+    
     return learners
 
 
@@ -254,10 +272,25 @@ async def get_learner_pdf_data(
     """
     Get comprehensive data for PDF generation
     Supports both single program and all programs report
+    HEAD: can only access learners they created
     """
     try:
-        # Get learner info
-        learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+        # Get learner info - filter by head if not admin
+        if current_user.role == UserRole.HEAD:
+            result = await db.execute(
+                select(HeadProfile).where(HeadProfile.user_id == current_user.id)
+            )
+            head_profile = result.scalar_one_or_none()
+            if not head_profile:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Head profile not found",
+                )
+            learners = await session_report_crud.get_unique_learners_from_session_reports(db, head_id=head_profile.id)
+        else:
+            # ADMIN sees all
+            learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+        
         learner = next((l for l in learners if l["learner_id"] == learner_id), None)
         
         if not learner:

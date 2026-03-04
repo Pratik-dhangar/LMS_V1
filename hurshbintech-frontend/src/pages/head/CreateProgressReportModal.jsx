@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import learnerProgressReportService from '../../api/services/learnerProgressReportService';
 import headService from '../../api/services/headService';
+import coachService from '../../api/services/coachService';
 import { generateLearnerProgressReportPDF } from '../../utils/pdfGenerator';
 import '../../styles/components/common/Modal.css';
 
@@ -23,6 +24,8 @@ const EMPTY_FORM = {
     date_of_birth: '',
     date_of_report: new Date().toISOString().split('T')[0],
     birth_history: '',
+    development_history: '',
+    learning_history: '',
     attention_cooperation: '',
     sensory_integration_motor: '',
     speech_language_communication: '',
@@ -32,9 +35,11 @@ const EMPTY_FORM = {
     independent_living: '',
     academic_readiness: '',
     professional_development: '',
+    intervention_plan: '',
     recommendation: '',
     conclusion: '',
     report_created_by: '',
+    digital_signature: '',
 };
 
 /**
@@ -51,6 +56,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
     const [step, setStep] = useState('form'); // 'form' | 'preview'
     const [saving, setSaving] = useState(false);
     const [selectedLearnerId, setSelectedLearnerId] = useState(learnerId);
+    const DEFAULT_SIGNATURE_IMG = '/sign/sign.jpeg'; // Default signature image from public folder
 
     // Learner dropdown state
     const [learners, setLearners] = useState([]);
@@ -69,12 +75,29 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
         }
     }, [user]);
 
-    // Fetch learners on mount
+    // Fetch learners on mount — HEAD uses headService, COACH uses coachService
     useEffect(() => {
-        headService.getAllLearners()
-            .then(data => setLearners(data || []))
-            .catch(() => { });
-    }, []);
+        if (user?.role?.toLowerCase() === 'coach') {
+            coachService.getAvailableLearners()
+                .then(data => {
+                    // Normalize coach learner data to match head format; preserve all fields
+                    const normalized = (data || []).map(l => ({
+                        ...l,  // Keep all original fields
+                        id: l.id || l.user_id,
+                        user_id: l.user_id || l.id,
+                        name: l.name,
+                        dob: l.dob || l.date_of_birth,
+                        date_of_birth: l.date_of_birth || l.dob,
+                    }));
+                    setLearners(normalized);
+                })
+                .catch(() => { });
+        } else {
+            headService.getAllLearners()
+                .then(data => setLearners(data || []))
+                .catch(() => { });
+        }
+    }, [user]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -136,7 +159,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
             const created = await learnerProgressReportService.create(payload);
             toast.success('Progress report saved! Downloading PDF…');
             // Generate and download PDF in the exact HurshBin branded format
-            const pdfBlob = await generateLearnerProgressReportPDF(form);
+            const pdfBlob = await generateLearnerProgressReportPDF(form, { signatureImage: DEFAULT_SIGNATURE_IMG });
             // Upload PDF to S3 on deploy (USE_S3=true); silently skipped on local
             if (pdfBlob) {
                 learnerProgressReportService.uploadPDF(created.id, pdfBlob);
@@ -193,7 +216,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                         {/* ── Basic Info ── */}
                         <SectionHeading title="Basic Information" />
                         <div style={gridStyle(2)}>
-                            {/* Learner Name — searchable dropdown */}
+                            {/* Learner Name — searchable dropdown for both Head and Coach */}
                             <Field label="Name *">
                                 <div ref={dropdownRef} style={{ position: 'relative' }}>
                                     <input
@@ -206,7 +229,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                                             if (!e.target.value) setSelectedLearnerId(null);
                                         }}
                                         onFocus={() => setShowDropdown(true)}
-                                        placeholder="Search or type learner name..."
+                                        placeholder={user?.role?.toLowerCase() === 'coach' ? 'Search or type learner name...' : 'Search or type learner name...'}
                                         required
                                         style={inputStyle}
                                         autoComplete="off"
@@ -286,8 +309,28 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                             />
                         </Field>
 
-                        {/* ── 9 Areas of Development ── */}
-                        <SectionHeading title="9 Areas of Development" subtitle="Provide assessment notes for each area" />
+                        <Field label="Development History">
+                            <textarea
+                                value={form.development_history}
+                                onChange={(e) => handleChange('development_history', e.target.value)}
+                                placeholder="Describe developmental history..."
+                                rows={3}
+                                style={{ ...inputStyle, resize: 'vertical' }}
+                            />
+                        </Field>
+
+                        <Field label="Learning History">
+                            <textarea
+                                value={form.learning_history}
+                                onChange={(e) => handleChange('learning_history', e.target.value)}
+                                placeholder="Describe learning history..."
+                                rows={3}
+                                style={{ ...inputStyle, resize: 'vertical' }}
+                            />
+                        </Field>
+
+                        {/* ── Functional Development Overview through overall development ── */}
+                        <SectionHeading title="Functional Development Overview through overall development" subtitle="Provide assessment notes for each area" />
                         {DEVELOPMENT_AREAS.map((area, idx) => (
                             <Field key={area.key} label={`${idx + 1}. ${area.label}`}>
                                 <textarea
@@ -300,8 +343,20 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                             </Field>
                         ))}
 
+                        {/* ── Professional Development Section ── */}
+                        <SectionHeading title="Additional Assessment Areas" />
+                        <Field label="The Immediate Intervention Plan">
+                            <textarea
+                                value={form.intervention_plan}
+                                onChange={(e) => handleChange('intervention_plan', e.target.value)}
+                                placeholder="Describe the immediate intervention plan..."
+                                rows={3}
+                                style={{ ...inputStyle, resize: 'vertical' }}
+                            />
+                        </Field>
+
                         {/* ── Summary ── */}
-                        <SectionHeading title="Summary" />
+                        <SectionHeading title="Summary & Signature" />
                         <Field label="Recommendation">
                             <textarea
                                 value={form.recommendation}
@@ -319,6 +374,22 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                                 rows={3}
                                 style={{ ...inputStyle, resize: 'vertical' }}
                             />
+                        </Field>
+                        <Field label="Digital Signature">
+                            <div style={{
+                                width: '120px',
+                                height: '80px',
+                                border: '2px solid #e5e7eb',
+                                borderRadius: '0.5rem',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: '#f9fafb'
+                            }}>
+                                <img src={DEFAULT_SIGNATURE_IMG} alt="Digital Signature" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.5rem 0 0' }}>Default signature from public folder</p>
                         </Field>
 
                         {/* Actions */}
@@ -363,7 +434,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                     {/* Report Title */}
                     <div style={{ textAlign: 'center', borderBottom: '3px solid #7c1c1c', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
                         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#7c1c1c', margin: 0 }}>
-                            DEVELOPMENTAL PROGRESS REPORT
+                            The Comprehensive Skill Development Evaluation Report
                         </h1>
                         <p style={{ margin: '0.4rem 0 0', color: '#555', fontSize: '0.95rem' }}>HurshBinTech Learning Centre</p>
                     </div>
@@ -377,10 +448,12 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                             <PreviewField label="Report Created By" value={form.report_created_by} />
                         </div>
                         {form.birth_history && <PreviewField label="Birth History" value={form.birth_history} block />}
+                        {form.development_history && <PreviewField label="Development History" value={form.development_history} block />}
+                        {form.learning_history && <PreviewField label="Learning History" value={form.learning_history} block />}
                     </PreviewSection>
 
                     {/* 9 Areas */}
-                    <PreviewSection title="9 Areas of Development">
+                    <PreviewSection title="Functional Development Overview through overall development">
                         {DEVELOPMENT_AREAS.map((area, idx) => (
                             form[area.key] ? (
                                 <div key={area.key} style={{ marginBottom: '1rem' }}>
@@ -395,23 +468,53 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                         ))}
                     </PreviewSection>
 
-                    {/* Summary */}
+                    {/* Intervention Plan */}
+                    {form.intervention_plan && (
+                        <PreviewSection title="Additional Assessment Areas">
+                            <PreviewField label="The Immediate Intervention Plan" value={form.intervention_plan} block />
+                        </PreviewSection>
+                    )}
+
+                    {/* Summary & Conclusion */}
                     {(form.recommendation || form.conclusion) && (
-                        <PreviewSection title="Summary">
+                        <PreviewSection title="Summary & Recommendations">
                             {form.recommendation && <PreviewField label="Recommendation" value={form.recommendation} block />}
                             {form.conclusion && <PreviewField label="Conclusion" value={form.conclusion} block />}
                         </PreviewSection>
                     )}
 
-                    {/* Signature */}
-                    {form.report_created_by && (
-                        <div style={{ marginTop: '2rem', textAlign: 'right', borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
-                            <p style={{ fontSize: '0.9rem', color: '#555', margin: 0 }}>Report Prepared By</p>
-                            <p style={{ fontWeight: 700, color: '#333', margin: '0.3rem 0 0', fontSize: '1rem' }}>
-                                {form.report_created_by}
+                    {/* Signature & Disclaimer */}
+                    <div style={{ marginTop: '2.5rem', borderTop: '2px solid #7c1c1c', paddingTop: '1.5rem' }}>
+                        {form.report_created_by && (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#555', margin: '0 0 0.5rem', fontWeight: 600 }}>Report Prepared By</p>
+                                <p style={{ fontWeight: 700, color: '#333', margin: '0.2rem 0 0' }}>{form.report_created_by}</p>
+                                {/* Signature Image */}
+                                <div style={{
+                                    width: '120px',
+                                    height: '80px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '0.5rem',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: '#f9fafb',
+                                    margin: '0.5rem 0 0'
+                                }}>
+                                    <img src={DEFAULT_SIGNATURE_IMG} alt="Digital Signature" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                </div>
+                                <p style={{ fontSize: '0.85rem', color: '#555', margin: '0.7rem 0 0', fontWeight: 600 }}>Ms. Binal Shah MA. BCBA</p>
+                            </div>
+                        )}
+
+                        {/* Disclaimer */}
+                        <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '0.5rem', padding: '1rem', marginTop: '1rem' }}>
+                            <p style={{ fontSize: '0.75rem', color: '#78350f', margin: 0, lineHeight: 1.6 }}>
+                                <strong>Disclaimer:</strong> This report has been prepared based on observations, assessments, interactions, tools and information provided by parents/caregivers at the time of evaluation.
                             </p>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Actions */}
@@ -431,7 +534,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
 /* ── Helpers ─────────────────────────────────────────── */
 
 const SectionHeading = ({ title, subtitle }) => (
-    <div style={{ margin: '1.5rem 0 0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f3d98b' }}>
+    <div style={{ margin: '1.5rem 0 0.75rem', paddingBottom: '0.5rem', borderBottom: '2px solid #f3d98b', textAlign: 'center' }}>
         <h3 style={{ margin: 0, color: '#7c1c1c', fontSize: '1rem', fontWeight: 700 }}>{title}</h3>
         {subtitle && <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#888' }}>{subtitle}</p>}
     </div>

@@ -598,7 +598,7 @@ const LearnerProgramAssignmentDetails = () => {
                 </ul>
               ) : (
                 <p className="no-programs">
-                  No programs assigned to this Home Program title yet.
+                  No programs assigned to this Home Learning Program title yet.
                 </p>
               )}
             </div>

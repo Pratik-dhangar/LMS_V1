@@ -1074,19 +1074,23 @@ async def get_available_learners(
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
     """Get all available learners for adding to sessions"""
+    from sqlalchemy.orm import selectinload
+    
     result = await db.execute(
         select(User)
         .where(User.role == UserRole.LEARNER)
         .where(User.is_active == True)
+        .options(selectinload(User.learner_profile))
         .order_by(User.name)
     )
-    users = result.scalars().all()
+    users = result.unique().scalars().all()
     
     return [
         {
             "id": user.id,
             "name": user.name,
-            "role": user.role.value
+            "role": user.role.value,
+            "date_of_birth": user.learner_profile.dob if user.learner_profile else None
         }
         for user in users
     ]

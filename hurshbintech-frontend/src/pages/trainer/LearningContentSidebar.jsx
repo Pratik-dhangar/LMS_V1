@@ -101,7 +101,7 @@ const LearningContentSidebar = ({
       </div>
 
       <div className="sidebar-section-title">
-        {learningContentSearch ? '🔍 Search Results' : '📋 Assigned IIP Content'}
+        {learningContentSearch ? '🔍 Search Results' : '📋 Assigned ILP Content'}
       </div>
 
       <div className="sidebar-content-list">

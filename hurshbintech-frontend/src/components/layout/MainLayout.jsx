@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import MessagingWidget from '../chat/MessagingWidget';
+import BuySubscriptionModal from '../common/BuySubscriptionModal';
 import { useAuth } from '../../context/AuthContext';
 
 /**
@@ -17,19 +18,25 @@ import { useAuth } from '../../context/AuthContext';
 const MainLayout = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   // Hide messaging widget on session pages
-  const isSessionPage = location.pathname.includes('/session/') || 
-                        location.pathname.includes('/guest-session/') || 
-                        location.pathname.includes('/observer-session/');
+  const isSessionPage = location.pathname.includes('/session/') ||
+    location.pathname.includes('/guest-session/') ||
+    location.pathname.includes('/observer-session/');
 
   return (
     <>
-      <Navbar />
+      <Navbar setShowSubscriptionModal={setShowSubscriptionModal} />
       <Outlet />
       <Footer />
       {/* LinkedIn-style messaging widget - hidden on session pages */}
       {user && !isSessionPage && <MessagingWidget />}
+
+      {/* Buy Learning Program Modal */}
+      {showSubscriptionModal && (
+        <BuySubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
+      )}
     </>
   );
 };

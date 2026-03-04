@@ -1068,7 +1068,7 @@ const ScheduleSession = () => {
                 Cancel
               </button>
               <button type="submit" className="modern-form-btn modern-form-btn-primary" disabled={loading}>
-                {loading ? "Scheduling..." : "Schedule IIP"}
+                {loading ? "Scheduling..." : "Schedule ILP"}
               </button>
             </div>
           </form>

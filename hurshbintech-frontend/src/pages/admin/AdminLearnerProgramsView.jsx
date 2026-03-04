@@ -330,7 +330,7 @@ const AdminLearnerProgramsView = () => {
                         >
                             <div>
                                 <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: "bold", margin: 0 }}>
-                                    📊 All Programs Progress Report
+                                    📊 Latest Skilled Development
                                 </h2>
                                 <p style={{ color: "rgba(255,255,255,0.85)", margin: "4px 0 0", fontSize: "0.95rem" }}>
                                     <strong>{pdfPreviewData.learnerName}</strong>

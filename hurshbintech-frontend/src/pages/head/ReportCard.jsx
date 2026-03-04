@@ -18,6 +18,8 @@ const ReportCard = () => {
   const [showCreateReportModal, setShowCreateReportModal] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [previewingId, setPreviewingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   useEffect(() => {
     fetchAllLearners();
@@ -68,7 +70,7 @@ const ReportCard = () => {
   const handleDownloadProgressReport = async (report) => {
     try {
       setDownloadingId(report.id);
-      await generateLearnerProgressReportPDF(report);
+      await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg' });
     } catch (e) {
       toast.error('Failed to download report');
     } finally {
@@ -79,11 +81,25 @@ const ReportCard = () => {
   const handlePreviewProgressReport = async (report) => {
     try {
       setPreviewingId(report.id);
-      await generateLearnerProgressReportPDF(report, { previewOnly: true });
+      await generateLearnerProgressReportPDF(report, { previewOnly: true, signatureImage: '/sign/sign.jpeg' });
     } catch (e) {
       toast.error('Failed to preview report');
     } finally {
       setPreviewingId(null);
+    }
+  };
+
+  const handleDeleteProgressReport = async (report) => {
+    try {
+      setDeletingId(report.id);
+      await learnerProgressReportService.delete(report.id);
+      toast.success('Report deleted successfully');
+      setShowDeleteConfirm(null);
+      fetchProgressReports();
+    } catch (e) {
+      toast.error('Failed to delete report');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -131,7 +147,7 @@ const ReportCard = () => {
             <div className="search-section" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <input
                 type="text"
-                placeholder="🔍 Search by learner name or IIP ID..."
+                placeholder="🔍 Search by learner name or ILP ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="search-input"
@@ -183,20 +199,21 @@ const ReportCard = () => {
                           <th className="table-primary-th">Learner Name</th>
                           <th className="table-primary-th">Sessions</th>
                           <th className="table-primary-th">Last Session</th>
-                          <th className="table-primary-th">Programs Covered</th>
+                          <th className="table-primary-th">Goals</th>
                           <th className="table-primary-th">All Program Goals Report</th>
                           <th className="table-primary-th">Final Generated Reports</th>
                         </tr>
                       </thead>
                       <tbody className="table-primary-body">
                         {filteredLearners.map((learner, idx) => {
-                          const progReports = progressReportsMap[learner.learner_id] || [];
+                          const progReports = (progressReportsMap[learner.learner_id] || [])
+                            .filter(r => r.report_created_by?.toLowerCase().includes('(head)'));
                           return (
                             <tr key={learner.learner_id} className="table-primary-row">
                               <td className="table-primary-td">{idx + 1}</td>
                               <td className="table-primary-td">
                                 <div className="table-primary-cell-name-text">{learner.learner_name}</div>
-                                {learner.iip_id && <div className="table-primary-cell-subtitle">IIP: {learner.iip_id}</div>}
+                                {learner.iip_id && <div className="table-primary-cell-subtitle">ILP: {learner.iip_id}</div>}
                               </td>
                               <td className="table-primary-td" style={{ textAlign: 'center' }}>
                                 <span style={{ fontWeight: 700, color: '#7c1c1c', fontSize: '1.1rem' }}>{learner.total_sessions}</span>
@@ -251,6 +268,76 @@ const ReportCard = () => {
                                         >
                                           {downloadingId === r.id ? '…' : '⬇ PDF'}
                                         </button>
+                                        <button
+                                          onClick={() => setShowDeleteConfirm(r.id)}
+                                          disabled={deletingId === r.id}
+                                          style={deleteBtnStyle}
+                                          title="Delete this report"
+                                        >
+                                          {deletingId === r.id ? '…' : '🗑 Delete'}
+                                        </button>
+                                        {showDeleteConfirm === r.id && (
+                                          <div style={{
+                                            position: 'fixed',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            backgroundColor: 'rgba(0,0,0,0.5)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            zIndex: 1000
+                                          }}>
+                                            <div style={{
+                                              backgroundColor: 'white',
+                                              padding: '2rem',
+                                              borderRadius: '0.5rem',
+                                              boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                                              maxWidth: '500px',
+                                              textAlign: 'center'
+                                            }}>
+                                              <h3 style={{ color: '#7c1c1c', marginBottom: '1rem' }}>Delete Report?</h3>
+                                              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+                                                Are you sure you want to delete this report? This action cannot be undone.
+                                              </p>
+                                              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                                <button
+                                                  onClick={() => setShowDeleteConfirm(null)}
+                                                  style={{
+                                                    background: '#e5e7eb',
+                                                    color: '#374151',
+                                                    border: 'none',
+                                                    borderRadius: '0.35rem',
+                                                    padding: '0.6rem 1.5rem',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer'
+                                                  }}
+                                                >
+                                                  Cancel
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteProgressReport(r)}
+                                                  disabled={deletingId === r.id}
+                                                  style={{
+                                                    background: 'linear-gradient(135deg, #b91c1c, #dc2626)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '0.35rem',
+                                                    padding: '0.6rem 1.5rem',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 600,
+                                                    cursor: deletingId === r.id ? 'not-allowed' : 'pointer',
+                                                    opacity: deletingId === r.id ? 0.7 : 1
+                                                  }}
+                                                >
+                                                  {deletingId === r.id ? 'Deleting...' : 'Delete Report'}
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -287,6 +374,18 @@ const ReportCard = () => {
 
 const dlBtnStyle = {
   background: 'linear-gradient(135deg, #7c1c1c, #a83232)',
+  color: 'white',
+  border: 'none',
+  borderRadius: '0.35rem',
+  padding: '0.25rem 0.6rem',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
+
+const deleteBtnStyle = {
+  background: 'linear-gradient(135deg, #b91c1c, #dc2626)',
   color: 'white',
   border: 'none',
   borderRadius: '0.35rem',

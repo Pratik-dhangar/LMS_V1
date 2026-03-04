@@ -30,8 +30,10 @@ class LearnerProgressReport(Base):
     date_of_birth = Column(Date, nullable=True)
     date_of_report = Column(Date, nullable=False)
     birth_history = Column(Text, nullable=True)
+    development_history = Column(Text, nullable=True)
+    learning_history = Column(Text, nullable=True)
 
-    # 9 Areas of Development
+    # Functional Development Overview through overall development
     attention_cooperation = Column(Text, nullable=True)
     sensory_integration_motor = Column(Text, nullable=True)
     speech_language_communication = Column(Text, nullable=True)
@@ -43,9 +45,11 @@ class LearnerProgressReport(Base):
     professional_development = Column(Text, nullable=True)
 
     # Summary fields
+    intervention_plan = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
     conclusion = Column(Text, nullable=True)
     report_created_by = Column(String(255), nullable=True)
+    digital_signature = Column(String(1024), nullable=True)
 
     # S3 PDF storage (populated on deploy when USE_S3=true)
     pdf_url = Column(String(1024), nullable=True)

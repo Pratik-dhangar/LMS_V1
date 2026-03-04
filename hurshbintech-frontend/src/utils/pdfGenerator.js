@@ -188,7 +188,7 @@ export const generateProgressReportPDF = (data, options = {}) => {
         doc.setFontSize(22);
         doc.setTextColor(52, 73, 94);
         doc.setFont('helvetica', 'bold');
-        const title = programName ? 'Program Progress Report' : 'Overall Progress Report';
+        const title = programName ? 'Progress Graph' : 'Overall Progress Report';
         doc.text(title, pageWidth / 2, currentY, { align: 'center' });
         currentY += 10;
 
@@ -449,7 +449,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
     })}`;
     let y = drawBrandedHeader(doc, {
         headerDataURL,
-        reportTitle: 'Program Progress Report',
+        reportTitle: 'Progress Graph',
         subtitle,
         generatedDate: genDate,
     });
@@ -498,6 +498,20 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
         // Bar fill – gold
         doc.setFillColor(219, 157, 50);
         doc.roundedRect(bx, by, barW, barH, 1, 1, 'F');
+
+        // If value is 0, add a green line at the x-axis
+        if (val === 0) {
+            // Draw green line at x-axis
+            doc.setDrawColor(34, 197, 94); // green color
+            doc.setLineWidth(0.8);
+            doc.line(bx, chartBottom, bx + barW, chartBottom);
+
+            // Add "Done" text above the line
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(34, 197, 94);
+            doc.text('Done', bx + barW / 2, chartBottom - 3, { align: 'center' });
+        }
 
         // Value label above bar
         doc.setFont('helvetica', 'bold');
@@ -650,7 +664,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
     const headerDataURL = await loadHeaderDataURL();
     let y = drawBrandedHeader(doc, {
         headerDataURL,
-        reportTitle: 'All Programs Progress Report',
+        reportTitle: 'Latest Skilled Development',
         subtitle: learnerName || 'Learner',
         generatedDate: `Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
     });
@@ -888,7 +902,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
    Matches the HurshBin branded format:
    • Gold border • Company header image • Structured content • Footer
    ───────────────────────────────────────────────────────────────── */
-export const generateLearnerProgressReportPDF = async (form, { previewOnly = false } = {}) => {
+export const generateLearnerProgressReportPDF = async (form, { signatureImage = null, previewOnly = false } = {}) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const pageW = doc.internal.pageSize.getWidth();   // 210 mm
@@ -910,46 +924,130 @@ export const generateLearnerProgressReportPDF = async (form, { previewOnly = fal
             pageW - 2 * BORDER_MARGIN, pageH - 2 * BORDER_MARGIN, 'S');
     };
 
+    // ── Load image and convert to base64 ──────────────────────
+    const loadImage = async (imagePath) => {
+        try {
+            const response = await fetch(imagePath);
+            if (!response.ok) {
+                console.warn(`Image not found: ${imagePath}`);
+                return null;
+            }
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result);
+                reader.onerror = () => {
+                    console.warn(`Failed to read image: ${imagePath}`);
+                    resolve(null);
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.warn(`Could not load image ${imagePath}:`, err.message);
+            return null;
+        }
+    };
+
     // ── Draw footer on current page ─────────────────────────────────
-    const drawFooter = (pageNum, totalPages) => {
-        const footerTop = pageH - BORDER_MARGIN - FOOTER_H + 3;
+    const drawFooter = async (pageNum, totalPages) => {
+        try {
+            const footerTop = pageH - BORDER_MARGIN - FOOTER_H + 3;
 
-        // Gold divider
-        doc.setDrawColor(...GOLD);
-        doc.setLineWidth(0.6);
-        doc.line(contentX, footerTop, contentX + contentW, footerTop);
+            // Gold divider
+            doc.setDrawColor(...GOLD);
+            doc.setLineWidth(0.6);
+            doc.line(contentX, footerTop, contentX + contentW, footerTop);
 
-        let fy = footerTop + 6;
+            let fy = footerTop + 6;
 
-        // Company name centred
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(0, 0, 0);
-        doc.text(
-            'HURSHBIN CHILD DEVELOPMENT, LEARNING AND BEHAVIOUR SERVICES (ABA)',
-            pageW / 2, fy, { align: 'center' }
-        );
-        fy += 6;
+            // Company name centred
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(
+                'HURSHBIN CHILD DEVELOPMENT, LEARNING AND BEHAVIOUR SERVICES (ABA)',
+                pageW / 2, fy, { align: 'center' }
+            );
+            fy += 6;
 
-        // Two-column contact line
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        const col1 = contentX + 4;
-        const col2 = pageW / 2 + 8;
+            // Load icons from public/icons folder
+            const telIcon = await loadImage('/icons/Tel.png');
+            const instaIcon = await loadImage('/icons/Instagram.webp');
+            const fbIcon = await loadImage('/icons/FB.png');
+            const webIcon = await loadImage('/icons/Web.png');
 
-        doc.text('Tel: +91 8928765220', col1, fy);
-        doc.text('FB: HurshBin Child Development Learning & Behaviour Services', col2, fy, { maxWidth: contentW / 2 - 4 });
+            // Two-column contact line with icons
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            const col1 = contentX + 4;
+            const col2 = pageW / 2 + 8;
+            const iconSize = 3.5; // 3.5mm icons
+            const iconOffsetX = -1; // Left of text
 
-        fy += 5.5;
-        doc.text('Instagram: hurshbin_mumbai / binal_all_about_happychild', col1, fy, { maxWidth: contentW / 2 - 4 });
-        doc.text('Web: www.HurshBin.com', col2, fy);
+            // Column 1: Tel and Instagram
+            let col1X = col1;
+            if (telIcon) {
+                try {
+                    doc.addImage(telIcon, 'PNG', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
+                } catch (e) {
+                    console.warn('Failed to add tel icon:', e.message);
+                }
+                col1X += 4;
+            }
+            doc.text('+91 8928765220', col1X, fy);
 
-        // Page counter for multi-page docs
-        if (totalPages > 1) {
-            doc.setFontSize(7);
-            doc.setTextColor(150, 150, 150);
-            doc.text(`Page ${pageNum} / ${totalPages}`,
-                pageW / 2, pageH - BORDER_MARGIN - 3, { align: 'center' });
+            fy += 5.5;
+            col1X = col1;
+            if (instaIcon) {
+                try {
+                    doc.addImage(instaIcon, 'WEBP', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
+                } catch (e) {
+                    // Try as PNG if WEBP fails
+                    try {
+                        doc.addImage(instaIcon, 'PNG', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
+                    } catch (e2) {
+                        console.warn('Failed to add instagram icon:', e2.message);
+                    }
+                }
+                col1X += 4;
+            }
+            doc.text('hurshbin_mumbai / binal_all_about_happychild', col1X, fy, { maxWidth: contentW / 2 - 8 });
+
+            // Column 2: Facebook and Web
+            fy = footerTop + 12;
+            let col2X = col2;
+            if (fbIcon) {
+                try {
+                    doc.addImage(fbIcon, 'PNG', col2X + iconOffsetX, fy - 2.4, iconSize, iconSize);
+                } catch (e) {
+                    console.warn('Failed to add facebook icon:', e.message);
+                }
+                col2X += 4;
+            }
+            doc.text('HurshBin Child Development Learning & Behaviour Services', col2X, fy, { maxWidth: contentW / 2 - 8 });
+
+            fy += 5.5;
+            col2X = col2;
+            if (webIcon) {
+                try {
+                    doc.addImage(webIcon, 'PNG', col2X + iconOffsetX, fy - 2.4, iconSize, iconSize);
+                } catch (e) {
+                    console.warn('Failed to add web icon:', e.message);
+                }
+                col2X += 4;
+            }
+            doc.text('www.HurshBin.com', col2X, fy);
+
+            // Page counter for multi-page docs
+            if (totalPages > 1) {
+                doc.setFontSize(7);
+                doc.setTextColor(150, 150, 150);
+                doc.text(`Page ${pageNum} / ${totalPages}`,
+                    pageW / 2, pageH - BORDER_MARGIN - 3, { align: 'center' });
+            }
+        } catch (err) {
+            console.error('Error drawing footer:', err.message);
+            // Continue anyway - don't let footer errors crash the PDF generation
         }
     };
 
@@ -1037,7 +1135,7 @@ export const generateLearnerProgressReportPDF = async (form, { previewOnly = fal
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
     doc.setTextColor(0, 0, 0);
-    doc.text('REPORT', pageW / 2, y, { align: 'center' });
+    doc.text('THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT', pageW / 2, y, { align: 'center' });
     y += 9;
 
     // ── Basic info fields ──────────────────────────────────────────
@@ -1058,12 +1156,36 @@ export const generateLearnerProgressReportPDF = async (form, { previewOnly = fal
     }
     y += 3;
 
-    // ── 9 Areas of Development ─────────────────────────────────────
+    // ── Development History ────────────────────────────────────────
+    maybeBreak(LINE_H + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(FIELD_FS);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Development History:', contentX, y);
+    y += LINE_H;
+    if (form.development_history) {
+        writeWrapped(form.development_history, contentX + 4, contentW - 6, 5.2, 'normal', 10.5);
+    }
+    y += 3;
+
+    // ── Learning History ──────────────────────────────────────────
+    maybeBreak(LINE_H + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(FIELD_FS);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Learning History:', contentX, y);
+    y += LINE_H;
+    if (form.learning_history) {
+        writeWrapped(form.learning_history, contentX + 4, contentW - 6, 5.2, 'normal', 10.5);
+    }
+    y += 3;
+
+    // ── Functional Development Overview through overall development ─────────────────────────────────────
     maybeBreak(14);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(FIELD_FS);
     doc.setTextColor(0, 0, 0);
-    doc.text('9 Areas of Development:', contentX, y);
+    doc.text('Functional Development Overview through overall development:', contentX + contentW / 2, y, { align: 'center' });
     y += LINE_H + 1;
 
     const AREAS = [
@@ -1097,6 +1219,18 @@ export const generateLearnerProgressReportPDF = async (form, { previewOnly = fal
         y += 2;
     });
 
+    y += 2;
+
+    // ── The Immediate Intervention Plan ────────────────────────────
+    maybeBreak(LINE_H + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(FIELD_FS);
+    doc.setTextColor(0, 0, 0);
+    doc.text('The Immediate Intervention Plan:', contentX, y);
+    y += LINE_H;
+    if (form.intervention_plan) {
+        writeWrapped(form.intervention_plan, contentX + 4, contentW - 6, 5.2, 'normal', 10.5);
+    }
     y += 2;
 
     // ── Recommendation ─────────────────────────────────────────────
@@ -1136,10 +1270,60 @@ export const generateLearnerProgressReportPDF = async (form, { previewOnly = fal
         y += LINE_H;
     }
 
+    // ── Digital Signature ──────────────────────────────────────────
+    maybeBreak(35);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(FIELD_FS);
+    doc.setTextColor(0, 0, 0);
+    // Position signature on right side
+    const sigX = contentX + contentW - 44;  // Right side positioning
+    if (signatureImage) {
+        const sigImgW = 40;
+        const sigImgH = 25;
+        // Load signature image from public folder
+        try {
+            const sigBlob = await fetch(signatureImage).then(res => res.blob());
+            const sigDataURL = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result);
+                reader.readAsDataURL(sigBlob);
+            });
+            doc.addImage(sigDataURL, 'PNG', sigX, y, sigImgW, sigImgH, '', 'FAST');
+        } catch (err) {
+            console.warn('Could not load signature image:', err);
+        }
+    }
+
+    // ── Professional Signature Line ────────────────────────────────
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(FIELD_FS);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Ms. Binal Shah MA. BCBA', sigX + 40, y + 27, { align: 'right' });
+    y = Math.max(y + 35, y + 35);
+
+    // ── Disclaimer ────────────────────────────────────────────────
+    maybeBreak(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(124, 28, 28);
+    doc.text('Disclaimer:', contentX, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    const disclaimerText = 'This report has been prepared based on observations, assessments, interactions, tools and information provided by parents/caregivers at the time of evaluation.';
+    const disclaimerLines = doc.splitTextToSize(disclaimerText, contentW - 6);
+    disclaimerLines.forEach(line => {
+        maybeBreak(5);
+        doc.text(line, contentX + 4, y);
+        y += 5;
+    });
+
     /* ── Stamp footer ONLY on the last page ──────────────────────── */
     const totalPages = doc.internal.getNumberOfPages();
     doc.setPage(totalPages);
-    drawFooter(totalPages, totalPages);
+    await drawFooter(totalPages, totalPages);
 
     /* ── Save / Preview ──────────────────────────────────────────── */
     const safe = (s) => (s || 'report').replace(/[^a-z0-9]/gi, '_').toLowerCase();

@@ -23,6 +23,7 @@ const AdminManageLearners = () => {
     const [progressReportsMap, setProgressReportsMap] = useState({});
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
+    const [reportCreatorFilter, setReportCreatorFilter] = useState('head'); // 'head', 'coach'
 
     useEffect(() => {
         fetchLearners();
@@ -89,7 +90,7 @@ const AdminManageLearners = () => {
     const handleDownloadProgressReport = async (report) => {
         try {
             setDownloadingId(report.id);
-            await generateLearnerProgressReportPDF(report);
+            await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg' });
         } catch (e) {
             toast.error('Failed to download report');
         } finally {
@@ -100,7 +101,7 @@ const AdminManageLearners = () => {
     const handlePreviewProgressReport = async (report) => {
         try {
             setPreviewingId(report.id);
-            await generateLearnerProgressReportPDF(report, { previewOnly: true });
+            await generateLearnerProgressReportPDF(report, { previewOnly: true, signatureImage: '/sign/sign.jpeg' });
         } catch (e) {
             toast.error('Failed to preview report');
         } finally {
@@ -120,6 +121,15 @@ const AdminManageLearners = () => {
             );
             setFilteredLearners(filtered);
         }
+    };
+
+    const filterReportsByCreator = (reports) => {
+        if (reportCreatorFilter === 'head') {
+            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(head)'));
+        } else if (reportCreatorFilter === 'coach') {
+            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+        }
+        return reports;
     };
 
     return (
@@ -150,6 +160,32 @@ const AdminManageLearners = () => {
                             onSearch={handleSearch}
                             placeholder="Search by name, passcode..."
                         />
+                    </div>
+
+                    {/* Report Creator Filter */}
+                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#374151' }}>Filter Reports:</span>
+                        {['head', 'coach'].map(filter => (
+                            <button
+                                key={filter}
+                                onClick={() => setReportCreatorFilter(filter)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.375rem',
+                                    border: 'none',
+                                    fontSize: '0.875rem',
+                                    fontWeight: filter === reportCreatorFilter ? 600 : 400,
+                                    background: filter === reportCreatorFilter
+                                        ? 'linear-gradient(135deg, #7c1c1c, #a83232)'
+                                        : '#e5e7eb',
+                                    color: filter === reportCreatorFilter ? 'white' : '#374151',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {`${filter.charAt(0).toUpperCase() + filter.slice(1)} Reports`}
+                            </button>
+                        ))}
                     </div>
 
                     {activeSearchQuery && (
@@ -249,12 +285,13 @@ const AdminManageLearners = () => {
                                                     <td className="table-primary-td">
                                                         {(() => {
                                                             const progReports = progressReportsMap[learner.user_id] || [];
-                                                            if (progReports.length === 0) {
+                                                            const filteredProgReports = filterReportsByCreator(progReports);
+                                                            if (filteredProgReports.length === 0) {
                                                                 return <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}>— No reports</span>;
                                                             }
                                                             return (
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                                    {progReports.map(r => (
+                                                                    {filteredProgReports.map(r => (
                                                                         <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                                             {/* <span style={{ fontSize: '0.78rem', color: '#555', whiteSpace: 'nowrap' }}>
                                                                                 {new Date(r.date_of_report).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

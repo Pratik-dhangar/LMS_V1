@@ -54,12 +54,12 @@ const LearnerDashboard = () => {
   const menuItems = [
     {
       icon: GraduationCap,
-      title: "Individualised Intervention Program(IIP)",
+      title: "Individualised Intervention Program(ILP)",
       onClick: () => navigate("/learner/my-sessions"),
     },
     {
       icon: BookMarked,
-      title: "Home Program (HP)",
+      title: "Home Learning Program (HP)",
       onClick: () => navigate("/learner/assigned-programs"),
     },
     {
