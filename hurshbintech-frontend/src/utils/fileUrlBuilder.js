@@ -34,6 +34,15 @@ export const getFileUrl = (s3PathOrUrl) => {
                 }
             } catch (_) { /* fall through */ }
         }
+        // Rewrite old frontend-proxy S3 URLs (e.g. stored with :3001/s3/... from previous deployment)
+        try {
+            const urlObj = new URL(s3PathOrUrl);
+            if (urlObj.pathname.startsWith('/s3/') &&
+                !urlObj.hostname.includes('amazonaws.com') &&
+                !urlObj.hostname.includes('neevcloud.com')) {
+                return `${window.location.origin}${urlObj.pathname}`;
+            }
+        } catch (_) { /* fall through */ }
         return s3PathOrUrl;
     }
 
