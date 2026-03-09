@@ -4,7 +4,7 @@ Revision ID: t9u0v1w2x3y4
 Revises: guest_session_001
 Create Date: 2026-01-05 10:30:00.000000
 
-This migration adds feedback and rating fields to support HP (Home Program) tracking
+This migration adds feedback and rating fields to support HP (Home Learning Program) tracking
 with head feedback, star ratings, and resubmission workflow.
 
 Changes:

@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
 } from "recharts";
 import sessionReportService from "../../api/services/sessionReportService";
 import { downloadAllProgramsPDF } from "../../utils/pdfGenerator";
@@ -171,6 +172,55 @@ const LearnerProgramsView = () => {
     }
   };
 
+  // Custom label component to show "Done" on zero-value bars
+  const renderCustomLabel = (props) => {
+    const { x, y, width, value } = props;
+    if (value === 0) {
+      return (
+        <text
+          x={x + width / 2}
+          y={y - 10}
+          fill="#22c55e"
+          textAnchor="middle"
+          fontSize="12"
+          fontWeight="bold"
+        >
+          Done
+        </text>
+      );
+    }
+    return null;
+  };
+
+  // Custom bar shape to render green line only on bars with 0 value
+  const CustomBarShape = (props) => {
+    const { x, y, width, height, fill, payload } = props;
+    const isZeroValue = payload && payload.prompt_value === 0;
+
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={fill}
+          radius={[6, 6, 0, 0]}
+        />
+        {isZeroValue && (
+          <line
+            x1={x}
+            y1={y}
+            x2={x + width}
+            y2={y}
+            stroke="#22c55e"
+            strokeWidth={3}
+          />
+        )}
+      </g>
+    );
+  };
+
   const filteredPrograms = programs.filter((program) =>
     program.program_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -183,7 +233,7 @@ const LearnerProgramsView = () => {
             {/* Header */}
             <div className="page-header">
               <button
-                onClick={() => navigate("/head/reports")}
+                onClick={() => navigate(-1)}
                 className="back-button"
               >
                 <svg
@@ -377,7 +427,7 @@ const LearnerProgramsView = () => {
             >
               <div>
                 <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: "bold", margin: 0 }}>
-                  📊 All Programs Progress Report
+                  📊 Latest Skilled Development
                 </h2>
                 <p style={{ color: "rgba(255,255,255,0.85)", margin: "4px 0 0", fontSize: "0.95rem" }}>
                   <strong>{pdfPreviewData.learnerName}</strong>
@@ -510,7 +560,19 @@ const LearnerProgramsView = () => {
                                 }}
                               />
                               <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
-                              <Bar dataKey="prompt_value" fill="#db9d32" name="Prompt Level" radius={[6, 6, 0, 0]} />
+                              <Bar
+                                dataKey="prompt_value"
+                                fill="#db9d32"
+                                name="Prompt Level"
+                                radius={[6, 6, 0, 0]}
+                                shape={<CustomBarShape />}
+                              >
+                                <LabelList
+                                  dataKey="prompt_value"
+                                  content={renderCustomLabel}
+                                  position="top"
+                                />
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </div>

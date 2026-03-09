@@ -122,3 +122,27 @@ class SessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SessionFeedbackCreate(BaseModel):
+    """Schema for submitting session feedback"""
+
+    rating: int = Field(..., ge=1, le=5, description="Star rating from 1 to 5")
+    remark: Optional[str] = Field(None, max_length=1000, description="Optional text feedback")
+    attendee_role: str = Field(default="learner", description="Role: learner, guest, client")
+    attendee_name: Optional[str] = Field(None, max_length=255)
+
+
+class SessionFeedbackResponse(BaseModel):
+    """Schema for session feedback response"""
+
+    id: int
+    session_id: int
+    attendee_role: str
+    attendee_name: Optional[str] = None
+    rating: int
+    remark: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

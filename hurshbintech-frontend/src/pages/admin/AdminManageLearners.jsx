@@ -23,6 +23,7 @@ const AdminManageLearners = () => {
     const [progressReportsMap, setProgressReportsMap] = useState({});
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
+    const [reportCreatorFilter, setReportCreatorFilter] = useState('head'); // 'head', 'coach'
 
     useEffect(() => {
         fetchLearners();
@@ -50,8 +51,7 @@ const AdminManageLearners = () => {
             const all = await learnerProgressReportService.getAll();
             const map = {};
             all.forEach(r => {
-                const key = r.learner_id;
-                if (key == null) return;
+                const key = r.learner_id ?? `standalone_${r.id}`;
                 if (!map[key]) map[key] = [];
                 map[key].push(r);
             });
@@ -89,7 +89,7 @@ const AdminManageLearners = () => {
     const handleDownloadProgressReport = async (report) => {
         try {
             setDownloadingId(report.id);
-            await generateLearnerProgressReportPDF(report);
+            await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg' });
         } catch (e) {
             toast.error('Failed to download report');
         } finally {
@@ -100,7 +100,7 @@ const AdminManageLearners = () => {
     const handlePreviewProgressReport = async (report) => {
         try {
             setPreviewingId(report.id);
-            await generateLearnerProgressReportPDF(report, { previewOnly: true });
+            await generateLearnerProgressReportPDF(report, { previewOnly: true, signatureImage: '/sign/sign.jpeg' });
         } catch (e) {
             toast.error('Failed to preview report');
         } finally {
@@ -121,6 +121,31 @@ const AdminManageLearners = () => {
             setFilteredLearners(filtered);
         }
     };
+
+    const filterReportsByCreator = (reports) => {
+        if (reportCreatorFilter === 'head') {
+            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(head)'));
+        } else if (reportCreatorFilter === 'coach') {
+            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+        }
+        return reports;
+    };
+
+    // Collect standalone (unregistered learner) coach reports grouped by name
+    const standaloneCoachRows = (() => {
+        const byName = {};
+        Object.keys(progressReportsMap).forEach(key => {
+            if (!key.startsWith('standalone_')) return;
+            const reports = progressReportsMap[key] || [];
+            const coachReports = reports.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+            coachReports.forEach(r => {
+                const nameKey = (r.name || 'Unknown').toLowerCase();
+                if (!byName[nameKey]) byName[nameKey] = { name: r.name || 'Unknown', reports: [] };
+                byName[nameKey].reports.push(r);
+            });
+        });
+        return Object.values(byName);
+    })();
 
     return (
         <div className="page-container">
@@ -150,6 +175,32 @@ const AdminManageLearners = () => {
                             onSearch={handleSearch}
                             placeholder="Search by name, passcode..."
                         />
+                    </div>
+
+                    {/* Report Creator Filter */}
+                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#374151' }}>Filter Reports:</span>
+                        {['head', 'coach'].map(filter => (
+                            <button
+                                key={filter}
+                                onClick={() => setReportCreatorFilter(filter)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '0.375rem',
+                                    border: 'none',
+                                    fontSize: '0.875rem',
+                                    fontWeight: filter === reportCreatorFilter ? 600 : 400,
+                                    background: filter === reportCreatorFilter
+                                        ? 'linear-gradient(135deg, #7c1c1c, #a83232)'
+                                        : '#e5e7eb',
+                                    color: filter === reportCreatorFilter ? 'white' : '#374151',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {`${filter.charAt(0).toUpperCase() + filter.slice(1)} Reports`}
+                            </button>
+                        ))}
                     </div>
 
                     {activeSearchQuery && (
@@ -204,9 +255,46 @@ const AdminManageLearners = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="table-primary-body">
+                                            {/* Unregistered learner rows — visible only in Coach filter */}
+                                            {reportCreatorFilter === 'coach' && standaloneCoachRows.map((row, index) => (
+                                                <tr key={`standalone_${row.name}`} className="table-primary-row">
+                                                    <td className="table-primary-td">{index + 1}</td>
+                                                    <td className="table-primary-td">
+                                                        <div className="table-primary-cell-name-text">{row.name}</div>
+                                                        <div className="table-primary-cell-subtitle" style={{ color: '#f59e0b', fontSize: '0.75rem' }}>Not registered</div>
+                                                    </td>
+                                                    <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
+                                                    <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
+                                                    <td className="table-primary-td table-primary-td-center">
+                                                        <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not registered</span>
+                                                    </td>
+                                                    <td className="table-primary-td">
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                            {row.reports.map(r => (
+                                                                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                    <button
+                                                                        onClick={() => handlePreviewProgressReport(r)}
+                                                                        disabled={previewingId === r.id}
+                                                                        style={previewBtnStyle}
+                                                                    >
+                                                                        {previewingId === r.id ? '…' : '👁 Preview'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDownloadProgressReport(r)}
+                                                                        disabled={downloadingId === r.id}
+                                                                        style={dlBtnStyle}
+                                                                    >
+                                                                        {downloadingId === r.id ? '…' : '⬇ PDF'}
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                             {filteredLearners.map((learner, index) => (
                                                 <tr key={learner.id} className="table-primary-row">
-                                                    <td className="table-primary-td">{index + 1}</td>
+                                                    <td className="table-primary-td">{(reportCreatorFilter === 'coach' ? standaloneCoachRows.length : 0) + index + 1}</td>
                                                     <td className="table-primary-td">
                                                         <div className="table-primary-cell-name-text">{learner.name}</div>
                                                         <div className="table-primary-cell-subtitle">{learner.role}</div>
@@ -249,12 +337,13 @@ const AdminManageLearners = () => {
                                                     <td className="table-primary-td">
                                                         {(() => {
                                                             const progReports = progressReportsMap[learner.user_id] || [];
-                                                            if (progReports.length === 0) {
+                                                            const filteredProgReports = filterReportsByCreator(progReports);
+                                                            if (filteredProgReports.length === 0) {
                                                                 return <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}>— No reports</span>;
                                                             }
                                                             return (
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                                    {progReports.map(r => (
+                                                                    {filteredProgReports.map(r => (
                                                                         <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                                             {/* <span style={{ fontSize: '0.78rem', color: '#555', whiteSpace: 'nowrap' }}>
                                                                                 {new Date(r.date_of_report).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

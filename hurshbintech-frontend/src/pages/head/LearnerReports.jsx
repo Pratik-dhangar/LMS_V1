@@ -124,7 +124,7 @@ const LearnerReports = () => {
               <div className="report-learner-info">
                 <p className="report-learner-name">{learnerInfo.learner_name}</p>
                 {learnerInfo.iip_id && (
-                  <p className="report-learner-iip">IIP ID: {learnerInfo.iip_id}</p>
+                  <p className="report-learner-iip">ILP ID: {learnerInfo.iip_id}</p>
                 )}
               </div>
             )}

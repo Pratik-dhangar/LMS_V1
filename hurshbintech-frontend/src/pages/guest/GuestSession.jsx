@@ -29,7 +29,8 @@ import {
   AttendeeWaitingModal,
   usePromptAnimation,
   useBulbGlowAnimation,
-  attendeeSessionStyles
+  attendeeSessionStyles,
+  SessionFeedbackModal
 } from '../../components/session/AttendeeSessionLayout';
 
 
@@ -102,9 +103,11 @@ const GuestSession = () => {
   const [admissionDenied, setAdmissionDenied] = useState(false); // Coach rejected the join request
   const [showExercise, setShowExercise] = useState(false);
   const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const authAttemptedRef = useRef(false);
   const pollingIntervalRef = useRef(null);
+  const pendingCleanupRef = useRef(null);
   const mediaControl = useMediaControl();
 
   // Use shared animation hooks
@@ -238,12 +241,11 @@ const GuestSession = () => {
     whiteboardService.onSessionEnded = (data) => {
       console.log('[GuestSession] Session ended by coach:', data);
       toast.info('Session has been ended by the coach');
-
-      // Clean up and redirect after a short delay
-      setTimeout(() => {
+      setShowFeedbackModal(true);
+      pendingCleanupRef.current = () => {
         cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
         navigate('/');
-      }, 2000);
+      };
     };
 
     return () => {
@@ -583,12 +585,12 @@ const GuestSession = () => {
       <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
         <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
           <div style={{ fontSize: '56px', marginBottom: '16px' }}>⏳</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Admission</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Instructor</h2>
           <p className="text-gray-600 mb-2">
-            You have joined the session. Please wait for your coach to admit you.
+            You have joined the session. Please wait for your instructor to admit you.
           </p>
           <p className="text-gray-600 mb-6">
-            <strong>{sessionInfo?.coach_name ?? 'Your coach'}</strong> will admit you shortly.
+            <strong>{sessionInfo?.coach_name ?? 'Your instructor'}</strong> will admit you shortly.
           </p>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
@@ -713,6 +715,30 @@ const GuestSession = () => {
           navigate('/');
         }}
       />
+      {showFeedbackModal && (
+        <SessionFeedbackModal
+          onSubmit={async (rating, remark) => {
+            try {
+              // guests use token-based session; submit without auth
+              const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+              await fetch(`${API_URL}/sessions/${sessionInfo?.session_id}/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating, remark: remark || null, attendee_role: 'guest', attendee_name: sessionInfo?.learner_name || null }),
+              });
+              toast.success('Thank you for your feedback!');
+            } catch {
+              // silently ignore
+            }
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+          onSkip={() => {
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+        />
+      )}
     </AttendeeSessionRoot>
   );
 };

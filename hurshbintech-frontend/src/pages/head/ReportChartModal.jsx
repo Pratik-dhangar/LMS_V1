@@ -137,7 +137,7 @@ const ReportChartModal = ({ statistics, learnerName, learnerId, onClose }) => {
               <div className="chart-summary-value">
                 {Object.keys(statistics.program_breakdown).length}
               </div>
-              <div className="chart-summary-label">Programs Covered</div>
+              <div className="chart-summary-label">Goals</div>
             </div>
           </div>
 

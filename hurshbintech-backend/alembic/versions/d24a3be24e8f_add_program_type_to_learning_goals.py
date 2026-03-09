@@ -21,12 +21,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Create enum type if it doesn't exist
-    op.execute("CREATE TYPE programtype AS ENUM ('IIP', 'HOME')")
+    op.execute("CREATE TYPE programtype AS ENUM ('ILP', 'HOME')")
     
     # Add program_type column with default value
     op.add_column('learning_goals', 
-        sa.Column('program_type', sa.Enum('IIP', 'HOME', name='programtype'), 
-                  nullable=False, server_default='IIP')
+        sa.Column('program_type', sa.Enum('ILP', 'HOME', name='programtype'), 
+                  nullable=False, server_default='ILP')
     )
 
 
