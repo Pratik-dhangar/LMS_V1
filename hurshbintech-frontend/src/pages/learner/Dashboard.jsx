@@ -13,7 +13,8 @@ import {
   TrendingUp,
   AlertCircle,
   Loader2,
-  X
+  X,
+  FileBarChart
 } from "lucide-react";
 import subscriptionService from "../../api/services/subscriptionService";
 import "../../styles/admin/index.css";
@@ -71,7 +72,12 @@ const LearnerDashboard = () => {
       icon: Package,
       title: "My Subscription",
       onClick: () => setShowSubscriptionModal(true),
-    }
+    },
+    {
+      icon: FileBarChart,
+      title: "My Reports",
+      onClick: () => navigate("/learner/my-reports"),
+    },
   ];
 
   return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Edit2, X, Eye, FileText, Video } from 'lucide-react';
+import { Edit2, X, Eye, FileText, Video, ChevronLeft, ChevronRight, Star, MessageSquare } from 'lucide-react';
 import sessionService from '../../api/services/sessionService';
 // import headSessionNotesService from '../../api/services/headSessionNotesService';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,9 @@ import '../../styles/ManageUsersLayout.css';
 const ManageSessions = () => {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,17 +26,21 @@ const ManageSessions = () => {
   const [editingSession, setEditingSession] = useState(null);
   const [viewingSession, setViewingSession] = useState(null);
   const [editingHeadNotes, setEditingHeadNotes] = useState(null);
+  const [feedbackSession, setFeedbackSession] = useState(null);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const { user } = useAuth();
   const [hoveredSession, setHoveredSession] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   // const [showSearch, setShowSearch] = useState(false);
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (page = currentPage) => {
     try {
       setLoading(true);
-      // Assuming we need to create an endpoint for head to get all sessions
-      const data = await sessionService.getAllSessions();
-      setSessions(data);
+      const skip = (page - 1) * itemsPerPage;
+      const data = await sessionService.getAllSessions(skip, itemsPerPage);
+      setSessions(data.sessions || []);
+      setTotalSessions(data.total || 0);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast.error('Failed to load sessions');
@@ -43,8 +50,14 @@ const ManageSessions = () => {
   };
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
+    fetchSessions(currentPage);
+  }, [currentPage, itemsPerPage]);
+
+  const handleItemsPerPageChange = (e) => {
+    const newLimit = parseInt(e.target.value);
+    setItemsPerPage(newLimit);
+    setCurrentPage(1); // Reset to first page when limit changes
+  };
 
   const handleCancelSession = async (sessionId, sessionTitle) => {
     if (window.confirm(`Are you sure you want to cancel the session "${sessionTitle}"? The session status will be marked as cancelled.`)) {
@@ -85,6 +98,20 @@ const ManageSessions = () => {
 
   const handleEditSuccess = async () => {
     await fetchSessions();
+  };
+
+  const handleViewFeedback = async (session) => {
+    setFeedbackSession(session);
+    setFeedbackList([]);
+    setFeedbackLoading(true);
+    try {
+      const data = await sessionService.getSessionFeedback(session.session_id);
+      setFeedbackList(data);
+    } catch {
+      toast.error('Failed to load feedback');
+    } finally {
+      setFeedbackLoading(false);
+    }
   };
 
   const handleSessionTitleClick = (session, event) => {
@@ -271,10 +298,13 @@ const ManageSessions = () => {
           {/* Filters */}
           <div className="filter-tabs">
             <button
-              onClick={() => setFilter('all')}
+              onClick={() => {
+                setFilter('all');
+                setCurrentPage(1);
+              }}
               className={`filter-tab ${filter === 'all' ? 'filter-tab-active' : ''}`}
             >
-              All ({sessions.length})
+              All ({totalSessions})
             </button>
             <button
               onClick={() => setFilter('scheduled')}
@@ -464,6 +494,17 @@ const ManageSessions = () => {
                                   <FileText size={14} />
                                 </button>
                               )}
+                              {/* Feedback Responses - only for ended sessions */}
+                              {canHeadNotes && (
+                                <button
+                                  onClick={() => handleViewFeedback(session)}
+                                  className="btn-icon app-modal-btn"
+                                  style={{ background: '#7c3aed', color: '#fff' }}
+                                  title="View learner feedback for this session"
+                                >
+                                  <Star size={14} />
+                                </button>
+                              )}
                               {session.status !== 'scheduled' && session.status !== 'active' && session.status !== 'ended' && session.status !== 'cancelled' && (
                                 <span className="material-badge material-badge-gray">
                                   Can't edit/delete
@@ -476,6 +517,78 @@ const ManageSessions = () => {
                     })}
                   </tbody>
                 </table>
+
+                {/* Pagination */}
+                {totalSessions > 0 && (
+                  <div className="pagination-container">
+                    <div className="pagination-info">
+                      <div className="flex items-center gap-4">
+                        <span>
+                          Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalSessions)} of {totalSessions} sessions
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="itemsPerPage" className="text-sm text-gray-600">Show:</label>
+                          <select
+                            id="itemsPerPage"
+                            value={itemsPerPage}
+                            onChange={handleItemsPerPageChange}
+                            className="app-modal-form-input py-1 px-2 text-sm w-20"
+                          >
+                            {[5, 10, 15, 20, 25, 30].map(val => (
+                              <option key={val} value={val}>{val}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    {totalSessions > itemsPerPage && (
+                      <div className="pagination-controls">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="pagination-button"
+                          title="Previous page"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+
+                        {/* Page numbers */}
+                        {(() => {
+                          const totalPages = Math.ceil(totalSessions / itemsPerPage);
+                          const pages = [];
+                          let startPage = Math.max(1, currentPage - 2);
+                          let endPage = Math.min(totalPages, startPage + 4);
+
+                          if (endPage - startPage < 4) {
+                            startPage = Math.max(1, endPage - 4);
+                          }
+
+                          for (let i = startPage; i <= endPage; i++) {
+                            pages.push(
+                              <button
+                                key={i}
+                                onClick={() => setCurrentPage(i)}
+                                className={`pagination-button ${currentPage === i ? 'active' : ''}`}
+                              >
+                                {i}
+                              </button>
+                            );
+                          }
+                          return pages;
+                        })()}
+
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalSessions / itemsPerPage)))}
+                          disabled={currentPage === Math.ceil(totalSessions / itemsPerPage)}
+                          className="pagination-button"
+                          title="Next page"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
             )}
@@ -510,6 +623,117 @@ const ManageSessions = () => {
           onClose={() => setEditingHeadNotes(null)}
           onSuccess={handleEditSuccess}
         />
+      )}
+
+      {/* Feedback Responses Modal */}
+      {feedbackSession && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          }}
+          onClick={() => setFeedbackSession(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff', borderRadius: '14px', width: 'min(92vw, 540px)',
+              maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.25)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1f2937' }}>
+                  Feedback Responses
+                </h2>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>
+                  {feedbackSession.title}
+                </p>
+              </div>
+              <button
+                onClick={() => setFeedbackSession(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '1.25rem', lineHeight: 1 }}
+              >✕</button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 }}>
+              {feedbackLoading ? (
+                <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>Loading feedback...</p>
+              ) : feedbackList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 0', color: '#9ca3af' }}>
+                  <MessageSquare size={40} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>No feedback yet</p>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>Learners have not submitted feedback for this session.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {feedbackList.map((fb) => (
+                    <div key={fb.id} style={{
+                      border: '1px solid #e5e7eb', borderRadius: '10px',
+                      padding: '1rem', backgroundColor: '#fafafa'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1f2937', fontSize: '0.9rem' }}>
+                            {fb.attendee_name || 'Anonymous'}
+                          </span>
+                          <span style={{
+                            marginLeft: '0.5rem', fontSize: '0.75rem', fontWeight: 600,
+                            padding: '1px 8px', borderRadius: '9999px',
+                            background: fb.attendee_role === 'learner' ? '#dbeafe' : fb.attendee_role === 'guest' ? '#fef9c3' : '#dcfce7',
+                            color: fb.attendee_role === 'learner' ? '#1d4ed8' : fb.attendee_role === 'guest' ? '#92400e' : '#166534'
+                          }}>
+                            {fb.attendee_role}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                          {new Date(fb.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {/* Stars */}
+                      <div style={{ display: 'flex', gap: '3px', marginBottom: fb.remark ? '0.5rem' : 0 }}>
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <Star
+                            key={s}
+                            size={18}
+                            fill={s <= fb.rating ? '#f59e0b' : 'none'}
+                            stroke={s <= fb.rating ? '#f59e0b' : '#d1d5db'}
+                          />
+                        ))}
+                        <span style={{ marginLeft: '6px', fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                          {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][fb.rating]}
+                        </span>
+                      </div>
+                      {fb.remark && (
+                        <p style={{
+                          margin: 0, fontSize: '0.875rem', color: '#374151',
+                          background: '#fff', border: '1px solid #e5e7eb',
+                          borderRadius: '6px', padding: '0.5rem 0.75rem'
+                        }}>{fb.remark}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Footer */}
+            {feedbackList.length > 0 && (
+              <div style={{
+                padding: '0.875rem 1.5rem', borderTop: '1px solid #e5e7eb',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                fontSize: '0.8rem', color: '#6b7280', backgroundColor: '#f9fafb', borderRadius: '0 0 14px 14px'
+              }}>
+                <span>{feedbackList.length} response{feedbackList.length !== 1 ? 's' : ''}</span>
+                <span>Avg rating: <strong style={{ color: '#f59e0b' }}>{(feedbackList.reduce((s, f) => s + f.rating, 0) / feedbackList.length).toFixed(1)} ★</strong></span>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Session Tooltip */}

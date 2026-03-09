@@ -63,6 +63,7 @@ from app.models.subscription import (
     PublicSubscriptionInquiry,
 )
 from app.models.whiteboard_state_model import WhiteboardState
+from app.models.session_feedback_model import SessionFeedback
 
 __all__ = [
     "User",

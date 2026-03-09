@@ -1073,13 +1073,12 @@ async def get_available_learners(
     db: AsyncSession = Depends(get_db),
     current_coach: CoachProfile = Depends(get_current_coach),
 ):
-    """Get all available learners for adding to sessions"""
+    """Get all available learners for adding to sessions (including inactive)"""
     from sqlalchemy.orm import selectinload
     
     result = await db.execute(
         select(User)
         .where(User.role == UserRole.LEARNER)
-        .where(User.is_active == True)
         .options(selectinload(User.learner_profile))
         .order_by(User.name)
     )

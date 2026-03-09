@@ -70,6 +70,7 @@ limiter = Limiter(key_func=get_remote_address)
 # ✅ Background Task Scheduler for Auto-Cleanup Jobs
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.chat_message_cleanup import cleanup_old_messages
+from app.workers.session_purge import purge_old_sessions
 from app.workers.subscription_tasks import process_ended_sessions_task
 from app.services.cache_service import cache_service
 
@@ -89,11 +90,14 @@ async def lifespan(app: FastAPI):
         if not scheduler.running:
             # Schedule chat message cleanup daily at 3 AM
             scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
+            # Schedule session data purge daily at 4 AM (retains 30 days)
+            scheduler.add_job(purge_old_sessions, 'cron', hour=4, minute=0, id='session_purge', replace_existing=True)
             # Schedule session processing every 1 minute to handle subscription session counting (for immediate updates)
             scheduler.add_job(process_ended_sessions_task, 'interval', minutes=1, id='session_processing', replace_existing=True)
             scheduler.start()
             logger.info("✅ Background scheduler started")
             logger.info("   - Chat message cleanup: Daily at 3 AM")
+            logger.info("   - Session data purge: Daily at 4 AM (keeps 30 days)")
             logger.info("   - Session processing: Every 1 minute")
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")

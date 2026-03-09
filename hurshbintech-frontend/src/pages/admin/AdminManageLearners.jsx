@@ -51,8 +51,7 @@ const AdminManageLearners = () => {
             const all = await learnerProgressReportService.getAll();
             const map = {};
             all.forEach(r => {
-                const key = r.learner_id;
-                if (key == null) return;
+                const key = r.learner_id ?? `standalone_${r.id}`;
                 if (!map[key]) map[key] = [];
                 map[key].push(r);
             });
@@ -131,6 +130,22 @@ const AdminManageLearners = () => {
         }
         return reports;
     };
+
+    // Collect standalone (unregistered learner) coach reports grouped by name
+    const standaloneCoachRows = (() => {
+        const byName = {};
+        Object.keys(progressReportsMap).forEach(key => {
+            if (!key.startsWith('standalone_')) return;
+            const reports = progressReportsMap[key] || [];
+            const coachReports = reports.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+            coachReports.forEach(r => {
+                const nameKey = (r.name || 'Unknown').toLowerCase();
+                if (!byName[nameKey]) byName[nameKey] = { name: r.name || 'Unknown', reports: [] };
+                byName[nameKey].reports.push(r);
+            });
+        });
+        return Object.values(byName);
+    })();
 
     return (
         <div className="page-container">
@@ -240,9 +255,46 @@ const AdminManageLearners = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="table-primary-body">
+                                            {/* Unregistered learner rows — visible only in Coach filter */}
+                                            {reportCreatorFilter === 'coach' && standaloneCoachRows.map((row, index) => (
+                                                <tr key={`standalone_${row.name}`} className="table-primary-row">
+                                                    <td className="table-primary-td">{index + 1}</td>
+                                                    <td className="table-primary-td">
+                                                        <div className="table-primary-cell-name-text">{row.name}</div>
+                                                        <div className="table-primary-cell-subtitle" style={{ color: '#f59e0b', fontSize: '0.75rem' }}>Not registered</div>
+                                                    </td>
+                                                    <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
+                                                    <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
+                                                    <td className="table-primary-td table-primary-td-center">
+                                                        <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not registered</span>
+                                                    </td>
+                                                    <td className="table-primary-td">
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                            {row.reports.map(r => (
+                                                                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                    <button
+                                                                        onClick={() => handlePreviewProgressReport(r)}
+                                                                        disabled={previewingId === r.id}
+                                                                        style={previewBtnStyle}
+                                                                    >
+                                                                        {previewingId === r.id ? '…' : '👁 Preview'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDownloadProgressReport(r)}
+                                                                        disabled={downloadingId === r.id}
+                                                                        style={dlBtnStyle}
+                                                                    >
+                                                                        {downloadingId === r.id ? '…' : '⬇ PDF'}
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                             {filteredLearners.map((learner, index) => (
                                                 <tr key={learner.id} className="table-primary-row">
-                                                    <td className="table-primary-td">{index + 1}</td>
+                                                    <td className="table-primary-td">{(reportCreatorFilter === 'coach' ? standaloneCoachRows.length : 0) + index + 1}</td>
                                                     <td className="table-primary-td">
                                                         <div className="table-primary-cell-name-text">{learner.name}</div>
                                                         <div className="table-primary-cell-subtitle">{learner.role}</div>

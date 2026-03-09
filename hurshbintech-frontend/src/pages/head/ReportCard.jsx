@@ -20,6 +20,7 @@ const ReportCard = () => {
   const [previewingId, setPreviewingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [sendingGoalsReportId, setSendingGoalsReportId] = useState(null);
 
   useEffect(() => {
     fetchAllLearners();
@@ -100,6 +101,19 @@ const ReportCard = () => {
       toast.error('Failed to delete report');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSendGoalsReport = async (learner) => {
+    try {
+      setSendingGoalsReportId(learner.learner_id);
+      await sessionReportService.sendGoalsReport(learner.learner_id);
+      toast.success(`Goals report sent to ${learner.learner_name}'s registered email!`);
+    } catch (e) {
+      const detail = e.response?.data?.detail;
+      toast.error(detail || 'Failed to send goals report email');
+    } finally {
+      setSendingGoalsReportId(null);
     }
   };
 
@@ -230,13 +244,36 @@ const ReportCard = () => {
                               </td>
                               {/* All Program Goals Report */}
                               <td className="table-primary-td table-primary-td-center">
-                                <button
-                                  onClick={() => handleLearnerClick(learner.learner_id)}
-                                  className="app-modal-btn app-modal-btn--primary"
-                                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
-                                >
-                                  📈 View Reports
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                  <button
+                                    onClick={() => handleLearnerClick(learner.learner_id)}
+                                    className="app-modal-btn app-modal-btn--primary"
+                                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
+                                  >
+                                    📈 View Reports
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendGoalsReport(learner)}
+                                    disabled={sendingGoalsReportId === learner.learner_id}
+                                    style={{
+                                      background: sendingGoalsReportId === learner.learner_id
+                                        ? '#9ca3af'
+                                        : '#7a2c2c',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '0.4rem',
+                                      fontSize: '0.8rem',
+                                      padding: '0.4rem 0.85rem',
+                                      fontWeight: 600,
+                                      cursor: sendingGoalsReportId === learner.learner_id ? 'not-allowed' : 'pointer',
+                                      whiteSpace: 'nowrap',
+                                      opacity: sendingGoalsReportId === learner.learner_id ? 0.7 : 1,
+                                    }}
+                                    title="Send All Program Goals Report to learner's email"
+                                  >
+                                    {sendingGoalsReportId === learner.learner_id ? '⏳ Sending…' : '📧 Send'}
+                                  </button>
+                                </div>
                               </td>
                               {/* Final Generated Reports */}
                               <td className="table-primary-td">

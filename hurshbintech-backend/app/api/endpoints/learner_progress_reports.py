@@ -143,11 +143,11 @@ async def delete_progress_report(
     current_user: User = Depends(get_current_user),
 ):
     """Delete a progress report."""
-    allowed_roles = {UserRole.HEAD, UserRole.ADMIN}
+    allowed_roles = {UserRole.HEAD, UserRole.ADMIN, UserRole.COACH}
     if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Head or Admin can delete progress reports",
+            detail="Only Head, Coach, or Admin can delete progress reports",
         )
 
     report = await learner_progress_report_crud.get_report_by_id(db, report_id)

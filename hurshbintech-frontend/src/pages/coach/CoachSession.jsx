@@ -147,7 +147,7 @@ const CoachSession = () => {
   // Remove client/guest from ongoing session
   const handleRemoveClient = () => {
     const clientName = state.sessionInfo?.client_name || 'Guest';
-    if (window.confirm(`Remove ${clientName} from the session?`)) {
+    if (window.confirm(`Exit ${clientName} from the session?`)) {
       state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
       toast.info(`${clientName} has been removed from the session`);
     }

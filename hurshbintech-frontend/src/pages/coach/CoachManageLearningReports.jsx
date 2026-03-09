@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 import coachService from '../../api/services/coachService';
 import learnerProgressReportService from '../../api/services/learnerProgressReportService';
 import { generateLearnerProgressReportPDF } from '../../utils/pdfGenerator';
@@ -11,6 +12,7 @@ import '../../styles/Table.css';
 
 const CoachManageLearningReports = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [learners, setLearners] = useState([]);
     const [progressReportsMap, setProgressReportsMap] = useState({}); // learner_id → [reports]
     const [loading, setLoading] = useState(true);
@@ -18,6 +20,8 @@ const CoachManageLearningReports = () => {
     const [showCreateReportModal, setShowCreateReportModal] = useState(false);
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
     useEffect(() => {
         fetchAllLearners();
@@ -67,7 +71,7 @@ const CoachManageLearningReports = () => {
     const handleDownloadProgressReport = async (report) => {
         try {
             setDownloadingId(report.id);
-            await generateLearnerProgressReportPDF(report);
+            await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg' });
         } catch (e) {
             toast.error('Failed to download report');
         } finally {
@@ -78,7 +82,7 @@ const CoachManageLearningReports = () => {
     const handlePreviewProgressReport = async (report) => {
         try {
             setPreviewingId(report.id);
-            await generateLearnerProgressReportPDF(report, { previewOnly: true });
+            await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg', previewOnly: true });
         } catch (e) {
             toast.error('Failed to preview report');
         } finally {
@@ -86,13 +90,87 @@ const CoachManageLearningReports = () => {
         }
     };
 
-    const filteredLearners = learners.filter(learner => {
+    const handleDeleteProgressReport = async (report) => {
+        try {
+            setDeletingId(report.id);
+            await learnerProgressReportService.delete(report.id);
+            toast.success('Report deleted successfully');
+            setDeleteConfirmId(null);
+            fetchProgressReports();
+        } catch (e) {
+            toast.error('Failed to delete report');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    // Build map of learner reports - BACKEND ALREADY FILTERS BY CURRENT COACH
+    // No need to filter again, all returned reports are from current coach
+    const reportsCreatedByCurrentCoach = {};
+    Object.keys(progressReportsMap).forEach(key => {
+        reportsCreatedByCurrentCoach[String(key)] = progressReportsMap[key];
+    });
+
+    // Build list of all learner IDs from reports (all already created by current coach via backend)
+    const learnersWithMyReports = new Set();
+    const learnerNameFromReports = {}; // Map of key → learner name from report
+    const standaloneReports = []; // Reports for unregistered learners (no learner_id)
+
+    Object.keys(reportsCreatedByCurrentCoach).forEach(key => {
+        const reports = reportsCreatedByCurrentCoach[key] || [];
+        if (reports.length === 0) return;
+
+        if (key.startsWith('standalone_')) {
+            // Unregistered learner — no user account, learner_id is null
+            standaloneReports.push(...reports);
+        } else {
+            const learnerId = parseInt(key);
+            if (!isNaN(learnerId)) {
+                learnersWithMyReports.add(learnerId);
+                if (reports[0]?.name) {
+                    learnerNameFromReports[String(learnerId)] = reports[0].name;
+                }
+            }
+        }
+    });
+
+    // Group standalone reports by name so each unique name shows as one row
+    const standaloneByName = {};
+    standaloneReports.forEach(r => {
+        const nameKey = (r.name || 'Unknown').toLowerCase();
+        if (!standaloneByName[nameKey]) standaloneByName[nameKey] = { name: r.name || 'Unknown', reports: [] };
+        standaloneByName[nameKey].reports.push(r);
+    });
+
+    // Registered learners rows
+    const registeredRows = Array.from(learnersWithMyReports).map(learnerId => {
+        const learnerData = learners.find(l => l.learner_id === learnerId);
+        if (learnerData) return learnerData;
+        const nameFromReport = learnerNameFromReports[String(learnerId)];
+        return {
+            learner_id: learnerId,
+            learner_name: nameFromReport || `Learner #${learnerId}`,
+            total_sessions: null,
+            last_session_date: null,
+            programs_covered: [],
+            _reports: reportsCreatedByCurrentCoach[String(learnerId)] || [],
+        };
+    });
+
+    // Unregistered learners rows (use name as unique key)
+    const standaloneRows = Object.values(standaloneByName).map(({ name, reports }) => ({
+        learner_id: null,
+        learner_name: name,
+        total_sessions: null,
+        last_session_date: null,
+        programs_covered: [],
+        _reports: reports,
+        _standaloneKey: name,
+    }));
+
+    const filteredLearners = [...registeredRows, ...standaloneRows].filter(learner => {
         const q = searchTerm.toLowerCase();
-        const nameMatch = (learner.learner_name?.toLowerCase() || '').includes(q);
-        // Only show learners who have at least one coach-created progress report
-        const coachReports = (progressReportsMap[learner.learner_id] || [])
-            .filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
-        return nameMatch && coachReports.length > 0;
+        return (learner.learner_name?.toLowerCase() || '').includes(q);
     });
 
     return (
@@ -183,67 +261,46 @@ const CoachManageLearningReports = () => {
                                                 <tr>
                                                     <th className="table-primary-th">Sr. No.</th>
                                                     <th className="table-primary-th">Learner Name</th>
-                                                    <th className="table-primary-th">Sessions</th>
-                                                    <th className="table-primary-th">Last Session</th>
-                                                    <th className="table-primary-th">Goals</th>
-                                                    <th className="table-primary-th">All Program Goals Report</th>
                                                     <th className="table-primary-th">Final Generated Reports</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="table-primary-body">
                                                 {filteredLearners.map((learner, idx) => {
-                                                    const progReports = (progressReportsMap[learner.learner_id] || [])
-                                                        .filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+                                                    const progReports = learner._reports || (reportsCreatedByCurrentCoach[String(learner.learner_id)] || []);
                                                     return (
-                                                        <tr key={learner.learner_id} className="table-primary-row">
+                                                        <tr key={learner.learner_id ?? learner._standaloneKey ?? idx} className="table-primary-row">
                                                             <td className="table-primary-td">{idx + 1}</td>
                                                             <td className="table-primary-td">
                                                                 <div className="table-primary-cell-name-text">{learner.learner_name}</div>
-                                                            </td>
-                                                            <td className="table-primary-td" style={{ textAlign: 'center' }}>
-                                                                {learner.total_sessions != null
-                                                                    ? <span style={{ fontWeight: 700, color: '#7c1c1c', fontSize: '1.1rem' }}>{learner.total_sessions}</span>
-                                                                    : '—'}
-                                                            </td>
-                                                            <td className="table-primary-td">
-                                                                {learner.last_session_date
-                                                                    ? new Date(learner.last_session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                                                    : '—'}
-                                                            </td>
-                                                            <td className="table-primary-td" style={{ textAlign: 'center' }}>
-                                                                {learner.programs_covered?.length > 0
-                                                                    ? <span className="table-primary-badge">{learner.programs_covered.length}</span>
-                                                                    : '—'}
-                                                            </td>
-                                                            {/* All Program Goals Report */}
-                                                            <td className="table-primary-td table-primary-td-center">
-                                                                <button
-                                                                    onClick={() => handleLearnerClick(learner.learner_id)}
-                                                                    className="app-modal-btn app-modal-btn--primary"
-                                                                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
-                                                                >
-                                                                    📈 View Reports
-                                                                </button>
                                                             </td>
                                                             {/* Final Generated Reports — always has reports since row is only shown when ≥1 exist */}
                                                             <td className="table-primary-td">
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                     {progReports.map(r => (
-                                                                        <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                                            <button
-                                                                                onClick={() => handlePreviewProgressReport(r)}
-                                                                                disabled={previewingId === r.id}
-                                                                                style={previewBtnStyle}
-                                                                            >
-                                                                                {previewingId === r.id ? '…' : '👁 Preview'}
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleDownloadProgressReport(r)}
-                                                                                disabled={downloadingId === r.id}
-                                                                                style={dlBtnStyle}
-                                                                            >
-                                                                                {downloadingId === r.id ? '…' : '⬇ PDF'}
-                                                                            </button>
+                                                                        <div key={r.id}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+                                                                                <button
+                                                                                    onClick={() => handlePreviewProgressReport(r)}
+                                                                                    disabled={previewingId === r.id}
+                                                                                    style={previewBtnStyle}
+                                                                                >
+                                                                                    {previewingId === r.id ? '…' : '👁 Preview'}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDownloadProgressReport(r)}
+                                                                                    disabled={downloadingId === r.id}
+                                                                                    style={dlBtnStyle}
+                                                                                >
+                                                                                    {downloadingId === r.id ? '…' : '⬇ PDF'}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => setDeleteConfirmId(r.id)}
+                                                                                    disabled={deletingId === r.id}
+                                                                                    style={deleteBtnStyle}
+                                                                                >
+                                                                                    {deletingId === r.id ? '…' : '🗑 Delete'}
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -273,6 +330,74 @@ const CoachManageLearningReports = () => {
                     onClose={() => setShowCreateReportModal(false)}
                     onCreated={() => fetchProgressReports()}
                 />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmId && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '2rem',
+                        borderRadius: '0.5rem',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        maxWidth: '500px',
+                        textAlign: 'center'
+                    }}>
+                        <h3 style={{ color: '#7c1c1c', marginBottom: '1rem' }}>Delete Report?</h3>
+                        <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+                            Are you sure you want to delete this report? This action cannot be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                style={{
+                                    background: '#e5e7eb',
+                                    color: '#374151',
+                                    border: 'none',
+                                    borderRadius: '0.35rem',
+                                    padding: '0.6rem 1.5rem',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const reports = Object.values(progressReportsMap).flat();
+                                    const report = reports.find(r => r.id === deleteConfirmId);
+                                    if (report) handleDeleteProgressReport(report);
+                                }}
+                                disabled={deletingId === deleteConfirmId}
+                                style={{
+                                    background: 'linear-gradient(135deg, #b91c1c, #dc2626)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '0.35rem',
+                                    padding: '0.6rem 1.5rem',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    cursor: deletingId === deleteConfirmId ? 'not-allowed' : 'pointer',
+                                    opacity: deletingId === deleteConfirmId ? 0.7 : 1
+                                }}
+                            >
+                                {deletingId === deleteConfirmId ? 'Deleting...' : 'Delete Report'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );
@@ -306,6 +431,18 @@ const createBtnStyle = {
     background: 'white',
     color: '#7c1c1c',
     border: '1px solid #7c1c1c',
+    borderRadius: '0.35rem',
+    padding: '0.25rem 0.6rem',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+};
+
+const deleteBtnStyle = {
+    background: 'linear-gradient(135deg, #dc2626, #991b1b)',
+    color: 'white',
+    border: 'none',
     borderRadius: '0.35rem',
     padding: '0.25rem 0.6rem',
     fontSize: '0.75rem',

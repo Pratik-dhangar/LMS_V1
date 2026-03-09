@@ -82,6 +82,8 @@ import FeedbackPage from "./pages/learner/FeedbackPage";
 import MySessions from "./pages/learner/MySessions";
 import AssignedPrograms from "./pages/learner/AssignedPrograms";
 import LearningContent from "./pages/learner/LearningContent";
+import LearnerMyReports from "./pages/learner/LearnerMyReports";
+import LearnerProgramGraphView from "./pages/learner/LearnerProgramGraphView";
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -813,6 +815,22 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["learner"]}>
                 <StoreCatalog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerMyReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports/:learnerId/program/:programName"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerProgramGraphView />
               </ProtectedRoute>
             }
           />
