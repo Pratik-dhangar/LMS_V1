@@ -51,14 +51,23 @@ async def get_all_progress_reports(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get all progress reports (paginated)."""
+    """
+    Get all progress reports created by the current user.
+    - HEAD, TRAINER, COACH: see only their own reports
+    - ADMIN: see all reports
+    """
     allowed_roles = {UserRole.HEAD, UserRole.TRAINER, UserRole.COACH, UserRole.ADMIN}
     if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",
         )
-    return await learner_progress_report_crud.get_all_reports(db, skip=skip, limit=limit)
+    
+    # ADMIN can see all reports, others see only their own
+    if current_user.role == UserRole.ADMIN:
+        return await learner_progress_report_crud.get_all_reports(db, skip=skip, limit=limit)
+    else:
+        return await learner_progress_report_crud.get_reports_by_creator(db, current_user.id, skip=skip, limit=limit)
 
 
 @router.get("/learner/{learner_id}", response_model=List[LearnerProgressReportResponse])
@@ -67,14 +76,23 @@ async def get_learner_progress_reports(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get all progress reports for a specific learner."""
+    """
+    Get all progress reports for a specific learner created by the current user.
+    - HEAD, TRAINER, COACH: see only reports they created for this learner
+    - ADMIN: see all reports for this learner
+    """
     allowed_roles = {UserRole.HEAD, UserRole.TRAINER, UserRole.COACH, UserRole.ADMIN}
     if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",
         )
-    return await learner_progress_report_crud.get_reports_by_learner(db, learner_id)
+    
+    # ADMIN can see all reports, others see only their own
+    if current_user.role == UserRole.ADMIN:
+        return await learner_progress_report_crud.get_reports_by_learner(db, learner_id)
+    else:
+        return await learner_progress_report_crud.get_reports_by_learner_and_creator(db, learner_id, current_user.id)
 
 
 @router.get("/{report_id}", response_model=LearnerProgressReportResponse)
@@ -125,11 +143,11 @@ async def delete_progress_report(
     current_user: User = Depends(get_current_user),
 ):
     """Delete a progress report."""
-    allowed_roles = {UserRole.HEAD, UserRole.ADMIN}
+    allowed_roles = {UserRole.HEAD, UserRole.ADMIN, UserRole.COACH}
     if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Head or Admin can delete progress reports",
+            detail="Only Head, Coach, or Admin can delete progress reports",
         )
 
     report = await learner_progress_report_crud.get_report_by_id(db, report_id)

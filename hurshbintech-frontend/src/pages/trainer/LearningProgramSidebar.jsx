@@ -90,7 +90,25 @@ const LearningProgramSidebar = ({
           </div>
         )}
 
-        <div className="sidebar-section-title">Program Items</div>
+        {sessionInfo?.program?.name && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            margin: '4px auto',
+            padding: '4px 8px',
+            backgroundColor: '#fef3c7',
+            borderLeft: '3px solid #d97706',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#92400e',
+            fontWeight: '600',
+          }}>
+            <span>📁</span>
+            <span>{sessionInfo.program.name}</span>
+          </div>
+        )}
+        <div className="sidebar-section-title">Program Goals</div>
 
         <div className="sidebar-scrollable">
           {isSearching ? (
@@ -203,19 +221,40 @@ const LearningProgramSidebar = ({
         <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
-            {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
-              <div
-                key={r}
-                className={`meter-button ${selectedReinforcementLevel === r ? 'meter-button-selected' : 'meter-button-green'}`}
-                onClick={() => {
-                  const newValue = selectedReinforcementLevel === r ? null : r;
-                  setSelectedReinforcementLevel(newValue);
-                  webRTC && webRTC.sendReinforcementMeter(newValue);
-                }}
-              >
-                {r}
-              </div>
-            ))}
+            {['Tick', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Cross'].map((r) => {
+              const val = r === 'Cross' ? 100 : r === 'Tick' ? 0 : r;
+              const isSelected = selectedReinforcementLevel === val;
+              return (
+                <div
+                  key={r}
+                  className={`meter-button ${r === 'Tick' || r === 'Cross' ? '' : isSelected ? 'meter-button-selected' : 'meter-button-green'}`}
+                  style={
+                    r === 'Tick'
+                      ? { backgroundColor: isSelected ? '#15803d' : '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                      : r === 'Cross'
+                        ? { backgroundColor: isSelected ? '#991b1b' : '#dc2626', borderColor: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                        : {}
+                  }
+                  title={r === 'Tick' ? 'No reinforcement needed (0)' : r === 'Cross' ? 'Full reinforcement needed (100)' : `Reinforcement level ${r}`}
+                  onClick={() => {
+                    const newValue = isSelected ? null : val;
+                    setSelectedReinforcementLevel(newValue);
+                    webRTC && webRTC.sendReinforcementMeter(newValue);
+                  }}
+                >
+                  {r === 'Tick' ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                      <polyline points="1.5,7 5.5,11 12.5,3" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : r === 'Cross' ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                      <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                    </svg>
+                  ) : r}
+                </div>
+              );
+            })}
           </div>
 
           {/* {selectedReinforcementLevel && (

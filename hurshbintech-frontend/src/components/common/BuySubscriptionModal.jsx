@@ -245,7 +245,7 @@ const BuySubscriptionModal = ({ onClose }) => {
                 {/* ── Header ──────────────────────────────────────────────────────── */}
                 <div className="bsm-header">
                     <div>
-                        <h2 className="bsm-header-title">Buy Subscription</h2>
+                        <h2 className="bsm-header-title">Buy Learning Program</h2>
                         <p className="bsm-header-subtitle">
                             Step {step} of {TOTAL_STEPS} —{' '}
                             {step === 1 && 'Learner Information'}

@@ -206,7 +206,7 @@ const TrainerSession = () => {
   // Remove learner from ongoing session
   const handleRemoveLearner = () => {
     const learnerName = state.sessionInfo?.learner_name || 'Learner';
-    if (window.confirm(`Remove ${learnerName} from the session?`)) {
+    if (window.confirm(`Exit ${learnerName} from the session?`)) {
       state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
       toast.info(`${learnerName} has been removed from the session`);
     }

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList,
 } from "recharts";
 import sessionReportService from "../../api/services/sessionReportService";
 import { downloadProgramGraphPDF } from "../../utils/pdfGenerator";
@@ -59,6 +59,62 @@ const AdminProgramGraphView = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Custom label component to show "Done" on zero-value bars
+    const renderCustomLabel = (props) => {
+        const { x, y, width, value } = props;
+        if (value === 0) {
+            return (
+                <text
+                    x={x + width / 2}
+                    y={y - 10}
+                    fill="#22c55e"
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="bold"
+                >
+                    Done
+                </text>
+            );
+        }
+        return null;
+    };
+
+    // Custom bar shape to render green line only on bars with 0 value
+    const CustomBarShape = (props) => {
+        const { x, y, width, height, fill, payload } = props;
+        const isZeroValue = payload && payload.prompt_value === 0;
+
+        return (
+            <g>
+                <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill={fill}
+                    radius={radiusToArray(props.radius)}
+                />
+                {isZeroValue && (
+                    <line
+                        x1={x}
+                        y1={y}
+                        x2={x + width}
+                        y2={y}
+                        stroke="#22c55e"
+                        strokeWidth={3}
+                    />
+                )}
+            </g>
+        );
+    };
+
+    // Helper to normalize radius props
+    const radiusToArray = (radius) => {
+        if (Array.isArray(radius)) return radius;
+        if (typeof radius === 'number') return [radius, radius, 0, 0];
+        return [8, 8, 0, 0];
     };
 
     const handleDownloadPDF = async () => {
@@ -128,7 +184,7 @@ const AdminProgramGraphView = () => {
                                 Back to Programs
                             </button>
                             <div>
-                                <h1 className="page-title">Program Progress Graph</h1>
+                                <h1 className="page-title">Progress Graph</h1>
                                 <p className="page-description">
                                     {learnerName && `${learnerName} — `}
                                     {programName}
@@ -199,7 +255,19 @@ const AdminProgramGraphView = () => {
                                         />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="square" />
-                                        <Bar dataKey="prompt_value" fill="#db9d32" name="Prompt Level" radius={[8, 8, 0, 0]} />
+                                        <Bar
+                                            dataKey="prompt_value"
+                                            fill="#db9d32"
+                                            name="Prompt Level"
+                                            radius={[8, 8, 0, 0]}
+                                            shape={<CustomBarShape />}
+                                        >
+                                            <LabelList
+                                                dataKey="prompt_value"
+                                                content={renderCustomLabel}
+                                                position="top"
+                                            />
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -277,7 +345,7 @@ const AdminProgramGraphView = () => {
                         }}>
                             <div>
                                 <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: "bold", margin: 0 }}>
-                                    📊 Program Progress Report
+                                    📊 Progress Graph
                                 </h2>
                                 <p style={{ color: "rgba(255,255,255,0.85)", margin: "4px 0 0", fontSize: "0.95rem" }}>
                                     {learnerName && <strong>{learnerName}</strong>}
@@ -325,7 +393,19 @@ const AdminProgramGraphView = () => {
                                         />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
-                                        <Bar dataKey="prompt_value" fill="#db9d32" name="Prompt Level" radius={[6, 6, 0, 0]} />
+                                        <Bar
+                                            dataKey="prompt_value"
+                                            fill="#db9d32"
+                                            name="Prompt Level"
+                                            radius={[6, 6, 0, 0]}
+                                            shape={<CustomBarShape />}
+                                        >
+                                            <LabelList
+                                                dataKey="prompt_value"
+                                                content={renderCustomLabel}
+                                                position="top"
+                                            />
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>

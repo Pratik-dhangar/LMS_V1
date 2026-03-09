@@ -17,8 +17,20 @@ from app.models.session_model import TrainingSession
 from app.schemas.session import SessionCreate
 
 
-async def get_all_sessions_by_head(db: AsyncSession, head_user_id: int) -> List[TrainingSession]:
-    """Get all sessions created by a specific Head"""
+async def get_all_sessions_by_head(
+    db: AsyncSession, head_user_id: int, skip: int = 0, limit: int = 10
+) -> (List[TrainingSession], int):
+    """Get all sessions created by a specific Head with pagination"""
+    from sqlalchemy import func
+
+    # Get total count
+    count_query = select(func.count()).select_from(TrainingSession).where(
+        TrainingSession.created_by_id == head_user_id
+    )
+    total_count_result = await db.execute(count_query)
+    total_count = total_count_result.scalar_one()
+
+    # Get paginated results
     result = await db.execute(
         select(TrainingSession)
         .options(
@@ -30,8 +42,10 @@ async def get_all_sessions_by_head(db: AsyncSession, head_user_id: int) -> List[
         )
         .where(TrainingSession.created_by_id == head_user_id)
         .order_by(TrainingSession.scheduled_date.desc())
+        .offset(skip)
+        .limit(limit)
     )
-    return result.unique().scalars().all()
+    return result.unique().scalars().all(), total_count
 
 
 async def get_by_id(db: AsyncSession, session_pk: int) -> Optional[TrainingSession]:

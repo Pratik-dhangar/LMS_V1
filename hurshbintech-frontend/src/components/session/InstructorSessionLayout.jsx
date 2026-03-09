@@ -3157,7 +3157,7 @@ export const InstructorSessionPage = ({
                             title={`Remove ${participantName} from session`}
                             
                         >
-                            🚫 <span className="xs:inline">Remove {participantName}</span>
+                            🚫 <span className="xs:inline">Exit {participantName}</span>
                         </button>
                     )}
                     <button

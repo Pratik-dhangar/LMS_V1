@@ -1,7 +1,7 @@
 # Program Assignment Feature - Implementation Summary
 
 ## Overview
-Complete implementation of the Home Program and Assignment Tracking Feature allowing Heads to assign learning programs to learners and track their progress, while learners can view assignments, submit work, and mark completion.
+Complete implementation of the Home Learning Program and Assignment Tracking Feature allowing Heads to assign learning programs to learners and track their progress, while learners can view assignments, submit work, and mark completion.
 
 ## Backend Implementation
 

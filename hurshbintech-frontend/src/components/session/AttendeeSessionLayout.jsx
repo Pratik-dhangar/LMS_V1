@@ -1332,9 +1332,16 @@ export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor })
 
     const colors = [
         { value: '#000000', label: 'Black' },
-        { value: '#22c55e', label: 'Green' },
+        { value: '#06b6d4', label: 'Cyan' },
         { value: '#ef4444', label: 'Red' },
-        { value: '#eab308', label: 'Yellow' }
+        { value: '#f97316', label: 'Orange' },
+        { value: '#eab308', label: 'Yellow' },
+        { value: '#22c55e', label: 'Green' },
+        { value: '#3b82f6', label: 'Blue' },
+        { value: '#8b5cf6', label: 'Purple' },
+        { value: '#ec4899', label: 'Pink' },
+        { value: '#6b7280', label: 'Gray' },
+        { value: '#92400e', label: 'Brown' },
     ];
 
     const isEraser = tool === 'eraser';
@@ -2928,4 +2935,167 @@ AttendeeUpperSection.propTypes = {
     videoLabel: PropTypes.string,
     showVideoControls: PropTypes.bool,
     sessionType: PropTypes.string
+};
+
+// ============================================================================
+// SESSION FEEDBACK MODAL
+// ============================================================================
+
+/**
+ * SessionFeedbackModal
+ * Shown to the attendee when the instructor ends the session.
+ * Collects a 1-5 star rating and an optional remark.
+ */
+export const SessionFeedbackModal = ({ onSubmit, onSkip }) => {
+    const [rating, setRating] = useState(0);
+    const [hovered, setHovered] = useState(0);
+    const [remark, setRemark] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        if (rating === 0) return;
+        setSubmitting(true);
+        await onSubmit(rating, remark);
+    };
+
+    return (
+        <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+        }}>
+            <div style={{
+                backgroundColor: '#fff',
+                borderRadius: '16px',
+                padding: '2rem',
+                width: 'min(90vw, 420px)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem'
+            }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#1f2937' }}>
+                        Session Complete!
+                    </h2>
+                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                        How was your session? Your feedback helps us improve.
+                    </p>
+                </div>
+
+                {/* Star Rating */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                        Rate your experience
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <button
+                                key={star}
+                                onMouseEnter={() => setHovered(star)}
+                                onMouseLeave={() => setHovered(0)}
+                                onClick={() => setRating(star)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '2.25rem',
+                                    color: star <= (hovered || rating) ? '#f59e0b' : '#d1d5db',
+                                    transition: 'color 0.15s ease, transform 0.1s ease',
+                                    transform: star <= (hovered || rating) ? 'scale(1.15)' : 'scale(1)',
+                                    padding: '0 2px',
+                                    lineHeight: 1
+                                }}
+                            >
+                                ★
+                            </button>
+                        ))}
+                    </div>
+                    {rating > 0 && (
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+                            {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][rating]}
+                        </p>
+                    )}
+                </div>
+
+                {/* Remark Text Box */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                        Remarks <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+                    </label>
+                    <textarea
+                        value={remark}
+                        onChange={e => setRemark(e.target.value)}
+                        placeholder="Share your thoughts about the session..."
+                        rows={3}
+                        maxLength={1000}
+                        style={{
+                            width: '100%',
+                            padding: '0.625rem 0.75rem',
+                            border: '1.5px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            color: '#1f2937'
+                        }}
+                        onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                        onBlur={e => e.target.style.borderColor = '#d1d5db'}
+                    />
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                        onClick={onSkip}
+                        disabled={submitting}
+                        style={{
+                            flex: 1,
+                            padding: '0.625rem',
+                            border: '1.5px solid #d1d5db',
+                            borderRadius: '8px',
+                            backgroundColor: '#f9fafb',
+                            color: '#6b7280',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Skip
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={rating === 0 || submitting}
+                        style={{
+                            flex: 2,
+                            padding: '0.625rem',
+                            border: 'none',
+                            borderRadius: '8px',
+                            backgroundColor: rating === 0 ? '#e5e7eb' : '#3b82f6',
+                            color: rating === 0 ? '#9ca3af' : '#fff',
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            cursor: rating === 0 ? 'not-allowed' : 'pointer',
+                            transition: 'background-color 0.15s ease'
+                        }}
+                    >
+                        {submitting ? 'Submitting...' : 'Submit Feedback'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+SessionFeedbackModal.propTypes = {
+    onSubmit: PropTypes.func.isRequired,
+    onSkip: PropTypes.func.isRequired,
 };

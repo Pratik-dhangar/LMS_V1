@@ -65,6 +65,7 @@ import TodaysSchedule from './pages/trainer/TodaysSchedule';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
+import CoachManageLearningReports from './pages/coach/CoachManageLearningReports';
 import CoachSession from './pages/coach/CoachSession';
 import CoachAppointments from './pages/coach/CoachAppointments';
 import CoachSessions from './pages/coach/CoachSessions';
@@ -81,6 +82,8 @@ import FeedbackPage from "./pages/learner/FeedbackPage";
 import MySessions from "./pages/learner/MySessions";
 import AssignedPrograms from "./pages/learner/AssignedPrograms";
 import LearningContent from "./pages/learner/LearningContent";
+import LearnerMyReports from "./pages/learner/LearnerMyReports";
+import LearnerProgramGraphView from "./pages/learner/LearnerProgramGraphView";
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -721,6 +724,22 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/coach/learning-reports"
+            element={
+              <ProtectedRoute allowedRoles={['coach']}>
+                <CoachManageLearningReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coach/learner-reports/:learnerId"
+            element={
+              <ProtectedRoute allowedRoles={['coach']}>
+                <LearnerProgramsView />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Learner Routes */}
           <Route
@@ -796,6 +815,22 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["learner"]}>
                 <StoreCatalog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerMyReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports/:learnerId/program/:programName"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerProgramGraphView />
               </ProtectedRoute>
             }
           />

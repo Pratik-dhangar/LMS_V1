@@ -30,10 +30,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Restore program_type column to learning_goals table."""
     # Recreate the enum type
-    op.execute("CREATE TYPE programtype AS ENUM ('IIP', 'HOME')")
+    op.execute("CREATE TYPE programtype AS ENUM ('ILP', 'HOME')")
     
     # Add program_type column back with default value
     op.add_column('learning_goals', 
-        sa.Column('program_type', sa.Enum('IIP', 'HOME', name='programtype'), 
-                  nullable=False, server_default='IIP')
+        sa.Column('program_type', sa.Enum('ILP', 'HOME', name='programtype'), 
+                  nullable=False, server_default='ILP')
     )

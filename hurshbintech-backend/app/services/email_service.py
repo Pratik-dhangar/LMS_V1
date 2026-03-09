@@ -3115,3 +3115,117 @@ class EmailService:
             html_body=html_body,
             email_type="vendor_order_notification",
         )
+
+    # ========== LEARNER GOALS REPORT EMAIL ==========
+
+    @staticmethod
+    async def send_learner_goals_report(
+        recipient_email: str,
+        recipient_name: str,
+        programs_covered: list,
+        total_sessions: int,
+        last_session_date: Optional[str],
+        sent_by_name: str,
+    ) -> bool:
+        """Send the All Program Goals Report summary to the learner's registered email."""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email disabled or no recipient, skipping goals report email to {recipient_email}")
+            return False
+
+        subject = f"Your Learning Goals Report – {recipient_name}"
+
+        # Build program rows
+        program_rows_html = ""
+        for i, prog in enumerate(programs_covered):
+            bg = "#f9f9f9" if i % 2 == 0 else "#ffffff"
+            program_rows_html += f"""
+                <tr style="background-color: {bg};">
+                    <td style="padding: 10px 14px; border: 1px solid #ddd; color: #444;">{i + 1}</td>
+                    <td style="padding: 10px 14px; border: 1px solid #ddd; color: #333; font-weight: 500;">{prog}</td>
+                </tr>"""
+
+        last_session_text = last_session_date if last_session_date else "N/A"
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Learning Goals Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }}
+                .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+                .header {{ background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; padding: 28px 30px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 22px; letter-spacing: 0.5px; }}
+                .header p {{ margin: 8px 0 0 0; opacity: 0.88; font-size: 14px; }}
+                .content {{ padding: 28px 30px; }}
+                .stats-row {{ display: flex; gap: 16px; margin: 20px 0; }}
+                .stat-box {{ flex: 1; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 14px; text-align: center; }}
+                .stat-box .num {{ font-size: 26px; font-weight: 700; color: #7c1c1c; }}
+                .stat-box .label {{ font-size: 12px; color: #888; margin-top: 4px; }}
+                .footer {{ background: #f8f8f8; padding: 18px 30px; text-align: center; font-size: 13px; color: #888; border-top: 1px solid #eee; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📈 All Program Goals Report</h1>
+                    <p>A summary of your learning progress across all programs</p>
+                </div>
+                <div class="content">
+                    <p>Hi <strong>{recipient_name}</strong>,</p>
+                    <p>Your learning progress report has been shared by <strong>{sent_by_name}</strong>. Below is a summary of all the programs and goals you have been working on.</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 8px 0 20px 0;">
+                        <tr>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555; width: 45%;">Total Sessions Attended</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #7c1c1c; font-weight: 700;">{total_sessions}</td>
+                        </tr>
+                        <tr style="background: #fafafa;">
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555;">Last Session Date</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #555;">{last_session_text}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555;">Total Programs / Goals</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #7c1c1c; font-weight: 700;">{len(programs_covered)}</td>
+                        </tr>
+                    </table>
+
+                    <h3 style="color: #7c1c1c; border-bottom: 2px solid #fca5a5; padding-bottom: 6px; margin-bottom: 12px;">Programs / Goals Covered</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                        <thead>
+                            <tr style="background: #7c1c1c; color: white;">
+                                <th style="padding: 10px 14px; border: 1px solid #a83232; text-align: left; width: 10%;">#</th>
+                                <th style="padding: 10px 14px; border: 1px solid #a83232; text-align: left;">Program / Goal Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {program_rows_html if programs_covered else '<tr><td colspan="2" style="padding: 12px; text-align: center; color: #888;">No programs recorded yet.</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <p style="color: #555; font-size: 14px;">To view detailed session reports and progress charts for each program, please log in to your dashboard.</p>
+
+                    <div style="text-align: center; margin: 24px 0;">
+                        <a href="{settings.FRONTEND_URL}/learner/dashboard" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Dashboard</a>
+                    </div>
+
+                    <div class="footer">
+                        <p>This report was sent by <strong>{sent_by_name}</strong> via the Hurshbintech platform.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="learner_goals_report",
+        )

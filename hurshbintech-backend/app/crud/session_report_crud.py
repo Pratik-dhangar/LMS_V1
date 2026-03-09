@@ -330,17 +330,21 @@ async def get_program_statistics(db: AsyncSession, learner_id: int, program_name
     }
 
 
-async def get_unique_learners_from_session_reports(db: AsyncSession) -> List[Dict]:
-    """Get all unique learners from session reports with their summary data"""
+async def get_unique_learners_from_session_reports(db: AsyncSession, head_id: int = None) -> List[Dict]:
+    """Get all unique learners from session reports with their summary data, optionally filtered by head"""
     learners_data = []
 
     # Get all unique learners from session_reports
-    result = await db.execute(
-        select(User)
-        .join(SessionReport, User.id == SessionReport.learner_id)
-        .distinct()
-        .order_by(User.name)
-    )
+    query = select(User).join(SessionReport, User.id == SessionReport.learner_id).distinct().order_by(User.name)
+    
+    # If head_id is provided, filter by learners created by that head
+    if head_id:
+        from app.models.user_model import LearnerProfile
+        query = query.join(LearnerProfile, User.id == LearnerProfile.user_id).where(
+            LearnerProfile.created_by_head_id == head_id
+        )
+    
+    result = await db.execute(query)
     learners = result.scalars().all()
 
     for learner in learners:

@@ -28,8 +28,9 @@ from app.models.program_model import Program
 from app.models.session_model import TrainingSession
 from app.models.session_notes_model import SessionNotes
 from app.models.session_report_model import SessionReport
+from app.models.session_feedback_model import SessionFeedback
 from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, User
-from app.schemas.session import SessionCreate, SessionEnd, SessionResponse
+from app.schemas.session import SessionCreate, SessionEnd, SessionResponse, SessionFeedbackCreate, SessionFeedbackResponse
 from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 from app.services.recording_storage import get_recording_storage
 from app.services.cache_service import cache_service
@@ -67,17 +68,28 @@ def get_public_url(file_url: str) -> str:
         return file_url
 
 
-@router.get("/all", response_model=List[SessionResponse])
+@router.get("/all")
 async def get_all_sessions(
-    db: AsyncSession = Depends(get_db), current_head: HeadProfile = Depends(get_current_head)
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+    skip: int = 0,
+    limit: int = 10,
 ):
-    """Get all sessions created by current Head"""
-    logger.info(f"Head {current_head.user_id} fetching all sessions")
+    """Get all sessions created by current Head with pagination"""
+    logger.info(f"Head {current_head.user_id} fetching all sessions with skip={skip}, limit={limit}")
 
     # Import here to avoid circular imports
     from app.crud.session_crud import get_all_sessions_by_head
 
-    sessions = await get_all_sessions_by_head(db, current_head.user_id)
+    sessions, total_count = await get_all_sessions_by_head(db, current_head.user_id, skip=skip, limit=limit)
+
+    # Build responses with notes and reports
+    responses = []
+    for s in sessions:
+        response = await build_session_response(db, s)
+        responses.append(response)
+
+    return {"sessions": responses, "total": total_count, "skip": skip, "limit": limit}
 
     # Build responses with notes and reports
     responses = []
@@ -436,6 +448,52 @@ async def end_training_session(
                 logger.error(f"Failed to send session end message: {e}")
 
     return {"message": "Session ended successfully"}
+
+
+@router.get("/{session_id}/feedback", response_model=list[SessionFeedbackResponse])
+async def get_session_feedback(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fetch all feedback submitted for a session. Requires authentication."""
+    result = await db.execute(select(TrainingSession).where(TrainingSession.session_id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    fb_result = await db.execute(
+        select(SessionFeedback)
+        .where(SessionFeedback.session_id == session.id)
+        .order_by(SessionFeedback.created_at.desc())
+    )
+    return fb_result.scalars().all()
+
+
+@router.post("/{session_id}/feedback", response_model=SessionFeedbackResponse, status_code=status.HTTP_201_CREATED)
+async def submit_session_feedback(
+    session_id: str,
+    feedback: SessionFeedbackCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit feedback (star rating + remark) after session ends. No auth required so guests can submit."""
+    # Resolve numeric session PK from string session_id
+    result = await db.execute(select(TrainingSession).where(TrainingSession.session_id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    new_feedback = SessionFeedback(
+        session_id=session.id,
+        attendee_role=feedback.attendee_role,
+        attendee_name=feedback.attendee_name,
+        rating=feedback.rating,
+        remark=feedback.remark,
+    )
+    db.add(new_feedback)
+    await db.commit()
+    await db.refresh(new_feedback)
+    logger.info(f"Feedback submitted for session {session_id}: rating={feedback.rating}, role={feedback.attendee_role}")
+    return new_feedback
 
 
 @router.delete("/{session_id}", status_code=status.HTTP_200_OK)

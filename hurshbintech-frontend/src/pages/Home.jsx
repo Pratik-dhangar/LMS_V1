@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/common/Spinner";
 import { CoachSkeleton, ServiceCardsSkeleton, ContentSectionSkeleton } from "../components/common/SkeletonLoader";
 import PWAInstallButton from '../components/common/PWAInstallButton';
-import BuySubscriptionModal from '../components/common/BuySubscriptionModal';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
@@ -32,7 +31,6 @@ const Home = () => {
   const [selectedSection, setSelectedSection] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFullBio, setShowFullBio] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const sectionRefs = useRef({});
   const blogsRef = useRef(null);
   const vlogsRef = useRef(null);
@@ -388,15 +386,8 @@ const Home = () => {
             About Us
           </button>
           <span className="hero-nav-divider">|</span>
-          <button
-            className="hero-nav-link hero-buy-subscription-btn"
-            onClick={() => setShowSubscriptionModal(true)}
-          >
-            Buy Subscription
-          </button>
-          <span className="hero-nav-divider">|</span>
           <PWAInstallButton />
-          
+
         </div>
 
         <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
@@ -843,11 +834,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Buy Subscription Modal */}
-      {showSubscriptionModal && (
-        <BuySubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
       )}
     </div>
   );

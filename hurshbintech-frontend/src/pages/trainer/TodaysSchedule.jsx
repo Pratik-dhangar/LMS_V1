@@ -323,7 +323,7 @@ const TodaysSchedule = () => {
                             <div className="trainer-session-meta">
                               Duration: {session.duration ?? "—"} minutes{" "}
                               {session.program
-                                ? ` | IIP: ${session.program}`
+                                ? ` | ILP: ${session.program}`
                                 : ""}
                             </div>
 
@@ -502,7 +502,7 @@ const TodaysSchedule = () => {
                   <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
                 </div>
                 <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Program / IIP</label>
+                  <label className="app-modal-form-label">Program / ILP</label>
                   <p className="app-modal-text">
                     {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
                       ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")

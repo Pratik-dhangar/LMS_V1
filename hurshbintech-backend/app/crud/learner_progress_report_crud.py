@@ -52,12 +52,41 @@ async def get_reports_by_learner(
     return list(result.scalars().all())
 
 
+async def get_reports_by_learner_and_creator(
+    db: AsyncSession, learner_id: int, created_by_id: int
+) -> List[LearnerProgressReport]:
+    """Fetch all reports for a specific learner created by a specific user."""
+    result = await db.execute(
+        select(LearnerProgressReport)
+        .where(
+            LearnerProgressReport.learner_id == learner_id,
+            LearnerProgressReport.created_by_id == created_by_id,
+        )
+        .order_by(LearnerProgressReport.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_all_reports(
     db: AsyncSession, skip: int = 0, limit: int = 100
 ) -> List[LearnerProgressReport]:
     """Fetch all reports (paginated)."""
     result = await db.execute(
         select(LearnerProgressReport)
+        .order_by(LearnerProgressReport.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def get_reports_by_creator(
+    db: AsyncSession, created_by_id: int, skip: int = 0, limit: int = 100
+) -> List[LearnerProgressReport]:
+    """Fetch all reports created by a specific user/head/trainer/coach."""
+    result = await db.execute(
+        select(LearnerProgressReport)
+        .where(LearnerProgressReport.created_by_id == created_by_id)
         .order_by(LearnerProgressReport.created_at.desc())
         .offset(skip)
         .limit(limit)

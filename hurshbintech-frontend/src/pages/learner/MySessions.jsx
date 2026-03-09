@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useAuth } from "../../context/AuthContext";
 import sessionService from "../../api/services/sessionService";
+import { SessionFeedbackModal } from "../../components/session/AttendeeSessionLayout";
 import "../../styles/components/common/Modal.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -17,6 +19,8 @@ const MySessions = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionDetailsModal, setShowSessionDetailsModal] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackSessionId, setFeedbackSessionId] = useState(null);
 
   // Track which sessions have been joined - persist to localStorage
   const [joinedSessions, setJoinedSessions] = useState(() => {
@@ -235,7 +239,7 @@ const MySessions = () => {
               Back to Dashboard
             </button>
             <h1 className="page-title">
-              My Sessions (IIP)
+              My Sessions (ILP)
             </h1>
           </div>
 
@@ -326,25 +330,11 @@ const MySessions = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {sessions
                   .sort((a, b) => {
-                    // Sort by status priority: active first, then scheduled, then cancelled/expired/ended
-                    const statusPriority = { active: 0, scheduled: 1, cancelled: 2, expired: 2, ended: 3 };
-                    // Get actual status for sorting
-                    const getSessionStatus = (sess) => {
-                      if (sess.status === 'scheduled' && sess.scheduled_date) {
-                        const now = new Date();
-                        const scheduled = new Date(sess.scheduled_date);
-                        if (scheduled < now) {
-                          return 'expired';
-                        }
-                      }
-                      return sess.status;
-                    };
-                    const aStatus = getSessionStatus(a);
-                    const bStatus = getSessionStatus(b);
-                    const aPriority = statusPriority[aStatus] ?? 4;
-                    const bPriority = statusPriority[bStatus] ?? 4;
-                    if (aPriority !== bPriority) return aPriority - bPriority;
-                    // Within same status, sort by date (newest first)
+                    // Only ongoing (active) sessions come to the top; rest keep original order (newest date first)
+                    const isActive = (sess) => sess.status === 'active';
+                    if (isActive(a) && !isActive(b)) return -1;
+                    if (!isActive(a) && isActive(b)) return 1;
+                    // Within same group, sort by date (newest first)
                     return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
                   })
                   .slice(0, itemsPerPage)
@@ -482,6 +472,26 @@ const MySessions = () => {
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
                               >
                                 {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
+                              </button>
+                            )}
+                            {isEnded && (
+                              <button
+                                onClick={() => { setFeedbackSessionId(session.session_id); setShowFeedbackModal(true); }}
+                                style={{
+                                  background: '#5C1E1E',
+                                  color: '#ffffff',
+                                  padding: '0.375rem 0.75rem',
+                                  borderRadius: '0.375rem',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '600',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7c3aed, #5b21b6)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8b5cf6, #6d28d9)'}
+                              >
+                                ★ Feedback
                               </button>
                             )}
                             <button
@@ -634,7 +644,7 @@ const MySessions = () => {
                   <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
                 </div>
                 <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Program / IIP</label>
+                  <label className="app-modal-form-label">Program / ILP</label>
                   <p className="app-modal-text">
                     {selectedSession.learning_goals && selectedSession.learning_goals.length > 0
                       ? selectedSession.learning_goals.map(goal => goal.goal).join(", ")
@@ -665,6 +675,21 @@ const MySessions = () => {
         </div>
       )}
 
+      {showFeedbackModal && feedbackSessionId && (
+        <SessionFeedbackModal
+          onSubmit={async (rating, remark) => {
+            try {
+              await sessionService.submitFeedback(feedbackSessionId, { rating, remark, attendeeRole: 'learner' });
+              toast.success('Thank you for your feedback!');
+            } catch {
+              toast.error('Failed to submit feedback. Please try again.');
+            }
+            setShowFeedbackModal(false);
+            setFeedbackSessionId(null);
+          }}
+          onSkip={() => { setShowFeedbackModal(false); setFeedbackSessionId(null); }}
+        />
+      )}
     </div>
   );
 };

@@ -41,7 +41,8 @@ import {
   usePromptAnimation,
   useBulbGlowAnimation,
   ExerciseOverlay,
-  attendeeSessionStyles
+  attendeeSessionStyles,
+  SessionFeedbackModal
 } from '../../components/session/AttendeeSessionLayout';
 
 
@@ -134,6 +135,8 @@ const LearnerSession = () => {
   const [retrying, setRetrying] = useState(false);
   const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for trainer to admit
   const [admissionDenied, setAdmissionDenied] = useState(false); // Trainer rejected the join request
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const pendingCleanupRef = useRef(null);
 
   // Use shared animation hooks
   const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
@@ -205,20 +208,16 @@ const LearnerSession = () => {
     whiteboardService.onSessionEnded = (data) => {
       // console.log('[LearnerSession] Session ended by trainer:', data);
       toast.info('Session has been ended by the trainer');
-
-      // Clean up and redirect after a short delay
-      setTimeout(() => {
+      setShowFeedbackModal(true);
+      // Store cleanup fn so feedback modal can trigger it
+      pendingCleanupRef.current = () => {
         if (webRTC?.localStream) {
           webRTC.localStream.getTracks().forEach(track => track.stop());
         }
-        if (webRTC) {
-          webRTC.close();
-        }
-        if (whiteboardService) {
-          whiteboardService.close();
-        }
+        if (webRTC) webRTC.close();
+        if (whiteboardService) whiteboardService.close();
         navigate('/learner/dashboard');
-      }, 2000);
+      };
     };
 
     return () => {
@@ -1452,12 +1451,12 @@ const LearnerSession = () => {
       <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
         <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
           <div style={{ fontSize: '56px', marginBottom: '16px', animation: 'bounce 1s infinite' }}>⏳</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Admission</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Instructor</h2>
           <p className="text-gray-600 mb-2">
-            You have joined the session. Please wait for your trainer to admit you.
+            You have joined the session. Please wait for your instructor to admit you.
           </p>
           <p className="text-gray-600 mb-6">
-            <strong>{sessionInfo?.trainer_name ?? 'Your trainer'}</strong> will admit you shortly.
+            <strong>{sessionInfo?.trainer_name ?? 'Your instructor'}</strong> will admit you shortly.
           </p>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
@@ -1960,6 +1959,24 @@ const LearnerSession = () => {
           position="bottom-right"
         />
       </div>
+      {showFeedbackModal && (
+        <SessionFeedbackModal
+          onSubmit={async (rating, remark) => {
+            try {
+              await sessionService.submitFeedback(sessionId, { rating, remark, attendeeRole: 'learner' });
+              toast.success('Thank you for your feedback!');
+            } catch {
+              // silently ignore if submission fails
+            }
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+          onSkip={() => {
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+        />
+      )}
     </div>
   );
 };

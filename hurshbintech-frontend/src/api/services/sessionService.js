@@ -75,9 +75,9 @@ const sessionService = {
   },
 
   // Common
-  getAllSessions: async () => {
+  getAllSessions: async (skip = 0, limit = 10) => {
     try {
-      const response = await api.get('/sessions/all');
+      const response = await api.get(`/sessions/all?skip=${skip}&limit=${limit}`);
       return response.data;
     } catch (error) {
       console.error('[sessionService] Error fetching all sessions:', error);
@@ -183,6 +183,31 @@ const sessionService = {
       return response.data;
     } catch (error) {
       console.error('[sessionService] Error uploading recording:', error);
+      throw error;
+    }
+  },
+
+  submitFeedback: async (sessionId, { rating, remark, attendeeRole, attendeeName }) => {
+    try {
+      const response = await api.post(`/sessions/${sessionId}/feedback`, {
+        rating,
+        remark: remark || null,
+        attendee_role: attendeeRole || 'learner',
+        attendee_name: attendeeName || null,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error submitting feedback:', error);
+      throw error;
+    }
+  },
+
+  getSessionFeedback: async (sessionId) => {
+    try {
+      const response = await api.get(`/sessions/${sessionId}/feedback`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching session feedback:', error);
       throw error;
     }
   }
