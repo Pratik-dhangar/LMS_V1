@@ -87,6 +87,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -417,7 +418,7 @@
   .guest-booking-flow .otp-input-container {
     gap: 0.5rem;
   }
-  
+
   .otp-input-box {
     width: 2.5rem;
     height: 2.5rem;
@@ -664,6 +665,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -810,6 +812,7 @@
     transform: scale(0);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -874,7 +877,150 @@
   color: #1f2937;
 }
 
-/* Token Expiry Box */
+/* ===== Email Input Wrapper (with checking spinner) ===== */
+.guest-booking-flow .email-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.guest-booking-flow .email-input-wrapper input {
+  width: 100%;
+  padding-right: 2.5rem;
+  /* room for spinner */
+}
+
+.guest-booking-flow .email-checking-spinner {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #41a67e;
+  pointer-events: none;
+}
+
+/* ===== Returning Guest Box ===== */
+.guest-booking-flow .returning-guest-box {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fffbef 0%, #fff8e1 100%);
+  border: 1.5px solid #f5c842;
+  border-left: 5px solid #f0a500;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(240, 165, 0, 0.12);
+  animation: slideUp 0.25s ease-out;
+}
+
+.guest-booking-flow .returning-guest-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.guest-booking-flow .returning-guest-desc {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: #78350f;
+  line-height: 1.55;
+}
+
+.guest-booking-flow .returning-guest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Follow-up button — amber/gold accent */
+.guest-booking-flow .btn-followup {
+  width: 100%;
+  background: linear-gradient(135deg, #f0a500 0%, #d97706 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(240, 165, 0, 0.35);
+  white-space: nowrap;
+}
+
+.guest-booking-flow .btn-followup:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 4px 12px rgba(240, 165, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.guest-booking-flow .btn-followup:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.guest-booking-flow .btn-followup:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* New session button — neutral/outline style */
+.guest-booking-flow .btn-new-session {
+  width: 100%;
+  background: #fff;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.guest-booking-flow .btn-new-session:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.guest-booking-flow .btn-new-session:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.guest-booking-flow .btn-new-session:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* OTP sent hint line */
+.guest-booking-flow .otp-sent-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 1.25rem;
+  margin-top: 0;
+  line-height: 1.5;
+}
+
+.guest-booking-flow .otp-sent-hint strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* ===== Token Expiry Box ===== */
 .guest-booking-flow .token-expiry-box {
   display: flex;
   align-items: center;

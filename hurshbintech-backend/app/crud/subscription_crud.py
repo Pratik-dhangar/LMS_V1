@@ -68,6 +68,7 @@ async def create_package(
         sessions_count=package_data.sessions_count,
         validity_days=package_data.validity_days,
         price=package_data.price,
+        package_type=package_data.package_type,
     )
     db.add(package)
     await db.commit()

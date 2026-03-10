@@ -24,9 +24,9 @@ const AdminDashboard = () => {
     { id: '1.9b', title: 'Contact Submissions', description: 'View and manage contact form submissions', icon: Mail, color: 'pink', onClick: () => navigate('/admin/contacts') },
     { id: '1.10', title: 'MarketPlace Inventory', description: 'Add, edit, and manage learning material products', icon: ShoppingCart, color: 'green', onClick: () => navigate('/admin/manage-learning-materials') },
     { id: '1.11', title: 'MarketPlace Orders', description: 'Verify customer payments and approve orders', icon: CreditCard, color: 'indigo', onClick: () => navigate('/admin/payment-verification') },
-    { id: '3.1', title: 'Manage Manage Learning Packages', description: 'Create and manage subscription packages for learners', icon: Package, color: 'orange', onClick: () => navigate('/admin/subscriptions/packages') },
+    { id: '3.1', title: 'Manage Learning Packages', description: 'Create and manage subscription packages for learners', icon: Package, color: 'orange', onClick: () => navigate('/admin/subscriptions/packages') },
     { id: '3.2', title: 'Manage Discount Codes', description: 'Create and manage discount codes for subscriptions', icon: Gift, color: 'violet', onClick: () => navigate('/admin/subscriptions/discounts') },
-    { id: '3.3', title: 'Manage Learning Payment Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'amber', onClick: () => navigate('/admin/subscriptions/records') }
+    { id: '3.3', title: 'Manage Payment Records', description: 'View all learner subscriptions and their details', icon: BookOpen, color: 'amber', onClick: () => navigate('/admin/subscriptions/records') }
   ];
 
   return (

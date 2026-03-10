@@ -24,6 +24,12 @@ def get_current_datetime():
 
 # ============ ENUMERATIONS ============
 
+class PackageType(enum.Enum):
+    """Type of subscription package"""
+    LEARNER = "LEARNER"    # Package for learners
+    COACH = "COACH"        # Package for coaches
+
+
 class SubscriptionStatus(enum.Enum):
     """Status of a learner's subscription"""
     ACTIVE = "ACTIVE"              # Currently active, sessions can be consumed
@@ -77,7 +83,8 @@ class SubscriptionPackage(Base):
     sessions_count = Column(Integer, nullable=False)  # Total sessions in package
     validity_days = Column(Integer, nullable=False)    # Validity period in days
     price = Column(Numeric(10, 2), nullable=False)     # Package price
-    
+    package_type = Column(SAEnum(PackageType, name="packagetype"), nullable=False, default=PackageType.LEARNER)  # Package target type
+
     # Package status
     is_active = Column(Boolean, default=True, nullable=False)  # Soft delete flag
     

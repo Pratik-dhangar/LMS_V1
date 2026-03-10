@@ -17,10 +17,13 @@ const ManageSubscriptionPackages = () => {
 
     const [packages, setPackages] = useState([]);
     const [filteredPackages, setFilteredPackages] = useState([]);
+    const [activeTab, setActiveTab] = useState("learner");
+    const [expandedDescriptions, setExpandedDescriptions] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [editingPackage, setEditingPackage] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Form state
     const [formData, setFormData] = useState({
@@ -29,11 +32,32 @@ const ManageSubscriptionPackages = () => {
         sessions_count: "",
         validity_days: "",
         price: "",
+        package_type: "LEARNER",
     });
 
     useEffect(() => {
         fetchPackages();
     }, []);
+
+    // Re-apply filters whenever packages, activeTab, or searchQuery changes
+    useEffect(() => {
+        applyFilters(packages, activeTab, searchQuery);
+    }, [packages, activeTab, searchQuery]);
+
+    const applyFilters = (allPackages, tab, query) => {
+        let filtered = allPackages.filter(
+            (pkg) => pkg.package_type === (tab === "learner" ? "LEARNER" : "COACH")
+        );
+        if (query.trim()) {
+            const lower = query.toLowerCase();
+            filtered = filtered.filter(
+                (pkg) =>
+                    pkg.package_name.toLowerCase().includes(lower) ||
+                    pkg.description?.toLowerCase().includes(lower)
+            );
+        }
+        setFilteredPackages(filtered);
+    };
 
     const fetchPackages = async () => {
         try {
@@ -41,7 +65,6 @@ const ManageSubscriptionPackages = () => {
             setError("");
             const data = await subscriptionService.getAllPackages();
             setPackages(data);
-            setFilteredPackages(data);
         } catch (err) {
             console.error("Error fetching packages:", err);
             setError("Failed to load packages. Please try again.");
@@ -55,17 +78,11 @@ const ManageSubscriptionPackages = () => {
     };
 
     const handleSearch = (query) => {
-        if (query.trim() === "") {
-            setFilteredPackages(packages);
-        } else {
-            const lowerQuery = query.toLowerCase();
-            const filtered = packages.filter(
-                (pkg) =>
-                    pkg.package_name.toLowerCase().includes(lowerQuery) ||
-                    pkg.description?.toLowerCase().includes(lowerQuery)
-            );
-            setFilteredPackages(filtered);
-        }
+        setSearchQuery(query);
+    };
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
     };
 
     const handleOpenModal = (pkg = null) => {
@@ -77,15 +94,18 @@ const ManageSubscriptionPackages = () => {
                 sessions_count: pkg.sessions_count,
                 validity_days: pkg.validity_days,
                 price: pkg.price,
+                package_type: pkg.package_type || "LEARNER",
             });
         } else {
             setEditingPackage(null);
+            const isCoach = activeTab === "coach";
             setFormData({
                 package_name: "",
                 description: "",
-                sessions_count: "",
-                validity_days: "",
+                sessions_count: isCoach ? 1 : "",
+                validity_days: isCoach ? 1 : "",
                 price: "",
+                package_type: isCoach ? "COACH" : "LEARNER",
             });
         }
         setShowModal(true);
@@ -100,6 +120,7 @@ const ManageSubscriptionPackages = () => {
             sessions_count: "",
             validity_days: "",
             price: "",
+            package_type: activeTab === "learner" ? "LEARNER" : "COACH",
         });
     };
 
@@ -125,12 +146,14 @@ const ManageSubscriptionPackages = () => {
         }
 
         try {
+            const isCoach = formData.package_type === "COACH";
             const packageData = {
                 package_name: formData.package_name.trim(),
                 description: formData.description.trim() || null,
-                sessions_count: parseInt(formData.sessions_count),
-                validity_days: parseInt(formData.validity_days),
+                sessions_count: isCoach ? 1 : parseInt(formData.sessions_count),
+                validity_days: isCoach ? 1 : parseInt(formData.validity_days),
                 price: parseFloat(formData.price),
+                package_type: formData.package_type,
             };
 
             if (editingPackage) {
@@ -189,12 +212,14 @@ const ManageSubscriptionPackages = () => {
                         </button>
 
                         <div>
-                            <h1 className="page-title">Manage Manage Learning Packages</h1>
+                            <h1 className="page-title">Manage Learning Packages</h1>
                             <p className="page-description">
                                 Create and manage subscription packages for learners
                             </p>
                         </div>
                     </div>
+
+
 
                     {/* Search Bar and Actions */}
                     <div className="search-section">
@@ -231,6 +256,42 @@ const ManageSubscriptionPackages = () => {
                             </button>
                         </div>
                     )}
+                    {/* Package Type Tabs */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: "0", marginBottom: "1.5rem" }}>
+                        <button
+                            onClick={() => handleTabChange("learner")}
+                            style={{
+                                padding: "0.6rem 2rem",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderRadius: "8px 0 0 8px",
+                                border: "2px solid #7c1a1a",
+                                cursor: "pointer",
+                                background: activeTab === "learner" ? "#7c1a1a" : "#fff",
+                                color: activeTab === "learner" ? "#fff" : "#7c1a1a",
+                                transition: "all 0.2s",
+                            }}
+                        >
+                            Learner Packages
+                        </button>
+                        <button
+                            onClick={() => handleTabChange("coach")}
+                            style={{
+                                padding: "0.6rem 2rem",
+                                fontWeight: 600,
+                                fontSize: "0.95rem",
+                                borderRadius: "0 8px 8px 0",
+                                border: "2px solid #7c1a1a",
+                                borderLeft: "none",
+                                cursor: "pointer",
+                                background: activeTab === "coach" ? "#7c1a1a" : "#fff",
+                                color: activeTab === "coach" ? "#fff" : "#7c1a1a",
+                                transition: "all 0.2s",
+                            }}
+                        >
+                            Coach Packages
+                        </button>
+                    </div>
 
                     {/* Packages Table */}
                     {!loading && !error && (
@@ -239,10 +300,10 @@ const ManageSubscriptionPackages = () => {
                                 <div className="table-primary-container">
                                     <div className="table-primary-empty">
                                         <Package size={48} className="table-primary-empty-icon" />
-                                        <p className="table-primary-empty-text">No packages found</p>
+                                        <p className="table-primary-empty-text">No {activeTab === "learner" ? "learner" : "coach"} packages found</p>
                                         <button onClick={() => handleOpenModal()} className="btn-primary">
                                             <Plus size={18} />
-                                            Create Your First Package
+                                            Create Your First {activeTab === "learner" ? "Learner" : "Coach"} Package
                                         </button>
                                     </div>
                                 </div>
@@ -273,10 +334,30 @@ const ManageSubscriptionPackages = () => {
                                                                 <span className="table-primary-cell-name-text">{pkg.package_name}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="table-primary-td">
-                                                            <span className="table-primary-cell-subtitle">
-                                                                {pkg.description || 'N/A'}
-                                                            </span>
+                                                        <td className="table-primary-td" style={{ maxWidth: "220px" }}>
+                                                            {pkg.description ? (
+                                                                <span className="table-primary-cell-subtitle">
+                                                                    {expandedDescriptions[pkg.id]
+                                                                        ? pkg.description
+                                                                        : pkg.description.length > 60
+                                                                            ? pkg.description.slice(0, 60) + "…"
+                                                                            : pkg.description
+                                                                    }
+                                                                    {pkg.description.length > 60 && (
+                                                                        <>
+                                                                            <br />
+                                                                            <button
+                                                                                onClick={() => setExpandedDescriptions((prev) => ({ ...prev, [pkg.id]: !prev[pkg.id] }))}
+                                                                                style={{ background: "none", border: "none", color: "#b45309", cursor: "pointer", padding: 0, fontSize: "0.8rem", fontWeight: 600 }}
+                                                                            >
+                                                                                {expandedDescriptions[pkg.id] ? "Read less" : "Read more"}
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="table-primary-cell-subtitle">N/A</span>
+                                                            )}
                                                         </td>
                                                         <td className="table-primary-td table-primary-td-center">
                                                             <strong>{pkg.sessions_count}</strong>
@@ -332,7 +413,7 @@ const ManageSubscriptionPackages = () => {
                 <div className="modal-overlay" onClick={handleCloseModal}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>{editingPackage ? 'Edit Package' : 'Create New Package'}</h2>
+                            <h2>{editingPackage ? `Edit ${editingPackage.package_type === "COACH" ? "Coach" : "Learner"} Package` : `Create New ${formData.package_type === "COACH" ? "Coach" : "Learner"} Package`}</h2>
                             <button onClick={handleCloseModal} className="modal-close">×</button>
                         </div>
 
@@ -366,11 +447,13 @@ const ManageSubscriptionPackages = () => {
                                     <input
                                         type="number"
                                         id="sessions_count"
-                                        value={formData.sessions_count}
-                                        onChange={(e) => setFormData({ ...formData, sessions_count: e.target.value })}
+                                        value={formData.package_type === "COACH" ? 1 : formData.sessions_count}
+                                        onChange={(e) => formData.package_type !== "COACH" && setFormData({ ...formData, sessions_count: e.target.value })}
                                         placeholder="e.g., 10"
                                         min="1"
                                         required
+                                        readOnly={formData.package_type === "COACH"}
+                                        style={formData.package_type === "COACH" ? { background: "#f3f4f6", cursor: "not-allowed", color: "#6b7280" } : {}}
                                     />
                                 </div>
 
@@ -379,11 +462,13 @@ const ManageSubscriptionPackages = () => {
                                     <input
                                         type="number"
                                         id="validity_days"
-                                        value={formData.validity_days}
-                                        onChange={(e) => setFormData({ ...formData, validity_days: e.target.value })}
+                                        value={formData.package_type === "COACH" ? 1 : formData.validity_days}
+                                        onChange={(e) => formData.package_type !== "COACH" && setFormData({ ...formData, validity_days: e.target.value })}
                                         placeholder="e.g., 30"
                                         min="1"
                                         required
+                                        readOnly={formData.package_type === "COACH"}
+                                        style={formData.package_type === "COACH" ? { background: "#f3f4f6", cursor: "not-allowed", color: "#6b7280" } : {}}
                                     />
                                 </div>
                             </div>
@@ -400,6 +485,27 @@ const ManageSubscriptionPackages = () => {
                                     step="0.01"
                                     required
                                 />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="package_type">Package Type *</label>
+                                <select
+                                    id="package_type"
+                                    value={formData.package_type}
+                                    onChange={(e) => {
+                                        const type = e.target.value;
+                                        setFormData({
+                                            ...formData,
+                                            package_type: type,
+                                            sessions_count: type === "COACH" ? 1 : (formData.package_type === "COACH" ? "" : formData.sessions_count),
+                                            validity_days: type === "COACH" ? 1 : (formData.package_type === "COACH" ? "" : formData.validity_days),
+                                        });
+                                    }}
+                                    required
+                                >
+                                    <option value="LEARNER">Learner Package</option>
+                                    <option value="COACH">Coach Package</option>
+                                </select>
                             </div>
 
                             <div className="modal-footer">

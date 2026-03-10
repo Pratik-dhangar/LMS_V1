@@ -604,7 +604,7 @@ Background tasks should be running for:
 
 ---
 
-### 5. Manage Learning Payment Records (HEAD/ADMIN)
+### 5. Manage Payment Records (HEAD/ADMIN)
 **URL**: `http://localhost:5173/subscriptions/records`
 
 #### View All Subscriptions

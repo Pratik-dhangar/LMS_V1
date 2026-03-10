@@ -340,6 +340,28 @@ from datetime import datetime, timedelta
 import uuid
 
 
+@router.get("/guest/check-email")
+async def check_guest_email(
+    email: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Check if a guest email already exists in the appointments table.
+    Returns whether the email has previous bookings.
+    No authentication required - public endpoint.
+    """
+    from sqlalchemy import func as sql_func
+    email_clean = email.lower().strip()
+
+    stmt = select(sql_func.count(Appointment.id)).where(
+        Appointment.guest_email == email_clean
+    )
+    result = await db.execute(stmt)
+    count = result.scalar() or 0
+
+    return {"exists": count > 0, "appointment_count": count}
+
+
 @router.post("/guest/send-otp")
 async def send_guest_otp(
     request: Request,

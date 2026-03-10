@@ -45,18 +45,6 @@
 
 
  /* ============ FILTER SECTION ============ */
- .filter-section {
-     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-     padding: 20px;
-     border-radius: 12px;
-     margin-bottom: 25px;
-     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-     border: 1px solid #e8eaed;
-     display: flex;
-     gap: 16px;
-     align-items: center;
-     flex-wrap: nowrap;
- }
 
  /* Search Box */
  .search-box {

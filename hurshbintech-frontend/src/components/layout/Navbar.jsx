@@ -88,15 +88,17 @@ const Navbar = ({ setShowSubscriptionModal }) => {
               </button>
             )}
 
-            {/* Book Appointment */}
-            <button
-              className="navbar-btn"
-              onClick={() => {
-                handleNavigate("/book-appointment");
-              }}
-            >
-              Book Appointment
-            </button>
+            {/* Book Appointment - only for non-logged-in visitors */}
+            {!user && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  handleNavigate("/book-appointment");
+                }}
+              >
+                Book Appointment
+              </button>
+            )}
 
             {/* Contact Us - Only on landing page */}
             {location.pathname === "/" && (
@@ -202,15 +204,17 @@ const Navbar = ({ setShowSubscriptionModal }) => {
               </button>
             )}
 
-            {/* Book Appointment */}
-            <button
-              className="navbar-btn"
-              onClick={() => {
-                handleNavigate("/book-appointment");
-              }}
-            >
-              Book Appointment
-            </button>
+            {/* Book Appointment - only for non-logged-in visitors */}
+            {!user && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  handleNavigate("/book-appointment");
+                }}
+              >
+                Book Appointment
+              </button>
+            )}
 
             {/* Contact Us - Only on landing page */}
             {location.pathname === "/" && (

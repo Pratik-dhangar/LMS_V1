@@ -357,7 +357,7 @@ const SubscriptionRecords = () => {
             </button>
 
             <div>
-              <h1 className="page-title">Manage Learning Payment Records & Analytics</h1>
+              <h1 className="page-title">Manage Payment Records & Analytics</h1>
               <p className="page-description">
                 View all subscription records and analyze revenue trends
               </p>
@@ -371,14 +371,14 @@ const SubscriptionRecords = () => {
               onClick={() => handleTabChange('records')}
             >
               <Package size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              Manage Learning Payment Records
+              Manage Payment Records
             </button>
             <button
               className={`sub-tab-btn ${activeTab === 'inquiries' ? 'sub-tab-btn-active' : ''}`}
               onClick={() => handleTabChange('inquiries')}
             >
               <ClipboardList size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              Subscription Inquiries
+              New Subscription Buyer
             </button>
           </div>
 
