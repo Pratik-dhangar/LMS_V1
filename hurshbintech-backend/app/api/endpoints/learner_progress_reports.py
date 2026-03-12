@@ -3,20 +3,23 @@ Learner Progress Report API Endpoints
 """
 
 import uuid
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.crud import learner_progress_report_crud
-from app.models.user_model import User, UserRole
+from app.models.user_model import User, UserRole, Appointment
 from app.schemas.learner_progress_report import (
     LearnerProgressReportCreate,
     LearnerProgressReportResponse,
     LearnerProgressReportUpdate,
 )
+from app.services.email_service import EmailService
 
 router = APIRouter()
 
@@ -68,6 +71,23 @@ async def get_all_progress_reports(
         return await learner_progress_report_crud.get_all_reports(db, skip=skip, limit=limit)
     else:
         return await learner_progress_report_crud.get_reports_by_creator(db, current_user.id, skip=skip, limit=limit)
+
+
+@router.get("/my-reports", response_model=List[LearnerProgressReportResponse])
+async def get_my_progress_reports(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all progress reports for the currently logged-in learner.
+    Accessible by LEARNER role only.
+    """
+    if current_user.role != UserRole.LEARNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only learners can access their own reports via this endpoint",
+        )
+    return await learner_progress_report_crud.get_reports_by_learner(db, current_user.id)
 
 
 @router.get("/learner/{learner_id}", response_model=List[LearnerProgressReportResponse])
@@ -203,3 +223,89 @@ async def upload_report_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload PDF to S3: {str(e)}",
         )
+
+
+class SendFinalReportEmailRequest(BaseModel):
+    sent_by_name: Optional[str] = None
+
+
+@router.post("/{report_id}/send-email")
+async def send_final_report_email(
+    report_id: int,
+    body: SendFinalReportEmailRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Send the Final Progress Report notification email to the learner.
+    Accessible by HEAD and COACH.
+    - Registered learner: email from users.email (via learner_id)
+    - Guest learner: email from appointments.guest_email (matched by guest_name)
+    """
+    allowed_roles = {UserRole.HEAD, UserRole.COACH, UserRole.ADMIN}
+    if current_user.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Head, Coach, or Admin can send final report emails",
+        )
+
+    report = await learner_progress_report_crud.get_report_by_id(db, report_id)
+    if not report:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
+
+    recipient_email: Optional[str] = None
+    recipient_name: str = report.name or "Learner"
+
+    if report.learner_id is not None:
+        # Registered learner — get email from users table
+        result = await db.execute(select(User).where(User.id == report.learner_id))
+        learner = result.scalar_one_or_none()
+        if learner:
+            recipient_email = learner.email
+    
+    if not recipient_email:
+        # Guest learner — look up appointments table by guest_name
+        result = await db.execute(
+            select(Appointment)
+            .where(Appointment.guest_name == report.name)
+            .where(Appointment.guest_email.isnot(None))
+            .order_by(Appointment.created_at.desc())
+            .limit(1)
+        )
+        appt = result.scalar_one_or_none()
+        if appt:
+            recipient_email = appt.guest_email
+
+    if not recipient_email:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No registered email found for this learner. Cannot send report.",
+        )
+
+    report_date = None
+    if report.date_of_report:
+        try:
+            from datetime import date
+            if isinstance(report.date_of_report, date):
+                report_date = report.date_of_report.strftime("%d %b %Y")
+            else:
+                report_date = str(report.date_of_report)
+        except Exception:
+            report_date = str(report.date_of_report)
+
+    sent_by_name = body.sent_by_name or current_user.name or "Your Specialist"
+
+    success = await EmailService.send_final_progress_report_email(
+        recipient_email=recipient_email,
+        recipient_name=recipient_name,
+        sent_by_name=sent_by_name,
+        report_date=report_date,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send email. Please check email configuration.",
+        )
+
+    return {"success": True, "message": f"Final report email sent to {recipient_email}"}

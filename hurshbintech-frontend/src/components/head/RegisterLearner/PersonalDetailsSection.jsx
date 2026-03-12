@@ -120,10 +120,10 @@ const PersonalDetailsSection = ({ formData, errors, handleChange }) => {
 
 
 
-        {/* Date of Assessment */}
+        {/* Start Date */}
         <div>
           <label htmlFor="date_of_assessment" className="register-field-label">
-            Date of Assessment <span className="register-required">*</span>
+            Start Date <span className="register-required">*</span>
           </label>
           <input
             type="date"

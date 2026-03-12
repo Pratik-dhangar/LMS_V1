@@ -22,6 +22,7 @@ const CoachManageLearningReports = () => {
     const [previewingId, setPreviewingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+    const [sendingFinalReportId, setSendingFinalReportId] = useState(null);
 
     useEffect(() => {
         fetchAllLearners();
@@ -87,6 +88,20 @@ const CoachManageLearningReports = () => {
             toast.error('Failed to preview report');
         } finally {
             setPreviewingId(null);
+        }
+    };
+
+    const handleSendFinalReport = async (report) => {
+        try {
+            setSendingFinalReportId(report.id);
+            const senderName = user?.name || '';
+            await learnerProgressReportService.sendFinalReportEmail(report.id, senderName);
+            toast.success('Final report email sent successfully!');
+        } catch (e) {
+            const detail = e.response?.data?.detail;
+            toast.error(detail || 'Failed to send final report email');
+        } finally {
+            setSendingFinalReportId(null);
         }
     };
 
@@ -300,6 +315,18 @@ const CoachManageLearningReports = () => {
                                                                                 >
                                                                                     {deletingId === r.id ? '…' : '🗑 Delete'}
                                                                                 </button>
+                                                                                <button
+                                                                                    onClick={() => handleSendFinalReport(r)}
+                                                                                    disabled={sendingFinalReportId === r.id}
+                                                                                    style={{
+                                                                                        ...sendBtnStyle,
+                                                                                        opacity: sendingFinalReportId === r.id ? 0.7 : 1,
+                                                                                        cursor: sendingFinalReportId === r.id ? 'not-allowed' : 'pointer',
+                                                                                    }}
+                                                                                    title="Send Final Report to learner's email"
+                                                                                >
+                                                                                    {sendingFinalReportId === r.id ? '⏳ Sending…' : '📧 Send'}
+                                                                                </button>
                                                                             </div>
                                                                         </div>
                                                                     ))}
@@ -448,6 +475,17 @@ const deleteBtnStyle = {
     fontSize: '0.75rem',
     fontWeight: 600,
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+};
+
+const sendBtnStyle = {
+    background: 'linear-gradient(135deg, #7c1c1c, #a83232)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.35rem',
+    padding: '0.25rem 0.6rem',
+    fontSize: '0.75rem',
+    fontWeight: 600,
     whiteSpace: 'nowrap',
 };
 

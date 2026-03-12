@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_current_admin, get_db
 from app.crud import subscription_crud
+from app.models.subscription import PackageType
 from app.models.user_model import User
 from app.schemas.subscription import (
     PublicSubscriptionInquiryResponse,
@@ -44,11 +45,11 @@ router = APIRouter(tags=["Subscription Inquiry"])
 )
 async def get_public_subscription_packages(db: AsyncSession = Depends(get_db)):
     """
-    Return all *active* subscription packages so the landing-page form
+    Return all *active* LEARNER subscription packages so the landing-page form
     can populate the package dropdown without requiring a login.
     """
     packages = await subscription_crud.get_all_packages(db, active_only=True)
-    return packages
+    return [p for p in packages if p.package_type == PackageType.LEARNER]
 
 
 @router.post(

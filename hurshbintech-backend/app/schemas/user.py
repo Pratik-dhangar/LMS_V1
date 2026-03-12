@@ -407,6 +407,7 @@ class CoachCreate(BaseModel):
     time_slots: Optional[str] = None  # e.g., "10am,1pm,3pm,5pm"
     specialization: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    is_special: Optional[bool] = False  # Featured/premium coach flag
 
 
 class CoachUpdate(BaseModel):
@@ -435,6 +436,7 @@ class CoachUpdate(BaseModel):
     is_available: Optional[bool] = None
     unavailable_until: Optional[datetime] = None
     unavailable_reason: Optional[str] = None
+    is_special: Optional[bool] = None  # Featured/premium coach flag
 
 
 class CoachResponse(BaseModel):
@@ -471,12 +473,15 @@ class CoachResponse(BaseModel):
     is_available: Optional[bool] = True
     unavailable_until: Optional[datetime] = None
     unavailable_reason: Optional[str] = None
+    is_special: bool = False
+    dedicated_package_id: Optional[int] = None
+    dedicated_package: Optional[dict] = None
     reference_data: List[ReferenceDataSchema] = []
     
     created_at: datetime  # From User
 
     @classmethod
-    def from_orm_with_user(cls, profile, user=None):
+    def from_orm_with_user(cls, profile, user=None, dedicated_package_id: Optional[int] = None, dedicated_package: Optional[dict] = None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
@@ -526,11 +531,15 @@ class CoachResponse(BaseModel):
                     "is_available",
                     "unavailable_until",
                     "unavailable_reason",
+                    "is_special",
                 ]
                 if hasattr(profile, field)
             },
             # Use converted profile picture URL (proxy URL to avoid CORS)
             "profile_picture_url": converted_pic_url,
+            # Dedicated package (passed in from endpoint after separate lookup)
+            "dedicated_package_id": dedicated_package_id,
+            "dedicated_package": dedicated_package,
             # Reference data
             "reference_data": [
                 ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])

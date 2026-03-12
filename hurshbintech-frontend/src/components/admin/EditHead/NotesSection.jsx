@@ -9,29 +9,18 @@ import FormSection from '../../common/FormSection';
  */
 
 const NotesSection = ({ formData, handleChange }) => (
-  <FormSection 
-    title="Notes & Messages"
-    description="Additional notes and communications"
+  <FormSection
+    title="Notes"
+    description="Additional notes"
   >
     <div className="modern-form-grid-full">
       <TextAreaField
-        label="Box of Note"
+        label="Note"
         name="note_box"
         value={formData.note_box}
         onChange={handleChange}
         rows={4}
         placeholder="Additional notes"
-      />
-    </div>
-
-    <div className="modern-form-grid-full">
-      <TextAreaField
-        label="Message Box"
-        name="message_box"
-        value={formData.message_box}
-        onChange={handleChange}
-        rows={4}
-        placeholder="Messages and communications"
       />
     </div>
   </FormSection>

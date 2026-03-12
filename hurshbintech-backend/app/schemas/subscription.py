@@ -42,6 +42,11 @@ class AdjustmentTypeEnum(str, enum.Enum):
     SUBTRACT = "SUBTRACT"
 
 
+class PackageTypeEnum(str, enum.Enum):
+    LEARNER = "LEARNER"
+    COACH = "COACH"
+
+
 # ============ SUBSCRIPTION PACKAGE SCHEMAS ============
 
 class SubscriptionPackageBase(BaseModel):
@@ -51,6 +56,7 @@ class SubscriptionPackageBase(BaseModel):
     sessions_count: int = Field(..., gt=0)
     validity_days: int = Field(..., gt=0)
     price: Decimal = Field(..., ge=0, decimal_places=2)
+    package_type: PackageTypeEnum = PackageTypeEnum.LEARNER
 
 
 class SubscriptionPackageCreate(SubscriptionPackageBase):
@@ -66,6 +72,7 @@ class SubscriptionPackageUpdate(BaseModel):
     validity_days: Optional[int] = Field(None, gt=0)
     price: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     is_active: Optional[bool] = None
+    package_type: Optional[PackageTypeEnum] = None
 
 
 class SubscriptionPackageResponse(SubscriptionPackageBase):

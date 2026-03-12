@@ -221,6 +221,15 @@ const headService = {
   },
 
   /**
+   * Get all COACH-type subscription packages (for dedicated package dropdown)
+   * @returns {Promise} - Array of COACH-type packages
+   */
+  getCoachPackages: async () => {
+    const response = await axiosInstance.get('/admin/subscription-packages', { params: { active_only: true } });
+    return (response.data || []).filter(p => p.package_type === 'COACH');
+  },
+
+  /**
    * Get all Coaches (ADMIN - all coaches in system)
    * @returns {Promise} 
    */

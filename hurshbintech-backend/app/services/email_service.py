@@ -3229,3 +3229,68 @@ class EmailService:
             html_body=html_body,
             email_type="learner_goals_report",
         )
+
+    # Final Progress Report Email - Sent to learner when coach/head clicks Send on final report
+    @staticmethod
+    async def send_final_progress_report_email(
+        recipient_email: str,
+        recipient_name: str,
+        sent_by_name: str,
+        report_date: Optional[str] = None,
+    ) -> bool:
+        """Send the Final Progress Report notification to the learner's email."""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email disabled or no recipient, skipping final report email to {recipient_email}")
+            return False
+
+        subject = f"Your Final Progress Report – {recipient_name}"
+
+        report_date_text = report_date if report_date else datetime.now().strftime("%d %b %Y")
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Final Progress Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }}
+                .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+                .header {{ background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; padding: 28px 30px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 22px; letter-spacing: 0.5px; }}
+                .header p {{ margin: 8px 0 0 0; opacity: 0.88; font-size: 14px; }}
+                .content {{ padding: 28px 30px; }}
+                .footer {{ background: #f8f8f8; padding: 18px 30px; text-align: center; font-size: 13px; color: #888; border-top: 1px solid #eee; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📋 Final Progress Report</h1>
+                    <p>Your comprehensive developmental assessment is ready</p>
+                </div>
+                <div class="content">
+                    <p>Hi <strong>{recipient_name}</strong>,</p>
+                    <p>We are pleased to inform you that your <strong>Final Progress Report</strong> dated <strong>{report_date_text}</strong> has been prepared and shared by <strong>{sent_by_name}</strong>. This report provides a comprehensive overview of your developmental progress and learning journey. Please log in to your dashboard to view the full report under the <strong>My Reports</strong> section.</p>
+                    <div style="text-align: center; margin: 28px 0;">
+                        <a href="{settings.FRONTEND_URL}/learner/my-reports" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Reports</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>This report was sent by <strong>{sent_by_name}</strong> via the Hurshbintech platform.</p>
+                    <p>© 2026 Hurshbintech. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="final_progress_report",
+        )
