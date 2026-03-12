@@ -272,7 +272,7 @@ const ManageSubscriptionPackages = () => {
                                 transition: "all 0.2s",
                             }}
                         >
-                            Learner Packages
+                            Learning Packages
                         </button>
                         <button
                             onClick={() => handleTabChange("coach")}

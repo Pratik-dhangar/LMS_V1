@@ -15,11 +15,7 @@ const GuestBookingStep1 = () => {
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-  const [emailCheckResult, setEmailCheckResult] = useState(null); // null | 'existing' | 'new'
-  const [bookingType, setBookingType] = useState(null); // null | 'follow_up' | 'new'
   const otpInputs = useRef([]);
-  const emailCheckTimeout = useRef(null);
 
   // Timer for resend OTP countdown
   useEffect(() => {
@@ -34,44 +30,14 @@ const GuestBookingStep1 = () => {
     };
   }, [resendTimer]);
 
-  // Debounced email check against Appointments table
-  useEffect(() => {
-    setEmailCheckResult(null);
-    setBookingType(null);
-
-    // Validate email format before hitting the API
-    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!email || !validEmail) return;
-
-    if (emailCheckTimeout.current) clearTimeout(emailCheckTimeout.current);
-
-    emailCheckTimeout.current = setTimeout(async () => {
-      try {
-        setCheckingEmail(true);
-        const result = await bookingService.checkGuestEmail(email);
-        setEmailCheckResult(result.exists ? 'existing' : 'new');
-      } catch {
-        setEmailCheckResult('new'); // Fallback: treat as new on error
-      } finally {
-        setCheckingEmail(false);
-      }
-    }, 600);
-
-    return () => {
-      if (emailCheckTimeout.current) clearTimeout(emailCheckTimeout.current);
-    };
-  }, [email]);
-
   // Step 1: Send OTP to email
-  const handleSendOTP = async (e, type = null) => {
+  const handleSendOTP = async (e) => {
     if (e) e.preventDefault();
 
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
     }
-
-    if (type) setBookingType(type);
 
     try {
       setLoading(true);
@@ -126,10 +92,10 @@ const GuestBookingStep1 = () => {
 
       toast.success('Email verified! Proceeding to booking details...');
 
-      // Store email, otp, coach, and booking type in state for Step 2
+      // Store email, otp, and coach in state for Step 2
       setTimeout(() => {
         navigate('/guest-booking/details', {
-          state: { email, otp, otpVerified: true, coach, bookingType }
+          state: { email, otp, otpVerified: true, coach }
         });
       }, 1500);
     } catch (err) {
@@ -230,7 +196,7 @@ const GuestBookingStep1 = () => {
               <div className="guest-booking-form centered">
                 {step === 'email' ? (
                   <>
-                    <form onSubmit={(e) => handleSendOTP(e, emailCheckResult === 'existing' ? null : 'new')}>
+                    <form onSubmit={handleSendOTP}>
                       <div className="form-group">
                         <label htmlFor="email">Email Address *</label>
                         <div className="email-input-wrapper">
@@ -243,58 +209,20 @@ const GuestBookingStep1 = () => {
                             disabled={loading}
                             required
                           />
-                          {checkingEmail && (
-                            <span className="email-checking-spinner">
-                              <Loader size={14} className="spinner" />
-                            </span>
-                          )}
                         </div>
                         <small>We'll send an OTP to this email</small>
 
-                        {/* Existing email — show follow-up / new booking choice */}
-                        {emailCheckResult === 'existing' && !loading && (
-                          <div className="returning-guest-box">
-                            <h3 className="returning-guest-title">🔁 Previous Booking Found</h3>
-                            <p className="returning-guest-desc">
-                              This email has been used for a booking before. Choose how you'd like to proceed:
-                            </p>
-                            <div className="returning-guest-actions">
-                              <button
-                                type="button"
-                                className="btn btn-followup"
-                                disabled={loading || checkingEmail}
-                                onClick={() => handleSendOTP(null, 'follow_up')}
-                              >
-                                {loading ? <><Loader size={16} className="spinner" /> Sending OTP...</> : '🔁 Book Follow-up Session'}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-new-session"
-                                disabled={loading || checkingEmail}
-                                onClick={() => handleSendOTP(null, 'new')}
-                              >
-                                {loading ? <><Loader size={16} className="spinner" /> Sending OTP...</> : '➕ Book New Session'}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* New email — show normal Send OTP button */}
-                        {emailCheckResult !== 'existing' && (
-                          <button
-                            type="submit"
-                            className="btn btn-primary btn-full"
-                            disabled={loading || checkingEmail}
-                          >
-                            {loading ? (
-                              <><Loader size={16} className="spinner" /> Sending OTP...</>
-                            ) : checkingEmail ? (
-                              <><Loader size={16} className="spinner" /> Checking email...</>
-                            ) : (
-                              <>Send OTP</>
-                            )}
-                          </button>
-                        )}
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-full"
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <><Loader size={16} className="spinner" /> Sending OTP...</>
+                          ) : (
+                            <>Send OTP</>
+                          )}
+                        </button>
                       </div>
                     </form>
 

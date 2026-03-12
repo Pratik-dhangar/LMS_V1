@@ -14,6 +14,16 @@ const PersonalDetailsSection = ({ formData, handleChange }) => (
   >
     <div className="modern-form-grid-full">
       <TextAreaField
+        label="Describe "
+        name="self_description"
+        value={formData.self_description}
+        onChange={handleChange}
+        rows={3}
+        placeholder="Self description"
+      />
+    </div>
+    <div className="modern-form-grid-full">
+      <TextAreaField
         label="Interest"
         name="interest"
         value={formData.interest}
@@ -23,16 +33,7 @@ const PersonalDetailsSection = ({ formData, handleChange }) => (
       />
     </div>
 
-    <div className="modern-form-grid-full">
-      <TextAreaField
-        label="Describe Yourself?"
-        name="self_description"
-        value={formData.self_description}
-        onChange={handleChange}
-        rows={3}
-        placeholder="Self description"
-      />
-    </div>
+    
 
     <div className="modern-form-grid-full">
       <TextAreaField

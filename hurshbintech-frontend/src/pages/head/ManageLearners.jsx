@@ -222,7 +222,7 @@ const ManageLearners = () => {
                           Passcode
                         </th>
                         <th className="table-primary-th">
-                          Date of Assessment
+                          Start Date
                         </th>
                         <th className="table-primary-th">
                           Actions

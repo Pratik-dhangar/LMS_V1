@@ -127,6 +127,35 @@ const adminService = {
     console.log('Admin passcode reveal response received');
     return response.data;
   },
+
+  /**
+   * Get all appointments (admin view)
+   * @param {Object} params - Optional filters: guest_only (bool), status_filter (string)
+   * @returns {Promise} - Array of appointment objects
+   */
+  getAppointments: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/appointments', { params });
+    return response.data;
+  },
+
+  /**
+   * Update appointment status (admin)
+   * @param {number} appointmentId
+   * @param {Object} data - e.g. { status: 'confirmed' }
+   * @returns {Promise} - Updated appointment object
+   */
+  updateAppointmentStatus: async (appointmentId, data) => {
+    const response = await axiosInstance.patch(`/admin/appointments/${appointmentId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete an appointment record (admin)
+   * @param {number} appointmentId
+   */
+  deleteAppointment: async (appointmentId) => {
+    await axiosInstance.delete(`/admin/appointments/${appointmentId}`);
+  },
 };
 
 export default adminService;

@@ -300,7 +300,7 @@ const EditLearner = () => {
       newErrors.dob = "Date of birth cannot be in the future";
     }
 
-    // Date of Assessment is required
+    // Start Date is required
     if (!formData.date_of_assessment) {
       newErrors.date_of_assessment = "Date of assessment is required";
     } else if (new Date(formData.date_of_assessment) > new Date()) {

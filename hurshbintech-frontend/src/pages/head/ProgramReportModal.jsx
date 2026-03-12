@@ -137,7 +137,7 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                                 </LineChart>
                             </ResponsiveContainer>
                             <p className="text-xs text-gray-500 text-center mt-2">
-                                Lower prompt values and higher reinforcement values indicate better progress
+                                Lower prompt and reinforcement values indicate better progress
                             </p>
                         </div>
                     )}
@@ -230,8 +230,8 @@ const ProgramReportModal = ({ statistics, learnerName, onClose }) => {
                                                     </span>
                                                 </td>
                                                 <td className="text-center py-2 px-3">
-                                                    <span className={`inline-block px-2 py-1 rounded text-white text-xs font-bold ${session.reinforcement_value >= 80 ? 'bg-green-500' :
-                                                        session.reinforcement_value >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                                    <span className={`inline-block px-2 py-1 rounded text-white text-xs font-bold ${session.reinforcement_value <= 20 ? 'bg-green-500' :
+                                                        session.reinforcement_value <= 50 ? 'bg-yellow-500' : 'bg-red-500'
                                                         }`}>
                                                         {session.reinforcement_meter}
                                                     </span>

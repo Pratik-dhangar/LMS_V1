@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
@@ -6,7 +6,6 @@ import headService from "../../api/services/headService";
 import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
 import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
 import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
-import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
 import NotesSection from "../../components/admin/EditHead/NotesSection";
 import FormSection from "../../components/common/FormSection";
 import FormFileUpload from "../../components/common/FormFileUpload";
@@ -36,12 +35,21 @@ const RegisterCoach = () => {
     learners_guardian_description: "",
     input_at_hurshbin: "",
     note_box: "",
-    message_box: "",
     availability_days: [],
     time_slots: [],
     specialization: "",
     profile_picture_url: null,
+    is_special: false,
+    dedicated_package_id: "",
   });
+
+  const [coachPackages, setCoachPackages] = useState([]);
+
+  useEffect(() => {
+    headService.getCoachPackages()
+      .then(setCoachPackages)
+      .catch(() => setCoachPackages([]));
+  }, []);
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const DAYS_OF_WEEK = [
@@ -176,6 +184,10 @@ const RegisterCoach = () => {
           submitData.append(key, parseInt(formData[key]) || 0);
         } else if (key === "age") {
           if (formData[key]) submitData.append(key, parseInt(formData[key]));
+        } else if (key === "is_special") {
+          submitData.append(key, formData[key] ? "true" : "false");
+        } else if (key === "dedicated_package_id") {
+          if (formData[key]) submitData.append(key, formData[key]);
         } else {
           submitData.append(key, formData[key] || "");
         }
@@ -436,6 +448,61 @@ const RegisterCoach = () => {
                   />
                 </div>
 
+                {/* Dedicated Package & Special Coach */}
+                <div className="modern-form-grid">
+                  {/* Dedicated Package */}
+                  <div>
+                    <label className="input-field-label">Dedicated Package</label>
+                    <select
+                      name="dedicated_package_id"
+                      value={formData.dedicated_package_id}
+                      onChange={handleChange}
+                      className="app-modal-form-input"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">— None —</option>
+                      {coachPackages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.package_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="form-hint" style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      Assign this coach as the dedicated coach for a specific COACH package
+                    </p>
+                  </div>
+
+                  {/* Special Coach */}
+                  <div>
+                    <label className="input-field-label">Special Coach</label>
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="true"
+                          checked={formData.is_special === true}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: true }))}
+                        />
+                        Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="false"
+                          checked={formData.is_special === false}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: false }))}
+                        />
+                        No
+                      </label>
+                    </div>
+                    <p className="form-hint" style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      Mark this coach as featured / premium
+                    </p>
+                  </div>
+                </div>
+
                 {/* Profile Picture */}
                 <div className="modern-form-grid-full">
                   <FormFileUpload
@@ -464,12 +531,6 @@ const RegisterCoach = () => {
                   />
                 </div>
               </FormSection>
-
-              <PerformanceFeedbackSection
-                formData={formData}
-                errors={errors}
-                handleChange={handleChange}
-              />
 
               <NotesSection
                 formData={formData}

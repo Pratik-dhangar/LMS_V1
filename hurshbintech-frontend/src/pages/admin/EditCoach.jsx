@@ -9,7 +9,6 @@ import headService from '../../api/services/headService';
 import BasicInfoSection from '../../components/admin/EditHead/BasicInfoSection';
 import ProfessionalInfoSection from '../../components/admin/EditHead/ProfessionalInfoSection';
 import PersonalDetailsSection from '../../components/admin/EditHead/PersonalDetailsSection';
-import PerformanceFeedbackSection from '../../components/admin/EditHead/PerformanceFeedbackSection';
 import NotesSection from '../../components/admin/EditHead/NotesSection';
 import '../../styles/admin/AdminEditCoach.css';
 import '../../styles/ManageUsersLayout.css';
@@ -37,12 +36,15 @@ const EditCoach = () => {
     learners_guardian_description: '',
     input_at_hurshbin: '',
     note_box: '',
-    message_box: '',
     availability_days: [],
     time_slots: [],
     specialization: '',
     profile_picture_url: null,
+    is_special: false,
+    dedicated_package_id: '',
   });
+
+  const [coachPackages, setCoachPackages] = useState([]);
 
   const [existingReferenceData, setExistingReferenceData] = useState([]);
   const [existingProfilePicture, setExistingProfilePicture] = useState(null);
@@ -61,6 +63,12 @@ const EditCoach = () => {
   useEffect(() => {
     fetchCoachData();
   }, [coachId]);
+
+  useEffect(() => {
+    headService.getCoachPackages()
+      .then(setCoachPackages)
+      .catch(() => setCoachPackages([]));
+  }, []);
 
   const fetchCoachData = async () => {
     try {
@@ -84,11 +92,12 @@ const EditCoach = () => {
         learners_guardian_description: coach.learners_guardian_description || '',
         input_at_hurshbin: coach.input_at_hurshbin || '',
         note_box: coach.note_box || '',
-        message_box: coach.message_box || '',
         availability_days: coach.availability_days ? coach.availability_days.split(',').map(d => d.trim()) : [],
         time_slots: coach.time_slots ? coach.time_slots.split(',').map(t => t.trim()) : [],
         specialization: coach.specialization || '',
         profile_picture_url: null,
+        is_special: coach.is_special || false,
+        dedicated_package_id: coach.dedicated_package_id || '',
       });
 
       // Store existing profile picture separately
@@ -284,6 +293,10 @@ const EditCoach = () => {
           submitData.append(key, parseInt(formData[key]) || 0);
         } else if (key === 'age') {
           if (formData[key]) submitData.append(key, parseInt(formData[key]));
+        } else if (key === 'is_special') {
+          submitData.append(key, formData[key] ? 'true' : 'false');
+        } else if (key === 'dedicated_package_id') {
+          if (formData[key]) submitData.append(key, formData[key]);
         } else {
           submitData.append(key, formData[key] || '');
         }
@@ -534,6 +547,54 @@ const EditCoach = () => {
                     />
                   </div>
 
+                  {/* Dedicated Package */}
+                  <div className="coach-field-group">
+                    <label className="coach-field-label">Dedicated Package</label>
+                    <select
+                      name="dedicated_package_id"
+                      value={formData.dedicated_package_id}
+                      onChange={handleChange}
+                      className="app-modal-form-input"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">— None —</option>
+                      {coachPackages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.package_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="reference-data-help-text">Assign this coach as the dedicated coach for a specific COACH package</p>
+                  </div>
+
+                  {/* Special Coach */}
+                  <div className="coach-field-group">
+                    <label className="coach-field-label">Special Coach</label>
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="true"
+                          checked={formData.is_special === true}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: true }))}
+                        />
+                        Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="false"
+                          checked={formData.is_special === false}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: false }))}
+                        />
+                        No
+                      </label>
+                    </div>
+                    <p className="reference-data-help-text">Mark this coach as featured / premium</p>
+                  </div>
+
                   {/* Profile Picture */}
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label htmlFor="profile_picture_url" className="app-modal-form-label">Profile Picture</label>
@@ -672,12 +733,6 @@ const EditCoach = () => {
                   </div>
                 </div>
               </section>
-
-              <PerformanceFeedbackSection
-                formData={formData}
-                errors={errors}
-                handleChange={handleChange}
-              />
 
               <NotesSection
                 formData={formData}

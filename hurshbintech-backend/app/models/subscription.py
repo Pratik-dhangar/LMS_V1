@@ -92,13 +92,18 @@ class SubscriptionPackage(Base):
     created_at = Column(DateTime, nullable=False, default=get_current_datetime, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=get_current_datetime, onupdate=get_current_datetime, server_default=func.now())
     
+    # Dedicated coach for COACH-type packages (one coach per package)
+    dedicated_coach_id = Column(Integer, ForeignKey("coach_profiles.id", ondelete="SET NULL"), nullable=True, index=True)
+
     # Relationships
     head = relationship("User", foreign_keys=[head_id])
+    dedicated_coach = relationship("CoachProfile", foreign_keys=[dedicated_coach_id])
     subscriptions = relationship("LearnerSubscription", back_populates="package", cascade="all, delete-orphan")
     
     # Indexes
     __table_args__ = (
         Index('idx_package_head_active', 'head_id', 'is_active'),
+        Index('idx_package_dedicated_coach', 'dedicated_coach_id'),
     )
 
 

@@ -230,6 +230,29 @@
     padding: 0.5rem 0;
 }
 
+.bsm-contact-note {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.bsm-whatsapp-link {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.bsm-whatsapp-link:hover {
+    transform: scale(1.15);
+}
+
 /* ── Package Price Display ───────────────────────────────────────────── */
 .bsm-price-display {
     background: #fef3e2;

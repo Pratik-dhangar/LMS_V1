@@ -23,11 +23,11 @@ def _prompt_to_value(prompt_meter: str) -> int:
 
 
 def _reinforcement_to_value(reinforcement_meter: Optional[str]) -> Optional[int]:
-    """Convert reinforcement_meter string to numeric value, or None if not set."""
+    """Convert reinforcement_meter string to numeric value (Full→0, others as-is)."""
     if reinforcement_meter is None:
         return None
     if reinforcement_meter == "Full":
-        return 100
+        return 0
     return int(reinforcement_meter)
 
 

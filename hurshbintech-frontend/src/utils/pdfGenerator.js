@@ -1461,9 +1461,9 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
     // Load and add Stamp.png
     const stampImg = await loadImage('/sign/Stamp.png');
     if (stampImg) {
-        const stampW = 38;
-        const stampH = 38;
-        doc.addImage(stampImg, 'PNG', stampX, y - 5, stampW, stampH, '', 'FAST');
+        const stampW = 35;
+        const stampH = 30;
+        doc.addImage(stampImg, 'PNG', stampX, y - 0, stampW, stampH, '', 'FAST');
     }
 
     if (signatureImage) {

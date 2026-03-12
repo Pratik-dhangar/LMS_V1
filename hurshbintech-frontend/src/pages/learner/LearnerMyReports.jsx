@@ -14,10 +14,12 @@ import {
     LabelList,
 } from "recharts";
 import sessionReportService from "../../api/services/sessionReportService";
-import { downloadAllProgramsPDF } from "../../utils/pdfGenerator";
+import learnerProgressReportService from "../../api/services/learnerProgressReportService";
+import { downloadAllProgramsPDF, generateLearnerProgressReportPDF } from "../../utils/pdfGenerator";
 
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/head/reportCard.css";
+import "../../styles/Table.css";
 
 const LearnerMyReports = () => {
     const navigate = useNavigate();
@@ -26,19 +28,55 @@ const LearnerMyReports = () => {
 
     const [programs, setPrograms] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
     const [statistics, setStatistics] = useState(null);
     const [groupedReports, setGroupedReports] = useState([]);
     const [showPreview, setShowPreview] = useState(false);
     const [pdfPreviewData, setPdfPreviewData] = useState(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [progressReports, setProgressReports] = useState([]);
+    const [downloadingId, setDownloadingId] = useState(null);
+    const [previewingId, setPreviewingId] = useState(null);
+    const [reportFilter, setReportFilter] = useState('head'); // 'head' | 'coach'
 
     useEffect(() => {
         if (learnerId) {
             fetchLearnerPrograms();
             fetchStatistics();
+            fetchProgressReports();
         }
     }, [learnerId]);
+
+    const fetchProgressReports = async () => {
+        try {
+            const reports = await learnerProgressReportService.getMyReports();
+            setProgressReports(reports || []);
+        } catch (error) {
+            console.error("Error fetching progress reports:", error);
+            setProgressReports([]);
+        }
+    };
+
+    const handlePreviewProgressReport = async (report) => {
+        try {
+            setPreviewingId(report.id);
+            await generateLearnerProgressReportPDF(report, { previewOnly: true, signatureImage: '/sign/sign.jpeg' });
+        } catch (e) {
+            toast.error('Failed to preview report');
+        } finally {
+            setPreviewingId(null);
+        }
+    };
+
+    const handleDownloadProgressReport = async (report) => {
+        try {
+            setDownloadingId(report.id);
+            await generateLearnerProgressReportPDF(report, { signatureImage: '/sign/sign.jpeg' });
+        } catch (e) {
+            toast.error('Failed to download report');
+        } finally {
+            setDownloadingId(null);
+        }
+    };
 
     const fetchStatistics = async () => {
         try {
@@ -64,10 +102,6 @@ const LearnerMyReports = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleProgramClick = (programName) => {
-        navigate(`/learner/my-reports/${learnerId}/program/${encodeURIComponent(programName)}`);
     };
 
     const handleDownloadAllProgramsPDF = async () => {
@@ -165,10 +199,6 @@ const LearnerMyReports = () => {
         );
     };
 
-    const filteredPrograms = programs.filter((program) =>
-        program.program_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
         <>
             <div className="page-container">
@@ -183,113 +213,177 @@ const LearnerMyReports = () => {
                                 Back to Dashboard
                             </button>
                             <div>
-                                <h1 className="page-title">Programs & Goals</h1>
+                                <h1 className="page-title">My Reports</h1>
                                 <p className="page-description">
                                     {user?.name ? `${user.name}'s Learning Programs` : "My Learning Programs"}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Search + Action Buttons */}
-                        <div className="search-section">
-                            <input
-                                type="text"
-                                placeholder="🔍 Search programs..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
-                            />
-                            <button
-                                onClick={handleViewReport}
-                                className="app-modal-btn app-modal-btn--primary"
-                                disabled={loading || programs.length === 0 || loadingPreview}
-                                title={programs.length === 0 ? "No programs available to preview" : "Preview the full report"}
-                            >
-                                {loadingPreview ? "Loading..." : "👁️ View Report"}
-                            </button>
-                            <button
-                                onClick={handleDownloadAllProgramsPDF}
-                                className="app-modal-btn app-modal-btn--success"
-                                disabled={loading || programs.length === 0}
-                                title={programs.length === 0 ? "No programs available to download" : "Download all programs report as PDF"}
-                            >
-                                📥 Download PDF Report
-                            </button>
-                        </div>
-
                         {/* Loading State */}
                         {loading && (
                             <div className="loading-container">
                                 <div className="loading-spinner"></div>
-                                <p className="loading-text">Loading programs...</p>
+                                <p className="loading-text">Loading...</p>
                             </div>
                         )}
 
-                        {/* Empty State */}
-                        {!loading && filteredPrograms.length === 0 && (
-                            <div className="empty-state">
-                                <div className="empty-state-icon">📭</div>
-                                <p className="empty-state-description">
-                                    {searchTerm ? "No programs found matching your search" : "No programs found yet"}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Programs Grid */}
-                        {!loading && filteredPrograms.length > 0 && (
-                            <div className="report-cards-grid">
-                                {filteredPrograms.map((program, index) => (
-                                    <div
-                                        key={index}
-                                        onClick={() => handleProgramClick(program.program_name)}
-                                        className="report-card report-card-active"
-                                    >
-                                        {/* Program Header */}
-                                        <div className="report-card-header">
-                                            <div className="report-card-avatar report-card-avatar-active">
-                                                📚
-                                            </div>
-                                            <div className="report-card-info">
-                                                <h3 className="report-card-name">{program.program_name}</h3>
-                                                {program.program_id && (
-                                                    <p className="report-card-iip">ID: {program.program_id}</p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Stats */}
-                                        <div className="report-stats">
-                                            <div className="report-stat-box">
-                                                <div className="report-stat-value">{program.total_sessions || 0}</div>
-                                                <div className="report-stat-label">Sessions</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Last Session */}
-                                        {program.last_session_date && (
-                                            <div className="report-card-meta">
-                                                <span className="report-meta-label">Last Session:</span>{" "}
-                                                {new Date(program.last_session_date).toLocaleDateString("en-US", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
-                                            </div>
-                                        )}
-
-                                        {/* View Button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleProgramClick(program.program_name);
-                                            }}
-                                            className="report-view-button report-view-button-active"
-                                        >
-                                            View Graph →
-                                        </button>
+                        {!loading && (
+                            <>
+                                {/* All Program Goals Report Card */}
+                                <div style={sectionCard}>
+                                    <div style={sectionHeader('#7c1c1c')}>
+                                        <span>📊 All Program Goals Report</span>
                                     </div>
-                                ))}
-                            </div>
+                                    <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                        <div>
+                                            <p style={{ margin: 0, fontWeight: 600, fontSize: '1rem', color: '#1f2937' }}>{user?.name || 'Learner'}</p>
+                                            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#6b7280' }}>
+                                                {programs.length} program{programs.length !== 1 ? 's' : ''} &middot; {programs.reduce((s, p) => s + (p.total_sessions || 0), 0)} sessions
+                                            </p>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.6rem' }}>
+                                            <button
+                                                onClick={handleViewReport}
+                                                disabled={programs.length === 0 || loadingPreview}
+                                                style={viewReportsBtnStyle}
+                                            >
+                                                {loadingPreview ? 'Loading...' : '📋 View Reports'}
+                                            </button>
+                                            <button
+                                                onClick={handleDownloadAllProgramsPDF}
+                                                disabled={programs.length === 0}
+                                                style={dlBtnStyle}
+                                            >
+                                                ⬇ PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Final Generated Reports Card */}
+                                <div style={{ ...sectionCard, marginTop: '1.25rem' }}>
+                                    <div style={{ ...sectionHeader('#7c1c1c'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <span>📄 Final Generated Reports</span>
+                                        {/* Filter Tabs */}
+                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                            {['head', 'coach'].map(f => (
+                                                <button
+                                                    key={f}
+                                                    onClick={() => setReportFilter(f)}
+                                                    style={{
+                                                        background: reportFilter === f ? 'white' : 'rgba(255,255,255,0.18)',
+                                                        color: reportFilter === f ? '#7c1c1c' : 'white',
+                                                        border: 'none',
+                                                        borderRadius: '1rem',
+                                                        padding: '0.25rem 0.85rem',
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                >
+                                                    {f === 'head' ? 'Head' : 'Coach'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ padding: '1.25rem 1.5rem' }}>
+                                        {progressReports.length === 0 ? (
+                                            <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
+                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
+                                                <p style={{ margin: 0 }}>No final reports available yet</p>
+                                            </div>
+                                        ) : (() => {
+                                            const filtered = progressReports.filter(r => {
+                                                const by = (r.report_created_by || '').toLowerCase();
+                                                if (reportFilter === 'head') return by.includes('head');
+                                                if (reportFilter === 'coach') return by.includes('coach');
+                                                return true;
+                                            });
+                                            if (filtered.length === 0) {
+                                                return (
+                                                    <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
+                                                        <p style={{ margin: 0 }}>No {reportFilter} reports found</p>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    {filtered.map((r, idx) => {
+                                                        const by = (r.report_created_by || '').toLowerCase();
+                                                        const isHead = by.includes('head');
+                                                        const accentColor = isHead ? '#7c1c1c' : '#b87d0a';
+                                                        const bgColor = isHead ? '#fff1f2' : '#fffbeb';
+                                                        const badge = isHead ? 'Head' : 'Coach';
+                                                        return (
+                                                            <div key={r.id} style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                backgroundColor: bgColor,
+                                                                border: `1px solid ${accentColor}30`,
+                                                                borderLeft: `4px solid ${accentColor}`,
+                                                                borderRadius: '0.6rem',
+                                                                padding: '0.85rem 1.1rem',
+                                                                flexWrap: 'wrap',
+                                                                gap: '0.75rem',
+                                                            }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                                                    <span style={{
+                                                                        background: accentColor,
+                                                                        color: 'white',
+                                                                        fontSize: '0.72rem',
+                                                                        fontWeight: 700,
+                                                                        borderRadius: '0.9rem',
+                                                                        padding: '0.18rem 0.6rem',
+                                                                        letterSpacing: '0.03em',
+                                                                        whiteSpace: 'nowrap',
+                                                                    }}>
+                                                                        {badge}
+                                                                    </span>
+                                                                    <div>
+                                                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1f2937' }}>
+                                                                            Report #{idx + 1}
+                                                                        </div>
+                                                                        {r.report_created_by && (
+                                                                            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>
+                                                                                By: {r.report_created_by}
+                                                                            </div>
+                                                                        )}
+                                                                        {r.date_of_report && (
+                                                                            <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '1px' }}>
+                                                                                {new Date(r.date_of_report).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                    <button
+                                                                        onClick={() => handlePreviewProgressReport(r)}
+                                                                        disabled={previewingId === r.id}
+                                                                        style={{ ...previewBtnStyle, opacity: previewingId === r.id ? 0.7 : 1 }}
+                                                                    >
+                                                                        {previewingId === r.id ? '…' : '👁 Preview'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDownloadProgressReport(r)}
+                                                                        disabled={downloadingId === r.id}
+                                                                        style={{ ...dlBtnStyle, opacity: downloadingId === r.id ? 0.7 : 1 }}
+                                                                    >
+                                                                        {downloadingId === r.id ? '…' : '⬇ PDF'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 </main>
@@ -508,6 +602,72 @@ const LearnerMyReports = () => {
             )}
         </>
     );
+};
+
+const statCard = (bg, color) => ({
+    flex: '1 1 130px',
+    backgroundColor: bg,
+    borderRadius: '12px',
+    padding: '1rem 1.25rem',
+    textAlign: 'center',
+    color,
+    minWidth: '120px',
+});
+
+const sectionCard = {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+    overflow: 'hidden',
+    border: '1px solid #f0f0f0',
+};
+
+const sectionHeader = (bg) => ({
+    background: `linear-gradient(135deg, ${bg}, #a83232)`,
+    color: 'white',
+    padding: '0.85rem 1.5rem',
+    fontSize: '0.95rem',
+    fontWeight: 700,
+    letterSpacing: '0.02em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+});
+
+const viewReportsBtnStyle = {
+    background: 'linear-gradient(135deg, #b87d0a, #db9d32)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.4rem',
+    padding: '0.4rem 0.85rem',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+};
+
+const previewBtnStyle = {
+    background: 'linear-gradient(135deg, #b87d0a, #db9d32)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.4rem',
+    padding: '0.4rem 0.85rem',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+};
+
+const dlBtnStyle = {
+    background: 'linear-gradient(135deg, #7c1c1c, #a83232)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.4rem',
+    padding: '0.4rem 0.85rem',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
 };
 
 export default LearnerMyReports;

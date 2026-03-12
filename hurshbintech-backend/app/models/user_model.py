@@ -280,6 +280,9 @@ class CoachProfile(Base):
     unavailable_until = Column(DateTime, nullable=True)  # End of unavailability period
     unavailable_reason = Column(String(255))  # e.g., "On leave", "Fully booked", "Personal"
 
+    # Special coach flag — marks a featured/premium coach
+    is_special = Column(Boolean, default=False, nullable=False, server_default="false")
+
     # Timestamps
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

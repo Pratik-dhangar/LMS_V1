@@ -21,6 +21,7 @@ const ReportCard = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [sendingGoalsReportId, setSendingGoalsReportId] = useState(null);
+  const [sendingFinalReportId, setSendingFinalReportId] = useState(null);
 
   useEffect(() => {
     fetchAllLearners();
@@ -114,6 +115,19 @@ const ReportCard = () => {
       toast.error(detail || 'Failed to send goals report email');
     } finally {
       setSendingGoalsReportId(null);
+    }
+  };
+
+  const handleSendFinalReport = async (report) => {
+    try {
+      setSendingFinalReportId(report.id);
+      await learnerProgressReportService.sendFinalReportEmail(report.id);
+      toast.success('Final report email sent successfully!');
+    } catch (e) {
+      const detail = e.response?.data?.detail;
+      toast.error(detail || 'Failed to send final report email');
+    } finally {
+      setSendingFinalReportId(null);
     }
   };
 
@@ -313,6 +327,18 @@ const ReportCard = () => {
                                         >
                                           {deletingId === r.id ? '…' : '🗑 Delete'}
                                         </button>
+                                        <button
+                                          onClick={() => handleSendFinalReport(r)}
+                                          disabled={sendingFinalReportId === r.id}
+                                          style={{
+                                            ...sendBtnStyle,
+                                            opacity: sendingFinalReportId === r.id ? 0.7 : 1,
+                                            cursor: sendingFinalReportId === r.id ? 'not-allowed' : 'pointer',
+                                          }}
+                                          title="Send Final Report to learner's email"
+                                        >
+                                          {sendingFinalReportId === r.id ? '⏳ Sending…' : '📧 Send'}
+                                        </button>
                                         {showDeleteConfirm === r.id && (
                                           <div style={{
                                             position: 'fixed',
@@ -430,6 +456,17 @@ const deleteBtnStyle = {
   fontSize: '0.75rem',
   fontWeight: 600,
   cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
+
+const sendBtnStyle = {
+  background: 'linear-gradient(135deg, #7c1c1c, #a83232)',
+  color: 'white',
+  border: 'none',
+  borderRadius: '0.35rem',
+  padding: '0.25rem 0.6rem',
+  fontSize: '0.75rem',
+  fontWeight: 600,
   whiteSpace: 'nowrap',
 };
 

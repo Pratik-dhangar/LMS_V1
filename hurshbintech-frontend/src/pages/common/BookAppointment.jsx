@@ -51,12 +51,13 @@ const BookAppointment = () => {
           console.log(`  Full image URL would be: ${getFileUrl(coach.profile_picture_url)}`);
         }
       });
-      setCoaches(data || []);
-      setFilteredCoaches(data || []);
-      
+      const nonSpecialCoaches = (data || []).filter(coach => !coach.is_special);
+      setCoaches(nonSpecialCoaches);
+      setFilteredCoaches(nonSpecialCoaches);
+
       // Fetch availability for each coach
-      if (data && data.length > 0) {
-        await fetchAllCoachAvailability(data);
+      if (nonSpecialCoaches.length > 0) {
+        await fetchAllCoachAvailability(nonSpecialCoaches);
       }
     } catch (error) {
       console.error('Error fetching coaches:', error);
@@ -69,7 +70,7 @@ const BookAppointment = () => {
   const fetchAllCoachAvailability = async (coachesList) => {
     try {
       const availabilityMap = {};
-      
+
       // Fetch availability for each coach in parallel
       const promises = coachesList.map(coach =>
         getCoachAvailabilityPublic(coach.id)
@@ -82,7 +83,7 @@ const BookAppointment = () => {
             availabilityMap[coach.id] = { is_available: true };
           })
       );
-      
+
       await Promise.all(promises);
       setCoachAvailability(availabilityMap);
     } catch (error) {
@@ -117,7 +118,7 @@ const BookAppointment = () => {
   const renderStars = (rating) => {
     const stars = [];
     const ratingValue = rating || 4.5; // Default rating
-    
+
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <Star
@@ -202,7 +203,7 @@ const BookAppointment = () => {
             </div>
             {/* Only show My Appointments button for roles that can book appointments */}
             {user && user.role !== 'admin' && user.role !== 'coach' && (
-              <button 
+              <button
                 onClick={() => navigate('/my-appointments')}
                 className="app-modal-btn app-modal-btn--primary flex items-center gap-2"
                 style={{ alignSelf: 'flex-start' }}
@@ -212,7 +213,7 @@ const BookAppointment = () => {
               </button>
             )}
           </div>
-          
+
 
           {/* Coaches Grid */}
           {filteredCoaches.length === 0 ? (
@@ -228,14 +229,14 @@ const BookAppointment = () => {
               {filteredCoaches.map((coach) => {
                 const availability = coachAvailability[coach.id];
                 const hasUnavailablePeriod = availability && !availability.is_available && availability.unavailable_from && availability.unavailable_until;
-                
+
                 // Format unavailable dates for display
                 const formatDate = (dateStr) => {
                   if (!dateStr) return '';
                   const date = new Date(dateStr);
                   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 };
-                
+
                 return (
                   <div key={coach.id} className="coach-card">
                     {/* Availability Badge - Show unavailable period if exists */}
@@ -252,7 +253,7 @@ const BookAppointment = () => {
                         <span className="badge-text">Available</span>
                       </div>
                     )}
-                    
+
                     <div className="coach-card-content">
                       {/* Profile Picture */}
                       <div className="coach-avatar-wrapper">
@@ -276,43 +277,30 @@ const BookAppointment = () => {
                       {/* Coach Info */}
                       <div className="coach-info">
                         <h3 className="coach-name">{coach.name}</h3>
-                        
-                        {coach.specialization && (
-                          <p className="coach-specialization">
-                            <span className="label">Specialization:</span> {coach.specialization}
-                          </p>
-                        )}
 
-                        {coach.years_of_experience && (
-                          <p className="coach-experience">
-                            {coach.years_of_experience} years experience
-                          </p>
-                        )}
-
-                        {/* Rating */}
-                        <div className="coach-rating">
-                          <div className="stars">
-                            {renderStars(coach.rating)}
-                          </div>
-                          <span className="rating-text">
-                            ({coach.rating || '4.5'}/5)
-                          </span>
-                          {coach.total_reviews && (
-                            <span className="reviews-count">
-                              - {coach.total_reviews} reviews
-                            </span>
+                        <div className="coach-detail-pills">
+                          {coach.age && (
+                            <div className="coach-detail-pill">
+                              <span className="coach-detail-label">Age</span>
+                              <span className="coach-detail-value">{coach.age}</span>
+                            </div>
+                          )}
+                          {coach.qualification && (
+                            <div className="coach-detail-pill">
+                              <span className="coach-detail-label">Qualification</span>
+                              <span className="coach-detail-value">{coach.qualification}</span>
+                            </div>
+                          )}
+                          {coach.experience_with_hurshbin && (
+                            <div className="coach-detail-pill">
+                              <span className="coach-detail-label">Exp. with Hurshbin</span>
+                              <span className="coach-detail-value">{coach.experience_with_hurshbin}</span>
+                            </div>
                           )}
                         </div>
-
-                        {/* Session Fee */}
-                        {coach.session_fee && (
-                          <p className="coach-fee">
-                            Session Fee: ₹{coach.session_fee}
-                          </p>
-                        )}
                       </div>
 
-                      {/* Book Button - Always enabled, date validation happens in the form */}
+                      {/* Book Button */}
                       <button
                         onClick={() => handleBookAppointment(coach)}
                         className="btn-book-appointment"

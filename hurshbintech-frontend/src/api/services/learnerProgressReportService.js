@@ -23,13 +23,24 @@ const learnerProgressReportService = {
         }
     },
 
-    // Get reports for a specific learner
+    // Get reports for a specific learner (called by Head/Coach/Admin)
     getByLearner: async (learnerId) => {
         try {
             const response = await axios.get(`/learner-progress-reports/learner/${learnerId}`);
             return response.data;
         } catch (error) {
             console.error('Error fetching learner progress reports:', error);
+            throw error;
+        }
+    },
+
+    // Get reports for the currently logged-in learner (called by Learner role)
+    getMyReports: async () => {
+        try {
+            const response = await axios.get('/learner-progress-reports/my-reports');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching my progress reports:', error);
             throw error;
         }
     },
@@ -81,6 +92,19 @@ const learnerProgressReportService = {
             // Non-fatal: log but don't break the UI
             console.warn('PDF S3 upload skipped or failed:', error?.response?.data?.detail || error.message);
             return null;
+        }
+    },
+
+    // Send Final Progress Report email to learner (Coach/Head only)
+    sendFinalReportEmail: async (reportId, sentByName = '') => {
+        try {
+            const response = await axios.post(`/learner-progress-reports/${reportId}/send-email`, {
+                sent_by_name: sentByName || null,
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error sending final report email:', error);
+            throw error;
         }
     },
 };
