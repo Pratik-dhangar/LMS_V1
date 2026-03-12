@@ -108,7 +108,7 @@ const LearningProgramSidebar = ({
             <span>{sessionInfo.program.name}</span>
           </div>
         )}
-        <div className="sidebar-section-title">Program Goals</div>
+        <div className="sidebar-section-title">Learning Goals</div>
 
         <div className="sidebar-scrollable">
           {isSearching ? (
@@ -222,7 +222,7 @@ const LearningProgramSidebar = ({
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
             {['Tick', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Cross'].map((r) => {
-              const val = r === 'Cross' ? 100 : r === 'Tick' ? 0 : r;
+              const val = r === 'Cross' ? 0 : r === 'Tick' ? 100 : r;
               const isSelected = selectedReinforcementLevel === val;
               return (
                 <div
@@ -235,7 +235,7 @@ const LearningProgramSidebar = ({
                         ? { backgroundColor: isSelected ? '#991b1b' : '#dc2626', borderColor: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }
                         : {}
                   }
-                  title={r === 'Tick' ? 'No reinforcement needed (0)' : r === 'Cross' ? 'Full reinforcement needed (100)' : `Reinforcement level ${r}`}
+                  title={r === 'Tick' ? 'Full reinforcement (100)' : r === 'Cross' ? 'No reinforcement (0)' : `Reinforcement level ${r}`}
                   onClick={() => {
                     const newValue = isSelected ? null : val;
                     setSelectedReinforcementLevel(newValue);

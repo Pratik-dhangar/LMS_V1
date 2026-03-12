@@ -32,8 +32,8 @@ const GuestBookingStep1 = () => {
 
   // Step 1: Send OTP to email
   const handleSendOTP = async (e) => {
-    e.preventDefault();
-    
+    if (e) e.preventDefault();
+
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
@@ -78,7 +78,7 @@ const GuestBookingStep1 = () => {
   // Step 2: Verify OTP and proceed to booking details
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    
+
     const otp = otpDigits.join('');
     if (!otp || otp.length !== 6) {
       toast.error('Please enter a 6-digit OTP');
@@ -89,13 +89,13 @@ const GuestBookingStep1 = () => {
       setLoading(true);
       // Call backend to verify OTP
       await bookingService.verifyGuestOTP({ email, otp });
-      
+
       toast.success('Email verified! Proceeding to booking details...');
-      
+
       // Store email, otp, and coach in state for Step 2
       setTimeout(() => {
-        navigate('/guest-booking/details', { 
-          state: { email, otp, otpVerified: true, coach } 
+        navigate('/guest-booking/details', {
+          state: { email, otp, otpVerified: true, coach }
         });
       }, 1500);
     } catch (err) {
@@ -115,11 +115,11 @@ const GuestBookingStep1 = () => {
   const handleOtpDigitChange = (index, value) => {
     // Only allow digits
     const digit = value.replace(/\D/g, '');
-    
+
     const newOtpDigits = [...otpDigits];
     newOtpDigits[index] = digit;
     setOtpDigits(newOtpDigits);
-    
+
     // Auto-focus next input
     if (digit && index < 5) {
       otpInputs.current[index + 1]?.focus();
@@ -136,24 +136,24 @@ const GuestBookingStep1 = () => {
   // Handle paste functionality
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    
+
     // Get pasted text from clipboard
     const pastedText = e.clipboardData.getData('text');
-    
+
     // Extract only digits from pasted text
     const digits = pastedText.replace(/\D/g, '').slice(0, 6);
-    
+
     // If we have digits, fill the OTP fields
     if (digits.length > 0) {
       const newOtpDigits = ['', '', '', '', '', ''];
-      
+
       // Fill the digits array with pasted digits
       for (let i = 0; i < digits.length; i++) {
         newOtpDigits[i] = digits[i];
       }
-      
+
       setOtpDigits(newOtpDigits);
-      
+
       // Auto-focus the next empty field or last field if complete
       const nextIndex = Math.min(digits.length, 5);
       if (digits.length === 6) {
@@ -196,42 +196,40 @@ const GuestBookingStep1 = () => {
               <div className="guest-booking-form centered">
                 {step === 'email' ? (
                   <>
-                   
                     <form onSubmit={handleSendOTP}>
                       <div className="form-group">
                         <label htmlFor="email">Email Address *</label>
-                        <input
-                          type="email"
-                          id="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="your@email.com"
-                          disabled={loading}
-                          required
-                        />
+                        <div className="email-input-wrapper">
+                          <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="your@email.com"
+                            disabled={loading}
+                            required
+                          />
+                        </div>
                         <small>We'll send an OTP to this email</small>
-                        <button 
-                        type="submit" 
-                        className="btn btn-primary btn-full" 
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader size={16} className="spinner" />
-                            Sending OTP...
-                          </>
-                        ) : (
-                          <>Send OTP</>
-                        )}
-                      </button>
-                      </div>
 
-                      
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-full"
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <><Loader size={16} className="spinner" /> Sending OTP...</>
+                          ) : (
+                            <>Send OTP</>
+                          )}
+                        </button>
+                      </div>
                     </form>
-                     <div className="instruction-box">
+
+                    <div className="instruction-box">
                       <h3>📧 Verify Your Email</h3>
                       <p>
-                        We'll send you a one-time password (OTP) to verify your email. 
+                        We'll send you a one-time password (OTP) to verify your email.
                         This keeps your booking secure.
                       </p>
                       <ul>
@@ -240,17 +238,16 @@ const GuestBookingStep1 = () => {
                         <li>No account creation needed</li>
                       </ul>
                     </div>
-
                   </>
                 ) : (
                   <>
-                   <form onSubmit={handleVerifyOTP}>
+                    <form onSubmit={handleVerifyOTP}>
                       <div className="form-group">
                         <label>Enter OTP *</label>
-                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+                        <p className="otp-sent-hint">
                           Enter the 6-digit code sent to <strong>{email}</strong>
                         </p>
-                        
+
                         {/* OTP Input Boxes */}
                         <div className="otp-input-container">
                           {otpDigits.map((digit, index) => (
@@ -271,7 +268,7 @@ const GuestBookingStep1 = () => {
                             />
                           ))}
                         </div>
-                        
+
                         {/* Resend OTP Section */}
                         <div style={{ marginTop: '15px', textAlign: 'center' }}>
                           {resendTimer > 0 ? (
@@ -279,7 +276,7 @@ const GuestBookingStep1 = () => {
                               Resend OTP in {resendTimer} seconds
                             </small>
                           ) : (
-                            <button 
+                            <button
                               type="button"
                               onClick={handleResendOTP}
                               disabled={loading}
@@ -292,8 +289,8 @@ const GuestBookingStep1 = () => {
                         </div>
                       </div>
 
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         className="btn btn-primary btn-full"
                         disabled={loading || otpDigits.join('').length !== 6}
                       >
@@ -307,8 +304,8 @@ const GuestBookingStep1 = () => {
                         )}
                       </button>
 
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn btn-link"
                         onClick={() => setStep('email')}
                         disabled={loading}
@@ -326,7 +323,7 @@ const GuestBookingStep1 = () => {
                       </p>
                     </div>
 
-                    
+
                   </>
                 )}
               </div>

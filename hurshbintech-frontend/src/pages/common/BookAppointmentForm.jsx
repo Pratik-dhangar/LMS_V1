@@ -14,7 +14,7 @@ const BookAppointmentForm = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const coach = location.state?.coach;
+  const [coach, setCoach] = useState(location.state?.coach || null);
 
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -23,16 +23,36 @@ const BookAppointmentForm = () => {
   const [formData, setFormData] = useState({
     appointment_date: '',
     appointment_time: '',
-    session_type: '',
+    session_type: coach?.dedicated_package ? coach.dedicated_package.package_name : '',
     payment_screenshot: null,
   });
   const [previewImage, setPreviewImage] = useState(null);
 
-  const sessionTypes = [
-    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 2500 },
-    { value: 'follow_up', label: 'Follow-up Session', duration: '45 min', fee: 2000 },
-    { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3500 },
-  ];
+  // const sessionTypes = [
+  //   { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 2500 },
+  //   { value: 'follow_up', label: 'Follow-up Session', duration: '45 min', fee: 2000 },
+  //   { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3500 },
+  // ];
+
+  // Fetch fresh coach data (including dedicated_package) on mount
+  useEffect(() => {
+    const fetchFreshCoachData = async () => {
+      if (!coachId) return;
+      try {
+        const allCoaches = await bookingService.getAvailableCoaches();
+        const freshCoach = allCoaches?.find(c => c.id === parseInt(coachId));
+        if (freshCoach) {
+          setCoach(freshCoach);
+          if (freshCoach.dedicated_package) {
+            setFormData(prev => ({ ...prev, session_type: freshCoach.dedicated_package.package_name }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching fresh coach data:', error);
+      }
+    };
+    fetchFreshCoachData();
+  }, [coachId]);
 
   // Fetch coach availability on mount
   useEffect(() => {
@@ -54,44 +74,44 @@ const BookAppointmentForm = () => {
   const isDateUnavailable = (date) => {
     if (!date || !coachAvailability) return false;
     if (coachAvailability.is_available) return false;
-    
+
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
-    
+
     if (coachAvailability.unavailable_from && coachAvailability.unavailable_until) {
       const unavailableFrom = new Date(coachAvailability.unavailable_from);
       unavailableFrom.setHours(0, 0, 0, 0);
       const unavailableUntil = new Date(coachAvailability.unavailable_until);
       unavailableUntil.setHours(0, 0, 0, 0);
-      
+
       return selectedDate >= unavailableFrom && selectedDate <= unavailableUntil;
     }
-    
+
     return false;
   };
 
   // Check if selected date's day is in coach's availability days
   const isDateDayUnavailable = (date) => {
     if (!date || !coachAvailability?.availability_days) return false;
-    
+
     const selectedDate = new Date(date);
     const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const availableDays = coachAvailability.availability_days.split(',').map(day => day.trim());
-    
-    console.log('[BookAppointment] Day Check:', { 
-      selectedDate: date, 
-      dayName, 
-      availableDays, 
-      isUnavailable: !availableDays.includes(dayName) 
+
+    console.log('[BookAppointment] Day Check:', {
+      selectedDate: date,
+      dayName,
+      availableDays,
+      isUnavailable: !availableDays.includes(dayName)
     });
-    
+
     return !availableDays.includes(dayName);
   };
 
   // Check if selected time slot is not in coach's available time slots
   const isTimeSlotUnavailable = (timeSlot) => {
     if (!timeSlot || !coachAvailability?.time_slots) return false;
-    
+
     const availableSlots = coachAvailability.time_slots.split(',').map(slot => slot.trim());
     return !availableSlots.includes(timeSlot);
   };
@@ -99,39 +119,39 @@ const BookAppointmentForm = () => {
   // Get next available date after unavailable period
   const getNextAvailableDate = () => {
     if (!coachAvailability || coachAvailability.is_available || !coachAvailability.unavailable_until) return null;
-    
+
     const unavailableUntil = new Date(coachAvailability.unavailable_until);
     unavailableUntil.setHours(0, 0, 0, 0);
-    
+
     // Add 1 day to get next available date
     const nextAvailable = new Date(unavailableUntil);
     nextAvailable.setDate(nextAvailable.getDate() + 1);
-    
+
     return nextAvailable.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   // Get next available date based on coach's availability days
   const getNextAvailableDayOfWeek = (fromDate) => {
     if (!coachAvailability?.availability_days) return null;
-    
+
     const availableDays = coachAvailability.availability_days.split(',').map(day => day.trim());
     const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+
     // Get indices of available days
     const availableDayIndices = availableDays.map(day => daysOfWeek.indexOf(day)).filter(i => i !== -1);
     if (availableDayIndices.length === 0) return null;
-    
+
     // Start from tomorrow or the provided date
     const startDate = fromDate ? new Date(fromDate) : new Date();
     startDate.setDate(startDate.getDate() + 1);
     startDate.setHours(0, 0, 0, 0);
-    
+
     // Find next available day (within next 14 days to avoid infinite loop)
     for (let i = 0; i < 14; i++) {
       const checkDate = new Date(startDate);
       checkDate.setDate(startDate.getDate() + i);
       const dayIndex = checkDate.getDay();
-      
+
       if (availableDayIndices.includes(dayIndex)) {
         // Also check if this date is not in unavailable period
         if (!isDateUnavailable(checkDate.toISOString().split('T')[0])) {
@@ -143,7 +163,7 @@ const BookAppointmentForm = () => {
         }
       }
     }
-    
+
     return null;
   };
 
@@ -151,7 +171,7 @@ const BookAppointmentForm = () => {
   useEffect(() => {
     const fetchAvailableSlotsForDate = async () => {
       if (!formData.appointment_date || !coachId) return;
-      
+
       try {
         setLoadingSlots(true);
         const slotsData = await bookingService.getAvailableSlots(coachId, formData.appointment_date);
@@ -164,7 +184,7 @@ const BookAppointmentForm = () => {
         setLoadingSlots(false);
       }
     };
-    
+
     fetchAvailableSlotsForDate();
   }, [formData.appointment_date, coachId]);
 
@@ -201,24 +221,24 @@ const BookAppointmentForm = () => {
         const str = timeStr.toLowerCase().trim();
         const isPM = str.includes('pm');
         const isAM = str.includes('am');
-        
+
         // Extract numeric part (handle both "10am" and "10:30am" formats)
         const numericPart = str.replace(/[apm\s]/g, '');
         const [hours, minutes = '0'] = numericPart.split(':');
-        
+
         let hour = parseInt(hours);
         const minute = parseInt(minutes);
-        
+
         // Convert to 24-hour format
         if (isPM && hour !== 12) {
           hour += 12;
         } else if (isAM && hour === 12) {
           hour = 0;
         }
-        
+
         return hour * 60 + minute; // Return total minutes for comparison
       };
-      
+
       return parseTime(a) - parseTime(b);
     });
   };
@@ -263,6 +283,9 @@ const BookAppointmentForm = () => {
   };
 
   const getTotalAmount = () => {
+    if (coach?.dedicated_package) {
+      return coach.dedicated_package.price;
+    }
     const sessionType = getSelectedSessionType();
     return sessionType ? sessionType.fee : 0;
   };
@@ -322,28 +345,28 @@ const BookAppointmentForm = () => {
       submitData.append('scheduled_date', formData.appointment_date);
       submitData.append('scheduled_time', formData.appointment_time);
       submitData.append('session_type', formData.session_type);
-      
+
       // Add payment screenshot if uploaded
       if (formData.payment_screenshot) {
         submitData.append('payment_screenshot', formData.payment_screenshot);
       }
-      
+
       // Add notes with total amount
       const notes = `Total Amount: ₹${getTotalAmount()}`;
       submitData.append('notes', notes);
 
       // Call booking API
       await bookingService.bookAppointment(submitData);
-      
+
       toast.success('Appointment booked successfully!');
       navigate(-1); // Go back to coaches list
     } catch (error) {
       console.error('Error booking appointment:', error);
-      
+
       // Handle 409 Conflict (double-booking)
       if (error.response?.status === 409) {
         toast.error(error.response.data.detail || 'This time slot was just booked by someone else. Please select another slot.');
-        
+
         // Refresh available slots
         if (formData.appointment_date) {
           try {
@@ -407,7 +430,7 @@ const BookAppointmentForm = () => {
             <div className="selected-coach-info">
               <div className="coach-avatar-sm">
                 {coach.profile_picture_url ? (
-                  <img 
+                  <img
                     src={getFileUrl(coach.profile_picture_url)}
                     alt={coach.name}
                     onError={(e) => {
@@ -433,7 +456,7 @@ const BookAppointmentForm = () => {
           {/* Form Card */}
           <div className="appointment-form-card">
             <form onSubmit={handleSubmit}>
-              
+
               {/* Date & Time Section */}
               <div className="form-section">
                 <h3 className="section-heading">
@@ -459,7 +482,7 @@ const BookAppointmentForm = () => {
                     )}
                     {formData.appointment_date && !isDateUnavailable(formData.appointment_date) && isDateDayUnavailable(formData.appointment_date) && (
                       <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                        ⚠️ Coach is not available on {new Date(formData.appointment_date).toLocaleDateString('en-US', { weekday: 'long' })}s. 
+                        ⚠️ Coach is not available on {new Date(formData.appointment_date).toLocaleDateString('en-US', { weekday: 'long' })}s.
                         {coachAvailability?.availability_days && ` Available on: ${coachAvailability.availability_days}`}
                         {(() => {
                           const nextDay = getNextAvailableDayOfWeek(formData.appointment_date);
@@ -487,31 +510,31 @@ const BookAppointmentForm = () => {
                           disabled={!formData.appointment_date || availableSlots.length === 0 || isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)}
                         >
                           <option value="">
-                            {!formData.appointment_date 
-                              ? "Select a date first" 
+                            {!formData.appointment_date
+                              ? "Select a date first"
                               : isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)
                                 ? "Selected date is unavailable"
-                              : availableSlots.length === 0 
-                                ? "No slots available on this date" 
-                                : "Select a time slot"
+                                : availableSlots.length === 0
+                                  ? "No slots available on this date"
+                                  : "Select a time slot"
                             }
                           </option>
                           {sortTimeSlots(availableSlots).map(slot => (
                             <option key={slot} value={slot}>{formatTimeSlot(slot)}</option>
                           ))}
                         </select>
-                        
+
                         {/* Show message if no slots available */}
                         {formData.appointment_date && availableSlots.length === 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
                           <small style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444', display: 'block' }}>
-                            ⚠️ All time slots are booked for this date. 
+                            ⚠️ All time slots are booked for this date.
                             {(() => {
                               const nextDay = getNextAvailableDayOfWeek(formData.appointment_date);
                               return nextDay ? ` Next available: ${nextDay.dayName}, ${nextDay.date}` : ' Please choose another date.';
                             })()}
                           </small>
                         )}
-                        
+
                         {/* Show available slots count - only if date is not unavailable */}
                         {formData.appointment_date && availableSlots.length > 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
                           <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#10b981' }}>
@@ -530,32 +553,45 @@ const BookAppointmentForm = () => {
                   <Clock className="w-5 h-5" />
                   Session Type <span style={{ color: '#ef4444' }}>*</span>
                 </h3>
-                <div className="session-types-grid">
-                  {sessionTypes.map(type => (
-                    <label
-                      key={type.value}
-                      className={`session-type-card ${formData.session_type === type.value ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="session_type"
-                        value={type.value}
-                        checked={formData.session_type === type.value}
-                        onChange={handleInputChange}
-                        className="session-type-radio"
-                        required
-                      />
+                {coach?.dedicated_package ? (
+                  <div className="session-types-grid">
+                    <label className="session-type-card selected" style={{ cursor: 'default' }}>
                       <div className="session-type-content">
-                        <p className="session-type-label">{type.label}</p>
-                        <p className="session-type-duration">{type.duration}</p>
-                        <p className="session-type-fee">₹{type.fee}</p>
+                        <p className="session-type-label">{coach.dedicated_package.package_name}</p>
+                        <p className="session-type-duration">1.5 Hour (90 min)</p>
+                        <p className="session-type-fee">₹{coach.dedicated_package.price}</p>
                       </div>
-                      {formData.session_type === type.value && (
-                        <Check className="check-icon" />
-                      )}
+                      <Check className="check-icon" />
                     </label>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="session-types-grid">
+                    {sessionTypes.map(type => (
+                      <label
+                        key={type.value}
+                        className={`session-type-card ${formData.session_type === type.value ? 'selected' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="session_type"
+                          value={type.value}
+                          checked={formData.session_type === type.value}
+                          onChange={handleInputChange}
+                          className="session-type-radio"
+                          required
+                        />
+                        <div className="session-type-content">
+                          <p className="session-type-label">{type.label}</p>
+                          <p className="session-type-duration">{type.duration}</p>
+                          <p className="session-type-fee">₹{type.fee}</p>
+                        </div>
+                        {formData.session_type === type.value && (
+                          <Check className="check-icon" />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                )}
                 {!formData.session_type && (
                   <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444' }}>
                     Please select a session type
@@ -569,7 +605,7 @@ const BookAppointmentForm = () => {
                   <Upload className="w-5 h-5" />
                   Payment Details
                 </h3>
-                
+
                 {/* Total Amount */}
                 <div className="payment-summary">
                   <div className="payment-row">
@@ -595,7 +631,7 @@ const BookAppointmentForm = () => {
                 {/* File Upload */}
                 <div className="app-modal-form-field">
                   <label className="field-label">Upload Payment Screenshot *</label>
-                  
+
                   {!previewImage ? (
                     <label className="file-upload-area">
                       <input
@@ -661,7 +697,7 @@ const BookAppointmentForm = () => {
             </form>
           </div>
         </div>
-        
+
       </main>
     </div>
   );

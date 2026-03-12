@@ -12,6 +12,7 @@ import {
   Loader2,
   AlertCircle,
   Calendar,
+  Clock,
   Filter,
   Download,
   BarChart3,
@@ -21,6 +22,12 @@ import {
   ClipboardList,
   CheckCircle,
   ExternalLink,
+  CalendarCheck,
+  Mail,
+  Phone,
+  FileText,
+  User,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import subscriptionService from "../../api/services/subscriptionService";
@@ -36,7 +43,7 @@ const SubscriptionRecords = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ── Active tab: "records" | "inquiries"
+  // ── Active tab: "records" | "inquiries" | "appointments"
   const [activeTab, setActiveTab] = useState("records");
 
   const [subscriptions, setSubscriptions] = useState([]);
@@ -57,6 +64,14 @@ const SubscriptionRecords = () => {
   const [filteredInquiries, setFilteredInquiries] = useState([]);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
+
+  // ── Appointment states
+  const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState("");
+  const [appointmentSearch, setAppointmentSearch] = useState("");
+  const [updatingAppointment, setUpdatingAppointment] = useState(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -219,6 +234,126 @@ const SubscriptionRecords = () => {
     if (tab === "inquiries" && inquiries.length === 0 && !inquiriesLoading) {
       fetchInquiries();
     }
+    if (tab === "appointments" && appointments.length === 0 && !appointmentsLoading) {
+      fetchAppointments();
+    }
+  };
+
+  // ── Appointment helpers ──────────────────────────────────────────────────
+
+  const fetchAppointments = async (statusFilter = appointmentStatusFilter) => {
+    try {
+      setAppointmentsLoading(true);
+      const params = { guest_only: true };
+      if (statusFilter) params.status_filter = statusFilter;
+      const data = await adminService.getAppointments(params);
+      setAppointments(data);
+      applyAppointmentSearch(data, appointmentSearch);
+    } catch (err) {
+      toast.error("Failed to load guest appointments");
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const applyAppointmentSearch = (list, query) => {
+    if (!query.trim()) {
+      setFilteredAppointments(list);
+      return;
+    }
+    const q = query.toLowerCase();
+    setFilteredAppointments(
+      list.filter(
+        (a) =>
+          a.guest_name?.toLowerCase().includes(q) ||
+          a.guest_email?.toLowerCase().includes(q) ||
+          a.guest_phone?.toLowerCase().includes(q),
+      ),
+    );
+  };
+
+  const handleAppointmentSearchChange = (query) => {
+    setAppointmentSearch(query);
+    applyAppointmentSearch(appointments, query);
+  };
+
+  const handleAppointmentStatusFilterChange = (newStatus) => {
+    setAppointmentStatusFilter(newStatus);
+    fetchAppointments(newStatus);
+  };
+
+  const handleSendPaymentLink = async (appointmentId) => {
+    setUpdatingAppointment(appointmentId);
+    try {
+      const updated = await adminService.updateAppointmentStatus(appointmentId, { status: "confirmed" });
+      toast.success("Payment link sent to guest!");
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: updated.status } : a))
+      );
+      setFilteredAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: updated.status } : a))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to send payment link");
+    } finally {
+      setUpdatingAppointment(null);
+    }
+  };
+
+  const handleConfirmPayment = async (appointmentId) => {
+    setUpdatingAppointment(appointmentId);
+    try {
+      const updated = await adminService.updateAppointmentStatus(appointmentId, { status: "confirmed" });
+      toast.success("Payment confirmed! Guest session link sent.");
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: updated.status } : a))
+      );
+      setFilteredAppointments((prev) =>
+        prev.map((a) => (a.id === appointmentId ? { ...a, status: updated.status } : a))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to confirm payment");
+    } finally {
+      setUpdatingAppointment(null);
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this appointment record?')) return;
+    setUpdatingAppointment(appointmentId);
+    try {
+      await adminService.deleteAppointment(appointmentId);
+      toast.success('Appointment deleted.');
+      setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
+      setFilteredAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete appointment');
+    } finally {
+      setUpdatingAppointment(null);
+    }
+  };
+
+  const isAppointmentCompleted = (apt) => {
+    const s = apt.status?.toUpperCase();
+    if (s === 'COMPLETED') return true;
+    if (s === 'REJECTED' || s === 'CANCELLED' || s === 'NO_SHOW' || s === 'GUEST_INTENT' || s === 'VERIFICATION_PENDING') return false;
+    const d = new Date(apt.scheduled_date);
+    d.setHours(23, 59, 59, 999);
+    return new Date() > d;
+  };
+
+  const getAppointmentStatusBadge = (apt) => {
+    const effectiveStatus = isAppointmentCompleted(apt) ? 'COMPLETED' : apt.status?.toUpperCase();
+    const map = {
+      GUEST_INTENT: { cls: "status-badge status-badge-pending", label: "New Booking" },
+      VERIFICATION_PENDING: { cls: "status-badge status-badge-paused", label: "Payment Review" },
+      CONFIRMED: { cls: "status-badge status-badge-active", label: "Confirmed" },
+      REJECTED: { cls: "status-badge status-badge-cancelled", label: "Rejected" },
+      COMPLETED: { cls: "status-badge status-badge-expired", label: "Completed" },
+      PENDING: { cls: "status-badge status-badge-pending", label: "Pending" },
+    };
+    const cfg = map[effectiveStatus] || { cls: "status-badge", label: effectiveStatus };
+    return <span className={cfg.cls}>{cfg.label}</span>;
   };
 
   const getInquiryStatusBadge = (status) => {
@@ -357,7 +492,7 @@ const SubscriptionRecords = () => {
             </button>
 
             <div>
-              <h1 className="page-title">Manage Learning Payment Records & Analytics</h1>
+              <h1 className="page-title">Manage Payment Records & Analytics</h1>
               <p className="page-description">
                 View all subscription records and analyze revenue trends
               </p>
@@ -371,14 +506,21 @@ const SubscriptionRecords = () => {
               onClick={() => handleTabChange('records')}
             >
               <Package size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              Manage Learning Payment Records
+              Manage Payment Records
             </button>
             <button
               className={`sub-tab-btn ${activeTab === 'inquiries' ? 'sub-tab-btn-active' : ''}`}
               onClick={() => handleTabChange('inquiries')}
             >
               <ClipboardList size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              Subscription Inquiries
+              New Subscription Buyer
+            </button>
+            <button
+              className={`sub-tab-btn ${activeTab === 'appointments' ? 'sub-tab-btn-active' : ''}`}
+              onClick={() => handleTabChange('appointments')}
+            >
+              <CalendarCheck size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
+              New Appointments
             </button>
           </div>
 
@@ -656,6 +798,170 @@ const SubscriptionRecords = () => {
                                       onClick={() => handleDeleteInquiry(inq.id)}
                                     >
                                       🗑 Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── New Appointments Tab ──────────────────────────────────── */}
+          {activeTab === 'appointments' && (
+            <>
+              {/* Toolbar */}
+              <div className="search-section">
+                <SearchBar
+                  onSearch={handleAppointmentSearchChange}
+                  placeholder="Search by guest name, email, or phone…"
+                />
+                <div className="filter-section">
+                  <select
+                    className="form-select"
+                    value={appointmentStatusFilter}
+                    onChange={(e) => handleAppointmentStatusFilterChange(e.target.value)}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="GUEST_INTENT">New Booking</option>
+                    <option value="VERIFICATION_PENDING">Payment Review</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Loading */}
+              {appointmentsLoading && (
+                <div className="loading-container">
+                  <Loader2 className="spinner" size={48} />
+                  <p>Loading appointments…</p>
+                </div>
+              )}
+
+              {/* Table */}
+              {!appointmentsLoading && (
+                <div className="table-primary-container">
+                  {filteredAppointments.length === 0 ? (
+                    <div className="empty-state">
+                      <CalendarCheck size={64} className="empty-state-icon" />
+                      <p className="empty-state-text">No guest appointments found</p>
+                    </div>
+                  ) : (
+                    <div className="table-primary-wrapper">
+                      <table className="table-primary">
+                        <thead className="table-primary-header">
+                          <tr>
+                            <th className="table-primary-th table-primary-th-id">ID</th>
+                            <th className="table-primary-th">Guest Name</th>
+                            <th className="table-primary-th">Email</th>
+                            <th className="table-primary-th">Phone</th>
+                            <th className="table-primary-th">Date</th>
+                            <th className="table-primary-th">Time</th>
+                            <th className="table-primary-th">Session Type</th>
+                            <th className="table-primary-th table-primary-th-center">Payment</th>
+                            <th className="table-primary-th table-primary-th-center">Status</th>
+                            <th className="table-primary-th table-primary-th-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="table-primary-body">
+                          {filteredAppointments.map((apt) => (
+                            <tr key={apt.id} className="table-primary-row">
+                              <td className="table-primary-td table-primary-td-id">{apt.id}</td>
+                              <td className="table-primary-td">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <User size={14} style={{ color: '#9ca3af', flexShrink: 0 }} />
+                                  {apt.guest_name}
+                                </div>
+                              </td>
+                              <td className="table-primary-td">
+                                <a href={`mailto:${apt.guest_email}`} style={{ color: '#d97706', textDecoration: 'none' }}>
+                                  {apt.guest_email}
+                                </a>
+                              </td>
+                              <td className="table-primary-td">{apt.guest_phone || '—'}</td>
+                              <td className="table-primary-td" style={{ whiteSpace: 'nowrap' }}>
+                                {new Date(apt.scheduled_date).toLocaleDateString('en-IN', {
+                                  day: '2-digit', month: 'short', year: 'numeric',
+                                })}
+                              </td>
+                              <td className="table-primary-td">{apt.scheduled_time}</td>
+                              <td className="table-primary-td">
+                                {apt.session_type
+                                  ? apt.session_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                                  : '—'}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {apt.payment_receipt_url ? (
+                                  <a
+                                    href={
+                                      apt.payment_receipt_url.startsWith('s3://')
+                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(apt.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
+                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${apt.payment_receipt_url}`
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-primary"
+                                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                  >
+                                    <ExternalLink size={12} /> View
+                                  </a>
+                                ) : (
+                                  <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>No file</span>
+                                )}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                {getAppointmentStatusBadge(apt)}
+                              </td>
+                              <td className="table-primary-td table-primary-td-center">
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                  {!isAppointmentCompleted(apt) && apt.status === 'GUEST_INTENT' && (
+                                    <button
+                                      className="btn btn-primary"
+                                      style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                      disabled={updatingAppointment === apt.id}
+                                      onClick={() => handleSendPaymentLink(apt.id)}
+                                    >
+                                      <Mail size={12} />
+                                      {updatingAppointment === apt.id ? 'Sending…' : 'Send Payment Link'}
+                                    </button>
+                                  )}
+                                  {!isAppointmentCompleted(apt) && apt.status === 'VERIFICATION_PENDING' && (
+                                    <button
+                                      className="btn"
+                                      style={{
+                                        fontSize: '0.72rem', padding: '0.25rem 0.5rem',
+                                        background: '#10b981', color: '#fff', border: 'none',
+                                        borderRadius: '0.375rem', cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                      }}
+                                      disabled={updatingAppointment === apt.id}
+                                      onClick={() => handleConfirmPayment(apt.id)}
+                                    >
+                                      <CheckCircle size={12} />
+                                      {updatingAppointment === apt.id ? 'Confirming…' : 'Confirm Payment'}
+                                    </button>
+                                  )}
+                                  {isAppointmentCompleted(apt) && (
+                                    <button
+                                      className="btn"
+                                      style={{
+                                        fontSize: '0.72rem', padding: '0.25rem 0.5rem',
+                                        background: '#dc2626', color: '#fff', border: 'none',
+                                        borderRadius: '0.375rem', cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                      }}
+                                      disabled={updatingAppointment === apt.id}
+                                      onClick={() => handleDeleteAppointment(apt.id)}
+                                    >
+                                      <Trash2 size={12} />
+                                      {updatingAppointment === apt.id ? 'Deleting…' : 'Delete'}
                                     </button>
                                   )}
                                 </div>

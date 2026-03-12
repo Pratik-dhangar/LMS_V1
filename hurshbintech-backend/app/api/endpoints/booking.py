@@ -20,6 +20,7 @@ from pathlib import Path
 from app.core.deps import get_db, get_current_user
 from app.core.config import settings
 from app.models.user_model import User, Appointment, AppointmentStatus, CoachProfile
+from app.models.subscription import SubscriptionPackage
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.schemas.guest_booking import GuestIntentResponse, GuestPaymentUploadResponse
 from app.crud import user_crud, coach_crud
@@ -51,8 +52,41 @@ async def get_available_coaches(
     logger.debug(f"Cache MISS: {cache_key}")
     coaches = await user_crud.get_all_coaches_system_wide(db)
     
-    # Convert responses first
-    responses = [CoachResponse.from_orm_with_user(coach) for coach in coaches]
+    # Batch lookup: map coach_profile_id -> dedicated package info
+    coach_ids = [c.id for c in coaches]
+    dedicated_map = {}
+    if coach_ids:
+        pkg_rows = (await db.execute(
+            select(
+                SubscriptionPackage.dedicated_coach_id,
+                SubscriptionPackage.id,
+                SubscriptionPackage.package_name,
+                SubscriptionPackage.price,
+                SubscriptionPackage.sessions_count,
+                SubscriptionPackage.validity_days,
+            ).where(
+                SubscriptionPackage.dedicated_coach_id.in_(coach_ids),
+                SubscriptionPackage.is_active == True,
+            )
+        )).all()
+        for row in pkg_rows:
+            dedicated_map[row[0]] = {
+                "id": row[1],
+                "package_name": row[2],
+                "price": float(row[3]),
+                "sessions_count": row[4],
+                "validity_days": row[5],
+            }
+    
+    # Convert responses with package info
+    responses = []
+    for coach in coaches:
+        pkg_info = dedicated_map.get(coach.id)
+        responses.append(CoachResponse.from_orm_with_user(
+            coach,
+            dedicated_package_id=pkg_info["id"] if pkg_info else None,
+            dedicated_package=pkg_info,
+        ))
     
     # Convert S3 profile pictures to permanent proxy URLs before caching.
     # Proxy URLs never expire, so the cached data remains valid indefinitely.
@@ -338,6 +372,28 @@ from app.models.guest_otp_model import GuestOTP
 from sqlalchemy import select
 from datetime import datetime, timedelta
 import uuid
+
+
+@router.get("/guest/check-email")
+async def check_guest_email(
+    email: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Check if a guest email already exists in the appointments table.
+    Returns whether the email has previous bookings.
+    No authentication required - public endpoint.
+    """
+    from sqlalchemy import func as sql_func
+    email_clean = email.lower().strip()
+
+    stmt = select(sql_func.count(Appointment.id)).where(
+        Appointment.guest_email == email_clean
+    )
+    result = await db.execute(stmt)
+    count = result.scalar() or 0
+
+    return {"exists": count > 0, "appointment_count": count}
 
 
 @router.post("/guest/send-otp")

@@ -351,9 +351,9 @@ const BuySubscriptionModal = ({ onClose }) => {
 
 
 
-                            {/* Date of Assessment */}
+                            {/* Start Date*/}
                             <div className="bsm-field">
-                                <label className="bsm-label">Date of Assessment</label>
+                                <label className="bsm-label">Start Date</label>
                                 <input
                                     className="bsm-input"
                                     type="date"
@@ -398,6 +398,25 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     </select>
                                 )}
                                 {errors.package_id && <p className="bsm-error-msg">{errors.package_id}</p>}
+                            </div>
+
+                            {/* Contact us for Ass. details */}
+                            <div className="bsm-field bsm-field-full">
+                                <p className="bsm-contact-note">
+                                    Contact us for assistance regarding learning packages &nbsp;
+                                    <a
+                                        href="https://wa.me/+918928765220"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bsm-whatsapp-link"
+                                        aria-label="Chat on WhatsApp"
+                                    >
+                                        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style={{ display: 'inline', verticalAlign: 'middle' }} aria-hidden="true">
+                                            <path d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.504L4 29l7.697-1.816A11.94 11.94 0 0016 27c6.627 0 12-5.373 12-12S22.627 3 16 3z" fill="#25D366" />
+                                            <path d="M16 5.5C10.753 5.5 6.5 9.753 6.5 15c0 2.127.676 4.097 1.83 5.706l-1.2 4.412 4.527-1.185A9.462 9.462 0 0016 24.5c5.247 0 9.5-4.253 9.5-9.5S21.247 5.5 16 5.5zm5.414 13.583c-.225.633-1.322 1.211-1.816 1.258-.465.044-.9.208-3.033-.633-2.578-1.018-4.23-3.647-4.357-3.816-.127-.169-1.034-1.376-1.034-2.625s.654-1.865.886-2.12c.232-.253.506-.317.674-.317.169 0 .337.002.485.008.155.007.363-.059.568.433.211.507.716 1.75.779 1.878.063.127.105.274.021.443-.084.169-.127.274-.253.422-.127.148-.266.33-.38.443-.127.127-.258.264-.111.518.148.253.656 1.082 1.408 1.751.966.86 1.782 1.125 2.035 1.252.253.127.4.105.548-.063.148-.169.634-.739.803-.992.169-.253.337-.211.568-.127.232.084 1.472.695 1.724.822.253.127.422.19.485.295.063.106.063.612-.162 1.244z" fill="#fff" />
+                                        </svg>
+                                    </a>
+                                </p>
                             </div>
 
                             {/* Package Price (auto-filled) */}
@@ -548,7 +567,7 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     <ReviewRow label="Contact Number" value={form.contact_number} />
                                     <ReviewRow label="Age" value={form.age || '—'} />
                                     <ReviewRow label="Date of Birth" value={displayDate(form.date_of_birth)} />
-                                    <ReviewRow label="Date of Assessment" value={displayDate(form.date_of_assessment)} />
+                                    <ReviewRow label="Start Date" value={displayDate(form.date_of_assessment)} />
                                 </div>
                             </div>
 

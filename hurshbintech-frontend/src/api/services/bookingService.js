@@ -69,6 +69,22 @@ const bookingService = {
   // === Guest Booking Flow Methods ===
 
   /**
+   * Check if a guest email already exists in the appointments table
+   * @param {string} email - Guest email to check
+   * @returns {Promise<{ exists: boolean, appointment_count: number }>}
+   */
+  async checkGuestEmail(email) {
+    try {
+      const response = await api.get('/booking/guest/check-email', {
+        params: { email },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
    * Send OTP to guest email for verification
    * @param {Object} payload - { email: string }
    * @returns {Promise<Object>} Confirmation message
@@ -92,7 +108,7 @@ const bookingService = {
       const formData = new FormData();
       formData.append('email', payload.email);
       formData.append('otp', payload.otp);
-      
+
       const response = await api.post('/booking/guest/verify-otp', formData);
       return response.data;
     } catch (error) {
@@ -127,7 +143,7 @@ const bookingService = {
     try {
       const formData = new FormData();
       formData.append('payment_screenshot', file);
-      
+
       const response = await api.post(
         `/booking/guest/upload-payment/${uploadToken}`,
         formData,

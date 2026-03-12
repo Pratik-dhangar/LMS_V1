@@ -589,6 +589,7 @@ async def create_coach(
         time_slots=coach_data.time_slots,
         specialization=coach_data.specialization,
         profile_picture_url=coach_data.profile_picture_url,
+        is_special=coach_data.is_special or False,
     )
 
     db.add(new_coach_profile)
