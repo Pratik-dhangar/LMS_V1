@@ -196,6 +196,7 @@ const CoachSession = () => {
     isFrozen: state.isFrozen,
     floatingAnimations: state.floatingAnimations,
     toolAccess: state.toolAccess,
+    lineWidth: state.lineWidth,
     audioRef: state.audioRef,
     musicOptions: MUSIC_OPTIONS,
     selectedMusic: state.selectedMusic,
@@ -372,6 +373,7 @@ const CoachSession = () => {
         canvasItems={state.canvasItems}
         setCanvasItems={state.setCanvasItems}
         remoteSelectedItemIds={state.remoteSelectedItemIds}
+        setRemoteSelectedItemIds={state.setRemoteSelectedItemIds}
         feedbackMessage={state.feedbackMessage}
         waitingMessage={state.waitingMessage}
         floatingAnimations={state.floatingAnimations}

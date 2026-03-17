@@ -91,9 +91,11 @@ class TrainingSession(Base):
     recording_status = Column(
         String(50), 
         default="pending", 
-        comment="Recording status: pending, processing, completed, failed"
+        comment="Recording status: pending, recording, processing, completed, failed"
     )
     recording_uploaded_at = Column(DateTime, comment="When recording was successfully stored")
+    recording_started_at = Column(DateTime, nullable=True, comment="When recording started (for chunked uploads)")
+    recording_duration = Column(Integer, nullable=True, comment="Total recording duration in seconds")
 
     # Relationships
     trainer = relationship("User", foreign_keys=[trainer_id], passive_deletes=True)

@@ -358,6 +358,7 @@ const Whiteboard = ({
     setCanvasItems,
     toolAccess = { select: false, drag: false, draw: false },
     remoteSelectedItemIds = [],
+    setRemoteSelectedItemIds = null,
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
@@ -369,7 +370,7 @@ const Whiteboard = ({
     color = '#000000',
     // setColor = () => { },
     lineWidth = 2,
-    // setLineWidth = () => { },
+    setLineWidth = () => { },
     bucketColor = '#9333ea',
     // setBucketColor = () => { },
     buckets = [],
@@ -993,6 +994,16 @@ const Whiteboard = ({
             whiteboardService.onDraw = (data) => {
                 drawOnCanvas(data);
 
+                if (!isTrainer && data.tool !== 'eraser' && canvasRef.current) {
+                    const incomingStrokeWidth = data.prevX >= 0 && data.prevX <= 1 && data.prevY >= 0 && data.prevY <= 1
+                        ? denormalizeStroke(data.lineWidth || data.strokeNorm || 0, canvasRef.current)
+                        : data.lineWidth;
+
+                    if (incomingStrokeWidth > 0) {
+                        setLineWidth(Math.round(incomingStrokeWidth));
+                    }
+                }
+
                 // Store normalized path for resize replay
                 // If data has normalized coordinates, store as-is; otherwise normalize them
                 if (canvasRef.current) {
@@ -1410,7 +1421,17 @@ const Whiteboard = ({
 
             whiteboardService.onItemsUnselected = (data) => {
                 // console.log('[Whiteboard] Items unselected by instructor');
-                setSelectedItems([]);
+                const nextSelectedIds = Array.isArray(data?.itemIds) ? data.itemIds.map(String) : [];
+
+                // Update local selection on attendee side (trainer=false)
+                if (!isTrainer) {
+                    setSelectedItems(prev => prev.filter(item => nextSelectedIds.includes(String(item.id))));
+                }
+
+                // Update remote selection display on instructor side (trainer=true)
+                if (isTrainer && setRemoteSelectedItemIds) {
+                    setRemoteSelectedItemIds(Array.isArray(data?.itemIds) ? data.itemIds : []);
+                }
             };
 
             // Handle whiteboard state restoration on reconnection
@@ -1621,12 +1642,8 @@ const Whiteboard = ({
     // Handle clear canvas trigger (clears pen strokes + canvas + video)
     useEffect(() => {
         if (clearCanvasTrigger > 0) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                // Clear entire canvas including pen strokes
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            // Clear entire canvas and normalized stroke history
+            clearCanvas();
             // Also clear inline video if present
             if (inlineVideoRef.current) {
                 inlineVideoRef.current.pause();
@@ -1638,16 +1655,12 @@ const Whiteboard = ({
     // Handle erase pen trigger (clears only pen strokes, redraws items)
     useEffect(() => {
         if (erasePenTrigger > 0) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                // Clear entire canvas to remove pen strokes
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                // Redraw canvas items after clearing pen strokes
-                setTimeout(() => {
-                    redrawCanvas();
-                }, 10);
-            }
+            // Remove pen strokes and reset normalized stroke history
+            clearCanvas();
+            // Redraw non-stroke canvas items after clearing strokes
+            setTimeout(() => {
+                redrawCanvas();
+            }, 10);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [erasePenTrigger]);
@@ -3252,10 +3265,7 @@ const Whiteboard = ({
             <div className="whiteboard-main-wrapper">
                 {/* Inline Video Section - Shows when video is dropped (50% width) */}
                 {inlineVideo && (
-                    <div className="whiteboard-split-video"
-                        onMouseEnter={() => setShowVideoControls(true)}
-                        onMouseLeave={() => setShowVideoControls(isVideoPlaying ? false : true)}
-                    >
+                    <div className="whiteboard-split-video" >
                         <video
                             ref={inlineVideoRef}
                             src={inlineVideo.src}
@@ -3272,13 +3282,14 @@ const Whiteboard = ({
                             onSeeked={handleVideoSeeked}
                             onLoadedMetadata={handleVideoMetadataLoaded}
                             onTimeUpdate={handleVideoTimeUpdate}
-                            onClick={handleVideoPlayPause}
+                            onClick={isTrainer ? handleVideoPlayPause : undefined}
                             style={{
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'contain',
                                 backgroundColor: '#000',
-                                cursor: 'pointer'
+                                cursor: isTrainer ? 'pointer' : 'default',
+                                pointerEvents: isTrainer ? 'auto' : 'none'
                             }}
                         />
 

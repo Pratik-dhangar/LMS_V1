@@ -478,7 +478,7 @@ const MySessions = () => {
                               <button
                                 onClick={() => { setFeedbackSessionId(session.session_id); setShowFeedbackModal(true); }}
                                 style={{
-                                  background: '#5C1E1E',
+                                  background: 'linear-gradient(to right, #7a2c2c, #5c1e1e)',
                                   color: '#ffffff',
                                   padding: '0.375rem 0.75rem',
                                   borderRadius: '0.375rem',
@@ -488,8 +488,8 @@ const MySessions = () => {
                                   cursor: 'pointer',
                                   whiteSpace: 'nowrap'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7c3aed, #5b21b6)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8b5cf6, #6d28d9)'}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #8a3333, #6b2626)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #7a2c2c, #5c1e1e)'}
                               >
                                 ★ Feedback
                               </button>

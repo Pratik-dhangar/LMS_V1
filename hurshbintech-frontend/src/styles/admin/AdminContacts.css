@@ -451,6 +451,7 @@
  }
 
  .btn-view {
+    width: 5rem;
      background-color: #e3f2fd;
      color: #1976d2;
  }
@@ -484,9 +485,9 @@
      align-items: center;
      gap: 15px;
      padding: 20px;
-     background: white;
+     /* background: white; */
      border-radius: 12px;
-     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+     /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); */
  }
 
  .pagination-btn {

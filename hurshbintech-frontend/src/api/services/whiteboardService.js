@@ -9,6 +9,7 @@ class WhiteboardService {
         this.onImage = null;
         this.onItemUpdate = null;
         this.onToolAccess = null; // New callback for tool access messages
+        this.onPenSizeUpdate = null; // New callback for trainer-controlled pen size updates
         this.onItemSelected = null; // New callback for item selection
         this.onItemsUnselected = null; // New callback for items unselected by instructor
         this.onPromptUpdate = null; // New callback for prompt updates from voice input
@@ -102,6 +103,12 @@ class WhiteboardService {
                 case 'tool_access':
                     if (this.onToolAccess) {
                         this.onToolAccess(message.data);
+                    }
+                    break;
+
+                case 'pen_size_update':
+                    if (this.onPenSizeUpdate) {
+                        this.onPenSizeUpdate(message.data);
                     }
                     break;
 
@@ -474,7 +481,7 @@ class WhiteboardService {
     set onWhiteboardRestore(callback) {
         console.log('[WhiteboardService] Setting onWhiteboardRestore callback');
         this._onWhiteboardRestore = callback;
-        
+
         // If there's a buffered restoration message, deliver it now
         if (this._restorationBuffer && callback) {
             console.log('[WhiteboardService] 📤 Delivering buffered restoration message');

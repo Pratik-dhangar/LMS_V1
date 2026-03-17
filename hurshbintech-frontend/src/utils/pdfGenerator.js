@@ -1,5 +1,43 @@
 import { jsPDF } from 'jspdf';
 
+const FREE_ASSESSMENT_SKILL_LABELS = {
+    touch_sensitivity: 'Likes/hates any particular touch too much',
+    sight_sensitivity: 'Likes/hates any particular sight too much',
+    sound_sensitivity: 'Likes/hates any particular sound too much',
+    taste_sensitivity: 'Likes/hates any particular taste too much',
+    smell_sensitivity: 'Likes/hates any particular smell too much',
+    fine_motor: 'Does age appropriate activities involving hand and finger movement',
+    gross_motor: 'Does age appropriate activities involving arms and legs movement',
+    oral_motor: 'Does age appropriate activities involving mouth and tongue movement',
+    motor_coordination: 'Does age appropriate activities related to motor coordination',
+    speech_clarity: 'Speaks clearly with no difficulties in any letter sounds',
+    requesting: 'Requests for things, activities, events, people using speech/gestures age appropriately',
+    vocal_response: 'Responds age appropriately using vocals when questioned by a familiar person',
+    spontaneous_communication: 'Initiates and maintains age appropriate communication spontaneously',
+    social_preference: 'Likes to be with people',
+    instructs_others: 'Tries to instruct others',
+    follows_daily_instructions: 'Follows age appropriate instructions given during daily routine chores',
+    activity_transition: 'Follows instructions to switch activities/accepts transition easily or with little effort',
+    follows_routine: 'Follows daily routine as required',
+    routine_change_adjustment: 'Adjusts changes in routine',
+    new_environment_adjustment: 'Adjusts with new environment within some time or no time',
+    independent_play: 'Engages in independent play when asked',
+    environment_exploration: 'Explores the environment instead of being stuck with one kind of activity',
+    novel_play_learning: 'Learns to play with an activity in a novel way when taught',
+    asks_for_help: 'Asks for help in learning new toys/activities',
+    group_sitting: 'Sits in the group for required time',
+    task_tolerance: 'Displays age appropriate tasks/sitting tolerance',
+    group_attention: 'Pays attention and learns in the group age appropriately',
+    concept_learning: 'Learns age/grade appropriate concepts',
+    retention: 'Learns in one or two trials, retains learned matter and displays knowledge when required',
+    curriculum_knowledge: 'Knows at least 60% of taught concepts from grade appropriate curriculum',
+    yes_no_response: 'Responds in yes or no',
+    eating_habits: 'Displays age appropriate eating habits',
+    new_food_exploration: 'Explores new food',
+    toileting_skills: 'Displays age appropriate toileting skills',
+    dressing_skills: 'Displays age appropriate dressing skills',
+};
+
 /**
  * Loads /Header.jpeg via the browser, draws it onto a canvas, and returns
  * { dataURL (PNG), naturalWidth, naturalHeight }.
@@ -31,7 +69,7 @@ const loadHeaderDataURL = () =>
 
 /**
  * Draws the branded company header onto the doc starting at y=0.
- * - Header.jpeg placed full page width (aspect-ratio preserved)
+ * - Header.jpeg placed using contain-fit (no stretch/distortion)
  * - Thin gold divider line
  * - Report title / subtitle / date in dark text below
  * Returns the y-position right after the header block.
@@ -41,23 +79,41 @@ const drawBrandedHeader = (doc, { headerDataURL, reportTitle, subtitle, generate
     const margin = 14;
 
     /* ── HEADER IMAGE ───────────────────────────────────────────── */
-    let imgH = 0;
+    const headerTopGap = 3;
+    const headerBoxHeight = 24;
+    let dividerY = headerTopGap + headerBoxHeight;
     if (headerDataURL && headerDataURL.dataURL) {
         const { dataURL, naturalWidth, naturalHeight } = headerDataURL;
-        // Derive height from real pixel dimensions with max cap to save space
-        imgH = (naturalWidth > 0 && naturalHeight > 0)
-            ? Math.min(pageWidth * (naturalHeight / naturalWidth), 28)
-            : 28;
-        doc.addImage(dataURL, 'PNG', 0, 0, pageWidth, imgH, '', 'FAST');
+        const maxW = pageWidth - margin * 2;
+        const maxH = headerBoxHeight;
+
+        // Contain fit inside the header box to avoid stretching.
+        let drawW = maxW;
+        let drawH = maxH;
+        if (naturalWidth > 0 && naturalHeight > 0) {
+            const imageRatio = naturalWidth / naturalHeight;
+            const boxRatio = maxW / maxH;
+            if (imageRatio > boxRatio) {
+                drawW = maxW;
+                drawH = maxW / imageRatio;
+            } else {
+                drawH = maxH;
+                drawW = maxH * imageRatio;
+            }
+        }
+
+        const drawX = (pageWidth - drawW) / 2;
+        const drawY = headerTopGap + (maxH - drawH) / 2;
+        doc.addImage(dataURL, 'PNG', drawX, drawY, drawW, drawH, '', 'FAST');
     }
 
     /* ── GOLD DIVIDER LINE ──────────────────────────────────────── */
     doc.setDrawColor(219, 157, 50);
     doc.setLineWidth(0.8);
-    doc.line(0, imgH, pageWidth, imgH);
+    doc.line(0, dividerY, pageWidth, dividerY);
 
     /* ── REPORT TITLE BLOCK ─────────────────────────────────────── */
-    let y = imgH + 7;
+    let y = dividerY + 7;
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -1510,5 +1566,490 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
     doc.save(`progress_report_${safe(form.name)}_${ts}.pdf`);
 
     // Return the PDF blob so callers can upload it to S3 on deploy
+    return doc.output('blob');
+};
+
+export const generateFreeAssessmentPDF = async (assessment, { previewOnly = false } = {}) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const headerImg = await loadHeaderDataURL();
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2;
+
+    const GOLD = [219, 157, 50];
+    const DARK_NAVY = [30, 58, 90];
+    const BROWN = [122, 44, 44];
+    const TEXT_DARK = [45, 55, 72];
+    const GRAY_MID = [200, 208, 218];
+    const bottomMargin = 18;
+
+    /* ── Helpers ──────────────────────────────────────────────── */
+    const formatDate = (value) => {
+        if (!value) return '-';
+        try {
+            return new Date(value).toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'long', year: 'numeric',
+            });
+        } catch { return String(value); }
+    };
+
+    const safe = (value) =>
+        (value === null || value === undefined || value === '') ? '-' : String(value);
+
+    const drawPageHeader = () => drawBrandedHeader(doc, {
+        headerDataURL: headerImg,
+        reportTitle: 'FREE ASSESSMENT FORM',
+        subtitle: assessment?.child_name
+            ? `Child: ${assessment.child_name}`
+            : 'Child Development Assessment Record',
+        generatedDate: `Generated on ${formatDate(new Date())}`,
+    });
+
+    let y = drawPageHeader();
+
+    const addPage = () => { doc.addPage(); y = drawPageHeader(); };
+
+    const ensureSpace = (needed = 10) => {
+        if (y + needed > pageHeight - bottomMargin) addPage();
+    };
+
+    /* ── Section Title — gold accent bar + cream background ───── */
+    const writeSectionTitle = (title) => {
+        ensureSpace(15);
+        y += 3;
+        doc.setFillColor(...GOLD);
+        doc.rect(margin, y - 5, 3.5, 10, 'F');
+        doc.setFillColor(252, 246, 236);
+        doc.rect(margin + 3.5, y - 5, contentWidth - 3.5, 10, 'F');
+        doc.setDrawColor(...GRAY_MID);
+        doc.setLineWidth(0.2);
+        doc.rect(margin, y - 5, contentWidth, 10, 'D');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...BROWN);
+        doc.text(title.toUpperCase(), margin + 7, y + 1.5);
+        y += 9;
+    };
+
+    /* ── 2-column info grid (label upper-small, value below) ─── */
+    const drawInfoGrid = (fields) => {
+        const colW = contentWidth / 2;
+        const cellPad = 3;
+        const rows = [];
+        for (let i = 0; i < fields.length; i += 2) {
+            rows.push([fields[i], fields[i + 1] || null]);
+        }
+
+        rows.forEach((row, rowIdx) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            const valLinesArr = row.map((f) =>
+                f ? doc.splitTextToSize(safe(f[1]), colW - cellPad * 2 - 2) : [],
+            );
+            const maxLines = Math.max(1, ...valLinesArr.map((v) => v.length));
+            // topPad(4) + labelH(4) + valueLines + botPad(3)
+            const rowH = 11 + maxLines * 5;
+            ensureSpace(rowH + 1);
+
+            row.forEach((field, colIdx) => {
+                const x = margin + colIdx * colW;
+                const bg = rowIdx % 2 === 0 ? [253, 253, 253] : [246, 249, 252];
+                doc.setFillColor(...bg);
+                doc.setDrawColor(...GRAY_MID);
+                doc.setLineWidth(0.2);
+                doc.rect(x, y, colW, rowH, 'FD');
+
+                if (!field) return;
+                const [label] = field;
+
+                // Small grey label
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.setTextColor(150, 150, 155);
+                doc.text(label.toUpperCase(), x + cellPad, y + 7);
+
+                // Value text
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(...TEXT_DARK);
+                valLinesArr[colIdx].forEach((line, li) =>
+                    doc.text(line, x + cellPad, y + 13 + li * 5),
+                );
+            });
+            y += rowH;
+        });
+        y += 5;
+    };
+
+    /* ── Paragraph block (full-width, multi-line value) ─────── */
+    const writeParagraphBlock = (label, value) => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const lines = doc.splitTextToSize(safe(value), contentWidth - 8);
+        const needed = 14 + lines.length * 5;
+        ensureSpace(needed + 2);
+
+        doc.setFillColor(252, 252, 252);
+        doc.setDrawColor(...GRAY_MID);
+        doc.setLineWidth(0.2);
+        doc.rect(margin, y, contentWidth, needed, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(150, 150, 155);
+        doc.text(label.toUpperCase(), margin + 3, y + 4.5);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...TEXT_DARK);
+        lines.forEach((line, i) => doc.text(line, margin + 3, y + 10 + i * 5));
+        y += needed + 2;
+    };
+
+    const drawCheckbox = (x, yPos, checked) => {
+        const size = 4.2;
+        doc.setDrawColor(135, 145, 160);
+        doc.setLineWidth(0.35);
+        doc.rect(x, yPos, size, size, 'D');
+        if (checked) {
+            doc.setDrawColor(...GOLD);
+            doc.setLineWidth(0.8);
+            doc.line(x + 0.9, yPos + 2.2, x + 1.8, yPos + 3.3);
+            doc.line(x + 1.8, yPos + 3.3, x + 3.5, yPos + 0.9);
+        }
+    };
+
+    const drawRadio = (cx, cy, selected, color = DARK_NAVY) => {
+        doc.setDrawColor(135, 145, 160);
+        doc.setLineWidth(0.35);
+        doc.circle(cx, cy, 1.8, 'D');
+        if (selected) {
+            doc.setFillColor(...color);
+            doc.circle(cx, cy, 1, 'F');
+        }
+    };
+
+    /* ── Diagnosis checkbox list (show all options) ─────────────── */
+    const ASSESSMENT_DISORDERS = [
+        'Specific Learning Disorder',
+        'Obsessive Compulsive Disorder',
+        'Post-Traumatic Stress Disorder',
+        'Oppositional Deficit Disorder',
+        'Specific Phobia Disorder',
+        'Specific Emotional Behavioural Disorder',
+    ];
+
+    const writeCheckboxList = (selectedItems) => {
+        const allCheckedFlag = selectedItems && selectedItems.length > 0;
+        if (!allCheckedFlag && (!selectedItems || selectedItems.length === 0)) {
+            ensureSpace(9);
+            doc.setFillColor(252, 252, 252);
+            doc.setDrawColor(...GRAY_MID);
+            doc.setLineWidth(0.2);
+            doc.rect(margin, y, contentWidth, 9, 'FD');
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9);
+            doc.setTextColor(160, 160, 160);
+            doc.text('None selected', margin + 3, y + 6);
+            y += 11;
+            return;
+        }
+
+        ASSESSMENT_DISORDERS.forEach((disorder, idx) => {
+            const isChecked = selectedItems && selectedItems.includes(disorder);
+            const lines = doc.splitTextToSize(String(disorder), contentWidth - 18);
+            const rowH = Math.max(8, lines.length * 5 + 4);
+            ensureSpace(rowH + 1);
+
+            const bg = idx % 2 === 0 ? [253, 253, 253] : [246, 249, 252];
+            doc.setFillColor(...bg);
+            doc.setDrawColor(...GRAY_MID);
+            doc.setLineWidth(0.2);
+            doc.rect(margin, y, contentWidth, rowH, 'FD');
+
+            drawCheckbox(margin + 4.5, y + (rowH - 4.2) / 2, isChecked);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(...TEXT_DARK);
+            lines.forEach((line, li) => doc.text(line, margin + 12, y + 3 + (li + 1) * 5));
+            y += rowH;
+        });
+        y += 4;
+    };
+
+    /* ── Medical history two-column table (Question | Response) ─ */
+    const drawMedicalTable = (rows) => {
+        const qW = contentWidth * 0.75;
+        const aW = contentWidth - qW;
+        const cellPad = 3;
+        const headerH = 8;
+
+        ensureSpace(headerH + 1);
+        doc.setFillColor(...DARK_NAVY);
+        doc.rect(margin, y, contentWidth, headerH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text('QUESTION', margin + cellPad, y + 5.5);
+        doc.text('RESPONSE', margin + qW + cellPad, y + 5.5);
+        y += headerH;
+
+        rows.forEach(([question, answer], idx) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            const qLines = doc.splitTextToSize(question, qW - cellPad * 2);
+            const rowH = Math.max(9, qLines.length * 5 + cellPad * 2);
+            ensureSpace(rowH + 1);
+
+            const bg = idx % 2 === 0 ? [253, 253, 253] : [246, 249, 252];
+            doc.setFillColor(...bg);
+            doc.setDrawColor(...GRAY_MID);
+            doc.setLineWidth(0.2);
+            doc.rect(margin, y, contentWidth, rowH, 'FD');
+            doc.line(margin + qW, y, margin + qW, y + rowH);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(...TEXT_DARK);
+            qLines.forEach((line, li) =>
+                doc.text(line, margin + cellPad, y + cellPad + 4 + li * 5),
+            );
+
+            const ans = safe(answer);
+            const ansLc = ans.toLowerCase();
+            const yesSelected = ansLc === 'yes';
+            const noSelected = ansLc === 'no';
+            const optionY = y + rowH / 2;
+            const yesX = margin + qW + 6;
+            const noX = margin + qW + aW / 2 + 2;
+
+            drawRadio(yesX, optionY, yesSelected, [39, 174, 96]);
+            drawRadio(noX, optionY, noSelected, [192, 57, 43]);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.8);
+            doc.setTextColor(...TEXT_DARK);
+            doc.text('Yes', yesX + 3.2, optionY + 0.9);
+            doc.text('No', noX + 3.2, optionY + 0.9);
+            y += rowH;
+        });
+        y += 4;
+    };
+
+    /* ── Skills rating table ─────────────────────────────────── */
+    const RATING_META = {
+        '0': { color: [192, 57, 43], label: 'Most Concern' },
+        '1': { color: [211, 84, 0], label: 'Partial' },
+        '2': { color: [243, 156, 18], label: 'Needs Help' },
+        '3': { color: [39, 174, 96], label: 'Developed' },
+    };
+
+    const drawSkillsTable = (skills) => {
+        // Rating legend bar with dynamic spacing so labels never overlap
+        const legendH = 15;
+        ensureSpace(legendH + 1);
+        doc.setFillColor(252, 249, 244);
+        doc.setDrawColor(...GRAY_MID);
+        doc.setLineWidth(0.2);
+        doc.rect(margin, y, contentWidth, legendH, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...TEXT_DARK);
+        const legendLabelY = y + legendH / 2 + 1;
+        doc.text('Rating Scale:', margin + 3, legendLabelY);
+
+        let lx = margin + 30;
+        const rightLimit = margin + contentWidth - 3;
+        Object.entries(RATING_META).forEach(([val, meta]) => {
+            const labelW = doc.getTextWidth(meta.label);
+            const itemW = 3 + 2 + labelW + 4;
+            if (lx + itemW > rightLimit) {
+                return;
+            }
+
+            // Small filled square
+            doc.setFillColor(...meta.color);
+            doc.rect(lx, legendLabelY - 3, 3, 3, 'F');
+
+            // Number label
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(255, 255, 255);
+            doc.text(val, lx + 1.5, legendLabelY - 0.5, { align: 'center' });
+
+            // Text label
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(...TEXT_DARK);
+            doc.text(meta.label, lx + 5, legendLabelY);
+
+            lx += itemW;
+        });
+        y += legendH;
+
+        // Column widths: Skill name | Rating options
+        const skillW = contentWidth * 0.62;
+        const ratingW = contentWidth - skillW;
+        const cellPad = 3;
+        const headerH = 9;
+
+        ensureSpace(headerH + 1);
+        doc.setFillColor(...DARK_NAVY);
+        doc.rect(margin, y, contentWidth, headerH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text('SKILL / BEHAVIOUR AREA', margin + cellPad, y + 6);
+        doc.text('RATING', margin + skillW + cellPad, y + 6);
+        y += headerH;
+
+        skills.forEach(([key, value], idx) => {
+            const label = FREE_ASSESSMENT_SKILL_LABELS[key] || key.replaceAll('_', ' ');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            const labelLines = doc.splitTextToSize(label, skillW - cellPad * 2);
+            const rowH = Math.max(12, labelLines.length * 5 + cellPad * 2);
+            ensureSpace(rowH + 1);
+
+            const bg = idx % 2 === 0 ? [253, 253, 253] : [246, 249, 252];
+            doc.setFillColor(...bg);
+            doc.setDrawColor(...GRAY_MID);
+            doc.setLineWidth(0.25);
+            doc.rect(margin, y, contentWidth, rowH, 'FD');
+            doc.line(margin + skillW, y, margin + skillW, y + rowH);
+
+            // Skill label text
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...TEXT_DARK);
+            labelLines.forEach((line, li) =>
+                doc.text(line, margin + cellPad, y + cellPad + 3.5 + li * 5),
+            );
+
+            const valStr = String(value === '' || value == null ? '-' : value);
+            const meta = RATING_META[valStr];
+
+            // Rating options: show 4 radio buttons with numbers
+            const ratingBaseY = y + rowH / 2 + 0.5;
+            const ratingStartX = margin + skillW + 4;
+            const radioSpacing = (ratingW - 8) / 4;
+
+            ['0', '1', '2', '3'].forEach((opt) => {
+                const selected = valStr === opt;
+                const rx = ratingStartX + ['0', '1', '2', '3'].indexOf(opt) * radioSpacing + radioSpacing / 2;
+
+                // Draw radio circle
+                drawRadio(rx, ratingBaseY, selected, RATING_META[opt].color);
+
+                // Draw number centered in circle
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                const numColor = selected ? RATING_META[opt].color : [140, 140, 145];
+                doc.setTextColor(...numColor);
+                doc.text(opt, rx, ratingBaseY + 0.7, { align: 'center' });
+            });
+
+            y += rowH;
+        });
+        y += 5;
+    };
+
+    /* ══════════════════════════════════════════════════════════ */
+    /*  DOCUMENT CONTENT                                          */
+    /* ══════════════════════════════════════════════════════════ */
+    const skills = Object.entries(assessment?.skills || {});
+
+    writeSectionTitle('Basic Information');
+    drawInfoGrid([
+        ['Child Name', assessment?.child_name],
+        ['Age', assessment?.child_age],
+        ['Date of Assessment', formatDate(assessment?.date_of_assessment)],
+        ['Siblings', assessment?.siblings],
+        ['Address', assessment?.address],
+        ['Sibling Age', assessment?.sibling_age],
+    ]);
+
+    writeSectionTitle('Mother Details');
+    drawInfoGrid([
+        ['Name', assessment?.mother_name],
+        ['Age', assessment?.mother_age],
+        ['Education', assessment?.mother_education],
+        ['Profession', assessment?.mother_profession],
+        ['Contact No.', assessment?.mother_contact],
+        ['Email', assessment?.mother_email],
+    ]);
+
+    writeSectionTitle('Father Details');
+    drawInfoGrid([
+        ['Name', assessment?.father_name],
+        ['Age', assessment?.father_age],
+        ['Education', assessment?.father_education],
+        ['Profession', assessment?.father_profession],
+        ['Contact No.', assessment?.father_contact],
+        ['Email', assessment?.father_email],
+    ]);
+
+    writeSectionTitle('Specific Diagnosis / Concern');
+    writeCheckboxList(assessment?.selected_disorders || []);
+
+    writeSectionTitle('Medical History');
+    drawMedicalTable([
+        ['Did the baby scream as a baby?', assessment?.medical_baby_scream],
+        ['Did the baby have a difficult sleep pattern?', assessment?.medical_difficult_sleep],
+        ['Did the baby display struggle in changing routines?', assessment?.medical_routine_change],
+        ['Did the baby display difficulties while shifting food habits?', assessment?.medical_food_habit_shift],
+        ['Did the baby achieve physical milestones at the right age?', assessment?.medical_physical_milestones],
+        ['Did the baby achieve vocal/language milestones at the right age?', assessment?.medical_language_milestones],
+    ]);
+    writeParagraphBlock(
+        'Major illness / hospitalization in early developmental years',
+        assessment?.medical_major_illness,
+    );
+    writeParagraphBlock('Specific medical details', assessment?.medical_specific_details);
+
+    writeSectionTitle('Learning History');
+    drawInfoGrid([
+        ['Years in school', assessment?.learning_school_years],
+        ['Support provided?', assessment?.learning_support],
+        ['Current grade of learning', assessment?.learning_current_grade],
+        ['Current learning scenario', assessment?.learning_scenario],
+    ]);
+
+    writeSectionTitle('History of Intervention');
+    writeParagraphBlock('Intervention History', assessment?.intervention_history);
+
+    writeSectionTitle('Current Development, Learning & Behaviour Overview');
+    drawSkillsTable(skills);
+
+    /* ── Page numbers & branded footer on every page ─────────── */
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
+        doc.setPage(pageIndex);
+        doc.setDrawColor(...GOLD);
+        doc.setLineWidth(0.4);
+        doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(150, 150, 150);
+        doc.text('HurshBinTech – Free Assessment Report', margin, pageHeight - 5.5);
+        doc.text(`Page ${pageIndex} of ${totalPages}`, pageWidth / 2, pageHeight - 5.5, { align: 'center' });
+        doc.text('Confidential', pageWidth - margin, pageHeight - 5.5, { align: 'right' });
+    }
+
+    const safeFileName = (s) => (s || 'assessment').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const ts = new Date().toISOString().split('T')[0];
+
+    if (previewOnly) {
+        const blobUrl = doc.output('bloburl');
+        window.open(blobUrl, '_blank');
+        return doc.output('blob');
+    }
+
+    doc.save(`free_assessment_${safeFileName(assessment?.child_name)}_${ts}.pdf`);
     return doc.output('blob');
 };

@@ -35,6 +35,18 @@ import { playFeedbackSound, playFloatingAnimationSound } from './feedbackSounds'
 // CONSTANTS
 // ============================================================================
 
+const MIN_PEN_SIZE = 1;
+const MAX_PEN_SIZE = 99;
+
+const clampPenSize = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed)) {
+        return null;
+    }
+
+    return Math.min(MAX_PEN_SIZE, Math.max(MIN_PEN_SIZE, parsed));
+};
+
 export const getWSBaseURL = () => {
     return import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 };
@@ -193,6 +205,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
 
     const {
         setToolAccess,
+        setLineWidth,
         setRemoteSelectedItemIds,
         setKeyboardMode,
         setBuckets,
@@ -222,9 +235,23 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         console.log('[AttendeeSession] Tool access received:', data);
         if (data.allPermissions) {
             setToolAccess(data.allPermissions);
+        } else if (typeof data.toolName === 'string') {
+            setToolAccess(prev => ({
+                ...prev,
+                [data.toolName]: Boolean(data.enabled)
+            }));
         } else {
-            setToolAccess(data);
+            setToolAccess(prev => ({
+                ...prev,
+                ...data
+            }));
         }
+    };
+
+    wbService.onPenSizeUpdate = (data) => {
+        const nextLineWidth = clampPenSize(data?.lineWidth);
+        if (nextLineWidth === null) return;
+        setLineWidth(nextLineWidth);
     };
 
     // Remote item selection
@@ -355,6 +382,11 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
             console.error('[AttendeeSession] Error playing feedback sound:', error);
         }
         if (data.text) {
+            wbService.onPenSizeUpdate = (data) => {
+                const nextLineWidth = clampPenSize(data?.lineWidth);
+                if (nextLineWidth === null) return;
+                setLineWidth(nextLineWidth);
+            };
             setTimeout(() => setFeedbackMessage(''), 4000);
         }
     };
@@ -525,7 +557,7 @@ export const initializeAttendeeServices = async (WS_BASE_URL, sessionId, role, s
  * Setup Video Conference Service for attendee
  */
 const setupAttendeeVideoService = async (WS_BASE_URL, sessionId, role, state) => {
-    const { setLocalStream, setRemoteStream, setConnectionStatus, setInstructorJoined, setPromptText, setPromptMeter, setReinforcementMeter } = state;
+    const { setLocalStream, setRemoteStream, setConnectionStatus, setInstructorJoined, setPromptText, setPromptMeter, setReinforcementMeter, setIsFrozen } = state;
 
     const videoService = new VideoConferenceService(WS_BASE_URL, sessionId, role);
 
@@ -580,6 +612,12 @@ const setupAttendeeVideoService = async (WS_BASE_URL, sessionId, role, state) =>
     videoService.onReinforcementMeterUpdate = (value) => {
         console.log('[AttendeeSession] Reinforcement meter update:', value);
         setReinforcementMeter(value);
+    };
+
+    // Freeze/unfreeze attendee window from instructor
+    videoService.onFreeze = (message) => {
+        const frozen = Boolean(message?.frozen);
+        setIsFrozen(frozen);
     };
 
     await videoService.initialize();

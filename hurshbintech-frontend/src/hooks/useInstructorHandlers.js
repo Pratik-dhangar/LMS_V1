@@ -40,6 +40,7 @@ export const useInstructorHandlers = ({
     isFrozen,
     floatingAnimations,
     toolAccess,
+    lineWidth,
     audioRef,
     musicOptions,
     selectedMusic,
@@ -172,8 +173,8 @@ export const useInstructorHandlers = ({
     }, [floatingAnimations, setFloatingAnimations, whiteboardService]);
 
     const toggleToolAccess = useCallback((toolName) => {
-        utilToggleToolAccess(toolName, toolAccess, setToolAccess, whiteboardService, setTool);
-    }, [toolAccess, setToolAccess, whiteboardService, setTool]);
+        utilToggleToolAccess(toolName, toolAccess, setToolAccess, whiteboardService, setTool, lineWidth);
+    }, [toolAccess, setToolAccess, whiteboardService, setTool, lineWidth]);
 
     const addBucket = useCallback(() => {
         // Use actual canvas dimensions if available, fallback to defaults

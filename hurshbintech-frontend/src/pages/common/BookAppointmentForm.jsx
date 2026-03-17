@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Calendar, Clock, Upload, X, ArrowLeft, Check, AlertCircle } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useAuth } from '../../context/AuthContext';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
@@ -28,11 +30,12 @@ const BookAppointmentForm = () => {
   });
   const [previewImage, setPreviewImage] = useState(null);
 
-  // const sessionTypes = [
-  //   { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 2500 },
-  //   { value: 'follow_up', label: 'Follow-up Session', duration: '45 min', fee: 2000 },
-  //   { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3500 },
-  // ];
+  const formatDateToIso = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Fetch fresh coach data (including dedicated_package) on mount
   useEffect(() => {
@@ -108,6 +111,47 @@ const BookAppointmentForm = () => {
     return !availableDays.includes(dayName);
   };
 
+  const isDateSelectableForCoach = (date) => {
+    if (!date) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return false;
+    }
+
+    return !isDateUnavailable(date) && !isDateDayUnavailable(date);
+  };
+
+  const getDateUnavailableReason = (date) => {
+    if (!date) return '';
+
+    if (isDateUnavailable(date)) {
+      return `Coach is unavailable on this date. Slots available from ${getNextAvailableDate()}.`;
+    }
+
+    if (isDateDayUnavailable(date)) {
+      let message = `Coach is not available on ${new Date(date).toLocaleDateString('en-US', { weekday: 'long' })}.`;
+
+      if (coachAvailability?.availability_days) {
+        message += ` Available on: ${coachAvailability.availability_days}.`;
+      }
+
+      const nextDay = getNextAvailableDayOfWeek(date);
+      if (nextDay) {
+        message += ` Next available: ${nextDay.dayName}, ${nextDay.date}.`;
+      }
+
+      return message;
+    }
+
+    return '';
+  };
+
   // Check if selected time slot is not in coach's available time slots
   const isTimeSlotUnavailable = (timeSlot) => {
     if (!timeSlot || !coachAvailability?.time_slots) return false;
@@ -172,6 +216,11 @@ const BookAppointmentForm = () => {
     const fetchAvailableSlotsForDate = async () => {
       if (!formData.appointment_date || !coachId) return;
 
+      if (!isDateSelectableForCoach(formData.appointment_date)) {
+        setAvailableSlots([]);
+        return;
+      }
+
       try {
         setLoadingSlots(true);
         const slotsData = await bookingService.getAvailableSlots(coachId, formData.appointment_date);
@@ -187,6 +236,19 @@ const BookAppointmentForm = () => {
 
     fetchAvailableSlotsForDate();
   }, [formData.appointment_date, coachId]);
+
+  useEffect(() => {
+    if (!formData.appointment_date) return;
+
+    if (!isDateSelectableForCoach(formData.appointment_date)) {
+      setFormData(prev => ({
+        ...prev,
+        appointment_date: '',
+        appointment_time: '',
+      }));
+      setAvailableSlots([]);
+    }
+  }, [coachAvailability]);
 
   // Format time slot for display (e.g., "10am" -> "10:00 AM")
   const formatTimeSlot = (slot) => {
@@ -318,15 +380,8 @@ const BookAppointmentForm = () => {
       return;
     }
 
-    // Check if selected date is in coach's unavailable period
-    if (isDateUnavailable(formData.appointment_date)) {
-      toast.error('Selected date is unavailable. Please choose another date.');
-      return;
-    }
-
-    // Check if selected date's day is in coach's availability days
-    if (isDateDayUnavailable(formData.appointment_date)) {
-      toast.error('Coach is not available on the selected day. Please choose another date.');
+    if (!isDateSelectableForCoach(formData.appointment_date)) {
+      toast.error(getDateUnavailableReason(formData.appointment_date) || 'Selected date is unavailable. Please choose another date.');
       return;
     }
 
@@ -466,28 +521,27 @@ const BookAppointmentForm = () => {
                 <div className="app-modal-form-grid">
                   <div className="app-modal-form-field">
                     <label className="field-label">Appointment Date *</label>
-                    <input
-                      type="date"
+                    <DatePicker
+                      selected={formData.appointment_date ? new Date(`${formData.appointment_date}T00:00:00`) : null}
+                      onChange={(date) => {
+                        const isoDate = date ? formatDateToIso(date) : '';
+                        setFormData(prev => ({
+                          ...prev,
+                          appointment_date: isoDate,
+                          appointment_time: '',
+                        }));
+                      }}
+                      filterDate={(date) => isDateSelectableForCoach(formatDateToIso(date))}
+                      minDate={new Date()}
+                      dateFormat="MM/dd/yyyy"
+                      placeholderText="mm/dd/yyyy"
+                      className="field-input book-appointment-date-input"
                       name="appointment_date"
-                      value={formData.appointment_date}
-                      onChange={handleInputChange}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="field-input"
                       required
                     />
-                    {formData.appointment_date && isDateUnavailable(formData.appointment_date) && (
+                    {formData.appointment_date && getDateUnavailableReason(formData.appointment_date) && (
                       <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                        ⚠️ Coach is unavailable on this date. Slots available from {getNextAvailableDate()}
-                      </small>
-                    )}
-                    {formData.appointment_date && !isDateUnavailable(formData.appointment_date) && isDateDayUnavailable(formData.appointment_date) && (
-                      <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                        ⚠️ Coach is not available on {new Date(formData.appointment_date).toLocaleDateString('en-US', { weekday: 'long' })}s.
-                        {coachAvailability?.availability_days && ` Available on: ${coachAvailability.availability_days}`}
-                        {(() => {
-                          const nextDay = getNextAvailableDayOfWeek(formData.appointment_date);
-                          return nextDay ? `. Next available: ${nextDay.dayName}, ${nextDay.date}` : '';
-                        })()}
+                        ⚠️ {getDateUnavailableReason(formData.appointment_date)}
                       </small>
                     )}
                   </div>
@@ -507,12 +561,12 @@ const BookAppointmentForm = () => {
                           onChange={handleInputChange}
                           className="field-input"
                           required
-                          disabled={!formData.appointment_date || availableSlots.length === 0 || isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)}
+                          disabled={!formData.appointment_date || availableSlots.length === 0 || !isDateSelectableForCoach(formData.appointment_date)}
                         >
                           <option value="">
                             {!formData.appointment_date
                               ? "Select a date first"
-                              : isDateUnavailable(formData.appointment_date) || isDateDayUnavailable(formData.appointment_date)
+                              : !isDateSelectableForCoach(formData.appointment_date)
                                 ? "Selected date is unavailable"
                                 : availableSlots.length === 0
                                   ? "No slots available on this date"
@@ -525,7 +579,7 @@ const BookAppointmentForm = () => {
                         </select>
 
                         {/* Show message if no slots available */}
-                        {formData.appointment_date && availableSlots.length === 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
+                        {formData.appointment_date && availableSlots.length === 0 && isDateSelectableForCoach(formData.appointment_date) && (
                           <small style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#ef4444', display: 'block' }}>
                             ⚠️ All time slots are booked for this date.
                             {(() => {
@@ -536,7 +590,7 @@ const BookAppointmentForm = () => {
                         )}
 
                         {/* Show available slots count - only if date is not unavailable */}
-                        {formData.appointment_date && availableSlots.length > 0 && !isDateUnavailable(formData.appointment_date) && !isDateDayUnavailable(formData.appointment_date) && (
+                        {formData.appointment_date && availableSlots.length > 0 && isDateSelectableForCoach(formData.appointment_date) && (
                           <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#10b981' }}>
                             {availableSlots.length} slot{availableSlots.length !== 1 ? 's' : ''} available
                           </p>
@@ -558,7 +612,7 @@ const BookAppointmentForm = () => {
                     <label className="session-type-card selected" style={{ cursor: 'default' }}>
                       <div className="session-type-content">
                         <p className="session-type-label">{coach.dedicated_package.package_name}</p>
-                        <p className="session-type-duration">1.5 Hour (90 min)</p>
+                        <p className="session-type-duration">1 Hour (60 min)</p>
                         <p className="session-type-fee">₹{coach.dedicated_package.price}</p>
                       </div>
                       <Check className="check-icon" />

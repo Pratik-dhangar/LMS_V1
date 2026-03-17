@@ -1327,7 +1327,7 @@ AttendeeMainLayout.propTypes = {
  * Shows 4 color options (black, green, red, yellow) when draw tool access is enabled
  * Used by: LearnerSession, GuestSession, ClientSession
  */
-export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor }) => {
+export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor, lineWidth = 2 }) => {
     if (!toolAccess?.draw) return null;
 
     const colors = [
@@ -1413,6 +1413,21 @@ export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor })
             >
                 <span style={{ filter: isEraser ? 'brightness(10)' : 'none' }}>🧹</span>
             </button>
+
+            {/* Current brush size indicator (controlled by trainer) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '2px' }} title={`Pen size: ${lineWidth}`}>
+                <div
+                    style={{
+                        width: "1.5rem",
+                        height: "1.5rem",
+                        borderRadius: isEraser ? '4px' : '9999px',
+                        border: isEraser ? '2px solid #ef4444' : '1px solid rgba(0,0,0,0.6)',
+                        backgroundColor: isEraser ? 'transparent' : color,
+                        transition: 'all 0.15s ease'
+                    }}
+                />
+                {/* <span style={{ fontSize: '12px', color: '#374151', minWidth: '12px', textAlign: 'center' }}>{lineWidth}</span> */}
+            </div>
         </div>
     );
 };
@@ -1422,7 +1437,8 @@ DrawColorPalette.propTypes = {
     tool: PropTypes.string,
     setTool: PropTypes.func,
     color: PropTypes.string,
-    setColor: PropTypes.func
+    setColor: PropTypes.func,
+    lineWidth: PropTypes.number
 };
 
 /**
@@ -1614,7 +1630,7 @@ export const AttendeeWhiteboardWithVideo = ({
             {/* Whiteboard */}
             <div className="w-full h-full" style={{ position: 'relative' }}>
                 {/* Floating color palette overlay - shown when draw access is enabled */}
-                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} />
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} lineWidth={lineWidth} />
 
                 <Whiteboard
                     whiteboardService={whiteboardService}
@@ -1735,7 +1751,7 @@ export const LearnerWhiteboardWithVideo = ({
             {/* Whiteboard component */}
             <div className="w-full h-full" style={{ position: 'relative' }}>
                 {/* Floating color palette overlay - shown when draw access is enabled */}
-                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} />
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} lineWidth={lineWidth} />
 
                 <Whiteboard
                     canvasRefForParent={whiteboardCanvasRef}

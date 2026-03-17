@@ -615,6 +615,7 @@ const LearnerSession = () => {
       whiteboardService,
       setToolAccess,
       setTool,
+      setLineWidth,
       setPromptText,
       setPromptVisible,
       setIsEyeBlinking,

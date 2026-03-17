@@ -170,6 +170,138 @@
     color: var(--brand-brown);
 }
 
+.form-action-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.free-assessment-btn {
+    border: 1px solid rgba(92, 30, 30, 0.35);
+    background: #fff;
+    color: #5c1e1e;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 170px;
+}
+
+.free-assessment-btn:hover {
+    background: rgba(92, 30, 30, 0.06);
+    border-color: #5c1e1e;
+}
+
+.assessment-placeholder-text {
+    margin: 0;
+    color: #5f4c4c;
+    font-size: 0.98rem;
+}
+
+.assessment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.assessment-section {
+    border: 1px solid #f0e2d4;
+    border-radius: 14px;
+    padding: 14px;
+    background: #fffdf9;
+}
+
+.assessment-section h3 {
+    font-size: 1rem;
+    color: #5c1e1e;
+    margin: 0 0 12px 0;
+}
+
+.assessment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.input-group label {
+    font-size: 0.88rem;
+    color: #5b4d4d;
+    font-weight: 600;
+}
+
+.input-group-full {
+    grid-column: 1 / -1;
+}
+
+.assessment-scale-help {
+    margin: 0 0 10px 0;
+    color: #7a6565;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.assessment-skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.assessment-skill-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #f0ece6;
+    border-radius: 10px;
+    padding: 10px;
+    background: #fff;
+}
+
+.assessment-skill-row p {
+    margin: 0;
+    font-size: 0.87rem;
+    color: #3f3333;
+}
+
+.assessment-ratings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.assessment-ratings label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.83rem;
+    color: #5f5050;
+    background: #f9f4ee;
+    border: 1px solid #ead8c5;
+    border-radius: 8px;
+    padding: 5px 8px;
+}
+
+.assessment-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.assessment-checkbox-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: #4c3f3f;
+}
+
+.app-modal-content {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
 .contact-form {
     display: flex;
     flex-direction: column;
@@ -250,6 +382,10 @@
     gap: 10px;
     transition: all 0.3s ease;
     font-family: 'Segoe UI', sans-serif;
+}
+
+.form-action-row .submit-btn {
+    flex: 1;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -352,6 +488,16 @@
         font-size: 1.2rem;
     }
 
+    .form-action-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .free-assessment-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
     .map-container {
         height: 250px;
         border: 3px solid white;
@@ -413,6 +559,20 @@
         padding: 14px;
         font-size: 0.95rem;
         gap: 8px;
+    }
+
+    .assessment-grid,
+    .assessment-checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .assessment-skill-row {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .assessment-ratings {
+        flex-wrap: wrap;
     }
 
     .map-container {

@@ -34,6 +34,7 @@ from app.schemas.session import SessionCreate, SessionEnd, SessionResponse, Sess
 from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 from app.services.recording_storage import get_recording_storage
 from app.services.cache_service import cache_service
+from app.services.recording_merge_service import get_recording_merge_service
 
 # Import SessionUpdate schema
 from app.schemas.session import SessionUpdate
@@ -930,6 +931,453 @@ async def upload_recording(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload recording: {str(e)}"
+        )
+
+
+# ============ OPTIMIZED CHUNKED RECORDING ENDPOINTS ============
+
+class RecordingChunkFinalization(BaseModel):
+    """Request model for finalizing chunked recording"""
+    recording_id: str
+    session_id: int
+    duration: int
+    total_chunks: int
+    uploaded_chunks: List[int] = []
+    failed_chunks: List[int] = []
+
+
+@router.post("/recordings/upload-chunk", status_code=status.HTTP_200_OK)
+async def upload_recording_chunk(
+    file: UploadFile = File(...),
+    session_id: str = Form(...),
+    recording_id: str = Form(...),
+    chunk_number: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload a single recording chunk (optimized for reduced CPU load).
+    
+    This endpoint receives chunk-by-chunk recording data from the frontend.
+    Chunks are uploaded in real-time, preventing data loss if connection drops.
+    
+    Args:
+        file: The WebM chunk blob
+        session_id: Session identifier (can be database ID or session_id string)
+        recording_id: Recording identifier (shared across all chunks)
+        chunk_number: Sequence number of this chunk (0, 1, 2, ...)
+    
+    Returns:
+        {
+            "status": "success",
+            "chunk_number": 0,
+            "size": 2048000,
+            "message": "Chunk uploaded successfully"
+        }
+    """
+    try:
+        # Convert chunk_number to integer
+        try:
+            chunk_num = int(chunk_number)
+        except (ValueError, TypeError):
+            logger.error(f"[CHUNK UPLOAD] Invalid chunk_number: {chunk_number}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid chunk_number"
+            )
+        
+        logger.info(f"[CHUNK UPLOAD] Incoming request:")
+        logger.info(f"  - session_id: {session_id}")
+        logger.info(f"  - recording_id: {recording_id}")
+        logger.info(f"  - chunk_number: {chunk_num}")
+        logger.info(f"  - file: {file.filename} (size: {file.size})")
+        logger.info(f"  - current_user: {current_user.id}")
+        
+        # Try to find session by numeric ID first, then by session_id string
+        session = None
+        try:
+            # Try as numeric ID
+            session_numeric_id = int(session_id)
+            session = await session_crud.get_by_id(db, session_numeric_id)
+        except (ValueError, TypeError):
+            pass
+        
+        # If not found by numeric ID, try to find by session_id string
+        if not session:
+            from sqlalchemy import select
+            result = await db.execute(
+                select(TrainingSession).where(TrainingSession.session_id == session_id)
+            )
+            session = result.scalar_one_or_none()
+        
+        if not session:
+            logger.error(f"[CHUNK UPLOAD] Session not found: {session_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session {session_id} not found"
+            )
+        
+        logger.info(f"[CHUNK UPLOAD] ✅ Session found: id={session.id}, trainer_id={session.trainer_id}, learner_id={session.learner_id}")
+        
+        # Verify user has permission
+        if current_user.id not in [session.trainer_id, session.learner_id]:
+            logger.error(f"[CHUNK UPLOAD] User {current_user.id} denied - not in session")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to upload chunks for this session"
+            )
+        
+        # Create chunks directory with proper structure
+        base_dir = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings")
+        recording_dir = base_dir / str(recording_id)
+        chunks_dir = recording_dir / "chunks"
+        chunks_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save chunk with zero-padded number for proper sorting.
+        # Preserve known extension so merge service can decode correctly.
+        file_ext = Path(file.filename or "").suffix.lower()
+        if file_ext not in [".mp4", ".webm"]:
+            content_type = (file.content_type or "").lower()
+            file_ext = ".webm" if "webm" in content_type else ".mp4"
+
+        chunk_path = chunks_dir / f"{chunk_num:06d}{file_ext}"
+        chunk_size = 0
+        chunk_checksum = ""
+        
+        # Read content and calculate checksum
+        content = await file.read()
+        chunk_size = len(content)
+        
+        if chunk_size == 0:
+            logger.error(f"[CHUNK UPLOAD] Empty chunk data received for chunk {chunk_num}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Empty chunk data"
+            )
+        
+        with open(chunk_path, "wb") as buffer:
+            buffer.write(content)
+        
+        # Calculate checksum for validation
+        chunk_checksum = hashlib.sha256(content).hexdigest()
+        
+        logger.info(f"[CHUNK UPLOAD] ✅ Saved chunk {chunk_num}: {chunk_size} bytes (checksum: {chunk_checksum}) to {chunk_path}")
+        
+        # Update metadata file with chunk info
+        metadata_file = recording_dir / "metadata.json"
+        metadata = {}
+        
+        if metadata_file.exists():
+            try:
+                with open(metadata_file, "r") as f:
+                    metadata = json.load(f)
+            except Exception as e:
+                logger.warning(f"[CHUNK UPLOAD] Could not read existing metadata: {e}")
+                metadata = {}
+        
+        # Add/update chunk metadata
+        if "chunks" not in metadata:
+            metadata["chunks"] = {}
+        
+        metadata["chunks"][str(chunk_num)] = {
+            "checksum": chunk_checksum,
+            "size": chunk_size,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "sequence": chunk_num
+        }
+        
+        # Track uploaded chunks
+        if "uploaded_chunks" not in metadata:
+            metadata["uploaded_chunks"] = []
+        if chunk_num not in metadata["uploaded_chunks"]:
+            metadata["uploaded_chunks"].append(chunk_num)
+        
+        # Update tracking
+        metadata["last_chunk_received"] = chunk_num
+        metadata["total_chunks_received"] = len(metadata["uploaded_chunks"])
+        
+        # Write updated metadata
+        try:
+            with open(metadata_file, "w") as f:
+                json.dump(metadata, f, indent=2)
+        except Exception as e:
+            logger.warning(f"[CHUNK UPLOAD] Could not write metadata: {e}")
+        
+        # Update session status if this is first chunk
+        if chunk_num == 0 and session.recording_status != "recording":
+            session.recording_status = "recording"
+            session.recording_started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            session.recording_url = str(recording_dir)  # Store base recording directory
+            await db.commit()
+            logger.info(f"[CHUNK UPLOAD] ✅ Session {session.id} recording started")
+        
+        return {
+            "status": "success",
+            "chunk_number": chunk_num,
+            "size": chunk_size,
+            "checksum": chunk_checksum,
+            "message": f"Chunk {chunk_num} uploaded successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[CHUNK UPLOAD] Unexpected error: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.post("/recordings/finalize", status_code=status.HTTP_200_OK)
+async def finalize_recording(
+    data: RecordingChunkFinalization,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Finalize chunked recording by merging all chunks into single file.
+    
+    This endpoint:
+    1. Validates all chunks are received and in correct order
+    2. Merges all uploaded chunks into a single WebM file using FFmpeg
+    3. Verifies output integrity
+    4. Cleans up individual chunk files
+    5. Updates session recording_url in database
+    6. Sets recording_status to 'completed'
+    
+    Args:
+        recording_id: Recording identifier
+        session_id: Database session ID
+        duration: Total recording duration in seconds
+        total_chunks: Total number of chunks to expect
+        uploaded_chunks: List of chunk numbers that were uploaded
+        failed_chunks: List of chunk numbers that failed to upload
+    
+    Returns:
+        {
+            "status": "success",
+            "recording_url": "uploads/recordings/...",
+            "duration": 3600,
+            "size": 1024000000,
+            "merged_chunks": 360,
+            "merge_method": "ffmpeg_concat",
+            "message": "Recording finalized successfully"
+        }
+    """
+    try:
+        recording_id = data.recording_id
+        session_id = data.session_id
+        duration = data.duration
+        total_chunks = data.total_chunks
+        uploaded_chunks = data.uploaded_chunks
+        failed_chunks = data.failed_chunks
+
+        logger.info(f"[FINALIZE] Finalizing recording {recording_id} for session {session_id}")
+        logger.info(f"[FINALIZE] Total chunks: {total_chunks}, Uploaded: {len(uploaded_chunks)}, Failed: {len(failed_chunks)}")
+
+        session = await session_crud.get_by_id(db, session_id)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session {session_id} not found"
+            )
+
+        if current_user.id not in [session.trainer_id, session.learner_id]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to finalize this recording"
+            )
+
+        base_dir = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings")
+        chunks_dir = base_dir / recording_id / "chunks"
+        output_dir = base_dir / recording_id
+        # Merge service defaults to MP4 codecs, so output container must be MP4.
+        output_file = output_dir / "final.mp4"
+        
+        # Load metadata if available
+        metadata_file = output_dir / "metadata.json"
+        chunk_metadata = {}
+        if metadata_file.exists():
+            try:
+                with open(metadata_file, "r") as f:
+                    chunk_data = json.load(f)
+                    # Extract checksum data
+                    if "chunks" in chunk_data:
+                        for chunk_id, chunk_info in chunk_data["chunks"].items():
+                            chunk_metadata[f"chunk_{chunk_id}_checksum"] = chunk_info.get("checksum")
+            except Exception as e:
+                logger.warning(f"[FINALIZE] Could not load metadata: {e}")
+
+        if not chunks_dir.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Chunks directory not found for recording {recording_id}"
+            )
+
+        # Use the new recording merge service for robust merging
+        merge_service = get_recording_merge_service()
+        
+        success, merge_result = merge_service.merge_chunks(
+            chunks_dir=chunks_dir,
+            output_file=output_file,
+            total_chunks=total_chunks,
+            uploaded_chunks=uploaded_chunks,
+            failed_chunks=failed_chunks,
+            chunk_metadata=chunk_metadata,
+            allow_partial=True  # Allow up to 20% missing chunks with warning
+        )
+
+        if not success:
+            logger.error(f"[FINALIZE] Merge failed: {merge_result['message']}")
+            # Log detailed errors
+            for error in merge_result.get("errors", []):
+                logger.error(f"  - {error}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to merge recording: {merge_result['message']}"
+            )
+
+        total_size = merge_result.get("output_size", 0)
+        merged_chunks = merge_result.get("merged_chunks", 0)
+        merge_method = merge_result.get("method", "unknown")
+
+        logger.info(f"[FINALIZE] ✅ Merge successful via {merge_method}: {merged_chunks} chunks → {total_size} bytes")
+
+        # Save to permanent storage (S3 or local)
+        storage = get_recording_storage()
+        try:
+            storage_path = await storage.save(str(output_file), session_id)
+            logger.info(f"[FINALIZE] Recording saved to permanent storage: {storage_path}")
+        except Exception as storage_err:
+            logger.error(f"[FINALIZE] Error saving to storage: {storage_err}")
+            # Fallback to local path if storage fails
+            storage_path = str(output_file)
+
+        # Clean up chunk files after successful merge
+        try:
+            # Remove individual chunk files
+            for pattern in ["*.webm", "*.mp4", "filelist.txt"]:
+                for chunk_file in chunks_dir.glob(pattern):
+                    try:
+                        chunk_file.unlink()
+                    except Exception as clean_err:
+                        logger.warning(f"[FINALIZE] Failed to delete chunk file {chunk_file}: {clean_err}")
+            
+            # Remove chunks directory
+            try:
+                chunks_dir.rmdir()
+                logger.info("[FINALIZE] Cleaned up chunks directory")
+            except:
+                pass
+            
+            # Clean up metadata file
+            if metadata_file.exists():
+                try:
+                    metadata_file.unlink()
+                except:
+                    pass
+                    
+        except Exception as cleanup_err:
+            logger.warning(f"[FINALIZE] Error during cleanup: {cleanup_err}")
+
+        # Update session in database
+        session.recording_url = storage_path
+        session.recording_status = "completed"
+        session.recording_uploaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        session.recording_duration = duration
+        await db.commit()
+
+        logger.info(f"[FINALIZE] ✅ Session {session_id} recording finalized in database")
+        logger.info(f"[FINALIZE] Summary: {merged_chunks} chunks merged ({total_size} bytes) via {merge_method}")
+        
+        return {
+            "status": "success",
+            "recording_url": storage_path,
+            "duration": duration,
+            "size": total_size,
+            "merged_chunks": merged_chunks,
+            "merge_method": merge_method,
+            "message": f"✅ Recording finalized successfully ({merged_chunks} chunks, {total_size} bytes via {merge_method})"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[FINALIZE] Error finalizing recording: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to finalize recording: {str(e)}"
+        )
+
+
+@router.get("/recordings/{recording_id}/status", status_code=status.HTTP_200_OK)
+async def get_recording_status(
+    recording_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get status of a chunked recording during or after upload.
+    
+    Returns information about uploaded chunks and failures.
+    
+    Args:
+        recording_id: Recording identifier
+    
+    Returns:
+        {
+            "recording_id": "session-123-timestamp",
+            "status": "recording" | "completed" | "failed",
+            "uploaded_chunks": 360,
+            "chunks_dir": "uploads/recordings/.../chunks",
+            "message": "Recording in progress"
+        }
+    """
+    try:
+        logger.info(f"[STATUS] Getting status for recording {recording_id}")
+        
+        # Check if chunks directory exists
+        chunks_dir = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings") / recording_id / "chunks"
+        output_file_mp4 = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings") / recording_id / "final.mp4"
+        output_file_webm = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings") / recording_id / "final.webm"
+        output_file = output_file_mp4 if output_file_mp4.exists() else output_file_webm
+
+        if output_file.exists():
+            return {
+                "recording_id": recording_id,
+                "status": "completed",
+                "uploaded_chunks": (
+                    len(list(chunks_dir.glob("*.webm"))) + len(list(chunks_dir.glob("*.mp4")))
+                ) if chunks_dir.exists() else 0,
+                "total_size": output_file.stat().st_size,
+                "message": "Recording completed"
+            }
+        
+        if chunks_dir.exists():
+            chunk_files = list(chunks_dir.glob("*.webm")) + list(chunks_dir.glob("*.mp4"))
+            total_size = sum(f.stat().st_size for f in chunk_files)
+            
+            return {
+                "recording_id": recording_id,
+                "status": "recording",
+                "uploaded_chunks": len(chunk_files),
+                "total_size": total_size,
+                "message": f"Recording in progress ({len(chunk_files)} chunks)"
+            }
+        
+        return {
+            "recording_id": recording_id,
+            "status": "not_found",
+            "uploaded_chunks": 0,
+            "message": "Recording not found"
+        }
+        
+    except Exception as e:
+        logger.error(f"[STATUS] Error getting recording status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get recording status: {str(e)}"
         )
 
 

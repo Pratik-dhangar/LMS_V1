@@ -176,7 +176,11 @@ async def get_available_slots(
                 Appointment.status.in_([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
-                ])  # Only consider active appointments
+                    # Guest booking statuses that should also block time slots
+                    AppointmentStatus.GUEST_INTENT,
+                    AppointmentStatus.PAYMENT_PENDING,
+                    AppointmentStatus.VERIFICATION_PENDING,
+                ])  # Only consider active or pending appointments
             )
         )
     )
@@ -246,6 +250,10 @@ async def check_slot_availability(
                 Appointment.status.in_([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
+                    # Guest booking statuses that should also block time slots
+                    AppointmentStatus.GUEST_INTENT,
+                    AppointmentStatus.PAYMENT_PENDING,
+                    AppointmentStatus.VERIFICATION_PENDING,
                 ])
             )
         )

@@ -70,7 +70,7 @@ const LearningProgramSidebar = ({
               style={{
                 width: '100%',
                 padding: '8px',
-                border: '2px solid #4A90E2',
+                border: '1px solid gray',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'inherit',
@@ -221,7 +221,7 @@ const LearningProgramSidebar = ({
         <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
-            {['Tick', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Cross'].map((r) => {
+            {['Cross', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Tick'].map((r) => {
               const val = r === 'Cross' ? 0 : r === 'Tick' ? 100 : r;
               const isSelected = selectedReinforcementLevel === val;
               return (

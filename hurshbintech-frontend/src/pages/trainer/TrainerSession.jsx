@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
 import sessionReportService from '../../api/services/sessionReportService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
-import JanusRecordingService from '../../api/services/janusService';
+import JanusRecordingServiceOptimized from '../../api/services/janusServiceOptimized';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
@@ -44,6 +44,10 @@ const TrainerSession = () => {
 
   // Admit/reject state for learner join requests
   const [pendingAdmission, setPendingAdmission] = useState(null);
+
+  // Recording UI state
+  const [recordingStatus, setRecordingStatus] = useState(null); // null, 'recording', 'paused', 'stopped'
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
 
   // Cleanup function
   const cleanup = () => {
@@ -139,7 +143,42 @@ const TrainerSession = () => {
       await learnerVideoService.initialize();
       state.setVideoService(learnerVideoService);
 
-      const recService = new JanusRecordingService(learnerVideoService, numericSessionId);
+      // Initialize Optimized Recording Service with chunked uploads
+      const recService = new JanusRecordingServiceOptimized(learnerVideoService, numericSessionId, {
+        chunkDuration: 10000,              // Upload every 10 seconds
+        enableAdaptiveQuality: true,       // Auto-adjust for device
+        maxRetries: 3,                     // Retry failed chunks
+        bitrate: 1500000                   // 1.5 Mbps (reduced for low-end devices)
+      });
+
+      // Setup recording callbacks for UI updates
+      recService.onRecordingStateChange = (state_str) => {
+        console.log('[TrainerSession] Recording state changed:', state_str);
+        setRecordingStatus(state_str);
+        if (state_str === 'recording') {
+          toast.info('🔴 Recording started', { autoClose: 2000 });
+        } else if (state_str === 'stopped') {
+          toast.info('⏹️ Recording stopped', { autoClose: 2000 });
+        }
+      };
+
+      recService.onChunkUploaded = ({ chunkNumber, uploadedChunks }) => {
+        console.log(`✅ Chunk ${chunkNumber} uploaded (Total: ${uploadedChunks})`);
+      };
+
+      recService.onUploadProgress = ({ uploadedChunks, totalChunks }) => {
+        console.log(`📊 Upload progress: ${uploadedChunks}/${totalChunks} chunks`);
+      };
+
+      recService.onRecordingError = (error) => {
+        console.error('[TrainerSession] Recording error:', error);
+        if (error.type === 'chunk_upload_failed') {
+          toast.warning(`⚠️ Chunk upload failed - retrying...`, { autoClose: 3000 });
+        } else {
+          toast.error(`Recording error: ${error.message || 'Unknown error'}`, { autoClose: 3000 });
+        }
+      };
+
       state.setRecordingService(recService);
 
       state.setMicEnabled(learnerVideoService.isMicrophoneEnabled());
@@ -244,6 +283,69 @@ const TrainerSession = () => {
     }
   };
 
+  // Recording control handlers
+  const handleToggleRecording = async () => {
+    try {
+      if (!state.recordingService) {
+        toast.error('Recording service not initialized');
+        return;
+      }
+
+      if (recordingStatus === 'recording') {
+        // Stop recording
+        const success = await state.recordingService.stopRecording();
+        if (success) {
+          setRecordingStatus('stopped');
+          setIsRecordingPaused(false);
+          console.log('[TrainerSession] Recording stopped successfully');
+        }
+      } else {
+        // Start recording
+        const success = await state.recordingService.startRecording();
+        if (success) {
+          setRecordingStatus('recording');
+          setIsRecordingPaused(false);
+          console.log('[TrainerSession] Recording started successfully');
+        }
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Recording toggle error:', error);
+      toast.error(`Recording error: ${error.message}`);
+    }
+  };
+
+  // For future implementation: pause/resume recording
+  // Note: MediaRecorder API pause/resume requires different implementation
+  const handlePauseResumeRecording = () => {
+    try {
+      if (!state.recordingService?.mediaRecorder) {
+        toast.warning('Cannot pause - recording not active');
+        return;
+      }
+
+      if (isRecordingPaused) {
+        // Resume recording
+        if (state.recordingService.mediaRecorder.state === 'paused') {
+          state.recordingService.mediaRecorder.resume();
+          setIsRecordingPaused(false);
+          toast.info('▶️ Recording resumed', { autoClose: 2000 });
+          console.log('[TrainerSession] Recording resumed');
+        }
+      } else {
+        // Pause recording
+        if (state.recordingService.mediaRecorder.state === 'recording') {
+          state.recordingService.mediaRecorder.pause();
+          setIsRecordingPaused(true);
+          toast.info('⏸️ Recording paused', { autoClose: 2000 });
+          console.log('[TrainerSession] Recording paused');
+        }
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Pause/resume error:', error);
+      toast.error(`Pause/resume error: ${error.message}`);
+    }
+  };
+
   // Use custom hooks for handlers and effects
   const handlers = useInstructorHandlers({
     role: 'trainer',
@@ -258,6 +360,7 @@ const TrainerSession = () => {
     isFrozen: state.isFrozen,
     floatingAnimations: state.floatingAnimations,
     toolAccess: state.toolAccess,
+    lineWidth: state.lineWidth,
     audioRef: state.audioRef,
     musicOptions: MUSIC_OPTIONS,
     selectedMusic: state.selectedMusic,
@@ -412,6 +515,10 @@ const TrainerSession = () => {
         eraseAllPen={handlers.eraseAllPen}
         addBucket={handlers.addBucket}
         isFrozen={state.isFrozen}
+        recordingStatus={recordingStatus}
+        onToggleRecording={handleToggleRecording}
+        onPauseResumeRecording={handlePauseResumeRecording}
+        isPaused={isRecordingPaused}
         localStream={state.localStream}
         remoteStream={state.remoteStream}
         remoteVideoRef={state.remoteVideoRef}
