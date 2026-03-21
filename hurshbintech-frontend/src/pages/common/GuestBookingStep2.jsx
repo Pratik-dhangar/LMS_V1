@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, User, Phone, Shield, Loader } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { toast } from 'react-toastify';
 import bookingService from '../../api/services/bookingService';
 import { getCoachAvailabilityPublic } from '../../api/coach/coachApi';
@@ -107,6 +109,38 @@ const GuestBookingStep2 = () => {
     }
   };
 
+  const formatDateToIso = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getCoachAvailableDays = (coachId) => {
+    if (!coachId) return [];
+
+    const availability = coachAvailability[coachId];
+    const availabilityDaysRaw = availability?.availability_days;
+    if (!availabilityDaysRaw) return [];
+
+    return availabilityDaysRaw
+      .split(',')
+      .map((day) => day.trim().toLowerCase())
+      .filter(Boolean);
+  };
+
+  const isDateAllowedByCoachWeekdays = (date, coachId) => {
+    if (!date || !coachId) return true;
+
+    const availableDays = getCoachAvailableDays(coachId);
+    if (availableDays.length === 0) {
+      return true;
+    }
+
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    return availableDays.includes(dayName);
+  };
+
   // Check if a date falls within coach's unavailable period
   const isDateUnavailable = (date, coachId) => {
     if (!date || !coachId) return false;
@@ -127,6 +161,42 @@ const GuestBookingStep2 = () => {
     }
 
     return false;
+  };
+
+  const isDateSelectableForCoach = (date, coachId) => {
+    if (!date || !coachId) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return false;
+    }
+
+    return isDateAllowedByCoachWeekdays(selectedDate, coachId) && !isDateUnavailable(date, coachId);
+  };
+
+  const getDateUnavailableReason = (date, coachId) => {
+    if (!date || !coachId) return '';
+
+    if (isDateUnavailable(date, coachId)) {
+      return `Coach is unavailable on this date. Slots available from ${getNextAvailableDate(coachId)}.`;
+    }
+
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    if (!isDateAllowedByCoachWeekdays(selectedDate, coachId)) {
+      const availableDays = getCoachAvailableDays(coachId);
+      if (availableDays.length > 0) {
+        return `Coach is not available on ${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}. Available on: ${availableDays.map((day) => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')}.`;
+      }
+      return 'Coach is not available on this day.';
+    }
+
+    return '';
   };
 
   // Get next available date after unavailable period
@@ -150,6 +220,12 @@ const GuestBookingStep2 = () => {
   useEffect(() => {
     const fetchSlots = async () => {
       if (!formData.scheduled_date || !formData.coach_id) return;
+
+      if (!isDateSelectableForCoach(formData.scheduled_date, formData.coach_id)) {
+        setAvailableSlots([]);
+        return;
+      }
+
       try {
         const data = await bookingService.getAvailableSlots(formData.coach_id, formData.scheduled_date);
         setAvailableSlots(data.available_slots || []);
@@ -161,6 +237,19 @@ const GuestBookingStep2 = () => {
     };
     fetchSlots();
   }, [formData.scheduled_date, formData.coach_id]);
+
+  useEffect(() => {
+    if (!formData.scheduled_date || !formData.coach_id) return;
+
+    if (!isDateSelectableForCoach(formData.scheduled_date, formData.coach_id)) {
+      setFormData(prev => ({
+        ...prev,
+        scheduled_date: '',
+        scheduled_time: '',
+      }));
+      setAvailableSlots([]);
+    }
+  }, [formData.coach_id, coachAvailability]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -214,9 +303,8 @@ const GuestBookingStep2 = () => {
       return;
     }
 
-    // Check if selected date is in coach's unavailable period
-    if (isDateUnavailable(formData.scheduled_date, formData.coach_id)) {
-      toast.error('Selected date is unavailable. Please choose another date.');
+    if (!isDateSelectableForCoach(formData.scheduled_date, formData.coach_id)) {
+      toast.error(getDateUnavailableReason(formData.scheduled_date, formData.coach_id) || 'Selected date is unavailable. Please choose another date.');
       return;
     }
 
@@ -448,19 +536,32 @@ const GuestBookingStep2 = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="scheduled_date">Date *</label>
-                      <input
-                        type="date"
+                      <DatePicker
+                        selected={formData.scheduled_date ? new Date(`${formData.scheduled_date}T00:00:00`) : null}
+                        onChange={(date) => {
+                          const isoDate = date ? formatDateToIso(date) : '';
+                          setFormData(prev => ({
+                            ...prev,
+                            scheduled_date: isoDate,
+                            scheduled_time: '',
+                          }));
+                        }}
+                        filterDate={(date) => {
+                          if (!formData.coach_id) return false;
+                          return isDateSelectableForCoach(formatDateToIso(date), formData.coach_id);
+                        }}
+                        minDate={new Date()}
+                        dateFormat="MM/dd/yyyy"
+                        placeholderText="mm/dd/yyyy"
+                        className="guest-date-picker-input"
                         id="scheduled_date"
                         name="scheduled_date"
-                        value={formData.scheduled_date}
-                        onChange={handleInputChange}
-                        min={new Date().toISOString().split('T')[0]}
                         disabled={loading || !formData.coach_id}
                         required
                       />
-                      {formData.scheduled_date && formData.coach_id && isDateUnavailable(formData.scheduled_date, formData.coach_id) && (
+                      {formData.scheduled_date && formData.coach_id && getDateUnavailableReason(formData.scheduled_date, formData.coach_id) && (
                         <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                          ⚠️ Coach is unavailable on this date. Slots available from {getNextAvailableDate(formData.coach_id)}
+                          ⚠️ {getDateUnavailableReason(formData.scheduled_date, formData.coach_id)}
                         </small>
                       )}
                     </div>
@@ -472,7 +573,7 @@ const GuestBookingStep2 = () => {
                         name="scheduled_time"
                         value={formData.scheduled_time}
                         onChange={handleInputChange}
-                        disabled={loading || availableSlots.length === 0 || (formData.scheduled_date && formData.coach_id && isDateUnavailable(formData.scheduled_date, formData.coach_id))}
+                        disabled={loading || availableSlots.length === 0 || (formData.scheduled_date && formData.coach_id && !isDateSelectableForCoach(formData.scheduled_date, formData.coach_id))}
                         required
                       >
                         <option value="">Select time...</option>
@@ -495,7 +596,7 @@ const GuestBookingStep2 = () => {
                         <input
                           type="text"
                           id="session_type"
-                          value={`${selectedCoach.dedicated_package.package_name} - 1.5 Hour (90 min)`}
+                          value={`${selectedCoach.dedicated_package.package_name} - 1 Hour (60 min)`}
                           disabled
                           style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                         />

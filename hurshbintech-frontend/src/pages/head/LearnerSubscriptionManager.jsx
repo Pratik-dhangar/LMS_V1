@@ -111,9 +111,13 @@ const LearnerSubscriptionManager = () => {
         headService.getAllLearners(),
       ]);
 
+      const learnerPackages = (pkgsData || []).filter(
+        (pkg) => String(pkg?.package_type || "").toUpperCase() !== "COACH"
+      );
+
       setSubscriptions(subsData);
       setFilteredSubscriptions(subsData);
-      setPackages(pkgsData);
+      setPackages(learnerPackages);
       setLearners(learnersData);
     } catch (err) {
       setError("Failed to load data. Please try again.");

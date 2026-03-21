@@ -79,7 +79,6 @@ async def create_session(
     new_session = TrainingSession(
         session_id=session_id,
         title=session_data.title,
-        description=session_data.description,
         trainer_id=session_data.trainer_id,
         learner_id=session_data.learner_id,
         created_by_id=created_by_id,

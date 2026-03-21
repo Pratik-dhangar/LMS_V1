@@ -56,6 +56,7 @@ from app.api.endpoints.subscription_inquiry import router as subscription_inquir
 from app.api.endpoints.Chat.chat import router as chat_router
 from app.api.endpoints.Communication.webinar import router as webinar_router
 from app.api.endpoints.vendors import router as vendors_router
+from app.api.endpoints.free_assessment import router as free_assessment_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.request_logging import RequestLoggingMiddleware
@@ -215,6 +216,7 @@ app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])
+app.include_router(free_assessment_router, prefix="/api", tags=["free-assessment"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 app.include_router(learner_progress_reports_router, prefix="/api/learner-progress-reports", tags=["learner-progress-reports"])
 

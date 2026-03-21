@@ -3127,7 +3127,7 @@ class EmailService:
         last_session_date: Optional[str],
         sent_by_name: str,
     ) -> bool:
-        """Send the All Program Goals Report summary to the learner's registered email."""
+        """Send the Skill Development Graph  summary to the learner's registered email."""
 
         if not settings.ENABLE_EMAIL or not recipient_email:
             logger.warning(f"Email disabled or no recipient, skipping goals report email to {recipient_email}")
@@ -3171,7 +3171,7 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>📈 All Program Goals Report</h1>
+                    <h1>📈 Skill Development Graph </h1>
                     <p>A summary of your learning progress across all programs</p>
                 </div>
                 <div class="content">
@@ -3273,9 +3273,9 @@ class EmailService:
                 </div>
                 <div class="content">
                     <p>Hi <strong>{recipient_name}</strong>,</p>
-                    <p>We are pleased to inform you that your <strong>Final Progress Report</strong> dated <strong>{report_date_text}</strong> has been prepared and shared by <strong>{sent_by_name}</strong>. This report provides a comprehensive overview of your developmental progress and learning journey. Please log in to your dashboard to view the full report under the <strong>My Reports</strong> section.</p>
+                    <p>We are pleased to inform you that your <strong>Final Progress Report</strong> dated <strong>{report_date_text}</strong> has been prepared and shared by <strong>{sent_by_name}</strong>. This report provides a comprehensive overview of your developmental progress and learning journey. Please log in to your dashboard to view the full report under the <strong>My Progress Report</strong> section.</p>
                     <div style="text-align: center; margin: 28px 0;">
-                        <a href="{settings.FRONTEND_URL}/learner/my-reports" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Reports</a>
+                        <a href="{settings.FRONTEND_URL}/learner/my-reports" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Progress Report</a>
                     </div>
                 </div>
                 <div class="footer">

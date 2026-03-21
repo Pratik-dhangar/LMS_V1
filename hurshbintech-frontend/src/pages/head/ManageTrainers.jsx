@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff, Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import headService from "../../api/services/headService";
 import SearchBar from "../../components/common/SearchBar";
+import { downloadProfilePDF } from "../../utils/pdfGenerator";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -23,11 +24,35 @@ const ManageTrainers = () => {
   const [error, setError] = useState("");
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
   const [revealedPasscodes, setRevealedPasscodes] = useState({}); // Store decrypted passcodes
+  const [downloadingTrainer, setDownloadingTrainer] = useState(null);
 
   // Fetch trainers data when component mounts
   useEffect(() => {
     fetchTrainers();
   }, []);
+
+  /**
+   * Handle downloading trainer profile as PDF
+   */
+  const handleDownloadProfile = async (trainer) => {
+    setDownloadingTrainer(trainer.id);
+    try {
+      const fullTrainerProfile = await headService.getTrainerById(trainer.id);
+      await downloadProfilePDF(fullTrainerProfile, 'trainer');
+      toast.success(`${trainer.name}'s profile downloaded successfully!`, {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (err) {
+      console.error("Error downloading profile:", err);
+      toast.error("Failed to download profile. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    } finally {
+      setDownloadingTrainer(null);
+    }
+  };
 
   // Fetch all trainers from the server
   const fetchTrainers = async () => {
@@ -281,13 +306,27 @@ const ManageTrainers = () => {
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleEditTrainer(trainer.id)}
-                              className="app-modal-btn app-modal-btn--primary"
-                            >
-                              <Edit3 className="table-primary-icon-sm" />
-                              Edit Profile
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleEditTrainer(trainer.id)}
+                                className="app-modal-btn app-modal-btn--primary"
+                                title="Edit Profile"
+                              >
+                                <Edit3 className="table-primary-icon-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadProfile(trainer)}
+                                disabled={downloadingTrainer === trainer.id}
+                                className="app-modal-btn app-modal-btn--primary"
+                                title="Download Profile"
+                                style={{
+                                  opacity: downloadingTrainer === trainer.id ? 0.6 : 1,
+                                  cursor: downloadingTrainer === trainer.id ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                <Download className="table-primary-icon-sm" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

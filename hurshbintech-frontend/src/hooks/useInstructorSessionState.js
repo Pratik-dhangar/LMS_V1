@@ -55,6 +55,7 @@ export const useInstructorSessionState = (role = 'trainer') => {
     const [buckets, setBuckets] = useState([]);
     const [bucketColor, setBucketColor] = useState('#6D5A3F');
     const [youtubePopups, setYoutubePopups] = useState([]);
+    const [inlineYoutube, setInlineYoutube] = useState(null); // { videoId, title, isOpen, currentTime }
 
     // Drawing tools
     const [tool, setTool] = useState('pen');
@@ -181,6 +182,8 @@ export const useInstructorSessionState = (role = 'trainer') => {
         setBucketColor,
         youtubePopups,
         setYoutubePopups,
+        inlineYoutube,
+        setInlineYoutube,
 
         // Tools
         tool,

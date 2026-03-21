@@ -213,7 +213,7 @@ const LearnerMyReports = () => {
                                 Back to Dashboard
                             </button>
                             <div>
-                                <h1 className="page-title">My Reports</h1>
+                                <h1 className="page-title">My Progress Report</h1>
                                 <p className="page-description">
                                     {user?.name ? `${user.name}'s Learning Programs` : "My Learning Programs"}
                                 </p>
@@ -230,10 +230,10 @@ const LearnerMyReports = () => {
 
                         {!loading && (
                             <>
-                                {/* All Program Goals Report Card */}
+                                {/* Skill Development Graph  Card */}
                                 <div style={sectionCard}>
                                     <div style={sectionHeader('#7c1c1c')}>
-                                        <span>📊 All Program Goals Report</span>
+                                        <span>📊 Skill Development Graph And Report </span>
                                     </div>
                                     <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                                         <div>
@@ -261,10 +261,10 @@ const LearnerMyReports = () => {
                                     </div>
                                 </div>
 
-                                {/* Final Generated Reports Card */}
+                                {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT Card */}
                                 <div style={{ ...sectionCard, marginTop: '1.25rem' }}>
                                     <div style={{ ...sectionHeader('#7c1c1c'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <span>📄 Final Generated Reports</span>
+                                        <span>📄 The Comprehensive Skill Development Evaluation Report</span>
                                         {/* Filter Tabs */}
                                         <div style={{ display: 'flex', gap: '0.4rem' }}>
                                             {['head', 'coach'].map(f => (

@@ -210,6 +210,47 @@ const sessionService = {
       console.error('[sessionService] Error fetching session feedback:', error);
       throw error;
     }
+  },
+
+  // Upload recording chunk (optimized)
+  uploadRecordingChunk: async (formData) => {
+    try {
+      const response = await api.post('/sessions/recordings/upload-chunk', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 60000 // 60 second timeout for chunk upload
+      });
+      return response.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || error.message;
+      const status = error.response?.status;
+      console.error(`[sessionService] Error uploading recording chunk (${status}):`, errorMsg);
+      console.error('[sessionService] Full error:', error.response?.data || error);
+      throw error;
+    }
+  },
+
+  // Finalize chunked recording (merge all chunks on server)
+  finalizeRecording: async (finalizationData) => {
+    try {
+      const response = await api.post('/sessions/recordings/finalize', finalizationData);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error finalizing recording:', error);
+      throw error;
+    }
+  },
+
+  // Get recording status
+  getRecordingStatus: async (recordingId) => {
+    try {
+      const response = await api.get(`/sessions/recordings/${recordingId}/status`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching recording status:', error);
+      throw error;
+    }
   }
 };
 

@@ -23,6 +23,42 @@ import {
 import { getFileUrl as resolveMediaUrl } from '../../utils/urlHelper';
 // Fill-in-the-blanks removed
 
+let youtubeIframeApiPromise = null;
+
+const loadYoutubeIframeApi = () => {
+    if (typeof window === 'undefined') {
+        return Promise.reject(new Error('Window unavailable'));
+    }
+
+    if (window.YT?.Player) {
+        return Promise.resolve(window.YT);
+    }
+
+    if (youtubeIframeApiPromise) {
+        return youtubeIframeApiPromise;
+    }
+
+    youtubeIframeApiPromise = new Promise((resolve) => {
+        const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+
+        const previousReady = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+            if (typeof previousReady === 'function') {
+                try { previousReady(); } catch { /* ignore */ }
+            }
+            resolve(window.YT);
+        };
+
+        if (!existingScript) {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(tag);
+        }
+    });
+
+    return youtubeIframeApiPromise;
+};
+
 // Memoized Video Overlay Component
 const VideoOverlay = React.memo(({
     item,
@@ -358,6 +394,7 @@ const Whiteboard = ({
     setCanvasItems,
     toolAccess = { select: false, drag: false, draw: false },
     remoteSelectedItemIds = [],
+    setRemoteSelectedItemIds = null,
     textMessages = [],
     setTextMessages = () => { },
     feedbackMessage = '',
@@ -369,7 +406,7 @@ const Whiteboard = ({
     color = '#000000',
     // setColor = () => { },
     lineWidth = 2,
-    // setLineWidth = () => { },
+    setLineWidth = () => { },
     bucketColor = '#9333ea',
     // setBucketColor = () => { },
     buckets = [],
@@ -396,7 +433,11 @@ const Whiteboard = ({
     onRemoveTextBox = () => { },
     activeTextBoxId = null,
     setActiveTextBoxId = () => { },
-    onYoutubeDropped = () => { }
+    onYoutubeDropped = () => { },
+    inlineYoutube = null, // Instructor: { videoId, title, isOpen, currentTime }
+    setInlineYoutube = null, // Instructor: setter for inline YouTube
+    inlineMedia = null, // Attendee: { type: 'youtube', videoId, title, isOpen, currentTime }
+    setInlineMedia = null, // Attendee: setter for inline media
 }) => {
     // Media control state management
     const mediaControl = useMediaControl();
@@ -589,6 +630,7 @@ const Whiteboard = ({
     // Inline video state for 50-50 split mode
     const [inlineVideo, setInlineVideo] = useState(null); // { id, src, title }
     const inlineVideoRef = useRef(null);
+    const [isInlineVideoMinimized, setIsInlineVideoMinimized] = useState(false);
 
     // Video control states
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -598,6 +640,17 @@ const Whiteboard = ({
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [videoPlaybackRate, setVideoPlaybackRate] = useState(1);
     const [showVideoControls, setShowVideoControls] = useState(true);
+
+    // YouTube split player state (controlled by instructor, mirrored for attendee)
+    const youtubePlayerRef = useRef(null);
+    const youtubePlayerVideoIdRef = useRef(null);
+    const youtubeSyncTimerRef = useRef(null);
+    const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
+    const [youtubeCurrentTime, setYoutubeCurrentTime] = useState(0);
+    const [youtubeDuration, setYoutubeDuration] = useState(0);
+    const activeYoutubeMedia = inlineYoutube || (inlineMedia && inlineMedia.type === 'youtube' ? inlineMedia : null);
+    const isYoutubeMinimized = Boolean(activeYoutubeMedia?.minimized);
+    const hasExpandedMedia = Boolean((inlineVideo && !isInlineVideoMinimized) || (activeYoutubeMedia && !isYoutubeMinimized));
 
     // Image caching system for performance
     const imageCacheRef = useRef(new Map());
@@ -747,11 +800,16 @@ const Whiteboard = ({
 
                 // console.log('[Whiteboard] Activating inline video split mode (touch):', videoData);
                 setInlineVideo({ id: videoData.id, src: videoData.src });
+                setIsInlineVideoMinimized(false);
 
                 whiteboardService?.sendMediaControl({
                     action: 'open',
                     videoId: videoData.id,
-                    src: videoData.src
+                    mediaId: videoData.id,
+                    src: videoData.src,
+                    mediaUrl: videoData.src,
+                    mediaType: 'video',
+                    currentTime: 0
                 });
                 return;
             }
@@ -986,12 +1044,22 @@ const Whiteboard = ({
         const dpr = window.devicePixelRatio || 1;
         canvas.width = canvas.offsetWidth * dpr;
         canvas.height = canvas.offsetHeight * dpr;
-        ctx.scale(dpr, dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         // Setup whiteboard event listeners
         if (whiteboardService) {
             whiteboardService.onDraw = (data) => {
                 drawOnCanvas(data);
+
+                if (!isTrainer && data.tool !== 'eraser' && canvasRef.current) {
+                    const incomingStrokeWidth = data.prevX >= 0 && data.prevX <= 1 && data.prevY >= 0 && data.prevY <= 1
+                        ? denormalizeStroke(data.lineWidth || data.strokeNorm || 0, canvasRef.current)
+                        : data.lineWidth;
+
+                    if (incomingStrokeWidth > 0) {
+                        setLineWidth(Math.round(incomingStrokeWidth));
+                    }
+                }
 
                 // Store normalized path for resize replay
                 // If data has normalized coordinates, store as-is; otherwise normalize them
@@ -1364,34 +1432,53 @@ const Whiteboard = ({
                 // console.log('[Whiteboard] Video state update:', data.videoId, data.isPlaying);
             };
 
+            const previousOnMediaControl = whiteboardService.onMediaControl;
             whiteboardService.onMediaControl = (data) => {
                 // console.log('[Whiteboard] Media control event received:', data);
 
-                // If this is an inline video open command, handle inline split-video
-                if (data && data.action === 'open' && data.src) {
-                    // Open inline split video for learners (suppress popup)
-                    if (!isTrainer) {
-                        setInlineVideo({ id: data.videoId, src: data.src });
+                if (!data) {
+                    if (typeof previousOnMediaControl === 'function') {
+                        previousOnMediaControl(data);
                     }
-                    return; // don't forward to popup handler
+                    return;
                 }
 
-                // Forward to MediaControlContext for other media control flows
-                try {
-                    mediaControl.handleMediaControlEvent(data);
-                } catch (err) {
-                    // console.warn('[Whiteboard] mediaControl.handleMediaControlEvent error:', err);
+                // If this is an inline video open command, handle inline split-video
+                const incomingMediaSrc = data?.src || data?.mediaUrl;
+                const incomingMediaId = data?.videoId || data?.mediaId;
+                if (data && data.action === 'open' && incomingMediaSrc) {
+                    // Open inline split video for learners (suppress popup)
+                    if (!isTrainer) {
+                        setInlineVideo({ id: incomingMediaId || Date.now(), src: incomingMediaSrc });
+                        setIsInlineVideoMinimized(false);
+                    }
+                } else {
+                    // Forward to MediaControlContext for other media control flows
+                    try {
+                        mediaControl.handleMediaControlEvent(data);
+                    } catch (err) {
+                        // console.warn('[Whiteboard] mediaControl.handleMediaControlEvent error:', err);
+                    }
                 }
 
                 // Additionally support inline split-video synchronization for play/pause/seek/close
-                if (!data || !data.action) return;
+                if (!data.action) {
+                    if (typeof previousOnMediaControl === 'function') {
+                        previousOnMediaControl(data);
+                    }
+                    return;
+                }
+
                 const action = data.action;
+                if (action === 'video_minimize_toggle') {
+                    setIsInlineVideoMinimized(Boolean(data.minimized));
+                }
                 if (action === 'close') {
                     setInlineVideo(null);
+                    setIsInlineVideoMinimized(false);
                     if (inlineVideoRef.current) {
                         try { inlineVideoRef.current.pause(); } catch { /* ignore */ }
                     }
-                    return;
                 }
 
                 if (!isTrainer && inlineVideoRef.current) {
@@ -1406,11 +1493,27 @@ const Whiteboard = ({
                         videoEl.currentTime = data.currentTime;
                     }
                 }
+
+                // Preserve any previously-registered media_control listener (e.g., attendee fallback logic)
+                // so whichever component initializes first still receives events.
+                if (typeof previousOnMediaControl === 'function') {
+                    previousOnMediaControl(data);
+                }
             };
 
             whiteboardService.onItemsUnselected = (data) => {
                 // console.log('[Whiteboard] Items unselected by instructor');
-                setSelectedItems([]);
+                const nextSelectedIds = Array.isArray(data?.itemIds) ? data.itemIds.map(String) : [];
+
+                // Update local selection on attendee side (trainer=false)
+                if (!isTrainer) {
+                    setSelectedItems(prev => prev.filter(item => nextSelectedIds.includes(String(item.id))));
+                }
+
+                // Update remote selection display on instructor side (trainer=true)
+                if (isTrainer && setRemoteSelectedItemIds) {
+                    setRemoteSelectedItemIds(Array.isArray(data?.itemIds) ? data.itemIds : []);
+                }
             };
 
             // Handle whiteboard state restoration on reconnection
@@ -1433,7 +1536,7 @@ const Whiteboard = ({
                                 // Clear and reset canvas dimensions
                                 canvas.width = canvas.offsetWidth * dpr;
                                 canvas.height = canvas.offsetHeight * dpr;
-                                ctx.scale(dpr, dpr);
+                                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
                                 // Replay all paths
                                 console.log('[Whiteboard] Replaying', normalizedPathsRef.current.length, 'paths');
@@ -1553,7 +1656,7 @@ const Whiteboard = ({
                 // Resize canvas
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
-                ctx.scale(dpr, dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
                 // Replay all normalized paths on the resized canvas
                 if (normalizedPathsRef.current.length > 0) {
@@ -1575,7 +1678,7 @@ const Whiteboard = ({
                 console.warn('[Whiteboard] Error during resize:', error.message);
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
-                ctx.scale(dpr, dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 redrawCanvas();
             }
         };
@@ -1621,12 +1724,8 @@ const Whiteboard = ({
     // Handle clear canvas trigger (clears pen strokes + canvas + video)
     useEffect(() => {
         if (clearCanvasTrigger > 0) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                // Clear entire canvas including pen strokes
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            // Clear entire canvas and normalized stroke history
+            clearCanvas();
             // Also clear inline video if present
             if (inlineVideoRef.current) {
                 inlineVideoRef.current.pause();
@@ -1638,16 +1737,12 @@ const Whiteboard = ({
     // Handle erase pen trigger (clears only pen strokes, redraws items)
     useEffect(() => {
         if (erasePenTrigger > 0) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                // Clear entire canvas to remove pen strokes
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                // Redraw canvas items after clearing pen strokes
-                setTimeout(() => {
-                    redrawCanvas();
-                }, 10);
-            }
+            // Remove pen strokes and reset normalized stroke history
+            clearCanvas();
+            // Redraw non-stroke canvas items after clearing strokes
+            setTimeout(() => {
+                redrawCanvas();
+            }, 10);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [erasePenTrigger]);
@@ -1780,6 +1875,32 @@ const Whiteboard = ({
             }
         });
     }, [canvasItems, isTrainer, selectedItems, remoteSelectedItemIds, color, isVideoItem, isPdfItem, preloadImages]);
+
+    // Keep canvas backing resolution in sync when full/split layout toggles.
+    // Without this, pointer coordinates are computed from the new visual width while
+    // drawing uses stale internal dimensions, which causes large cursor offset.
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = canvas.offsetHeight * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            if (normalizedPathsRef.current.length > 0) {
+                replayPaths(normalizedPathsRef.current, ctx, canvas);
+            }
+
+            redrawCanvas();
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [hasExpandedMedia, redrawCanvas]);
 
     const drawOnCanvas = (data) => {
         const canvas = canvasRef.current;
@@ -2804,12 +2925,17 @@ const Whiteboard = ({
 
                 console.log('[Whiteboard] Activating inline video split mode:', videoData);
                 setInlineVideo({ id: videoData.id, src: videoData.src });
+                setIsInlineVideoMinimized(false);
 
                 // Send video data to learners (no title)
                 whiteboardService?.sendMediaControl({
                     action: 'open',
                     videoId: videoData.id,
-                    src: videoData.src
+                    mediaId: videoData.id,
+                    src: videoData.src,
+                    mediaUrl: videoData.src,
+                    mediaType: 'video',
+                    currentTime: 0
                 });
                 return;
             }
@@ -3029,6 +3155,7 @@ const Whiteboard = ({
             });
         }
         setInlineVideo(null);
+        setIsInlineVideoMinimized(false);
         if (inlineVideoRef.current) {
             inlineVideoRef.current.pause();
         }
@@ -3038,6 +3165,215 @@ const Whiteboard = ({
         setVideoDuration(0);
         setVideoPlaybackRate(1);
     }, [isTrainer, inlineVideo, whiteboardService]);
+
+    const handleInlineVideoMinimizeToggle = useCallback(() => {
+        if (!isTrainer || !inlineVideo || !whiteboardService) return;
+        const nextMinimized = !isInlineVideoMinimized;
+        setIsInlineVideoMinimized(nextMinimized);
+        whiteboardService.sendMediaControl({
+            action: 'video_minimize_toggle',
+            videoId: inlineVideo.id,
+            minimized: nextMinimized
+        });
+    }, [isTrainer, inlineVideo, isInlineVideoMinimized, whiteboardService]);
+
+    // YouTube split video handlers
+    const handleYoutubeClose = useCallback(() => {
+        if (isTrainer && whiteboardService && inlineYoutube) {
+            // Broadcast close to attendees
+            whiteboardService.sendYoutubeSplit({
+                action: 'close',
+                videoId: inlineYoutube.videoId,
+                time: youtubePlayerRef.current?.getCurrentTime?.() || 0,
+                timestamp: Date.now()
+            });
+            whiteboardService.sendMediaControl({ action: 'youtube_close' });
+        }
+        // Update state (use prop setter if provided, otherwise local state)
+        if (setInlineYoutube) {
+            setInlineYoutube(null);
+        }
+        if (youtubePlayerRef.current?.destroy) {
+            try { youtubePlayerRef.current.destroy(); } catch { /* ignore */ }
+        }
+        youtubePlayerRef.current = null;
+        youtubePlayerVideoIdRef.current = null;
+        setIsYoutubePlaying(false);
+        setYoutubeCurrentTime(0);
+        setYoutubeDuration(0);
+    }, [isTrainer, inlineYoutube, whiteboardService, setInlineYoutube]);
+
+    const handleYoutubeMinimizeToggle = useCallback(() => {
+        if (!isTrainer || !whiteboardService || !inlineYoutube || !setInlineYoutube) return;
+        const nextMinimized = !Boolean(inlineYoutube.minimized);
+        setInlineYoutube(prev => prev ? { ...prev, minimized: nextMinimized } : prev);
+        whiteboardService.sendYoutubeSplit({
+            action: 'minimize',
+            videoId: inlineYoutube.videoId,
+            minimized: nextMinimized,
+            time: youtubePlayerRef.current?.getCurrentTime?.() || 0,
+            timestamp: Date.now()
+        });
+        whiteboardService.sendMediaControl({
+            action: 'youtube_minimize_toggle',
+            minimized: nextMinimized,
+            time: youtubePlayerRef.current?.getCurrentTime?.() || 0
+        });
+    }, [isTrainer, whiteboardService, inlineYoutube, setInlineYoutube]);
+
+    const handleYoutubePlayPause = useCallback(() => {
+        if (!isTrainer || !whiteboardService || !inlineYoutube || !youtubePlayerRef.current) return;
+
+        const player = youtubePlayerRef.current;
+        const playerState = player.getPlayerState?.();
+        const currentTime = player.getCurrentTime?.() || 0;
+        const isCurrentlyPlaying = playerState === window.YT?.PlayerState?.PLAYING;
+
+        if (isCurrentlyPlaying) {
+            player.pauseVideo();
+            setIsYoutubePlaying(false);
+            if (setInlineYoutube) {
+                setInlineYoutube(prev => prev ? { ...prev, isPlaying: false, currentTime } : prev);
+            }
+            whiteboardService.sendYoutubeSplit({
+                action: 'pause',
+                videoId: inlineYoutube.videoId,
+                time: currentTime,
+                timestamp: Date.now()
+            });
+            whiteboardService.sendMediaControl({ action: 'youtube_pause', time: currentTime });
+            return;
+        }
+
+        player.playVideo();
+        setIsYoutubePlaying(true);
+        if (setInlineYoutube) {
+            setInlineYoutube(prev => prev ? { ...prev, isPlaying: true, currentTime } : prev);
+        }
+        whiteboardService.sendYoutubeSplit({
+            action: 'play',
+            videoId: inlineYoutube.videoId,
+            time: currentTime,
+            timestamp: Date.now()
+        });
+        whiteboardService.sendMediaControl({ action: 'youtube_play', time: currentTime });
+    }, [isTrainer, inlineYoutube, whiteboardService, setInlineYoutube]);
+
+    const handleYoutubeSeek = useCallback((time) => {
+        if (!isTrainer || !whiteboardService || !inlineYoutube || !youtubePlayerRef.current) return;
+        const player = youtubePlayerRef.current;
+        player.seekTo(time, true);
+        setYoutubeCurrentTime(time);
+        if (setInlineYoutube) {
+            setInlineYoutube(prev => prev ? { ...prev, currentTime: time } : prev);
+        }
+        whiteboardService.sendYoutubeSplit({
+            action: 'seek',
+            videoId: inlineYoutube.videoId,
+            time: time,
+            timestamp: Date.now()
+        });
+        whiteboardService.sendMediaControl({ action: 'youtube_seek', time: time });
+    }, [isTrainer, inlineYoutube, whiteboardService, setInlineYoutube]);
+
+    useEffect(() => {
+        if (!activeYoutubeMedia?.videoId) {
+            if (youtubeSyncTimerRef.current) {
+                clearInterval(youtubeSyncTimerRef.current);
+                youtubeSyncTimerRef.current = null;
+            }
+            if (youtubePlayerRef.current?.destroy) {
+                try { youtubePlayerRef.current.destroy(); } catch { /* ignore */ }
+            }
+            youtubePlayerRef.current = null;
+            youtubePlayerVideoIdRef.current = null;
+            setIsYoutubePlaying(false);
+            setYoutubeCurrentTime(0);
+            setYoutubeDuration(0);
+            return;
+        }
+
+        let cancelled = false;
+
+        const initYoutubePlayer = async () => {
+            try {
+                await loadYoutubeIframeApi();
+                if (cancelled) return;
+
+                const targetId = `youtube-iframe-${activeYoutubeMedia.videoId}`;
+                const targetEl = document.getElementById(targetId);
+                if (!targetEl) return;
+
+                if (youtubePlayerRef.current && youtubePlayerVideoIdRef.current !== activeYoutubeMedia.videoId) {
+                    try { youtubePlayerRef.current.destroy(); } catch { /* ignore */ }
+                    youtubePlayerRef.current = null;
+                }
+
+                if (!youtubePlayerRef.current) {
+                    youtubePlayerRef.current = new window.YT.Player(targetId, {
+                        events: {
+                            onReady: (event) => {
+                                const duration = event.target.getDuration?.() || 0;
+                                setYoutubeDuration(duration);
+                                const startTime = activeYoutubeMedia.currentTime || 0;
+                                if (startTime > 0) {
+                                    event.target.seekTo(startTime, true);
+                                    setYoutubeCurrentTime(startTime);
+                                }
+                            },
+                            onStateChange: (event) => {
+                                const playing = event.data === window.YT?.PlayerState?.PLAYING;
+                                setIsYoutubePlaying(playing);
+                            }
+                        }
+                    });
+                    youtubePlayerVideoIdRef.current = activeYoutubeMedia.videoId;
+                }
+
+                if (youtubeSyncTimerRef.current) {
+                    clearInterval(youtubeSyncTimerRef.current);
+                }
+
+                youtubeSyncTimerRef.current = setInterval(() => {
+                    const player = youtubePlayerRef.current;
+                    if (!player?.getCurrentTime) return;
+                    const nextTime = player.getCurrentTime() || 0;
+                    const nextDuration = player.getDuration?.() || 0;
+                    setYoutubeCurrentTime(nextTime);
+                    setYoutubeDuration(nextDuration);
+                }, 500);
+            } catch (error) {
+                console.error('[Whiteboard] Failed to initialize YouTube player:', error);
+            }
+        };
+
+        initYoutubePlayer();
+
+        return () => {
+            cancelled = true;
+            if (youtubeSyncTimerRef.current) {
+                clearInterval(youtubeSyncTimerRef.current);
+                youtubeSyncTimerRef.current = null;
+            }
+        };
+    }, [activeYoutubeMedia?.videoId, activeYoutubeMedia?.currentTime]);
+
+    useEffect(() => {
+        if (isTrainer || !inlineMedia || inlineMedia.type !== 'youtube' || !youtubePlayerRef.current) return;
+
+        const player = youtubePlayerRef.current;
+        const targetTime = inlineMedia.currentTime || 0;
+        const current = player.getCurrentTime?.() || 0;
+        if (Math.abs(current - targetTime) > 1.5) {
+            player.seekTo(targetTime, true);
+        }
+
+        if (inlineMedia.isPlaying) {
+            player.playVideo();
+        } else {
+            player.pauseVideo();
+        }
+    }, [isTrainer, inlineMedia?.videoId, inlineMedia?.currentTime, inlineMedia?.isPlaying]);
 
     // Video control functions
     const handleVideoMetadataLoaded = useCallback(() => {
@@ -3142,6 +3478,10 @@ const Whiteboard = ({
         return x >= item.x + item.width - handleSize && x <= item.x + item.width &&
             y >= item.y + item.height - handleSize && y <= item.y + item.height;
     };
+
+    const youtubeEmbedSrc = activeYoutubeMedia?.videoId
+        ? `https://www.youtube-nocookie.com/embed/${activeYoutubeMedia.videoId}?enablejsapi=1&fs=0&modestbranding=1&rel=0&playsinline=1&autoplay=0&controls=0&disablekb=1&iv_load_policy=3`
+        : '';
 
     return (
         <div className={`whiteboard-container ${isTrainer ? 'trainer-mode' : 'learner-mode'}`}>
@@ -3252,10 +3592,7 @@ const Whiteboard = ({
             <div className="whiteboard-main-wrapper">
                 {/* Inline Video Section - Shows when video is dropped (50% width) */}
                 {inlineVideo && (
-                    <div className="whiteboard-split-video"
-                        onMouseEnter={() => setShowVideoControls(true)}
-                        onMouseLeave={() => setShowVideoControls(isVideoPlaying ? false : true)}
-                    >
+                    <div className={`whiteboard-split-video ${isInlineVideoMinimized ? 'split-media-minimized-hidden' : ''}`} >
                         <video
                             ref={inlineVideoRef}
                             src={inlineVideo.src}
@@ -3272,18 +3609,19 @@ const Whiteboard = ({
                             onSeeked={handleVideoSeeked}
                             onLoadedMetadata={handleVideoMetadataLoaded}
                             onTimeUpdate={handleVideoTimeUpdate}
-                            onClick={handleVideoPlayPause}
+                            onClick={isTrainer ? handleVideoPlayPause : undefined}
                             style={{
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'contain',
                                 backgroundColor: '#000',
-                                cursor: 'pointer'
+                                cursor: isTrainer ? 'pointer' : 'default',
+                                pointerEvents: isTrainer ? 'auto' : 'none'
                             }}
                         />
 
                         {/* Custom Video Controls Overlay - Trainer Only */}
-                        {isTrainer && showVideoControls && (
+                        {isTrainer && showVideoControls && !isInlineVideoMinimized && (
                             <div className="video-controls-container">
                                 {/* Progress Bar */}
                                 <div className="video-progress-bar">
@@ -3345,7 +3683,15 @@ const Whiteboard = ({
                                         <FaExpand size={14} />
                                     </button>
 
+
                                     {/* Close Button */}
+                                    <button
+                                        onClick={handleInlineVideoMinimizeToggle}
+                                        className="video-control-btn"
+                                        title="Minimize video"
+                                    >
+                                        _
+                                    </button>
                                     <button
                                         onClick={handleVideoClose}
                                         className="video-control-btn video-close-btn"
@@ -3359,8 +3705,129 @@ const Whiteboard = ({
                     </div>
                 )}
 
-                {/* Canvas Section - Takes full width when no video, 50% width when video is present */}
-                <div className={inlineVideo ? "whiteboard-split-canvas" : "whiteboard-full-canvas"}>
+                {/* YouTube Split Video - Instructor-only controls, attendee read-only */}
+                {activeYoutubeMedia && (
+                    <div className={`whiteboard-split-video youtube-split-video ${isYoutubeMinimized ? 'split-media-minimized-hidden' : ''}`}>
+                        <div className="youtube-container">
+                            {/* YouTube Embed - Using nocookie domain for privacy */}
+                            <iframe
+                                key={`youtube-${activeYoutubeMedia.videoId}`}
+                                id={`youtube-iframe-${activeYoutubeMedia.videoId}`}
+                                width="100%"
+                                height="100%"
+                                src={youtubeEmbedSrc}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                tabIndex={-1}
+                                title={activeYoutubeMedia?.title || 'YouTube Video'}
+                                style={{
+                                    border: 'none',
+                                    borderRadius: '0'
+                                }}
+                                onLoad={() => {
+                                    // Enable YouTube IFrame API when ready
+                                    // This allows instructor to control play/pause/seek
+                                    if (isTrainer) {
+                                        // Initialize YouTube IFrame API here if needed
+                                    }
+                                }}
+                            />
+                            {/* Block all direct iframe interaction; only custom controls are allowed. */}
+                            <div className="youtube-interaction-blocker" />
+                        </div>
+
+                        {/* Custom YouTube Controls Overlay - Instructor Only */}
+                        {isTrainer && activeYoutubeMedia && !isYoutubeMinimized && (
+                            <div className="youtube-controls-container">
+                                <div className="video-progress-bar">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={youtubeDuration || 0}
+                                        value={youtubeCurrentTime}
+                                        onChange={(e) => handleYoutubeSeek(parseFloat(e.target.value))}
+                                        className="video-progress-input"
+                                        style={{
+                                            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(youtubeCurrentTime / youtubeDuration) * 100 || 0}%, #4b5563 ${(youtubeCurrentTime / youtubeDuration) * 100 || 0}%, #4b5563 100%)`
+                                        }}
+                                    />
+                                </div>
+                                <div className="youtube-controls-single-line">
+                                    <button
+                                        onClick={handleYoutubePlayPause}
+                                        className="video-control-btn"
+                                        title={isYoutubePlaying ? 'Pause' : 'Play'}
+                                    >
+                                        {isYoutubePlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
+                                    </button>
+
+                                    <span className="video-time-text">
+                                        {formatVideoTime(youtubeCurrentTime)} / {formatVideoTime(youtubeDuration)}
+                                    </span>
+
+                                    <span className="youtube-title-text">
+                                        {activeYoutubeMedia?.title || 'YouTube Video'}
+                                    </span>
+
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={handleYoutubeMinimizeToggle}
+                                        className="video-control-btn"
+                                        title="Minimize video"
+                                    >
+                                        _
+                                    </button>
+
+                                    <button
+                                        onClick={handleYoutubeClose}
+                                        className="video-control-btn video-close-btn"
+                                        title="Close YouTube video"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Attendee indicator remains visual-only; interaction is blocked for all roles above. */}
+                        {!isTrainer && (inlineMedia && inlineMedia.type === 'youtube') && (
+                            <div className="youtube-attendee-readonly-overlay" />
+                        )}
+                    </div>
+                )}
+
+                {inlineVideo && isInlineVideoMinimized && (
+                    <div className="minimized-media-pill">
+                        <span className="minimized-media-title">Video Minimized</span>
+                        {isTrainer && (
+                            <button
+                                onClick={handleInlineVideoMinimizeToggle}
+                                className="video-control-btn"
+                                title="Restore video"
+                            >
+                                □
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {activeYoutubeMedia && isYoutubeMinimized && (
+                    <div className="minimized-media-pill">
+                        <span className="minimized-media-title">YouTube Minimized</span>
+                        {isTrainer && (
+                            <button
+                                onClick={handleYoutubeMinimizeToggle}
+                                className="video-control-btn"
+                                title="Restore YouTube"
+                            >
+                                □
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Canvas Section - Takes full width when no video, 50% width when video/YouTube is present */}
+                <div className={hasExpandedMedia ? "whiteboard-split-canvas" : "whiteboard-full-canvas"}>
                     <div
                         className="canvas-container relative"
                     >

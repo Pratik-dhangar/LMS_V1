@@ -75,7 +75,7 @@ const LearnerDashboard = () => {
     },
     {
       icon: FileBarChart,
-      title: "My Reports",
+      title: "My Progress Report",
       onClick: () => navigate("/learner/my-reports"),
     },
   ];

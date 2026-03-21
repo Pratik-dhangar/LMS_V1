@@ -11,6 +11,8 @@ const LearningProgramSidebar = ({
   setSelectedPromptLevel,
   selectedReinforcementLevel,
   setSelectedReinforcementLevel,
+  reinforcementValueVisible = true,
+  onToggleReinforcementValueVisibility,
   selectedProgramId,
   handleProgramCheck,
   webRTC,
@@ -70,7 +72,7 @@ const LearningProgramSidebar = ({
               style={{
                 width: '100%',
                 padding: '8px',
-                border: '2px solid #4A90E2',
+                border: '1px solid gray',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'inherit',
@@ -218,10 +220,31 @@ const LearningProgramSidebar = ({
           </button>
         )}
 
-        <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
+        <div className="sidebar-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <span><Emoji emoji="🎯" size="base" /> Reinforcement Meter</span>
+          {onToggleReinforcementValueVisibility && (
+            <button
+              type="button"
+              onClick={onToggleReinforcementValueVisibility}
+              style={{
+                border: '1px solid #16a34a',
+                backgroundColor: reinforcementValueVisible ? '#ecfdf5' : '#f8fafc',
+                color: '#166534',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+              title={reinforcementValueVisible ? 'Hide R value on learner page' : 'Show R value on learner page'}
+            >
+              {reinforcementValueVisible ? 'Hide' : 'View'}
+            </button>
+          )}
+        </div>
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
-            {['Tick', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Cross'].map((r) => {
+            {['Cross', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Tick'].map((r) => {
               const val = r === 'Cross' ? 0 : r === 'Tick' ? 100 : r;
               const isSelected = selectedReinforcementLevel === val;
               return (

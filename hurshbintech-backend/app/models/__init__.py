@@ -64,6 +64,7 @@ from app.models.subscription import (
 )
 from app.models.whiteboard_state_model import WhiteboardState
 from app.models.session_feedback_model import SessionFeedback
+from app.models.free_assessment_model import FreeAssessment
 
 __all__ = [
     "User",
@@ -122,4 +123,5 @@ __all__ = [
     "AdjustmentType",
     "PublicSubscriptionInquiry",
     "WhiteboardState",
+    "FreeAssessment",
 ]
