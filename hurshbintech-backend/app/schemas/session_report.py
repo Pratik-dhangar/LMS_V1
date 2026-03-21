@@ -16,7 +16,7 @@ class SessionReportCreate(BaseModel):
     program_id: Optional[int] = None
     program_name: str = Field(..., min_length=1, max_length=500)
     prompt_meter: Literal["0", "I", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]
-    reinforcement_meter: Optional[Literal["Full", "90", "80", "70", "60", "50", "40", "30", "20", "10"]] = None
+    reinforcement_meter: Optional[Literal["Full", "90", "80", "70", "60", "50", "40", "30", "20", "10", "0"]] = None
 
 
 class SessionReportResponse(BaseModel):

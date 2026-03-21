@@ -47,7 +47,7 @@ const ProgramGraphView = () => {
       );
 
       // Process data to add session labels with ID and time
-      const processedData = data.map((session) => {
+      const processedData = data.map((session, idx) => {
         const sessionTime = session.session_date
           ? new Date(session.session_date).toLocaleString("en-US", {
             month: "short",
@@ -60,6 +60,7 @@ const ProgramGraphView = () => {
         return {
           ...session,
           sessionLabel: `S${session.session_id} - ${sessionTime}`,
+          xAxisKey: `S${session.session_id}-${idx}`,
         };
       });
 
@@ -116,13 +117,17 @@ const ProgramGraphView = () => {
         </text>
       );
     }
-    return null;
+    return (
+      <text x={x + width / 2} y={y - 10} fill="#333" textAnchor="middle" fontSize="12" fontWeight="bold">
+        {value}
+      </text>
+    );
   };
 
   // Custom bar shape to render green line only on bars with 0 value
   const CustomBarShape = (props) => {
     const { x, y, width, height, fill, payload } = props;
-    const isZeroValue = payload && payload.prompt_value === 0;
+    const isZeroValue = payload && payload.reinforcement_value === 0;
 
     return (
       <>
@@ -151,10 +156,8 @@ const ProgramGraphView = () => {
   // Custom tooltip for the chart
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const sessionIndex = sessionData.findIndex(
-        (s) => s.sessionLabel === label
-      );
-      const session = sessionData[sessionIndex];
+      const entry = payload[0];
+      const session = entry.payload;
 
       return (
         <div
@@ -180,12 +183,10 @@ const ProgramGraphView = () => {
               })}
             </p>
           )}
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color, margin: "4px 0" }}>
-              {entry.name}:{" "}
-              {entry.payload.prompt_meter}{" "}({entry.value}/100)
-            </p>
-          ))}
+          <p style={{ color: entry.color, margin: "4px 0" }}>
+            {entry.name}:{" "}
+            {Number(session?.reinforcement_value ?? entry?.value ?? 0)} ({Number(session?.reinforcement_value ?? entry?.value ?? 0)}/100)
+          </p>
         </div>
       );
     }
@@ -299,10 +300,10 @@ const ProgramGraphView = () => {
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis
-                      dataKey="sessionLabel"
-                      angle={0}
-                      textAnchor="middle"
-                      height={80}
+                      dataKey="xAxisKey"
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
                       tick={{ fontSize: 12 }}
                       label={{
                         value: "Session ID & Time",
@@ -319,19 +320,19 @@ const ProgramGraphView = () => {
                         position: "insideLeft",
                       }}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip shared={false} content={<CustomTooltip />} />
                     <Legend
                       wrapperStyle={{ paddingTop: "20px" }}
                       iconType="square"
                     />
                     <Bar
-                      dataKey="prompt_value"
+                      dataKey="reinforcement_value"
                       fill="#db9d32"
-                      name="Prompt Level"
+                      name="Reinforcement Level"
                       shape={<CustomBarShape />}
                     >
                       <LabelList
-                        dataKey="prompt_value"
+                        dataKey="reinforcement_value"
                         content={renderCustomLabel}
                         position="top"
                       />
@@ -371,7 +372,7 @@ const ProgramGraphView = () => {
                           Date & Time
                         </th>
                         <th style={{ padding: "12px", textAlign: "left" }}>
-                          Prompt Level
+                          Reinforcement Level
                         </th>
                       </tr>
                     </thead>
@@ -417,7 +418,7 @@ const ProgramGraphView = () => {
                                 fontWeight: "600",
                               }}
                             >
-                              {session.prompt_meter} ({session.prompt_value}/100)
+                              {session.reinforcement_meter || "N/A"} ({session.reinforcement_value ?? 0}/100)
                             </span>
                           </td>
                         </tr>
@@ -519,10 +520,10 @@ const ProgramGraphView = () => {
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis
-                      dataKey="sessionLabel"
-                      angle={0}
-                      textAnchor="middle"
-                      height={70}
+                      dataKey="xAxisKey"
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                       tick={{ fontSize: 11 }}
                       label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }}
                     />
@@ -531,16 +532,16 @@ const ProgramGraphView = () => {
                       tick={{ fontSize: 11 }}
                       label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip shared={false} content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
                     <Bar
-                      dataKey="prompt_value"
+                      dataKey="reinforcement_value"
                       fill="#db9d32"
-                      name="Prompt Level"
+                      name="Reinforcement Level"
                       shape={<CustomBarShape />}
                     >
                       <LabelList
-                        dataKey="prompt_value"
+                        dataKey="reinforcement_value"
                         content={renderCustomLabel}
                         position="top"
                       />
@@ -559,7 +560,7 @@ const ProgramGraphView = () => {
                     <tr style={{ backgroundColor: "#db9d32", color: "white" }}>
                       <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Session ID</th>
                       <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Date & Time</th>
-                      <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Prompt Level</th>
+                      <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Reinforcement Level</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -587,7 +588,7 @@ const ProgramGraphView = () => {
                               fontWeight: "600",
                             }}
                           >
-                            {session.prompt_meter} ({session.prompt_value}/100)
+                            {session.reinforcement_meter || "N/A"} ({session.reinforcement_value ?? 0}/100)
                           </span>
                         </td>
                       </tr>

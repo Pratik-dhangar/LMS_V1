@@ -123,7 +123,7 @@ const AdminLearnerProgramsView = () => {
             }
             const processedPrograms = pdfData.programs.map((prog) => ({
                 ...prog,
-                sessions: (prog.sessions || []).map((session) => {
+                sessions: (prog.sessions || []).map((session, idx) => {
                     const sessionTime = session.session_date
                         ? new Date(session.session_date).toLocaleString("en-US", {
                             month: "short",
@@ -135,6 +135,7 @@ const AdminLearnerProgramsView = () => {
                     return {
                         ...session,
                         sessionLabel: `S${session.session_id} - ${sessionTime}`,
+                        xAxisKey: `S${session.session_id}-${idx}`,
                     };
                 }),
             }));
@@ -168,13 +169,17 @@ const AdminLearnerProgramsView = () => {
                 </text>
             );
         }
-        return null;
+        return (
+            <text x={x + width / 2} y={y - 10} fill="#333" textAnchor="middle" fontSize="11" fontWeight="bold">
+                {value}
+            </text>
+        );
     };
 
     // Custom bar shape to render green line only on bars with 0 value
     const CustomBarShape = (props) => {
         const { x, y, width, height, fill, payload } = props;
-        const isZeroValue = payload && payload.prompt_value === 0;
+        const isZeroValue = payload && payload.reinforcement_value === 0;
 
         return (
             <g>
@@ -470,17 +475,18 @@ const AdminLearnerProgramsView = () => {
                                                     <ResponsiveContainer width="100%" height={280}>
                                                         <BarChart data={prog.sessions} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
                                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                            <XAxis dataKey="sessionLabel" angle={0} textAnchor="middle" height={70} tick={{ fontSize: 11 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
+                                                            <XAxis dataKey="sessionLabel" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
                                                             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }} />
                                                             <Tooltip
                                                                 content={({ active, payload, label }) => {
                                                                     if (active && payload && payload.length) {
-                                                                        const session = prog.sessions.find(s => s.sessionLabel === label);
+                                                                        const entry = payload[0];
+                                                                        const session = entry.payload;
                                                                         return (
                                                                             <div style={{ backgroundColor: "white", padding: "12px", border: "1px solid #ccc", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                                                                                 {session && <p style={{ fontWeight: "bold", marginBottom: "4px" }}>Session ID: {session.session_id}</p>}
                                                                                 {session?.session_date && <p style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}>{new Date(session.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
-                                                                                {payload.map((entry, i) => <p key={i} style={{ color: entry.color, margin: "2px 0" }}>{entry.name}: {session?.prompt_meter} ({entry.value}/100)</p>)}
+                                                                                <p style={{ color: entry.color, margin: "2px 0" }}>{entry.name}: {Number(entry?.value ?? 0)} ({Number(entry?.value ?? 0)}/100)</p>
                                                                             </div>
                                                                         );
                                                                     }
@@ -489,14 +495,14 @@ const AdminLearnerProgramsView = () => {
                                                             />
                                                             <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
                                                             <Bar
-                                                                dataKey="prompt_value"
+                                                                dataKey="reinforcement_value"
                                                                 fill="#db9d32"
-                                                                name="Prompt Level"
+                                                                name="Reinforcement Level"
                                                                 radius={[6, 6, 0, 0]}
                                                                 shape={<CustomBarShape />}
                                                             >
                                                                 <LabelList
-                                                                    dataKey="prompt_value"
+                                                                    dataKey="reinforcement_value"
                                                                     content={renderCustomLabel}
                                                                     position="top"
                                                                 />
@@ -510,7 +516,7 @@ const AdminLearnerProgramsView = () => {
                                                             <tr style={{ backgroundColor: "#db9d32", color: "white" }}>
                                                                 <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Session ID</th>
                                                                 <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Date & Time</th>
-                                                                <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Prompt Level</th>
+                                                                <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Reinforcement Level</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -518,7 +524,7 @@ const AdminLearnerProgramsView = () => {
                                                                 <tr key={si} style={{ backgroundColor: si % 2 === 0 ? "#f9fafb" : "white", borderBottom: "1px solid #e5e7eb" }}>
                                                                     <td style={{ padding: "9px 12px", fontWeight: "600" }}>Session {session.session_id}</td>
                                                                     <td style={{ padding: "9px 12px", color: "#6b7280" }}>{session.session_date ? new Date(session.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "N/A"}</td>
-                                                                    <td style={{ padding: "9px 12px" }}><span style={{ padding: "3px 10px", borderRadius: "6px", backgroundColor: "#fef3c7", color: "#9c6a08", fontWeight: "600" }}>{session.prompt_meter} ({session.prompt_value}/100)</span></td>
+                                                                    <td style={{ padding: "9px 12px" }}><span style={{ padding: "3px 10px", borderRadius: "6px", backgroundColor: "#fef3c7", color: "#9c6a08", fontWeight: "600" }}>{session.reinforcement_meter || 'N/A'} ({session.reinforcement_value ?? 0}/100)</span></td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>

@@ -31,7 +31,7 @@ const AdminProgramGraphView = () => {
                 programName
             );
 
-            const processedData = data.map((session) => {
+            const processedData = data.map((session, idx) => {
                 const sessionTime = session.session_date
                     ? new Date(session.session_date).toLocaleString("en-US", {
                         month: "short",
@@ -43,6 +43,7 @@ const AdminProgramGraphView = () => {
                 return {
                     ...session,
                     sessionLabel: `S${session.session_id} - ${sessionTime}`,
+                    xAxisKey: `S${session.session_id}-${idx}`,
                 };
             });
 
@@ -78,13 +79,17 @@ const AdminProgramGraphView = () => {
                 </text>
             );
         }
-        return null;
+        return (
+            <text x={x + width / 2} y={y - 10} fill="#333" textAnchor="middle" fontSize="11" fontWeight="bold">
+                {value}
+            </text>
+        );
     };
 
     // Custom bar shape to render green line only on bars with 0 value
     const CustomBarShape = (props) => {
         const { x, y, width, height, fill, payload } = props;
-        const isZeroValue = payload && payload.prompt_value === 0;
+        const isZeroValue = payload && payload.reinforcement_value === 0;
 
         return (
             <g>
@@ -135,10 +140,10 @@ const AdminProgramGraphView = () => {
         }
     };
 
-    const CustomTooltip = ({ active, payload, label }) => {
+    const CustomTooltip = ({ active, payload }) => {
         if (active && payload && payload.length) {
-            const sessionIndex = sessionData.findIndex((s) => s.sessionLabel === label);
-            const session = sessionData[sessionIndex];
+            const entry = payload[0];
+            const session = entry.payload;
             return (
                 <div style={{
                     backgroundColor: "white", padding: "15px", border: "1px solid #ccc",
@@ -155,11 +160,9 @@ const AdminProgramGraphView = () => {
                             })}
                         </p>
                     )}
-                    {payload.map((entry, index) => (
-                        <p key={index} style={{ color: entry.color, margin: "4px 0" }}>
-                            {entry.name}: {entry.payload.prompt_meter} ({entry.value}/100)
-                        </p>
-                    ))}
+                    <p style={{ color: entry.color, margin: "4px 0" }}>
+                        {entry.name}: {Number(session?.reinforcement_value ?? entry?.value ?? 0)} ({Number(session?.reinforcement_value ?? entry?.value ?? 0)}/100)
+                    </p>
                 </div>
             );
         }
@@ -241,10 +244,10 @@ const AdminProgramGraphView = () => {
                                     <BarChart data={sessionData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis
-                                            dataKey="sessionLabel"
-                                            angle={0}
-                                            textAnchor="middle"
-                                            height={80}
+                                            dataKey="xAxisKey"
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={100}
                                             tick={{ fontSize: 12 }}
                                             label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }}
                                         />
@@ -253,17 +256,17 @@ const AdminProgramGraphView = () => {
                                             tick={{ fontSize: 12 }}
                                             label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }}
                                         />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip shared={false} content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="square" />
                                         <Bar
-                                            dataKey="prompt_value"
+                                            dataKey="reinforcement_value"
                                             fill="#db9d32"
-                                            name="Prompt Level"
+                                            name="Reinforcement Level"
                                             radius={[8, 8, 0, 0]}
                                             shape={<CustomBarShape />}
                                         >
                                             <LabelList
-                                                dataKey="prompt_value"
+                                                dataKey="reinforcement_value"
                                                 content={renderCustomLabel}
                                                 position="top"
                                             />
@@ -286,7 +289,7 @@ const AdminProgramGraphView = () => {
                                             <tr style={{ backgroundColor: "#f3f4f6", borderBottom: "2px solid #e5e7eb" }}>
                                                 <th style={{ padding: "12px", textAlign: "left" }}>Session ID</th>
                                                 <th style={{ padding: "12px", textAlign: "left" }}>Date &amp; Time</th>
-                                                <th style={{ padding: "12px", textAlign: "left" }}>Prompt Level</th>
+                                                <th style={{ padding: "12px", textAlign: "left" }}>Reinforcement Level</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -310,7 +313,7 @@ const AdminProgramGraphView = () => {
                                                             padding: "4px 12px", borderRadius: "6px",
                                                             backgroundColor: "#dbeafe", color: "#9c6a08", fontWeight: "600",
                                                         }}>
-                                                            {session.prompt_meter} ({session.prompt_value}/100)
+                                                            {session.reinforcement_meter || 'N/A'} ({session.reinforcement_value ?? 0}/100)
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -383,25 +386,25 @@ const AdminProgramGraphView = () => {
                                     <BarChart data={sessionData} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                         <XAxis
-                                            dataKey="sessionLabel"
-                                            angle={0} textAnchor="middle" height={70} tick={{ fontSize: 11 }}
+                                            dataKey="xAxisKey"
+                                            angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11 }}
                                             label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }}
                                         />
                                         <YAxis
                                             domain={[0, 100]} tick={{ fontSize: 11 }}
                                             label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }}
                                         />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip shared={false} content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
                                         <Bar
-                                            dataKey="prompt_value"
+                                            dataKey="reinforcement_value"
                                             fill="#db9d32"
-                                            name="Prompt Level"
+                                            name="Reinforcement Level"
                                             radius={[6, 6, 0, 0]}
                                             shape={<CustomBarShape />}
                                         >
                                             <LabelList
-                                                dataKey="prompt_value"
+                                                dataKey="reinforcement_value"
                                                 content={renderCustomLabel}
                                                 position="top"
                                             />
@@ -420,7 +423,7 @@ const AdminProgramGraphView = () => {
                                         <tr style={{ backgroundColor: "#db9d32", color: "white" }}>
                                             <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Session ID</th>
                                             <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Date &amp; Time</th>
-                                            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Prompt Level</th>
+                                            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: "600" }}>Reinforcement Level</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -446,7 +449,7 @@ const AdminProgramGraphView = () => {
                                                         padding: "3px 12px", borderRadius: "6px",
                                                         backgroundColor: "#fef3c7", color: "#9c6a08", fontWeight: "600",
                                                     }}>
-                                                        {session.prompt_meter} ({session.prompt_value}/100)
+                                                        {session.reinforcement_meter || 'N/A'} ({session.reinforcement_value ?? 0}/100)
                                                     </span>
                                                 </td>
                                             </tr>
