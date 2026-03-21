@@ -144,7 +144,7 @@ const LearnerProgramsView = () => {
       // For each program, process sessions to add sessionLabel
       const processedPrograms = pdfData.programs.map((prog) => ({
         ...prog,
-        sessions: (prog.sessions || []).map((session) => {
+        sessions: (prog.sessions || []).map((session, idx) => {
           const sessionTime = session.session_date
             ? new Date(session.session_date).toLocaleString("en-US", {
               month: "short",
@@ -156,6 +156,7 @@ const LearnerProgramsView = () => {
           return {
             ...session,
             sessionLabel: `S${session.session_id} - ${sessionTime}`,
+            xAxisKey: `S${session.session_id}-${idx}`,
           };
         }),
       }));
@@ -189,13 +190,17 @@ const LearnerProgramsView = () => {
         </text>
       );
     }
-    return null;
+    return (
+      <text x={x + width / 2} y={y - 10} fill="#333" textAnchor="middle" fontSize="11" fontWeight="bold">
+        {value}
+      </text>
+    );
   };
 
   // Custom bar shape to render green line only on bars with 0 value
   const CustomBarShape = (props) => {
     const { x, y, width, height, fill, payload } = props;
-    const isZeroValue = payload && payload.prompt_value === 0;
+    const isZeroValue = payload && payload.reinforcement_value === 0;
 
     return (
       <g>
@@ -253,7 +258,7 @@ const LearnerProgramsView = () => {
                 <h1 className="page-title">Skill Development Graph  </h1>
                 <p className="page-description">
                   Learner's Progress View
-                  </p>
+                </p>
               </div>
             </div>
 
@@ -525,9 +530,9 @@ const LearnerProgramsView = () => {
                               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                               <XAxis
                                 dataKey="sessionLabel"
-                                angle={0}
-                                textAnchor="middle"
-                                height={70}
+                                angle={-45}
+                                textAnchor="end"
+                                height={80}
                                 tick={{ fontSize: 11 }}
                                 label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }}
                               />
@@ -539,7 +544,8 @@ const LearnerProgramsView = () => {
                               <Tooltip
                                 content={({ active, payload, label }) => {
                                   if (active && payload && payload.length) {
-                                    const session = prog.sessions.find(s => s.sessionLabel === label);
+                                    const entry = payload[0];
+                                    const session = entry.payload;
                                     return (
                                       <div style={{ backgroundColor: "white", padding: "12px", border: "1px solid #ccc", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                                         {session && <p style={{ fontWeight: "bold", marginBottom: "4px" }}>Session ID: {session.session_id}</p>}
@@ -548,11 +554,9 @@ const LearnerProgramsView = () => {
                                             {new Date(session.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                                           </p>
                                         )}
-                                        {payload.map((entry, i) => (
-                                          <p key={i} style={{ color: entry.color, margin: "2px 0" }}>
-                                            {entry.name}: {session?.prompt_meter} ({entry.value}/100)
-                                          </p>
-                                        ))}
+                                        <p style={{ color: entry.color, margin: "2px 0" }}>
+                                          {entry.name}: {Number(entry?.value ?? 0)} ({Number(entry?.value ?? 0)}/100)
+                                        </p>
                                       </div>
                                     );
                                   }
@@ -561,14 +565,14 @@ const LearnerProgramsView = () => {
                               />
                               <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
                               <Bar
-                                dataKey="prompt_value"
+                                dataKey="reinforcement_value"
                                 fill="#db9d32"
-                                name="Prompt Level"
+                                name="Reinforcement Level"
                                 radius={[6, 6, 0, 0]}
                                 shape={<CustomBarShape />}
                               >
                                 <LabelList
-                                  dataKey="prompt_value"
+                                  dataKey="reinforcement_value"
                                   content={renderCustomLabel}
                                   position="top"
                                 />
@@ -584,7 +588,7 @@ const LearnerProgramsView = () => {
                               <tr style={{ backgroundColor: "#db9d32", color: "white" }}>
                                 <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Session ID</th>
                                 <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Date & Time</th>
-                                <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Prompt Level</th>
+                                <th style={{ padding: "9px 12px", textAlign: "left", fontWeight: "600" }}>Reinforcement Level</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -604,7 +608,7 @@ const LearnerProgramsView = () => {
                                   </td>
                                   <td style={{ padding: "9px 12px" }}>
                                     <span style={{ padding: "3px 10px", borderRadius: "6px", backgroundColor: "#fef3c7", color: "#9c6a08", fontWeight: "600" }}>
-                                      {session.prompt_meter} ({session.prompt_value}/100)
+                                      {session.reinforcement_meter || "N/A"} ({session.reinforcement_value ?? 0}/100)
                                     </span>
                                   </td>
                                 </tr>

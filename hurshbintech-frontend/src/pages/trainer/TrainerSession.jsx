@@ -270,10 +270,31 @@ const TrainerSession = () => {
   // Session report handler (Trainer only)
   const handleSaveReport = async (reportData) => {
     try {
-      if (!reportData?.programName || !reportData?.promptMeter) {
-        toast.error('Please select a program and prompt level');
+      if (!reportData?.programName || reportData?.reinforcementMeter === null || reportData?.reinforcementMeter === undefined) {
+        toast.error('Please select a program and reinforcement level');
         return;
       }
+
+      const toPromptMeter = (value) => {
+        if (value === null || value === undefined || value === '') return 'I';
+        return String(value);
+      };
+
+      const toReinforcementMeter = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+
+        if (value === 'Full') return 'Full';
+
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) return null;
+
+        if (numeric >= 100) return 'Full';
+        if (numeric <= 0) return '0';
+        return String(numeric);
+      };
+
+      const reinforcementMeter = toReinforcementMeter(reportData.reinforcementMeter);
+      const promptMeter = toPromptMeter(reportData.promptMeter);
 
       // Convert sessionId to integer and build report with API-required fields
       const numericSessionId = parseInt(sessionId) || state.sessionInfo?.id;
@@ -282,7 +303,8 @@ const TrainerSession = () => {
         learner_id: state.sessionInfo?.learner_id,
         program_id: reportData.programId || null,
         program_name: reportData.programName,
-        prompt_meter: reportData.promptMeter,
+        prompt_meter: promptMeter,
+        reinforcement_meter: reinforcementMeter,
       };
 
       console.log('[TrainerSession] Saving report:', reportPayload);
