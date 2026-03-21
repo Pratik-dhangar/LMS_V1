@@ -8,7 +8,7 @@ import json
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
 from datetime import timedelta
@@ -30,6 +30,23 @@ from app.utils.s3_utils import convert_s3_url_to_proxy
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+async def _has_dedicated_coach_column(db: AsyncSession) -> bool:
+    """Return True when subscription_packages.dedicated_coach_id exists."""
+    result = await db.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'subscription_packages'
+                  AND column_name = 'dedicated_coach_id'
+            )
+            """
+        )
+    )
+    return bool(result.scalar())
 
 
 @router.get("/available-coaches", response_model=List[CoachResponse])
@@ -55,7 +72,8 @@ async def get_available_coaches(
     # Batch lookup: map coach_profile_id -> dedicated package info
     coach_ids = [c.id for c in coaches]
     dedicated_map = {}
-    if coach_ids:
+    has_dedicated_column = await _has_dedicated_coach_column(db)
+    if coach_ids and has_dedicated_column:
         pkg_rows = (await db.execute(
             select(
                 SubscriptionPackage.dedicated_coach_id,
@@ -77,6 +95,10 @@ async def get_available_coaches(
                 "sessions_count": row[4],
                 "validity_days": row[5],
             }
+    elif coach_ids:
+        logger.warning(
+            "Skipping dedicated package lookup in /available-coaches because subscription_packages.dedicated_coach_id is missing"
+        )
     
     # Convert responses with package info
     responses = []
