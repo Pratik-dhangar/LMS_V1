@@ -250,7 +250,7 @@ const AdminManageLearners = () => {
                                                 <th className="table-primary-th">Name</th>
                                                 <th className="table-primary-th">Passcode</th>
                                                 <th className="table-primary-th">Start Date</th>
-                                                <th className="table-primary-th">All Program Goals Report</th>
+                                                <th className="table-primary-th">Skill Development Graph </th>
                                                 <th className="table-primary-th">Final Generated Reports</th>
                                             </tr>
                                         </thead>
@@ -323,7 +323,7 @@ const AdminManageLearners = () => {
                                                             ? new Date(learner.date_of_assessment).toLocaleDateString()
                                                             : 'N/A'}
                                                     </td>
-                                                    {/* All Program Goals Report */}
+                                                    {/* Skill Development Graph  */}
                                                     <td className="table-primary-td table-primary-td-center">
                                                         <button
                                                             onClick={() => handleViewProgress(learner)}
@@ -333,7 +333,7 @@ const AdminManageLearners = () => {
                                                             📈 View Reports
                                                         </button>
                                                     </td>
-                                                    {/* Final Generated Reports */}
+                                                    {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT */}
                                                     <td className="table-primary-td">
                                                         {(() => {
                                                             const progReports = progressReportsMap[learner.user_id] || [];

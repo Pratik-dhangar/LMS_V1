@@ -1,5 +1,59 @@
 import React, { useMemo } from 'react';
 
+const DEFAULT_TIME = {
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
+    display: '00:00:00'
+};
+
+const pad2 = (value) => String(Math.max(0, Number.parseInt(value, 10) || 0)).padStart(2, '0');
+
+const normalizeFormattedTime = (value) => {
+    if (!value) {
+        return DEFAULT_TIME;
+    }
+
+    if (typeof value === 'string') {
+        // Accept strings like "MM:SS" or "HH:MM:SS"
+        const parts = value.split(':').map((part) => pad2(part));
+        if (parts.length === 2) {
+            const [minutes, seconds] = parts;
+            return {
+                hours: '00',
+                minutes,
+                seconds,
+                display: `00:${minutes}:${seconds}`
+            };
+        }
+        if (parts.length >= 3) {
+            const [hours, minutes, seconds] = parts;
+            return {
+                hours,
+                minutes,
+                seconds,
+                display: `${hours}:${minutes}:${seconds}`
+            };
+        }
+        return DEFAULT_TIME;
+    }
+
+    if (typeof value === 'object') {
+        const hours = pad2(value.hours ?? '00');
+        const minutes = pad2(value.minutes ?? '00');
+        const seconds = pad2(value.seconds ?? '00');
+        const display = value.display || `${hours}:${minutes}:${seconds}`;
+        return {
+            hours,
+            minutes,
+            seconds,
+            display
+        };
+    }
+
+    return DEFAULT_TIME;
+};
+
 /**
  * StopwatchDisplay Component
  * Displays stopwatch time with controls
@@ -30,17 +84,19 @@ const StopwatchDisplay = ({
     size = 'md',
     variant = 'standard'
 }) => {
+    const safeTime = useMemo(() => normalizeFormattedTime(formattedTime), [formattedTime]);
+
     // ==================== TIME INPUT STATE ====================
-    const [inputHours, setInputHours] = React.useState(formattedTime.hours);
-    const [inputMinutes, setInputMinutes] = React.useState(formattedTime.minutes);
-    const [inputSeconds, setInputSeconds] = React.useState(formattedTime.seconds);
+    const [inputHours, setInputHours] = React.useState(safeTime.hours);
+    const [inputMinutes, setInputMinutes] = React.useState(safeTime.minutes);
+    const [inputSeconds, setInputSeconds] = React.useState(safeTime.seconds);
     const [showSetTime, setShowSetTime] = React.useState(false);
 
     // Calculate hand rotations based on time
     const handRotations = useMemo(() => {
-        const hours = parseInt(formattedTime.hours) || 0;
-        const minutes = parseInt(formattedTime.minutes) || 0;
-        const seconds = parseInt(formattedTime.seconds) || 0;
+        const hours = parseInt(safeTime.hours) || 0;
+        const minutes = parseInt(safeTime.minutes) || 0;
+        const seconds = parseInt(safeTime.seconds) || 0;
 
         // Total seconds for smooth calculation
         const totalSeconds = hours * 3600 + minutes * 60 + seconds;
@@ -50,7 +106,7 @@ const StopwatchDisplay = ({
             minutesRotation: (minutes * 6) + (seconds * 0.1), // 360/60 = 6 degrees per minute
             hoursRotation: ((hours % 12) * 30) + (minutes * 0.5), // 360/12 = 30 degrees per hour
         };
-    }, [formattedTime]);
+    }, [safeTime]);
 
     // Handle set time button click
     const handleSetTimeClick = () => {
@@ -64,11 +120,11 @@ const StopwatchDisplay = ({
     // Update input values when formattedTime changes
     React.useEffect(() => {
         if (!showSetTime) {
-            setInputHours(formattedTime.hours);
-            setInputMinutes(formattedTime.minutes);
-            setInputSeconds(formattedTime.seconds);
+            setInputHours(safeTime.hours);
+            setInputMinutes(safeTime.minutes);
+            setInputSeconds(safeTime.seconds);
         }
-    }, [formattedTime, showSetTime]);
+    }, [safeTime, showSetTime]);
 
     // ==================== SIZE MAPPINGS ====================
     const sizeClasses = {
@@ -149,7 +205,7 @@ const StopwatchDisplay = ({
                         textAnchor="middle"
                         fill="#4E342E"
                     >
-                        {`${formattedTime.minutes}:${formattedTime.seconds}`}
+                        {`${safeTime.minutes}:${safeTime.seconds}`}
                     </text>
 
                     {/* Running indicator dot */}
@@ -283,7 +339,7 @@ const StopwatchDisplay = ({
         return (
             <div className={`flex items-center gap-2 ${currentSize.container}`}>
                 <div className={`font-mono font-bold text-gray-800 ${currentSize.time}`}>
-                    {formattedTime.display}
+                    {safeTime.display}
                 </div>
                 {isRunning && (
                     <div className="flex gap-1">
@@ -314,7 +370,7 @@ const StopwatchDisplay = ({
             <div className="grid grid-cols-2 gap-2 mb-4 w-full">
                 <div className="bg-purple-50 border border-purple-200 rounded p-2 text-center">
                     <div className={`font-mono font-bold text-purple-600 ${currentSize.time}`}>
-                        {formattedTime.minutes}
+                        {safeTime.minutes}
                     </div>
                     <div className={`text-[10px] text-gray-600 uppercase mt-1 ${currentSize.label}`}>
                         Minutes
@@ -322,7 +378,7 @@ const StopwatchDisplay = ({
                 </div>
                 <div className="bg-amber-50 border border-amber-200 rounded p-2 text-center">
                     <div className={`font-mono font-bold text-amber-600 ${currentSize.time}`}>
-                        {formattedTime.seconds}
+                        {safeTime.seconds}
                     </div>
                     <div className={`text-[10px] text-gray-600 uppercase mt-1 ${currentSize.label}`}>
                         Seconds

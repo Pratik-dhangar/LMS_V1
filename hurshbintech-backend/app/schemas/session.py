@@ -14,7 +14,6 @@ class SessionCreate(BaseModel):
     """Schema for creating a new session (by Head)"""
 
     title: str = Field(..., min_length=3, max_length=255)
-    description: Optional[str] = None
     trainer_id: int
     learner_id: int
     scheduled_date: datetime
@@ -29,7 +28,6 @@ class SessionUpdate(BaseModel):
     """Schema for updating session"""
 
     title: Optional[str] = Field(None, min_length=3, max_length=255)
-    description: Optional[str] = None
     scheduled_date: Optional[datetime] = None
     duration: Optional[int] = Field(None, ge=15, le=240)
     content_ids: Optional[List[int]] = None  # IDs of learning content to attach
@@ -80,7 +78,6 @@ class SessionResponse(BaseModel):
     id: int
     session_id: str
     title: str
-    description: Optional[str]
     trainer_id: int
     learner_id: int
     created_by_id: int

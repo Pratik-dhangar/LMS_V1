@@ -154,7 +154,7 @@ const sessionReportService = {
     }
   },
 
-  // Send All Program Goals Report to learner's registered email (Head/Admin only)
+  // Send Skill Development Graph  to learner's registered email (Head/Admin only)
   sendGoalsReport: async (learnerId, sentByName = '') => {
     try {
       const response = await axios.post(`/session-reports/send-goals-report/${learnerId}`, {

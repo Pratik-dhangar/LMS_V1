@@ -288,7 +288,7 @@ const CoachManageLearningReports = () => {
                                                             <td className="table-primary-td">
                                                                 <div className="table-primary-cell-name-text">{learner.learner_name}</div>
                                                             </td>
-                                                            {/* Final Generated Reports — always has reports since row is only shown when ≥1 exist */}
+                                                            {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT — always has reports since row is only shown when ≥1 exist */}
                                                             <td className="table-primary-td">
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                     {progReports.map(r => (

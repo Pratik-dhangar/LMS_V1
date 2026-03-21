@@ -117,6 +117,18 @@ const adminService = {
   },
 
   /**
+   * Get Coach by ID
+   * @param {number} coachId
+   * @returns {Promise} - Coach object
+   */
+  getCoachById: async (coachId) => {
+    console.log('Fetching coach details:', { coachId });
+    const response = await axiosInstance.get(`/admin/coaches/${coachId}`);
+    console.log('Coach details received:', { id: response.data.id, name: response.data.name });
+    return response.data;
+  },
+
+  /**
    * Reveal (decrypt) a user's passcode (admin)
    * @param {number} userId - The user ID to reveal passcode for
    * @returns {Promise} - Object containing decrypted passcode

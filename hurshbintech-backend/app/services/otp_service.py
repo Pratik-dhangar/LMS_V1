@@ -47,7 +47,7 @@ class GuestOTPService:
         result = await db.execute(stmt)
         count = result.scalar()
         
-        return count < 10  # Max 10 OTPs per day per IP
+        return count < 30  # Max 30 OTPs per day per IP
 
     @staticmethod
     async def generate_otp(email: str, db: AsyncSession, ip_address: str = None) -> str:

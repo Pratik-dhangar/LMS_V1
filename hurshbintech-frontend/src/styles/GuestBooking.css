@@ -326,6 +326,14 @@
   font-family: inherit;
 }
 
+.guest-booking-flow .react-datepicker-wrapper {
+  width: 100%;
+}
+
+.guest-booking-flow .guest-date-picker-input {
+  width: 100%;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -546,6 +554,10 @@
   margin-top: 1rem;
 }
 
+.guest-booking-flow .coach-card::before {
+  display: none;
+}
+
 .guest-booking-flow .coach-card {
   position: relative;
   padding: 1.25rem 1rem;
@@ -576,7 +588,7 @@
   flex-shrink: 0;
 }
 
-.coach-card:hover {
+.guest-booking-flow .coach-card:hover {
   border-color: #41a67e;
   box-shadow: 0 4px 12px rgba(65, 166, 126, 0.15);
   transform: translateY(-2px);

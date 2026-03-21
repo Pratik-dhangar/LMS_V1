@@ -40,6 +40,7 @@ export const useInstructorHandlers = ({
     isFrozen,
     floatingAnimations,
     toolAccess,
+    lineWidth,
     audioRef,
     musicOptions,
     selectedMusic,
@@ -54,6 +55,7 @@ export const useInstructorHandlers = ({
     setSessionNotes,
     setFloatingAnimations,
     setYoutubePopups,
+    setInlineYoutube,
     setExerciseData,
     setToolAccess,
     setBuckets,
@@ -172,8 +174,8 @@ export const useInstructorHandlers = ({
     }, [floatingAnimations, setFloatingAnimations, whiteboardService]);
 
     const toggleToolAccess = useCallback((toolName) => {
-        utilToggleToolAccess(toolName, toolAccess, setToolAccess, whiteboardService, setTool);
-    }, [toolAccess, setToolAccess, whiteboardService, setTool]);
+        utilToggleToolAccess(toolName, toolAccess, setToolAccess, whiteboardService, setTool, lineWidth);
+    }, [toolAccess, setToolAccess, whiteboardService, setTool, lineWidth]);
 
     const addBucket = useCallback(() => {
         // Use actual canvas dimensions if available, fallback to defaults
@@ -318,8 +320,72 @@ export const useInstructorHandlers = ({
         e.dataTransfer.effectAllowed = 'copy';
     }, []);
 
-    // YouTube
+    // YouTube Split Video (new mode - replaces popup for Learning Content drops)
     const handleYoutubeDropped = useCallback((videoData) => {
+        // Open YouTube in split-view mode (instructor only controls)
+        // videoData: { videoId, title }
+        const youtubeState = {
+            videoId: videoData.videoId,
+            title: videoData.title,
+            isOpen: true,
+            currentTime: 0
+        };
+
+        // Update instructor state to show split YouTube panel
+        setInlineYoutube(youtubeState);
+
+        // Broadcast to attendees via WebSocket
+        if (whiteboardService) {
+            whiteboardService.sendYoutubeOpen({
+                videoId: videoData.videoId,
+                title: videoData.title,
+                timestamp: Date.now()
+            });
+            whiteboardService.sendMediaControl({
+                action: 'youtube_open',
+                videoId: videoData.videoId,
+                title: videoData.title,
+                time: 0
+            });
+            console.log('[useInstructorHandlers] YouTube split video opened:', youtubeState);
+        }
+    }, [whiteboardService, setInlineYoutube]);
+
+    // YouTube Split Video - Play/Pause/Seek Control
+    const handleYoutubeSplitControl = useCallback((action, time = 0) => {
+        // action: 'play' | 'pause' | 'seek' | 'close'
+        if (action === 'close') {
+            // Close split video
+            setInlineYoutube(null);
+        } else if (action === 'seek' || action === 'play' || action === 'pause') {
+            // Update time for seek action
+            if (action === 'seek') {
+                setInlineYoutube(prev => prev ? { ...prev, currentTime: time } : null);
+            }
+        }
+
+        // Broadcast to attendees via WebSocket
+        if (whiteboardService) {
+            whiteboardService.sendYoutubeSplit({
+                action: action,
+                time: time,
+                timestamp: Date.now()
+            });
+            if (action === 'close') {
+                whiteboardService.sendMediaControl({ action: 'youtube_close' });
+            } else if (action === 'play') {
+                whiteboardService.sendMediaControl({ action: 'youtube_play', time: time });
+            } else if (action === 'pause') {
+                whiteboardService.sendMediaControl({ action: 'youtube_pause', time: time });
+            } else if (action === 'seek') {
+                whiteboardService.sendMediaControl({ action: 'youtube_seek', time: time });
+            }
+            console.log('[useInstructorHandlers] YouTube split control:', action, time);
+        }
+    }, [whiteboardService, setInlineYoutube]);
+
+    // YouTube Legacy Popup Mode (backward compatibility - kept but not used for drops)
+    const handleYoutubePopupLegacy = useCallback((videoData) => {
         const newPopup = {
             id: Date.now(),
             videoId: videoData.videoId,
@@ -403,8 +469,10 @@ export const useInstructorHandlers = ({
         handleMusicVolumeChange,
         handleLearningContentSearch,
         onDragStartContent,
-        handleYoutubeDropped,
-        handleCloseYoutubePopup,
+        handleYoutubeDropped, // Split video mode (replaces popup for Learning Content)
+        handleYoutubeSplitControl, // Play/pause/seek/close control
+        handleYoutubePopupLegacy, // Legacy popup (kept for backward compatibility)
+        handleCloseYoutubePopup, // Legacy popup close
         handleExerciseSubmit,
         handleExerciseUpdate,
         handleExerciseDelete,

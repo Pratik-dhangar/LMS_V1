@@ -27,6 +27,7 @@ import {
   AttendeeUpperSection,
   AttendeeWhiteboardSection,
   AttendeeWhiteboardWithVideo,
+  DrawColorPalette,
   AttendeeWaitingScreen,
   AttendeeWaitingModal,
   usePromptAnimation,
@@ -604,16 +605,24 @@ const ClientSession = () => {
       {/* Main Container - Whiteboard */}
       <div className="learner-main-container">
         <AttendeeWhiteboardSection>
-          <div className="w-full h-full">
+          <div className="w-full h-full" style={{ position: 'relative' }}>
+            <DrawColorPalette
+              toolAccess={toolAccess}
+              tool={tool}
+              setTool={setTool}
+              color={color}
+              setColor={setColor}
+            />
             <Whiteboard
               whiteboardService={whiteboardService}
               isTrainer={false}
               canvasItems={canvasItems}
               setCanvasItems={setCanvasItems}
-              isFrozen={false}
+              isFrozen={isFrozen}
               isPaused={false}
               toolAccess={toolAccess}
               remoteSelectedItemIds={remoteSelectedItemIds}
+              setRemoteSelectedItemIds={setRemoteSelectedItemIds}
               textMessages={textMessages}
               setTextMessages={setTextMessages}
               feedbackMessage={feedbackMessage}

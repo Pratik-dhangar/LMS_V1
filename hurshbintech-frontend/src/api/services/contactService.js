@@ -12,6 +12,12 @@ const contactService = {
         return response.data;
     },
 
+    // Public endpoint - Submit free assessment form
+    submitFreeAssessment: async (assessmentData) => {
+        const response = await api.post('/free-assessments', assessmentData);
+        return response.data;
+    },
+
     // Admin endpoints - Get all contacts with filters
     getAdminContacts: async (skip = 0, limit = 10, filters = {}) => {
         const params = new URLSearchParams({
@@ -36,6 +42,26 @@ const contactService = {
     // Admin endpoint - Get contact statistics
     getContactStats: async () => {
         const response = await api.get('/admin/contacts/stats');
+        return response.data;
+    },
+
+    // Admin endpoints - Free assessment previews
+    getAdminFreeAssessments: async (skip = 0, limit = 10, search = '') => {
+        const params = new URLSearchParams({
+            skip: skip.toString(),
+            limit: limit.toString(),
+        });
+
+        if (search) {
+            params.append('search', search);
+        }
+
+        const response = await api.get(`/admin/free-assessments?${params.toString()}`);
+        return response.data;
+    },
+
+    getAdminFreeAssessmentDetail: async (assessmentId) => {
+        const response = await api.get(`/admin/free-assessments/${assessmentId}`);
         return response.data;
     },
 

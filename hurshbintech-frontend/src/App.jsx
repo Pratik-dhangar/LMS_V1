@@ -32,6 +32,7 @@ import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
 import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
 import AdminContacts from './pages/admin/AdminContacts';
+import AdminFreeAssessments from './pages/admin/AdminFreeAssessments';
 import AdminProfile from './pages/admin/AdminProfile';
 import AdminVendors from './pages/admin/AdminVendors';
 import AdminManageLearners from './pages/admin/AdminManageLearners';
@@ -472,6 +473,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminContacts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/free-assessments"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminFreeAssessments />
               </ProtectedRoute>
             }
           />

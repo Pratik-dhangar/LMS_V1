@@ -39,6 +39,8 @@ import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Subscription.css";
 
+const PAGE_SIZE_OPTIONS = [5, 10, 15, 25];
+
 const SubscriptionRecords = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -55,6 +57,8 @@ const SubscriptionRecords = () => {
   const [error, setError] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
+  const [recordsPage, setRecordsPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // ── Inquiry states
   const [inquiries, setInquiries] = useState([]);
@@ -64,6 +68,7 @@ const SubscriptionRecords = () => {
   const [filteredInquiries, setFilteredInquiries] = useState([]);
   const [exportingCsv, setExportingCsv] = useState(false);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
+  const [inquiriesPage, setInquiriesPage] = useState(1);
 
   // ── Appointment states
   const [appointments, setAppointments] = useState([]);
@@ -72,6 +77,7 @@ const SubscriptionRecords = () => {
   const [appointmentStatusFilter, setAppointmentStatusFilter] = useState("");
   const [appointmentSearch, setAppointmentSearch] = useState("");
   const [updatingAppointment, setUpdatingAppointment] = useState(null);
+  const [appointmentsPage, setAppointmentsPage] = useState(1);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -110,6 +116,18 @@ const SubscriptionRecords = () => {
       fetchRevenueData();
     }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    setRecordsPage(1);
+  }, [statusFilter, headFilter, searchQuery]);
+
+  useEffect(() => {
+    setInquiriesPage(1);
+  }, [inquiryStatusFilter, inquirySearchQuery]);
+
+  useEffect(() => {
+    setAppointmentsPage(1);
+  }, [appointmentStatusFilter, appointmentSearch]);
 
   const fetchData = async () => {
     try {
@@ -470,6 +488,130 @@ const SubscriptionRecords = () => {
     })();
   };
 
+  const recordsTotalPages = Math.max(1, Math.ceil(filteredSubscriptions.length / itemsPerPage));
+  const paginatedSubscriptions = filteredSubscriptions.slice(
+    (recordsPage - 1) * itemsPerPage,
+    recordsPage * itemsPerPage,
+  );
+
+  const inquiriesTotalPages = Math.max(1, Math.ceil(filteredInquiries.length / itemsPerPage));
+  const paginatedInquiries = filteredInquiries.slice(
+    (inquiriesPage - 1) * itemsPerPage,
+    inquiriesPage * itemsPerPage,
+  );
+
+  const appointmentsTotalPages = Math.max(1, Math.ceil(filteredAppointments.length / itemsPerPage));
+  const paginatedAppointments = filteredAppointments.slice(
+    (appointmentsPage - 1) * itemsPerPage,
+    appointmentsPage * itemsPerPage,
+  );
+
+  useEffect(() => {
+    if (recordsPage > recordsTotalPages) {
+      setRecordsPage(recordsTotalPages);
+    }
+  }, [recordsPage, recordsTotalPages]);
+
+  useEffect(() => {
+    if (inquiriesPage > inquiriesTotalPages) {
+      setInquiriesPage(inquiriesTotalPages);
+    }
+  }, [inquiriesPage, inquiriesTotalPages]);
+
+  useEffect(() => {
+    if (appointmentsPage > appointmentsTotalPages) {
+      setAppointmentsPage(appointmentsTotalPages);
+    }
+  }, [appointmentsPage, appointmentsTotalPages]);
+
+  const renderPagination = (currentPage, totalPages, totalItems, setPage) => {
+    if (totalItems === 0) {
+      return null;
+    }
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    return (
+      <div className="table-pagination-section">
+        <div className="table-pagination-size-row">
+          <label htmlFor="table-page-size" className="table-pagination-size-label">Rows per page:</label>
+          <select
+            id="table-page-size"
+            className="table-pagination-size-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size === 25 ? "More (25)" : size}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="table-pagination">
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="table-pagination-btn"
+            >
+              Previous
+            </button>
+
+            <div className="table-pagination-pages">
+              {[...Array(totalPages)].map((_, idx) => {
+                const pageNum = idx + 1;
+                if (
+                  pageNum === 1 ||
+                  pageNum === totalPages ||
+                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      type="button"
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`table-pagination-page ${currentPage === pageNum ? "active" : ""}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                }
+
+                if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                  return (
+                    <span key={pageNum} className="table-pagination-ellipsis">
+                      ...
+                    </span>
+                  );
+                }
+
+                return null;
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="table-pagination-btn"
+            >
+              Next
+            </button>
+          </div>
+        )}
+
+       
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <main className="page-main">
@@ -513,7 +655,7 @@ const SubscriptionRecords = () => {
               onClick={() => handleTabChange('inquiries')}
             >
               <ClipboardList size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              New Subscription Buyer
+              New Package Buyer
             </button>
             <button
               className={`sub-tab-btn ${activeTab === 'appointments' ? 'sub-tab-btn-active' : ''}`}
@@ -521,6 +663,14 @@ const SubscriptionRecords = () => {
             >
               <CalendarCheck size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
               New Appointments
+            </button>
+            <div className="sub-tab-spacer" />
+            <button
+              className="sub-tab-action-btn"
+              onClick={() => navigate('/admin/free-assessments')}
+            >
+              <FileText size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
+              Free Assessment
             </button>
           </div>
 
@@ -603,7 +753,7 @@ const SubscriptionRecords = () => {
                           </tr>
                         </thead>
                         <tbody className="table-primary-body">
-                          {filteredSubscriptions.map((sub) => (
+                          {paginatedSubscriptions.map((sub) => (
                             <tr key={sub.id} className="table-primary-row">
                               <td className="table-primary-td table-primary-td-id">{sub.id}</td>
                               <td className="table-primary-td">{sub.learner_name || `ID: ${sub.learner_id}`}</td>
@@ -637,6 +787,7 @@ const SubscriptionRecords = () => {
                       </table>
                     </div>
                   )}
+                  {renderPagination(recordsPage, recordsTotalPages, filteredSubscriptions.length, setRecordsPage)}
                 </div>
               )}
             </>
@@ -713,7 +864,7 @@ const SubscriptionRecords = () => {
                           </tr>
                         </thead>
                         <tbody className="table-primary-body">
-                          {filteredInquiries.map((inq) => (
+                          {paginatedInquiries.map((inq) => (
                             <tr key={inq.id} className="table-primary-row">
                               <td className="table-primary-td table-primary-td-id">{inq.id}</td>
                               <td className="table-primary-td">{inq.learner_name}</td>
@@ -808,6 +959,7 @@ const SubscriptionRecords = () => {
                       </table>
                     </div>
                   )}
+                  {renderPagination(inquiriesPage, inquiriesTotalPages, filteredInquiries.length, setInquiriesPage)}
                 </div>
               )}
             </>
@@ -871,7 +1023,7 @@ const SubscriptionRecords = () => {
                           </tr>
                         </thead>
                         <tbody className="table-primary-body">
-                          {filteredAppointments.map((apt) => (
+                          {paginatedAppointments.map((apt) => (
                             <tr key={apt.id} className="table-primary-row">
                               <td className="table-primary-td table-primary-td-id">{apt.id}</td>
                               <td className="table-primary-td">
@@ -972,6 +1124,7 @@ const SubscriptionRecords = () => {
                       </table>
                     </div>
                   )}
+                  {renderPagination(appointmentsPage, appointmentsTotalPages, filteredAppointments.length, setAppointmentsPage)}
                 </div>
               )}
             </>

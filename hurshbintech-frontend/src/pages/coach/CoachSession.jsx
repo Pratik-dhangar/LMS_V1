@@ -196,6 +196,7 @@ const CoachSession = () => {
     isFrozen: state.isFrozen,
     floatingAnimations: state.floatingAnimations,
     toolAccess: state.toolAccess,
+    lineWidth: state.lineWidth,
     audioRef: state.audioRef,
     musicOptions: MUSIC_OPTIONS,
     selectedMusic: state.selectedMusic,
@@ -210,6 +211,7 @@ const CoachSession = () => {
     setSessionNotes: state.setSessionNotes,
     setFloatingAnimations: state.setFloatingAnimations,
     setYoutubePopups: state.setYoutubePopups,
+    setInlineYoutube: state.setInlineYoutube,
     setExerciseData: state.setExerciseData,
     setToolAccess: state.setToolAccess,
     setBuckets: state.setBuckets,
@@ -372,6 +374,7 @@ const CoachSession = () => {
         canvasItems={state.canvasItems}
         setCanvasItems={state.setCanvasItems}
         remoteSelectedItemIds={state.remoteSelectedItemIds}
+        setRemoteSelectedItemIds={state.setRemoteSelectedItemIds}
         feedbackMessage={state.feedbackMessage}
         waitingMessage={state.waitingMessage}
         floatingAnimations={state.floatingAnimations}
@@ -437,6 +440,8 @@ const CoachSession = () => {
         youtubePopups={state.youtubePopups}
         handleYoutubeDropped={handlers.handleYoutubeDropped}
         handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
+        inlineYoutube={state.inlineYoutube}
+        setInlineYoutube={state.setInlineYoutube}
         activeIcons={state.activeIcons}
         isWaitActive={state.isWaitActive}
         handleToolClick={handlers.handleToolClick}
