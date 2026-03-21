@@ -1744,7 +1744,9 @@ export const LearnerWhiteboardWithVideo = ({
     syncedElapsedTime,
     syncedIsRunning,
     stopwatch,
-    Whiteboard
+    Whiteboard,
+    inlineMedia,
+    setInlineMedia
 }) => {
     return (
         <>
@@ -1782,6 +1784,8 @@ export const LearnerWhiteboardWithVideo = ({
                     setLineWidth={setLineWidth}
                     stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
                     stopwatchIsRunning={syncedIsRunning}
+                    inlineMedia={inlineMedia}
+                    setInlineMedia={setInlineMedia}
                 />
             </div>
         </>
@@ -1972,6 +1976,7 @@ AttendeeCommentsPanelWrapper.propTypes = {
 export const AttendeeMetricsPanel = ({
     promptMeter = 0,
     reinforcementMeter = 0,
+    showReinforcementValue = true,
     bucketColor = null,
     micEnabled = true,
     cameraEnabled = true,
@@ -2029,25 +2034,27 @@ export const AttendeeMetricsPanel = ({
                     flexShrink: 0,
                 }}>
                     {/* Reinforcement Level */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
-                    }}>
-                        <span style={{
-                            fontWeight: 'bold',
-                            fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
-                            color: '#16a34a',
-                            whiteSpace: 'nowrap'
-                        }}>R :</span>
-                        <span style={{
-                            fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
-                            fontWeight: 'bold',
-                            color: '#16a34a',
-                            whiteSpace: 'nowrap'
-                        }}>{reinforcementMeter}</span>
-                    </div>
+                    {showReinforcementValue && (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
+                        }}>
+                            <span style={{
+                                fontWeight: 'bold',
+                                fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
+                                color: '#16a34a',
+                                whiteSpace: 'nowrap'
+                            }}>R :</span>
+                            <span style={{
+                                fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
+                                fontWeight: 'bold',
+                                color: '#16a34a',
+                                whiteSpace: 'nowrap'
+                            }}>{reinforcementMeter}</span>
+                        </div>
+                    )}
 
                     {/* Bulb — right of R:, toggles prompt box */}
                     <span
@@ -2174,6 +2181,7 @@ export const AttendeeMetricsPanel = ({
 AttendeeMetricsPanel.propTypes = {
     promptMeter: PropTypes.number,
     reinforcementMeter: PropTypes.number,
+    showReinforcementValue: PropTypes.bool,
     bucketColor: PropTypes.string,
     micEnabled: PropTypes.bool,
     cameraEnabled: PropTypes.bool,
@@ -2654,6 +2662,7 @@ export const AttendeeUpperSection = ({
     // Metrics Panel Props
     promptMeter = 0,
     reinforcementMeter = 0,
+    showReinforcementValue = true,
     bucketColor = null,
 
     // Prompt Panel Props
@@ -2870,6 +2879,7 @@ export const AttendeeUpperSection = ({
                 <AttendeeMetricsPanel
                     promptMeter={promptMeter}
                     reinforcementMeter={reinforcementMeter}
+                    showReinforcementValue={showReinforcementValue}
                     bucketColor={bucketColor}
                     micEnabled={micEnabled}
                     cameraEnabled={cameraEnabled}
@@ -2926,6 +2936,7 @@ export const AttendeeUpperSection = ({
 AttendeeUpperSection.propTypes = {
     promptMeter: PropTypes.number,
     reinforcementMeter: PropTypes.number,
+    showReinforcementValue: PropTypes.bool,
     bucketColor: PropTypes.string,
     promptText: PropTypes.string,
     defaultPromptText: PropTypes.string,

@@ -197,7 +197,7 @@ async def send_learner_goals_report(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Send the All Program Goals Report summary to the learner's registered email.
+    Send the Skill Development Graph  summary to the learner's registered email.
     Only heads and admins can send this.
     """
     if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:

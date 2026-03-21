@@ -50,7 +50,6 @@ class TrainingSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    description = Column(Text)
     duration = Column(Integer)  # Session duration in minutes
 
     # Participants

@@ -37,7 +37,6 @@ const ScheduleSession = () => {
 
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
     trainer_id: "",
     learner_id: "",
     scheduled_date: "",
@@ -436,41 +435,6 @@ const ScheduleSession = () => {
             </div>
           </div>
           <form onSubmit={handleSubmit} className="modern-form-card">
-            {/* Title */}
-            <div className="modern-form-section">
-              <div className="modern-form-grid">
-                <div className="modern-form-grid-full">
-                  <label className="modern-form-label">
-                    Session Title <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    className="modern-form-input"
-                    placeholder="e.g., Introduction to Fruits"
-                    required
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="modern-form-grid-full">
-                  <label className="modern-form-label">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="modern-form-textarea"
-                    rows="3"
-                    placeholder="Session description (optional)"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Trainer & Learner Selection */}
             <div className="modern-form-section">
               <div className="modern-form-grid-two-col">
@@ -588,6 +552,32 @@ const ScheduleSession = () => {
                 </div>
               </div>
             </div>
+
+            {/* Title */}
+            <div className="modern-form-section">
+              <div className="modern-form-grid">
+
+                {/* Session Title */}
+                <div className="modern-form-grid-full">
+                  <label className="modern-form-label">
+                    Learning Program name <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="modern-form-input"
+                    placeholder="e.g., Introduction to Fruits"
+                    required
+                  />
+                </div>
+
+              </div>
+            </div>
+
+
 
             {/* Date & Time and Duration */}
             <div className="modern-form-section">

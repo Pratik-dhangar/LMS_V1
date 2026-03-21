@@ -32,6 +32,8 @@ class WhiteboardService {
         this.onSessionEnded = null; // New callback for session ended by coach/trainer
         this.onYoutubePopupCreated = null; // New callback for YouTube popup created
         this.onYoutubePopupClosed = null; // New callback for YouTube popup closed
+        this.onYoutubeOpen = null; // New callback for YouTube split video opened
+        this.onYoutubeSplit = null; // New callback for YouTube split video state (play/pause/seek/close)
         this.onBackgroundMusic = null; // New callback for background music control
         this.onBackgroundMusicVolume = null; // New callback for background music volume changes
         this.onExerciseUpdate = null; // New callback for exercise updates from trainer
@@ -42,32 +44,62 @@ class WhiteboardService {
         this.onCommentsToggle = null; // New callback for comments tool toggle
         this._onWhiteboardRestore = null; // Internal callback holder
         this._restorationBuffer = null; // Buffer for restoration message if received before callback is set
+
+        // Reconnection state
+        this.shouldReconnect = true;
+        this.reconnectAttempts = 0;
+        this.reconnectDelayMs = 1000;
+        this.maxReconnectDelayMs = 30000;
+        this.reconnectTimer = null;
     }
 
     initialize() {
+        this.shouldReconnect = true;
+
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
+        this.reconnectAttempts = 0;
+        this.connect();
+    }
+
+    connect() {
+        if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
         const wsUrl = this.wsUrl.replace('http', 'ws');
         const fullWsUrl = `${wsUrl}/ws/whiteboard/${this.sessionId}`;
 
         try {
-            this.ws = new WebSocket(fullWsUrl);
-            this.setupWebSocket();
+            const socket = new WebSocket(fullWsUrl);
+            this.ws = socket;
+            this.setupWebSocket(socket);
         } catch (error) {
-            // console.error('[WhiteboardService] Error creating WebSocket:', error);
+            this.scheduleReconnect();
         }
     }
 
-    setupWebSocket() {
-        this.ws.onopen = () => {
+    setupWebSocket(socket) {
+        socket.onopen = () => {
+            // Ignore stale socket callbacks after a reconnect swap.
+            if (this.ws !== socket) return;
+
+            this.reconnectAttempts = 0;
             // console.log('[WhiteboardService] WebSocket connected for role:', this.role, 'session:', this.sessionId);
             const joinMessage = {
                 type: 'join',
                 sessionId: this.sessionId,
                 role: this.role
             };
-            this.ws.send(JSON.stringify(joinMessage));
+            socket.send(JSON.stringify(joinMessage));
         };
 
-        this.ws.onmessage = (event) => {
+        socket.onmessage = (event) => {
+            if (this.ws !== socket) return;
+
             const message = JSON.parse(event.data);
 
             // Log all incoming messages for debugging
@@ -262,6 +294,20 @@ class WhiteboardService {
                     }
                     break;
 
+                case 'youtube_open':
+                    // YouTube split video opened by instructor
+                    if (this.onYoutubeOpen) {
+                        this.onYoutubeOpen(message.data);
+                    }
+                    break;
+
+                case 'youtube_split':
+                    // YouTube split video state sync (play/pause/seek/close)
+                    if (this.onYoutubeSplit) {
+                        this.onYoutubeSplit(message.data);
+                    }
+                    break;
+
                 case 'background_music':
                     // console.log('[WhiteboardService] 🎵 Received background_music message:', message);
                     if (this.onBackgroundMusic) {
@@ -339,10 +385,12 @@ class WhiteboardService {
 
                 case 'ping':
                     // Respond to server heartbeat ping with pong
-                    this.ws.send(JSON.stringify({
-                        type: 'pong',
-                        timestamp: new Date().toISOString()
-                    }));
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            type: 'pong',
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
                     // console.debug('[WhiteboardService] Responded to ping with pong');
                     break;
 
@@ -352,13 +400,36 @@ class WhiteboardService {
             }
         };
 
-        this.ws.onerror = (error) => {
+        socket.onerror = (error) => {
+            if (this.ws !== socket) return;
             // console.error('[WhiteboardService] Whiteboard WebSocket error:', error);
         };
 
-        this.ws.onclose = (event) => {
+        socket.onclose = (event) => {
+            if (this.ws === socket) {
+                this.ws = null;
+            }
+
             // console.log('[WhiteboardService] Whiteboard WebSocket closed - Code:', event.code, 'Reason:', event.reason);
+
+            if (this.shouldReconnect) {
+                this.scheduleReconnect();
+            }
         };
+    }
+
+    scheduleReconnect() {
+        if (!this.shouldReconnect) return;
+        if (this.reconnectTimer) return;
+
+        const attempt = this.reconnectAttempts + 1;
+        const delay = Math.min(this.reconnectDelayMs * (2 ** (attempt - 1)), this.maxReconnectDelayMs);
+
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.reconnectAttempts = attempt;
+            this.connect();
+        }, delay);
     }
 
     sendDrawData(data) {
@@ -448,6 +519,34 @@ class WhiteboardService {
         }
     }
 
+    // Send YouTube split video open event
+    sendYoutubeOpen(data) {
+        // Instructor-only: { videoId, title }
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // console.log('[WhiteboardService] Sending youtube_open:', data);
+            this.ws.send(JSON.stringify({
+                type: 'youtube_open',
+                data: data
+            }));
+        } else {
+            // console.warn('[WhiteboardService] Cannot send youtube_open - WebSocket not ready');
+        }
+    }
+
+    // Send YouTube split video state change event (play/pause/seek/close)
+    sendYoutubeSplit(data) {
+        // Instructor-only: { action: 'play'|'pause'|'seek'|'close', time, videoId }
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // console.log('[WhiteboardService] Sending youtube_split:', data);
+            this.ws.send(JSON.stringify({
+                type: 'youtube_split',
+                data: data
+            }));
+        } else {
+            // console.warn('[WhiteboardService] Cannot send youtube_split - WebSocket not ready');
+        }
+    }
+
     // Generic send method for custom message types
     send(type, data) {
         // console.log(`[WhiteboardService.send] Called with type: ${type}`);
@@ -496,8 +595,17 @@ class WhiteboardService {
     }
 
     close() {
+        this.shouldReconnect = false;
+        this.reconnectAttempts = 0;
+
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
         if (this.ws) {
             this.ws.close();
+            this.ws = null;
         }
     }
 }

@@ -211,6 +211,7 @@ const CoachSession = () => {
     setSessionNotes: state.setSessionNotes,
     setFloatingAnimations: state.setFloatingAnimations,
     setYoutubePopups: state.setYoutubePopups,
+    setInlineYoutube: state.setInlineYoutube,
     setExerciseData: state.setExerciseData,
     setToolAccess: state.setToolAccess,
     setBuckets: state.setBuckets,
@@ -439,6 +440,8 @@ const CoachSession = () => {
         youtubePopups={state.youtubePopups}
         handleYoutubeDropped={handlers.handleYoutubeDropped}
         handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
+        inlineYoutube={state.inlineYoutube}
+        setInlineYoutube={state.setInlineYoutube}
         activeIcons={state.activeIcons}
         isWaitActive={state.isWaitActive}
         handleToolClick={handlers.handleToolClick}

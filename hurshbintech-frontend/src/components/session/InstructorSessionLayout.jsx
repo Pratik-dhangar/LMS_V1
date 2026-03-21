@@ -1321,6 +1321,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     setRedrawCanvasTrigger,
     setClearCanvasTrigger,
     setYoutubePopups,
+    setInlineMedia,
     setBackgroundMusicPlaying,
     setSelectedMusic,
     setMusicVolume,
@@ -1519,6 +1520,97 @@ export const setupAttendeeWhiteboardCallbacks = ({
         };
     }
 
+    // YouTube split-video mode (instructor -> attendee, read-only)
+    if (setInlineMedia) {
+        whiteboardService.onYoutubeOpen = (data) => {
+            setInlineMedia({
+                type: 'youtube',
+                videoId: data.videoId,
+                title: data.title,
+                isOpen: true,
+                isPlaying: false,
+                minimized: false,
+                currentTime: 0
+            });
+        };
+
+        whiteboardService.onYoutubeSplit = (data) => {
+            if (data?.action === 'close') {
+                setInlineMedia(null);
+                return;
+            }
+
+            if (data?.action === 'play') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: true, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data?.action === 'pause') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: false, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data?.action === 'seek') {
+                setInlineMedia(prev => prev ? { ...prev, currentTime: data.time || 0 } : prev);
+                return;
+            }
+
+            if (data?.action === 'minimize') {
+                setInlineMedia(prev => prev ? { ...prev, minimized: Boolean(data.minimized), currentTime: data.time ?? prev.currentTime } : prev);
+            }
+        };
+
+        // Fallback channel in case backend forwards only media_control messages.
+        // Keep any existing Whiteboard-level media handler alive for non-YouTube actions
+        // like inline video minimize/restore.
+        const previousOnMediaControl = whiteboardService.onMediaControl;
+        whiteboardService.onMediaControl = (data) => {
+            if (!data) return;
+
+            if (data.action === 'youtube_open') {
+                setInlineMedia({
+                    type: 'youtube',
+                    videoId: data.videoId,
+                    title: data.title,
+                    isOpen: true,
+                    isPlaying: false,
+                    minimized: false,
+                    currentTime: data.time || 0
+                });
+                return;
+            }
+
+            if (data.action === 'youtube_play') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: true, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_pause') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: false, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_close') {
+                setInlineMedia(null);
+                return;
+            }
+
+            if (data.action === 'youtube_seek') {
+                setInlineMedia(prev => prev ? { ...prev, currentTime: data.time || 0 } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_minimize_toggle') {
+                setInlineMedia(prev => prev ? { ...prev, minimized: Boolean(data.minimized), currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (typeof previousOnMediaControl === 'function') {
+                previousOnMediaControl(data);
+            }
+        };
+    }
+
     // Background music - Instructor side receives sync from learner/client
     if (setBackgroundMusicPlaying && audioRef) {
         whiteboardService.onBackgroundMusic = (data) => {
@@ -1624,6 +1716,9 @@ export const setupAttendeeWhiteboardCallbacks = ({
             // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component, not here
             whiteboardService.onYoutubePopupCreated = null;
             whiteboardService.onYoutubePopupClosed = null;
+            whiteboardService.onYoutubeOpen = null;
+            whiteboardService.onYoutubeSplit = null;
+            whiteboardService.onMediaControl = null;
             whiteboardService.onBackgroundMusic = null;
             whiteboardService.onBackgroundMusicVolume = null;
             whiteboardService.onExerciseUpdate = null;
@@ -1736,6 +1831,13 @@ export const clearAllCanvas = ({
 
     if (whiteboardService) {
         whiteboardService.send('clear_canvas', {
+            timestamp: Date.now()
+        });
+
+        // Keep media state synchronized with canvas clear so the next dropped video
+        // starts from a clean state for all attendees.
+        whiteboardService.sendMediaControl({
+            action: 'close',
             timestamp: Date.now()
         });
     }
@@ -2734,13 +2836,45 @@ export const searchLearningGoalsDatabase = async ({
 };
 
 /**
+ * Extract YouTube video ID from various URL formats
+ * Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+ * 
+ * @param {string} url - YouTube URL
+ * @returns {string|null} - Video ID or null if not found
+ */
+const extractYoutubeVideoId = (url) => {
+    if (!url) return null;
+
+    // Format: https://www.youtube.com/watch?v=VIDEOID or https://youtube.com/watch?v=VIDEOID
+    const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([^&]+)/);
+    if (watchMatch && watchMatch[1]) return watchMatch[1];
+
+    // Format: https://youtu.be/VIDEOID
+    const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
+    if (shortMatch && shortMatch[1]) return shortMatch[1];
+
+    // Format: https://www.youtube.com/embed/VIDEOID
+    const embedMatch = url.match(/youtube\.com\/embed\/([^?&]+)/);
+    if (embedMatch && embedMatch[1]) return embedMatch[1];
+
+    return null;
+};
+
+/**
  * Create drag start handler for learning content cards
  * Enables drag-and-drop functionality for content items to whiteboard
+ * Normalizes YouTube video ID extraction from URL if ID not provided
  * 
  * @param {Object} content - The content item being dragged
  * @returns {Object} - Drag payload with content details
  */
 export const createContentDragPayload = (content) => {
+    // Normalize YouTube video ID from URL if not present
+    let youtubeVideoId = content.youtube_video_id || null;
+    if (!youtubeVideoId && content.youtube_url) {
+        youtubeVideoId = extractYoutubeVideoId(content.youtube_url);
+    }
+
     return {
         id: content.id,
         title: content.title,
@@ -2750,7 +2884,8 @@ export const createContentDragPayload = (content) => {
         mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
         originalFilename: content.title,
         is_youtube: content.is_youtube || false,
-        youtube_url: content.youtube_url || null
+        youtube_url: content.youtube_url || null,
+        youtube_video_id: youtubeVideoId
     };
 };
 
@@ -2895,6 +3030,10 @@ export const InstructorSessionPage = ({
     youtubePopups,
     handleYoutubeDropped,
     handleCloseYoutubePopup,
+
+    // YouTube split video
+    inlineYoutube,
+    setInlineYoutube,
 
     // Active icons
     activeIcons,
@@ -3068,6 +3207,8 @@ export const InstructorSessionPage = ({
                                 isInstructor={true}
                                 toolActive={toolActive}
                                 onYoutubeDropped={handleYoutubeDropped}
+                                inlineYoutube={inlineYoutube}
+                                setInlineYoutube={setInlineYoutube}
                                 canvasRefForParent={whiteboardCanvasRef}
                             />
                         </div>
@@ -3514,6 +3655,11 @@ export const WhiteboardTools = ({
                         setClearCanvasTrigger(prev => prev + 1);
                         if (whiteboardService) {
                             whiteboardService.send('clear_canvas', {
+                                timestamp: Date.now()
+                            });
+
+                            whiteboardService.sendMediaControl({
+                                action: 'close',
                                 timestamp: Date.now()
                             });
                         }

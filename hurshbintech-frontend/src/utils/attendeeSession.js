@@ -139,6 +139,9 @@ export const useAttendeeSessionState = () => {
     const [trainerComments, setTrainerComments] = useState([]);
     const [isCommentsOpen, setIsCommentsOpen] = useState(false);
 
+    // Inline media - YouTube split view (synced from instructor, read-only)
+    const [inlineMedia, setInlineMedia] = useState(null); // { type: 'youtube', videoId, title, isOpen, currentTime }
+
     return {
         webRTC, setWebRTC,
         whiteboardService, setWhiteboardService,
@@ -187,7 +190,8 @@ export const useAttendeeSessionState = () => {
         bucketColor, setBucketColor,
         promptText, setPromptText,
         trainerComments, setTrainerComments,
-        isCommentsOpen, setIsCommentsOpen
+        isCommentsOpen, setIsCommentsOpen,
+        inlineMedia, setInlineMedia
     };
 };
 
@@ -227,7 +231,8 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         setReinforcementMeter,
         setBucketColor,
         setTrainerComments,
-        setIsCommentsOpen
+        setIsCommentsOpen,
+        setInlineMedia
     } = state;
 
     // Tool access from instructor
@@ -505,11 +510,51 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
         setIsCommentsOpen(data.visible || false);
     };
 
+    // YouTube Split Video - Attendee receives state from instructor (read-only)
+    wbService.onYoutubeOpen = (data) => {
+        console.log('[AttendeeSession] YouTube split video opened:', data);
+        // data: { videoId, title, timestamp }
+        setInlineMedia({
+            type: 'youtube',
+            videoId: data.videoId,
+            title: data.title,
+            isOpen: true,
+            isPlaying: false,
+            minimized: false,
+            currentTime: 0
+        });
+    };
+
+    // YouTube state sync from instructor (play/pause/seek/close)
+    wbService.onYoutubeSplit = (data) => {
+        console.log('[AttendeeSession] YouTube split state update:', data);
+        // data: { action: 'play'|'pause'|'seek'|'close', time, videoId, timestamp }
+        const { action, time } = data;
+
+        if (action === 'close') {
+            // Close YouTube player
+            setInlineMedia(null);
+        } else if (action === 'play') {
+            setInlineMedia(prev => prev ? { ...prev, isPlaying: true, currentTime: time ?? prev.currentTime } : null);
+        } else if (action === 'pause') {
+            setInlineMedia(prev => prev ? { ...prev, isPlaying: false, currentTime: time ?? prev.currentTime } : null);
+        } else if (action === 'seek') {
+            // Update current time (for display purposes on attendee side)
+            setInlineMedia(prev => prev ? { ...prev, currentTime: time || 0 } : null);
+        } else if (action === 'minimize') {
+            setInlineMedia(prev => prev ? { ...prev, minimized: Boolean(data.minimized), currentTime: time ?? prev.currentTime } : null);
+        }
+        // 'play' and 'pause' actions don't need state updates - YouTube iframe API would handle actual playback
+        // Attendee cannot control these, only instructor can via the embed URL
+    };
+
     console.log('[AttendeeSession] ✅ All whiteboard listeners setup complete');
     console.log('[AttendeeSession] ✅ Registered callbacks:', {
         onBackgroundMusic: !!wbService.onBackgroundMusic,
         onBackgroundMusicVolume: !!wbService.onBackgroundMusicVolume,
         onToolAccess: !!wbService.onToolAccess,
+        onYoutubeOpen: !!wbService.onYoutubeOpen,
+        onYoutubeSplit: !!wbService.onYoutubeSplit,
         // onBucketAdded handled by Whiteboard.jsx
         onAnimationPopped: !!wbService.onAnimationPopped,
         onPromptMeterUpdate: !!wbService.onPromptMeterUpdate

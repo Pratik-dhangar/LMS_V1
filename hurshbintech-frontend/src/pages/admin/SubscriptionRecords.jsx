@@ -655,7 +655,7 @@ const SubscriptionRecords = () => {
               onClick={() => handleTabChange('inquiries')}
             >
               <ClipboardList size={16} style={{ display: 'inline', marginRight: '0.4rem' }} />
-              New Subscription Buyer
+              New Package Buyer
             </button>
             <button
               className={`sub-tab-btn ${activeTab === 'appointments' ? 'sub-tab-btn-active' : ''}`}

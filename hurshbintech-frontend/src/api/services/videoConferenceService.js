@@ -90,6 +90,7 @@ class VideoConferenceService {
         this.onMessage = null;
         this.onPromptMeterUpdate = null;
         this.onReinforcementMeterUpdate = null;
+        this.onReinforcementVisibilityUpdate = null;
         this.onPromptText = null;
         this.onFreeze = null;
         this.onParticipantJoinRequest = null; // Called when learner/client announces presence (admit/reject flow)
@@ -126,13 +127,13 @@ class VideoConferenceService {
             this.announcePresence(userData);
 
             this.isInitialized = true;
-            
+
             // Step 6: Start connection monitoring
             this.startConnectionMonitoring();
-            
+
             // Step 7: Start WebSocket heartbeat
             this.startHeartbeat();
-            
+
             // console.log(`[VideoConference][${this.role}] Initialization complete with monitoring`);
 
             return this.localStream;
@@ -233,7 +234,7 @@ class VideoConferenceService {
             if (this.peerConnection) {
                 const videoTrack = screenStream.getVideoTracks()[0];
                 const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
-                
+
                 if (sender) {
                     await sender.replaceTrack(videoTrack);
                     console.log(`[VideoConference][${this.role}] Video track replaced with screen share`);
@@ -280,7 +281,7 @@ class VideoConferenceService {
     async stopScreenShare() {
         try {
             console.log(`[VideoConference][${this.role}] Stopping screen share...`);
-            
+
             // Notify observers that screen share has stopped
             if (this.role === 'trainer' && this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.ws.send(JSON.stringify({
@@ -289,7 +290,7 @@ class VideoConferenceService {
                 }));
                 console.log(`[VideoConference][${this.role}] Notified observers that screen share stopped`);
             }
-            
+
             // Restore original camera track if available
             if (this.localStream && this.peerConnection) {
                 const videoTrack = this.localStream.getVideoTracks()[0];
@@ -359,13 +360,13 @@ class VideoConferenceService {
 
         this.reconnecting = true;
         this.reconnectAttempts++;
-        
+
         // Exponential backoff with max delay
         const delay = Math.min(
             this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1),
             this.maxReconnectDelay
         );
-        
+
         // console.log(`[VideoConference][${this.role}] WebSocket closed. Reconnecting in ${Math.round(delay/1000)}s... (attempt ${this.reconnectAttempts})`);
 
         setTimeout(async () => {
@@ -374,10 +375,10 @@ class VideoConferenceService {
                 this.reconnecting = false;
                 this.reconnectAttempts = 0;
                 // console.log(`[VideoConference][${this.role}] WebSocket reconnected successfully`);
-                
+
                 // Restart heartbeat after reconnection
                 this.startHeartbeat();
-                
+
                 // Re-announce presence
                 this.announcePresence();
             } catch (error) {
@@ -419,12 +420,12 @@ class VideoConferenceService {
 
             if (event.streams && event.streams[0]) {
                 const newStream = event.streams[0];
-                
+
                 // Check if this is truly a new stream or just an update
-                const isNewStream = !this.remoteStream || 
-                                   this.remoteStream.id !== newStream.id ||
-                                   this.remoteStreamId !== newStream.id;
-                
+                const isNewStream = !this.remoteStream ||
+                    this.remoteStream.id !== newStream.id ||
+                    this.remoteStreamId !== newStream.id;
+
                 this.remoteStream = newStream;
                 this.remoteStreamId = newStream.id;
                 // console.log(`[VideoConference][${this.role}] Remote stream ${isNewStream ? 'set' : 'updated'} with ${newStream.getTracks().length} tracks (ID: ${newStream.id})`);
@@ -433,7 +434,7 @@ class VideoConferenceService {
                 if (this.onRemoteStream) {
                     this.onRemoteStream(this.remoteStream);
                 }
-                
+
                 // Monitor track state changes for debugging
                 event.track.onended = () => {
                     console.warn(`[VideoConference][${this.role}] Remote ${event.track.kind} track ended`);
@@ -443,11 +444,11 @@ class VideoConferenceService {
                         setTimeout(() => this.restartIce(), 1000);
                     }
                 };
-                
+
                 event.track.onmute = () => {
                     console.warn(`[VideoConference][${this.role}] Remote ${event.track.kind} track muted`);
                 };
-                
+
                 event.track.onunmute = () => {
                     // console.log(`[VideoConference][${this.role}] Remote ${event.track.kind} track unmuted`);
                 };
@@ -466,7 +467,7 @@ class VideoConferenceService {
             // Handle connection failures and disconnections
             if (state === 'disconnected') {
                 console.warn(`[VideoConference][${this.role}] Connection disconnected, will attempt ICE restart if not recovered in 5s`);
-                
+
                 // Wait 5 seconds before restarting to allow automatic recovery
                 this.disconnectTimer = setTimeout(() => {
                     if (this.peerConnection?.connectionState === 'disconnected') {
@@ -543,12 +544,12 @@ class VideoConferenceService {
             role: this.role,
             session_id: this.sessionId
         };
-        
+
         // Include user data if provided (for observer)
         if (userData) {
             joinMessage.user_data = userData;
         }
-        
+
         this.sendSignal(joinMessage);
         // console.log(`[VideoConference][${this.role}] Announced presence`);
     }
@@ -684,6 +685,12 @@ class VideoConferenceService {
                     }
                     break;
 
+                case 'reinforcement_visibility':
+                    if (this.onReinforcementVisibilityUpdate) {
+                        this.onReinforcementVisibilityUpdate(message.visible !== false);
+                    }
+                    break;
+
                 case 'prompt_text':
                     if (this.onPromptText) {
                         this.onPromptText({ text: message.text });
@@ -706,7 +713,7 @@ class VideoConferenceService {
                     break;
 
                 default:
-                    // console.log(`[VideoConference][${this.role}] Unknown message type:`, message.type);
+                // console.log(`[VideoConference][${this.role}] Unknown message type:`, message.type);
             }
         } catch (error) {
             console.error(`[VideoConference][${this.role}] Error handling signal:`, error);
@@ -1030,6 +1037,16 @@ class VideoConferenceService {
     }
 
     /**
+     * Toggle reinforcement meter visibility on learner page
+     */
+    sendReinforcementVisibility(isVisible) {
+        this.sendSignal({
+            type: 'reinforcement_visibility',
+            visible: !!isVisible
+        });
+    }
+
+    /**
      * Send chat message to other participant
      */
     sendMessage(message, senderRole) {
@@ -1079,7 +1096,7 @@ class VideoConferenceService {
         this.heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.sendSignal({ type: 'ping' });
-                
+
                 // Set timeout for pong response
                 this.heartbeatTimeout = setTimeout(() => {
                     console.warn(`[VideoConference][${this.role}] Heartbeat timeout - no pong received`);
@@ -1150,7 +1167,7 @@ class VideoConferenceService {
             if (quality !== this.connectionQuality) {
                 this.connectionQuality = quality;
                 // console.log(`[VideoConference][${this.role}] Connection quality: ${quality}`);
-                
+
                 if (this.onConnectionQualityChange) {
                     this.onConnectionQualityChange(quality);
                 }
@@ -1237,7 +1254,7 @@ class VideoConferenceService {
         if (!this.peerConnection) return;
 
         const qualityData = await this.getConnectionQualityFromStats();
-        
+
         if (qualityData.details.packetsReceived > 0) {
             // console.log(
             //     `[VideoConference][${this.role}] Stats:`,

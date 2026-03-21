@@ -228,7 +228,7 @@ const ReportCard = () => {
                           <th className="table-primary-th">Sessions</th>
                           <th className="table-primary-th">Last Session</th>
                           <th className="table-primary-th">Goals</th>
-                          <th className="table-primary-th">All Program Goals Report</th>
+                          <th className="table-primary-th">Skill Development Graph </th>
                           <th className="table-primary-th">Final Generated Reports</th>
                         </tr>
                       </thead>
@@ -256,7 +256,7 @@ const ReportCard = () => {
                                   ? <span className="table-primary-badge">{learner.programs_covered.length}</span>
                                   : '—'}
                               </td>
-                              {/* All Program Goals Report */}
+                              {/* Skill Development Graph  */}
                               <td className="table-primary-td table-primary-td-center">
                                 <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
                                   <button
@@ -283,13 +283,13 @@ const ReportCard = () => {
                                       whiteSpace: 'nowrap',
                                       opacity: sendingGoalsReportId === learner.learner_id ? 0.7 : 1,
                                     }}
-                                    title="Send All Program Goals Report to learner's email"
+                                    title="Send Skill Development Graph  to learner's email"
                                   >
                                     {sendingGoalsReportId === learner.learner_id ? '⏳ Sending…' : '📧 Send'}
                                   </button>
                                 </div>
                               </td>
-                              {/* Final Generated Reports */}
+                              {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT */}
                               <td className="table-primary-td">
                                 {progReports.length === 0 ? (
                                   <button

@@ -38,8 +38,8 @@ def get_public_url(file_url: str) -> str:
 logger = logging.getLogger(__name__)
 
 # WebSocket configuration
-HEARTBEAT_INTERVAL = 30  # Send ping every 30 seconds
-HEARTBEAT_TIMEOUT = 90  # Close connection if no pong received within 90 seconds (increased for reliability)
+HEARTBEAT_INTERVAL = 20  # Send ping every 20 seconds
+HEARTBEAT_TIMEOUT = 300  # Allow up to 5 minutes before considering a connection stale
 MAX_RECONNECT_ATTEMPTS = 3  # Max reconnection attempts tracked
 
 
@@ -87,19 +87,25 @@ async def send_heartbeat(conn_info: ConnectionInfo):
     """Send periodic ping messages to keep connection alive"""
     try:
         while conn_info.is_alive:
-            # Check if last heartbeat is too old BEFORE sending next ping
-            elapsed = (datetime.utcnow() - conn_info.last_heartbeat).total_seconds()
-            if elapsed > HEARTBEAT_TIMEOUT:
-                logger.warning(
-                    f"Connection timeout for {conn_info.role} in session {conn_info.session_id} "
-                    f"(no pong for {elapsed:.1f}s)"
-                )
-                conn_info.is_alive = False
-                break
-
             await asyncio.sleep(HEARTBEAT_INTERVAL)
             if not conn_info.is_alive:
                 break
+
+            # Avoid aggressive disconnects on transient packet loss.
+            # Keep the socket alive unless it has been stale for a long period.
+            elapsed = (datetime.utcnow() - conn_info.last_heartbeat).total_seconds()
+            if elapsed > HEARTBEAT_TIMEOUT:
+                logger.warning(
+                    f"Stale heartbeat for {conn_info.role} in session {conn_info.session_id} "
+                    f"(last activity {elapsed:.1f}s ago)"
+                )
+                if elapsed > HEARTBEAT_TIMEOUT * 3:
+                    logger.error(
+                        f"Forcing disconnect for {conn_info.role} in session {conn_info.session_id} "
+                        f"after prolonged inactivity ({elapsed:.1f}s)"
+                    )
+                    conn_info.is_alive = False
+                    break
 
             try:
                 # Send ping message
@@ -219,6 +225,7 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
         try:
             while conn_info.is_alive:
                 message = await websocket.receive_json()
+                conn_info.last_heartbeat = datetime.utcnow()
 
                 # --- FIX 1: Handle Client Pings to prevent Disconnect Loop ---
                 if message.get("type") == "ping":
@@ -585,6 +592,7 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         try:
             while conn_info.is_alive:
                 message = await websocket.receive_json()
+                conn_info.last_heartbeat = datetime.utcnow()
 
                 # Handle pong response
                 if message.get("type") == "pong":
@@ -630,6 +638,12 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                 else:
                     # Persist whiteboard events to database before forwarding
                     await persist_whiteboard_event(message, session_id, role)
+
+                    # Clear canvas should also reset any active media session state.
+                    # This prevents stale media snapshots/locks from affecting the next drop.
+                    if message.get("type") == "clear_canvas":
+                        media_states[session_id] = None
+                        media_control_locks[session_id] = None
                     
                     # Forward draw/clear/item_update messages to the other participant(s)
                     # Map roles to their counterparts (coach can have both client and guest, trainer broadcasts to learner and observer)

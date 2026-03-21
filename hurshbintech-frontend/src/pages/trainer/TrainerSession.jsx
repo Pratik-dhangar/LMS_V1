@@ -44,10 +44,16 @@ const TrainerSession = () => {
 
   // Admit/reject state for learner join requests
   const [pendingAdmission, setPendingAdmission] = useState(null);
+  const [isReinforcementValueVisible, setIsReinforcementValueVisible] = useState(true);
+  const reinforcementVisibilityRef = React.useRef(true);
 
   // Recording UI state
   const [recordingStatus, setRecordingStatus] = useState(null); // null, 'recording', 'paused', 'stopped'
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
+
+  React.useEffect(() => {
+    reinforcementVisibilityRef.current = isReinforcementValueVisible;
+  }, [isReinforcementValueVisible]);
 
   // Cleanup function
   const cleanup = () => {
@@ -96,6 +102,7 @@ const TrainerSession = () => {
       learnerVideoService.onLocalStream = (stream) => state.setLocalStream(stream);
       learnerVideoService.onRemoteStream = (stream) => {
         state.setRemoteStream(stream);
+        learnerVideoService.sendReinforcementVisibility(reinforcementVisibilityRef.current);
         if (!state.connectedRef.current) {
           state.connectedRef.current = true;
           toast.success(`${state.sessionInfo?.learner_name || 'Learner'} has joined the session`);
@@ -251,6 +258,15 @@ const TrainerSession = () => {
     }
   };
 
+  const handleToggleReinforcementValueVisibility = () => {
+    setIsReinforcementValueVisible((prev) => {
+      const next = !prev;
+      reinforcementVisibilityRef.current = next;
+      state.videoService?.sendReinforcementVisibility(next);
+      return next;
+    });
+  };
+
   // Session report handler (Trainer only)
   const handleSaveReport = async (reportData) => {
     try {
@@ -375,6 +391,7 @@ const TrainerSession = () => {
     setSessionNotes: state.setSessionNotes,
     setFloatingAnimations: state.setFloatingAnimations,
     setYoutubePopups: state.setYoutubePopups,
+    setInlineYoutube: state.setInlineYoutube,
     setExerciseData: state.setExerciseData,
     setToolAccess: state.setToolAccess,
     setBuckets: state.setBuckets,
@@ -595,6 +612,8 @@ const TrainerSession = () => {
         youtubePopups={state.youtubePopups}
         handleYoutubeDropped={handlers.handleYoutubeDropped}
         handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
+        inlineYoutube={state.inlineYoutube}
+        setInlineYoutube={state.setInlineYoutube}
         activeIcons={state.activeIcons}
         isWaitActive={state.isWaitActive}
         handleToolClick={handlers.handleToolClick}
@@ -614,6 +633,8 @@ const TrainerSession = () => {
             setSelectedPromptLevel={state.setSelectedPromptLevel}
             selectedReinforcementLevel={state.selectedReinforcementLevel}
             setSelectedReinforcementLevel={state.setSelectedReinforcementLevel}
+            reinforcementValueVisible={isReinforcementValueVisible}
+            onToggleReinforcementValueVisibility={handleToggleReinforcementValueVisibility}
             selectedProgramId={state.selectedProgramId}
             handleProgramCheck={handlers.handleProgramCheck}
             webRTC={state.videoService}

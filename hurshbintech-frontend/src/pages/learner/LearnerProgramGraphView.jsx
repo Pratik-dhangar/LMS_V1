@@ -137,7 +137,7 @@ const LearnerProgramGraphView = () => {
                                 <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                                     <path d="M15 19l-7-7 7-7"></path>
                                 </svg>
-                                Back to My Reports
+                                Back to My Progress Report
                             </button>
                             <div>
                                 <h1 className="page-title">Progress Graph</h1>

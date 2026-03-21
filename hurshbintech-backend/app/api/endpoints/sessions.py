@@ -147,7 +147,6 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
         id=session.id,
         session_id=session.session_id,
         title=session.title,
-        description=session.description,
         trainer_id=session.trainer_id,
         learner_id=session.learner_id,
         created_by_id=session.created_by_id,

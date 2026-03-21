@@ -131,6 +131,7 @@ const LearnerSession = () => {
   const [youtubePopups, setYoutubePopups] = useState([]);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
+  const [showReinforcementValue, setShowReinforcementValue] = useState(true);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for trainer to admit
@@ -630,6 +631,7 @@ const LearnerSession = () => {
       setRedrawCanvasTrigger,
       setClearCanvasTrigger,
       setYoutubePopups,
+      setInlineMedia: sessionState.setInlineMedia,
       setBackgroundMusicPlaying,
       setSelectedMusic,
       setMusicVolume,
@@ -932,6 +934,10 @@ const LearnerSession = () => {
       videoService.onReinforcementMeterUpdate = (value) => {
         // console.log('[LearnerSession] Reinforcement meter update received:', value);
         setReinforcementMeter(value);
+      };
+
+      videoService.onReinforcementVisibilityUpdate = (isVisible) => {
+        setShowReinforcementValue(isVisible);
       };
 
       // Set callback for freeze signal from trainer
@@ -1849,6 +1855,7 @@ const LearnerSession = () => {
           // Metrics Panel Props
           promptMeter={promptMeter}
           reinforcementMeter={reinforcementMeter}
+          showReinforcementValue={showReinforcementValue}
           bucketColor={bucketColor}
 
           // Prompt Panel Props
@@ -1912,6 +1919,8 @@ const LearnerSession = () => {
             syncedIsRunning={syncedIsRunning}
             stopwatch={stopwatch}
             Whiteboard={Whiteboard}
+            inlineMedia={sessionState.inlineMedia}
+            setInlineMedia={sessionState.setInlineMedia}
           />
 
           {/* Exercise Overlay - Displays question/answer on top of whiteboard */}

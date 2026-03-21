@@ -250,10 +250,10 @@ const LearnerProgramsView = () => {
                 Back to Manage Learning Progress
               </button>
               <div>
-                <h1 className="page-title">Programs & Goals </h1>
+                <h1 className="page-title">Skill Development Graph  </h1>
                 <p className="page-description">
-                  learner Kumar's Learning Programs
-                </p>
+                  Learner's Progress View
+                  </p>
               </div>
             </div>
 
