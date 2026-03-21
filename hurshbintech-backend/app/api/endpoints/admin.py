@@ -45,6 +45,23 @@ from app.services.cache_service import cache_service
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
 
+async def _has_dedicated_coach_column(db: AsyncSession) -> bool:
+    """Return True when subscription_packages.dedicated_coach_id exists."""
+    result = await db.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'subscription_packages'
+                  AND column_name = 'dedicated_coach_id'
+            )
+            """
+        )
+    )
+    return bool(result.scalar())
+
+
 # head management
 
 
@@ -459,7 +476,8 @@ async def get_all_coaches_list(
     # Batch lookup: map coach_profile_id -> dedicated_package_id
     coach_ids = [c.id for c in coaches]
     dedicated_map: dict = {}
-    if coach_ids:
+    has_dedicated_column = await _has_dedicated_coach_column(db)
+    if coach_ids and has_dedicated_column:
         pkg_rows = await db.execute(
             select(SubscriptionPackage.dedicated_coach_id, SubscriptionPackage.id).where(
                 SubscriptionPackage.dedicated_coach_id.in_(coach_ids)
@@ -649,9 +667,11 @@ async def create_new_coach(
 
     # Refresh coach to get the reference_data relationship
     await db.refresh(new_coach, ['reference_data'])
+
+    has_dedicated_column = await _has_dedicated_coach_column(db)
     
     # Handle dedicated package assignment
-    if dedicated_package_id is not None:
+    if dedicated_package_id is not None and has_dedicated_column:
         # Clear any old assignment for this coach profile
         old_pkg_result = await db.execute(
             select(SubscriptionPackage).where(SubscriptionPackage.dedicated_coach_id == new_coach.id)
@@ -670,13 +690,20 @@ async def create_new_coach(
             if new_pkg:
                 new_pkg.dedicated_coach_id = new_coach.id
         await db.commit()
+    elif dedicated_package_id is not None:
+        logging.warning(
+            "Skipping dedicated package assignment for coach %s because subscription_packages.dedicated_coach_id is missing",
+            new_coach.id,
+        )
 
     # Look up current dedicated package for response
-    pkg_result = await db.execute(
-        select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == new_coach.id)
-    )
-    pkg_row = pkg_result.first()
-    response_dedicated_pkg_id = pkg_row[0] if pkg_row else None
+    response_dedicated_pkg_id = None
+    if has_dedicated_column:
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == new_coach.id)
+        )
+        pkg_row = pkg_result.first()
+        response_dedicated_pkg_id = pkg_row[0] if pkg_row else None
 
     return CoachResponse.from_orm_with_user(new_coach, dedicated_package_id=response_dedicated_pkg_id)
 
@@ -693,12 +720,15 @@ async def get_coach_by_id(
     
     if not coach:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
-    
-    pkg_result = await db.execute(
-        select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == coach.id)
-    )
-    pkg_row = pkg_result.first()
-    return CoachResponse.from_orm_with_user(coach, dedicated_package_id=pkg_row[0] if pkg_row else None)
+
+    dedicated_package_id = None
+    if await _has_dedicated_coach_column(db):
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == coach.id)
+        )
+        pkg_row = pkg_result.first()
+        dedicated_package_id = pkg_row[0] if pkg_row else None
+    return CoachResponse.from_orm_with_user(coach, dedicated_package_id=dedicated_package_id)
 
 
 # Update coach (admin only)
@@ -923,8 +953,10 @@ async def update_coach_profile(
     # Invalidate coach profile caches
     await cache_service.invalidate_coach_profile(coach_id)
 
+    has_dedicated_column = await _has_dedicated_coach_column(db)
+
     # Handle dedicated package assignment
-    if dedicated_package_id is not None:
+    if dedicated_package_id is not None and has_dedicated_column:
         old_pkg_result = await db.execute(
             select(SubscriptionPackage).where(SubscriptionPackage.dedicated_coach_id == updated_coach.id)
         )
@@ -941,12 +973,19 @@ async def update_coach_profile(
             if new_pkg:
                 new_pkg.dedicated_coach_id = updated_coach.id
         await db.commit()
+    elif dedicated_package_id is not None:
+        logging.warning(
+            "Skipping dedicated package assignment for coach %s because subscription_packages.dedicated_coach_id is missing",
+            updated_coach.id,
+        )
 
     # Look up current dedicated package for response
-    pkg_result = await db.execute(
-        select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == updated_coach.id)
-    )
-    pkg_row = pkg_result.first()
+    pkg_row = None
+    if has_dedicated_column:
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == updated_coach.id)
+        )
+        pkg_row = pkg_result.first()
 
     return CoachResponse.from_orm_with_user(updated_coach, dedicated_package_id=pkg_row[0] if pkg_row else None)
 
