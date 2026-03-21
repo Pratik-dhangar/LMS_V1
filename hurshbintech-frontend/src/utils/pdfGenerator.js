@@ -987,8 +987,8 @@ export const downloadProgressReportPDF = async (data, options = {}) => {
 /**
  * Download a program progress report PDF matching the "View Report" modal layout:
  *  - Gold header (learner name, program name, generated date)
- *  - Bar chart of prompt values per session
- *  - Session details table (Session ID | Date & Time | Prompt Level)
+ *  - Bar chart of reinforcement values per session
+ *  - Session details table (Session ID | Date & Time | Reinforcement Level)
  *
  * @param {object} params
  * @param {string} params.learnerName
@@ -1052,7 +1052,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
     const gap = barAreaW / n;
 
     sessionData.forEach((session, idx) => {
-        const val = session.prompt_value ?? 0;
+        const val = session.reinforcement_value ?? 0;
         const barH = (val / 100) * chartH;
         const bx = axisLeft + idx * gap + (gap - barW) / 2;
         const by = chartBottom - barH;
@@ -1093,7 +1093,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
-    doc.text('Prompt Level (0–100)', pageWidth / 2, chartBottom + 12, { align: 'center' });
+    doc.text('Reinforcement Level (0-100)', pageWidth / 2, chartBottom + 12, { align: 'center' });
 
     // Legend
     const legendX = axisRight - 28;
@@ -1102,7 +1102,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
     doc.rect(legendX, legendY, 5, 3.5, 'F');
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(7);
-    doc.text('Prompt Level', legendX + 7, legendY + 3);
+    doc.text('Reinforcement Level', legendX + 7, legendY + 3);
 
     y = chartBottom + 18;
 
@@ -1120,7 +1120,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
     doc.text('Session Details', margin, y);
     y += 7;
 
-    const cols = ['Session ID', 'Date & Time', 'Prompt Level'];
+    const cols = ['Session ID', 'Date & Time', 'Reinforcement Level'];
     const colW = [contentWidth * 0.22, contentWidth * 0.50, contentWidth * 0.28];
     const rowH = 8;
     const pad = 2.5;
@@ -1157,8 +1157,8 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
                 hour: '2-digit', minute: '2-digit'
             })
             : 'N/A';
-        const promptLabel = `${session.prompt_meter}  (${session.prompt_value}/100)`;
-        const rowCells = [`Session ${session.session_id}`, dateStr, promptLabel];
+        const reinforcementLabel = `${session.reinforcement_meter || 'N/A'}  (${session.reinforcement_value ?? 0}/100)`;
+        const rowCells = [`Session ${session.session_id}`, dateStr, reinforcementLabel];
 
         tx = margin;
         rowCells.forEach((cell, i) => {
@@ -1351,7 +1351,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         const barW = Math.min(16, gap * 0.55);
 
         sessions.forEach((session, idx) => {
-            const val = session.prompt_value ?? 0;
+            const val = session.reinforcement_value ?? 0;
             const barH = (val / 100) * chartH;
             const bx = axisLeft + idx * gap + (gap - barW) / 2;
             const by = chartBottom - barH;
@@ -1373,7 +1373,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
                 doc.setTextColor(34, 197, 94);
                 doc.text('Done', bx + barW / 2, chartBottom - 2, { align: 'center' });
             } else {
-                // Prompt value text above non-zero bars
+                // Reinforcement value text above non-zero bars
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(6);
                 doc.setTextColor(100, 60, 0);
@@ -1397,7 +1397,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         doc.rect(legX, chartTop + 2, 4.5, 3, 'F');
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(6.5);
-        doc.text('Prompt Level', legX + 6, chartTop + 4.5);
+        doc.text('Reinforcement Level', legX + 6, chartTop + 4.5);
 
         y = chartBottom + 14;
 
@@ -1409,7 +1409,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         doc.text('Session Details', margin, y);
         y += 6;
 
-        const cols = ['Session ID', 'Date & Time', 'Prompt Level'];
+        const cols = ['Session ID', 'Date & Time', 'Reinforcement Level'];
         const colW = [contentWidth * 0.22, contentWidth * 0.50, contentWidth * 0.28];
         const rowH = 7.5;
         const pad = 2.2;
@@ -1437,8 +1437,8 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
             const dateStr = session.session_date
                 ? new Date(session.session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'N/A';
-            const promptLabel = `${session.prompt_meter}  (${session.prompt_value}/100)`;
-            const cells = [`Session ${session.session_id}`, dateStr, promptLabel];
+            const reinforcementLabel = `${session.reinforcement_meter || 'N/A'}  (${session.reinforcement_value ?? 0}/100)`;
+            const cells = [`Session ${session.session_id}`, dateStr, reinforcementLabel];
             tx = margin;
             cells.forEach((cell, i) => {
                 doc.setFillColor(idx % 2 === 0 ? 249 : 255, idx % 2 === 0 ? 250 : 255, idx % 2 === 0 ? 251 : 255);

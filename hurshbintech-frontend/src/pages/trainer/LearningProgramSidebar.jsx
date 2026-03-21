@@ -24,6 +24,20 @@ const LearningProgramSidebar = ({
   learningGoalsSearch,
   setLearningGoalsSearch
 }) => {
+  const promptToReinforcement = {
+    '0': 100,
+    '10': 90,
+    '20': 80,
+    '30': 70,
+    '40': 60,
+    '50': 50,
+    '60': 40,
+    '70': 30,
+    '80': 20,
+    '90': 10,
+    '100': 0,
+  };
+
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
   // State for editable transcript
@@ -178,19 +192,16 @@ const LearningProgramSidebar = ({
                   const newValue = selectedPromptLevel === p ? null : p;
                   setSelectedPromptLevel(newValue);
                   webRTC && webRTC.sendPromptMeter(newValue);
+
+                  const mappedValue = newValue === null ? null : promptToReinforcement[newValue];
+                  const mappedReinforcement = mappedValue === null
+                    ? null
+                    : (mappedValue === 0 ? 0 : String(mappedValue));
+                  setSelectedReinforcementLevel(mappedReinforcement);
+                  webRTC && webRTC.sendReinforcementMeter(mappedReinforcement);
                 }}
               >
-                {p === '0' ? (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                    <polyline
-                      points="1.5,7 5.5,11 12.5,3"
-                      stroke="#ffffff"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : p === '100' ? (
+                {p === '0' ? ('0') : p === '100' ? (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
                     <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
                     <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
@@ -206,20 +217,6 @@ const LearningProgramSidebar = ({
             </div>
           )} */}
         </div>
-        {/* Save Report Button */}
-        {selectedProgramId && selectedPromptLevel && (
-          <button
-            onClick={() => onSaveReport({
-              programId: selectedProgramId,
-              programName: selectedProgram?.goal || 'Unknown Program',
-              promptMeter: selectedPromptLevel
-            })}
-            className="btn-primary w-60 ml-3.5"
-          >
-            💾 Save Learning Progress
-          </button>
-        )}
-
         <div className="sidebar-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
           <span><Emoji emoji="🎯" size="base" /> Reinforcement Meter</span>
           {onToggleReinforcementValueVisibility && (
@@ -244,9 +241,11 @@ const LearningProgramSidebar = ({
         </div>
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
-            {['Cross', '10', '20', '30', '40', '50', '60', '70', '80', '90', 'Tick'].map((r) => {
+            {['100', '90', '80', '70', '60', '50', '40', '30', '20', '10', 'Cross'].map((r) => {
               const val = r === 'Cross' ? 0 : r === 'Tick' ? 100 : r;
-              const isSelected = selectedReinforcementLevel === val;
+              const isSelected = selectedReinforcementLevel !== null
+                && selectedReinforcementLevel !== undefined
+                && String(selectedReinforcementLevel) === String(val);
               return (
                 <div
                   key={r}
@@ -286,6 +285,21 @@ const LearningProgramSidebar = ({
             </div>
           )} */}
         </div>
+
+        {/* Save Report Button */}
+        {selectedProgramId && selectedReinforcementLevel !== null && selectedReinforcementLevel !== undefined && (
+          <button
+            onClick={() => onSaveReport({
+              programId: selectedProgramId,
+              programName: selectedProgram?.goal || 'Unknown Program',
+              promptMeter: selectedPromptLevel,
+              reinforcementMeter: selectedReinforcementLevel
+            })}
+            className="btn-primary w-60 ml-3.5"
+          >
+            💾 Save Learning Progress
+          </button>
+        )}
 
 
 

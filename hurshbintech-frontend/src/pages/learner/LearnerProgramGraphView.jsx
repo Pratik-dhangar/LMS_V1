@@ -38,7 +38,7 @@ const LearnerProgramGraphView = () => {
         try {
             setLoading(true);
             const data = await sessionReportService.getProgramSessionData(learnerId, programName);
-            const processedData = data.map((session) => {
+            const processedData = data.map((session, idx) => {
                 const sessionTime = session.session_date
                     ? new Date(session.session_date).toLocaleString("en-US", {
                         month: "short",
@@ -50,6 +50,7 @@ const LearnerProgramGraphView = () => {
                 return {
                     ...session,
                     sessionLabel: `S${session.session_id} - ${sessionTime}`,
+                    xAxisKey: `S${session.session_id}-${session.session_number ?? idx + 1}`,
                 };
             });
             setSessionData(processedData);
@@ -88,12 +89,16 @@ const LearnerProgramGraphView = () => {
                 </text>
             );
         }
-        return null;
+        return (
+            <text x={x + width / 2} y={y - 10} fill="#333" textAnchor="middle" fontSize="12" fontWeight="bold">
+                {value}
+            </text>
+        );
     };
 
     const CustomBarShape = (props) => {
         const { x, y, width, height, fill, payload } = props;
-        const isZeroValue = payload && payload.prompt_value === 0;
+        const isZeroValue = payload && payload.reinforcement_value === 0;
         return (
             <>
                 <rect x={x} y={y} width={width} height={height} fill={fill} radius="8,8,0,0" />
@@ -106,7 +111,8 @@ const LearnerProgramGraphView = () => {
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
-            const session = sessionData.find((s) => s.sessionLabel === label);
+            const entry = payload[0];
+            const session = entry.payload;
             return (
                 <div style={{ backgroundColor: "white", padding: "15px", border: "1px solid #ccc", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                     <p style={{ fontWeight: "bold", marginBottom: "8px" }}>Session ID: {session?.session_id}</p>
@@ -115,11 +121,9 @@ const LearnerProgramGraphView = () => {
                             {new Date(session.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </p>
                     )}
-                    {payload.map((entry, index) => (
-                        <p key={index} style={{ color: entry.color, margin: "4px 0" }}>
-                            {entry.name}: {session?.prompt_meter} ({entry.value}/100)
-                        </p>
-                    ))}
+                    <p style={{ color: entry.color, margin: "4px 0" }}>
+                        {entry.name}: {Number(session?.reinforcement_value ?? entry?.value ?? 0)} ({Number(session?.reinforcement_value ?? entry?.value ?? 0)}/100)
+                    </p>
                 </div>
             );
         }
@@ -186,12 +190,12 @@ const LearnerProgramGraphView = () => {
                                 <ResponsiveContainer width="100%" height={500}>
                                     <BarChart data={sessionData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                        <XAxis dataKey="sessionLabel" angle={0} textAnchor="middle" height={80} tick={{ fontSize: 12 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
+                                        <XAxis dataKey="xAxisKey" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 12 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
                                         <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }} />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip shared={false} content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="square" />
-                                        <Bar dataKey="prompt_value" fill="#db9d32" name="Prompt Level" shape={<CustomBarShape />}>
-                                            <LabelList dataKey="prompt_value" content={renderCustomLabel} position="top" />
+                                        <Bar dataKey="reinforcement_value" fill="#db9d32" name="Reinforcement Level" shape={<CustomBarShape />}>
+                                            <LabelList dataKey="reinforcement_value" content={renderCustomLabel} position="top" />
                                         </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -207,7 +211,7 @@ const LearnerProgramGraphView = () => {
                                             <tr style={{ backgroundColor: "#f3f4f6", borderBottom: "2px solid #e5e7eb" }}>
                                                 <th style={{ padding: "12px", textAlign: "left" }}>Session ID</th>
                                                 <th style={{ padding: "12px", textAlign: "left" }}>Date & Time</th>
-                                                <th style={{ padding: "12px", textAlign: "left" }}>Prompt Level</th>
+                                                <th style={{ padding: "12px", textAlign: "left" }}>Reinforcement Level</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -219,7 +223,7 @@ const LearnerProgramGraphView = () => {
                                                     </td>
                                                     <td style={{ padding: "12px" }}>
                                                         <span style={{ padding: "4px 12px", borderRadius: "6px", backgroundColor: "#dbeafe", color: "#9c6a08", fontWeight: "600" }}>
-                                                            {session.prompt_meter} ({session.prompt_value}/100)
+                                                            {session.reinforcement_meter || "N/A"} ({session.reinforcement_value ?? 0}/100)
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -256,12 +260,12 @@ const LearnerProgramGraphView = () => {
                             <ResponsiveContainer width="100%" height={320}>
                                 <BarChart data={sessionData} margin={{ top: 10, right: 20, left: 10, bottom: 60 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                    <XAxis dataKey="sessionLabel" angle={0} textAnchor="middle" height={70} tick={{ fontSize: 11 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
+                                    <XAxis dataKey="xAxisKey" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11 }} label={{ value: "Session ID & Time", position: "insideBottom", offset: -10 }} />
                                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} label={{ value: "Level (0-100)", angle: -90, position: "insideLeft" }} />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip shared={false} content={<CustomTooltip />} />
                                     <Legend wrapperStyle={{ paddingTop: "10px" }} iconType="square" />
-                                    <Bar dataKey="prompt_value" fill="#db9d32" name="Prompt Level" radius={[6, 6, 0, 0]} shape={<CustomBarShape />}>
-                                        <LabelList dataKey="prompt_value" content={renderCustomLabel} position="top" />
+                                    <Bar dataKey="reinforcement_value" fill="#db9d32" name="Reinforcement Level" radius={[6, 6, 0, 0]} shape={<CustomBarShape />}>
+                                        <LabelList dataKey="reinforcement_value" content={renderCustomLabel} position="top" />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
