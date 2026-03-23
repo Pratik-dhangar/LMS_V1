@@ -942,14 +942,18 @@ class RecordingChunkFinalization(BaseModel):
     recording_id: str
     session_id: int
     duration: int
-    total_chunks: int
+    total_chunks: int | None = None
     uploaded_chunks: List[int] = []
     failed_chunks: List[int] = []
+    # Backward-compatible keys used by the new frontend recording service.
+    chunk_count: int | None = None
+    total_chunks_uploaded: int | None = None
 
 
 @router.post("/recordings/upload-chunk", status_code=status.HTTP_200_OK)
 async def upload_recording_chunk(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    chunk: UploadFile = File(None),
     session_id: str = Form(...),
     recording_id: str = Form(...),
     chunk_number: str = Form(...),
@@ -991,7 +995,14 @@ async def upload_recording_chunk(
         logger.info(f"  - session_id: {session_id}")
         logger.info(f"  - recording_id: {recording_id}")
         logger.info(f"  - chunk_number: {chunk_num}")
-        logger.info(f"  - file: {file.filename} (size: {file.size})")
+        upload_file = file or chunk
+        if not upload_file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing upload file. Provide 'file' or 'chunk'.",
+            )
+
+        logger.info(f"  - file: {upload_file.filename} (size: {upload_file.size})")
         logger.info(f"  - current_user: {current_user.id}")
         
         # Try to find session by numeric ID first, then by session_id string
@@ -1036,9 +1047,9 @@ async def upload_recording_chunk(
         
         # Save chunk with zero-padded number for proper sorting.
         # Preserve known extension so merge service can decode correctly.
-        file_ext = Path(file.filename or "").suffix.lower()
+        file_ext = Path(upload_file.filename or "").suffix.lower()
         if file_ext not in [".mp4", ".webm"]:
-            content_type = (file.content_type or "").lower()
+            content_type = (upload_file.content_type or "").lower()
             file_ext = ".webm" if "webm" in content_type else ".mp4"
 
         chunk_path = chunks_dir / f"{chunk_num:06d}{file_ext}"
@@ -1046,7 +1057,7 @@ async def upload_recording_chunk(
         chunk_checksum = ""
         
         # Read content and calculate checksum
-        content = await file.read()
+        content = await upload_file.read()
         chunk_size = len(content)
         
         if chunk_size == 0:
@@ -1105,12 +1116,17 @@ async def upload_recording_chunk(
             logger.warning(f"[CHUNK UPLOAD] Could not write metadata: {e}")
         
         # Update session status if this is first chunk
-        if chunk_num == 0 and session.recording_status != "recording":
+        if chunk_num <= 1 and session.recording_status != "recording":
             session.recording_status = "recording"
             session.recording_started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            session.recording_id = recording_id
+            session.has_recording = True
             session.recording_url = str(recording_dir)  # Store base recording directory
             await db.commit()
             logger.info(f"[CHUNK UPLOAD] ✅ Session {session.id} recording started")
+        elif session.recording_status == "recording":
+            session.recording_chunks_count = max(session.recording_chunks_count or 0, chunk_num)
+            await db.commit()
         
         return {
             "status": "success",
@@ -1170,7 +1186,7 @@ async def finalize_recording(
         recording_id = data.recording_id
         session_id = data.session_id
         duration = data.duration
-        total_chunks = data.total_chunks
+        total_chunks = data.total_chunks or data.chunk_count or 0
         uploaded_chunks = data.uploaded_chunks
         failed_chunks = data.failed_chunks
 
@@ -1193,8 +1209,6 @@ async def finalize_recording(
         base_dir = Path(settings.RECORDINGS_BASE_DIR or "uploads/recordings")
         chunks_dir = base_dir / recording_id / "chunks"
         output_dir = base_dir / recording_id
-        # Merge service defaults to MP4 codecs, so output container must be MP4.
-        output_file = output_dir / "final.mp4"
         
         # Load metadata if available
         metadata_file = output_dir / "metadata.json"
@@ -1216,32 +1230,71 @@ async def finalize_recording(
                 detail=f"Chunks directory not found for recording {recording_id}"
             )
 
+        # Resolve uploaded chunk files and choose a matching output container.
+        chunk_files = list(chunks_dir.glob("*.webm")) + list(chunks_dir.glob("*.mp4"))
+        if not chunk_files:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No chunks found for recording {recording_id}",
+            )
+
+        # Sort chunks by numeric chunk index, not lexicographic filename.
+        def _chunk_index(path: Path) -> int:
+            try:
+                return int(path.stem)
+            except ValueError:
+                return 0
+
+        chunk_files = sorted(chunk_files, key=_chunk_index)
+        chunk_indexes = [_chunk_index(p) for p in chunk_files]
+
+        expected_total = total_chunks or len(chunk_files)
+        if expected_total > 0:
+            first_index = min(chunk_indexes) if chunk_indexes else 0
+            # Support both 0-based and 1-based chunk numbering.
+            if first_index <= 0:
+                expected_indexes = set(range(0, expected_total))
+            else:
+                expected_indexes = set(range(1, expected_total + 1))
+
+            found_indexes = set(chunk_indexes)
+            missing_indexes = sorted(expected_indexes - found_indexes)
+
+            if missing_indexes:
+                logger.error(
+                    f"[FINALIZE] Missing chunk indexes: {missing_indexes[:20]}"
+                    f"{'...' if len(missing_indexes) > 20 else ''}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Recording is incomplete. Missing {len(missing_indexes)} chunk(s). "
+                        "Please wait for uploads/retries to finish, then finalize again."
+                    ),
+                )
+
+        output_ext = chunk_files[0].suffix if chunk_files else ".webm"
+        output_file = output_dir / f"final{output_ext}"
+
         # Use the new recording merge service for robust merging
         merge_service = get_recording_merge_service()
-        
-        success, merge_result = merge_service.merge_chunks(
-            chunks_dir=chunks_dir,
-            output_file=output_file,
-            total_chunks=total_chunks,
-            uploaded_chunks=uploaded_chunks,
-            failed_chunks=failed_chunks,
-            chunk_metadata=chunk_metadata,
-            allow_partial=True  # Allow up to 20% missing chunks with warning
+
+        success = merge_service.merge_chunks(
+            chunk_files=chunk_files,
+            output_path=str(output_file),
+            use_copy_codec=True,
         )
 
         if not success:
-            logger.error(f"[FINALIZE] Merge failed: {merge_result['message']}")
-            # Log detailed errors
-            for error in merge_result.get("errors", []):
-                logger.error(f"  - {error}")
+            logger.error("[FINALIZE] Merge failed")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to merge recording: {merge_result['message']}"
+                detail="Failed to merge recording"
             )
 
-        total_size = merge_result.get("output_size", 0)
-        merged_chunks = merge_result.get("merged_chunks", 0)
-        merge_method = merge_result.get("method", "unknown")
+        total_size = output_file.stat().st_size
+        merged_chunks = len(chunk_files)
+        merge_method = "ffmpeg_concat_copy"
 
         logger.info(f"[FINALIZE] ✅ Merge successful via {merge_method}: {merged_chunks} chunks → {total_size} bytes")
 
@@ -1287,6 +1340,7 @@ async def finalize_recording(
         session.recording_status = "completed"
         session.recording_uploaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.recording_duration = duration
+        session.recording_chunks_count = merged_chunks
         await db.commit()
 
         logger.info(f"[FINALIZE] ✅ Session {session_id} recording finalized in database")
