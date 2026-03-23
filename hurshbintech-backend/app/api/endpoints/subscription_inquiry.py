@@ -63,6 +63,7 @@ async def submit_subscription_inquiry(
     learner_name: str = Form(...),
     email: str = Form(...),
     contact_number: str = Form(...),
+    address: Optional[str] = Form(None),
     age: Optional[int] = Form(None),
     date_of_birth: Optional[str] = Form(None),        # ISO date string YYYY-MM-DD
     date_of_assessment: Optional[str] = Form(None),   # ISO date string YYYY-MM-DD
@@ -156,6 +157,7 @@ async def submit_subscription_inquiry(
         learner_name=learner_name,
         email=email,
         contact_number=contact_number,
+        address=address,
         age=age,
         date_of_birth=dob,
         date_of_assessment=doa,
@@ -220,6 +222,7 @@ async def update_subscription_inquiry(
             inquiry_data = {
                 "email": inquiry.email,
                 "contact_number": inquiry.contact_number,
+                "address": inquiry.address,
                 "age": inquiry.age,
                 "date_of_birth": inquiry.date_of_birth.isoformat() if inquiry.date_of_birth else None,
                 "date_of_assessment": inquiry.date_of_assessment.isoformat() if inquiry.date_of_assessment else None,
@@ -288,6 +291,7 @@ async def export_subscription_inquiries_csv(
         "Learner Name",
         "Email",
         "Contact Number",
+        "Address",
         "Age",
         "Date of Birth",
         "Date of Assessment",
@@ -309,6 +313,7 @@ async def export_subscription_inquiries_csv(
             inq.learner_name,
             inq.email,
             inq.contact_number,
+            inq.address or "",
             inq.age if inq.age is not None else "",
             inq.date_of_birth.isoformat() if inq.date_of_birth else "",
             inq.date_of_assessment.isoformat() if inq.date_of_assessment else "",

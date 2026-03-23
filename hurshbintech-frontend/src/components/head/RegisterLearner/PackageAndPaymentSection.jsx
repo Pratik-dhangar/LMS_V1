@@ -28,7 +28,7 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
 
     const handlePackageChange = (e) => {
         const packageId = parseInt(e.target.value);
-        const selectedPackage = packages.find(p => p.id === packageId);
+        const selectedPackage = learnerPackages.find(p => p.id === packageId);
         handleChange(e);
         if (onPackageChange) {
             onPackageChange(selectedPackage);
@@ -76,8 +76,12 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
 
     const getSelectedPackageDetails = () => {
         const selectedId = parseInt(formData.package_id);
-        return packages.find(p => p.id === selectedId);
+        return learnerPackages.find(p => p.id === selectedId);
     };
+
+    const learnerPackages = packages.filter(
+        (pkg) => String(pkg?.package_type || '').toUpperCase() === 'LEARNER'
+    );
 
     const selectedPackage = getSelectedPackageDetails();
 
@@ -102,7 +106,7 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
                         disabled={loadingPackages}
                     >
                         <option value="">-- Select a Package --</option>
-                        {packages.map(pkg => (
+                        {learnerPackages.map(pkg => (
                             <option key={pkg.id} value={pkg.id}>
                                 {pkg.package_name} ({pkg.sessions_count} sessions)
                             </option>
@@ -268,7 +272,7 @@ const PackageAndPaymentSection = ({ formData, handleChange, onPackageChange, err
                                 />
                             )}
                         </div>
-                        
+
                     </div>
                 </div>
             )}

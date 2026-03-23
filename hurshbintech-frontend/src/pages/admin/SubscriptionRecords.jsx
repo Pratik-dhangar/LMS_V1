@@ -195,6 +195,7 @@ const SubscriptionRecords = () => {
           i.learner_name?.toLowerCase().includes(q) ||
           i.email?.toLowerCase().includes(q) ||
           i.contact_number?.toLowerCase().includes(q) ||
+          i.address?.toLowerCase().includes(q) ||
           i.package_name?.toLowerCase().includes(q),
       ),
     );
@@ -607,7 +608,7 @@ const SubscriptionRecords = () => {
           </div>
         )}
 
-       
+
       </div>
     );
   };
@@ -800,7 +801,7 @@ const SubscriptionRecords = () => {
               <div className="search-section">
                 <SearchBar
                   onSearch={handleInquirySearch}
-                  placeholder="Search by name, email, package…"
+                  placeholder="Search by name, email, address, package…"
                 />
                 <div className="filter-section">
                   <select
@@ -851,6 +852,7 @@ const SubscriptionRecords = () => {
                             <th className="table-primary-th">Learner Name</th>
                             <th className="table-primary-th">Email</th>
                             <th className="table-primary-th">Contact</th>
+                            <th className="table-primary-th">Address</th>
                             <th className="table-primary-th table-primary-th-center">Age</th>
                             <th className="table-primary-th">DOB</th>
                             <th className="table-primary-th">Assessment Date</th>
@@ -870,6 +872,9 @@ const SubscriptionRecords = () => {
                               <td className="table-primary-td">{inq.learner_name}</td>
                               <td className="table-primary-td">{inq.email}</td>
                               <td className="table-primary-td">{inq.contact_number}</td>
+                              <td className="table-primary-td" style={{ maxWidth: '220px', whiteSpace: 'normal' }}>
+                                {inq.address || '—'}
+                              </td>
                               <td className="table-primary-td table-primary-td-center">{inq.age ?? '—'}</td>
                               <td className="table-primary-td">
                                 {inq.date_of_birth ? new Date(inq.date_of_birth).toLocaleDateString('en-IN') : '—'}

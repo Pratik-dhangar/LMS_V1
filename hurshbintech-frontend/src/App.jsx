@@ -53,6 +53,9 @@ import ManageSessions from './pages/head/ManageSessions';
 import ObserverSession from './pages/head/ObserverSession';
 import ViewVlogs from './pages/head/ViewVlogs';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
+import CreateProgram from './pages/head/CreateProgram';
+import EditProgram from './pages/head/EditProgram';
+import ManagePrograms from './pages/head/ManagePrograms';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
 import LearnerProgramsView from './pages/head/LearnerProgramsView';
@@ -603,6 +606,30 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['head']}>
                 <ManageProgramAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/create-new-program"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <CreateProgram />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/edit-program/:programId"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <EditProgram />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/manage-programs"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <ManagePrograms />
               </ProtectedRoute>
             }
           />
