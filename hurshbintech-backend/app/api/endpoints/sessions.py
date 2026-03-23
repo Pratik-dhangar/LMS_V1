@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
+from sqlalchemy.orm import aliased
 
 from app.core.config import settings
 from app.core.deps import (
@@ -29,7 +30,7 @@ from app.models.session_model import TrainingSession
 from app.models.session_notes_model import SessionNotes
 from app.models.session_report_model import SessionReport
 from app.models.session_feedback_model import SessionFeedback
-from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, User
+from app.models.user_model import HeadProfile, LearnerProfile, TrainerProfile, User, UserRole
 from app.schemas.session import SessionCreate, SessionEnd, SessionResponse, SessionFeedbackCreate, SessionFeedbackResponse
 from app.utils.s3_utils import S3Manager, convert_s3_url_to_proxy
 from app.services.recording_storage import get_recording_storage
@@ -1520,7 +1521,13 @@ async def get_recording_playback_url(
         )
     
     # Verify user access
-    if current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
+    # Admin can access any recording. Others must be participants/creator.
+    is_admin = (
+        current_user.role == UserRole.ADMIN
+        or str(current_user.role).upper() == "ADMIN"
+        or current_user.role == "admin"
+    )
+    if (not is_admin) and current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this session recording"
@@ -1622,6 +1629,66 @@ async def get_trainer_recordings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recordings: {str(e)}"
         )
+
+
+@router.get("/admin/learner/{learner_id}/recordings")
+async def get_learner_recordings_for_admin(
+    learner_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get session-wise recording status for a learner (admin/head only)."""
+    is_admin_or_head = (
+        current_user.role in [UserRole.ADMIN, UserRole.HEAD]
+        or str(current_user.role).upper() in ["ADMIN", "HEAD"]
+        or current_user.role in ["admin", "head"]
+    )
+    if not is_admin_or_head:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin/head can access learner recordings",
+        )
+
+    # Enforce trainer-learner only session records (exclude any non-standard role mapping).
+    trainer_user = aliased(User)
+    learner_user = aliased(User)
+
+    stmt = (
+        select(TrainingSession)
+        .join(trainer_user, trainer_user.id == TrainingSession.trainer_id)
+        .join(learner_user, learner_user.id == TrainingSession.learner_id)
+        .where(
+            TrainingSession.learner_id == learner_id,
+            trainer_user.role == UserRole.TRAINER,
+            learner_user.role == UserRole.LEARNER,
+        )
+        .order_by(
+            desc(TrainingSession.updated_at),
+            desc(TrainingSession.created_at),
+            desc(TrainingSession.id),
+        )
+    )
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
+
+    rows = []
+    for s in sessions:
+        rows.append(
+            {
+                "session_db_id": s.id,
+                "session_id": s.session_id,
+                "title": s.title,
+                "scheduled_date": s.scheduled_date,
+                "created_at": s.created_at,
+                "updated_at": s.updated_at,
+                "latest_event_at": s.updated_at or s.created_at or s.scheduled_date,
+                "status": s.status,
+                "recording_status": s.recording_status,
+                "has_recording": bool(s.recording_url),
+            }
+        )
+
+    return {"learner_id": learner_id, "sessions": rows, "total": len(rows)}
 
 
 # ============ SUBSCRIPTION SESSION TRACKING (MANUAL TRIGGER) ============
