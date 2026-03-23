@@ -2544,7 +2544,7 @@ class EmailService:
     ) -> bool:
         """
         Send subscription inquiry confirmation email to learner after admin review.
-        inquiry_data should contain: email, contact_number, age, date_of_birth, date_of_assessment, 
+        inquiry_data should contain: email, contact_number, address, age, date_of_birth, date_of_assessment, 
                                      package_name, package_price, payment_method, payment_receipt_filename
         """
         
@@ -2723,6 +2723,10 @@ class EmailService:
                             <div class="detail-row">
                                 <span class="detail-label">Contact Number</span>
                                 <span class="detail-value">{inquiry_data.get('contact_number', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Address</span>
+                                <span class="detail-value">{inquiry_data.get('address', '—')}</span>
                             </div>
                             <div class="detail-row">
                                 <span class="detail-label">Age</span>

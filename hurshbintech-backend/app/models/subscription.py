@@ -359,6 +359,7 @@ class PublicSubscriptionInquiry(Base):
     learner_name = Column(String(200), nullable=False)
     email = Column(String(255), nullable=False)
     contact_number = Column(String(50), nullable=False)
+    address = Column(Text, nullable=True)
     age = Column(Integer, nullable=True)
     date_of_birth = Column(Date, nullable=True)
 

@@ -13,6 +13,9 @@ class ContactCRUD:
         """Create a new contact submission"""
         db_contact = Contact(
             parent_name=contact.parent_name,
+            child_name=contact.child_name,
+            child_age=contact.child_age,
+            address=contact.address,
             email=contact.email,
             phone=contact.phone,
             message=contact.message,

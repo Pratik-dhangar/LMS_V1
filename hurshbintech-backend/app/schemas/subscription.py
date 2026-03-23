@@ -501,6 +501,7 @@ class PublicSubscriptionInquiryCreate(BaseModel):
     learner_name: str = Field(..., min_length=1, max_length=200)
     email: str = Field(..., max_length=255)
     contact_number: str = Field(..., min_length=1, max_length=50)
+    address: Optional[str] = Field(None, max_length=1000)
     age: Optional[int] = Field(None, ge=0, le=150)
     date_of_birth: Optional[date] = None
     date_of_assessment: Optional[date] = None
@@ -516,6 +517,7 @@ class PublicSubscriptionInquiryResponse(BaseModel):
     learner_name: str
     email: str
     contact_number: str
+    address: Optional[str] = None
     age: Optional[int] = None
     date_of_birth: Optional[date] = None
     date_of_assessment: Optional[date] = None

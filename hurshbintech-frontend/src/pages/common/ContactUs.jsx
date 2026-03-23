@@ -100,6 +100,9 @@ const ContactUs = () => {
     const [assessmentData, setAssessmentData] = useState(createInitialAssessmentData);
     const [formData, setFormData] = useState({
         parent_name: "",
+        child_name: "",
+        child_age: "",
+        address: "",
         email: "",
         phone: "",
         message: "",
@@ -114,6 +117,18 @@ const ContactUs = () => {
             newErrors.parent_name = "Name is required";
         } else if (formData.parent_name.length < 2) {
             newErrors.parent_name = "Name must be at least 2 characters";
+        }
+
+        if (formData.child_name && formData.child_name.trim().length > 0 && formData.child_name.trim().length < 2) {
+            newErrors.child_name = "Child name must be at least 2 characters";
+        }
+
+        if (formData.child_age && formData.child_age.trim().length > 20) {
+            newErrors.child_age = "Child age is too long";
+        }
+
+        if (formData.address && formData.address.length > 1000) {
+            newErrors.address = "Address must not exceed 1000 characters";
         }
 
         if (!formData.email.trim()) {
@@ -179,6 +194,9 @@ const ContactUs = () => {
             setTimeout(() => {
                 setFormData({
                     parent_name: "",
+                    child_name: "",
+                    child_age: "",
+                    address: "",
                     email: "",
                     phone: "",
                     message: "",
@@ -342,6 +360,51 @@ const ContactUs = () => {
                                     />
                                     {errors.parent_name && (
                                         <span className="error-message">{errors.parent_name}</span>
+                                    )}
+                                </div>
+
+                                <div className="input-group">
+                                    <input
+                                        type="text"
+                                        name="child_name"
+                                        placeholder="Child's Name"
+                                        value={formData.child_name}
+                                        onChange={handleInputChange}
+                                        disabled={loading}
+                                        className={errors.child_name ? "error" : ""}
+                                    />
+                                    {errors.child_name && (
+                                        <span className="error-message">{errors.child_name}</span>
+                                    )}
+                                </div>
+
+                                <div className="input-group">
+                                    <input
+                                        type="text"
+                                        name="child_age"
+                                        placeholder="Child Age"
+                                        value={formData.child_age}
+                                        onChange={handleInputChange}
+                                        disabled={loading}
+                                        className={errors.child_age ? "error" : ""}
+                                    />
+                                    {errors.child_age && (
+                                        <span className="error-message">{errors.child_age}</span>
+                                    )}
+                                </div>
+
+                                <div className="input-group">
+                                    <input
+                                        type="text"
+                                        name="address"
+                                        placeholder="Address"
+                                        value={formData.address}
+                                        onChange={handleInputChange}
+                                        disabled={loading}
+                                        className={errors.address ? "error" : ""}
+                                    />
+                                    {errors.address && (
+                                        <span className="error-message">{errors.address}</span>
                                     )}
                                 </div>
 

@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field, EmailStr
 class ContactCreate(BaseModel):
     """Schema for creating a new contact submission"""
     parent_name: str = Field(..., min_length=2, max_length=255, description="Name of the parent/submitter")
+    child_name: Optional[str] = Field(None, min_length=2, max_length=255, description="Name of the child")
+    child_age: Optional[str] = Field(None, max_length=20, description="Age of the child")
+    address: Optional[str] = Field(None, max_length=1000, description="Address")
     email: EmailStr = Field(..., description="Email address")
     phone: Optional[str] = Field(None, max_length=20, description="Phone number")
     message: str = Field(..., min_length=5, max_length=5000, description="Contact message")
@@ -16,6 +19,9 @@ class ContactCreate(BaseModel):
         json_schema_extra = {
             "example": {
                 "parent_name": "John Doe",
+                "child_name": "Jane Doe",
+                "child_age": "7",
+                "address": "Andheri West, Mumbai",
                 "email": "john@example.com",
                 "phone": "+91 98XXXXXX",
                 "message": "I would like to inquire about your coaching programs..."
@@ -43,6 +49,9 @@ class ContactResponse(BaseModel):
     """Schema for returning contact information"""
     id: int
     parent_name: str
+    child_name: Optional[str]
+    child_age: Optional[str]
+    address: Optional[str]
     email: str
     phone: Optional[str]
     message: str
@@ -58,6 +67,9 @@ class ContactResponse(BaseModel):
             "example": {
                 "id": 1,
                 "parent_name": "John Doe",
+                "child_name": "Jane Doe",
+                "child_age": "7",
+                "address": "Andheri West, Mumbai",
                 "email": "john@example.com",
                 "phone": "+91 98XXXXXX",
                 "message": "I would like to inquire about your coaching programs...",

@@ -155,7 +155,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
             setCreatingProgram(true);
             const created = await programService.createProgram({
                 name: newProgramName.trim(),
-                description: newProgramDescription.trim() || null,
+                skill: newProgramDescription.trim() || null,
                 learner_id: session.learner_id,
                 goal_ids: formData.goal_ids,
                 content_ids: formData.content_ids,

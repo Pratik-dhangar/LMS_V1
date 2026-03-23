@@ -35,6 +35,7 @@ const publicSubscriptionService = {
         data.append('learner_name', formData.learner_name || '');
         data.append('email', formData.email || '');
         data.append('contact_number', formData.contact_number || '');
+        data.append('address', formData.address || '');
         if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
             data.append('age', formData.age);
         }

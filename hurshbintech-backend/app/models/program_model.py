@@ -23,7 +23,7 @@ class Program(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, index=True)
-    description = Column(Text, nullable=True)
+    skill = Column(Text, nullable=True)
 
     # Owner / scope
     head_id = Column(
@@ -64,3 +64,13 @@ class Program(Base):
     head = relationship("User", foreign_keys=[head_id])
     learner = relationship("User", foreign_keys=[learner_id])
     sessions = relationship("TrainingSession", back_populates="program", passive_deletes=True)
+
+    @property
+    def description(self):
+        """Backward-compatible alias for legacy clients still reading description."""
+        return self.skill
+
+    @description.setter
+    def description(self, value):
+        """Backward-compatible alias for legacy clients still writing description."""
+        self.skill = value

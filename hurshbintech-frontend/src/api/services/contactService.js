@@ -5,6 +5,9 @@ const contactService = {
     submitContact: async (contactData) => {
         const response = await api.post('/contacts', {
             parent_name: contactData.parent_name,
+            child_name: contactData.child_name?.trim() || null,
+            child_age: contactData.child_age?.trim() || null,
+            address: contactData.address?.trim() || null,
             email: contactData.email,
             phone: contactData.phone || '',
             message: contactData.message,

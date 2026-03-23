@@ -11,7 +11,7 @@ const programService = {
    * Create a new program.
    * goal_ids are locked at creation; content_ids are mutable.
    *
-   * @param {{ name: string, description?: string, learner_id: number, goal_ids: number[], content_ids: number[] }} data
+  * @param {{ name: string, skill?: string, description?: string, learner_id: number, goal_ids: number[], content_ids: number[] }} data
    */
   createProgram: async (data) => {
     try {
@@ -57,11 +57,11 @@ const programService = {
   },
 
   /**
-   * Update a program's name, description, and/or content_ids.
+  * Update a program's name, skill, and/or content_ids.
    * goal_ids are intentionally not accepted here — they are locked.
    *
    * @param {number} programId
-   * @param {{ name?: string, description?: string, content_ids?: number[] }} data
+  * @param {{ name?: string, skill?: string, description?: string, content_ids?: number[] }} data
    */
   updateProgram: async (programId, data) => {
     try {

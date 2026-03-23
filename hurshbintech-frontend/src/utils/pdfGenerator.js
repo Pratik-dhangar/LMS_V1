@@ -640,6 +640,188 @@ export const downloadProfilePDF = async (profileData, profileType = 'trainer') =
 };
 
 /**
+ * Generate Learning Program PDF used from Schedule Session after selecting a program.
+ * Layout:
+ * - Header image
+ * - Learning Program heading
+ * - Metadata fields (Date, Child name, Program start date, Executer)
+ * - Table: SR. No. | Skill | Sub-Programs
+ */
+export const generateLearningProgramPDF = async (data = {}) => {
+    const {
+        programName = 'Learning Program',
+        date = null,
+        childName = '-',
+        programStartDate = null,
+        executerName = '-',
+        rows = [],
+    } = data;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+
+    const formatDate = (value) => {
+        if (!value) return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+        });
+    };
+
+    const safeRows = Array.isArray(rows) && rows.length > 0
+        ? rows
+        : [{ skill: '-', subPrograms: '-' }];
+
+    const headerImg = await loadHeaderDataURL();
+    let y = 10;
+
+    if (headerImg?.dataURL) {
+        const maxW = pageWidth - margin * 2;
+        const maxH = 24;
+        const ratio = headerImg.naturalWidth > 0 && headerImg.naturalHeight > 0
+            ? headerImg.naturalWidth / headerImg.naturalHeight
+            : 1;
+
+        let drawW = maxW;
+        let drawH = drawW / ratio;
+        if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+        }
+
+        const drawX = (pageWidth - drawW) / 2;
+        doc.addImage(headerImg.dataURL, 'PNG', drawX, y, drawW, drawH, '', 'FAST');
+        y += drawH + 6;
+    }
+
+    doc.setDrawColor(219, 157, 50);
+    doc.setLineWidth(0.8);
+    doc.line(0, y, pageWidth, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(52, 73, 94);
+    doc.text('Learning Program', pageWidth / 2, y, { align: 'center' });
+    y += 7;
+
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    doc.text(String(programName || 'Learning Program'), pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    const infoLines = [
+        `Date : ${formatDate(date)}`,
+        `Name of the Child : ${childName || '-'}`,
+        `Date of the Program Start : ${formatDate(programStartDate)}`,
+        `Name of the Executer : ${executerName || '-'}`,
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(20, 20, 20);
+    infoLines.forEach((line) => {
+        doc.text(line, margin, y);
+        y += 7;
+    });
+
+    y += 3;
+
+    const tableX = margin;
+    const tableW = pageWidth - 2 * margin;
+    const colW = {
+        sr: 18,
+        skill: 56,
+        sub: tableW - 18 - 56,
+    };
+    const rowMinH = 8;
+    const textPadX = 2;
+
+    const ensureSpace = (neededHeight) => {
+        if (y + neededHeight > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+        }
+    };
+
+    const drawHeaderRow = () => {
+        doc.setFillColor(122, 44, 44);
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.2);
+
+        doc.rect(tableX, y, colW.sr, rowMinH, 'FD');
+        doc.rect(tableX + colW.sr, y, colW.skill, rowMinH, 'FD');
+        doc.rect(tableX + colW.sr + colW.skill, y, colW.sub, rowMinH, 'FD');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('SR. No.', tableX + textPadX, y + 5.5);
+        doc.text('Skill', tableX + colW.sr + textPadX, y + 5.5);
+        doc.text('Sub-Programs', tableX + colW.sr + colW.skill + textPadX, y + 5.5);
+
+        y += rowMinH;
+    };
+
+    ensureSpace(16);
+    drawHeaderRow();
+
+    safeRows.forEach((row, idx) => {
+        const srText = String(idx + 1);
+        const skillText = String(row?.skill || '-');
+        const subText = String(row?.subPrograms || '-');
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(20, 20, 20);
+
+        const skillLines = doc.splitTextToSize(skillText, colW.skill - textPadX * 2);
+        const subLines = doc.splitTextToSize(subText, colW.sub - textPadX * 2);
+        const linesCount = Math.max(1, skillLines.length, subLines.length);
+        const rowH = Math.max(rowMinH, linesCount * 5 + 3);
+
+        ensureSpace(rowH + 2);
+        if (y + rowH > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+            drawHeaderRow();
+        }
+
+        doc.setFillColor(idx % 2 === 0 ? 255 : 247, idx % 2 === 0 ? 255 : 247, idx % 2 === 0 ? 255 : 247);
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.rect(tableX, y, colW.sr, rowH, 'FD');
+        doc.rect(tableX + colW.sr, y, colW.skill, rowH, 'FD');
+        doc.rect(tableX + colW.sr + colW.skill, y, colW.sub, rowH, 'FD');
+
+        doc.text(srText, tableX + textPadX, y + 5);
+        skillLines.forEach((line, lineIdx) => {
+            doc.text(line, tableX + colW.sr + textPadX, y + 5 + lineIdx * 5);
+        });
+        subLines.forEach((line, lineIdx) => {
+            doc.text(line, tableX + colW.sr + colW.skill + textPadX, y + 5 + lineIdx * 5);
+        });
+
+        y += rowH;
+    });
+
+    return doc;
+};
+
+export const downloadLearningProgramPDF = async (data = {}) => {
+    const doc = await generateLearningProgramPDF(data);
+    const rawName = String(data?.programName || 'learning_program').trim();
+    const safeName = rawName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const datePart = new Date().toISOString().slice(0, 10);
+    doc.save(`${safeName}_${datePart}.pdf`);
+};
+
+/**
  * Generate a progress report card PDF for a learner
  * Can generate for a specific program or all programs
  */

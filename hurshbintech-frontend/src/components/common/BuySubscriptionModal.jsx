@@ -17,6 +17,7 @@ const INITIAL_FORM = {
     learner_name: '',
     email: '',
     contact_number: '',
+    address: '',
     age: '',
     date_of_birth: '',
     date_of_assessment: '',
@@ -149,6 +150,7 @@ const BuySubscriptionModal = ({ onClose }) => {
             errs.email = 'Enter a valid email address';
         }
         if (!form.contact_number.trim()) errs.contact_number = 'Contact number is required';
+        if (!form.address.trim()) errs.address = 'Address is required';
         return errs;
     };
 
@@ -317,6 +319,20 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     placeholder="+91 XXXXX XXXXX"
                                 />
                                 {errors.contact_number && <p className="bsm-error-msg">{errors.contact_number}</p>}
+                            </div>
+
+                            {/* Address */}
+                            <div className="bsm-field bsm-field-full">
+                                <label className="bsm-label">Address <span className="bsm-required">*</span></label>
+                                <textarea
+                                    className={`bsm-input ${errors.address ? 'bsm-input-error' : ''}`}
+                                    name="address"
+                                    value={form.address}
+                                    onChange={handleChange}
+                                    placeholder="Full address"
+                                    rows={3}
+                                />
+                                {errors.address && <p className="bsm-error-msg">{errors.address}</p>}
                             </div>
 
                             {/* Date of Birth */}
@@ -565,6 +581,7 @@ const BuySubscriptionModal = ({ onClose }) => {
                                     <ReviewRow label="Name" value={form.learner_name} />
                                     <ReviewRow label="Email" value={form.email} />
                                     <ReviewRow label="Contact Number" value={form.contact_number} />
+                                    <ReviewRow label="Address" value={form.address || '—'} />
                                     <ReviewRow label="Age" value={form.age || '—'} />
                                     <ReviewRow label="Date of Birth" value={displayDate(form.date_of_birth)} />
                                     <ReviewRow label="Start Date" value={displayDate(form.date_of_assessment)} />
