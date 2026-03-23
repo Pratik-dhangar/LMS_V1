@@ -5,11 +5,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Users, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import adminService from '../../api/services/adminService';
+import sessionService from '../../api/services/sessionService';
 import learnerProgressReportService from '../../api/services/learnerProgressReportService';
 import { generateLearnerProgressReportPDF } from '../../utils/pdfGenerator';
 import SearchBar from '../../components/common/SearchBar';
 import '../../styles/Table.css';
 import '../../styles/ManageUsersLayout.css';
+import '../../styles/components/common/Modal.css';
 
 const AdminManageLearners = () => {
     const navigate = useNavigate();
@@ -24,6 +26,12 @@ const AdminManageLearners = () => {
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
     const [reportCreatorFilter, setReportCreatorFilter] = useState('head'); // 'head', 'coach'
+    const [showRecordingModal, setShowRecordingModal] = useState(false);
+    const [recordingRows, setRecordingRows] = useState([]);
+    const [recordingModalLearnerName, setRecordingModalLearnerName] = useState('');
+    const [loadingRecordings, setLoadingRecordings] = useState(false);
+    const [openingRecordingSessionId, setOpeningRecordingSessionId] = useState(null);
+    const [downloadingRecordingSessionId, setDownloadingRecordingSessionId] = useState(null);
 
     useEffect(() => {
         fetchLearners();
@@ -119,6 +127,115 @@ const AdminManageLearners = () => {
                 learner.passcode?.toLowerCase().includes(lowerQuery)
             );
             setFilteredLearners(filtered);
+        }
+    };
+
+    const openLearnerRecordingModal = async (learner) => {
+        try {
+            setRecordingModalLearnerName(learner.name || 'Learner');
+            setShowRecordingModal(true);
+            setLoadingRecordings(true);
+            const data = await adminService.getLearnerSessionRecordings(learner.user_id);
+            const toSortValue = (row) => {
+                const dateValue = row?.latest_event_at
+                    ? Date.parse(row.latest_event_at)
+                    : row?.created_at
+                        ? Date.parse(row.created_at)
+                        : row?.scheduled_date
+                            ? Date.parse(row.scheduled_date)
+                            : NaN;
+                if (!Number.isNaN(dateValue)) return dateValue;
+                return Number(row?.session_db_id || 0);
+            };
+            const sortedRows = [...(data?.sessions || [])].sort(
+                (a, b) => toSortValue(b) - toSortValue(a)
+            );
+            setRecordingRows(sortedRows);
+        } catch (err) {
+            console.error('Error fetching learner recordings:', err);
+            toast.error('Failed to load session recordings');
+            setRecordingRows([]);
+        } finally {
+            setLoadingRecordings(false);
+        }
+    };
+
+    const handleWatchRecording = async (sessionDbId) => {
+        try {
+            setOpeningRecordingSessionId(sessionDbId);
+            const data = await sessionService.getRecordingUrl(sessionDbId);
+            const playbackUrl = data?.playback_url;
+            if (!playbackUrl) {
+                toast.error('Recording URL not available yet');
+                return;
+            }
+            window.open(playbackUrl, '_blank', 'noopener,noreferrer');
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            toast.error(detail || 'Unable to open recording');
+        } finally {
+            setOpeningRecordingSessionId(null);
+        }
+    };
+
+    const getRecordingDownloadFilename = (row, playbackUrl) => {
+        const extensionMatch = playbackUrl?.match(/\.(webm|mp4|mkv|mov)(?:\?|$)/i);
+        const extension = extensionMatch?.[1] || 'webm';
+        const sessionRef = row?.session_id || row?.session_db_id || 'session';
+        return `${sessionRef}_recording.${extension}`;
+    };
+
+    const triggerDownloadAnchor = (url, fileName) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    const handleDownloadRecording = async (row) => {
+        const sessionDbId = row?.session_db_id;
+        if (!sessionDbId) {
+            toast.error('Session ID missing for download');
+            return;
+        }
+
+        try {
+            setDownloadingRecordingSessionId(sessionDbId);
+            const data = await sessionService.getRecordingUrl(sessionDbId);
+            const playbackUrl = data?.playback_url;
+
+            if (!playbackUrl) {
+                toast.error('Recording URL not available yet');
+                return;
+            }
+
+            const fileName = getRecordingDownloadFilename(row, playbackUrl);
+
+            try {
+                const response = await fetch(playbackUrl);
+                if (!response.ok) {
+                    throw new Error(`Download failed with status ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                triggerDownloadAnchor(blobUrl, fileName);
+                window.URL.revokeObjectURL(blobUrl);
+                toast.success('Recording download started');
+            } catch (blobError) {
+                console.warn('Blob download failed, falling back to direct URL:', blobError);
+                triggerDownloadAnchor(playbackUrl, fileName);
+                toast.info('Opened recording URL for download');
+            }
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            toast.error(detail || 'Unable to download recording');
+        } finally {
+            setDownloadingRecordingSessionId(null);
         }
     };
 
@@ -252,6 +369,7 @@ const AdminManageLearners = () => {
                                                 <th className="table-primary-th">Start Date</th>
                                                 <th className="table-primary-th">Skill Development Graph </th>
                                                 <th className="table-primary-th">Final Generated Reports</th>
+                                                <th className="table-primary-th">Session Recordings</th>
                                             </tr>
                                         </thead>
                                         <tbody className="table-primary-body">
@@ -289,6 +407,9 @@ const AdminManageLearners = () => {
                                                                 </div>
                                                             ))}
                                                         </div>
+                                                    </td>
+                                                    <td className="table-primary-td table-primary-td-center">
+                                                        <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not registered</span>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -368,6 +489,15 @@ const AdminManageLearners = () => {
                                                             );
                                                         })()}
                                                     </td>
+                                                    <td className="table-primary-td table-primary-td-center">
+                                                        <button
+                                                            onClick={() => openLearnerRecordingModal(learner)}
+                                                            className="app-modal-btn app-modal-btn--primary"
+                                                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
+                                                        >
+                                                            🎥 View Sessions
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -385,6 +515,95 @@ const AdminManageLearners = () => {
                     )}
                 </div>
             </main>
+
+            {showRecordingModal && (
+                <div
+                    className="app-modal-overlay"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowRecordingModal(false);
+                        }
+                    }}
+                >
+                    <div className="app-modal-container app-modal-container--lg" onClick={(e) => e.stopPropagation()}>
+                        <div className="app-modal-header app-modal-header--primary">
+                            <div className="app-modal-header-content">
+                                <h3 className="app-modal-title">Session Recordings</h3>
+                                <p className="app-modal-subtitle">{recordingModalLearnerName}</p>
+                            </div>
+                            <button className="app-modal-close" onClick={() => setShowRecordingModal(false)} aria-label="Close session recordings modal">×</button>
+                        </div>
+
+                        <div className="app-modal-content">
+                            {loadingRecordings ? (
+                                <div className="app-modal-loading">
+                                    <Loader2 className="loading-spinner" /> Loading session recordings...
+                                </div>
+                            ) : recordingRows.length === 0 ? (
+                                <div className="app-modal-table-empty">No sessions found for this learner.</div>
+                            ) : (
+                                <div className="app-modal-table-container">
+                                    <table className="app-modal-table">
+                                        <thead className="app-modal-table-header">
+                                            <tr>
+                                                <th>Session</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Recording</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="app-modal-table-body">
+                                            {recordingRows.map((row, idx) => (
+                                                <tr key={`${row.session_db_id}_${idx}`} className="recording-table-row">
+                                                    <td>{row.session_id || row.session_db_id}</td>
+                                                    <td>
+                                                        {row.latest_event_at
+                                                            ? new Date(row.latest_event_at).toLocaleString()
+                                                            : row.scheduled_date
+                                                                ? new Date(row.scheduled_date).toLocaleString()
+                                                                : 'N/A'}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`recording-status-chip recording-status-${(row.recording_status || 'pending').toLowerCase()}`}>
+                                                            {row.recording_status || 'pending'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        {row.recording_status === 'completed' && row.has_recording ? (
+                                                            <div className="recording-action-group">
+                                                                <button
+                                                                    onClick={() => handleWatchRecording(row.session_db_id)}
+                                                                    disabled={openingRecordingSessionId === row.session_db_id || downloadingRecordingSessionId === row.session_db_id}
+                                                                    className="recording-watch-btn"
+                                                                >
+                                                                    {openingRecordingSessionId === row.session_db_id ? 'Opening...' : 'Watch'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDownloadRecording(row)}
+                                                                    disabled={downloadingRecordingSessionId === row.session_db_id || openingRecordingSessionId === row.session_db_id}
+                                                                    className="recording-download-btn"
+                                                                >
+                                                                    {downloadingRecordingSessionId === row.session_db_id ? 'Downloading...' : 'Download'}
+                                                                </button>
+                                                            </div>
+                                                        ) : row.recording_status === 'failed' ? (
+                                                            <span className="recording-meta recording-meta-failed">Failed</span>
+                                                        ) : row.recording_status === 'processing' || row.recording_status === 'recording' ? (
+                                                            <span className="recording-meta recording-meta-processing">Processing...</span>
+                                                        ) : (
+                                                            <span className="recording-meta recording-meta-empty">N/A</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
