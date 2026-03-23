@@ -106,6 +106,16 @@ const adminService = {
   },
 
   /**
+   * Get session-wise recording status for one learner (admin/head)
+   * @param {number} learnerId
+   * @returns {Promise<{learner_id:number,sessions:Array,total:number}>}
+   */
+  getLearnerSessionRecordings: async (learnerId) => {
+    const response = await axiosInstance.get(`/sessions/admin/learner/${learnerId}/recordings`);
+    return response.data;
+  },
+
+  /**
    * Get all Consultants/Coaches (system-wide, read-only)
    * @returns {Promise} - Array of coach objects
    */
