@@ -1,635 +1,95 @@
-// /**
-//  * Optimized Browser-based Recording Service with Chunked Uploads
-//  * Features:
-//  * - Chunked uploads to prevent data loss
-//  * - Adaptive quality based on device capability
-//  * - Efficient memory management
-//  * - Retry mechanism for failed uploads
-//  * - Reduced CPU utilization
-//  */
-
-// import sessionService from './sessionService';
-
-// class JanusRecordingServiceOptimized {
-//   constructor(videoService, sessionId, options = {}) {
-//     this.videoService = videoService;
-//     this.sessionId = sessionId;
-
-//     console.log(`[JanusRecordingService] Initialized with sessionId: ${sessionId} (type: ${typeof sessionId})`);
-
-//     // Configuration with defaults
-//     this.config = {
-//       // Chunk interval - reduced from 10s to 5s for faster recovery on network issues
-//       chunkDuration: options.chunkDuration || 5000,
-
-//       // VIDEO QUALITY IMPROVEMENTS (Increased from 1Mbps to 3.5Mbps range)
-//       // Standard HD video needs 2.5-3.5 Mbps for good quality
-//       bitrate: options.bitrate || 2500000, // 2.5 Mbps (was 1.5 Mbps)
-//       videoBitrate: options.videoBitrate || 2200000, // 2.2 Mbps video (was 1 Mbps)
-//       audioBitrate: options.audioBitrate || 192000, // 192 kbps audio (was 128 kbps)
-
-//       enableAdaptiveQuality: options.enableAdaptiveQuality !== false,
-//       maxRetries: options.maxRetries || 3,
-//       retryDelay: options.retryDelay || 2000,
-//       ...options
-//     };
-
-//     // Recording state
-//     this.isRecording = false;
-//     this.recordingId = null;
-//     this.recordingStartTime = null;
-//     this.chunkNumber = 0;
-//     this.uploadedChunks = new Set();
-//     this.failedChunks = new Map();
-
-//     // MediaRecorder state
-//     this.mediaRecorder = null;
-//     this.currentChunkData = [];
-//     this.displayStream = null;
-//     this.isUploading = false;
-
-//     // Callbacks
-//     this.onRecordingStateChange = null;
-//     this.onRecordingError = null;
-//     this.onChunkUploaded = null;
-//     this.onUploadProgress = null;
-
-//     // Device capability detection
-//     this.deviceCapability = this.detectDeviceCapability();
-
-//     // Adjust quality based on device
-//     if (this.config.enableAdaptiveQuality) {
-//       this.adjustQualityForDevice();
-//     }
-
-//     // Retry queue
-//     this.retryQueue = [];
-//     this.retryInProgress = false;
-//   }
-
-//   /**
-//    * Detect device capability (CPU, RAM, Network)
-//    */
-//   detectDeviceCapability() {
-//     const cores = navigator.hardwareConcurrency || 4;
-//     const memory = navigator.deviceMemory || 8;
-//     const connection = navigator.connection || navigator.mozConnection;
-
-//     const effectiveType = connection?.effectiveType || '4g';
-//     const downlink = connection?.downlink || 10;
-
-//     return {
-//       cores,
-//       memory,
-//       effectiveType,
-//       downlink,
-//       isLowEnd: cores <= 2 || memory <= 4,
-//       isHighEnd: cores >= 8 && memory >= 16,
-//       isSlowNetwork: effectiveType === '3g' || effectiveType === '2g'
-//     };
-//   }
-
-//   /**
-//    * Adjust quality based on device capability
-//    */
-//   adjustQualityForDevice() {
-//     const { isLowEnd, isSlowNetwork } = this.deviceCapability;
-
-//     if (isLowEnd) {
-//       // Reduce bitrate and resolution for low-end devices
-//       // But keep it higher than original for better quality
-//       this.config.bitrate = 1500000; // 1.5 Mbps (reduced from 2.5)
-//       this.config.videoBitrate = 1200000; // 1.2 Mbps video
-//       this.config.audioBitrate = 128000; // Keep audio bitrate lower for low-end
-//       this.config.chunkDuration = 10000; // Larger chunks
-//       console.log('[JanusRecordingService] Adjusted quality for low-end device (1.2Mbps video)');
-//     }
-
-//     if (isSlowNetwork) {
-//       // Reduce bitrate for slow networks but stay above minimum
-//       this.config.bitrate = 1200000; // 1.2 Mbps
-//       this.config.videoBitrate = 1000000; // 1 Mbps video
-//       this.config.audioBitrate = 128000;
-//       this.config.chunkDuration = 15000; // Larger chunks for slow networks
-//       console.log('[JanusRecordingService] Adjusted quality for slow network (1.0Mbps video)');
-//     }
-//   }
-
-//   /**
-//    * Start recording with chunked upload
-//    */
-//   async startRecording() {
-//     try {
-//       if (this.isRecording) {
-//         console.warn('[JanusRecordingService] Recording already in progress');
-//         return false;
-//       }
-
-//       // Generate recording ID
-//       this.recordingId = `session-${this.sessionId}-${Date.now()}`;
-//       this.recordingStartTime = new Date();
-//       this.chunkNumber = 0;
-//       this.uploadedChunks.clear();
-//       this.failedChunks.clear();
-
-//       console.log(`[JanusRecordingService] Starting optimized recording: ${this.recordingId}`);
-//       console.log(`[JanusRecordingService] Device - Cores: ${this.deviceCapability.cores}, Memory: ${this.deviceCapability.memory}GB, Network: ${this.deviceCapability.effectiveType}`);
-//       console.log(`[JanusRecordingService] Bitrate: ${this.config.bitrate} bps, Chunk Duration: ${this.config.chunkDuration}ms`);
-
-//       // Request display media
-//       const displayStream = await navigator.mediaDevices.getDisplayMedia({
-//         video: {
-//           displaySurface: 'browser',
-//           cursor: 'always',
-//           width: { ideal: 1920 }, // Full HD for better quality
-//           height: { ideal: 1080 },
-//           frameRate: { ideal: 30 } // 30fps for smooth video
-//         },
-//         audio: false,
-//         preferCurrentTab: true,
-//         selfBrowserSurface: 'include',
-//         surfaceSwitching: 'exclude',
-//         systemAudio: 'exclude'
-//       });
-
-//       // Get audio from trainer's microphone
-//       const localStream = this.videoService.localStream;
-//       let audioTrack = null;
-//       if (localStream) {
-//         const audioTracks = localStream.getAudioTracks();
-//         if (audioTracks.length > 0) {
-//           audioTrack = audioTracks[0];
-//         }
-//       }
-
-//       // Combine streams
-//       const stream = new MediaStream();
-//       displayStream.getVideoTracks().forEach(track => stream.addTrack(track));
-//       if (audioTrack) {
-//         stream.addTrack(audioTrack);
-//       }
-
-//       this.displayStream = displayStream;
-
-//       // Create MediaRecorder with optimized settings
-//       this.currentChunkData = [];
-//       this.mediaRecorder = new MediaRecorder(stream, {
-//         mimeType: 'video/webm;codecs=vp8,opus',
-//         videoBitsPerSecond: this.config.videoBitrate,
-//         audioBitsPerSecond: this.config.audioBitrate
-//       });
-
-//       // Handle data available
-//       this.mediaRecorder.ondataavailable = (event) => {
-//         if (event.data && event.data.size > 0) {
-//           this.currentChunkData.push(event.data);
-//           console.log(`[JanusRecordingService] Data chunk: ${event.data.size} bytes (total: ${this.currentChunkData.reduce((a, b) => a + b.size, 0)} bytes)`);
-//         }
-//       };
-
-//       // Handle recording stop
-//       this.mediaRecorder.onstop = async () => {
-//         console.log('[JanusRecordingService] MediaRecorder stopped');
-//         await this.finalizeRecording();
-//       };
-
-//       // Start recording
-//       this.mediaRecorder.start(this.config.chunkDuration);
-//       this.isRecording = true;
-
-//       // Start chunk upload interval
-//       this.startChunkUploadInterval();
-
-//       if (this.onRecordingStateChange) {
-//         this.onRecordingStateChange('recording');
-//       }
-
-//       return true;
-//     } catch (error) {
-//       console.error('[JanusRecordingService] Error starting recording:', error);
-//       if (this.onRecordingError) {
-//         this.onRecordingError(error);
-//       }
-//       return false;
-//     }
-//   }
-
-//   /**
-//    * Start interval to upload chunks while recording
-//    */
-//   startChunkUploadInterval() {
-//     this.uploadInterval = setInterval(async () => {
-//       if (this.currentChunkData.length > 0 && !this.isUploading) {
-//         await this.uploadCurrentChunk();
-//       }
-//     }, this.config.chunkDuration);
-
-//     console.log('[JanusRecordingService] Chunk upload interval started');
-//   }
-
-//   /**
-//    * Calculate SHA256 checksum for chunk validation
-//    */
-//   async calculateChecksum(blob) {
-//     try {
-//       const buffer = await blob.arrayBuffer();
-//       const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-//       const hashArray = Array.from(new Uint8Array(hashBuffer));
-//       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-//       return hashHex;
-//     } catch (error) {
-//       console.warn('[JanusRecordingService] Checksum calculation failed:', error);
-//       return null;
-//     }
-//   }
-
-//   /**
-//    * Upload current chunk to server
-//    */
-//   async uploadCurrentChunk() {
-//     if (this.currentChunkData.length === 0 || this.isUploading) {
-//       return;
-//     }
-
-//     // Snapshot and clear immediately so new MediaRecorder data is never lost
-//     // while an upload is in progress.
-//     const chunkDataToUpload = this.currentChunkData;
-//     this.currentChunkData = [];
-
-//     this.isUploading = true;
-
-//     try {
-//       const chunkBlob = new Blob(chunkDataToUpload, { type: 'video/webm' });
-//       const chunkSize = chunkBlob.size;
-
-//       if (chunkSize === 0) {
-//         this.isUploading = false;
-//         return;
-//       }
-
-//       // Calculate checksum for validation
-//       const checksum = await this.calculateChecksum(chunkBlob);
-
-//       const formData = new FormData();
-//       formData.append('file', chunkBlob, `${this.recordingId}-chunk-${this.chunkNumber}.webm`);
-//       formData.append('session_id', String(this.sessionId));
-//       formData.append('recording_id', this.recordingId);
-//       formData.append('chunk_number', String(this.chunkNumber));
-//       if (checksum) {
-//         formData.append('checksum', checksum);
-//       }
-
-//       console.log(`[JanusRecordingService] Uploading chunk ${this.chunkNumber} (${chunkSize} bytes)${checksum ? ` [SHA256: ${checksum.substring(0, 8)}...]` : ''}...`);
-
-//       await sessionService.uploadRecordingChunk(formData);
-
-//       this.uploadedChunks.add(this.chunkNumber);
-//       this.failedChunks.delete(this.chunkNumber);
-//       this.chunkNumber++;
-//       this.currentChunkData = [];
-
-//       console.log(`[JanusRecordingService] ✅ Chunk ${this.chunkNumber - 1} uploaded successfully`);
-
-//       if (this.onChunkUploaded) {
-//         this.onChunkUploaded({
-//           chunkNumber: this.chunkNumber - 1,
-//           size: chunkSize,
-//           checksum: checksum,
-//           uploadedChunks: this.uploadedChunks.size
-//         });
-//       }
-
-//       if (this.onUploadProgress) {
-//         this.onUploadProgress({
-//           uploadedChunks: this.uploadedChunks.size,
-//           totalChunks: this.chunkNumber
-//         });
-//       }
-//     } catch (error) {
-//       console.error(`[JanusRecordingService] ❌ Error uploading chunk ${this.chunkNumber}:`, error);
-
-//       // Add to retry queue
-//       this.failedChunks.set(this.chunkNumber, {
-//         data: chunkDataToUpload,
-//         retries: 0,
-//         lastError: error
-//       });
-
-//       this.addToRetryQueue(this.chunkNumber);
-
-//       if (this.onRecordingError) {
-//         this.onRecordingError({
-//           type: 'chunk_upload_failed',
-//           chunkNumber: this.chunkNumber,
-//           error
-//         });
-//       }
-
-//       // Preserve ordering: advance sequence for failed uploads too.
-//       this.chunkNumber++;
-//     } finally {
-//       this.isUploading = false;
-//     }
-//   }
-
-//   /**
-//    * Add failed chunk to retry queue
-//    */
-//   addToRetryQueue(chunkNumber) {
-//     if (!this.retryQueue.includes(chunkNumber)) {
-//       this.retryQueue.push(chunkNumber);
-//       console.log(`[JanusRecordingService] Added chunk ${chunkNumber} to retry queue`);
-
-//       if (!this.retryInProgress) {
-//         this.processRetryQueue();
-//       }
-//     }
-//   }
-
-//   /**
-//    * Process retry queue
-//    */
-//   async processRetryQueue() {
-//     if (this.retryInProgress || this.retryQueue.length === 0) {
-//       return;
-//     }
-
-//     this.retryInProgress = true;
-
-//     while (this.retryQueue.length > 0) {
-//       const chunkNumber = this.retryQueue.shift();
-//       const failedChunk = this.failedChunks.get(chunkNumber);
-
-//       if (!failedChunk) {
-//         continue;
-//       }
-
-//       if (failedChunk.retries >= this.config.maxRetries) {
-//         console.error(`[JanusRecordingService] Max retries reached for chunk ${chunkNumber}`);
-//         this.failedChunks.delete(chunkNumber);
-//         continue;
-//       }
-
-//       failedChunk.retries++;
-
-//       try {
-//         console.log(`[JanusRecordingService] Retrying chunk ${chunkNumber} (attempt ${failedChunk.retries}/${this.config.maxRetries})...`);
-
-//         const chunkBlob = new Blob(failedChunk.data, { type: 'video/webm' });
-//         const checksum = await this.calculateChecksum(chunkBlob);
-
-//         const formData = new FormData();
-//         formData.append('file', chunkBlob, `${this.recordingId}-chunk-${chunkNumber}.webm`);
-//         formData.append('session_id', String(this.sessionId));
-//         formData.append('recording_id', this.recordingId);
-//         formData.append('chunk_number', String(chunkNumber));
-//         if (checksum) {
-//           formData.append('checksum', checksum);
-//         }
-
-//         await sessionService.uploadRecordingChunk(formData);
-
-//         this.uploadedChunks.add(chunkNumber);
-//         this.failedChunks.delete(chunkNumber);
-//         console.log(`[JanusRecordingService] ✅ Chunk ${chunkNumber} uploaded successfully on retry`);
-//       } catch (error) {
-//         console.error(`[JanusRecordingService] ❌ Retry failed for chunk ${chunkNumber}:`, error);
-//         failedChunk.lastError = error;
-//         this.retryQueue.push(chunkNumber); // Re-add to queue
-//       }
-
-//       // Wait before next retry
-//       await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
-//     }
-
-//     this.retryInProgress = false;
-//   }
-
-//   /**
-//    * Stop recording and finalize upload
-//    */
-//   async stopRecording() {
-//     try {
-//       if (!this.isRecording) {
-//         console.warn('[JanusRecordingService] No recording in progress');
-//         return false;
-//       }
-
-//       return new Promise((resolve, reject) => {
-//         this.mediaRecorder.onstop = async () => {
-//           try {
-//             // Clear upload interval
-//             if (this.uploadInterval) {
-//               clearInterval(this.uploadInterval);
-//             }
-
-//             // Upload remaining chunks
-//             if (this.currentChunkData.length > 0) {
-//               await this.uploadCurrentChunk();
-//             }
-
-//             // Wait for all retries to complete
-//             await this.processRetryQueue();
-
-//             // Finalize recording on server
-//             const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-//             await this.finalizeRecordingOnServer(duration);
-
-//             this.isRecording = false;
-//             this.currentChunkData = [];
-//             this.mediaRecorder = null;
-
-//             // Stop display stream
-//             if (this.displayStream) {
-//               this.displayStream.getTracks().forEach(track => track.stop());
-//               this.displayStream = null;
-//             }
-
-//             document.documentElement.removeAttribute('data-recording');
-
-//             console.log(`[JanusRecordingService] Recording stopped: ${this.recordingId} (${duration}s, ${this.uploadedChunks.size} chunks)`);
-
-//             if (this.onRecordingStateChange) {
-//               this.onRecordingStateChange('stopped');
-//             }
-
-//             resolve(true);
-//           } catch (error) {
-//             console.error('[JanusRecordingService] Error finalizing recording:', error);
-//             if (this.onRecordingError) {
-//               this.onRecordingError(error);
-//             }
-//             reject(error);
-//           }
-//         };
-
-//         this.mediaRecorder.stop();
-//       });
-//     } catch (error) {
-//       console.error('[JanusRecordingService] Error stopping recording:', error);
-//       if (this.onRecordingError) {
-//         this.onRecordingError(error);
-//       }
-//       return false;
-//     }
-//   }
-
-//   /**
-//    * Finalize recording on server (merge chunks)
-//    */
-//   async finalizeRecordingOnServer(duration) {
-//     try {
-//       console.log(`[JanusRecordingService] Finalizing recording on server...`);
-
-//       const finalizationData = {
-//         recording_id: this.recordingId,
-//         session_id: this.sessionId,
-//         duration: duration,
-//         total_chunks: this.chunkNumber,
-//         uploaded_chunks: Array.from(this.uploadedChunks),
-//         failed_chunks: Array.from(this.failedChunks.keys())
-//       };
-
-//       const response = await sessionService.finalizeRecording(finalizationData);
-//       console.log('[JanusRecordingService] Recording finalized on server:', response);
-
-//       return response;
-//     } catch (error) {
-//       console.error('[JanusRecordingService] Error finalizing recording on server:', error);
-//       throw error;
-//     }
-//   }
-
-//   /**
-//    * Get recording status
-//    */
-//   getRecordingStatus() {
-//     return {
-//       isRecording: this.isRecording,
-//       recordingId: this.recordingId,
-//       startTime: this.recordingStartTime,
-//       duration: this.isRecording ? Math.floor((Date.now() - this.recordingStartTime) / 1000) : 0,
-//       currentChunk: this.chunkNumber,
-//       uploadedChunks: this.uploadedChunks.size,
-//       failedChunks: this.failedChunks.size,
-//       isUploading: this.isUploading,
-//       deviceCapability: this.deviceCapability,
-//       config: this.config
-//     };
-//   }
-
-//   /**
-//    * Cleanup resources
-//    */
-//   destroy() {
-//     if (this.uploadInterval) {
-//       clearInterval(this.uploadInterval);
-//     }
-
-//     if (this.isRecording) {
-//       this.stopRecording();
-//     }
-
-//     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-//       this.mediaRecorder.stop();
-//     }
-
-//     if (this.displayStream) {
-//       this.displayStream.getTracks().forEach(track => track.stop());
-//     }
-
-//     this.currentChunkData = [];
-//     this.uploadedChunks.clear();
-//     this.failedChunks.clear();
-//     this.retryQueue = [];
-//   }
-
-//   /**
-//    * Finalize recording (called from stop)
-//    */
-//   async finalizeRecording() {
-//     // This is called by mediaRecorder.onstop
-//     console.log('[JanusRecordingService] Recording finalized');
-//   }
-// }
-
-// export default JanusRecordingServiceOptimized;
-
-
 /**
- * Optimized Browser-based Recording Service with Chunked Uploads
- * WORKING VERSION - Proper chunk extraction
+ * COMPLETE Recording Service with Full Implementation
+ * All missing logic is now included and active
  * 
- * The key insight: Let MediaRecorder buffer data naturally,
- * don't force requestData() immediately. Let it accumulate for 10 seconds.
+ * Features:
+ * - Active MediaRecorder lifecycle
+ * - 5-10 second chunk collection
+ * - Automatic upload with retry logic
+ * - Network failure handling
+ * - Memory management
+ * - Progress tracking
+ * - Device adaptation
  */
 
 import sessionService from './sessionService';
 
-class JanusRecordingServiceOptimized {
+class JanusRecordingService {
   constructor(videoService, sessionId, options = {}) {
     this.videoService = videoService;
     this.sessionId = sessionId;
 
-    console.log(`[JanusRecordingService] Initialized with sessionId: ${sessionId}`);
+    console.log(`[RecordingService] ✅ Initialized with sessionId: ${sessionId} (type: ${typeof sessionId})`);
 
+    // === CONFIGURATION ===
     this.config = {
-      chunkDuration: options.chunkDuration || 10000, // 10 seconds - let data buffer naturally
-      bitrate: options.bitrate || 1800000,
-      videoBitrate: options.videoBitrate || 1800000,
-      audioBitrate: options.audioBitrate || 192000,
+      chunkDuration: options.chunkDuration || 5000, // 5 seconds
+      bitrate: options.bitrate || 2500000, // 2.5 Mbps
+      videoBitrate: options.videoBitrate || 2200000, // 2.2 Mbps
+      audioBitrate: options.audioBitrate || 192000, // 192 kbps
       enableAdaptiveQuality: options.enableAdaptiveQuality !== false,
       maxRetries: options.maxRetries || 3,
       retryDelay: options.retryDelay || 2000,
       ...options
     };
 
+    // === RECORDING STATE ===
     this.isRecording = false;
     this.recordingId = null;
     this.recordingStartTime = null;
+    this.recordingDuration = 0;
     this.chunkNumber = 0;
     this.uploadedChunks = new Set();
     this.failedChunks = new Map();
 
+    // === MEDIARECORDER STATE ===
     this.mediaRecorder = null;
     this.currentChunkData = [];
     this.displayStream = null;
     this.isUploading = false;
 
+    // === CALLBACKS ===
     this.onRecordingStateChange = null;
     this.onRecordingError = null;
     this.onChunkUploaded = null;
     this.onUploadProgress = null;
 
+    // === DEVICE CAPABILITY ===
     this.deviceCapability = this.detectDeviceCapability();
-
     if (this.config.enableAdaptiveQuality) {
       this.adjustQualityForDevice();
     }
 
+    // === UPLOAD QUEUE & RETRY ===
+    this.uploadQueue = [];
     this.retryQueue = [];
     this.retryInProgress = false;
-    this.chunkExtractionTimer = null;
-    this.chunkMimeType = 'video/webm';
-    this.chunkFileExtension = 'webm';
+    this.isProcessingQueue = false;
+
+    // === TIMERS ===
+    this.recordingTimer = null;
+    this.chunkUploadInterval = null;
+    this.queueProcessInterval = null;
+
+    // === NETWORK STATE ===
+    this.isOnline = navigator.onLine;
+    this.networkStatusCheckInterval = null;
+    this.setupNetworkListener();
+
+    // === STATS ===
+    this.stats = {
+      totalChunksCollected: 0,
+      totalChunksUploaded: 0,
+      totalChunksFailed: 0,
+      totalBytesUploaded: 0,
+      startTime: null,
+      endTime: null
+    };
   }
 
-  getSupportedRecorderFormat() {
-    const candidates = [
-      { mimeType: 'video/webm;codecs=vp9,opus', extension: 'webm' },
-      { mimeType: 'video/webm;codecs=vp8,opus', extension: 'webm' },
-      { mimeType: 'video/webm', extension: 'webm' },
-      { mimeType: 'video/mp4', extension: 'mp4' }
-    ];
-
-    for (const candidate of candidates) {
-      if (MediaRecorder.isTypeSupported(candidate.mimeType)) {
-        return candidate;
-      }
-    }
-
-    return { mimeType: '', extension: 'webm' };
-  }
+  // ============================================================================
+  // DEVICE CAPABILITY DETECTION
+  // ============================================================================
 
   detectDeviceCapability() {
     const cores = navigator.hardwareConcurrency || 4;
@@ -654,47 +114,87 @@ class JanusRecordingServiceOptimized {
     const { isLowEnd, isSlowNetwork } = this.deviceCapability;
 
     if (isLowEnd) {
-      this.config.bitrate = 1200000;
+      this.config.bitrate = 1500000;
       this.config.videoBitrate = 1200000;
       this.config.audioBitrate = 128000;
-      this.config.chunkDuration = 15000;
-      console.log('[JanusRecordingService] Adjusted for low-end device');
+      this.config.chunkDuration = 10000;
+      console.log('[RecordingService] ⚠️ Adjusted for low-end device (1.2 Mbps)');
     }
 
     if (isSlowNetwork) {
-      this.config.bitrate = 1000000;
+      this.config.bitrate = 1200000;
       this.config.videoBitrate = 1000000;
       this.config.audioBitrate = 128000;
       this.config.chunkDuration = 15000;
-      console.log('[JanusRecordingService] Adjusted for slow network');
+      console.log('[RecordingService] ⚠️ Adjusted for slow network (1.0 Mbps)');
     }
   }
 
-  /**
-   * Start recording
-   */
+  // ============================================================================
+  // NETWORK STATE MANAGEMENT
+  // ============================================================================
+
+  setupNetworkListener() {
+    window.addEventListener('online', () => {
+      console.log('[RecordingService] 🌐 Network restored');
+      this.isOnline = true;
+      // Resume any pending uploads
+      this.processPendingUploads();
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('[RecordingService] ⚠️ Network lost');
+      this.isOnline = false;
+    });
+
+    // Periodic network check every 10 seconds
+    this.networkStatusCheckInterval = setInterval(() => {
+      // Connection status is automatically updated by browser
+    }, 10000);
+  }
+
+  // ============================================================================
+  // START RECORDING
+  // ============================================================================
+
   async startRecording() {
     try {
       if (this.isRecording) {
-        console.warn('[JanusRecordingService] Recording already in progress');
+        console.warn('[RecordingService] Recording already in progress');
         return false;
       }
 
+      // Generate recording ID
       this.recordingId = `session-${this.sessionId}-${Date.now()}`;
       this.recordingStartTime = new Date();
+      this.recordingDuration = 0;
       this.chunkNumber = 0;
       this.uploadedChunks.clear();
       this.failedChunks.clear();
+      this.uploadQueue = [];
+      this.retryQueue = [];
 
-      console.log(`[JanusRecordingService] Starting recording: ${this.recordingId}`);
+      // Initialize stats
+      this.stats = {
+        totalChunksCollected: 0,
+        totalChunksUploaded: 0,
+        totalChunksFailed: 0,
+        totalBytesUploaded: 0,
+        startTime: new Date(),
+        endTime: null
+      };
 
-      // Request display media - 720p
+      console.log(`[RecordingService] ▶️ Starting recording: ${this.recordingId}`);
+      console.log(`[RecordingService] Device: ${this.deviceCapability.cores} cores, ${this.deviceCapability.memory}GB RAM, ${this.deviceCapability.effectiveType}`);
+      console.log(`[RecordingService] Bitrate: ${this.config.videoBitrate} bps, Chunk: ${this.config.chunkDuration}ms`);
+
+      // === GET DISPLAY MEDIA ===
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: 'browser',
           cursor: 'always',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
           frameRate: { ideal: 30 }
         },
         audio: false,
@@ -704,8 +204,8 @@ class JanusRecordingServiceOptimized {
         systemAudio: 'exclude'
       });
 
-      // Get audio
-      const localStream = this.videoService.localStream;
+      // === GET AUDIO FROM MICROPHONE ===
+      const localStream = this.videoService?.localStream;
       let audioTrack = null;
       if (localStream) {
         const audioTracks = localStream.getAudioTracks();
@@ -714,7 +214,7 @@ class JanusRecordingServiceOptimized {
         }
       }
 
-      // Combine streams
+      // === COMBINE STREAMS ===
       const stream = new MediaStream();
       displayStream.getVideoTracks().forEach(track => stream.addTrack(track));
       if (audioTrack) {
@@ -723,380 +223,432 @@ class JanusRecordingServiceOptimized {
 
       this.displayStream = displayStream;
 
-      const recorderFormat = this.getSupportedRecorderFormat();
-      this.chunkMimeType = recorderFormat.mimeType || 'video/webm';
-      this.chunkFileExtension = recorderFormat.extension;
-
-      // Create MediaRecorder using the best supported browser format
+      // === CREATE MEDIARECORDER ===
       this.currentChunkData = [];
-      this.mediaRecorder = recorderFormat.mimeType
-        ? new MediaRecorder(stream, {
-          mimeType: recorderFormat.mimeType,
-          videoBitsPerSecond: 1800000,
-          audioBitsPerSecond: 192000
-        })
-        : new MediaRecorder(stream, {
-          videoBitsPerSecond: 1800000,
-          audioBitsPerSecond: 192000
-        });
+      this.mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: this.config.videoBitrate,
+        audioBitsPerSecond: this.config.audioBitrate
+      });
 
-      console.log(`[JanusRecordingService] Recorder format: ${this.chunkMimeType || 'browser-default'}`);
-
-      // Handle data available - accumulate data
+      // === HANDLE DATA AVAILABLE ===
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           this.currentChunkData.push(event.data);
-          const totalSize = this.currentChunkData.reduce((a, b) => a + b.size, 0);
-          console.log(`[JanusRecordingService] Data chunk: ${event.data.size} bytes (total: ${totalSize} bytes)`);
+          console.log(`[RecordingService] 📦 Data chunk: ${(event.data.size / 1024).toFixed(2)} KB`);
         }
       };
 
-      // Handle stop
+      // === HANDLE RECORDING STOP ===
       this.mediaRecorder.onstop = async () => {
-        console.log('[JanusRecordingService] MediaRecorder stopped');
-        await this.finalizeRecording();
+        console.log('[RecordingService] ⏹️ MediaRecorder stopped');
+        await this.handleRecordingStop();
       };
 
-      // ✅ KEY FIX: Start with timeslice parameter
-      // This makes MediaRecorder automatically call ondataavailable every chunkDuration ms
+      // === START RECORDING ===
       this.mediaRecorder.start(this.config.chunkDuration);
       this.isRecording = true;
 
-      // ✅ Upload chunks as they accumulate
-      this.startChunkUploadTimer();
+      // === START CHUNK UPLOAD INTERVAL ===
+      this.startChunkCollection();
 
+      // === START DURATION TIMER ===
+      this.startDurationTimer();
+
+      // === PROCESS UPLOAD QUEUE ===
+      this.startQueueProcessor();
+
+      // Handle stream stop (user clicked "Stop sharing")
+      displayStream.getTracks().forEach(track => {
+        track.onended = () => {
+          console.log('[RecordingService] User stopped screen sharing');
+          this.stopRecording();
+        };
+      });
+
+      // Notify listeners
       if (this.onRecordingStateChange) {
         this.onRecordingStateChange('recording');
       }
 
-      console.log('[JanusRecordingService] Recording started');
       return true;
     } catch (error) {
-      console.error('[JanusRecordingService] Error starting recording:', error);
-      if (this.onRecordingError) {
-        this.onRecordingError(error);
-      }
-      return false;
-    }
-  }
-
-  /**
-   * Start timer to upload chunks
-   */
-  startChunkUploadTimer() {
-    // Wait a bit for data to accumulate, then start checking for uploads
-    this.chunkExtractionTimer = setInterval(() => {
-      if (this.isRecording && this.currentChunkData.length > 0 && !this.isUploading) {
-        this.uploadCurrentChunk();
-      }
-    }, 2000); // Check every 2 seconds if we have data to upload
-
-    console.log('[JanusRecordingService] Chunk upload timer started');
-  }
-
-  /**
-   * Calculate checksum
-   */
-  async calculateChecksum(blob) {
-    try {
-      const buffer = await blob.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex;
-    } catch (error) {
-      console.warn('[JanusRecordingService] Checksum calculation failed');
-      return null;
-    }
-  }
-
-  /**
-   * Upload current chunk
-   */
-  async uploadCurrentChunk() {
-    if (this.currentChunkData.length === 0 || this.isUploading) {
-      return;
-    }
-
-    // Snapshot and clear
-    const chunkDataToUpload = this.currentChunkData;
-    this.currentChunkData = [];
-
-    this.isUploading = true;
-
-    try {
-      // Create blob
-      const chunkBlob = new Blob(chunkDataToUpload, { type: this.chunkMimeType || 'video/webm' });
-      const chunkSize = chunkBlob.size;
-
-      if (chunkSize === 0) {
-        console.log('[JanusRecordingService] Skipping empty chunk');
-        this.isUploading = false;
-        return;
-      }
-
-      const checksum = await this.calculateChecksum(chunkBlob);
-
-      const formData = new FormData();
-      formData.append('file', chunkBlob, `${this.recordingId}-chunk-${this.chunkNumber}.${this.chunkFileExtension}`);
-      formData.append('session_id', String(this.sessionId));
-      formData.append('recording_id', this.recordingId);
-      formData.append('chunk_number', String(this.chunkNumber));
-      if (checksum) {
-        formData.append('checksum', checksum);
-      }
-
-      console.log(`[JanusRecordingService] Uploading chunk ${this.chunkNumber} (${chunkSize} bytes)...`);
-
-      await sessionService.uploadRecordingChunk(formData);
-
-      this.uploadedChunks.add(this.chunkNumber);
-      this.failedChunks.delete(this.chunkNumber);
-      this.chunkNumber++;
-
-      console.log(`[JanusRecordingService] ✅ Chunk ${this.chunkNumber - 1} uploaded`);
-
-      if (this.onChunkUploaded) {
-        this.onChunkUploaded({
-          chunkNumber: this.chunkNumber - 1,
-          size: chunkSize,
-          uploadedChunks: this.uploadedChunks.size
-        });
-      }
-    } catch (error) {
-      console.error('[JanusRecordingService] Error uploading chunk:', error);
-
-      this.failedChunks.set(this.chunkNumber, {
-        data: chunkDataToUpload,
-        retries: 0
-      });
-
-      this.addToRetryQueue(this.chunkNumber);
+      console.error('[RecordingService] ❌ Error starting recording:', error);
+      this.isRecording = false;
 
       if (this.onRecordingError) {
         this.onRecordingError({
-          type: 'chunk_upload_failed',
-          chunkNumber: this.chunkNumber,
-          error
+          message: error.message,
+          code: error.name
         });
       }
 
-      this.chunkNumber++;
-    } finally {
-      this.isUploading = false;
+      return false;
     }
   }
 
-  /**
-   * Add to retry queue
-   */
-  addToRetryQueue(chunkNumber) {
-    if (!this.retryQueue.includes(chunkNumber)) {
-      this.retryQueue.push(chunkNumber);
-      console.log(`[JanusRecordingService] Added chunk ${chunkNumber} to retry queue`);
+  // ============================================================================
+  // CHUNK COLLECTION
+  // ============================================================================
 
-      if (!this.retryInProgress) {
-        this.processRetryQueue();
+  startChunkCollection() {
+    console.log('[RecordingService] 🔄 Starting chunk collection (every 5s)');
+
+    this.chunkUploadInterval = setInterval(async () => {
+      if (!this.mediaRecorder || !this.isRecording) {
+        return;
       }
+
+      try {
+        // Request data from MediaRecorder
+        this.mediaRecorder.requestData();
+
+        // Wait a bit for ondataavailable to fire
+        setTimeout(() => {
+          if (this.currentChunkData.length > 0) {
+            this.extractAndQueueChunk();
+          }
+        }, 50);
+      } catch (error) {
+        console.error('[RecordingService] Error collecting chunk:', error);
+      }
+    }, this.config.chunkDuration);
+  }
+
+  extractAndQueueChunk() {
+    try {
+      // Create blob from collected data
+      const chunkBlob = new Blob(this.currentChunkData, { type: 'video/webm' });
+
+      if (chunkBlob.size === 0) {
+        console.warn('[RecordingService] ⚠️ Empty chunk, skipping');
+        this.currentChunkData = [];
+        return;
+      }
+
+      this.chunkNumber++;
+      this.stats.totalChunksCollected++;
+
+      console.log(`[RecordingService] 📹 Chunk #${this.chunkNumber} created: ${(chunkBlob.size / 1024).toFixed(2)} KB`);
+
+      // Queue for upload
+      this.uploadQueue.push({
+        chunkNumber: this.chunkNumber,
+        blob: chunkBlob,
+        size: chunkBlob.size,
+        createdAt: new Date(),
+        retries: 0
+      });
+
+      // Reset buffer
+      this.currentChunkData = [];
+
+      console.log(`[RecordingService] 📋 Upload queue size: ${this.uploadQueue.length}`);
+    } catch (error) {
+      console.error('[RecordingService] Error extracting chunk:', error);
     }
   }
 
-  /**
-   * Process retry queue
-   */
-  async processRetryQueue() {
-    if (this.retryInProgress || this.retryQueue.length === 0) {
+  // ============================================================================
+  // UPLOAD QUEUE PROCESSING
+  // ============================================================================
+
+  startQueueProcessor() {
+    console.log('[RecordingService] 🚀 Starting queue processor');
+
+    this.queueProcessInterval = setInterval(async () => {
+      if (this.uploadQueue.length > 0 && !this.isProcessingQueue && this.isOnline) {
+        this.isProcessingQueue = true;
+        const chunk = this.uploadQueue.shift();
+
+        try {
+          await this.uploadChunkWithRetry(chunk);
+        } catch (error) {
+          console.error('[RecordingService] Error uploading chunk:', error);
+        } finally {
+          this.isProcessingQueue = false;
+        }
+      }
+    }, 500); // Check queue every 500ms
+  }
+
+  async uploadChunkWithRetry(chunk, attempt = 1) {
+    if (!this.isOnline) {
+      console.log('[RecordingService] 📵 Offline, queuing chunk for retry');
+      this.retryQueue.push(chunk);
       return;
     }
 
-    this.retryInProgress = true;
+    try {
+      console.log(`[RecordingService] 📤 Uploading chunk #${chunk.chunkNumber} (attempt ${attempt}/${this.config.maxRetries})`);
 
-    while (this.retryQueue.length > 0) {
-      const chunkNumber = this.retryQueue.shift();
-      const failedChunk = this.failedChunks.get(chunkNumber);
+      const formData = new FormData();
+      formData.append('chunk', chunk.blob, `chunk_${chunk.chunkNumber}.webm`);
+      formData.append('session_id', this.sessionId);
+      formData.append('chunk_number', chunk.chunkNumber);
+      formData.append('recording_id', this.recordingId);
 
-      if (!failedChunk) {
-        continue;
+      // Upload with timeout
+      const response = await Promise.race([
+        sessionService.uploadRecordingChunk(formData),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Upload timeout')), 60000)
+        )
+      ]);
+
+      this.uploadedChunks.add(chunk.chunkNumber);
+      this.stats.totalChunksUploaded++;
+      this.stats.totalBytesUploaded += chunk.size;
+
+      console.log(`[RecordingService] ✅ Chunk #${chunk.chunkNumber} uploaded (${(chunk.size / 1024).toFixed(2)} KB)`);
+
+      if (this.onChunkUploaded) {
+        this.onChunkUploaded({
+          chunkNumber: chunk.chunkNumber,
+          size: chunk.size,
+          success: true
+        });
       }
+    } catch (error) {
+      console.error(`[RecordingService] ❌ Upload failed (attempt ${attempt}):`, error.message);
 
-      if (failedChunk.retries >= this.config.maxRetries) {
-        console.error(`[JanusRecordingService] Max retries for chunk ${chunkNumber}`);
-        this.failedChunks.delete(chunkNumber);
-        continue;
-      }
+      // Exponential backoff retry
+      if (attempt < this.config.maxRetries) {
+        const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
+        console.log(`[RecordingService] ⏳ Retrying in ${delay}ms...`);
 
-      failedChunk.retries++;
+        // Keep retry chain awaited so stop/finalize waits for completion.
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return this.uploadChunkWithRetry(chunk, attempt + 1);
+      } else {
+        console.error(`[RecordingService] ❌ Chunk #${chunk.chunkNumber} failed after ${this.config.maxRetries} attempts`);
+        this.failedChunks.set(chunk.chunkNumber, error);
+        this.stats.totalChunksFailed++;
 
-      try {
-        console.log(`[JanusRecordingService] Retrying chunk ${chunkNumber}...`);
-
-        const chunkBlob = new Blob(failedChunk.data, { type: this.chunkMimeType || 'video/webm' });
-        const checksum = await this.calculateChecksum(chunkBlob);
-
-        const formData = new FormData();
-        formData.append('file', chunkBlob, `${this.recordingId}-chunk-${chunkNumber}.${this.chunkFileExtension}`);
-        formData.append('session_id', String(this.sessionId));
-        formData.append('recording_id', this.recordingId);
-        formData.append('chunk_number', String(chunkNumber));
-        if (checksum) {
-          formData.append('checksum', checksum);
+        if (this.onChunkUploaded) {
+          this.onChunkUploaded({
+            chunkNumber: chunk.chunkNumber,
+            size: chunk.size,
+            success: false,
+            error: error.message
+          });
         }
-
-        await sessionService.uploadRecordingChunk(formData);
-
-        this.uploadedChunks.add(chunkNumber);
-        this.failedChunks.delete(chunkNumber);
-        console.log(`[JanusRecordingService] ✅ Chunk ${chunkNumber} uploaded on retry`);
-      } catch (error) {
-        console.error(`[JanusRecordingService] Retry failed for chunk ${chunkNumber}`);
-        this.retryQueue.push(chunkNumber);
       }
-
-      await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
     }
-
-    this.retryInProgress = false;
   }
 
-  /**
-   * Stop recording
-   */
+  async processPendingUploads() {
+    console.log(`[RecordingService] 🔄 Processing ${this.retryQueue.length} pending uploads`);
+
+    while (this.retryQueue.length > 0) {
+      const chunk = this.retryQueue.shift();
+      await this.uploadChunkWithRetry(chunk);
+    }
+  }
+
+  // ============================================================================
+  // DURATION TRACKING
+  // ============================================================================
+
+  startDurationTimer() {
+    this.recordingTimer = setInterval(() => {
+      if (this.isRecording && this.recordingStartTime) {
+        this.recordingDuration = Math.floor(
+          (new Date() - this.recordingStartTime) / 1000
+        );
+      }
+    }, 100); // Update every 100ms
+  }
+
+  formatDuration(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  }
+
+  // ============================================================================
+  // STOP RECORDING
+  // ============================================================================
+
   async stopRecording() {
     try {
       if (!this.isRecording) {
-        console.warn('[JanusRecordingService] No recording in progress');
+        console.warn('[RecordingService] Recording not in progress');
         return false;
       }
 
-      return new Promise((resolve, reject) => {
-        this.mediaRecorder.onstop = async () => {
-          try {
-            // Clear timer
-            if (this.chunkExtractionTimer) {
-              clearInterval(this.chunkExtractionTimer);
-            }
+      console.log('[RecordingService] ⏹️ Stopping recording...');
 
-            // Upload remaining chunks
-            if (this.currentChunkData.length > 0) {
-              await this.uploadCurrentChunk();
-            }
-
-            // Wait for retries
-            await this.processRetryQueue();
-
-            // Finalize
-            const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-            await this.finalizeRecordingOnServer(duration);
-
-            this.isRecording = false;
-            this.currentChunkData = [];
-            this.mediaRecorder = null;
-
-            if (this.displayStream) {
-              this.displayStream.getTracks().forEach(track => track.stop());
-              this.displayStream = null;
-            }
-
-            console.log(`[JanusRecordingService] Recording stopped: ${this.recordingId} (${duration}s, ${this.uploadedChunks.size} chunks)`);
-
-            if (this.onRecordingStateChange) {
-              this.onRecordingStateChange('stopped');
-            }
-
-            resolve(true);
-          } catch (error) {
-            console.error('[JanusRecordingService] Error finalizing:', error);
-            if (this.onRecordingError) {
-              this.onRecordingError(error);
-            }
-            reject(error);
-          }
-        };
-
+      // Stop MediaRecorder
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
         this.mediaRecorder.stop();
-      });
+      }
+
+      // Stop streams
+      if (this.displayStream) {
+        this.displayStream.getTracks().forEach(track => track.stop());
+      }
+
+      // Stop timers
+      if (this.chunkUploadInterval) clearInterval(this.chunkUploadInterval);
+      if (this.recordingTimer) clearInterval(this.recordingTimer);
+
+      // Extract final chunk
+      if (this.currentChunkData.length > 0) {
+        this.extractAndQueueChunk();
+      }
+
+      // Update stats
+      this.stats.endTime = new Date();
+      console.log('[RecordingService] 📊 Recording Stats:');
+      console.log(`  - Duration: ${this.formatDuration(this.recordingDuration)}`);
+      console.log(`  - Chunks collected: ${this.stats.totalChunksCollected}`);
+      console.log(`  - Chunks uploaded: ${this.stats.totalChunksUploaded}`);
+      console.log(`  - Chunks failed: ${this.stats.totalChunksFailed}`);
+      console.log(`  - Total size: ${(this.stats.totalBytesUploaded / 1024 / 1024).toFixed(2)} MB`);
+
+      this.isRecording = false;
+
+      // Wait for all uploads to complete
+      await this.waitForUploadsComplete();
+
+      // Queue processor is no longer needed once uploads are done
+      if (this.queueProcessInterval) {
+        clearInterval(this.queueProcessInterval);
+        this.queueProcessInterval = null;
+      }
+
+      // Notify listeners
+      if (this.onRecordingStateChange) {
+        this.onRecordingStateChange('stopped');
+      }
+
+      // Finalize recording on server
+      await this.finalizeRecording();
+
+      return true;
     } catch (error) {
-      console.error('[JanusRecordingService] Error stopping:', error);
+      console.error('[RecordingService] Error stopping recording:', error);
       if (this.onRecordingError) {
-        this.onRecordingError(error);
+        this.onRecordingError({ message: error.message });
       }
       return false;
     }
   }
 
-  /**
-   * Finalize on server
-   */
-  async finalizeRecordingOnServer(duration) {
-    try {
-      console.log('[JanusRecordingService] Finalizing on server...');
+  async handleRecordingStop() {
+    console.log('[RecordingService] Finalizing recording after MediaRecorder stop');
+  }
 
-      const finalizationData = {
+  waitForUploadsComplete() {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (
+          this.uploadQueue.length === 0 &&
+          this.retryQueue.length === 0 &&
+          !this.isProcessingQueue
+        ) {
+          clearInterval(checkInterval);
+          console.log('[RecordingService] ✅ All uploads complete');
+          resolve();
+        }
+      }, 1000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('[RecordingService] Upload timeout after 5 minutes');
+        resolve();
+      }, 300000);
+    });
+  }
+
+  // ============================================================================
+  // FINALIZATION
+  // ============================================================================
+
+  async finalizeRecording() {
+    try {
+      console.log('[RecordingService] 🔀 Finalizing recording...');
+
+      if (this.uploadedChunks.size === 0) {
+        console.error('[RecordingService] No chunks were successfully uploaded');
+        throw new Error('No chunks uploaded');
+      }
+
+      const response = await sessionService.finalizeRecording({
         recording_id: this.recordingId,
         session_id: this.sessionId,
-        duration: duration,
-        total_chunks: this.chunkNumber,
-        uploaded_chunks: Array.from(this.uploadedChunks),
-        failed_chunks: Array.from(this.failedChunks.keys())
-      };
+        chunk_count: this.chunkNumber,
+        total_chunks_uploaded: this.uploadedChunks.size,
+        uploaded_chunks: Array.from(this.uploadedChunks).sort((a, b) => a - b),
+        failed_chunks: Array.from(this.failedChunks.keys()).sort((a, b) => a - b),
+        duration: this.recordingDuration
+      });
 
-      const response = await sessionService.finalizeRecording(finalizationData);
-      console.log('[JanusRecordingService] ✅ Finalized:', response);
+      console.log('[RecordingService] ✅ Recording finalized successfully');
       return response;
     } catch (error) {
-      console.error('[JanusRecordingService] Finalization error:', error);
+      console.error('[RecordingService] Error finalizing recording:', error);
+      if (this.onRecordingError) {
+        this.onRecordingError({ message: error.message });
+      }
       throw error;
     }
   }
 
-  /**
-   * Get status
-   */
+  // ============================================================================
+  // STATE QUERIES
+  // ============================================================================
+
   getRecordingStatus() {
     return {
       isRecording: this.isRecording,
-      recordingId: this.recordingId,
-      startTime: this.recordingStartTime,
-      duration: this.isRecording ? Math.floor((Date.now() - this.recordingStartTime) / 1000) : 0,
-      currentChunk: this.chunkNumber,
+      duration: this.recordingDuration,
+      chunkCount: this.chunkNumber,
       uploadedChunks: this.uploadedChunks.size,
-      failedChunks: this.failedChunks.size,
-      isUploading: this.isUploading
+      queueSize: this.uploadQueue.length,
+      stats: this.stats
     };
   }
 
-  /**
-   * Cleanup
-   */
-  destroy() {
-    if (this.chunkExtractionTimer) {
-      clearInterval(this.chunkExtractionTimer);
-    }
+  // ============================================================================
+  // CLEANUP
+  // ============================================================================
 
+  destroy() {
+    console.log('[RecordingService] 🧹 Destroying recording service');
+
+    // Stop all timers
+    if (this.chunkUploadInterval) clearInterval(this.chunkUploadInterval);
+    if (this.recordingTimer) clearInterval(this.recordingTimer);
+    if (this.queueProcessInterval) clearInterval(this.queueProcessInterval);
+    if (this.networkStatusCheckInterval) clearInterval(this.networkStatusCheckInterval);
+
+    // Stop recording if active
     if (this.isRecording) {
       this.stopRecording();
     }
 
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-    }
-
+    // Stop streams
     if (this.displayStream) {
       this.displayStream.getTracks().forEach(track => track.stop());
     }
 
+    // Clear data
     this.currentChunkData = [];
+    this.uploadQueue = [];
+    this.retryQueue = [];
     this.uploadedChunks.clear();
     this.failedChunks.clear();
-    this.retryQueue = [];
-  }
 
-  /**
-   * Finalize callback
-   */
-  async finalizeRecording() {
-    console.log('[JanusRecordingService] Recording finalized');
+    console.log('[RecordingService] ✅ Cleanup complete');
   }
 }
 
-export default JanusRecordingServiceOptimized;
+export default JanusRecordingService;
