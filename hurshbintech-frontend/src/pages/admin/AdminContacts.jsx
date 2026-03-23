@@ -359,6 +359,24 @@ const AdminContacts = () => {
                                                 <label>Name:</label>
                                                 <span>{selectedContact.parent_name}</span>
                                             </div>
+                                            {selectedContact.child_name && (
+                                                <div className="info-item">
+                                                    <label>Child Name:</label>
+                                                    <span>{selectedContact.child_name}</span>
+                                                </div>
+                                            )}
+                                            {selectedContact.child_age && (
+                                                <div className="info-item">
+                                                    <label>Child Age:</label>
+                                                    <span>{selectedContact.child_age}</span>
+                                                </div>
+                                            )}
+                                            {selectedContact.address && (
+                                                <div className="info-item">
+                                                    <label>Address:</label>
+                                                    <span>{selectedContact.address}</span>
+                                                </div>
+                                            )}
                                             <div className="info-item">
                                                 <label>
                                                     <FaEnvelope /> Email:
@@ -477,7 +495,7 @@ const AdminContacts = () => {
                 </div>
             </main>
         </div>
-                );
+    );
 };
 
-                export default AdminContacts;
+export default AdminContacts;

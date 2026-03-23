@@ -21,6 +21,9 @@ class Contact(Base):
     
     # Submitter info
     parent_name = Column(String(255), nullable=False, index=True)
+    child_name = Column(String(255), nullable=True, index=True)
+    child_age = Column(String(20), nullable=True)
+    address = Column(Text, nullable=True)
     email = Column(String(255), nullable=False, index=True)
     phone = Column(String(20), nullable=True)
     

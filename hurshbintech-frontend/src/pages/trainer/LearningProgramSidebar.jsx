@@ -40,6 +40,32 @@ const LearningProgramSidebar = ({
 
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
+
+  const resolvedSkillNames = (() => {
+    const program = sessionInfo?.program || {};
+
+    const fromProgramDescription = (program.skill || program.description || program.descrption || '').trim();
+    if (fromProgramDescription) return fromProgramDescription;
+
+    const candidateList =
+      program.skill_names ||
+      program.skills ||
+      program.goal_names ||
+      program.learning_goal_names ||
+      [];
+
+    if (Array.isArray(candidateList) && candidateList.length > 0) {
+      const names = candidateList
+        .map((item) => {
+          if (typeof item === 'string') return item.trim();
+          return (item?.goal || item?.name || item?.title || '').trim();
+        })
+        .filter(Boolean);
+      if (names.length > 0) return names.join(', ');
+    }
+
+    return '';
+  })();
   // State for editable transcript
   const [editableTranscript, setEditableTranscript] = useState(transcript || '');
 
@@ -121,10 +147,25 @@ const LearningProgramSidebar = ({
             fontWeight: '600',
           }}>
             <span>📁</span>
-            <span>{sessionInfo.program.name}</span>
+            <span>Program Name: {sessionInfo.program.name}</span>
           </div>
         )}
-        <div className="sidebar-section-title">Learning Goals</div>
+        {resolvedSkillNames && (
+          <div style={{
+            margin: '2px auto 6px auto',
+            padding: '4px 8px',
+            backgroundColor: '#fff7ed',
+            borderLeft: '3px solid #f59e0b',
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: '#9a3412',
+            fontWeight: 600,
+          }}>
+            Skill: {resolvedSkillNames}
+          </div>
+        )}
+
+        <div className="sidebar-section-title">Sub-programs</div>
 
         <div className="sidebar-scrollable">
           {isSearching ? (
@@ -144,8 +185,7 @@ const LearningProgramSidebar = ({
                         checked={selectedProgramId === goal.id}
                         onChange={() => handleProgramCheck(goal.id)}
                       />
-                      <div className="sidebar-item-text">{index + 1}. {goalText}</div>
-                      <div className="sidebar-badge" title="Click to record prompt level">—</div>
+                      <div className="sidebar-item-text"> {goalText}</div>
                     </div>
                   );
                 })
@@ -291,7 +331,7 @@ const LearningProgramSidebar = ({
           <button
             onClick={() => onSaveReport({
               programId: selectedProgramId,
-              programName: selectedProgram?.goal || 'Unknown Program',
+              programName: selectedProgram?.goal || selectedProgram?.name || selectedProgram?.title || 'Unknown Program',
               promptMeter: selectedPromptLevel,
               reinforcementMeter: selectedReinforcementLevel
             })}

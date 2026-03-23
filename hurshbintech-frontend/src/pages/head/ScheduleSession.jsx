@@ -7,6 +7,7 @@ import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
 import programService from "../../api/services/programService";
+import { downloadLearningProgramPDF } from "../../utils/pdfGenerator";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
 import "../../styles/head/ScheduleSession.css";
@@ -23,11 +24,8 @@ const ScheduleSession = () => {
   // Program state
   const [programList, setProgramList] = useState([]);
   const [selectedProgramId, setSelectedProgramId] = useState(null);
-  const [programMode, setProgramMode] = useState('none'); // 'none' | 'existing' | 'new'
+  const [programMode, setProgramMode] = useState('none'); // 'none' | 'existing'
   const [programSearch, setProgramSearch] = useState('');
-  const [newProgramName, setNewProgramName] = useState('');
-  const [newProgramDescription, setNewProgramDescription] = useState('');
-  const [creatingProgram, setCreatingProgram] = useState(false);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
   const programDropdownRef = useRef(null);
@@ -327,44 +325,41 @@ const ScheduleSession = () => {
     }));
   };
 
-  const handleCreateNewProgram = async () => {
-    if (!newProgramName.trim()) {
-      toast.error('Please enter a program name');
+  const handleGenerateProgramPdf = async () => {
+    if (!selectedProgramId || !selectedProgram) {
+      toast.error("Please select a program first");
       return;
     }
-    if (!formData.learner_id) {
-      toast.error('Please select a learner first');
-      return;
-    }
-    if (formData.goal_ids.length === 0) {
-      toast.error('Please select at least one learning goal before creating a program');
-      return;
-    }
-    if (formData.content_ids.length === 0) {
-      toast.error('Please select at least one learning content before creating a program');
-      return;
-    }
+
     try {
-      setCreatingProgram(true);
-      const created = await programService.createProgram({
-        name: newProgramName.trim(),
-        description: newProgramDescription.trim() || null,
-        learner_id: parseInt(formData.learner_id),
-        goal_ids: formData.goal_ids,
-        content_ids: formData.content_ids,
+      const programDetail = await programService.getProgramById(selectedProgramId);
+
+      const selectedGoalIds = programDetail?.goal_ids || [];
+      const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
+      const subProgramText = selectedGoals.length
+        ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
+        : "-";
+
+      const rows = [{
+        skill: programDetail?.skill || selectedProgram?.skill || "-",
+        subPrograms: subProgramText,
+      }];
+
+      const selectedLearner = learners.find((l) => l.id === parseInt(formData.learner_id));
+      const selectedTrainer = trainers.find((t) => t.user_id === parseInt(formData.trainer_id));
+
+      await downloadLearningProgramPDF({
+        programName: selectedProgram.name,
+        date: formData.scheduled_date || new Date().toISOString(),
+        childName: selectedLearner?.name || "-",
+        programStartDate: programDetail?.created_at || null,
+        executerName: selectedTrainer?.name || "-",
+        rows,
       });
-      toast.success(`Program "${created.name}" created successfully`);
-      setSelectedProgramId(created.id);
-      setProgramMode('existing');
-      setProgramSearch(created.name);
-      setNewProgramName('');
-      setNewProgramDescription('');
-      // Refresh program list
-      fetchProgramsForLearner(formData.learner_id);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create program');
-    } finally {
-      setCreatingProgram(false);
+
+      toast.success("Program PDF downloaded successfully");
+    } catch {
+      toast.error("Failed to generate program PDF");
     }
   };
 
@@ -673,17 +668,6 @@ const ScheduleSession = () => {
                   >
                     Select Existing Program
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleProgramModeChange('new')}
-                    className={`modern-form-btn ${programMode === 'new'
-                      ? 'modern-form-btn-primary'
-                      : 'modern-form-btn-secondary'
-                      }`}
-                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }}
-                  >
-                    + Create New Program
-                  </button>
                 </div>
               )}
 
@@ -719,7 +703,8 @@ const ScheduleSession = () => {
                               >
                                 {prog.name}
                                 <span className="dropdown-item-meta">
-                                  &nbsp;— {(prog.goal_ids || []).length} goal(s), {(prog.content_ids || []).length} content(s)
+                                  {(prog.skill) ? ` | Skill: ${prog.skill}` : ''}
+                                  &nbsp;—  Sub-Programs : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
                                 </span>
                               </div>
                             ))
@@ -733,61 +718,23 @@ const ScheduleSession = () => {
                         </div>
                       )}
                       {selectedProgram && (
-                        <p className="modern-form-section-description" style={{ marginTop: '0.4rem' }}>
-                          ✅ Program &quot;<strong>{selectedProgram.name}</strong>&quot; selected —
-                          goals are pre-loaded (locked) and content is pre-selected (editable).
-                        </p>
+                        <div className="program-selected-card">
+                          <p className="modern-form-section-description program-selected-text">
+                            <span className="program-selected-icon" aria-hidden="true">✓</span>
+                            Program &quot;<strong>{selectedProgram.name}</strong>&quot; selected —
+                            goals are pre-loaded (locked) and content is pre-selected (editable).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleGenerateProgramPdf}
+                            className="modern-form-btn modern-form-btn-secondary program-pdf-btn"
+                          >
+                            Download Program PDF
+                          </button>
+                        </div>
                       )}
                     </>
                   )}
-                </div>
-              )}
-
-              {/* Create new program inline form */}
-              {programMode === 'new' && (
-                <div
-                  style={{
-                    padding: '1rem',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    marginBottom: '1rem',
-                    background: '#f9fafb',
-                  }}
-                >
-                  <p className="modern-form-section-description" style={{ marginBottom: '0.75rem' }}>
-                    Select the goals and content below first, then click <strong>Create Program</strong>.
-                  </p>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ flex: '1 1 200px' }}>
-                      <label className="modern-form-label">Program Name *</label>
-                      <input
-                        type="text"
-                        value={newProgramName}
-                        onChange={(e) => setNewProgramName(e.target.value)}
-                        className="modern-form-input"
-                        placeholder="e.g. Program-A"
-                      />
-                    </div>
-                    <div style={{ flex: '1 1 200px' }}>
-                      <label className="modern-form-label">Description</label>
-                      <input
-                        type="text"
-                        value={newProgramDescription}
-                        onChange={(e) => setNewProgramDescription(e.target.value)}
-                        className="modern-form-input"
-                        placeholder="Optional description"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCreateNewProgram}
-                      className="modern-form-btn modern-form-btn-primary"
-                      disabled={creatingProgram}
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      {creatingProgram ? 'Creating...' : 'Create Program'}
-                    </button>
-                  </div>
                 </div>
               )}
 

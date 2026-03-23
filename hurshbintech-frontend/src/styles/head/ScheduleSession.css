@@ -139,6 +139,79 @@
   background-color: white !important;
 }
 
+/* Selected program feedback + PDF action */
+.schedule-session .program-selected-card {
+  margin-top: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #dbe9df;
+  background: linear-gradient(180deg, #f7fcf9 0%, #f1f8f4 100%);
+  border-radius: 0.625rem;
+}
+
+.schedule-session .program-selected-text {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: #466359;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.schedule-session .program-selected-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  min-width: 1.05rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2fa66d;
+  box-shadow: 0 1px 3px rgba(47, 166, 109, 0.28);
+}
+
+.schedule-session .program-pdf-btn {
+  margin-top: 0.7rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 0.55rem;
+  border-color: #d4a354;
+  color: #73420e;
+  background: #fff7e8;
+  transition: all 0.2s ease;
+}
+
+.schedule-session .program-pdf-btn:hover {
+  color: #5f3207;
+  background: #fde8c0;
+  border-color: #c78d2b;
+  transform: translateY(-1px);
+}
+
+.schedule-session .program-pdf-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .schedule-session .program-selected-card {
+    padding: 0.7rem 0.7rem;
+  }
+
+  .schedule-session .program-selected-text {
+    font-size: 0.84rem;
+    align-items: flex-start;
+  }
+
+  .schedule-session .program-pdf-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Clear Button for Dropdown */
 /* .schedule-session .dropdown-clear {
   position: absolute !important;
