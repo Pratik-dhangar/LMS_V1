@@ -54,6 +54,27 @@ class S3RecordingStorage(RecordingStorage):
             f"S3RecordingStorage initialized for bucket: {settings.S3_BUCKET_NAME}"
         )
 
+    def _ensure_recording_prefix(self, session_id: int) -> str:
+        """
+        Ensure the session recording prefix marker exists in S3.
+
+        S3 is key-based and does not require folders, but creating a trailing-slash
+        object improves compatibility with S3-compatible backends and makes the
+        prefix visible in bucket browsers.
+        """
+        prefix_key = f"uploads/session_recordings/{session_id}/"
+        try:
+            self.s3_manager.s3_client.put_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=prefix_key,
+                Body=b"",
+                ContentType="application/x-directory",
+            )
+            logger.debug(f"Ensured S3 prefix marker: {prefix_key}")
+        except Exception as e:
+            logger.warning(f"Could not create S3 prefix marker {prefix_key}: {e}")
+        return prefix_key
+
     async def save(self, local_path: str, session_id: int) -> str:
         """
         Upload recording to S3 and clean up local temp file.
@@ -79,6 +100,9 @@ class S3RecordingStorage(RecordingStorage):
         unique_filename = f"{uuid4()}{file_extension}"
         
         try:
+            # Ensure logical "folder" exists for this session in S3-compatible stores.
+            self._ensure_recording_prefix(session_id)
+
             # Read file content
             with open(source, 'rb') as f:
                 file_content = f.read()

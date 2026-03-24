@@ -1306,7 +1306,20 @@ async def finalize_recording(
             logger.info(f"[FINALIZE] Recording saved to permanent storage: {storage_path}")
         except Exception as storage_err:
             logger.error(f"[FINALIZE] Error saving to storage: {storage_err}")
-            # Fallback to local path if storage fails
+            # In S3 mode, do not silently fallback to local path.
+            # That creates DB URLs that cannot be played back via S3 watch flow.
+            if settings.RECORDING_STORAGE_MODE.lower() == "s3":
+                session.recording_status = "failed"
+                await db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=(
+                        "Recording merged but failed to upload to S3. "
+                        "Check AWS credentials and bucket configuration."
+                    ),
+                )
+
+            # Local mode keeps backward-compatible behavior.
             storage_path = str(output_file)
 
         # Clean up chunk files after successful merge
