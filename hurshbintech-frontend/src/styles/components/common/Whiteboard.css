@@ -1764,7 +1764,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* MOBILE LANDSCAPE (max-width: 812px) */
 @media (max-width: 812px) {
     .whiteboard-main-wrapper {
-        min-height: 300px;
+        min-height: 260px;
         flex-direction: column;
     }
 
@@ -1783,7 +1783,7 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     .whiteboard {
-        min-height: 280px;
+        min-height: 240px;
         border-radius: var(--radius-sm);
     }
 

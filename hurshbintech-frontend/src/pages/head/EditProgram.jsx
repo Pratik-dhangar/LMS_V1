@@ -34,7 +34,7 @@ const EditProgram = () => {
         name: "",
         skill: "",
         goal_ids: [], // Skills (now editable)
-        content_ids: [], // Sub-programs (editable)
+        content_ids: [], // Learning Goals (editable)
         learner_id: null, // Now editable
     });
 
@@ -423,7 +423,7 @@ const EditProgram = () => {
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Sub-programs</h2>
+                            <h2 className="modern-form-section-title">Select Learning Goals</h2>
                             <p className="modern-form-section-description">
                                 Update the sub-programs for this program.
                             </p>

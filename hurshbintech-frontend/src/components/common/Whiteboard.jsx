@@ -645,6 +645,7 @@ const Whiteboard = ({
     const youtubePlayerRef = useRef(null);
     const youtubePlayerVideoIdRef = useRef(null);
     const youtubeSyncTimerRef = useRef(null);
+    const [isYoutubePlayerReady, setIsYoutubePlayerReady] = useState(false);
     const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
     const [youtubeCurrentTime, setYoutubeCurrentTime] = useState(0);
     const [youtubeDuration, setYoutubeDuration] = useState(0);
@@ -679,24 +680,22 @@ const Whiteboard = ({
             // Scale cursor size so it's always visible (browsers may clamp the image size)
             const base = Math.max(12, Math.round(lineWidth * 3));
             const center = Math.round(base / 2);
+            const previewStroke = Math.max(1, Math.round(lineWidth / 2));
 
             if (tool === 'pen') {
                 const radius = Math.max(2, Math.round(lineWidth));
-                const stroke = Math.max(1, Math.round(lineWidth / 2));
-                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${base}' height='${base}' viewBox='0 0 ${base} ${base}'><circle cx='${center}' cy='${center}' r='${radius}' fill='rgba(0,0,0,0.0)' stroke='rgba(0,0,0,0.85)' stroke-width='${stroke}' opacity='0.95'/></svg>`;
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${base}' height='${base}' viewBox='0 0 ${base} ${base}'><circle cx='${center}' cy='${center}' r='${radius}' fill='rgba(0,0,0,0.0)' stroke='rgba(0,0,0,0.85)' stroke-width='${previewStroke}' opacity='0.95'/></svg>`;
                 const url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
                 return `url("${url}") ${center} ${center}, crosshair`;
             }
 
             if (tool === 'eraser') {
-                // Draw a visible square for the eraser with a red stroke
-                const pad = Math.max(2, Math.round(lineWidth / 2));
-                const size = Math.max(10, Math.round(lineWidth * 3));
-                const inner = Math.max(4, size - pad * 2);
-                const stroke = Math.max(1, Math.round(lineWidth / 2));
-                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'><rect x='${pad}' y='${pad}' width='${inner}' height='${inner}' rx='2' fill='rgba(255,255,255,0.0)' stroke='rgba(220,38,38,0.95)' stroke-width='${stroke}'/></svg>`;
+                // Use the same preview footprint as pen, only visual style differs.
+                const inset = Math.max(1, Math.round(previewStroke / 2));
+                const inner = Math.max(4, base - inset * 2);
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${base}' height='${base}' viewBox='0 0 ${base} ${base}'><rect x='${inset}' y='${inset}' width='${inner}' height='${inner}' rx='2' fill='rgba(255,255,255,0.0)' stroke='rgba(220,38,38,0.95)' stroke-width='${previewStroke}'/></svg>`;
                 const url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-                return `url("${url}") ${Math.round(size / 2)} ${Math.round(size / 2)}, auto`;
+                return `url("${url}") ${center} ${center}, auto`;
             }
 
             return 'default';
@@ -2753,7 +2752,8 @@ const Whiteboard = ({
         // Normalize coordinates for network transmission (device-independent)
         const prevNorm = normalizePoint({ x: prevPosRef.current.x, y: prevPosRef.current.y }, canvas);
         const currNorm = normalizePoint({ x: currX, y: currY }, canvas);
-        const strokeWidth = tool === 'eraser' ? 20 : lineWidth;
+        // Keep cursor preview based on selected lineWidth, but apply stronger erase thickness on canvas.
+        const strokeWidth = tool === 'eraser' ? Math.max(1, lineWidth * 2) : lineWidth;
         const strokeNorm = normalizeStroke(strokeWidth, canvas);
 
         // Create normalized draw data to send over network
@@ -3287,6 +3287,7 @@ const Whiteboard = ({
             }
             youtubePlayerRef.current = null;
             youtubePlayerVideoIdRef.current = null;
+            setIsYoutubePlayerReady(false);
             setIsYoutubePlaying(false);
             setYoutubeCurrentTime(0);
             setYoutubeDuration(0);
@@ -3307,18 +3308,29 @@ const Whiteboard = ({
                 if (youtubePlayerRef.current && youtubePlayerVideoIdRef.current !== activeYoutubeMedia.videoId) {
                     try { youtubePlayerRef.current.destroy(); } catch { /* ignore */ }
                     youtubePlayerRef.current = null;
+                    setIsYoutubePlayerReady(false);
                 }
 
                 if (!youtubePlayerRef.current) {
                     youtubePlayerRef.current = new window.YT.Player(targetId, {
                         events: {
                             onReady: (event) => {
+                                setIsYoutubePlayerReady(true);
                                 const duration = event.target.getDuration?.() || 0;
                                 setYoutubeDuration(duration);
                                 const startTime = activeYoutubeMedia.currentTime || 0;
                                 if (startTime > 0) {
                                     event.target.seekTo(startTime, true);
                                     setYoutubeCurrentTime(startTime);
+                                }
+                                // On slower networks, learner may receive play/pause before player is ready.
+                                // Apply latest synced state once the iframe API reports readiness.
+                                if (!isTrainer && inlineMedia?.type === 'youtube') {
+                                    if (inlineMedia.isPlaying) {
+                                        event.target.playVideo();
+                                    } else {
+                                        event.target.pauseVideo();
+                                    }
                                 }
                             },
                             onStateChange: (event) => {
@@ -3356,10 +3368,10 @@ const Whiteboard = ({
                 youtubeSyncTimerRef.current = null;
             }
         };
-    }, [activeYoutubeMedia?.videoId, activeYoutubeMedia?.currentTime]);
+    }, [activeYoutubeMedia?.videoId, activeYoutubeMedia?.currentTime, isTrainer, inlineMedia]);
 
     useEffect(() => {
-        if (isTrainer || !inlineMedia || inlineMedia.type !== 'youtube' || !youtubePlayerRef.current) return;
+        if (isTrainer || !inlineMedia || inlineMedia.type !== 'youtube' || !youtubePlayerRef.current || !isYoutubePlayerReady) return;
 
         const player = youtubePlayerRef.current;
         const targetTime = inlineMedia.currentTime || 0;
@@ -3373,7 +3385,7 @@ const Whiteboard = ({
         } else {
             player.pauseVideo();
         }
-    }, [isTrainer, inlineMedia?.videoId, inlineMedia?.currentTime, inlineMedia?.isPlaying]);
+    }, [isTrainer, inlineMedia?.videoId, inlineMedia?.currentTime, inlineMedia?.isPlaying, isYoutubePlayerReady]);
 
     // Video control functions
     const handleVideoMetadataLoaded = useCallback(() => {

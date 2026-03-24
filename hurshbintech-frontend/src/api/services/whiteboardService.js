@@ -522,29 +522,34 @@ class WhiteboardService {
     // Send YouTube split video open event
     sendYoutubeOpen(data) {
         // Instructor-only: { videoId, title }
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            // console.log('[WhiteboardService] Sending youtube_open:', data);
-            this.ws.send(JSON.stringify({
-                type: 'youtube_open',
-                data: data
-            }));
-        } else {
-            // console.warn('[WhiteboardService] Cannot send youtube_open - WebSocket not ready');
-        }
+        this._sendWithRetry('youtube_open', data);
     }
 
     // Send YouTube split video state change event (play/pause/seek/close)
     sendYoutubeSplit(data) {
         // Instructor-only: { action: 'play'|'pause'|'seek'|'close', time, videoId }
+        this._sendWithRetry('youtube_split', data);
+    }
+
+    // Retry-critical send helper for latency-sensitive events (e.g. YouTube sync)
+    _sendWithRetry(type, data, remainingAttempts = 10, retryDelayMs = 150) {
+        if (!this.shouldReconnect) return;
+
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            // console.log('[WhiteboardService] Sending youtube_split:', data);
             this.ws.send(JSON.stringify({
-                type: 'youtube_split',
-                data: data
+                type,
+                data
             }));
-        } else {
-            // console.warn('[WhiteboardService] Cannot send youtube_split - WebSocket not ready');
+            return;
         }
+
+        if (remainingAttempts <= 0) {
+            return;
+        }
+
+        setTimeout(() => {
+            this._sendWithRetry(type, data, remainingAttempts - 1, retryDelayMs);
+        }, retryDelayMs);
     }
 
     // Generic send method for custom message types

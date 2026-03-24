@@ -1807,7 +1807,7 @@ const LearnerSession = () => {
 
           /* Constrain canvas to fit perfectly */
           .learner-whiteboard-wrapper canvas {
-            max-height: calc(100dvh - 45px) !important;
+            max-height: calc(100dvh - 43px) !important;
             max-height: calc(-webkit-fill-available - 45px) !important;
             object-fit: contain !important;
           }
@@ -1826,7 +1826,7 @@ const LearnerSession = () => {
 
 
       {/* Sidebar Toggles (Mobile Only) */}
-      <div className="session-sidebar-toggles">
+      {/* <div className="session-sidebar-toggles">
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="sidebar-toggle-button"
@@ -1834,18 +1834,18 @@ const LearnerSession = () => {
         >
           {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
-      </div>
+      </div> */}
 
       {/* Overlay backdrop for mobile sidebar */}
-      {isSidebarOpen && (
+      {/* {isSidebarOpen && (
         <div
           className="sidebar-overlay"
           onClick={() => setIsSidebarOpen(false)}
         />
-      )}
+      )} */}
 
       {/* Fullscreen activation triggers on first user interaction */}
-      {showFullscreenPrompt && <div style={{ display: 'none' }} />}
+      {/* {showFullscreenPrompt && <div style={{ display: 'none' }} />} */}
 
       {/* Main Container - Flexbox column layout */}
       <div className="learner-main-container">

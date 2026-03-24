@@ -645,7 +645,7 @@ export const downloadProfilePDF = async (profileData, profileType = 'trainer') =
  * - Header image
  * - Learning Program heading
  * - Metadata fields (Date, Child name, Program start date, Executer)
- * - Table: SR. No. | Skill | Sub-Programs
+ * - Table: SR. No. | Skill | Learning Goals
  */
 export const generateLearningProgramPDF = async (data = {}) => {
     const {
@@ -763,7 +763,7 @@ export const generateLearningProgramPDF = async (data = {}) => {
         doc.setFontSize(10);
         doc.text('SR. No.', tableX + textPadX, y + 5.5);
         doc.text('Skill', tableX + colW.sr + textPadX, y + 5.5);
-        doc.text('Sub-Programs', tableX + colW.sr + colW.skill + textPadX, y + 5.5);
+        doc.text('Learning Goals', tableX + colW.sr + colW.skill + textPadX, y + 5.5);
 
         y += rowMinH;
     };
