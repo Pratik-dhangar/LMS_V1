@@ -605,7 +605,7 @@ const Home = () => {
       ) : null}
 
       {/* Blogs Section */}
-      <div ref={blogsRef} style={{ minHeight: '600px' }}>
+      <div ref={blogsRef} style={loadingBlogs ? { minHeight: '600px' } : undefined}>
         {loadingBlogs ? (
           <ContentSectionSkeleton count={3} />
         ) : blogs.length > 0 ? (
@@ -669,7 +669,7 @@ const Home = () => {
       </div>
 
       {/* Vlogs Section */}
-      <div ref={vlogsRef} style={{ minHeight: '600px' }}>
+      <div ref={vlogsRef} style={loadingVlogs ? { minHeight: '600px' } : undefined}>
         {loadingVlogs ? (
           <ContentSectionSkeleton count={3} />
         ) : vlogs.length > 0 ? (

@@ -276,7 +276,7 @@ const CoachManageLearningReports = () => {
                                                 <tr>
                                                     <th className="table-primary-th">Sr. No.</th>
                                                     <th className="table-primary-th">Learner Name</th>
-                                                    <th className="table-primary-th">Final Generated Reports</th>
+                                                    <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="table-primary-body">

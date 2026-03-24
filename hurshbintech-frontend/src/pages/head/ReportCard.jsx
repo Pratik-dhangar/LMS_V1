@@ -229,7 +229,7 @@ const ReportCard = () => {
                           <th className="table-primary-th">Last Session</th>
                           <th className="table-primary-th">Goals</th>
                           <th className="table-primary-th">Skill Development Graph </th>
-                          <th className="table-primary-th">Final Generated Reports</th>
+                          <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
                         </tr>
                       </thead>
                       <tbody className="table-primary-body">

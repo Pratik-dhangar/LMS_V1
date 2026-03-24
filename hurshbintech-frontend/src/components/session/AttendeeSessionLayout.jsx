@@ -587,7 +587,7 @@ export const attendeeSessionStyles = `
     margin: 0 !important;
     padding: 0rem !important;
     min-height: 0 !important;
-    overflow: hidden !important;
+    // overflow: hidden !important;
   }
 
   @media (max-width: 767px) {
@@ -672,23 +672,31 @@ export const attendeeSessionStyles = `
     .learner-main-container {
       /* No scrolling needed in landscape */
       overflow: hidden !important;
+            min-height: 0 !important;
     }
 
     .learner-whiteboard-wrapper {
-      /* In landscape, fit perfectly in viewport when browser chrome is hidden */
-      min-height: calc(100vh - 40px) !important;
-      max-height: calc(100vh - 40px) !important;
-      height: calc(100vh - 40px) !important;
-      /* Use dvh for dynamic adjustment */
-      min-height: calc(100dvh - 40px) !important;
-      max-height: calc(100dvh - 40px) !important;
-      height: calc(100dvh - 40px) !important;
-      /* iOS Safari fallback */
-      min-height: calc(-webkit-fill-available - 40px) !important;
-      max-height: calc(-webkit-fill-available - 40px) !important;
+            /* Let whiteboard consume only remaining space under header to avoid bottom clipping */
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            height: auto !important;
       /* Remove bottom padding in landscape */
       padding-bottom: 0 !important;
     }
+
+        .session-whiteboard-container,
+        .learner-whiteboard-wrapper > div,
+        .learner-whiteboard-wrapper .w-full {
+            min-height: 0 !important;
+            height: 100% !important;
+        }
+
+        .learner-whiteboard-wrapper .whiteboard-main-wrapper,
+        .learner-whiteboard-wrapper .whiteboard {
+            min-height: 0 !important;
+            height: 100% !important;
+        }
   }
 
   .session-whiteboard-container {
@@ -2001,10 +2009,10 @@ export const AttendeeMetricsPanel = ({
             width: '20%',
             minWidth: 'clamp(7.5rem, 12vw, 9.375rem)',
             maxWidth: 'clamp(9.375rem, 15vw, 12rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: isPromptOpen ? 'flex-start' : 'center',
+            // display: 'flex',
+            // flexDirection: 'column',
+            // alignItems: 'center',
+            // justifyContent: isPromptOpen ? 'flex-start' : 'center',
             gap: 'clamp(0.5rem, 1.5vh, 0.75rem)',
             backgroundColor: 'white',
             borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
@@ -2093,7 +2101,7 @@ export const AttendeeMetricsPanel = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
-                        maxHeight: 'clamp(5rem, 14vh, 7rem)',
+                        maxHeight: 'clamp(3rem, 14vh, 7rem)',
                         overflow: 'auto',
                         animation: 'slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
                         boxSizing: 'border-box',
@@ -2104,11 +2112,11 @@ export const AttendeeMetricsPanel = ({
                             margin: 0,
                             textAlign: 'center',
                             fontStyle: promptText !== defaultPromptText ? 'normal' : 'italic',
-                            lineHeight: '1.4',
+                            lineHeight: '1.3',
                             fontWeight: promptText !== defaultPromptText ? '600' : '500',
                             wordWrap: 'break-word',
                             overflowWrap: 'break-word',
-                            padding: '0.25rem 0.5rem',
+                            // padding: '0.25rem 0.5rem',
                             width: '100%',
                             boxSizing: 'border-box',
                             whiteSpace: 'normal',
@@ -2790,7 +2798,7 @@ export const AttendeeUpperSection = ({
                     .attendee-upper-section {
                         flex-direction: row !important;
                         height: 35vh !important;
-                        max-height: 35vh !important;
+                        max-height: 25vh !important;
                         min-height: auto !important;
                     }
                     .attendee-metrics-panel {

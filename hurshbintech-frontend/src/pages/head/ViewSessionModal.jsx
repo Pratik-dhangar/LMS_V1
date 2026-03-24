@@ -87,7 +87,7 @@ const ViewSessionModal = ({ session, onClose }) => {
 
     const selectedSkills = resolvedSkillNames ? [resolvedSkillNames] : [];
 
-    // Sub-programs should display selected program names (goal names).
+    // Learning Goals should display selected program names (goal names).
     const subPrograms = selectedProgramItems
         .map((goal) => ({
             id: goal?.id,
@@ -123,7 +123,7 @@ const ViewSessionModal = ({ session, onClose }) => {
             <div className="space-y-3">
                 {subPrograms.map((subProgram, index) => (
                     <div key={subProgram.id || index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="font-semibold text-gray-900">{subProgram.title || 'Unnamed Sub-program'}</div>
+                        <div className="font-semibold text-gray-900">{subProgram.title || 'Unnamed Learning Goals'}</div>
                     </div>
                 ))}
             </div>
@@ -265,7 +265,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                                         Program: {session.program.name}
                                     </span>
                                     <span style={{ fontSize: '0.78rem', color: '#b07320' }}>
-                                        — Skills: {(session.program.goal_ids || []).length}, Sub-programs: {(session.program.content_ids || []).length}
+                                        — Skills: {(session.program.goal_ids || []).length}, Learning Goals: {(session.program.content_ids || []).length}
                                     </span>
                                 </div>
                             </div>
@@ -274,7 +274,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                         {/* Learning Goals */}
                         <div className="mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <span>🎯</span> Skills
+                                <span>🎯</span> Learning Skills
                             </h3>
                             {renderSkills()}
                         </div>
@@ -282,7 +282,7 @@ const ViewSessionModal = ({ session, onClose }) => {
                         {/* Learning Content */}
                         <div className="mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <span>📚</span> Sub-programs
+                                <span>📚</span> Learning Goals
                             </h3>
                             {renderSubPrograms()}
                         </div>
