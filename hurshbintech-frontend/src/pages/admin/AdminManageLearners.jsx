@@ -368,7 +368,7 @@ const AdminManageLearners = () => {
                                                 <th className="table-primary-th">Passcode</th>
                                                 <th className="table-primary-th">Start Date</th>
                                                 <th className="table-primary-th">Skill Development Graph </th>
-                                                <th className="table-primary-th">Final Generated Reports</th>
+                                                <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
                                                 <th className="table-primary-th">Session Recordings</th>
                                             </tr>
                                         </thead>

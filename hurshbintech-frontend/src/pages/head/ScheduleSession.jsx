@@ -29,6 +29,7 @@ const ScheduleSession = () => {
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
   const programDropdownRef = useRef(null);
+  const contentGridRef = useRef(null);
   const contentSentinelRef = useRef(null);
   const CONTENT_PAGE_SIZE = 12;
   const [contentVisibleCount, setContentVisibleCount] = useState(CONTENT_PAGE_SIZE);
@@ -54,6 +55,13 @@ const ScheduleSession = () => {
     trainer: false,
     learner: false,
   });
+
+  const normalizedContentSearch = searchTerm.content.toLowerCase();
+  const filteredContentCount = contents.filter(
+    (content) =>
+      content.title?.toLowerCase().includes(normalizedContentSearch) ||
+      content.content_type?.toLowerCase().includes(normalizedContentSearch)
+  ).length;
 
   const trainerDropdownRef = useRef(null);
   const learnerDropdownRef = useRef(null);
@@ -97,18 +105,26 @@ const ScheduleSession = () => {
   // IntersectionObserver for lazy loading content grid
   useEffect(() => {
     const sentinel = contentSentinelRef.current;
-    if (!sentinel) return;
+    const contentGrid = contentGridRef.current;
+    if (!sentinel || !contentGrid) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && contentVisibleCount < filteredContentCount) {
           setContentVisibleCount((prev) => prev + CONTENT_PAGE_SIZE);
         }
       },
-      { rootMargin: '150px', threshold: 0 }
+      { root: contentGrid, rootMargin: '150px', threshold: 0 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [contentVisibleCount]);
+  }, [contentVisibleCount, filteredContentCount]);
+
+  const handleContentGridScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 150 && contentVisibleCount < filteredContentCount) {
+      setContentVisibleCount((prev) => prev + CONTENT_PAGE_SIZE);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -704,7 +720,7 @@ const ScheduleSession = () => {
                                 {prog.name}
                                 <span className="dropdown-item-meta">
                                   {(prog.skill) ? ` | Skill: ${prog.skill}` : ''}
-                                  &nbsp;—  Sub-Programs : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
+                                  &nbsp;—  Learning Goals : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
                                 </span>
                               </div>
                             ))
@@ -898,7 +914,11 @@ const ScheduleSession = () => {
                 {contents.length === 0 ? (
                   <p className="empty-state">No learning content available</p>
                 ) : (
-                  <div className="content-grid-container">
+                  <div
+                    ref={contentGridRef}
+                    className="content-grid-container"
+                    onScroll={handleContentGridScroll}
+                  >
                     {sortedFilteredContents.length > 0 ? (
                       (() => {
                         const selCount = sortedFilteredContents.filter((c) => formData.content_ids.includes(c.id)).length;

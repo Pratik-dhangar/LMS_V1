@@ -385,7 +385,7 @@ const CreateProgram = () => {
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Sub-programs</h2>
+                            <h2 className="modern-form-section-title">Select Learning Goals</h2>
                             <p className="modern-form-section-description">
                                 Choose one or more sub-programs for this program.
                             </p>

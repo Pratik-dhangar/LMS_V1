@@ -46,6 +46,12 @@ class JanusRecordingService {
     this.mediaRecorder = null;
     this.currentChunkData = [];
     this.displayStream = null;
+    this.audioContext = null;
+    this.audioDestination = null;
+    this.mixedAudioTrack = null;
+    this.mixedAudioSources = [];
+    this.connectedMixerTrackIds = new Set();
+    this.audioTrackMonitorInterval = null;
     this.isUploading = false;
 
     // === CALLBACKS ===
@@ -204,21 +210,17 @@ class JanusRecordingService {
         systemAudio: 'exclude'
       });
 
-      // === GET AUDIO FROM MICROPHONE ===
-      const localStream = this.videoService?.localStream;
-      let audioTrack = null;
-      if (localStream) {
-        const audioTracks = localStream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          audioTrack = audioTracks[0];
-        }
-      }
+      // === BUILD MIXED AUDIO TRACK (TRAINER + LEARNER) ===
+      const audioTrack = await this.createMixedAudioTrack();
 
       // === COMBINE STREAMS ===
       const stream = new MediaStream();
       displayStream.getVideoTracks().forEach(track => stream.addTrack(track));
       if (audioTrack) {
         stream.addTrack(audioTrack);
+        this.mixedAudioTrack = audioTrack;
+      } else {
+        console.warn('[RecordingService] ⚠️ No audio track available for recording');
       }
 
       this.displayStream = displayStream;
@@ -258,6 +260,9 @@ class JanusRecordingService {
       // === PROCESS UPLOAD QUEUE ===
       this.startQueueProcessor();
 
+      // Keep mixer in sync so learner audio is added even if learner joins later.
+      this.startAudioTrackMonitor();
+
       // Handle stream stop (user clicked "Stop sharing")
       displayStream.getTracks().forEach(track => {
         track.onended = () => {
@@ -275,6 +280,9 @@ class JanusRecordingService {
     } catch (error) {
       console.error('[RecordingService] ❌ Error starting recording:', error);
       this.isRecording = false;
+
+      // Release audio mixer resources now that recording is finalized.
+      this.cleanupAudioMixer();
 
       if (this.onRecordingError) {
         this.onRecordingError({
@@ -531,9 +539,12 @@ class JanusRecordingService {
       // Finalize recording on server
       await this.finalizeRecording();
 
+      this.cleanupAudioMixer();
+
       return true;
     } catch (error) {
       console.error('[RecordingService] Error stopping recording:', error);
+      this.cleanupAudioMixer();
       if (this.onRecordingError) {
         this.onRecordingError({ message: error.message });
       }
@@ -543,6 +554,133 @@ class JanusRecordingService {
 
   async handleRecordingStop() {
     console.log('[RecordingService] Finalizing recording after MediaRecorder stop');
+  }
+
+  async createMixedAudioTrack() {
+    const audioTracks = this.getLiveAudioTracksFromConference();
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      console.warn('[RecordingService] Web Audio API not available, falling back to local track only');
+      return audioTracks[0] || null;
+    }
+
+    // Always reset stale mixer instances before creating a new one.
+    this.cleanupAudioMixer();
+
+    this.audioContext = new AudioContextClass();
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+
+    this.audioDestination = this.audioContext.createMediaStreamDestination();
+    this.syncMixerTracks();
+
+    const mixedTrack = this.audioDestination.stream.getAudioTracks()[0] || null;
+    if (!mixedTrack) {
+      console.warn('[RecordingService] Audio mixer produced no output track');
+      return audioTracks[0] || null;
+    }
+
+    return mixedTrack;
+  }
+
+  getLiveAudioTracksFromConference() {
+    const localStream = this.videoService?.localStream || null;
+    const remoteStream = this.videoService?.remoteStream || null;
+
+    const localTrack = localStream
+      ? localStream.getAudioTracks().find((track) => track.readyState === 'live')
+      : null;
+    const remoteTrack = remoteStream
+      ? remoteStream.getAudioTracks().find((track) => track.readyState === 'live')
+      : null;
+
+    const tracks = [];
+    if (localTrack) tracks.push(localTrack);
+    if (remoteTrack) tracks.push(remoteTrack);
+    return tracks;
+  }
+
+  syncMixerTracks() {
+    if (!this.audioContext || !this.audioDestination) {
+      return;
+    }
+
+    const tracks = this.getLiveAudioTracksFromConference();
+    tracks.forEach((track) => {
+      if (this.connectedMixerTrackIds.has(track.id)) {
+        return;
+      }
+
+      try {
+        const sourceStream = new MediaStream([track]);
+        const source = this.audioContext.createMediaStreamSource(sourceStream);
+        const gainNode = this.audioContext.createGain();
+        gainNode.gain.value = 1.0;
+        source.connect(gainNode).connect(this.audioDestination);
+
+        this.mixedAudioSources.push({ trackId: track.id, source, gainNode });
+        this.connectedMixerTrackIds.add(track.id);
+        console.log(`[RecordingService] 🎤 Added audio track to mixer: ${track.id}`);
+
+        track.addEventListener('ended', () => {
+          this.connectedMixerTrackIds.delete(track.id);
+        }, { once: true });
+      } catch (error) {
+        console.warn('[RecordingService] Could not mix audio track:', error);
+      }
+    });
+  }
+
+  startAudioTrackMonitor() {
+    this.stopAudioTrackMonitor();
+    this.audioTrackMonitorInterval = setInterval(() => {
+      if (!this.isRecording) {
+        return;
+      }
+      this.syncMixerTracks();
+    }, 1000);
+  }
+
+  stopAudioTrackMonitor() {
+    if (this.audioTrackMonitorInterval) {
+      clearInterval(this.audioTrackMonitorInterval);
+      this.audioTrackMonitorInterval = null;
+    }
+  }
+
+  cleanupAudioMixer() {
+    this.stopAudioTrackMonitor();
+
+    this.mixedAudioSources.forEach(({ source, gainNode }) => {
+      try {
+        source.disconnect();
+      } catch (_) {
+        // no-op
+      }
+      try {
+        gainNode.disconnect();
+      } catch (_) {
+        // no-op
+      }
+    });
+    this.mixedAudioSources = [];
+    this.connectedMixerTrackIds.clear();
+
+    if (this.mixedAudioTrack) {
+      this.mixedAudioTrack.stop();
+      this.mixedAudioTrack = null;
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close().catch(() => {
+        // no-op cleanup guard
+      });
+      this.audioContext = null;
+    }
+
+    this.audioDestination = null;
   }
 
   waitForUploadsComplete() {
@@ -639,6 +777,8 @@ class JanusRecordingService {
     if (this.displayStream) {
       this.displayStream.getTracks().forEach(track => track.stop());
     }
+
+    this.cleanupAudioMixer();
 
     // Clear data
     this.currentChunkData = [];

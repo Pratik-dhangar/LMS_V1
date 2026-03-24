@@ -165,7 +165,7 @@ const LearningProgramSidebar = ({
           </div>
         )}
 
-        <div className="sidebar-section-title">Sub-programs</div>
+        <div className="sidebar-section-title">Learning Goals</div>
 
         <div className="sidebar-scrollable">
           {isSearching ? (

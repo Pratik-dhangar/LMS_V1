@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import programService from '../../api/services/programService';
+import headService from '../../api/services/headService';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/Table.css';
 
@@ -12,6 +13,7 @@ const ManagePrograms = () => {
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [learnerNameById, setLearnerNameById] = useState({});
 
     useEffect(() => {
         fetchPrograms();
@@ -20,8 +22,28 @@ const ManagePrograms = () => {
     const fetchPrograms = async () => {
         try {
             setLoading(true);
-            const data = await programService.getPrograms();
-            setPrograms(data || []);
+            const [programsResult, learnersResult] = await Promise.allSettled([
+                programService.getPrograms(),
+                headService.getLearnersForSessionScheduling(),
+            ]);
+
+            if (programsResult.status !== 'fulfilled') {
+                throw programsResult.reason;
+            }
+
+            setPrograms(programsResult.value || []);
+
+            if (learnersResult.status === 'fulfilled') {
+                const learnerMap = {};
+                (learnersResult.value || []).forEach((learner) => {
+                    if (learner?.id != null && learner?.name) {
+                        learnerMap[String(learner.id)] = String(learner.name);
+                    }
+                });
+                setLearnerNameById(learnerMap);
+            } else {
+                setLearnerNameById({});
+            }
         } catch (error) {
             toast.error('Failed to load programs');
         } finally {
@@ -29,11 +51,35 @@ const ManagePrograms = () => {
         }
     };
 
+    const getProgramLearnerName = (program) => {
+        const directName =
+            program?.learner_name ||
+            program?.learnerName ||
+            program?.learner?.name ||
+            program?.user?.name;
+
+        if (directName && String(directName).trim()) {
+            return String(directName).trim();
+        }
+
+        const learnerId = program?.learner_id ?? program?.learnerId;
+        if (learnerId == null) {
+            return '';
+        }
+
+        return learnerNameById[String(learnerId)] || '';
+    };
+
     const filteredPrograms = programs.filter(
-        (program) =>
-            program.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (program.skill || program.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            program.learner_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        (program) => {
+            const normalizedSearch = searchTerm.toLowerCase();
+            const learnerName = getProgramLearnerName(program);
+            return (
+                program.name?.toLowerCase().includes(normalizedSearch) ||
+                (program.skill || program.description || '').toLowerCase().includes(normalizedSearch) ||
+                learnerName.toLowerCase().includes(normalizedSearch)
+            );
+        }
     );
 
     const handleEdit = (programId) => {
@@ -138,10 +184,10 @@ const ManagePrograms = () => {
                                             <thead className="table-primary-header">
                                                 <tr>
                                                     <th className="table-primary-th">Program Name</th>
-                                                    <th className="table-primary-th">Skill</th>
-                                                    <th className="table-primary-th">Learner</th>
-                                                    <th className="table-primary-th" style={{ textAlign: 'center' }}>Sub-Programs</th>
-                                                    <th className="table-primary-th" style={{ textAlign: 'center' }}>Sub-programs</th>
+                                                    <th className="table-primary-th">Learning Skill</th>
+                                                    <th className="table-primary-th">Learner Name </th>
+                                                    <th className="table-primary-th" style={{ textAlign: 'center' }}>Learning Goals</th>
+                                                    <th className="table-primary-th" style={{ textAlign: 'center' }}>Learning Content</th>
                                                     <th className="table-primary-th" style={{ textAlign: 'center', width: '120px' }}>Actions</th>
                                                 </tr>
                                             </thead>
@@ -157,7 +203,7 @@ const ManagePrograms = () => {
                                                             {program.skill || program.description || '-'}
                                                         </td>
                                                         <td className="table-primary-td">
-                                                            {program.learner_name || `ID: ${program.learner_id}`}
+                                                            {getProgramLearnerName(program) || '-'}
                                                         </td>
                                                         <td className="table-primary-td" style={{ textAlign: 'center' }}>
                                                             <span
