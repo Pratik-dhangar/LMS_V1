@@ -1175,9 +1175,10 @@ export const downloadProgressReportPDF = async (data, options = {}) => {
  * @param {object} params
  * @param {string} params.learnerName
  * @param {string} params.programName
+ * @param {string} [params.skillName]
  * @param {Array}  params.sessionData  – processed session array from ProgramGraphView state
  */
-export const downloadProgramGraphPDF = async ({ learnerName, programName, sessionData }) => {
+export const downloadProgramGraphPDF = async ({ learnerName, programName, skillName, sessionData }) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const pageWidth = doc.internal.pageSize.getWidth();   // 210
@@ -1187,7 +1188,10 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
 
     /* ── BRANDED HEADER ───────────────────────────────────────────── */
     const headerDataURL = await loadHeaderDataURL();
-    const subtitle = learnerName ? `${learnerName}  —  ${programName}` : programName;
+    const skillLabel = `Skill: ${skillName || '-'}`;
+    const subtitle = learnerName
+        ? `${learnerName}  —  ${programName}  —  ${skillLabel}`
+        : `${programName}  —  ${skillLabel}`;
     const genDate = `Generated on: ${new Date().toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })}`;
@@ -1474,6 +1478,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
 
     const drawProgramSection = (prog) => {
         const sessions = prog.sessions || [];
+        const skillLabel = prog.skill_name || prog.skill || '-';
 
         /* sub-header bar */
         checkBreak(14);
@@ -1485,7 +1490,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         doc.setFontSize(10);
         doc.setTextColor(55, 65, 81);
         doc.text(`  ${prog.program_name}`, margin + 2, y + 8);
-        const subLabel = `${prog.total_sessions || sessions.length} Sessions${prog.last_session_date ? '  ·  Last: ' + new Date(prog.last_session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}`;
+        const subLabel = `Skill: ${skillLabel}  ·  ${prog.total_sessions || sessions.length} Sessions${prog.last_session_date ? '  ·  Last: ' + new Date(prog.last_session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}`;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(107, 114, 128);

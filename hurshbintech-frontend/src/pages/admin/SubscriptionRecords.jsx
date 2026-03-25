@@ -238,8 +238,8 @@ const SubscriptionRecords = () => {
   const handleExportCsv = async () => {
     setExportingCsv(true);
     try {
-      await publicSubscriptionService.exportCsv(inquiryStatusFilter || null);
-      toast.success("CSV download started!");
+      await publicSubscriptionService.exportCsv();
+      toast.success("Processed records CSV download started!");
     } catch (err) {
       toast.error("CSV export failed. Please try again.");
     } finally {
@@ -818,7 +818,7 @@ const SubscriptionRecords = () => {
                     className="btn btn-primary"
                     onClick={handleExportCsv}
                     disabled={exportingCsv}
-                    title="Export all inquiries as CSV"
+                    title="Export processed inquiries as CSV"
                     style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                   >
                     <Download size={16} />

@@ -16,6 +16,7 @@ const AdminProgramGraphView = () => {
     const navigate = useNavigate();
     const [sessionData, setSessionData] = useState([]);
     const [learnerName, setLearnerName] = useState("");
+    const [skillName, setSkillName] = useState("");
     const [loading, setLoading] = useState(true);
     const [showPreview, setShowPreview] = useState(false);
 
@@ -30,6 +31,12 @@ const AdminProgramGraphView = () => {
                 parseInt(learnerId),
                 programName
             );
+
+            const singleProgramData = await sessionReportService.getPdfData(
+                parseInt(learnerId),
+                programName
+            );
+            setSkillName(singleProgramData?.skill_name || "");
 
             const processedData = data.map((session, idx) => {
                 const sessionTime = session.session_date
@@ -131,6 +138,7 @@ const AdminProgramGraphView = () => {
             await downloadProgramGraphPDF({
                 learnerName: learnerName || "Learner",
                 programName: programName,
+                skillName,
                 sessionData: sessionData,
             });
             toast.success("PDF downloaded successfully!");
@@ -191,6 +199,9 @@ const AdminProgramGraphView = () => {
                                 <p className="page-description">
                                     {learnerName && `${learnerName} — `}
                                     {programName}
+                                </p>
+                                <p className="page-description" style={{ marginTop: "0.25rem" }}>
+                                    Skill: {skillName || "-"}
                                 </p>
                             </div>
                         </div>
@@ -354,6 +365,9 @@ const AdminProgramGraphView = () => {
                                     {learnerName && <strong>{learnerName}</strong>}
                                     {learnerName && " — "}
                                     {programName}
+                                </p>
+                                <p style={{ color: "rgba(255,255,255,0.8)", margin: "4px 0 0", fontSize: "0.85rem" }}>
+                                    Skill: {skillName || "-"}
                                 </p>
                                 <p style={{ color: "rgba(255,255,255,0.65)", margin: "4px 0 0", fontSize: "0.8rem" }}>
                                     Generated on:{" "}
