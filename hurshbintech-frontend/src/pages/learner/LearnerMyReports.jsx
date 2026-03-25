@@ -513,6 +513,9 @@ const LearnerMyReports = () => {
                                             {prog.total_sessions || prog.sessions?.length || 0} Sessions
                                             {prog.last_session_date && ` · Last: ${new Date(prog.last_session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
                                         </span>
+                                        <div style={{ fontSize: "0.82rem", color: "#6b7280", marginTop: "0.35rem" }}>
+                                            Skill: {prog.skill_name || "-"}
+                                        </div>
                                     </div>
 
                                     <div style={{ padding: "1rem 1.25rem" }}>

@@ -376,6 +376,11 @@ const LearnerProgramsView = () => {
                       </div>
                     )}
 
+                    <div className="report-card-meta">
+                      <span className="report-meta-label">Skill:</span>{" "}
+                      {program.skill_name || "-"}
+                    </div>
+
                     {/* View Button */}
                     <button
                       onClick={(e) => {
@@ -515,6 +520,9 @@ const LearnerProgramsView = () => {
                       {prog.total_sessions || prog.sessions?.length || 0} Sessions
                       {prog.last_session_date && ` · Last: ${new Date(prog.last_session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
                     </span>
+                    <div style={{ fontSize: "0.82rem", color: "#6b7280", marginTop: "0.35rem" }}>
+                      Skill: {prog.skill_name || "-"}
+                    </div>
                   </div>
 
                   <div style={{ padding: "1rem 1.25rem" }}>

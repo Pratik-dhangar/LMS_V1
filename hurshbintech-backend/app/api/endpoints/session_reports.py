@@ -393,6 +393,11 @@ async def get_learner_pdf_data(
         
         # If specific program requested
         if program_name:
+            learner_programs = await session_report_crud.get_programs_by_learner(db, learner_id)
+            target_program = next(
+                (p for p in learner_programs if p.get("program_name") == program_name),
+                None,
+            )
             session_data = await session_report_crud.get_session_data_by_program(
                 db, learner_id, program_name
             )
@@ -400,6 +405,7 @@ async def get_learner_pdf_data(
             return {
                 "learner_name": learner["learner_name"],
                 "program_name": program_name,
+                "skill_name": (target_program or {}).get("skill_name"),
                 "total_sessions": len(session_data),
                 "sessions": session_data,
                 "type": "single_program"
@@ -418,6 +424,7 @@ async def get_learner_pdf_data(
                 programs_with_sessions.append({
                     "program_name": program["program_name"],
                     "program_id": program.get("program_id"),
+                    "skill_name": program.get("skill_name"),
                     "total_sessions": len(session_data),
                     "last_session_date": program.get("last_session_date"),
                     "sessions": session_data
@@ -428,6 +435,7 @@ async def get_learner_pdf_data(
                 programs_with_sessions.append({
                     "program_name": program["program_name"],
                     "program_id": program.get("program_id"),
+                    "skill_name": program.get("skill_name"),
                     "total_sessions": 0,
                     "last_session_date": program.get("last_session_date"),
                     "sessions": []

@@ -7,6 +7,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.program_model import Program
 from app.models.session_report_model import SessionReport
 from app.models.session_model import TrainingSession
 from app.models.user_model import User
@@ -397,15 +398,44 @@ async def get_programs_by_learner(db: AsyncSession, learner_id: int) -> List[Dic
     """Get all unique programs/goals for a specific learner with summary data"""
     programs_data = []
 
-    # Get all unique programs for this learner
+    # Fetch report rows newest-first so each program_name picks the latest linked program_id.
     result = await db.execute(
-        select(func.distinct(SessionReport.program_name), SessionReport.program_id)
+        select(
+            SessionReport.program_name,
+            SessionReport.program_id,
+            SessionReport.created_at,
+        )
         .where(SessionReport.learner_id == learner_id)
-        .order_by(SessionReport.program_name)
+        .order_by(SessionReport.program_name.asc(), SessionReport.created_at.desc())
     )
-    programs = result.all()
+    report_rows = result.all()
 
-    for program_name, program_id in programs:
+    latest_program_ref = {}
+    for program_name, program_id, _created_at in report_rows:
+        if program_name not in latest_program_ref:
+            latest_program_ref[program_name] = program_id
+
+    for program_name in sorted(latest_program_ref.keys()):
+        program_id = latest_program_ref[program_name]
+        program_skill = None
+        if program_id is not None:
+            skill_result = await db.execute(
+                select(Program.skill).where(Program.id == program_id)
+            )
+            program_skill = skill_result.scalar_one_or_none()
+
+        # Fallback for legacy reports where program_id is null/stale:
+        # resolve the learner's program by name and use its latest skill value.
+        if not program_skill:
+            fallback_skill_result = await db.execute(
+                select(Program.skill)
+                .where(Program.learner_id == learner_id)
+                .where(Program.name == program_name)
+                .order_by(Program.updated_at.desc(), Program.id.desc())
+                .limit(1)
+            )
+            program_skill = fallback_skill_result.scalar_one_or_none()
+
         # Count reports for this program
         count_result = await db.execute(
             select(func.count(SessionReport.id))
@@ -428,6 +458,7 @@ async def get_programs_by_learner(db: AsyncSession, learner_id: int) -> List[Dic
             {
                 "program_id": program_id,
                 "program_name": program_name,
+                "skill_name": program_skill,
                 "total_sessions": total_reports,
                 "last_session_date": last_date,
             }
