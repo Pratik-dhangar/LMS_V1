@@ -275,9 +275,12 @@ async def export_subscription_inquiries_csv(
     current_admin: User = Depends(get_current_admin),
 ):
     """
-    Admin: export all public subscription inquiries as a downloadable CSV file.
-    The CSV contains all available fields for each inquiry record.
+    Admin: export PROCESSED public subscription inquiries as a downloadable CSV file.
+    The CSV contains all available fields for each processed inquiry record.
     """
+    # Export is intentionally restricted to processed records only.
+    review_status = "PROCESSED"
+
     inquiries = await subscription_crud.get_all_inquiries(
         db, review_status=review_status, skip=0, limit=10000
     )

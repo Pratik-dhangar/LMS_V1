@@ -25,6 +25,7 @@ const LearnerProgramGraphView = () => {
     const learnerId = user?.id;
 
     const [sessionData, setSessionData] = useState([]);
+    const [skillName, setSkillName] = useState("");
     const [loading, setLoading] = useState(true);
     const [showPreview, setShowPreview] = useState(false);
 
@@ -38,6 +39,8 @@ const LearnerProgramGraphView = () => {
         try {
             setLoading(true);
             const data = await sessionReportService.getProgramSessionData(learnerId, programName);
+            const singleProgramData = await sessionReportService.getPdfData(learnerId, programName);
+            setSkillName(singleProgramData?.skill_name || "");
             const processedData = data.map((session, idx) => {
                 const sessionTime = session.session_date
                     ? new Date(session.session_date).toLocaleString("en-US", {
@@ -71,6 +74,7 @@ const LearnerProgramGraphView = () => {
             await downloadProgramGraphPDF({
                 learnerName: user?.name || "Learner",
                 programName: programName,
+                skillName,
                 sessionData: sessionData,
             });
             toast.success("PDF downloaded successfully!");
@@ -147,6 +151,9 @@ const LearnerProgramGraphView = () => {
                                 <h1 className="page-title">Progress Graph</h1>
                                 <p className="page-description">
                                     {user?.name && `${user.name} — `}{programName}
+                                </p>
+                                <p className="page-description" style={{ marginTop: "0.25rem" }}>
+                                    Skill: {skillName || "-"}
                                 </p>
                             </div>
                         </div>
@@ -249,6 +256,9 @@ const LearnerProgramGraphView = () => {
                                 <h2 style={{ color: "white", fontSize: "1.4rem", fontWeight: "bold", margin: 0 }}>📊 Progress Graph</h2>
                                 <p style={{ color: "rgba(255,255,255,0.85)", margin: "4px 0 0", fontSize: "0.95rem" }}>
                                     {user?.name && <strong>{user.name}</strong>}{user?.name && " — "}{programName}
+                                </p>
+                                <p style={{ color: "rgba(255,255,255,0.8)", margin: "4px 0 0", fontSize: "0.85rem" }}>
+                                    Skill: {skillName || "-"}
                                 </p>
                                 <p style={{ color: "rgba(255,255,255,0.65)", margin: "4px 0 0", fontSize: "0.8rem" }}>
                                     Generated on: {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
