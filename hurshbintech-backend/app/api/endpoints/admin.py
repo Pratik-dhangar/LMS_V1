@@ -4,13 +4,15 @@ Admin CRUD endpoints - Manage Heads and Coaches
 
 import hashlib
 import json
+import uuid
 from typing import List, Optional
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, and_, text
+from sqlalchemy.orm import joinedload
 import logging
 
 from app.core.deps import get_current_admin
@@ -18,9 +20,12 @@ from app.core.config import settings
 from app.core.security import decrypt_passcode
 from app.crud import user_crud
 from app.crud import subscription_crud
+from app.crud import coach_crud
 from app.db.session import get_db
-from app.models.user_model import User
-from app.schemas.user import HeadCreate, HeadResponse, HeadUpdate, LearnerResponse, TrainerResponse, CoachResponse, CoachCreate, CoachUpdate
+from app.models.user_model import User, Appointment, AppointmentStatus, CoachProfile
+from app.models.subscription import SubscriptionPackage, PackageType
+from app.schemas.user import HeadCreate, HeadResponse, HeadUpdate, LearnerResponse, TrainerResponse, CoachResponse, CoachCreate, CoachUpdate, AppointmentResponse, AppointmentUpdate
+from app.services.email_service import EmailService
 from app.schemas.subscription import (
     SubscriptionDiscountCreate,
     SubscriptionDiscountBulkCreate,
@@ -40,6 +45,23 @@ from app.services.cache_service import cache_service
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
 
+async def _has_dedicated_coach_column(db: AsyncSession) -> bool:
+    """Return True when subscription_packages.dedicated_coach_id exists."""
+    result = await db.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'subscription_packages'
+                  AND column_name = 'dedicated_coach_id'
+            )
+            """
+        )
+    )
+    return bool(result.scalar())
+
+
 # head management
 
 
@@ -50,7 +72,7 @@ async def create_new_head(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(...),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -72,13 +94,16 @@ async def create_new_head(
 ):
     """Create a new head with optional reference data file uploads"""
 
-    # Check if contact number already exists
-    existing_head = await user_crud.get_head_by_contact(db, contact_no)
-    if existing_head:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists with this contact number",
+    # Check if contact number already exists in Users table
+    if contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
         )
+        if existing_user.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already exists with this contact number",
+            )
 
     # Convert date_of_joining from string to date object if provided
     date_of_joining_obj = None
@@ -97,7 +122,7 @@ async def create_new_head(
         email=email,
         age=age,
         address=address,
-        contact_no=contact_no,
+        contact_number=contact_number,  # Now stored in Users table
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -115,6 +140,12 @@ async def create_new_head(
 
     # Create head
     new_head = await user_crud.create_head(db, head_data, current_admin.id)
+    
+    # Update User record with contact_number
+    if contact_number:
+        new_head.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(new_head.user)
     
     # Handle reference files upload
     if reference_files:
@@ -205,7 +236,7 @@ async def update_head_profile(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -232,10 +263,12 @@ async def update_head_profile(
     if not head:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Head not found")
 
-    # If updating contact number, check for duplicates
-    if contact_no and contact_no != head.contact_no:
-        existing = await user_crud.get_head_by_contact(db, contact_no)
-        if existing:
+    # If updating contact number, check for duplicates in Users table
+    if contact_number and contact_number != head.user.contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -262,8 +295,7 @@ async def update_head_profile(
         update_dict['age'] = age
     if address is not None:
         update_dict['address'] = address
-    if contact_no is not None:
-        update_dict['contact_no'] = contact_no
+    # Note: contact_number is handled separately below (update User table)
     if qualification is not None:
         update_dict['qualification'] = qualification
     if experience is not None:
@@ -293,6 +325,12 @@ async def update_head_profile(
 
     head_update = HeadUpdate(**update_dict)
     updated_head = await user_crud.update_head(db, head_id, head_update)
+    
+    # Update User record with contact_number
+    if contact_number is not None:
+        updated_head.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(updated_head.user)
     
     # Handle reference files upload
     if reference_files:
@@ -435,7 +473,18 @@ async def get_all_coaches_list(
 ):
     """Get all coaches - admin can view all coaches in the system"""
     coaches = await user_crud.get_all_coaches_system_wide(db)
-    return [CoachResponse.from_orm_with_user(coach) for coach in coaches]
+    # Batch lookup: map coach_profile_id -> dedicated_package_id
+    coach_ids = [c.id for c in coaches]
+    dedicated_map: dict = {}
+    has_dedicated_column = await _has_dedicated_coach_column(db)
+    if coach_ids and has_dedicated_column:
+        pkg_rows = await db.execute(
+            select(SubscriptionPackage.dedicated_coach_id, SubscriptionPackage.id).where(
+                SubscriptionPackage.dedicated_coach_id.in_(coach_ids)
+            )
+        )
+        dedicated_map = {row[0]: row[1] for row in pkg_rows.all()}
+    return [CoachResponse.from_orm_with_user(coach, dedicated_package_id=dedicated_map.get(coach.id)) for coach in coaches]
 
 
 # Create coach (admin only)
@@ -445,7 +494,7 @@ async def create_new_coach(
     name: str = Form(...),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -462,6 +511,8 @@ async def create_new_coach(
     availability_days: str = Form(None),
     time_slots: str = Form(None),
     specialization: str = Form(None),
+    is_special: bool = Form(False),
+    dedicated_package_id: Optional[int] = Form(None),
     # File uploads
     profile_picture_url: UploadFile = File(None),
     reference_files: List[UploadFile] = File(None),
@@ -471,13 +522,16 @@ async def create_new_coach(
 ):
     """Create a new coach with optional file uploads (profile picture and reference data)"""
     
-    # Check if contact number already exists
-    existing_coach = await user_crud.get_coach_by_contact(db, contact_no)
-    if existing_coach:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists with this contact number",
+    # Check if contact number already exists in Users table
+    if contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
         )
+        if existing_user.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already exists with this contact number",
+            )
 
     # Handle profile picture upload
     profile_picture_path = None
@@ -497,7 +551,7 @@ async def create_new_coach(
             )
         
         file_extension = profile_picture_url.filename.split(".")[-1]
-        filename = f"coach_profile_{contact_no}.{file_extension}"
+        filename = f"coach_profile_{name}_{int(datetime.now().timestamp())}.{file_extension}"
         
         try:
             if settings.USE_S3:
@@ -543,7 +597,7 @@ async def create_new_coach(
         name=name,
         age=age,
         address=address,
-        contact_no=contact_no,
+        contact_number=contact_number,  # Now stored in Users table
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -551,10 +605,17 @@ async def create_new_coach(
         time_slots=time_slots,
         specialization=specialization,
         profile_picture_url=profile_picture_path,
+        is_special=is_special,
     )
 
     # Create coach in database (admin only)
     new_coach = await user_crud.create_coach(db, coach_data)
+    
+    # Update User record with contact_number
+    if contact_number:
+        new_coach.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(new_coach.user)
     
     # Handle reference files upload
     if reference_files:
@@ -606,8 +667,45 @@ async def create_new_coach(
 
     # Refresh coach to get the reference_data relationship
     await db.refresh(new_coach, ['reference_data'])
+
+    has_dedicated_column = await _has_dedicated_coach_column(db)
     
-    return CoachResponse.from_orm_with_user(new_coach)
+    # Handle dedicated package assignment
+    if dedicated_package_id is not None and has_dedicated_column:
+        # Clear any old assignment for this coach profile
+        old_pkg_result = await db.execute(
+            select(SubscriptionPackage).where(SubscriptionPackage.dedicated_coach_id == new_coach.id)
+        )
+        for old_pkg in old_pkg_result.scalars().all():
+            old_pkg.dedicated_coach_id = None
+        # Assign the new package (0 means unassign only)
+        if dedicated_package_id > 0:
+            new_pkg_result = await db.execute(
+                select(SubscriptionPackage).where(
+                    SubscriptionPackage.id == dedicated_package_id,
+                    SubscriptionPackage.package_type == PackageType.COACH,
+                )
+            )
+            new_pkg = new_pkg_result.scalar_one_or_none()
+            if new_pkg:
+                new_pkg.dedicated_coach_id = new_coach.id
+        await db.commit()
+    elif dedicated_package_id is not None:
+        logging.warning(
+            "Skipping dedicated package assignment for coach %s because subscription_packages.dedicated_coach_id is missing",
+            new_coach.id,
+        )
+
+    # Look up current dedicated package for response
+    response_dedicated_pkg_id = None
+    if has_dedicated_column:
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == new_coach.id)
+        )
+        pkg_row = pkg_result.first()
+        response_dedicated_pkg_id = pkg_row[0] if pkg_row else None
+
+    return CoachResponse.from_orm_with_user(new_coach, dedicated_package_id=response_dedicated_pkg_id)
 
 
 # Get coach by ID (admin only)
@@ -622,8 +720,15 @@ async def get_coach_by_id(
     
     if not coach:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
-    
-    return CoachResponse.from_orm_with_user(coach)
+
+    dedicated_package_id = None
+    if await _has_dedicated_coach_column(db):
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == coach.id)
+        )
+        pkg_row = pkg_result.first()
+        dedicated_package_id = pkg_row[0] if pkg_row else None
+    return CoachResponse.from_orm_with_user(coach, dedicated_package_id=dedicated_package_id)
 
 
 # Update coach (admin only)
@@ -635,7 +740,7 @@ async def update_coach_profile(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -652,6 +757,8 @@ async def update_coach_profile(
     availability_days: str = Form(None),
     time_slots: str = Form(None),
     specialization: str = Form(None),
+    is_special: Optional[bool] = Form(None),
+    dedicated_package_id: Optional[int] = Form(None),
     # File uploads
     profile_picture_url: UploadFile = File(None),
     reference_files: List[UploadFile] = File(None),
@@ -666,10 +773,12 @@ async def update_coach_profile(
     if not coach:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coach not found")
 
-    # If updating contact number, check for duplicates
-    if contact_no and contact_no != coach.contact_no:
-        existing = await user_crud.get_coach_by_contact(db, contact_no)
-        if existing:
+    # If updating contact number, check for duplicates in Users table
+    if contact_number and contact_number != coach.user.contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -734,29 +843,50 @@ async def update_coach_profile(
             )
 
     # Prepare update data - only include profile_picture_url if a new file was uploaded
-    update_dict = {
-        "name": name,
-        "email": email,
-        "age": age,
-        "address": address,
-        "contact_no": contact_no,
-        "qualification": qualification,
-        "experience": experience,
-        "date_of_joining": date_of_joining_obj,
-        "experience_with_hurshbin": experience_with_hurshbin,
-        "interest": interest,
-        "self_description": self_description,
-        "future_vision": future_vision,
-        "number_of_sessions_done": number_of_sessions_done,
-        "head_description": head_description,
-        "learners_guardian_description": learners_guardian_description,
-        "input_at_hurshbin": input_at_hurshbin,
-        "note_box": note_box,
-        "message_box": message_box,
-        "availability_days": availability_days,
-        "time_slots": time_slots,
-        "specialization": specialization,
-    }
+    update_dict = {}
+    if name is not None:
+        update_dict["name"] = name
+    if email is not None:
+        update_dict["email"] = email
+    if age is not None:
+        update_dict["age"] = age
+    if address is not None:
+        update_dict["address"] = address
+    # Note: contact_number is handled separately below (update User table)
+    if qualification is not None:
+        update_dict["qualification"] = qualification
+    if experience is not None:
+        update_dict["experience"] = experience
+    if date_of_joining_obj is not None:
+        update_dict["date_of_joining"] = date_of_joining_obj
+    if experience_with_hurshbin is not None:
+        update_dict["experience_with_hurshbin"] = experience_with_hurshbin
+    if interest is not None:
+        update_dict["interest"] = interest
+    if self_description is not None:
+        update_dict["self_description"] = self_description
+    if future_vision is not None:
+        update_dict["future_vision"] = future_vision
+    if number_of_sessions_done is not None:
+        update_dict["number_of_sessions_done"] = number_of_sessions_done
+    if head_description is not None:
+        update_dict["head_description"] = head_description
+    if learners_guardian_description is not None:
+        update_dict["learners_guardian_description"] = learners_guardian_description
+    if input_at_hurshbin is not None:
+        update_dict["input_at_hurshbin"] = input_at_hurshbin
+    if note_box is not None:
+        update_dict["note_box"] = note_box
+    if message_box is not None:
+        update_dict["message_box"] = message_box
+    if availability_days is not None:
+        update_dict["availability_days"] = availability_days
+    if time_slots is not None:
+        update_dict["time_slots"] = time_slots
+    if specialization is not None:
+        update_dict["specialization"] = specialization
+    if is_special is not None:
+        update_dict["is_special"] = is_special
     
     # Only include profile_picture_url if a new file was actually uploaded
     if profile_picture_path is not None:
@@ -765,6 +895,12 @@ async def update_coach_profile(
     coach_update = CoachUpdate(**update_dict)
 
     updated_coach = await user_crud.update_coach(db, coach_id, coach_update)
+    
+    # Update User record with contact_number
+    if contact_number is not None:
+        updated_coach.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(updated_coach.user)
     
     # Handle reference files upload
     if reference_files:
@@ -816,8 +952,42 @@ async def update_coach_profile(
     
     # Invalidate coach profile caches
     await cache_service.invalidate_coach_profile(coach_id)
-    
-    return CoachResponse.from_orm_with_user(updated_coach)
+
+    has_dedicated_column = await _has_dedicated_coach_column(db)
+
+    # Handle dedicated package assignment
+    if dedicated_package_id is not None and has_dedicated_column:
+        old_pkg_result = await db.execute(
+            select(SubscriptionPackage).where(SubscriptionPackage.dedicated_coach_id == updated_coach.id)
+        )
+        for old_pkg in old_pkg_result.scalars().all():
+            old_pkg.dedicated_coach_id = None
+        if dedicated_package_id > 0:
+            new_pkg_result = await db.execute(
+                select(SubscriptionPackage).where(
+                    SubscriptionPackage.id == dedicated_package_id,
+                    SubscriptionPackage.package_type == PackageType.COACH,
+                )
+            )
+            new_pkg = new_pkg_result.scalar_one_or_none()
+            if new_pkg:
+                new_pkg.dedicated_coach_id = updated_coach.id
+        await db.commit()
+    elif dedicated_package_id is not None:
+        logging.warning(
+            "Skipping dedicated package assignment for coach %s because subscription_packages.dedicated_coach_id is missing",
+            updated_coach.id,
+        )
+
+    # Look up current dedicated package for response
+    pkg_row = None
+    if has_dedicated_column:
+        pkg_result = await db.execute(
+            select(SubscriptionPackage.id).where(SubscriptionPackage.dedicated_coach_id == updated_coach.id)
+        )
+        pkg_row = pkg_result.first()
+
+    return CoachResponse.from_orm_with_user(updated_coach, dedicated_package_id=pkg_row[0] if pkg_row else None)
 
 
 # Delete coach reference file
@@ -1563,4 +1733,211 @@ async def delete_subscription_package(
         logger.warning(f"Failed to invalidate subscription package cache: {e}")
     
     return None
+
+
+# ============ ADMIN APPOINTMENT MANAGEMENT ============
+
+
+@router.get("/appointments", response_model=List[AppointmentResponse])
+async def get_all_appointments_admin(
+    guest_only: bool = Query(False, description="Filter to show only guest appointments"),
+    status_filter: Optional[str] = Query(None, description="Filter by status (e.g. GUEST_INTENT, VERIFICATION_PENDING, CONFIRMED)"),
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Get all appointments system-wide (Admin). Supports filtering by guest-only and status."""
+    stmt = (
+        select(Appointment)
+        .options(
+            joinedload(Appointment.coach).joinedload(CoachProfile.user),
+            joinedload(Appointment.user),
+        )
+        .order_by(Appointment.created_at.desc())
+    )
+
+    conditions = []
+    if guest_only:
+        conditions.append(Appointment.guest_name.isnot(None))
+    if status_filter:
+        try:
+            status_enum = AppointmentStatus[status_filter.upper()]
+            conditions.append(Appointment.status == status_enum)
+        except KeyError:
+            pass
+
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
+
+    result = await db.execute(stmt)
+    appointments = result.unique().scalars().all()
+
+    return [
+        AppointmentResponse(
+            id=apt.id,
+            coach_id=apt.coach_id,
+            user_id=apt.user_id,
+            user_role=apt.user_role,
+            scheduled_date=apt.scheduled_date.isoformat() if isinstance(apt.scheduled_date, date) else str(apt.scheduled_date),
+            scheduled_time=apt.scheduled_time,
+            status=apt.status.value,
+            notes=apt.notes,
+            user_name=apt.guest_name if apt.guest_name else (apt.user.name if apt.user else None),
+            session_type=apt.session_type,
+            payment_screenshot_url=apt.payment_receipt_url,
+            payment_receipt_url=apt.payment_receipt_url,
+            rejection_reason=apt.rejection_reason,
+            refund_receipt_url=apt.refund_receipt_url,
+            created_at=apt.created_at.isoformat() if hasattr(apt.created_at, 'isoformat') else str(apt.created_at),
+            updated_at=apt.updated_at.isoformat() if hasattr(apt.updated_at, 'isoformat') else str(apt.updated_at),
+            guest_name=apt.guest_name,
+            guest_email=apt.guest_email,
+            guest_phone=apt.guest_phone,
+        )
+        for apt in appointments
+    ]
+
+
+@router.patch("/appointments/{appointment_id}", response_model=AppointmentResponse)
+async def update_appointment_admin(
+    appointment_id: int,
+    appointment_update: AppointmentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """
+    Update appointment status (Admin).
+    Handles the full guest payment flow:
+      - GUEST_INTENT + request CONFIRMED  →  VERIFICATION_PENDING (sends payment upload link to guest)
+      - VERIFICATION_PENDING + request CONFIRMED  →  CONFIRMED (sends session link to guest)
+    """
+    appointment = await coach_crud.get_appointment_by_id(db, appointment_id)
+    if not appointment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found")
+
+    previous_status = appointment.status.value
+
+    # Resolve coach name for email content
+    coach_name = "Coach"
+    if appointment.coach and appointment.coach.user:
+        coach_name = appointment.coach.user.name
+
+    # --- Guest flow: GUEST_INTENT → VERIFICATION_PENDING (send payment upload link) ---
+    if (
+        appointment.guest_name
+        and previous_status == "GUEST_INTENT"
+        and appointment_update.status
+        and appointment_update.status.upper() == "CONFIRMED"
+    ):
+        logger.info(f"[Admin] Sending payment link for guest booking {appointment_id}")
+        appointment.status = AppointmentStatus.VERIFICATION_PENDING
+        upload_token = str(uuid.uuid4())
+        appointment.upload_token = upload_token
+        appointment.upload_token_expires_at = datetime.utcnow() + timedelta(hours=24)
+        await db.commit()
+        await db.refresh(appointment)
+
+        upload_url = f"{settings.FRONTEND_URL}/guest-payment/{upload_token}"
+        try:
+            await EmailService.send_payment_upload_link_to_guest(
+                guest_email=appointment.guest_email,
+                guest_name=appointment.guest_name,
+                upload_url=upload_url,
+                token_expires_in_hours=24,
+                coach_name=coach_name,
+            )
+            logger.info(f"[Admin] Payment upload link sent to guest {appointment.guest_email}")
+        except Exception as e:
+            logger.error(f"[Admin] Failed to send payment upload link: {str(e)}", exc_info=True)
+
+        return AppointmentResponse(
+            id=appointment.id,
+            coach_id=appointment.coach_id,
+            user_id=appointment.user_id,
+            user_role=appointment.user_role,
+            scheduled_date=appointment.scheduled_date.isoformat() if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+            scheduled_time=appointment.scheduled_time,
+            status=appointment.status.value,
+            notes=appointment.notes,
+            user_name=appointment.guest_name,
+            session_type=appointment.session_type,
+            payment_screenshot_url=appointment.payment_receipt_url,
+            payment_receipt_url=appointment.payment_receipt_url,
+            rejection_reason=appointment.rejection_reason,
+            refund_receipt_url=appointment.refund_receipt_url,
+            created_at=appointment.created_at.isoformat() if hasattr(appointment.created_at, 'isoformat') else str(appointment.created_at),
+            updated_at=appointment.updated_at.isoformat() if hasattr(appointment.updated_at, 'isoformat') else str(appointment.updated_at),
+            guest_name=appointment.guest_name,
+            guest_email=appointment.guest_email,
+            guest_phone=appointment.guest_phone,
+            upload_token_expires_at=appointment.upload_token_expires_at.isoformat() if appointment.upload_token_expires_at else None,
+        )
+
+    # --- Normal status update ---
+    updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
+    new_status = updated.status.value
+
+    # --- Guest flow: VERIFICATION_PENDING → CONFIRMED (confirm payment, send session link) ---
+    if updated.guest_name and previous_status == "VERIFICATION_PENDING" and new_status == "CONFIRMED":
+        logger.info(f"[Admin] Confirming payment for guest booking {appointment_id}")
+        guest_session_token = str(uuid.uuid4())
+        updated.guest_session_token = guest_session_token
+        updated.guest_session_token_expires_at = datetime.utcnow() + timedelta(days=7)
+        await db.commit()
+        await db.refresh(updated)
+
+        guest_session_link = f"{settings.FRONTEND_URL}/guest-session/{guest_session_token}"
+        try:
+            await EmailService.send_guest_appointment_confirmed_with_session_link(
+                recipient_email=updated.guest_email,
+                recipient_name=updated.guest_name,
+                coach_name=coach_name,
+                scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                scheduled_time=updated.scheduled_time,
+                session_type=updated.session_type,
+                appointment_id=updated.id,
+                session_link=guest_session_link,
+            )
+            logger.info(f"[Admin] Confirmation email with session link sent to guest {updated.guest_email}")
+        except Exception as e:
+            logger.error(f"[Admin] Failed to send confirmation email to guest: {str(e)}", exc_info=True)
+
+    return AppointmentResponse(
+        id=updated.id,
+        coach_id=updated.coach_id,
+        user_id=updated.user_id,
+        user_role=updated.user_role,
+        scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+        scheduled_time=updated.scheduled_time,
+        status=updated.status.value,
+        notes=updated.notes,
+        user_name=updated.guest_name if updated.guest_name else (updated.user.name if updated.user else None),
+        session_type=updated.session_type,
+        payment_screenshot_url=updated.payment_receipt_url,
+        payment_receipt_url=updated.payment_receipt_url,
+        rejection_reason=updated.rejection_reason,
+        refund_receipt_url=updated.refund_receipt_url,
+        created_at=updated.created_at.isoformat() if hasattr(updated.created_at, 'isoformat') else str(updated.created_at),
+        updated_at=updated.updated_at.isoformat() if hasattr(updated.updated_at, 'isoformat') else str(updated.updated_at),
+        guest_name=updated.guest_name,
+        guest_email=updated.guest_email,
+        guest_phone=updated.guest_phone,
+    )
+
+
+@router.delete("/appointments/{appointment_id}", status_code=204)
+async def delete_appointment_admin(
+    appointment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+):
+    """Permanently delete a completed appointment record (Admin only)."""
+    appointment = await coach_crud.get_appointment_by_id(db, appointment_id)
+    if not appointment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found")
+
+    # Use raw SQL so the DB-level ON DELETE CASCADE on child tables is triggered
+    # instead of SQLAlchemy ORM trying to NULL-ify the FK (which violates NOT NULL).
+    await db.execute(text("DELETE FROM appointments WHERE id = :id"), {"id": appointment_id})
+    await db.commit()
+    logger.info(f"[Admin] Deleted appointment {appointment_id}")
 

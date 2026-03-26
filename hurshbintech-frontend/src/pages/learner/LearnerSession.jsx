@@ -20,6 +20,7 @@ import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
 import { setupAttendeeWhiteboardCallbacks } from '../../components/session/InstructorSessionLayout';
+import IOSNavBar from '../../components/common/IOSNavBar';
 import '../../styles/components/common/sessionHeader.css';
 
 import {
@@ -40,7 +41,8 @@ import {
   usePromptAnimation,
   useBulbGlowAnimation,
   ExerciseOverlay,
-  attendeeSessionStyles
+  attendeeSessionStyles,
+  SessionFeedbackModal
 } from '../../components/session/AttendeeSessionLayout';
 
 
@@ -129,8 +131,13 @@ const LearnerSession = () => {
   const [youtubePopups, setYoutubePopups] = useState([]);
   const [isPrompterMeterOpen, setIsPrompterMeterOpen] = useState(false);
   const [isReinforcementMeterOpen, setIsReinforcementMeterOpen] = useState(false);
+  const [showReinforcementValue, setShowReinforcementValue] = useState(true);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for trainer to admit
+  const [admissionDenied, setAdmissionDenied] = useState(false); // Trainer rejected the join request
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const pendingCleanupRef = useRef(null);
 
   // Use shared animation hooks
   const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
@@ -202,20 +209,16 @@ const LearnerSession = () => {
     whiteboardService.onSessionEnded = (data) => {
       // console.log('[LearnerSession] Session ended by trainer:', data);
       toast.info('Session has been ended by the trainer');
-
-      // Clean up and redirect after a short delay
-      setTimeout(() => {
+      setShowFeedbackModal(true);
+      // Store cleanup fn so feedback modal can trigger it
+      pendingCleanupRef.current = () => {
         if (webRTC?.localStream) {
           webRTC.localStream.getTracks().forEach(track => track.stop());
         }
-        if (webRTC) {
-          webRTC.close();
-        }
-        if (whiteboardService) {
-          whiteboardService.close();
-        }
+        if (webRTC) webRTC.close();
+        if (whiteboardService) whiteboardService.close();
         navigate('/learner/dashboard');
-      }, 2000);
+      };
     };
 
     return () => {
@@ -227,15 +230,34 @@ const LearnerSession = () => {
 
   // Set up remote video stream
   useEffect(() => {
+    if (remoteStream) {
+      // Clear admission gate as soon as any stream arrives (ref may not be mounted yet)
+      setAwaitingAdmission(false);
+    }
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, awaitingAdmission]);
+
+  // Detect admission rejection or removal from trainer via waiting_message signal
+  useEffect(() => {
+    if (waitingMessage === '__ADMISSION_REJECTED__') {
+      setAdmissionDenied(true);
+      setAwaitingAdmission(false);
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/learner/dashboard'), 2000);
+    } else if (waitingMessage === '__REMOVED_FROM_SESSION__') {
+      toast.warning('You have been removed from the session by the trainer.');
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/learner/dashboard'), 1500);
+    }
+  }, [waitingMessage, navigate]);
 
   // Learner-specific: Tool access permissions from trainer
   const [toolAccess, setToolAccess] = useState({
     select: false,
-    drag: false
+    drag: false,
+    draw: false
   });
 
   // Learner-specific: Background music player ref
@@ -594,6 +616,7 @@ const LearnerSession = () => {
       whiteboardService,
       setToolAccess,
       setTool,
+      setLineWidth,
       setPromptText,
       setPromptVisible,
       setIsEyeBlinking,
@@ -608,6 +631,7 @@ const LearnerSession = () => {
       setRedrawCanvasTrigger,
       setClearCanvasTrigger,
       setYoutubePopups,
+      setInlineMedia: sessionState.setInlineMedia,
       setBackgroundMusicPlaying,
       setSelectedMusic,
       setMusicVolume,
@@ -721,6 +745,7 @@ const LearnerSession = () => {
       await sessionService.joinSession(sessionId);
       await initializeWebRTC();
       setLoading(false);
+      setAwaitingAdmission(true); // Show awaiting-admission screen until trainer's offer arrives
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       setLoading(false);
@@ -758,6 +783,7 @@ const LearnerSession = () => {
       setShowWaitingModal(false);
       await initializeWebRTC();
       setLoading(false);
+      setAwaitingAdmission(true);
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       // Suppress 'Session is not active' toast while the waiting modal is shown
@@ -810,6 +836,7 @@ const LearnerSession = () => {
               setShowWaitingModal(false);
               await initializeWebRTC();
               setLoading(false);
+              setAwaitingAdmission(true);
             } catch (error) {
               const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
               setRetrying(false);
@@ -907,6 +934,10 @@ const LearnerSession = () => {
       videoService.onReinforcementMeterUpdate = (value) => {
         // console.log('[LearnerSession] Reinforcement meter update received:', value);
         setReinforcementMeter(value);
+      };
+
+      videoService.onReinforcementVisibilityUpdate = (isVisible) => {
+        setShowReinforcementValue(isVisible);
       };
 
       // Set callback for freeze signal from trainer
@@ -1394,6 +1425,51 @@ const LearnerSession = () => {
             </div>
           </div>
         </div>
+
+        {/* iOS / PWA floating nav (back + refresh) */}
+        <IOSNavBar
+          onBack={() => navigate('/learner/dashboard')}
+          onRefresh={() => window.location.reload()}
+          position="bottom-right"
+        />
+      </div>
+    );
+  }
+
+  // Admission denied by trainer
+  if (admissionDenied) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Request Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Your request to join the session was not accepted by the trainer.
+          </p>
+          <p className="text-sm text-gray-500">Redirecting you back to the dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting for trainer to admit
+  if (awaitingAdmission) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px', animation: 'bounce 1s infinite' }}>⏳</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Instructor</h2>
+          <p className="text-gray-600 mb-2">
+            You have joined the session. Please wait for your instructor to admit you.
+          </p>
+          <p className="text-gray-600 mb-6">
+            <strong>{sessionInfo?.trainer_name ?? 'Your instructor'}</strong> will admit you shortly.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
+            <span>Waiting for admission...</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1558,6 +1634,7 @@ const LearnerSession = () => {
           .learner-main-container {
             /* No scrolling needed in landscape */
             overflow: hidden !important;
+            min-height: 0 !important;
           }
 
           .learner-metrics-header {
@@ -1568,19 +1645,24 @@ const LearnerSession = () => {
           }
 
           .learner-whiteboard-wrapper {
-            /* In landscape, fit perfectly in viewport when browser chrome is hidden */
-            min-height: calc(100vh - 40px) !important;
-            max-height: calc(100vh - 40px) !important;
-            height: calc(100vh - 40px) !important;
-            /* Use dvh for dynamic adjustment */
-            min-height: calc(100dvh - 40px) !important;
-            max-height: calc(100dvh - 40px) !important;
-            height: calc(100dvh - 40px) !important;
-            /* iOS Safari fallback */
-            min-height: calc(-webkit-fill-available - 40px) !important;
-            max-height: calc(-webkit-fill-available - 40px) !important;
+            /* Consume remaining space under header; avoid fixed vh math that clips on small devices */
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            height: auto !important;
+            max-height: none !important;
             /* Remove bottom padding in landscape */
             padding-bottom: 0 !important;
+          }
+
+          .session-whiteboard-container,
+          .learner-whiteboard-wrapper > div,
+          .learner-whiteboard-wrapper .w-full,
+          .learner-whiteboard-wrapper .whiteboard-main-wrapper,
+          .learner-whiteboard-wrapper .whiteboard,
+          .learner-whiteboard-wrapper .canvas-container {
+            min-height: 0 !important;
+            height: 100% !important;
+            max-height: none !important;
           }
         }
 
@@ -1731,8 +1813,7 @@ const LearnerSession = () => {
 
           /* Constrain canvas to fit perfectly */
           .learner-whiteboard-wrapper canvas {
-            max-height: calc(100dvh - 45px) !important;
-            max-height: calc(-webkit-fill-available - 45px) !important;
+            max-height: 100% !important;
             object-fit: contain !important;
           }
 
@@ -1750,7 +1831,7 @@ const LearnerSession = () => {
 
 
       {/* Sidebar Toggles (Mobile Only) */}
-      <div className="session-sidebar-toggles">
+      {/* <div className="session-sidebar-toggles">
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="sidebar-toggle-button"
@@ -1758,18 +1839,18 @@ const LearnerSession = () => {
         >
           {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
-      </div>
+      </div> */}
 
       {/* Overlay backdrop for mobile sidebar */}
-      {isSidebarOpen && (
+      {/* {isSidebarOpen && (
         <div
           className="sidebar-overlay"
           onClick={() => setIsSidebarOpen(false)}
         />
-      )}
+      )} */}
 
       {/* Fullscreen activation triggers on first user interaction */}
-      {showFullscreenPrompt && <div style={{ display: 'none' }} />}
+      {/* {showFullscreenPrompt && <div style={{ display: 'none' }} />} */}
 
       {/* Main Container - Flexbox column layout */}
       <div className="learner-main-container">
@@ -1779,6 +1860,7 @@ const LearnerSession = () => {
           // Metrics Panel Props
           promptMeter={promptMeter}
           reinforcementMeter={reinforcementMeter}
+          showReinforcementValue={showReinforcementValue}
           bucketColor={bucketColor}
 
           // Prompt Panel Props
@@ -1842,6 +1924,8 @@ const LearnerSession = () => {
             syncedIsRunning={syncedIsRunning}
             stopwatch={stopwatch}
             Whiteboard={Whiteboard}
+            inlineMedia={sessionState.inlineMedia}
+            setInlineMedia={sessionState.setInlineMedia}
           />
 
           {/* Exercise Overlay - Displays question/answer on top of whiteboard */}
@@ -1882,7 +1966,32 @@ const LearnerSession = () => {
 
         {/* Background Music Audio Element */}
         <audio ref={audioRef} crossOrigin="anonymous" />
+
+        {/* iOS / PWA floating nav (back + refresh) */}
+        <IOSNavBar
+          onBack={() => navigate('/learner/dashboard')}
+          onRefresh={() => window.location.reload()}
+          position="bottom-right"
+        />
       </div>
+      {showFeedbackModal && (
+        <SessionFeedbackModal
+          onSubmit={async (rating, remark) => {
+            try {
+              await sessionService.submitFeedback(sessionId, { rating, remark, attendeeRole: 'learner' });
+              toast.success('Thank you for your feedback!');
+            } catch {
+              // silently ignore if submission fails
+            }
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+          onSkip={() => {
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+        />
+      )}
     </div>
   );
 };

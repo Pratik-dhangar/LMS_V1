@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff, Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import adminService from "../../api/services/adminService";
 import SearchBar from "../../components/common/SearchBar";
+import { downloadProfilePDF } from "../../utils/pdfGenerator";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -22,11 +23,35 @@ const ViewConsultants = () => {
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
+  const [downloadingCoach, setDownloadingCoach] = useState(null);
 
   // Fetch consultants data when component mounts
   useEffect(() => {
     fetchConsultants();
   }, []);
+
+  /**
+   * Handle downloading coach profile as PDF
+   */
+  const handleDownloadProfile = async (coach) => {
+    setDownloadingCoach(coach.id);
+    try {
+      const fullCoachProfile = await adminService.getCoachById(coach.id);
+      await downloadProfilePDF(fullCoachProfile, 'coach');
+      toast.success(`${coach.name}'s profile downloaded successfully!`, {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (err) {
+      console.error("Error downloading profile:", err);
+      toast.error("Failed to download profile. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    } finally {
+      setDownloadingCoach(null);
+    }
+  };
 
   // Fetch all consultants from the server
   const fetchConsultants = async () => {
@@ -60,8 +85,8 @@ const ViewConsultants = () => {
         (consultant) =>
           consultant.name.toLowerCase().includes(lowerQuery) ||
           consultant.passcode.toLowerCase().includes(lowerQuery) ||
-          (consultant.contact_no &&
-            consultant.contact_no.toLowerCase().includes(lowerQuery))
+          (consultant.contact_number &&
+            consultant.contact_number.toLowerCase().includes(lowerQuery))
       );
       setFilteredConsultants(filtered);
     }
@@ -268,23 +293,37 @@ const ViewConsultants = () => {
                             </div>
                           </td>
                           <td className="table-primary-td">
-                            {consultant.contact_no || "N/A"}
+                            {consultant.contact_number || "N/A"}
                           </td>
                           <td className="table-primary-td">
                             {consultant.date_of_joining
                               ? new Date(
-                                  consultant.date_of_joining
-                                ).toLocaleDateString()
+                                consultant.date_of_joining
+                              ).toLocaleDateString()
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleEditCoach(consultant.id)}
-                              className="app-modal-btn app-modal-btn--primary btn-sm "
-                            >
-                              <Edit3 className="table-primary-icon-sm" />
-                              Edit Profile
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleEditCoach(consultant.id)}
+                                className="app-modal-btn app-modal-btn--primary btn-sm"
+                                title="Edit Profile"
+                              >
+                                <Edit3 className="table-primary-icon-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadProfile(consultant)}
+                                disabled={downloadingCoach === consultant.id}
+                                className="app-modal-btn app-modal-btn--primary btn-sm"
+                                title="Download Profile"
+                                style={{
+                                  opacity: downloadingCoach === consultant.id ? 0.6 : 1,
+                                  cursor: downloadingCoach === consultant.id ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                <Download className="table-primary-icon-sm" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

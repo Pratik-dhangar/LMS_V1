@@ -48,6 +48,14 @@ export const getFileUrl = (url) => {
         const key = urlObj.pathname.replace(/^\/[^/]+\//, ''); // remove /bucket-name/
         if (key) return `${API_BASE_URL}/media/s3/${key}`;
       }
+
+      // Rewrite old frontend-proxy S3 URLs (e.g. stored with :3001/s3/... from previous deployment)
+      // Detected by: same domain (hurshbin.lumesoftai.in) with /s3/ path — rewrite to current origin
+      if (urlObj.pathname.startsWith('/s3/') &&
+          !urlObj.hostname.includes('amazonaws.com') &&
+          !urlObj.hostname.includes('neevcloud.com')) {
+        return `${window.location.origin}${urlObj.pathname}`;
+      }
     } catch (_) { /* fall through */ }
     return url;
   }

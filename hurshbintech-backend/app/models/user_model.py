@@ -151,7 +151,6 @@ class HeadProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique per trainer/consultant
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)
@@ -198,7 +197,6 @@ class TrainerProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)
@@ -247,7 +245,6 @@ class CoachProfile(Base):
     # Contact & Personal Info
     age = Column(Integer)
     address = Column(Text)
-    contact_no = Column(String(20))  # Must be unique
     qualification = Column(Text)
     experience = Column(Text)
     date_of_joining = Column(Date)
@@ -282,6 +279,9 @@ class CoachProfile(Base):
     unavailable_from = Column(DateTime, nullable=True)  # Start of unavailability period
     unavailable_until = Column(DateTime, nullable=True)  # End of unavailability period
     unavailable_reason = Column(String(255))  # e.g., "On leave", "Fully booked", "Personal"
+
+    # Special coach flag — marks a featured/premium coach
+    is_special = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Timestamps
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

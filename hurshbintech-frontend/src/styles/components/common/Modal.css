@@ -712,6 +712,13 @@
 
 .app-modal-input-group .app-modal-form-input {
   flex: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.app-modal-input-group button {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 /* ============================================

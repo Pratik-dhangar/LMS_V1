@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
+import programService from "../../api/services/programService";
+import { downloadLearningProgramPDF } from "../../utils/pdfGenerator";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
 import "../../styles/head/ScheduleSession.css";
@@ -19,9 +21,21 @@ const ScheduleSession = () => {
   const [learningGoals, setLearningGoals] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Program state
+  const [programList, setProgramList] = useState([]);
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [programMode, setProgramMode] = useState('none'); // 'none' | 'existing'
+  const [programSearch, setProgramSearch] = useState('');
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
+  const programDropdownRef = useRef(null);
+  const contentGridRef = useRef(null);
+  const contentSentinelRef = useRef(null);
+  const CONTENT_PAGE_SIZE = 12;
+  const [contentVisibleCount, setContentVisibleCount] = useState(CONTENT_PAGE_SIZE);
+
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
     trainer_id: "",
     learner_id: "",
     scheduled_date: "",
@@ -42,6 +56,13 @@ const ScheduleSession = () => {
     learner: false,
   });
 
+  const normalizedContentSearch = searchTerm.content.toLowerCase();
+  const filteredContentCount = contents.filter(
+    (content) =>
+      content.title?.toLowerCase().includes(normalizedContentSearch) ||
+      content.content_type?.toLowerCase().includes(normalizedContentSearch)
+  ).length;
+
   const trainerDropdownRef = useRef(null);
   const learnerDropdownRef = useRef(null);
 
@@ -60,6 +81,12 @@ const ScheduleSession = () => {
       ) {
         setShowDropdown((prev) => ({ ...prev, learner: false }));
       }
+      if (
+        programDropdownRef.current &&
+        !programDropdownRef.current.contains(event.target)
+      ) {
+        setProgramDropdownOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -69,6 +96,35 @@ const ScheduleSession = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Reset visible count when content search or program selection changes
+  useEffect(() => {
+    setContentVisibleCount(CONTENT_PAGE_SIZE);
+  }, [searchTerm.content, selectedProgramId]);
+
+  // IntersectionObserver for lazy loading content grid
+  useEffect(() => {
+    const sentinel = contentSentinelRef.current;
+    const contentGrid = contentGridRef.current;
+    if (!sentinel || !contentGrid) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && contentVisibleCount < filteredContentCount) {
+          setContentVisibleCount((prev) => prev + CONTENT_PAGE_SIZE);
+        }
+      },
+      { root: contentGrid, rootMargin: '150px', threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [contentVisibleCount, filteredContentCount]);
+
+  const handleContentGridScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 150 && contentVisibleCount < filteredContentCount) {
+      setContentVisibleCount((prev) => prev + CONTENT_PAGE_SIZE);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -147,6 +203,7 @@ const ScheduleSession = () => {
       duration: parseInt(formData.duration),
       content_ids: formData.content_ids.map(Number),
       goal_ids: formData.goal_ids.map(Number),
+      ...(selectedProgramId ? { program_id: selectedProgramId } : {}),
     };
 
     try {
@@ -200,6 +257,21 @@ const ScheduleSession = () => {
         .includes(searchTerm.content.toLowerCase())
   );
 
+  // Programs filtered by search inside the dropdown
+  const filteredPrograms = programList.filter((p) =>
+    p.name?.toLowerCase().includes(programSearch.toLowerCase())
+  );
+
+  // The currently selected program object (for resolving goal names)
+  const selectedProgram = selectedProgramId
+    ? programList.find((p) => p.id === selectedProgramId) || null
+    : null;
+
+  // Goals resolved for read-only display when a program is active
+  const lockedGoals = selectedProgram
+    ? learningGoals.filter((g) => (selectedProgram.goal_ids || []).includes(g.id))
+    : [];
+
   const getSelectedTrainerName = () => {
     const trainer = trainers.find(
       (t) => t.user_id === parseInt(formData.trainer_id)
@@ -223,9 +295,88 @@ const ScheduleSession = () => {
   };
 
   const handleLearnerSelect = (learnerId) => {
-    setFormData({ ...formData, learner_id: learnerId });
+    setFormData({ ...formData, learner_id: learnerId, goal_ids: [], content_ids: [] });
     setShowDropdown({ ...showDropdown, learner: false });
     setSearchTerm({ ...searchTerm, learner: "" });
+    // Reset program state
+    setSelectedProgramId(null);
+    setProgramMode('none');
+    setProgramList([]);
+    setProgramSearch('');
+    // Fetch programs for this learner
+    fetchProgramsForLearner(learnerId);
+  };
+
+  const fetchProgramsForLearner = async (learnerId) => {
+    if (!learnerId) return;
+    try {
+      setLoadingPrograms(true);
+      const programs = await programService.getPrograms(learnerId);
+      setProgramList(programs || []);
+    } catch {
+      // Non-fatal — programs are optional
+    } finally {
+      setLoadingPrograms(false);
+    }
+  };
+
+  const handleProgramModeChange = (mode) => {
+    setProgramMode(mode);
+    if (mode !== 'existing') {
+      setSelectedProgramId(null);
+      setProgramSearch('');
+      setFormData(prev => ({ ...prev, goal_ids: [], content_ids: [] }));
+    }
+  };
+
+  const handleSelectExistingProgram = async (program) => {
+    setSelectedProgramId(program.id);
+    setProgramSearch(program.name);
+    setProgramDropdownOpen(false);
+    // Auto-populate goals (locked) and content (editable default)
+    setFormData(prev => ({
+      ...prev,
+      goal_ids: program.goal_ids || [],
+      content_ids: program.content_ids || [],
+    }));
+  };
+
+  const handleGenerateProgramPdf = async () => {
+    if (!selectedProgramId || !selectedProgram) {
+      toast.error("Please select a program first");
+      return;
+    }
+
+    try {
+      const programDetail = await programService.getProgramById(selectedProgramId);
+
+      const selectedGoalIds = programDetail?.goal_ids || [];
+      const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
+      const subProgramText = selectedGoals.length
+        ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
+        : "-";
+
+      const rows = [{
+        skill: programDetail?.skill || selectedProgram?.skill || "-",
+        subPrograms: subProgramText,
+      }];
+
+      const selectedLearner = learners.find((l) => l.id === parseInt(formData.learner_id));
+      const selectedTrainer = trainers.find((t) => t.user_id === parseInt(formData.trainer_id));
+
+      await downloadLearningProgramPDF({
+        programName: selectedProgram.name,
+        date: formData.scheduled_date || new Date().toISOString(),
+        childName: selectedLearner?.name || "-",
+        programStartDate: programDetail?.created_at || null,
+        executerName: selectedTrainer?.name || "-",
+        rows,
+      });
+
+      toast.success("Program PDF downloaded successfully");
+    } catch {
+      toast.error("Failed to generate program PDF");
+    }
   };
 
   // State to hold the unconfirmed date/time from the input
@@ -238,6 +389,21 @@ const ScheduleSession = () => {
     // You could also add a console.log or alert here for confirmation
     console.log("Date set:", tempDate);
   };
+
+  // When an existing program is selected, bubble its goals/content to the top
+  const sortedFilteredGoals = selectedProgramId
+    ? [
+      ...filteredGoals.filter((g) => formData.goal_ids.includes(g.id)),
+      ...filteredGoals.filter((g) => !formData.goal_ids.includes(g.id)),
+    ]
+    : filteredGoals;
+
+  const sortedFilteredContents = selectedProgramId
+    ? [
+      ...filteredContents.filter((c) => formData.content_ids.includes(c.id)),
+      ...filteredContents.filter((c) => !formData.content_ids.includes(c.id)),
+    ]
+    : filteredContents;
 
   if (loadingData) {
     return (
@@ -280,41 +446,6 @@ const ScheduleSession = () => {
             </div>
           </div>
           <form onSubmit={handleSubmit} className="modern-form-card">
-            {/* Title */}
-            <div className="modern-form-section">
-              <div className="modern-form-grid">
-                <div className="modern-form-grid-full">
-                  <label className="modern-form-label">
-                    Session Title <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    className="modern-form-input"
-                    placeholder="e.g., Introduction to Fruits"
-                    required
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="modern-form-grid-full">
-                  <label className="modern-form-label">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="modern-form-textarea"
-                    rows="3"
-                    placeholder="Session description (optional)"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Trainer & Learner Selection */}
             <div className="modern-form-section">
               <div className="modern-form-grid-two-col">
@@ -416,9 +547,9 @@ const ScheduleSession = () => {
                               : ""
                               } ${!learner.can_schedule ? "dropdown-item-disabled" : ""}`}
                           >
-                            {learner.name}{" "} 
-                            <span className="dropdown-item-meta"> 
-                          - {learner.remaining_sessions} sessions - {learner.status_text}
+                            {learner.name}{" "}
+                            <span className="dropdown-item-meta">
+                              - {learner.remaining_sessions} sessions - {learner.status_text}
                             </span>
                           </div>
                         ))
@@ -432,6 +563,32 @@ const ScheduleSession = () => {
                 </div>
               </div>
             </div>
+
+            {/* Title */}
+            <div className="modern-form-section">
+              <div className="modern-form-grid">
+
+                {/* Session Title */}
+                <div className="modern-form-grid-full">
+                  <label className="modern-form-label">
+                    Learning Program name <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    className="modern-form-input"
+                    placeholder="e.g., Introduction to Fruits"
+                    required
+                  />
+                </div>
+
+              </div>
+            </div>
+
+
 
             {/* Date & Time and Duration */}
             <div className="modern-form-section">
@@ -494,265 +651,367 @@ const ScheduleSession = () => {
               </div>
             </div>
 
-            {/* Select Learning Goals */}
+            {/* Select Program — parent section containing goals + content */}
             <div className="modern-form-section">
-              <h2 className="modern-form-section-title">Select Learning Goals</h2>
+              <h2 className="modern-form-section-title">Select Program</h2>
               <p className="modern-form-section-description">
-                Choose learning goals for this session (optional)
+                Link this session to a program to reuse saved goals and content, or skip to
+                select goals/content directly.
               </p>
 
-              {/* Search Bar for Goals */}
-              <div className="search-container">
-                <Search className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search goals by name or description..."
-                  value={searchTerm.goal}
-                  onChange={(e) =>
-                    setSearchTerm({ ...searchTerm, goal: e.target.value })
-                  }
-                  className="search-input"
-                />
-                {searchTerm.goal && (
+              {/* Program mode switcher */}
+              {formData.learner_id && (
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setSearchTerm({ ...searchTerm, goal: "" })}
-                    className="search-clear"
-                    aria-label="Clear goal search"
+                    onClick={() => handleProgramModeChange('none')}
+                    className={`modern-form-btn ${programMode === 'none'
+                      ? 'modern-form-btn-primary'
+                      : 'modern-form-btn-secondary'
+                      }`}
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }}
                   >
-                    ✕
+                    No Program
                   </button>
-                )}
-              </div>
-
-              {learningGoals.length === 0 ? (
-                <p className="empty-state">
-                  No learning goals available
-                </p>
-              ) : (
-                <div className="table-primary-container">
-                  <div className="table-primary-wrapper">
-                    <table className="table-primary">
-                      <thead className="table-primary-header">
-                        <tr>
-                          <th className="table-primary-th table-primary-th-center" style={{ width: '60px' }}>
-                            Select
-                          </th>
-                          <th className="table-primary-th">
-                            Goal
-                          </th>
-                          <th className="table-primary-th">
-                            Description
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="table-primary-body">
-                        {filteredGoals.length > 0 ? (
-                          filteredGoals.map((goal) => (
-                            <tr
-                              key={goal.id}
-                              onClick={() => handleGoalToggle(goal.id)}
-                              className={`table-primary-row ${formData.goal_ids.includes(goal.id) ? "row-selected" : ""}`}
-                            >
-                              <td className="table-primary-td table-primary-td-center">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.goal_ids.includes(goal.id)}
-                                  onChange={() => { }}
-                                  className="custom-checkbox"
-                                />
-                              </td>
-                              <td className="table-primary-td">
-                                <div className="table-primary-cell-name-text">
-                                  {goal.goal}
-                                </div>
-                              </td>
-                              <td className="table-primary-td">
-                                <div className="table-primary-cell-subtitle">
-                                  {goal.goal_description}
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="3" className="table-primary-td" style={{ textAlign: 'center', padding: '2rem' }}>
-                              No goals match your search
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleProgramModeChange('existing')}
+                    className={`modern-form-btn ${programMode === 'existing'
+                      ? 'modern-form-btn-primary'
+                      : 'modern-form-btn-secondary'
+                      }`}
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }}
+                  >
+                    Select Existing Program
+                  </button>
                 </div>
               )}
-              <p className="modern-form-section-description">
-                {formData.goal_ids.length} goal(s) selected
-              </p>
-            </div>
 
-            {/* Select Learning Content */}
-            <div className="modern-form-section">
-              <h2 className="modern-form-section-title">Select Learning Content</h2>
-              <p className="modern-form-section-description">
-                Choose content that will be available during the session (optional)
-              </p>
-
-              {/* Search Bar for Content */}
-              <div className="search-container">
-                <Search className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search content by title or type..."
-                  value={searchTerm.content}
-                  onChange={(e) =>
-                    setSearchTerm({ ...searchTerm, content: e.target.value })
-                  }
-                  className="search-input"
-                />
-                {searchTerm.content && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSearchTerm({ ...searchTerm, content: "" })
-                    }
-                    className="search-clear"
-                    aria-label="Clear content search"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {contents.length === 0 ? (
-                <p className="empty-state">
-                  No learning content available
-                </p>
-              ) : (
-                <div className="content-grid-container">
-                  {filteredContents.length > 0 ? (
-                    filteredContents.map((content) => {
-                      const getContentIcon = (type) => {
-                        const icons = {
-                          image: "🖼️",
-                          pdf: "📄",
-                          video: "🎥",
-                          audio: "🎵",
-                          document: "📝",
-                          youtube: "🎥",
-                        };
-                        return icons[type] || "📁";
-                      };
-
-                      // Function to render thumbnail or icon
-                      const renderThumbnail = () => {
-                        // Handle YouTube content
-                        if (content.is_youtube && content.youtube_video_id) {
-                          const youtubeThumbUrl = `https://img.youtube.com/vi/${content.youtube_video_id}/hqdefault.jpg`;
-                          return (
-                            <div className="content-thumbnail youtube-thumbnail">
-                              <img
-                                src={youtubeThumbUrl}
-                                alt={content.title}
-                                onError={(e) => {
-                                  e.target.style.display = "none";
-                                  e.target.nextElementSibling.style.display =
-                                    "flex";
-                                }}
-                              />
-                              <div className="img-fallback">
-                                <span className="content-icon">🎥</span>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        if (
-                          content.content_type === "image" ||
-                          content.thumbnail_url
-                        ) {
-                          const imageUrl = learningContentService.getFileUrl(
-                            content.content_type === "image"
-                              ? content.file_url
-                              : content.thumbnail_url
-                          );
-                          return (
-                            <div className="content-thumbnail">
-                              <img
-                                src={imageUrl}
-                                alt={content.title}
-                                onError={(e) => {
-                                  e.target.style.display = "none";
-                                  e.target.nextElementSibling.style.display =
-                                    "flex";
-                                }}
-                              />
-                              <div className="img-fallback">
-                                <span className="content-icon">
-                                  {getContentIcon(content.content_type)}
+              {/* Existing program picker */}
+              {programMode === 'existing' && (
+                <div ref={programDropdownRef} className="dropdown-field" style={{ marginBottom: '1rem' }}>
+                  {loadingPrograms ? (
+                    <p className="modern-form-section-description">Loading programs...</p>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="Search programs..."
+                        value={programSearch}
+                        onChange={(e) => {
+                          setProgramSearch(e.target.value);
+                          setSelectedProgramId(null);
+                          setProgramDropdownOpen(true);
+                          setFormData(prev => ({ ...prev, goal_ids: [], content_ids: [] }));
+                        }}
+                        onFocus={() => setProgramDropdownOpen(true)}
+                        className="modern-form-input"
+                      />
+                      {programDropdownOpen && (
+                        <div className="dropdown-menu">
+                          {filteredPrograms.length > 0 ? (
+                            filteredPrograms.map((prog) => (
+                              <div
+                                key={prog.id}
+                                onClick={() => handleSelectExistingProgram(prog)}
+                                className={`dropdown-item ${selectedProgramId === prog.id ? 'dropdown-item-selected' : ''
+                                  }`}
+                              >
+                                {prog.name}
+                                <span className="dropdown-item-meta">
+                                  {(prog.skill) ? ` | Skill: ${prog.skill}` : ''}
+                                  &nbsp;—  Learning Goals : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
                                 </span>
                               </div>
+                            ))
+                          ) : (
+                            <div className="dropdown-item dropdown-item-empty">
+                              {programList.length === 0
+                                ? 'No programs found for this learner'
+                                : 'No programs match your search'}
                             </div>
-                          );
-                        }
-                        return (
-                          <div className="content-icon-container">
-                            <span className="content-icon">
-                              {getContentIcon(content.content_type)}
-                            </span>
-                          </div>
-                        );
-                      };
-
-                      return (
-                        <div
-                          key={content.id}
-                          onClick={() => handleContentToggle(content.id)}
-                          className={`content-card ${formData.content_ids.includes(content.id)
-                            ? "card-selected"
-                            : ""
-                            }`}
-                        >
-                          {/* Thumbnail */}
-                          {renderThumbnail()}
-
-                          {/* Content Info */}
-                          <div className="content-info">
-                            <h4
-                              className="content-title"
-                              title={content.title}
-                            >
-                              {content.title}
-                            </h4>
-                            <p className="content-type">
-                              {content.is_youtube ? "YouTube" : content.content_type}
-                            </p>
-                          </div>
-
-                          {/* Checkbox */}
-                          <div className="content-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={formData.content_ids.includes(
-                                content.id
-                              )}
-                              onChange={() => { }}
-                              className="custom-checkbox-sm"
-                            />
-                          </div>
+                          )}
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="content-empty">
-                      No content matches your search
-                    </div>
+                      )}
+                      {selectedProgram && (
+                        <div className="program-selected-card">
+                          <p className="modern-form-section-description program-selected-text">
+                            <span className="program-selected-icon" aria-hidden="true">✓</span>
+                            Program &quot;<strong>{selectedProgram.name}</strong>&quot; selected —
+                            goals are pre-loaded (locked) and content is pre-selected (editable).
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleGenerateProgramPdf}
+                            className="modern-form-btn modern-form-btn-secondary program-pdf-btn"
+                          >
+                            Download Program PDF
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
-              <p className="modern-form-section-description">
-                {formData.content_ids.length} item(s) selected
-              </p>
+
+              {/* ── SELECT LEARNING GOALS (child) ─────────────────────────────── */}
+              <div className="modern-form-section" style={{ marginTop: '1.5rem' }}>
+                <h2 className="modern-form-section-title">Select Learning Goals</h2>
+
+                <>
+                  {selectedProgramId ? (
+                    <p className="modern-form-section-description" style={{ marginBottom: '0.75rem' }}>
+                      Goals are pre-loaded from program &quot;<strong>{selectedProgram?.name}</strong>&quot; and can be edited.
+                    </p>
+                  ) : (
+                    <p className="modern-form-section-description">
+                      Choose learning goals for this session (optional)
+                    </p>
+                  )}
+                  <div>
+                    <div className="search-container">
+                      <Search className="search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search goals by name or description..."
+                        value={searchTerm.goal}
+                        onChange={(e) =>
+                          setSearchTerm({ ...searchTerm, goal: e.target.value })
+                        }
+                        className="search-input"
+                      />
+                      {searchTerm.goal && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchTerm({ ...searchTerm, goal: "" })}
+                          className="search-clear"
+                          aria-label="Clear goal search"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    {learningGoals.length === 0 ? (
+                      <p className="empty-state">No learning goals available</p>
+                    ) : (
+                      <div className="table-primary-container">
+                        <div className="table-primary-wrapper">
+                          <table className="table-primary">
+                            <thead className="table-primary-header">
+                              <tr>
+                                <th className="table-primary-th table-primary-th-center" style={{ width: '60px' }}>
+                                  Select
+                                </th>
+                                <th className="table-primary-th">Goal</th>
+                                <th className="table-primary-th">Description</th>
+                              </tr>
+                            </thead>
+                            <tbody className="table-primary-body">
+                              {sortedFilteredGoals.length > 0 ? (
+                                (() => {
+                                  const selGoals = sortedFilteredGoals.filter((g) => formData.goal_ids.includes(g.id));
+                                  const unselGoals = sortedFilteredGoals.filter((g) => !formData.goal_ids.includes(g.id));
+                                  const showDivider = selectedProgramId && selGoals.length > 0 && unselGoals.length > 0;
+                                  const firstUnselId = unselGoals[0]?.id;
+                                  return (
+                                    <>
+                                      {showDivider && selGoals.length > 0 && (
+                                        <tr>
+                                          <td colSpan="3" style={{ padding: '0.4rem 0.75rem', background: '#ecfdf5', fontSize: '0.75rem', color: '#065f46', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            ✅ From Selected Program
+                                          </td>
+                                        </tr>
+                                      )}
+                                      {sortedFilteredGoals.map((goal) => {
+                                        const isSelected = formData.goal_ids.includes(goal.id);
+                                        const isDividerRow = showDivider && goal.id === firstUnselId;
+                                        return (
+                                          <React.Fragment key={goal.id}>
+                                            {isDividerRow && (
+                                              <tr>
+                                                <td colSpan="3" style={{ padding: '0.4rem 0.75rem', background: '#f3f4f6', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '2px solid #e5e7eb' }}>
+                                                  Other Goals
+                                                </td>
+                                              </tr>
+                                            )}
+                                            <tr
+                                              onClick={() => handleGoalToggle(goal.id)}
+                                              className={`table-primary-row ${isSelected ? 'row-selected' : ''}`}
+                                            >
+                                              <td className="table-primary-td table-primary-td-center">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isSelected}
+                                                  onChange={() => { }}
+                                                  className="custom-checkbox"
+                                                />
+                                              </td>
+                                              <td className="table-primary-td">
+                                                <div className="table-primary-cell-name-text">{goal.goal}</div>
+                                              </td>
+                                              <td className="table-primary-td">
+                                                <div className="table-primary-cell-subtitle">{goal.goal_description}</div>
+                                              </td>
+                                            </tr>
+                                          </React.Fragment>
+                                        );
+                                      })}
+                                    </>
+                                  );
+                                })()
+                              ) : (
+                                <tr>
+                                  <td colSpan="3" className="table-primary-td" style={{ textAlign: 'center', padding: '2rem' }}>
+                                    No goals match your search
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="modern-form-section-description">
+                    {formData.goal_ids.length} goal(s) selected
+                  </p>
+                </>
+              </div>
+
+              {/* ── SELECT LEARNING CONTENT (child) ───────────────────────────── */}
+              <div className="modern-form-section" style={{ marginTop: '1.5rem' }}>
+                <h2 className="modern-form-section-title">Select Learning Content</h2>
+                <p className="modern-form-section-description">
+                  {selectedProgramId
+                    ? `Content pre-loaded from program "${selectedProgram?.name}". You can add or remove items.`
+                    : 'Choose content that will be available during the session (optional)'}
+                </p>
+
+                {/* Search Bar for Content */}
+                <div className="search-container">
+                  <Search className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search content by title or type..."
+                    value={searchTerm.content}
+                    onChange={(e) =>
+                      setSearchTerm({ ...searchTerm, content: e.target.value })
+                    }
+                    className="search-input"
+                  />
+                  {searchTerm.content && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm({ ...searchTerm, content: "" })}
+                      className="search-clear"
+                      aria-label="Clear content search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {contents.length === 0 ? (
+                  <p className="empty-state">No learning content available</p>
+                ) : (
+                  <div
+                    ref={contentGridRef}
+                    className="content-grid-container"
+                    onScroll={handleContentGridScroll}
+                  >
+                    {sortedFilteredContents.length > 0 ? (
+                      (() => {
+                        const selCount = sortedFilteredContents.filter((c) => formData.content_ids.includes(c.id)).length;
+                        const hasUnsel = sortedFilteredContents.some((c) => !formData.content_ids.includes(c.id));
+                        const showDivider = selectedProgramId && selCount > 0 && hasUnsel;
+                        const visibleItems = sortedFilteredContents.slice(0, contentVisibleCount);
+
+                        const getContentIcon = (type) => {
+                          const icons = { image: "🖼️", pdf: "📄", video: "🎥", audio: "🎵", document: "📝", youtube: "🎥" };
+                          return icons[type] || "📁";
+                        };
+
+                        return (
+                          <>
+                            {showDivider && selCount > 0 && (
+                              <div style={{ gridColumn: '1 / -1', padding: '0.5rem 0.75rem', background: '#ecfdf5', borderRadius: '6px', fontSize: '0.75rem', color: '#065f46', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                ✅ From Selected Program
+                              </div>
+                            )}
+                            {visibleItems.map((content, idx) => {
+                              const isSelected = formData.content_ids.includes(content.id);
+                              const isFirstUnselected = showDivider && idx === selCount;
+
+                              const renderThumbnail = () => {
+                                if (content.is_youtube && content.youtube_video_id) {
+                                  const youtubeThumbUrl = `https://img.youtube.com/vi/${content.youtube_video_id}/hqdefault.jpg`;
+                                  return (
+                                    <div className="content-thumbnail youtube-thumbnail">
+                                      <img src={youtubeThumbUrl} alt={content.title} onError={(e) => { e.target.style.display = "none"; e.target.nextElementSibling.style.display = "flex"; }} />
+                                      <div className="img-fallback"><span className="content-icon">🎥</span></div>
+                                    </div>
+                                  );
+                                }
+                                if (content.content_type === "image" || content.thumbnail_url) {
+                                  const imageUrl = learningContentService.getFileUrl(content.content_type === "image" ? content.file_url : content.thumbnail_url);
+                                  return (
+                                    <div className="content-thumbnail">
+                                      <img src={imageUrl} alt={content.title} onError={(e) => { e.target.style.display = "none"; e.target.nextElementSibling.style.display = "flex"; }} />
+                                      <div className="img-fallback"><span className="content-icon">{getContentIcon(content.content_type)}</span></div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="content-icon-container">
+                                    <span className="content-icon">{getContentIcon(content.content_type)}</span>
+                                  </div>
+                                );
+                              };
+
+                              return (
+                                <React.Fragment key={content.id}>
+                                  {isFirstUnselected && (
+                                    <div style={{ gridColumn: '1 / -1', padding: '0.5rem 0.75rem', background: '#f3f4f6', borderRadius: '6px', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '2px solid #e5e7eb', marginTop: '0.5rem' }}>
+                                      Other Content
+                                    </div>
+                                  )}
+                                  <div
+                                    onClick={() => handleContentToggle(content.id)}
+                                    className={`content-card ${isSelected ? 'card-selected' : ''}`}
+                                  >
+                                    {renderThumbnail()}
+                                    <div className="content-info">
+                                      <h4 className="content-title" title={content.title}>{content.title}</h4>
+                                      <p className="content-type">{content.is_youtube ? "YouTube" : content.content_type}</p>
+                                    </div>
+                                    <div className="content-checkbox">
+                                      <input type="checkbox" checked={isSelected} onChange={() => { }} className="custom-checkbox-sm" />
+                                    </div>
+                                  </div>
+                                </React.Fragment>
+                              );
+                            })}
+                            {sortedFilteredContents.length > contentVisibleCount && (
+                              <div ref={contentSentinelRef} className="col-span-full flex justify-center items-center py-3 text-sm text-gray-400 gap-2">
+                                <svg className="animate-spin h-4 w-4 text-[#DB9D32]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Loading more...
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <div className="content-empty">No content matches your search</div>
+                    )}
+                  </div>
+                )}
+                <p className="modern-form-section-description">
+                  {formData.content_ids.length} item(s) selected
+                </p>
+              </div>
             </div>
 
             {/* Submit Buttons */}
@@ -766,7 +1025,7 @@ const ScheduleSession = () => {
                 Cancel
               </button>
               <button type="submit" className="modern-form-btn modern-form-btn-primary" disabled={loading}>
-                {loading ? "Scheduling..." : "Schedule Session"}
+                {loading ? "Scheduling..." : "Schedule ILP"}
               </button>
             </div>
           </form>

@@ -52,6 +52,7 @@ from app.schemas.subscription import (
 )
 from app.models.subscription import RefundType
 from app.services.cache_service import cache_service
+from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/head", tags=["Head Operations"])
 
@@ -67,7 +68,7 @@ async def create_new_trainer(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -89,10 +90,12 @@ async def create_new_trainer(
 ):
     """Create a new trainer with optional reference file uploads"""
 
-    # Check if contact number already exists
-    if contact_no:
-        existing_trainer = await user_crud.get_trainer_by_contact(db, contact_no)
-        if existing_trainer:
+    # Check if contact number already exists in Users table
+    if contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -115,7 +118,7 @@ async def create_new_trainer(
         email=email,
         age=age,
         address=address,
-        contact_no=contact_no,
+        contact_number=contact_number,  # Now stored in Users table
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -136,6 +139,12 @@ async def create_new_trainer(
         new_trainer = await user_crud.create_trainer(db, trainer_data, current_head.id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+    # Update User record with contact_number
+    if contact_number:
+        new_trainer.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(new_trainer.user)
     
     # Handle reference files upload
     if reference_files:
@@ -186,7 +195,19 @@ async def create_new_trainer(
     
     # Refresh trainer to get the reference_data relationship
     await db.refresh(new_trainer, ['reference_data'])
-    
+
+    # Send welcome email with auto-generated credentials
+    if new_trainer.user.email and hasattr(new_trainer, 'plaintext_passcode') and new_trainer.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_trainer.user.email,
+                recipient_name=new_trainer.user.name,
+                role="Trainer",
+                password=new_trainer.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to trainer {new_trainer.user.email}: {email_exc}")
+
     return TrainerResponse.from_orm_with_user(new_trainer)
 
 
@@ -229,7 +250,7 @@ async def update_trainer_profile(
     email: str = Form(None),
     age: int = Form(None),
     address: str = Form(None),
-    contact_no: str = Form(None),
+    contact_number: str = Form(None),  # Contact number now stored in Users table
     qualification: str = Form(None),
     experience: str = Form(None),
     date_of_joining: str = Form(None),
@@ -262,10 +283,12 @@ async def update_trainer_profile(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this trainer"
         )
 
-    # If updating contact number, check for duplicates
-    if contact_no and contact_no != trainer.contact_no:
-        existing = await user_crud.get_trainer_by_contact(db, contact_no)
-        if existing:
+    # If updating contact number, check for duplicates in Users table
+    if contact_number and contact_number != trainer.user.contact_number:
+        existing_user = await db.execute(
+            select(User).where(User.contact_number == contact_number)
+        )
+        if existing_user.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User already exists with this contact number",
@@ -288,7 +311,7 @@ async def update_trainer_profile(
         email=email,
         age=age,
         address=address,
-        contact_no=contact_no,
+        # Note: contact_number is handled separately below (update User table)
         qualification=qualification,
         experience=experience,
         date_of_joining=date_of_joining_obj,
@@ -305,6 +328,12 @@ async def update_trainer_profile(
     )
 
     updated_trainer = await user_crud.update_trainer(db, trainer_id, trainer_update)
+    
+    # Update User record with contact_number
+    if contact_number is not None:
+        updated_trainer.user.contact_number = contact_number
+        await db.commit()
+        await db.refresh(updated_trainer.user)
     
     # Handle reference files upload
     if reference_files:
@@ -683,7 +712,19 @@ async def create_new_learner(
     
     # Refresh learner to load user relationship
     await db.refresh(new_learner, ['reference_data', 'user'])
-    
+
+    # Send welcome email with auto-generated credentials
+    if new_learner.user.email and hasattr(new_learner, 'plaintext_passcode') and new_learner.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_learner.user.email,
+                recipient_name=new_learner.user.name,
+                role="Learner",
+                password=new_learner.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to learner {new_learner.user.email}: {email_exc}")
+
     return LearnerResponse.from_orm_with_user(new_learner)
 
 

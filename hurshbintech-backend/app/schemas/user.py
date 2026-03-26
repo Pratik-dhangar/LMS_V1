@@ -129,7 +129,7 @@ class HeadCreate(BaseModel):
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -152,7 +152,7 @@ class HeadUpdate(BaseModel):
     email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -177,9 +177,9 @@ class HeadResponse(BaseModel):
     email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
+    contact_number: Optional[str] = None  # From User
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -216,6 +216,7 @@ class HeadResponse(BaseModel):
             "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
+            "contact_number": user.contact_number,  # Get from User table
             "created_at": user.created_at,
             "created_by": profile.created_by_admin_id,
             # Profile fields
@@ -224,7 +225,6 @@ class HeadResponse(BaseModel):
                 for field in [
                     "age",
                     "address",
-                    "contact_no",
                     "qualification",
                     "experience",
                     "date_of_joining",
@@ -263,7 +263,7 @@ class TrainerCreate(BaseModel):
     age: Optional[int] = None
     passcode: Optional[str] = None  # Auto-generated if not provided
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -286,7 +286,7 @@ class TrainerUpdate(BaseModel):
     email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -311,9 +311,9 @@ class TrainerResponse(BaseModel):
     email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
+    contact_number: Optional[str] = None  # From User
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -350,6 +350,7 @@ class TrainerResponse(BaseModel):
             "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
+            "contact_number": user.contact_number,  # Get from User table
             "created_at": user.created_at,
             "created_by": profile.created_by_head_id,
             # Profile fields
@@ -358,7 +359,6 @@ class TrainerResponse(BaseModel):
                 for field in [
                     "age",
                     "address",
-                    "contact_no",
                     "qualification",
                     "experience",
                     "date_of_joining",
@@ -397,7 +397,7 @@ class CoachCreate(BaseModel):
     passcode: Optional[str] = None  # Auto-generated if not provided
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -407,6 +407,7 @@ class CoachCreate(BaseModel):
     time_slots: Optional[str] = None  # e.g., "10am,1pm,3pm,5pm"
     specialization: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    is_special: Optional[bool] = False  # Featured/premium coach flag
 
 
 class CoachUpdate(BaseModel):
@@ -416,7 +417,7 @@ class CoachUpdate(BaseModel):
     email: Optional[str] = None
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
+    contact_number: Optional[str] = None  # Contact number stored in Users table
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -435,6 +436,7 @@ class CoachUpdate(BaseModel):
     is_available: Optional[bool] = None
     unavailable_until: Optional[datetime] = None
     unavailable_reason: Optional[str] = None
+    is_special: Optional[bool] = None  # Featured/premium coach flag
 
 
 class CoachResponse(BaseModel):
@@ -446,9 +448,9 @@ class CoachResponse(BaseModel):
     email: Optional[str] = None  # From User
     role: str  # From User
     passcode: str  # From User
+    contact_number: Optional[str] = None  # From User
     age: Optional[int] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = None
     qualification: Optional[str] = None
     experience: Optional[str] = None
     date_of_joining: Optional[date] = None
@@ -471,12 +473,15 @@ class CoachResponse(BaseModel):
     is_available: Optional[bool] = True
     unavailable_until: Optional[datetime] = None
     unavailable_reason: Optional[str] = None
+    is_special: bool = False
+    dedicated_package_id: Optional[int] = None
+    dedicated_package: Optional[dict] = None
     reference_data: List[ReferenceDataSchema] = []
     
     created_at: datetime  # From User
 
     @classmethod
-    def from_orm_with_user(cls, profile, user=None):
+    def from_orm_with_user(cls, profile, user=None, dedicated_package_id: Optional[int] = None, dedicated_package: Optional[dict] = None):
         """Create response from Profile with User data"""
         if user is None:
             user = profile.user
@@ -499,6 +504,7 @@ class CoachResponse(BaseModel):
             "email": user.email,
             "role": user.role.value if hasattr(user.role, "value") else str(user.role),
             "passcode": passcode,
+            "contact_number": user.contact_number,  # Get from User table
             "created_at": user.created_at,
             # Profile fields
             **{
@@ -506,7 +512,6 @@ class CoachResponse(BaseModel):
                 for field in [
                     "age",
                     "address",
-                    "contact_no",
                     "qualification",
                     "experience",
                     "date_of_joining",
@@ -526,11 +531,15 @@ class CoachResponse(BaseModel):
                     "is_available",
                     "unavailable_until",
                     "unavailable_reason",
+                    "is_special",
                 ]
                 if hasattr(profile, field)
             },
             # Use converted profile picture URL (proxy URL to avoid CORS)
             "profile_picture_url": converted_pic_url,
+            # Dedicated package (passed in from endpoint after separate lookup)
+            "dedicated_package_id": dedicated_package_id,
+            "dedicated_package": dedicated_package,
             # Reference data
             "reference_data": [
                 ReferenceDataSchema.from_orm(ref) for ref in (profile.reference_data or [])
@@ -723,7 +732,7 @@ class LearnerResponse(BaseModel):
     email: Optional[str] = None  # From User
     passcode: str
     age: Optional[int] = None
-    contact_no: Optional[str] = None  # Contact number
+    contact_number: Optional[str] = None  # Contact number from Users table
     dob: Optional[date] = None
     date_of_assessment: Optional[date] = None
     dlb_concerns_checklist: Optional[List[str]] = None  # Return list to frontend
@@ -807,7 +816,7 @@ class LearnerResponse(BaseModel):
             "user_id": user.id,
             "name": user.name,
             "email": user.email,
-            "contact_no": user.contact_number,  # Get contact_number from User
+            "contact_number": user.contact_number,  # Get contact_number from User
             "passcode": passcode,
             "created_at": user.created_at,
             "updated_at": profile.updated_at,

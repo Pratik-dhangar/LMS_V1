@@ -60,7 +60,10 @@ async def get_appointment_by_id(db: AsyncSession, appointment_id: int) -> Appoin
     """Get appointment by ID"""
     result = await db.execute(
         select(Appointment)
-        .options(joinedload(Appointment.coach), joinedload(Appointment.user))
+        .options(
+            joinedload(Appointment.coach).joinedload(CoachProfile.user),
+            joinedload(Appointment.user),
+        )
         .where(Appointment.id == appointment_id)
     )
     return result.unique().scalar_one_or_none()
@@ -173,7 +176,11 @@ async def get_available_slots(
                 Appointment.status.in_([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
-                ])  # Only consider active appointments
+                    # Guest booking statuses that should also block time slots
+                    AppointmentStatus.GUEST_INTENT,
+                    AppointmentStatus.PAYMENT_PENDING,
+                    AppointmentStatus.VERIFICATION_PENDING,
+                ])  # Only consider active or pending appointments
             )
         )
     )
@@ -243,6 +250,10 @@ async def check_slot_availability(
                 Appointment.status.in_([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
+                    # Guest booking statuses that should also block time slots
+                    AppointmentStatus.GUEST_INTENT,
+                    AppointmentStatus.PAYMENT_PENDING,
+                    AppointmentStatus.VERIFICATION_PENDING,
                 ])
             )
         )

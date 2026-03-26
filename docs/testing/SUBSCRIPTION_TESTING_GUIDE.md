@@ -69,9 +69,9 @@ Background tasks should be running for:
 
 ## Backend API Testing
 
-### A. Subscription Packages (HEAD Endpoints)
+### A. Manage Learning Packages (HEAD Endpoints)
 
-#### 1. Create Subscription Package
+#### 1. Create Manage Learning Package
 **Endpoint**: `POST /api/head/subscriptions/packages`
 
 **Headers**:
@@ -432,7 +432,7 @@ Background tasks should be running for:
 
 ## Frontend UI Testing
 
-### 1. Subscription Package Manager (HEAD)
+### 1. Manage Learning Package Manager (HEAD)
 **URL**: `http://localhost:5173/head/subscriptions/packages`
 
 **Test Scenarios**:
@@ -604,7 +604,7 @@ Background tasks should be running for:
 
 ---
 
-### 5. Subscription Records (HEAD/ADMIN)
+### 5. Manage Payment Records (HEAD/ADMIN)
 **URL**: `http://localhost:5173/subscriptions/records`
 
 #### View All Subscriptions

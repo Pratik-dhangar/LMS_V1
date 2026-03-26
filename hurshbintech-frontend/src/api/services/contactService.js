@@ -5,10 +5,19 @@ const contactService = {
     submitContact: async (contactData) => {
         const response = await api.post('/contacts', {
             parent_name: contactData.parent_name,
+            child_name: contactData.child_name?.trim() || null,
+            child_age: contactData.child_age?.trim() || null,
+            address: contactData.address?.trim() || null,
             email: contactData.email,
             phone: contactData.phone || '',
             message: contactData.message,
         });
+        return response.data;
+    },
+
+    // Public endpoint - Submit free assessment form
+    submitFreeAssessment: async (assessmentData) => {
+        const response = await api.post('/free-assessments', assessmentData);
         return response.data;
     },
 
@@ -36,6 +45,26 @@ const contactService = {
     // Admin endpoint - Get contact statistics
     getContactStats: async () => {
         const response = await api.get('/admin/contacts/stats');
+        return response.data;
+    },
+
+    // Admin endpoints - Free assessment previews
+    getAdminFreeAssessments: async (skip = 0, limit = 10, search = '') => {
+        const params = new URLSearchParams({
+            skip: skip.toString(),
+            limit: limit.toString(),
+        });
+
+        if (search) {
+            params.append('search', search);
+        }
+
+        const response = await api.get(`/admin/free-assessments?${params.toString()}`);
+        return response.data;
+    },
+
+    getAdminFreeAssessmentDetail: async (assessmentId) => {
+        const response = await api.get(`/admin/free-assessments/${assessmentId}`);
         return response.data;
     },
 

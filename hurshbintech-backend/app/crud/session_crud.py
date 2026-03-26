@@ -12,12 +12,25 @@ from sqlalchemy.orm import joinedload
 
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goals_model import LearningGoals
+from app.models.program_model import Program
 from app.models.session_model import TrainingSession
 from app.schemas.session import SessionCreate
 
 
-async def get_all_sessions_by_head(db: AsyncSession, head_user_id: int) -> List[TrainingSession]:
-    """Get all sessions created by a specific Head"""
+async def get_all_sessions_by_head(
+    db: AsyncSession, head_user_id: int, skip: int = 0, limit: int = 10
+) -> (List[TrainingSession], int):
+    """Get all sessions created by a specific Head with pagination"""
+    from sqlalchemy import func
+
+    # Get total count
+    count_query = select(func.count()).select_from(TrainingSession).where(
+        TrainingSession.created_by_id == head_user_id
+    )
+    total_count_result = await db.execute(count_query)
+    total_count = total_count_result.scalar_one()
+
+    # Get paginated results
     result = await db.execute(
         select(TrainingSession)
         .options(
@@ -29,8 +42,10 @@ async def get_all_sessions_by_head(db: AsyncSession, head_user_id: int) -> List[
         )
         .where(TrainingSession.created_by_id == head_user_id)
         .order_by(TrainingSession.scheduled_date.desc())
+        .offset(skip)
+        .limit(limit)
     )
-    return result.unique().scalars().all()
+    return result.unique().scalars().all(), total_count
 
 
 async def get_by_id(db: AsyncSession, session_pk: int) -> Optional[TrainingSession]:
@@ -64,7 +79,6 @@ async def create_session(
     new_session = TrainingSession(
         session_id=session_id,
         title=session_data.title,
-        description=session_data.description,
         trainer_id=session_data.trainer_id,
         learner_id=session_data.learner_id,
         created_by_id=created_by_id,
@@ -107,6 +121,37 @@ async def create_session(
     
     if active_subscription:
         new_session.subscription_id = active_subscription.id
+
+    # ── Program link ──────────────────────────────────────────────────────────
+    # If a program_id is supplied the program pre-loads goals and content.
+    # Both goals and content_ids may be overridden by the caller; when they differ
+    # the program is patched so the next session can auto-populate the updated list.
+    if session_data.program_id:
+        program_result = await db.execute(
+            select(Program).where(Program.id == session_data.program_id)
+        )
+        program = program_result.scalar_one_or_none()
+        if program:
+            new_session.program_id = program.id
+            # Goals are pre-loaded from the program but can be edited by caller
+            incoming_goals = session_data.goal_ids
+            if incoming_goals is None or len(incoming_goals) == 0:
+                # No goals passed — use program's stored goals
+                session_data = session_data.model_copy(
+                    update={"goal_ids": program.goal_ids or []}
+                )
+            # Sync content back to the program if the caller provided a different list
+            incoming_content = session_data.content_ids
+            if incoming_content is not None and list(incoming_content) != list(program.content_ids or []):
+                from datetime import timezone as _tz
+                program.content_ids = list(incoming_content)
+                program.updated_at = datetime.now(_tz.utc).replace(tzinfo=None)
+            elif incoming_content is None or len(incoming_content) == 0:
+                # No content passed — use program's stored content
+                session_data = session_data.model_copy(
+                    update={"content_ids": program.content_ids or []}
+                )
+    # ─────────────────────────────────────────────────────────────────────────
 
     # Add learning content associations if provided (BEFORE commit)
     if session_data.content_ids:
@@ -337,6 +382,30 @@ async def update_session(
             if key == "scheduled_date" and value.tzinfo is not None:
                 value = value.replace(tzinfo=None)
             setattr(session, key, value)
+
+    # ── Program link (edit path) ───────────────────────────────────────────────
+    program_id = update_data.pop("program_id", None)
+    if program_id is None and content_ids is None and goal_ids is None:
+        # No program-related update; fall through to normal M:M update below
+        pass
+    if program_id is not None:
+        program_result = await db.execute(
+            select(Program).where(Program.id == program_id)
+        )
+        program = program_result.scalar_one_or_none()
+        if program:
+            session.program_id = program.id
+            # Goals are pre-loaded from the program but can be edited
+            if goal_ids is None or len(goal_ids) == 0:
+                goal_ids = program.goal_ids or []
+            # Sync content back to the program if caller provided a different list
+            if content_ids is not None and list(content_ids) != list(program.content_ids or []):
+                from datetime import timezone as _tz
+                program.content_ids = list(content_ids)
+                program.updated_at = datetime.utcnow()
+            elif content_ids is None or len(content_ids) == 0:
+                content_ids = program.content_ids or []
+    # ─────────────────────────────────────────────────────────────────────────
 
     # Update learning content associations if provided
     if content_ids is not None:

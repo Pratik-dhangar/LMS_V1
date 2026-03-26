@@ -1,16 +1,35 @@
 """Session Report CRUD Operations
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.program_model import Program
 from app.models.session_report_model import SessionReport
 from app.models.session_model import TrainingSession
 from app.models.user_model import User
 from app.schemas.session_report import SessionReportCreate
+
+
+def _prompt_to_value(prompt_meter: str) -> int:
+    """Convert prompt_meter string to numeric value.
+    'I' and '0' (✔ no-prompt) -> 0, '100' (✗ full-prompt) -> 100, else int.
+    """
+    if prompt_meter in ("I", "0"):
+        return 0
+    return int(prompt_meter)
+
+
+def _reinforcement_to_value(reinforcement_meter: Optional[str]) -> Optional[int]:
+    """Convert reinforcement_meter string to numeric value (Full→100, 0→0, others as-is)."""
+    if reinforcement_meter is None:
+        return None
+    if reinforcement_meter == "Full":
+        return 100
+    return int(reinforcement_meter)
 
 
 async def create_session_report(
@@ -125,10 +144,11 @@ async def get_learner_report_statistics(db: AsyncSession, learner_id: int) -> Di
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Program breakdown
         program_breakdown[report.program_name] = program_breakdown.get(report.program_name, 0) + 1
@@ -228,10 +248,11 @@ async def get_overall_statistics(db: AsyncSession) -> Dict:
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Program breakdown
         program_breakdown[report.program_name] = program_breakdown.get(report.program_name, 0) + 1
@@ -280,16 +301,15 @@ async def get_program_statistics(db: AsyncSession, learner_id: int, program_name
         # Prompt distribution
         prompt_dist[report.prompt_meter] = prompt_dist.get(report.prompt_meter, 0) + 1
 
-        # Reinforcement distribution
-        reinforcement_dist[report.reinforcement_meter] = (
-            reinforcement_dist.get(report.reinforcement_meter, 0) + 1
-        )
+        # Reinforcement distribution (skip null values)
+        if report.reinforcement_meter is not None:
+            reinforcement_dist[report.reinforcement_meter] = (
+                reinforcement_dist.get(report.reinforcement_meter, 0) + 1
+            )
 
         # Progress over time
-        prompt_value = 0 if report.prompt_meter == "I" else int(report.prompt_meter)
-        reinforcement_value = (
-            100 if report.reinforcement_meter == "Full" else int(report.reinforcement_meter)
-        )
+        prompt_value = _prompt_to_value(report.prompt_meter)
+        reinforcement_value = _reinforcement_to_value(report.reinforcement_meter)
 
         progress_data.append(
             {
@@ -311,17 +331,21 @@ async def get_program_statistics(db: AsyncSession, learner_id: int, program_name
     }
 
 
-async def get_unique_learners_from_session_reports(db: AsyncSession) -> List[Dict]:
-    """Get all unique learners from session reports with their summary data"""
+async def get_unique_learners_from_session_reports(db: AsyncSession, head_id: int = None) -> List[Dict]:
+    """Get all unique learners from session reports with their summary data, optionally filtered by head"""
     learners_data = []
 
     # Get all unique learners from session_reports
-    result = await db.execute(
-        select(User)
-        .join(SessionReport, User.id == SessionReport.learner_id)
-        .distinct()
-        .order_by(User.name)
-    )
+    query = select(User).join(SessionReport, User.id == SessionReport.learner_id).distinct().order_by(User.name)
+    
+    # If head_id is provided, filter by learners created by that head
+    if head_id:
+        from app.models.user_model import LearnerProfile
+        query = query.join(LearnerProfile, User.id == LearnerProfile.user_id).where(
+            LearnerProfile.created_by_head_id == head_id
+        )
+    
+    result = await db.execute(query)
     learners = result.scalars().all()
 
     for learner in learners:
@@ -374,15 +398,44 @@ async def get_programs_by_learner(db: AsyncSession, learner_id: int) -> List[Dic
     """Get all unique programs/goals for a specific learner with summary data"""
     programs_data = []
 
-    # Get all unique programs for this learner
+    # Fetch report rows newest-first so each program_name picks the latest linked program_id.
     result = await db.execute(
-        select(func.distinct(SessionReport.program_name), SessionReport.program_id)
+        select(
+            SessionReport.program_name,
+            SessionReport.program_id,
+            SessionReport.created_at,
+        )
         .where(SessionReport.learner_id == learner_id)
-        .order_by(SessionReport.program_name)
+        .order_by(SessionReport.program_name.asc(), SessionReport.created_at.desc())
     )
-    programs = result.all()
+    report_rows = result.all()
 
-    for program_name, program_id in programs:
+    latest_program_ref = {}
+    for program_name, program_id, _created_at in report_rows:
+        if program_name not in latest_program_ref:
+            latest_program_ref[program_name] = program_id
+
+    for program_name in sorted(latest_program_ref.keys()):
+        program_id = latest_program_ref[program_name]
+        program_skill = None
+        if program_id is not None:
+            skill_result = await db.execute(
+                select(Program.skill).where(Program.id == program_id)
+            )
+            program_skill = skill_result.scalar_one_or_none()
+
+        # Fallback for legacy reports where program_id is null/stale:
+        # resolve the learner's program by name and use its latest skill value.
+        if not program_skill:
+            fallback_skill_result = await db.execute(
+                select(Program.skill)
+                .where(Program.learner_id == learner_id)
+                .where(Program.name == program_name)
+                .order_by(Program.updated_at.desc(), Program.id.desc())
+                .limit(1)
+            )
+            program_skill = fallback_skill_result.scalar_one_or_none()
+
         # Count reports for this program
         count_result = await db.execute(
             select(func.count(SessionReport.id))
@@ -405,6 +458,7 @@ async def get_programs_by_learner(db: AsyncSession, learner_id: int) -> List[Dic
             {
                 "program_id": program_id,
                 "program_name": program_name,
+                "skill_name": program_skill,
                 "total_sessions": total_reports,
                 "last_session_date": last_date,
             }
@@ -430,13 +484,9 @@ async def get_session_data_by_program(
     
     session_data = []
     for idx, (report, session) in enumerate(rows, start=1):
-        # Convert prompt meter to numeric value
-        prompt_value = 0 if report.prompt_meter == "I" else int(report.prompt_meter)
-        
-        # Convert reinforcement meter to numeric value
-        reinforcement_value = (
-            100 if report.reinforcement_meter == "Full" else int(report.reinforcement_meter)
-        )
+        # Convert prompt meter to numeric value (0/\u2714=0, 100/\u2717=100, else int)
+        prompt_value = _prompt_to_value(report.prompt_meter)
+        reinforcement_value = _reinforcement_to_value(report.reinforcement_meter)
         
         session_data.append({
             "session_number": idx,

@@ -15,8 +15,8 @@ class SessionReportCreate(BaseModel):
     learner_id: int
     program_id: Optional[int] = None
     program_name: str = Field(..., min_length=1, max_length=500)
-    prompt_meter: Literal["I", "10", "20", "30", "40", "50", "60", "70", "80", "90"]
-    reinforcement_meter: Literal["Full", "90", "80", "70", "60", "50", "40", "30", "20", "10"]
+    prompt_meter: Literal["0", "I", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]
+    reinforcement_meter: Optional[Literal["Full", "90", "80", "70", "60", "50", "40", "30", "20", "10", "0"]] = None
 
 
 class SessionReportResponse(BaseModel):
@@ -28,7 +28,7 @@ class SessionReportResponse(BaseModel):
     program_id: Optional[int]
     program_name: str
     prompt_meter: str
-    reinforcement_meter: str
+    reinforcement_meter: Optional[str] = None
     created_at: datetime
     session_started_at: Optional[datetime] = None
     session_goals: List[str] = []
@@ -61,7 +61,7 @@ class LearnerReportSummary(BaseModel):
 class SessionReportStatistics(BaseModel):
     """Schema for session report statistics (for charts)"""
 
-    prompt_distribution: Dict[str, int]  # {'I': 5, '10': 3, '20': 8, ...}
-    reinforcement_distribution: Dict[str, int]  # {'Full': 2, '90': 5, ...}
+    prompt_distribution: Dict[str, int]  # {'0': 5, '10': 3, '20': 8, ..., '100': 2}
+    reinforcement_distribution: Dict[str, int] = {}  # kept for backward compat
     total_reports: int
     program_breakdown: Dict[str, int]  # {'Program A': 10, 'Program B': 5, ...}

@@ -152,7 +152,20 @@ const sessionReportService = {
       console.error('Error fetching PDF data:', error);
       throw error;
     }
-  }
+  },
+
+  // Send Skill Development Graph  to learner's registered email (Head/Admin only)
+  sendGoalsReport: async (learnerId, sentByName = '') => {
+    try {
+      const response = await axios.post(`/session-reports/send-goals-report/${learnerId}`, {
+        sent_by_name: sentByName || null,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending goals report email:', error);
+      throw error;
+    }
+  },
 };
 
 export default sessionReportService;

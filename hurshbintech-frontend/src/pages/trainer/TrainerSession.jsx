@@ -2,13 +2,13 @@
 // Uses shared InstructorSessionPage component and custom hooks
 // Manages Observer connections, Recording, and Learner-specific logic
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import sessionService from '../../api/services/sessionService';
 import sessionReportService from '../../api/services/sessionReportService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
-import JanusRecordingService from '../../api/services/janusService';
+import JanusRecordingServiceOptimized from '../../api/services/janusServiceOptimized';
 import useVoiceInput from '../../hooks/useVoiceInput';
 import useStopwatch from '../../hooks/useStopwatch';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
@@ -41,6 +41,19 @@ const TrainerSession = () => {
   const mediaControl = useMediaControl();
   const { toggleListening, listening, transcript } = useVoiceInput();
   const { pageClassName, navbarClassName } = useAutoHideNavbar();
+
+  // Admit/reject state for learner join requests
+  const [pendingAdmission, setPendingAdmission] = useState(null);
+  const [isReinforcementValueVisible, setIsReinforcementValueVisible] = useState(true);
+  const reinforcementVisibilityRef = React.useRef(true);
+
+  // Recording UI state
+  const [recordingStatus, setRecordingStatus] = useState(null); // null, 'recording', 'paused', 'stopped'
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
+
+  React.useEffect(() => {
+    reinforcementVisibilityRef.current = isReinforcementValueVisible;
+  }, [isReinforcementValueVisible]);
 
   // Cleanup function
   const cleanup = () => {
@@ -89,6 +102,7 @@ const TrainerSession = () => {
       learnerVideoService.onLocalStream = (stream) => state.setLocalStream(stream);
       learnerVideoService.onRemoteStream = (stream) => {
         state.setRemoteStream(stream);
+        learnerVideoService.sendReinforcementVisibility(reinforcementVisibilityRef.current);
         if (!state.connectedRef.current) {
           state.connectedRef.current = true;
           toast.success(`${state.sessionInfo?.learner_name || 'Learner'} has joined the session`);
@@ -128,10 +142,50 @@ const TrainerSession = () => {
         }
       };
 
+      learnerVideoService.onParticipantJoinRequest = () => {
+        const learnerName = state.sessionInfo?.learner_name || 'Learner';
+        setPendingAdmission({ name: learnerName });
+      };
+
       await learnerVideoService.initialize();
       state.setVideoService(learnerVideoService);
 
-      const recService = new JanusRecordingService(learnerVideoService, numericSessionId);
+      // Initialize Optimized Recording Service with chunked uploads
+      const recService = new JanusRecordingServiceOptimized(learnerVideoService, numericSessionId, {
+        chunkDuration: 10000,              // Upload every 10 seconds
+        enableAdaptiveQuality: true,       // Auto-adjust for device
+        maxRetries: 3,                     // Retry failed chunks
+        bitrate: 1500000                   // 1.5 Mbps (reduced for low-end devices)
+      });
+
+      // Setup recording callbacks for UI updates
+      recService.onRecordingStateChange = (state_str) => {
+        console.log('[TrainerSession] Recording state changed:', state_str);
+        setRecordingStatus(state_str);
+        if (state_str === 'recording') {
+          toast.info('🔴 Recording started', { autoClose: 2000 });
+        } else if (state_str === 'stopped') {
+          toast.info('⏹️ Recording stopped', { autoClose: 2000 });
+        }
+      };
+
+      recService.onChunkUploaded = ({ chunkNumber, uploadedChunks }) => {
+        console.log(`✅ Chunk ${chunkNumber} uploaded (Total: ${uploadedChunks})`);
+      };
+
+      recService.onUploadProgress = ({ uploadedChunks, totalChunks }) => {
+        console.log(`📊 Upload progress: ${uploadedChunks}/${totalChunks} chunks`);
+      };
+
+      recService.onRecordingError = (error) => {
+        console.error('[TrainerSession] Recording error:', error);
+        if (error.type === 'chunk_upload_failed') {
+          toast.warning(`⚠️ Chunk upload failed - retrying...`, { autoClose: 3000 });
+        } else {
+          toast.error(`Recording error: ${error.message || 'Unknown error'}`, { autoClose: 3000 });
+        }
+      };
+
       state.setRecordingService(recService);
 
       state.setMicEnabled(learnerVideoService.isMicrophoneEnabled());
@@ -182,13 +236,65 @@ const TrainerSession = () => {
     await initializeObserverConnection();
   };
 
+  // Admission modal handlers
+  const handleAdmitLearner = () => {
+    setPendingAdmission(null);
+    if (state.videoService) state.videoService.admitParticipant();
+  };
+
+  const handleRejectLearner = () => {
+    setPendingAdmission(null);
+    if (state.whiteboardService) {
+      state.whiteboardService.send('waiting_message', { text: '__ADMISSION_REJECTED__' });
+    }
+  };
+
+  // Remove learner from ongoing session
+  const handleRemoveLearner = () => {
+    const learnerName = state.sessionInfo?.learner_name || 'Learner';
+    if (window.confirm(`Exit ${learnerName} from the session?`)) {
+      state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
+      toast.info(`${learnerName} has been removed from the session`);
+    }
+  };
+
+  const handleToggleReinforcementValueVisibility = () => {
+    setIsReinforcementValueVisible((prev) => {
+      const next = !prev;
+      reinforcementVisibilityRef.current = next;
+      state.videoService?.sendReinforcementVisibility(next);
+      return next;
+    });
+  };
+
   // Session report handler (Trainer only)
   const handleSaveReport = async (reportData) => {
     try {
-      if (!reportData?.programName || !reportData?.promptMeter || !reportData?.reinforcementMeter) {
-        toast.error('Please select a program, prompt level, and reinforcement level');
+      if (!reportData?.programName || reportData?.reinforcementMeter === null || reportData?.reinforcementMeter === undefined) {
+        toast.error('Please select a program and reinforcement level');
         return;
       }
+
+      const toPromptMeter = (value) => {
+        if (value === null || value === undefined || value === '') return 'I';
+        return String(value);
+      };
+
+      const toReinforcementMeter = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+
+        if (value === 'Full') return 'Full';
+
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) return null;
+
+        if (numeric >= 100) return 'Full';
+        if (numeric <= 0) return '0';
+        return String(numeric);
+      };
+
+      const reinforcementMeter = toReinforcementMeter(reportData.reinforcementMeter);
+      const promptMeter = toPromptMeter(reportData.promptMeter);
 
       // Convert sessionId to integer and build report with API-required fields
       const numericSessionId = parseInt(sessionId) || state.sessionInfo?.id;
@@ -197,8 +303,8 @@ const TrainerSession = () => {
         learner_id: state.sessionInfo?.learner_id,
         program_id: reportData.programId || null,
         program_name: reportData.programName,
-        prompt_meter: reportData.promptMeter,
-        reinforcement_meter: reportData.reinforcementMeter,
+        prompt_meter: promptMeter,
+        reinforcement_meter: reinforcementMeter,
       };
 
       console.log('[TrainerSession] Saving report:', reportPayload);
@@ -212,6 +318,69 @@ const TrainerSession = () => {
       console.error('[TrainerSession] Error saving report:', error);
       console.error('Response details:', error.response?.data);
       toast.error('Failed to save session report');
+    }
+  };
+
+  // Recording control handlers
+  const handleToggleRecording = async () => {
+    try {
+      if (!state.recordingService) {
+        toast.error('Recording service not initialized');
+        return;
+      }
+
+      if (recordingStatus === 'recording') {
+        // Stop recording
+        const success = await state.recordingService.stopRecording();
+        if (success) {
+          setRecordingStatus('stopped');
+          setIsRecordingPaused(false);
+          console.log('[TrainerSession] Recording stopped successfully');
+        }
+      } else {
+        // Start recording
+        const success = await state.recordingService.startRecording();
+        if (success) {
+          setRecordingStatus('recording');
+          setIsRecordingPaused(false);
+          console.log('[TrainerSession] Recording started successfully');
+        }
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Recording toggle error:', error);
+      toast.error(`Recording error: ${error.message}`);
+    }
+  };
+
+  // For future implementation: pause/resume recording
+  // Note: MediaRecorder API pause/resume requires different implementation
+  const handlePauseResumeRecording = () => {
+    try {
+      if (!state.recordingService?.mediaRecorder) {
+        toast.warning('Cannot pause - recording not active');
+        return;
+      }
+
+      if (isRecordingPaused) {
+        // Resume recording
+        if (state.recordingService.mediaRecorder.state === 'paused') {
+          state.recordingService.mediaRecorder.resume();
+          setIsRecordingPaused(false);
+          toast.info('▶️ Recording resumed', { autoClose: 2000 });
+          console.log('[TrainerSession] Recording resumed');
+        }
+      } else {
+        // Pause recording
+        if (state.recordingService.mediaRecorder.state === 'recording') {
+          state.recordingService.mediaRecorder.pause();
+          setIsRecordingPaused(true);
+          toast.info('⏸️ Recording paused', { autoClose: 2000 });
+          console.log('[TrainerSession] Recording paused');
+        }
+      }
+    } catch (error) {
+      console.error('[TrainerSession] Pause/resume error:', error);
+      toast.error(`Pause/resume error: ${error.message}`);
     }
   };
 
@@ -229,6 +398,7 @@ const TrainerSession = () => {
     isFrozen: state.isFrozen,
     floatingAnimations: state.floatingAnimations,
     toolAccess: state.toolAccess,
+    lineWidth: state.lineWidth,
     audioRef: state.audioRef,
     musicOptions: MUSIC_OPTIONS,
     selectedMusic: state.selectedMusic,
@@ -243,6 +413,7 @@ const TrainerSession = () => {
     setSessionNotes: state.setSessionNotes,
     setFloatingAnimations: state.setFloatingAnimations,
     setYoutubePopups: state.setYoutubePopups,
+    setInlineYoutube: state.setInlineYoutube,
     setExerciseData: state.setExerciseData,
     setToolAccess: state.setToolAccess,
     setBuckets: state.setBuckets,
@@ -253,6 +424,8 @@ const TrainerSession = () => {
     setFeedbackMessage: state.setFeedbackMessage,
     setWaitingMessage: state.setWaitingMessage,
     setShowExercise: state.setShowExercise,
+    isWaitActive: state.isWaitActive,
+    setIsWaitActive: state.setIsWaitActive,
     setBackgroundMusicPlaying: state.setBackgroundMusicPlaying,
     setSelectedMusic: state.setSelectedMusic,
     setMusicVolume: state.setMusicVolume,
@@ -302,6 +475,16 @@ const TrainerSession = () => {
     handleEndSession: handlers.handleEndSession,
   });
 
+  // Sync stopwatch state to learner when it becomes 0 (reset)
+  React.useEffect(() => {
+    if (stopwatch?.elapsedTime === 0 && state.whiteboardService) {
+      state.whiteboardService.send('stopwatch_sync', {
+        elapsedTime: 0,
+        isRunning: false
+      });
+    }
+  }, [stopwatch?.elapsedTime, state.whiteboardService]);
+
   // Loading state
   if (state.loading) {
     return (
@@ -322,132 +505,170 @@ const TrainerSession = () => {
   const wbSmallBtnActive = WB_BUTTON_STYLES.smallActive;
 
   return (
-    <InstructorSessionPage
-      role="trainer"
-      participantName="Learner"
-      participantType="learner"
-      pageClassName={pageClassName}
-      navbarClassName={navbarClassName}
-      showHeader={state.showHeader}
-      showInfoBar={state.showInfoBar}
-      setShowInfoBar={state.setShowInfoBar}
-      sessionInfo={state.sessionInfo}
-      connectionStatus={state.connectionStatus}
-      timeLeft={state.timeLeft}
-      micEnabled={state.micEnabled}
-      cameraEnabled={state.cameraEnabled}
-      handleToggleMic={handlers.handleToggleMic}
-      handleToggleCamera={handlers.handleToggleCamera}
-      handleFreeze={handlers.handleFreeze}
-      handleEndSession={handlers.handleEndSession}
-      eraseAllPen={handlers.eraseAllPen}
-      addBucket={handlers.addBucket}
-      isFrozen={state.isFrozen}
-      localStream={state.localStream}
-      remoteStream={state.remoteStream}
-      remoteVideoRef={state.remoteVideoRef}
-      audioRef={state.audioRef}
-      whiteboardService={state.whiteboardService}
-      whiteboardCanvasRef={state.whiteboardCanvasRef}
-      canvasItems={state.canvasItems}
-      setCanvasItems={state.setCanvasItems}
-      remoteSelectedItemIds={state.remoteSelectedItemIds}
-      setRemoteSelectedItemIds={state.setRemoteSelectedItemIds}
-      feedbackMessage={state.feedbackMessage}
-      waitingMessage={state.waitingMessage}
-      floatingAnimations={state.floatingAnimations}
-      setFloatingAnimations={state.setFloatingAnimations}
-      handleAnimationPop={handlers.handleAnimationPop}
-      tool={state.tool}
-      setTool={state.setTool}
-      color={state.color}
-      setColor={state.setColor}
-      lineWidth={state.lineWidth}
-      setLineWidth={state.setLineWidth}
-      buckets={state.buckets}
-      setBuckets={state.setBuckets}
-      bucketColor={state.bucketColor}
-      setBucketColor={state.setBucketColor}
-      toolActive={state.toolActive}
-      setToolActive={state.setToolActive}
-      eraserActive={state.eraserActive}
-      setEraserActive={state.setEraserActive}
-      eraseAllActive={state.eraseAllActive}
-      setEraseAllActive={state.setEraseAllActive}
-      clearCanvasTrigger={state.clearCanvasTrigger}
-      setClearCanvasTrigger={state.setClearCanvasTrigger}
-      erasePenTrigger={state.erasePenTrigger}
-      redrawCanvasTrigger={state.redrawCanvasTrigger}
-      toolAccess={state.toolAccess}
-      toggleToolAccess={handlers.toggleToolAccess}
-      showExercise={state.showExercise}
-      setShowExercise={state.setShowExercise}
-      exerciseData={state.exerciseData}
-      handleExerciseSubmit={handlers.handleExerciseSubmit}
-      handleExerciseUpdate={handlers.handleExerciseUpdate}
-      handleExerciseDelete={handlers.handleExerciseDelete}
-      handleExerciseAnswerChange={handlers.handleExerciseAnswerChange}
-      showStopwatch={state.showStopwatch}
-      setShowStopwatch={state.setShowStopwatch}
-      stopwatch={stopwatch}
-      musicOptions={MUSIC_OPTIONS}
-      toggleBackgroundMusic={handlers.toggleBackgroundMusic}
-      selectedMusic={state.selectedMusic}
-      backgroundMusicPlaying={state.backgroundMusicPlaying}
-      musicVolume={state.musicVolume}
-      handleMusicVolumeChange={handlers.handleMusicVolumeChange}
-      sessionNotes={state.sessionNotes}
-      handleNotesChange={handlers.handleNotesChange}
-      handleClearNotes={handlers.handleClearNotes}
-      learningContentSearch={state.learningContentSearch}
-      handleLearningContentSearch={handlers.handleLearningContentSearch}
-      filteredLearningContent={filteredLearningContent}
-      isSearching={state.isSearching}
-      onDragStartContent={handlers.onDragStartContent}
-      filteredLearningGoals={state.filteredLearningGoals}
-      selectedPromptLevel={state.selectedPromptLevel}
-      setSelectedPromptLevel={state.setSelectedPromptLevel}
-      selectedReinforcementLevel={state.selectedReinforcementLevel}
-      setSelectedReinforcementLevel={state.setSelectedReinforcementLevel}
-      selectedProgramId={state.selectedProgramId}
-      handleProgramCheck={handlers.handleProgramCheck}
-      webRTC={state.videoService}
-      toggleListening={toggleListening}
-      listening={listening}
-      transcript={transcript}
-      onSaveReport={handleSaveReport}
-      youtubePopups={state.youtubePopups}
-      handleYoutubeDropped={handlers.handleYoutubeDropped}
-      handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
-      activeIcons={state.activeIcons}
-      handleToolClick={handlers.handleToolClick}
-      wbBtnBase={wbBtnBase}
-      wbBtnActive={wbBtnActive}
-      wbSmallBtnBase={wbSmallBtnBase}
-      wbSmallBtnActive={wbSmallBtnActive}
-      handleHeaderClick={handlers.handleHeaderClick}
-      showObserverModal={state.showObserverModal}
-      observerData={state.observerData}
-      handleObserverModalOk={handleObserverModalOk}
-      LeftSidebarComponent={
-        <LearningProgramSidebar
-          sessionInfo={state.sessionInfo}
-          filteredLearningGoals={state.filteredLearningGoals}
-          selectedPromptLevel={state.selectedPromptLevel}
-          setSelectedPromptLevel={state.setSelectedPromptLevel}
-          selectedReinforcementLevel={state.selectedReinforcementLevel}
-          setSelectedReinforcementLevel={state.setSelectedReinforcementLevel}
-          selectedProgramId={state.selectedProgramId}
-          handleProgramCheck={handlers.handleProgramCheck}
-          webRTC={state.videoService}
-          toggleListening={toggleListening}
-          listening={listening}
-          transcript={transcript}
-          whiteboardService={state.whiteboardService}
-          onSaveReport={handleSaveReport}
-        />
-      }
-    />
+    <>
+      {/* Learner admission modal */}
+      {pendingAdmission && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '14px', padding: '36px 32px', maxWidth: '420px', width: '92%', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '52px', marginBottom: '12px' }}>🎓</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: '#1a1a2e' }}>Learner Wants to Join</h2>
+            <p style={{ color: '#555', marginBottom: '28px', fontSize: '15px' }}>
+              <strong>{pendingAdmission.name}</strong> is requesting to join this session.
+            </p>
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+              <button
+                onClick={handleAdmitLearner}
+                style={{ padding: '10px 28px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ✅ Admit
+              </button>
+              <button
+                onClick={handleRejectLearner}
+                style={{ padding: '10px 28px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}
+              >
+                ❌ Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <InstructorSessionPage
+        role="trainer"
+        participantName="Learner"
+        participantType="learner"
+        pageClassName={pageClassName}
+        navbarClassName={navbarClassName}
+        showHeader={state.showHeader}
+        showInfoBar={state.showInfoBar}
+        setShowInfoBar={state.setShowInfoBar}
+        sessionInfo={state.sessionInfo}
+        connectionStatus={state.connectionStatus}
+        timeLeft={state.timeLeft}
+        micEnabled={state.micEnabled}
+        cameraEnabled={state.cameraEnabled}
+        handleToggleMic={handlers.handleToggleMic}
+        handleToggleCamera={handlers.handleToggleCamera}
+        handleFreeze={handlers.handleFreeze}
+        handleRemoveParticipant={handleRemoveLearner}
+        handleEndSession={handlers.handleEndSession}
+        eraseAllPen={handlers.eraseAllPen}
+        addBucket={handlers.addBucket}
+        isFrozen={state.isFrozen}
+        recordingStatus={recordingStatus}
+        onToggleRecording={handleToggleRecording}
+        onPauseResumeRecording={handlePauseResumeRecording}
+        isPaused={isRecordingPaused}
+        localStream={state.localStream}
+        remoteStream={state.remoteStream}
+        remoteVideoRef={state.remoteVideoRef}
+        audioRef={state.audioRef}
+        whiteboardService={state.whiteboardService}
+        whiteboardCanvasRef={state.whiteboardCanvasRef}
+        canvasItems={state.canvasItems}
+        setCanvasItems={state.setCanvasItems}
+        remoteSelectedItemIds={state.remoteSelectedItemIds}
+        setRemoteSelectedItemIds={state.setRemoteSelectedItemIds}
+        feedbackMessage={state.feedbackMessage}
+        waitingMessage={state.waitingMessage}
+        floatingAnimations={state.floatingAnimations}
+        setFloatingAnimations={state.setFloatingAnimations}
+        handleAnimationPop={handlers.handleAnimationPop}
+        tool={state.tool}
+        setTool={state.setTool}
+        color={state.color}
+        setColor={state.setColor}
+        lineWidth={state.lineWidth}
+        setLineWidth={state.setLineWidth}
+        buckets={state.buckets}
+        setBuckets={state.setBuckets}
+        bucketColor={state.bucketColor}
+        setBucketColor={state.setBucketColor}
+        toolActive={state.toolActive}
+        setToolActive={state.setToolActive}
+        eraserActive={state.eraserActive}
+        setEraserActive={state.setEraserActive}
+        eraseAllActive={state.eraseAllActive}
+        setEraseAllActive={state.setEraseAllActive}
+        clearCanvasTrigger={state.clearCanvasTrigger}
+        setClearCanvasTrigger={state.setClearCanvasTrigger}
+        erasePenTrigger={state.erasePenTrigger}
+        redrawCanvasTrigger={state.redrawCanvasTrigger}
+        toolAccess={state.toolAccess}
+        toggleToolAccess={handlers.toggleToolAccess}
+        showExercise={state.showExercise}
+        setShowExercise={state.setShowExercise}
+        exerciseData={state.exerciseData}
+        handleExerciseSubmit={handlers.handleExerciseSubmit}
+        handleExerciseUpdate={handlers.handleExerciseUpdate}
+        handleExerciseDelete={handlers.handleExerciseDelete}
+        handleExerciseAnswerChange={handlers.handleExerciseAnswerChange}
+        showStopwatch={state.showStopwatch}
+        setShowStopwatch={state.setShowStopwatch}
+        stopwatch={stopwatch}
+        musicOptions={MUSIC_OPTIONS}
+        toggleBackgroundMusic={handlers.toggleBackgroundMusic}
+        selectedMusic={state.selectedMusic}
+        backgroundMusicPlaying={state.backgroundMusicPlaying}
+        musicVolume={state.musicVolume}
+        handleMusicVolumeChange={handlers.handleMusicVolumeChange}
+        sessionNotes={state.sessionNotes}
+        handleNotesChange={handlers.handleNotesChange}
+        handleClearNotes={handlers.handleClearNotes}
+        learningContentSearch={state.learningContentSearch}
+        handleLearningContentSearch={handlers.handleLearningContentSearch}
+        filteredLearningContent={filteredLearningContent}
+        isSearching={state.isSearching}
+        onDragStartContent={handlers.onDragStartContent}
+        filteredLearningGoals={state.filteredLearningGoals}
+        selectedPromptLevel={state.selectedPromptLevel}
+        setSelectedPromptLevel={state.setSelectedPromptLevel}
+        selectedReinforcementLevel={state.selectedReinforcementLevel}
+        setSelectedReinforcementLevel={state.setSelectedReinforcementLevel}
+        selectedProgramId={state.selectedProgramId}
+        handleProgramCheck={handlers.handleProgramCheck}
+        webRTC={state.videoService}
+        toggleListening={toggleListening}
+        listening={listening}
+        transcript={transcript}
+        onSaveReport={handleSaveReport}
+        youtubePopups={state.youtubePopups}
+        handleYoutubeDropped={handlers.handleYoutubeDropped}
+        handleCloseYoutubePopup={handlers.handleCloseYoutubePopup}
+        inlineYoutube={state.inlineYoutube}
+        setInlineYoutube={state.setInlineYoutube}
+        activeIcons={state.activeIcons}
+        isWaitActive={state.isWaitActive}
+        handleToolClick={handlers.handleToolClick}
+        wbBtnBase={wbBtnBase}
+        wbBtnActive={wbBtnActive}
+        wbSmallBtnBase={wbSmallBtnBase}
+        wbSmallBtnActive={wbSmallBtnActive}
+        handleHeaderClick={handlers.handleHeaderClick}
+        showObserverModal={state.showObserverModal}
+        observerData={state.observerData}
+        handleObserverModalOk={handleObserverModalOk}
+        LeftSidebarComponent={
+          <LearningProgramSidebar
+            sessionInfo={state.sessionInfo}
+            filteredLearningGoals={state.filteredLearningGoals}
+            selectedPromptLevel={state.selectedPromptLevel}
+            setSelectedPromptLevel={state.setSelectedPromptLevel}
+            selectedReinforcementLevel={state.selectedReinforcementLevel}
+            setSelectedReinforcementLevel={state.setSelectedReinforcementLevel}
+            reinforcementValueVisible={isReinforcementValueVisible}
+            onToggleReinforcementValueVisibility={handleToggleReinforcementValueVisibility}
+            selectedProgramId={state.selectedProgramId}
+            handleProgramCheck={handlers.handleProgramCheck}
+            webRTC={state.videoService}
+            toggleListening={toggleListening}
+            listening={listening}
+            transcript={transcript}
+            whiteboardService={state.whiteboardService}
+            onSaveReport={handleSaveReport}
+          />
+        }
+      />
+    </>
   );
 };
 

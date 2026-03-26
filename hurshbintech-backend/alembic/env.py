@@ -25,6 +25,8 @@ from app.models.program_assignment_model import ProgramAssignment
 from app.models.program_assignment_attachment_model import ProgramAssignmentAttachment
 # Chat Models
 from app.models.Chat.chat_model import Conversation, ConversationMember, Message, ReadReceipt
+from app.models.learner_progress_report_model import LearnerProgressReport
+from app.models.free_assessment_model import FreeAssessment
 
 
 # this is the Alembic Config object

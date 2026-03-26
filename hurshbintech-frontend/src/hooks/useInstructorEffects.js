@@ -197,9 +197,22 @@ export const useInstructorEffects = ({
         mediaWasVisibleRef.current = mediaControl.currentMedia.isVisible;
     }, [mediaControl.currentMedia.isVisible, mediaWasVisibleRef, setShowStopwatch]);
 
-    // 8. Sync stopwatch to participant (including reset)
+    // 8a. Send immediate sync whenever stopwatch is not running.
+    // Including elapsedTime in deps guarantees reset(0) gets propagated.
     useEffect(() => {
-        if (!whiteboardService) return;
+        if (!whiteboardService || stopwatch.isRunning) return;
+
+        // Send final/current paused state to participant.
+        whiteboardService.send('stopwatch_sync', {
+            elapsedTime: stopwatch.elapsedTime,
+            isRunning: false,
+        });
+    }, [whiteboardService, stopwatch.isRunning, stopwatch.elapsedTime]);
+
+    // 8b. Sync stopwatch to participant (throttled updates while running)
+    useEffect(() => {
+        if (!whiteboardService || !stopwatch.isRunning) return;
+
         const now = Date.now();
         if (now - lastSyncTimeRef.current > 100) {
             whiteboardService.send('stopwatch_sync', {

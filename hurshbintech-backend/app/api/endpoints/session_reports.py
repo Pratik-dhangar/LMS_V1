@@ -1,21 +1,24 @@
 """
-Session Reports API Endpoints
+Manage Learning Progress API Endpoints
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_current_user, get_db, get_current_head
 from app.crud import session_report_crud
-from app.models.user_model import User, UserRole
+from app.models.user_model import User, UserRole, HeadProfile
 from app.schemas.session_report import (
     LearnerReportSummary,
     SessionReportCreate,
     SessionReportResponse,
     SessionReportStatistics,
 )
+from app.services.email_service import EmailService
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -120,11 +123,11 @@ async def get_learners_summary(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
-    Get all learners with report summaries (Head only)
+    Get all learners with report summaries (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads can access learner summaries"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads and admins can access learner summaries"
         )
 
     learners_data = await session_report_crud.get_all_learners_with_reports(db)
@@ -136,11 +139,11 @@ async def get_overall_statistics(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
-    Get overall statistics across all learners (Head only)
+    Get overall statistics across all learners (Head and Admin)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads can access overall statistics"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only heads and admins can access overall statistics"
         )
 
     stats = await session_report_crud.get_overall_statistics(db)
@@ -153,16 +156,99 @@ async def get_unique_learners(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all unique learners from session reports (Head only)
+    Get all unique learners from session reports (Head and Admin)
+    - HEAD: sees only their own learners
+    - ADMIN: sees all learners
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads and admins can access this endpoint",
         )
 
-    learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+    # If HEAD, only show learners created by this head
+    if current_user.role == UserRole.HEAD:
+        result = await db.execute(
+            select(HeadProfile).where(HeadProfile.user_id == current_user.id)
+        )
+        head_profile = result.scalar_one_or_none()
+        if not head_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Head profile not found",
+            )
+        learners = await session_report_crud.get_unique_learners_from_session_reports(db, head_id=head_profile.id)
+    else:
+        # ADMIN sees all learners
+        learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+    
     return learners
+
+
+class SendGoalsReportRequest(BaseModel):
+    sent_by_name: Optional[str] = "Your Training Head"
+
+
+@router.post("/send-goals-report/{learner_id}")
+async def send_learner_goals_report(
+    learner_id: int,
+    body: SendGoalsReportRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Send the Skill Development Graph  summary to the learner's registered email.
+    Only heads and admins can send this.
+    """
+    if current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only heads and admins can send this report",
+        )
+
+    # Fetch learner user record to get email
+    result = await db.execute(select(User).where(User.id == learner_id))
+    learner = result.scalar_one_or_none()
+    if not learner:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learner not found")
+
+    if not learner.email:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Learner does not have a registered email address",
+        )
+
+    # Fetch programs / goals covered by this learner
+    learner_data_list = await session_report_crud.get_unique_learners_from_session_reports(db)
+    learner_data = next((ld for ld in learner_data_list if ld["learner_id"] == learner_id), None)
+
+    programs_covered: list = learner_data["programs_covered"] if learner_data else []
+    total_sessions: int = learner_data["total_sessions"] if learner_data else 0
+    last_session_date = None
+    if learner_data and learner_data.get("last_session_date"):
+        try:
+            last_session_date = learner_data["last_session_date"].strftime("%d %b %Y")
+        except Exception:
+            last_session_date = str(learner_data["last_session_date"])
+
+    sent_by_name = body.sent_by_name or current_user.name or "Your Training Head"
+
+    success = await EmailService.send_learner_goals_report(
+        recipient_email=learner.email,
+        recipient_name=learner.name or learner.email,
+        programs_covered=programs_covered,
+        total_sessions=total_sessions,
+        last_session_date=last_session_date,
+        sent_by_name=sent_by_name,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send email. Please check email configuration.",
+        )
+
+    return {"success": True, "message": f"Goals report sent to {learner.email}"}
 
 
 @router.get("/learner/{learner_id}/programs")
@@ -172,12 +258,18 @@ async def get_learner_programs(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all unique programs/goals for a specific learner (Head only)
+    Get all unique programs/goals for a specific learner (Head, Admin, or the learner themselves)
     """
-    if current_user.role != UserRole.HEAD:
+    if current_user.role == UserRole.LEARNER:
+        if current_user.id != learner_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learners can only access their own programs",
+            )
+    elif current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads, admins, or the learner themselves can access this endpoint",
         )
 
     programs = await session_report_crud.get_programs_by_learner(db, learner_id)
@@ -192,15 +284,21 @@ async def get_program_session_data(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all session data for a specific program/goal for graph visualization (Head only)
+    Get all session data for a specific program/goal for graph visualization.
     Use query parameter for program_name to handle special characters like /
     """
     print(f"[get_program_session_data] learner_id={learner_id}, program_name={program_name}")
     
-    if current_user.role != UserRole.HEAD:
+    if current_user.role == UserRole.LEARNER:
+        if current_user.id != learner_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learners can only access their own program data",
+            )
+    elif current_user.role not in [UserRole.HEAD, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only heads can access this endpoint",
+            detail="Only heads, admins, or the learner themselves can access this endpoint",
         )
 
     session_data = await session_report_crud.get_session_data_by_program(
@@ -254,10 +352,37 @@ async def get_learner_pdf_data(
     """
     Get comprehensive data for PDF generation
     Supports both single program and all programs report
+    HEAD: can only access learners they created
     """
     try:
-        # Get learner info
-        learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+        # Allow learners to access their own PDF data
+        if current_user.role == UserRole.LEARNER:
+            if current_user.id != learner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Learners can only access their own report data",
+                )
+            learner_user = await db.execute(select(User).where(User.id == learner_id))
+            learner_user = learner_user.scalar_one_or_none()
+            if not learner_user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learner not found")
+            learners = [{"learner_id": learner_user.id, "learner_name": learner_user.name}]
+        # Get learner info - filter by head if not admin
+        elif current_user.role == UserRole.HEAD:
+            result = await db.execute(
+                select(HeadProfile).where(HeadProfile.user_id == current_user.id)
+            )
+            head_profile = result.scalar_one_or_none()
+            if not head_profile:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Head profile not found",
+                )
+            learners = await session_report_crud.get_unique_learners_from_session_reports(db, head_id=head_profile.id)
+        else:
+            # ADMIN sees all
+            learners = await session_report_crud.get_unique_learners_from_session_reports(db)
+        
         learner = next((l for l in learners if l["learner_id"] == learner_id), None)
         
         if not learner:
@@ -268,6 +393,11 @@ async def get_learner_pdf_data(
         
         # If specific program requested
         if program_name:
+            learner_programs = await session_report_crud.get_programs_by_learner(db, learner_id)
+            target_program = next(
+                (p for p in learner_programs if p.get("program_name") == program_name),
+                None,
+            )
             session_data = await session_report_crud.get_session_data_by_program(
                 db, learner_id, program_name
             )
@@ -275,6 +405,7 @@ async def get_learner_pdf_data(
             return {
                 "learner_name": learner["learner_name"],
                 "program_name": program_name,
+                "skill_name": (target_program or {}).get("skill_name"),
                 "total_sessions": len(session_data),
                 "sessions": session_data,
                 "type": "single_program"
@@ -293,6 +424,7 @@ async def get_learner_pdf_data(
                 programs_with_sessions.append({
                     "program_name": program["program_name"],
                     "program_id": program.get("program_id"),
+                    "skill_name": program.get("skill_name"),
                     "total_sessions": len(session_data),
                     "last_session_date": program.get("last_session_date"),
                     "sessions": session_data
@@ -303,6 +435,7 @@ async def get_learner_pdf_data(
                 programs_with_sessions.append({
                     "program_name": program["program_name"],
                     "program_id": program.get("program_id"),
+                    "skill_name": program.get("skill_name"),
                     "total_sessions": 0,
                     "last_session_date": program.get("last_session_date"),
                     "sessions": []

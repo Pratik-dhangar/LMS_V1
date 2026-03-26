@@ -226,7 +226,7 @@ const ManageProgramAssignments = () => {
     }
 
     if (!formData.assignment_title || formData.assignment_title.trim() === '') {
-      return toast.error('Please enter an assignment title');
+      return toast.error('Please enter a home program title');
     }
 
     if (!formData.start_date || !formData.end_date) {
@@ -395,7 +395,7 @@ const ManageProgramAssignments = () => {
   const handleDeleteAssignmentTitle = async (titleAssignments) => {
     const programCount = titleAssignments.length;
     const confirmation = window.confirm(
-      `Delete this assignment title and all ${programCount} associated program${programCount > 1 ? 's' : ''}?\n\n⚠️ This will delete:\n- All program assignments under this title\n- All assigned content\n\nThis action cannot be undone.`
+      `Delete this home program title and all ${programCount} associated program${programCount > 1 ? 's' : ''}?\n\n⚠️ This will delete:\n- All program assignments under this title\n- All assigned content\n\nThis action cannot be undone.`
     );
 
     if (!confirmation) return;
@@ -449,7 +449,7 @@ const ManageProgramAssignments = () => {
     e.preventDefault();
 
     if (!formData.assignment_title || formData.assignment_title.trim() === '') {
-      return toast.error('Please enter an assignment title');
+      return toast.error('Please enter a home program title');
     }
 
     if (!formData.start_date || !formData.end_date) {
@@ -671,7 +671,7 @@ const ManageProgramAssignments = () => {
               Back to Dashboard
             </button>
             <div>
-              <h1 className="page-title">Manage Home Program Assignments</h1>
+              <h1 className="page-title">Manage Home Learning Program</h1>
               <p className="page-description">
                 Assign home learning programs to learners and track their progress
               </p>
@@ -684,7 +684,7 @@ const ManageProgramAssignments = () => {
               onClick={() => setShowAssignModal(true)}
               className="btn-gradient  "
             >
-              + Assign Home Program
+              + Assign Home Learning Program
             </button>
           </div>
 
@@ -701,7 +701,7 @@ const ManageProgramAssignments = () => {
                 className={`mpa-tab-btn ${activeTab === 'assignments' ? 'mpa-tab-btn-active' : ''}`}
                 onClick={() => setActiveTab('assignments')}
               >
-                📋 All Home Program Assignments
+                📋  All Home Learning Programs
               </button>
             </div>
           </div>
@@ -736,7 +736,7 @@ const ManageProgramAssignments = () => {
                       </div>
 
                       <div className="overview-programs">
-                        <h4 className="overview-programs-title">📌 Assigned Home Program Titles</h4>
+                        <h4 className="overview-programs-title">📌 Assigned Home Learning Program Titles</h4>
                         <div className="overview-programs-list">
                           {Array.from(
                             // Group assignments by assignment_title
@@ -965,12 +965,12 @@ const ManageProgramAssignments = () => {
         </div>
       </div>
 
-      {/* Assign Home Program Modal */}
+      {/* Assign Home Learning Program Modal */}
       {showAssignModal && (
         <div className="app-modal-overlay">
           <div className="app-modal-container app-modal-container--lg">
             <div className="app-modal-header app-modal-header--primary">
-              <h2 className="app-modal-title">Assign Home Program to Learners</h2>
+              <h2 className="app-modal-title">Assign Home Learning Program to Learners</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -1000,11 +1000,11 @@ const ManageProgramAssignments = () => {
                 {/* Assignment Title */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Assignment Title <span className="mpa-form-required">*</span>
+                    Home Learning Program Title <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter a title for this program assignment (e.g., 'Q1 Home Program', 'Advanced Learning Path')..."
+                    placeholder="Enter a title for this program assignment (e.g., 'Q1 Home Learning Program', 'Advanced Learning Path')..."
                     className="mpa-form-input"
                     value={formData.assignment_title}
                     onChange={(e) => setFormData({ ...formData, assignment_title: e.target.value })}
@@ -1052,7 +1052,7 @@ const ManageProgramAssignments = () => {
                 {/* Program Selection */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Select Programs <span className="mpa-form-required">*</span>
+                    Learning Goals <span className="mpa-form-required">*</span>
                     <span className="mpa-form-hint">({formData.program_ids.length} selected)</span>
                   </label>
                   <input
@@ -1241,7 +1241,7 @@ const ManageProgramAssignments = () => {
                   Cancel
                 </button>
                 <button type="submit" className="btn-gradient">
-                  Assign Home Program
+                  Assign Home Learning Program
                 </button>
               </div>
             </form>
@@ -1326,10 +1326,10 @@ const ManageProgramAssignments = () => {
 
             <form onSubmit={handleEditSubmit}>
               <div className="app-modal-content">
-                {/* Assignment Title */}
+                {/* Home Learning Program Title */}
                 <div className="mpa-form-field">
                   <label className="mpa-form-label">
-                    Assignment Title <span className="mpa-form-required">*</span>
+                    Home Learning Program Title <span className="mpa-form-required">*</span>
                   </label>
                   <input
                     type="text"
@@ -1360,7 +1360,7 @@ const ManageProgramAssignments = () => {
 
                 {/* Programs Section */}
                 <div className="mpa-form-field">
-                  <label className="mpa-form-label">Programs <span className="mpa-form-required">*</span></label>
+                  <label className="mpa-form-label">Learning Goals <span className="mpa-form-required">*</span></label>
                   <div className="mpa-search-box">
                     <input
                       type="text"
@@ -1540,7 +1540,7 @@ const ManageProgramAssignments = () => {
         <div className="app-modal-overlay">
           <div className="app-modal-container mpa-modal-lg">
             <div className="app-modal-header">
-              <h2 className="app-modal-title">Home Program Tracking</h2>
+              <h2 className="app-modal-title">Home Learning Program Tracking</h2>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button
                   onClick={handleRefreshTracking}
@@ -1570,16 +1570,16 @@ const ManageProgramAssignments = () => {
 
               {/* Assignment Details */}
               <div className="mpa-assignment-details">
-                <h3 className="mpa-section-title">Home Program Details</h3>
+                <h3 className="mpa-section-title">Home Learning Program Details</h3>
                 <div className="mpa-details-grid">
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Home Program Title:</span>
+                    <span className="mpa-detail-label">Home Learning Program Title:</span>
                     <span className="mpa-detail-value">
                       {selectedAssignment?.assignment_title || 'N/A'}
                     </span>
                   </div>
                   <div className="mpa-detail-item">
-                    <span className="mpa-detail-label">Home Programs:</span>
+                    <span className="mpa-detail-label">Learning Goals:</span>
                     <span className="mpa-detail-value">
                       {selectedAssignment?.program_names && selectedAssignment.program_names.length > 0
                         ? selectedAssignment.program_names.join(', ')

@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
-import { markSessionActive } from '../../utils/sessionActivityTracker';
+import sessionService from '../../api/services/sessionService';
 import Whiteboard from '../../components/common/Whiteboard';
 import Exercise from '../../components/session/Exercise';
 import MessageList from '../../components/common/MessageList';
@@ -27,11 +27,13 @@ import {
   AttendeeUpperSection,
   AttendeeWhiteboardSection,
   AttendeeWhiteboardWithVideo,
+  DrawColorPalette,
   AttendeeWaitingScreen,
   AttendeeWaitingModal,
   usePromptAnimation,
   useBulbGlowAnimation,
-  attendeeSessionStyles
+  attendeeSessionStyles,
+  SessionFeedbackModal
 } from '../../components/session/AttendeeSessionLayout';
 
 
@@ -94,11 +96,14 @@ const ClientSession = () => {
   // Client-specific state
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [awaitingAdmission, setAwaitingAdmission] = useState(false); // Waiting for coach to admit
+  const [admissionDenied, setAdmissionDenied] = useState(false); // Coach rejected the join request
   const [showExercise, setShowExercise] = useState(false);
   const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const pollingIntervalRef = useRef(null);
-  const restrictionAlertShownRef = useRef(false);
+  const pendingCleanupRef = useRef(null);
 
   // Use shared animation hooks
   const { isPromptLineOpen, setIsPromptLineOpen, promptLineAnimating } = usePromptAnimation(promptText);
@@ -227,12 +232,11 @@ const ClientSession = () => {
     whiteboardService.onSessionEnded = (data) => {
       console.log('[ClientSession] Session ended by coach:', data);
       toast.info('Session has been ended by the coach');
-
-      // Clean up and redirect after a short delay
-      setTimeout(() => {
+      setShowFeedbackModal(true);
+      pendingCleanupRef.current = () => {
         cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
         navigate('/my-appointments');
-      }, 2000);
+      };
     };
 
     return () => {
@@ -274,11 +278,29 @@ const ClientSession = () => {
 
   // Connect remote stream to video element
   useEffect(() => {
+    if (remoteStream) {
+      // Clear admission gate as soon as any stream arrives (ref may not be mounted yet)
+      setAwaitingAdmission(false);
+    }
     if (remoteStream && remoteVideoRef.current) {
       console.log('[ClientSession] Connecting remote stream to video element');
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, awaitingAdmission]);
+
+  // Detect admission rejection or removal from coach via waiting_message signal
+  useEffect(() => {
+    if (waitingMessage === '__ADMISSION_REJECTED__') {
+      setAdmissionDenied(true);
+      setAwaitingAdmission(false);
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/my-appointments'), 2000);
+    } else if (waitingMessage === '__REMOVED_FROM_SESSION__') {
+      toast.warning('You have been removed from the session by the coach.');
+      cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
+      setTimeout(() => navigate('/my-appointments'), 1500);
+    }
+  }, [waitingMessage, navigate]);
 
   // Countdown timer
   useEffect(() => {
@@ -373,6 +395,7 @@ const ClientSession = () => {
       }
 
       setLoading(false);
+      setAwaitingAdmission(true); // Show awaiting-admission screen until coach's offer arrives
     } catch (error) {
       console.error('[ClientSession] Error initializing session:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to initialize session';
@@ -397,20 +420,10 @@ const ClientSession = () => {
       const session = await coachSessionService.getSessionDetails(sessionId);
       setSessionInfo(session);
 
-      const sessionCheck = markSessionActive(sessionId, 'client');
-      if (!sessionCheck.success) {
-        if (!restrictionAlertShownRef.current) {
-          restrictionAlertShownRef.current = true;
-          toast.error(sessionCheck.message);
-          navigate('/my-appointments');
-        }
-        setRetrying(false);
-        return;
-      }
-
       await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
       setShowWaitingModal(false);
       setLoading(false);
+      setAwaitingAdmission(true);
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || 'Failed to join session';
       if (!(error.response?.status === 400 && errorMessage.includes('not active'))) {
@@ -441,20 +454,10 @@ const ClientSession = () => {
           setTimeout(async () => {
             setRetrying(true);
             try {
-              const sessionCheck = markSessionActive(sessionId, 'client');
-              if (!sessionCheck.success) {
-                if (!restrictionAlertShownRef.current) {
-                  restrictionAlertShownRef.current = true;
-                  toast.error(sessionCheck.message);
-                  navigate('/my-appointments');
-                }
-                setRetrying(false);
-                return;
-              }
-
               await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'client', sessionState);
               setShowWaitingModal(false);
               setLoading(false);
+              setAwaitingAdmission(true);
             } catch (error) {
               setRetrying(false);
             }
@@ -523,6 +526,44 @@ const ClientSession = () => {
     );
   }
 
+  // Admission denied by coach
+  if (admissionDenied) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Your request to join the session was not accepted by the coach.
+          </p>
+          <p className="text-sm text-gray-500">Redirecting you back...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting for coach to admit
+  if (awaitingAdmission) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>⏳</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Awaiting Instructor</h2>
+          <p className="text-gray-600 mb-2">
+            You have joined the session. Please wait for your instructor to admit you.
+          </p>
+          <p className="text-gray-600 mb-6">
+            <strong>{sessionInfo?.coach_name ?? 'Your instructor'}</strong> will admit you shortly.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
+            <span>Waiting for admission...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AttendeeSessionRoot pageClassName={pageClassName} audioRef={audioRef}>
       {/* Upper Section: Metrics (20%) | Prompt (60%) | Video (20%) */}
@@ -564,16 +605,24 @@ const ClientSession = () => {
       {/* Main Container - Whiteboard */}
       <div className="learner-main-container">
         <AttendeeWhiteboardSection>
-          <div className="w-full h-full">
+          <div className="w-full h-full" style={{ position: 'relative' }}>
+            <DrawColorPalette
+              toolAccess={toolAccess}
+              tool={tool}
+              setTool={setTool}
+              color={color}
+              setColor={setColor}
+            />
             <Whiteboard
               whiteboardService={whiteboardService}
               isTrainer={false}
               canvasItems={canvasItems}
               setCanvasItems={setCanvasItems}
-              isFrozen={false}
+              isFrozen={isFrozen}
               isPaused={false}
               toolAccess={toolAccess}
               remoteSelectedItemIds={remoteSelectedItemIds}
+              setRemoteSelectedItemIds={setRemoteSelectedItemIds}
               textMessages={textMessages}
               setTextMessages={setTextMessages}
               feedbackMessage={feedbackMessage}
@@ -617,6 +666,24 @@ const ClientSession = () => {
           navigate('/client/dashboard');
         }}
       />
+      {showFeedbackModal && (
+        <SessionFeedbackModal
+          onSubmit={async (rating, remark) => {
+            try {
+              await sessionService.submitFeedback(sessionId, { rating, remark, attendeeRole: 'client' });
+              toast.success('Thank you for your feedback!');
+            } catch {
+              // silently ignore
+            }
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+          onSkip={() => {
+            setShowFeedbackModal(false);
+            if (pendingCleanupRef.current) pendingCleanupRef.current();
+          }}
+        />
+      )}
     </AttendeeSessionRoot>
   );
 };

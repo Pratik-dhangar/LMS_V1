@@ -45,18 +45,6 @@
 
 
  /* ============ FILTER SECTION ============ */
- .filter-section {
-     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-     padding: 20px;
-     border-radius: 12px;
-     margin-bottom: 25px;
-     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-     border: 1px solid #e8eaed;
-     display: flex;
-     gap: 16px;
-     align-items: center;
-     flex-wrap: nowrap;
- }
 
  /* Search Box */
  .search-box {
@@ -463,6 +451,7 @@
  }
 
  .btn-view {
+    width: 5rem;
      background-color: #e3f2fd;
      color: #1976d2;
  }
@@ -496,9 +485,9 @@
      align-items: center;
      gap: 15px;
      padding: 20px;
-     background: white;
+     /* background: white; */
      border-radius: 12px;
-     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+     /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); */
  }
 
  .pagination-btn {

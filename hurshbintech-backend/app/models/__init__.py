@@ -1,3 +1,4 @@
+from app.models.program_model import Program
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goal_assignment_model import LearningGoalAssignment
 from app.models.learning_goals_model import LearningGoals
@@ -59,8 +60,11 @@ from app.models.subscription import (
     DiscountType,
     RefundType,
     AdjustmentType,
+    PublicSubscriptionInquiry,
 )
 from app.models.whiteboard_state_model import WhiteboardState
+from app.models.session_feedback_model import SessionFeedback
+from app.models.free_assessment_model import FreeAssessment
 
 __all__ = [
     "User",
@@ -78,6 +82,7 @@ __all__ = [
     "CoachSession",
     "CoachSessionParticipant",
     "CoachAppointmentSession",
+    "Program",
     "TrainingSession",
     "LearningContent",
     "LearningGoals",
@@ -116,5 +121,7 @@ __all__ = [
     "DiscountType",
     "RefundType",
     "AdjustmentType",
+    "PublicSubscriptionInquiry",
     "WhiteboardState",
+    "FreeAssessment",
 ]

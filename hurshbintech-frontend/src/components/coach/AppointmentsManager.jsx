@@ -387,8 +387,8 @@ const AppointmentsManager = () => {
               <option value="CONFIRMED">Confirmed</option>
               <option value="COMPLETED">Completed</option>
               <option value="REJECTED">Rejected</option>
-              <option value="GUEST_INTENT">Guest Intent</option>
-              <option value="VERIFICATION_PENDING">Payment Review</option>
+              <option value="GUEST_INTENT">Guest Booking (New)</option>
+              <option value="VERIFICATION_PENDING">Guest Booking (Awaiting Admin)</option>
             </select>
           </div>
 
@@ -488,8 +488,8 @@ const AppointmentsManager = () => {
                       onClick={() => handleStartSession(apt)}
                       disabled={!isSessionStartable(apt) || updating}
                       className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap ${isSessionStartable(apt) && !updating
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       title={!isSessionStartable(apt) ? 'Session can be started 30 minutes before scheduled time' : 'Start video session now'}
                     >
@@ -671,7 +671,7 @@ const AppointmentsManager = () => {
 
             {/* Modal Footer */}
             <div className="app-modal-footer">
-              {!isAppointmentCompleted(selectedAppointment) && (selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending' || selectedAppointment.status === 'GUEST_INTENT' || selectedAppointment.status === 'VERIFICATION_PENDING') && (
+              {!isAppointmentCompleted(selectedAppointment) && (selectedAppointment.status === 'PENDING' || selectedAppointment.status === 'pending') && (
                 <>
                   <button
                     onClick={handleOpenRejectModal}
@@ -687,11 +687,11 @@ const AppointmentsManager = () => {
                     disabled={updating}
                   >
                     <Check className="w-4 h-4" />
-                    {updating ? 'Updating...' : selectedAppointment.status === 'GUEST_INTENT' ? 'Send Payment Link' : selectedAppointment.status === 'VERIFICATION_PENDING' ? 'Confirm Payment' : 'Accept'}
+                    {updating ? 'Updating...' : 'Accept'}
                   </button>
                 </>
               )}
-              {(isAppointmentCompleted(selectedAppointment) || (selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending' && selectedAppointment.status !== 'GUEST_INTENT' && selectedAppointment.status !== 'VERIFICATION_PENDING')) && (
+              {(isAppointmentCompleted(selectedAppointment) || (selectedAppointment.status !== 'PENDING' && selectedAppointment.status !== 'pending')) && (
                 <button onClick={closeModal} className="app-modal-btn app-modal-btn--secondary">
                   Close
                 </button>

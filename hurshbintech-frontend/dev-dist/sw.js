@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
+define(['./workbox-b79e8dca'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -78,28 +78,29 @@ define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
    * See https://goo.gl/S9QRab
    */
   workbox.precacheAndRoute([{
-    "url": "suppress-warnings.js",
-    "revision": "0e05294fed0a81386845d09a1192d272"
-  }, {
     "url": "registerSW.js",
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.s7ou68l05tg"
+    "revision": "0.b9uht6ur8v8"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
+    allowlist: [/^\/$/],
+    denylist: [/\/api\/content\/learning-content\/s3-files\//]
   }));
   workbox.registerRoute(({
     url
-  }) => url.pathname.startsWith("/s3/"), new workbox.NetworkFirst({
+  }) => url.pathname.includes("/s3-files/"), new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(({
+    url
+  }) => (url.pathname.startsWith("/s3/") || url.pathname.startsWith("/api/media/s3/")) && url.origin === self.location.origin, new workbox.NetworkFirst({
     "cacheName": "s3-media-cache",
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
+      maxEntries: 200,
       maxAgeSeconds: 2592000
     }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
+      statuses: [200]
     })]
   }), 'GET');
   workbox.registerRoute(({
@@ -112,14 +113,16 @@ define(['./workbox-29bfc98f'], (function (workbox) { 'use strict';
     const isWebinars = path.includes("/api/communication/webinars");
     const isAppointments = path.includes("/api/appointments");
     const isSessionMutation = path.includes("/sessions/") && (path.endsWith("/start") || path.endsWith("/end") || path.endsWith("/cancel") || path.endsWith("/join") || path.endsWith("/leave"));
-    return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || isWebinars || isAppointments || isSessionMutation;
+    const isProgramAssignmentLearner = path.includes("/program-assignments/learner/");
+    return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || isWebinars || isAppointments || isSessionMutation || isProgramAssignmentLearner;
   }, new workbox.NetworkOnly(), 'GET');
   workbox.registerRoute(({
     url
   }) => {
     const isApi = url.pathname.startsWith("/api");
     const isAdminApi = url.pathname.includes("/admin/");
-    return isApi && !isAdminApi;
+    const isSameOrigin = url.origin === self.location.origin;
+    return isApi && !isAdminApi && isSameOrigin;
   }, new workbox.NetworkFirst({
     "cacheName": "api-cache",
     plugins: [new workbox.ExpirationPlugin({

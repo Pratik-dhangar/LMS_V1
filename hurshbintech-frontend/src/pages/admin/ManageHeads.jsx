@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff, Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import SearchBar from "../../components/common/SearchBar";
 import adminService from "../../api/services/adminService";
+import { downloadProfilePDF } from "../../utils/pdfGenerator";
 import "../../styles/Table.css";
 import "../../styles/ManageUsersLayout.css";
 
@@ -22,6 +23,7 @@ const ManageHeads = () => {
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
   const [error, setError] = useState("");
+  const [downloadingHead, setDownloadingHead] = useState(null);
 
   // Fetch heads data when component mounts
   useEffect(() => {
@@ -39,8 +41,8 @@ const ManageHeads = () => {
         (head) =>
           head.name.toLowerCase().includes(searchLower) ||
           head.passcode.toLowerCase().includes(searchLower) ||
-          (head.contact_no &&
-            head.contact_no.toLowerCase().includes(searchLower))
+          (head.contact_number &&
+            head.contact_number.toLowerCase().includes(searchLower))
       );
       setFilteredHeads(filtered);
     }
@@ -72,6 +74,29 @@ const ManageHeads = () => {
    */
   const handleEditHead = (headId) => {
     navigate(`/admin/edit-head/${headId}`);
+  };
+
+  /**
+   * Download profile PDF for a specific head
+   */
+  const handleDownloadProfile = async (head) => {
+    setDownloadingHead(head.id);
+    try {
+      const fullHeadProfile = await adminService.getHeadById(head.id);
+      await downloadProfilePDF(fullHeadProfile, "head");
+      toast.success(`${head.name}'s profile downloaded successfully!`, {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (err) {
+      console.error("Error downloading head profile:", err);
+      toast.error("Failed to download profile. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    } finally {
+      setDownloadingHead(null);
+    }
   };
 
   /**
@@ -266,23 +291,37 @@ const ManageHeads = () => {
                             </div>
                           </td>
                           <td className="table-primary-td">
-                            {head.contact_no || "N/A"}
+                            {head.contact_number || "N/A"}
                           </td>
                           <td className="table-primary-td">
                             {head.date_of_joining
                               ? new Date(
-                                  head.date_of_joining
-                                ).toLocaleDateString()
+                                head.date_of_joining
+                              ).toLocaleDateString()
                               : "N/A"}
                           </td>
                           <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleEditHead(head.id)}
-                              className="app-modal-btn app-modal-btn--primary btn-sm "
-                            >
-                              <Edit3 className="table-primary-icon-sm" />
-                              Edit Profile
-                            </button>
+                            <div style={{ display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
+                              <button
+                                onClick={() => handleEditHead(head.id)}
+                                className="app-modal-btn app-modal-btn--primary btn-sm"
+                                title="Edit Profile"
+                              >
+                                <Edit3 className="table-primary-icon-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadProfile(head)}
+                                disabled={downloadingHead === head.id}
+                                className="app-modal-btn app-modal-btn--primary btn-sm"
+                                title="Download Profile"
+                                style={{
+                                  opacity: downloadingHead === head.id ? 0.6 : 1,
+                                  cursor: downloadingHead === head.id ? "not-allowed" : "pointer",
+                                }}
+                              >
+                                <Download className="table-primary-icon-sm" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

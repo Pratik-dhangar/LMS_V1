@@ -87,6 +87,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -325,6 +326,14 @@
   font-family: inherit;
 }
 
+.guest-booking-flow .react-datepicker-wrapper {
+  width: 100%;
+}
+
+.guest-booking-flow .guest-date-picker-input {
+  width: 100%;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -417,7 +426,7 @@
   .guest-booking-flow .otp-input-container {
     gap: 0.5rem;
   }
-  
+
   .otp-input-box {
     width: 2.5rem;
     height: 2.5rem;
@@ -540,19 +549,23 @@
 /* Coach Cards Grid */
 .guest-booking-flow .coach-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
 
+.guest-booking-flow .coach-card::before {
+  display: none;
+}
+
 .guest-booking-flow .coach-card {
   position: relative;
-  padding: 1rem;
+  padding: 1.25rem 1rem;
   background: white;
   border: 2px solid #e5e7eb;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -560,7 +573,22 @@
   gap: 0.75rem;
 }
 
-.coach-card:hover {
+/* Horizontal layout for the pre-selected single coach card */
+.guest-booking-flow .coach-card.coach-card-horizontal {
+  flex-direction: row;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  max-width: 100%;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.guest-booking-flow .coach-card-avatar-wrap {
+  flex-shrink: 0;
+}
+
+.guest-booking-flow .coach-card:hover {
   border-color: #41a67e;
   box-shadow: 0 4px 12px rgba(65, 166, 126, 0.15);
   transform: translateY(-2px);
@@ -574,23 +602,87 @@
 
 .guest-booking-flow .coach-card-image {
   width: 80px;
-  height: 80px;
-  border-radius: 50%;
+  height: 106px;
+  /* 80 × 1.325 ≈ passport 160×212 ratio */
+  border-radius: 0.5rem;
   object-fit: cover;
-  border: 3px solid #41a67e;
+  object-position: top center;
+  /* keep face in frame */
+  border: 2px solid #41a67e;
+  display: block;
+  flex-shrink: 0;
+}
+
+.guest-booking-flow .coach-card-image-placeholder {
+  width: 80px;
+  height: 106px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .guest-booking-flow .coach-card-info {
   flex: 1;
+  min-width: 0;
 }
 
 .guest-booking-flow .coach-card-name {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
+  margin: 0 0 0.6rem 0;
+  font-size: 1rem;
+  font-weight: 700;
   color: #1f2937;
+  line-height: 1.3;
 }
 
+/* Detail pills grid */
+.guest-booking-flow .coach-card-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.guest-booking-flow .coach-card-detail-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.guest-booking-flow .coach-detail-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 0.1rem;
+}
+
+.guest-booking-flow .coach-detail-label::after {
+  content: ':';
+}
+
+.guest-booking-flow .coach-detail-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #065f46;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+/* Legacy specialization class kept for safety */
 .guest-booking-flow .coach-card-specialization {
   margin: 0.25rem 0 0 0;
   font-size: 0.8rem;
@@ -599,10 +691,10 @@
 
 .guest-booking-flow .coach-card-checkmark {
   position: absolute;
-  top: -12px;
-  right: -12px;
-  width: 32px;
-  height: 32px;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #10b981;
   color: white;
@@ -610,7 +702,7 @@
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 1.25rem;
+  font-size: 1rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
@@ -664,6 +756,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -810,6 +903,7 @@
     transform: scale(0);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -874,7 +968,150 @@
   color: #1f2937;
 }
 
-/* Token Expiry Box */
+/* ===== Email Input Wrapper (with checking spinner) ===== */
+.guest-booking-flow .email-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.guest-booking-flow .email-input-wrapper input {
+  width: 100%;
+  padding-right: 2.5rem;
+  /* room for spinner */
+}
+
+.guest-booking-flow .email-checking-spinner {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #41a67e;
+  pointer-events: none;
+}
+
+/* ===== Returning Guest Box ===== */
+.guest-booking-flow .returning-guest-box {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #fffbef 0%, #fff8e1 100%);
+  border: 1.5px solid #f5c842;
+  border-left: 5px solid #f0a500;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(240, 165, 0, 0.12);
+  animation: slideUp 0.25s ease-out;
+}
+
+.guest-booking-flow .returning-guest-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.guest-booking-flow .returning-guest-desc {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: #78350f;
+  line-height: 1.55;
+}
+
+.guest-booking-flow .returning-guest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Follow-up button — amber/gold accent */
+.guest-booking-flow .btn-followup {
+  width: 100%;
+  background: linear-gradient(135deg, #f0a500 0%, #d97706 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(240, 165, 0, 0.35);
+  white-space: nowrap;
+}
+
+.guest-booking-flow .btn-followup:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 4px 12px rgba(240, 165, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.guest-booking-flow .btn-followup:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.guest-booking-flow .btn-followup:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* New session button — neutral/outline style */
+.guest-booking-flow .btn-new-session {
+  width: 100%;
+  background: #fff;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.guest-booking-flow .btn-new-session:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.guest-booking-flow .btn-new-session:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.guest-booking-flow .btn-new-session:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* OTP sent hint line */
+.guest-booking-flow .otp-sent-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 1.25rem;
+  margin-top: 0;
+  line-height: 1.5;
+}
+
+.guest-booking-flow .otp-sent-hint strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* ===== Token Expiry Box ===== */
 .guest-booking-flow .token-expiry-box {
   display: flex;
   align-items: center;

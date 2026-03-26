@@ -67,7 +67,7 @@ const ViewTrainers = () => {
       const filtered = trainers.filter(trainer =>
         trainer.name.toLowerCase().includes(lowerQuery) ||
         trainer.passcode.toLowerCase().includes(lowerQuery) ||
-        (trainer.contact_no && trainer.contact_no.toLowerCase().includes(lowerQuery))
+        (trainer.contact_number && trainer.contact_number.toLowerCase().includes(lowerQuery))
       );
       setFilteredTrainers(filtered);
     }
@@ -114,12 +114,12 @@ const ViewTrainers = () => {
               Back to Dashboard
             </button>
 
-           <div>
-             <h1 className="page-title">
-              View HurshBin Trainers
-            </h1>
-            <p className="page-description">View all registered trainers in the system</p>
-           </div>
+            <div>
+              <h1 className="page-title">
+                View HurshBin Trainers
+              </h1>
+              <p className="page-description">View all registered trainers in the system</p>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -222,7 +222,7 @@ const ViewTrainers = () => {
                             </div>
                           </td>
                           <td className="table-primary-td">
-                            {trainer.contact_no || 'N/A'}
+                            {trainer.contact_number || 'N/A'}
                           </td>
                           <td className="table-primary-td">
                             {trainer.date_of_joining

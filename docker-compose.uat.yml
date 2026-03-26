@@ -20,9 +20,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=Password12#$
-      # CORS: allow the UAT frontend (port 3001) to reach the UAT backend (port 8001)
-      - FRONTEND_URL=https://hurshbin.lumesoftai.in:3001
-      - BACKEND_CORS_ORIGINS=["https://hurshbin.lumesoftai.in:3001"]
+      # CORS: allow the UAT frontend to reach the UAT backend
+      - FRONTEND_URL=https://hurshbin.lumesoftai.in
+      - BACKEND_CORS_ORIGINS=["https://hurshbin.lumesoftai.in"]
     volumes:
       - ~/certs:/app/certs:ro
     depends_on:
@@ -35,7 +35,7 @@ services:
     networks:
       - pwa-network
 
-  # 2. PWA Frontend (UAT - builds from source on EC2, port 3001)
+  # 2. PWA Frontend (UAT - builds from source on EC2, port 443)
   frontend-pwa:
     build:
       context: ./hurshbintech-frontend
@@ -48,9 +48,9 @@ services:
         - VITE_GOOGLE_CLIENT_ID=594243784455-qehgec7ij9lqnvo38jumb5m29ttv4gck.apps.googleusercontent.com
         - ENV_TYPE=uat
     container_name: hurshbintech-frontend-pwa
-    # Map host port 3001 -> Container port 3000
+    # Map host port 443 -> Container port 443
     ports:
-      - "3001:3000"
+      - "443:443"
     volumes:
       - ~/certs:/app/certs:ro
     restart: unless-stopped

@@ -33,6 +33,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { FaMicrophone, FaBars, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import IOSNavBar from '../common/IOSNavBar';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
@@ -43,6 +44,19 @@ import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
 import StopwatchDisplay from '../common/StopwatchDisplay';
+import { playFeedbackSound, playFeedbackSoundLoop, stopFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
+
+const MIN_PEN_SIZE = 1;
+const MAX_PEN_SIZE = 99;
+
+const clampPenSize = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed)) {
+        return null;
+    }
+
+    return Math.min(MAX_PEN_SIZE, Math.max(MIN_PEN_SIZE, parsed));
+};
 
 /**
  * Session Header for Instructor
@@ -113,7 +127,11 @@ export const InstructorVideoControls = ({
     onToggleMic,
     onToggleCamera,
     onToggleFreeze,
-    showFreezeButton = true
+    showFreezeButton = true,
+    recordingStatus = null,
+    onToggleRecording = null,
+    onPauseResumeRecording = null,
+    isPaused = false
 }) => {
     return (
         <div style={{
@@ -155,6 +173,44 @@ export const InstructorVideoControls = ({
                 <span>{cameraEnabled ? 'Video On' : 'Video Off'}</span>
             </button>
 
+            {/* Session Recording Button */}
+            {onToggleRecording && (
+                <button
+                    onClick={onToggleRecording}
+                    className={`${recordingStatus === 'recording' ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                    style={{
+                        padding: '10px 16px',
+                        fontSize: '14px',
+                        gap: '8px',
+                        border: 'none',
+                        cursor: 'pointer'
+                    }}
+                    title={recordingStatus === 'recording' ? 'Stop Recording' : 'Start Recording'}
+                >
+                    <span style={{ fontSize: '18px' }}>{recordingStatus === 'recording' ? '⏹️' : '⏺️'}</span>
+                    <span>{recordingStatus === 'recording' ? 'Stop Rec' : 'Start Rec'}</span>
+                </button>
+            )}
+
+            {/* Pause/Resume Recording Button (only show when recording) */}
+            {onPauseResumeRecording && recordingStatus === 'recording' && (
+                <button
+                    onClick={onPauseResumeRecording}
+                    className={`${isPaused ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-purple-600 hover:bg-purple-700'} text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                    style={{
+                        padding: '10px 16px',
+                        fontSize: '14px',
+                        gap: '8px',
+                        border: 'none',
+                        cursor: 'pointer'
+                    }}
+                    title={isPaused ? 'Resume Recording' : 'Pause Recording'}
+                >
+                    <span style={{ fontSize: '18px' }}>{isPaused ? '▶️' : '⏸️'}</span>
+                    <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                </button>
+            )}
+
             {showFreezeButton && (
                 <button
                     onClick={onToggleFreeze}
@@ -183,7 +239,11 @@ InstructorVideoControls.propTypes = {
     onToggleMic: PropTypes.func.isRequired,
     onToggleCamera: PropTypes.func.isRequired,
     onToggleFreeze: PropTypes.func.isRequired,
-    showFreezeButton: PropTypes.bool
+    showFreezeButton: PropTypes.bool,
+    recordingStatus: PropTypes.oneOf(['idle', 'recording', 'paused', 'stopped', null]),
+    onToggleRecording: PropTypes.func,
+    onPauseResumeRecording: PropTypes.func,
+    isPaused: PropTypes.bool
 };
 
 /**
@@ -238,6 +298,7 @@ export const ToolAccessPanel = ({
     const tools = [
         { key: 'select', label: 'Select', icon: '🔍' },
         { key: 'drag', label: 'Drag', icon: '👆' },
+        { key: 'draw', label: 'Draw', icon: '✏️' },
         { key: 'keyboard', label: 'Keyboard', icon: '⌨️' }
     ];
 
@@ -688,57 +749,59 @@ export const getWSBaseURL = () => {
 /**
  * Common reaction SVG assets used in both Trainer and Coach sessions
  */
+const REACTION_ASSET_BASE = `${import.meta.env.BASE_URL}reactions`;
+
 export const REACTION_SVG_ASSETS = {
     smiley: {
         type: 'svg',
-        src: '/reactions/realistic-pastel-smile.svg',
+        src: `${REACTION_ASSET_BASE}/realistic-pastel-smile.svg`,
         alt: 'Realistic Pastel Smile'
     },
     bubble: {
         type: 'svg',
-        src: '/reactions/realistic-bubble.svg',
+        src: `${REACTION_ASSET_BASE}/realistic-bubble.svg`,
         alt: 'Realistic Soap Bubble'
     },
     balloon: [
         {
             type: 'svg',
-            src: '/reactions/02_pastel_mint.svg',
+            src: `${REACTION_ASSET_BASE}/02_pastel_mint.svg`,
             alt: 'Realistic Mint Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/03_pastel_brown.svg',
-            alt: 'Realistic Brown Balloon'
+            src: `${REACTION_ASSET_BASE}/03_pastel_pink.svg`,
+            alt: 'Realistic Pink Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/04_pastel_lavender.svg',
-            alt: 'Realistic Gold Balloon'
+            src: `${REACTION_ASSET_BASE}/04_pastel_lavender.svg`,
+            alt: 'Realistic Lavender Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/05_pastel_peach.svg',
-            alt: 'Realistic Green Balloon'
+            src: `${REACTION_ASSET_BASE}/05_pastel_peach.svg`,
+            alt: 'Realistic Peach Balloon'
         },
         {
             type: 'svg',
-            src: '/reactions/06_pastel_coral.svg',
+            src: `${REACTION_ASSET_BASE}/06_pastel_coral.svg`,
+            alt: 'Realistic Coral Balloon'
+        },
+        {
+            type: 'svg',
+            src: `${REACTION_ASSET_BASE}/07_pastel_teal.svg`,
+            alt: 'Realistic Teal Balloon'
+        },
+        {
+            type: 'svg',
+            src: `${REACTION_ASSET_BASE}/08_pastel_yellow.svg`,
             alt: 'Realistic Yellow Balloon'
-        },
-        {
-            type: 'svg',
-            src: '/reactions/07_pastel_teal.svg',
-            alt: 'Realistic Purple Balloon'
-        },
-        {
-            type: 'svg',
-            src: '/reactions/08_pastel_yellow.svg',
-            alt: 'Realistic Orange Balloon'
         }
     ],
     star: {
         type: 'svg',
-        src: '/reactions/realistic-oil-pastel-star.svg',
+        src: `${REACTION_ASSET_BASE}/realistic-oil-pastel-star.svg`,
         alt: 'Realistic Oil Pastel Star'
     }
 };
@@ -1081,8 +1144,8 @@ export const initializeInstructorSession = async ({
 
         setSessionInfo(session);
 
-        // Initialize WebRTC with numeric session ID
-        await initializeWebRTC(session.session_id || session.id);
+        // Initialize WebRTC with numeric session ID (use database ID, not string identifier)
+        await initializeWebRTC(session.id);
         setLoading(false);
 
         // console.log(`[${role}Session] Session initialization complete`);
@@ -1129,7 +1192,7 @@ export const setupInstructorWhiteboardCallbacks = ({
     whiteboardService.onItemsUnselected = (data) => {
         // console.log('[InstructorSession] Items unselected confirmation received');
         if (setRemoteSelectedItemIds) {
-            setRemoteSelectedItemIds([]);
+            setRemoteSelectedItemIds(Array.isArray(data?.itemIds) ? data.itemIds : []);
         }
     };
 
@@ -1243,6 +1306,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     setToolAccess,
     setSelectedItems,
     setTool,
+    setLineWidth,
     setPromptText,
     setPromptVisible,
     setIsEyeBlinking,
@@ -1257,6 +1321,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     setRedrawCanvasTrigger,
     setClearCanvasTrigger,
     setYoutubePopups,
+    setInlineMedia,
     setBackgroundMusicPlaying,
     setSelectedMusic,
     setMusicVolume,
@@ -1267,6 +1332,13 @@ export const setupAttendeeWhiteboardCallbacks = ({
     denormalizeItem
 }) => {
     if (!whiteboardService) return null;
+
+    const applyRemotePenSize = (incomingSize) => {
+        if (!setLineWidth) return;
+        const nextLineWidth = clampPenSize(incomingSize);
+        if (nextLineWidth === null) return;
+        setLineWidth(nextLineWidth);
+    };
 
     // Tool access control from instructor
     if (setToolAccess) {
@@ -1286,8 +1358,18 @@ export const setupAttendeeWhiteboardCallbacks = ({
                     setTool('select');
                 } else if (data.toolName === 'select' && data.enabled) {
                     setTool('select');
+                } else if (data.toolName === 'draw' && data.enabled) {
+                    setTool('pen');
+                } else if (data.toolName === 'draw' && !data.enabled) {
+                    setTool('select');
                 }
             }
+        };
+    }
+
+    if (setLineWidth) {
+        whiteboardService.onPenSizeUpdate = (data) => {
+            applyRemotePenSize(data?.lineWidth);
         };
     }
 
@@ -1309,18 +1391,49 @@ export const setupAttendeeWhiteboardCallbacks = ({
     // Feedback messages from instructor
     if (setFeedbackMessage) {
         whiteboardService.onFeedbackMessage = (data) => {
-            // console.log('[AttendeeSession] Feedback message received:', data);
-            setFeedbackMessage(data.text || '');
-            setTimeout(() => setFeedbackMessage(''), 3000);
+            console.log('[AttendeeSession] Feedback message received:', data);
+            const message = data.text || '';
+            setFeedbackMessage(message);
+            // Play feedback sound on attendee side when receiving feedback
+            try {
+                console.log('[AttendeeSession] Playing feedback sound for:', message);
+                playFeedbackSound(message);
+            } catch (error) {
+                console.error('[AttendeeSession] Error playing feedback sound:', error);
+            }
+            setTimeout(() => setFeedbackMessage(''), 4000);
         };
     }
 
     // Waiting messages from instructor
     if (setWaitingMessage) {
         whiteboardService.onWaitingMessage = (data) => {
-            // console.log('[AttendeeSession] Waiting message received:', data);
-            setWaitingMessage(data.text || '');
-            setTimeout(() => setWaitingMessage(''), 3000);
+            console.log('[AttendeeSession] Waiting message received:', data);
+            const message = data.text || '';
+            setWaitingMessage(message);
+
+            if (message) {
+                // Play waiting sound on attendee side
+                try {
+                    console.log('[AttendeeSession] Playing waiting sound for:', message, data.persistent ? '(persistent/loop)' : '(one-shot)');
+                    if (data.persistent) {
+                        // Persistent mode: loop the audio until instructor deactivates
+                        playFeedbackSoundLoop(message);
+                    } else {
+                        playFeedbackSound(message);
+                    }
+                } catch (error) {
+                    console.error('[AttendeeSession] Error playing waiting sound:', error);
+                }
+
+                // Only auto-remove for non-persistent (timed) messages
+                if (!data.persistent) {
+                    setTimeout(() => setWaitingMessage(''), 4000);
+                }
+            } else {
+                // Empty message = deactivation: stop looping audio
+                stopFeedbackSound('Please Wait...');
+            }
         };
     }
 
@@ -1328,6 +1441,17 @@ export const setupAttendeeWhiteboardCallbacks = ({
     if (setFloatingAnimations) {
         whiteboardService.onFloatingAnimations = (data) => {
             setFloatingAnimations(prev => [...prev, ...data.animations]);
+            // Play floating animation sound on attendee side when receiving animations
+            data.animations?.forEach(animation => {
+                if (animation.type) {
+                    try {
+                        console.log('[AttendeeSession] Playing animation sound for:', animation.type);
+                        playFloatingAnimationSound(animation.type);
+                    } catch (error) {
+                        console.error('[AttendeeSession] Error playing animation sound:', error);
+                    }
+                }
+            });
             setTimeout(() => {
                 setFloatingAnimations(prev =>
                     prev.filter(a => !data.animations.find(na => na.id === a.id))
@@ -1393,6 +1517,97 @@ export const setupAttendeeWhiteboardCallbacks = ({
         whiteboardService.onYoutubePopupClosed = (data) => {
             // console.log('[AttendeeSession] YouTube popup closed:', data);
             setYoutubePopups(prev => prev.filter(popup => popup.id !== data.id));
+        };
+    }
+
+    // YouTube split-video mode (instructor -> attendee, read-only)
+    if (setInlineMedia) {
+        whiteboardService.onYoutubeOpen = (data) => {
+            setInlineMedia({
+                type: 'youtube',
+                videoId: data.videoId,
+                title: data.title,
+                isOpen: true,
+                isPlaying: false,
+                minimized: false,
+                currentTime: 0
+            });
+        };
+
+        whiteboardService.onYoutubeSplit = (data) => {
+            if (data?.action === 'close') {
+                setInlineMedia(null);
+                return;
+            }
+
+            if (data?.action === 'play') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: true, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data?.action === 'pause') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: false, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data?.action === 'seek') {
+                setInlineMedia(prev => prev ? { ...prev, currentTime: data.time || 0 } : prev);
+                return;
+            }
+
+            if (data?.action === 'minimize') {
+                setInlineMedia(prev => prev ? { ...prev, minimized: Boolean(data.minimized), currentTime: data.time ?? prev.currentTime } : prev);
+            }
+        };
+
+        // Fallback channel in case backend forwards only media_control messages.
+        // Keep any existing Whiteboard-level media handler alive for non-YouTube actions
+        // like inline video minimize/restore.
+        const previousOnMediaControl = whiteboardService.onMediaControl;
+        whiteboardService.onMediaControl = (data) => {
+            if (!data) return;
+
+            if (data.action === 'youtube_open') {
+                setInlineMedia({
+                    type: 'youtube',
+                    videoId: data.videoId,
+                    title: data.title,
+                    isOpen: true,
+                    isPlaying: false,
+                    minimized: false,
+                    currentTime: data.time || 0
+                });
+                return;
+            }
+
+            if (data.action === 'youtube_play') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: true, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_pause') {
+                setInlineMedia(prev => prev ? { ...prev, isPlaying: false, currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_close') {
+                setInlineMedia(null);
+                return;
+            }
+
+            if (data.action === 'youtube_seek') {
+                setInlineMedia(prev => prev ? { ...prev, currentTime: data.time || 0 } : prev);
+                return;
+            }
+
+            if (data.action === 'youtube_minimize_toggle') {
+                setInlineMedia(prev => prev ? { ...prev, minimized: Boolean(data.minimized), currentTime: data.time ?? prev.currentTime } : prev);
+                return;
+            }
+
+            if (typeof previousOnMediaControl === 'function') {
+                previousOnMediaControl(data);
+            }
         };
     }
 
@@ -1488,6 +1703,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     return () => {
         if (whiteboardService) {
             whiteboardService.onToolAccess = null;
+            whiteboardService.onPenSizeUpdate = null;
             whiteboardService.onPromptUpdate = null;
             whiteboardService.onFeedbackMessage = null;
             whiteboardService.onWaitingMessage = null;
@@ -1500,6 +1716,9 @@ export const setupAttendeeWhiteboardCallbacks = ({
             // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component, not here
             whiteboardService.onYoutubePopupCreated = null;
             whiteboardService.onYoutubePopupClosed = null;
+            whiteboardService.onYoutubeOpen = null;
+            whiteboardService.onYoutubeSplit = null;
+            whiteboardService.onMediaControl = null;
             whiteboardService.onBackgroundMusic = null;
             whiteboardService.onBackgroundMusicVolume = null;
             whiteboardService.onExerciseUpdate = null;
@@ -1612,6 +1831,13 @@ export const clearAllCanvas = ({
 
     if (whiteboardService) {
         whiteboardService.send('clear_canvas', {
+            timestamp: Date.now()
+        });
+
+        // Keep media state synchronized with canvas clear so the next dropped video
+        // starts from a clean state for all attendees.
+        whiteboardService.sendMediaControl({
+            action: 'close',
             timestamp: Date.now()
         });
     }
@@ -1790,12 +2016,15 @@ export const spawnFloatingAnimation = ({
 /**
  * Toggle tool access for participant
  */
-export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whiteboardService, setTool) => {
+export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whiteboardService, setTool, currentLineWidth = null) => {
     const updated = { ...currentAccess, [toolName]: !currentAccess[toolName] };
 
     if (toolName === 'drag' && updated.drag) {
         updated.select = true;
     }
+
+    // When draw is disabled, no special cascading needed
+    // Draw is independent of select/drag
 
     setToolAccess(updated);
 
@@ -1811,6 +2040,13 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
                 toolName: 'select',
                 enabled: true,
                 allPermissions: updated
+            });
+        }
+
+        if (toolName === 'draw' && updated.draw && currentLineWidth !== null) {
+            whiteboardService.send('pen_size_update', {
+                lineWidth: currentLineWidth,
+                timestamp: Date.now()
             });
         }
     }
@@ -2245,9 +2481,12 @@ export const sendFeedbackMessage = ({
     message,
     setFeedbackMessage,
     whiteboardService,
-    duration = 3000
+    duration = 4000
 }) => {
     setFeedbackMessage(message);
+
+    // Play feedback sound when sending message to attendee
+    playFeedbackSound(message);
 
     if (whiteboardService) {
         whiteboardService.send('feedback_message', {
@@ -2271,33 +2510,66 @@ export const sendFeedbackMessage = ({
 
 /**
  * Send waiting message to participant
+ * Supports persistent mode (no auto-removal) for toggle behavior
  */
 export const sendWaitingMessage = ({
     message,
     setWaitingMessage,
     whiteboardService,
-    duration = 5000
+    duration = 5000,
+    persistent = false
 }) => {
     setWaitingMessage(message);
+
+    // Play waiting sound - loop if persistent, one-shot if timed
+    if (persistent) {
+        playFeedbackSoundLoop(message);
+    } else {
+        playFeedbackSound(message);
+    }
 
     if (whiteboardService) {
         whiteboardService.send('waiting_message', {
             text: message,
+            persistent: persistent,
             timestamp: Date.now()
         });
     }
 
-    setTimeout(() => {
-        setWaitingMessage('');
-        if (whiteboardService) {
-            whiteboardService.send('waiting_message', {
-                text: '',
-                timestamp: Date.now()
-            });
-        }
-    }, duration);
+    // Only auto-remove for non-persistent (timed) mode
+    if (!persistent) {
+        setTimeout(() => {
+            setWaitingMessage('');
+            if (whiteboardService) {
+                whiteboardService.send('waiting_message', {
+                    text: '',
+                    timestamp: Date.now()
+                });
+            }
+        }, duration);
+    }
 
-    // console.log('[InstructorSession] Waiting message sent:', message);
+    // console.log('[InstructorSession] Waiting message sent:', message, persistent ? '(persistent)' : `(${duration}ms)`);
+};
+
+/**
+ * Clear persistent waiting message from both whiteboards
+ */
+export const clearWaitingMessage = ({
+    setWaitingMessage,
+    whiteboardService
+}) => {
+    setWaitingMessage('');
+    stopFeedbackSound('Please Wait...');
+
+    if (whiteboardService) {
+        whiteboardService.send('waiting_message', {
+            text: '',
+            timestamp: Date.now()
+        });
+    }
+
+    // console.log('[InstructorSession] Waiting message cleared');
 };
 
 /**
@@ -2311,7 +2583,9 @@ export const handleToolClick = ({
     spawnFloatingAnimation,
     toggleLearnerToolAccess,
     whiteboardService,
-    REACTION_SVG_ASSETS
+    REACTION_SVG_ASSETS,
+    isWaitActive = false,
+    setIsWaitActive = null,
 }) => {
     // console.log('[InstructorSession] Tool clicked:', tool);
 
@@ -2321,7 +2595,7 @@ export const handleToolClick = ({
                 message: 'Good Job!',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2330,7 +2604,7 @@ export const handleToolClick = ({
                 message: 'Wow!',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2339,7 +2613,7 @@ export const handleToolClick = ({
                 message: 'Doing Well',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2348,7 +2622,7 @@ export const handleToolClick = ({
                 message: 'Thank You',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2357,7 +2631,7 @@ export const handleToolClick = ({
                 message: 'Loved it',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
@@ -2366,17 +2640,26 @@ export const handleToolClick = ({
                 message: 'Relax',
                 setFeedbackMessage,
                 whiteboardService,
-                duration: 3000
+                duration: 4000
             });
             break;
 
         case '⏳ Wait':
-            sendWaitingMessage({
-                message: 'Please Wait...',
-                setWaitingMessage,
-                whiteboardService,
-                duration: 5000
-            });
+            // Toggle behavior: first click activates persistent wait, second click deactivates
+            if (isWaitActive) {
+                // Deactivate - clear the waiting message
+                clearWaitingMessage({ setWaitingMessage, whiteboardService });
+                if (setIsWaitActive) setIsWaitActive(false);
+            } else {
+                // Activate - show persistent waiting message with looping audio
+                sendWaitingMessage({
+                    message: 'Please Wait...',
+                    setWaitingMessage,
+                    whiteboardService,
+                    persistent: true
+                });
+                if (setIsWaitActive) setIsWaitActive(true);
+            }
             break;
 
         case '🫧 Bubbles':
@@ -2553,13 +2836,45 @@ export const searchLearningGoalsDatabase = async ({
 };
 
 /**
+ * Extract YouTube video ID from various URL formats
+ * Supports: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+ * 
+ * @param {string} url - YouTube URL
+ * @returns {string|null} - Video ID or null if not found
+ */
+const extractYoutubeVideoId = (url) => {
+    if (!url) return null;
+
+    // Format: https://www.youtube.com/watch?v=VIDEOID or https://youtube.com/watch?v=VIDEOID
+    const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([^&]+)/);
+    if (watchMatch && watchMatch[1]) return watchMatch[1];
+
+    // Format: https://youtu.be/VIDEOID
+    const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
+    if (shortMatch && shortMatch[1]) return shortMatch[1];
+
+    // Format: https://www.youtube.com/embed/VIDEOID
+    const embedMatch = url.match(/youtube\.com\/embed\/([^?&]+)/);
+    if (embedMatch && embedMatch[1]) return embedMatch[1];
+
+    return null;
+};
+
+/**
  * Create drag start handler for learning content cards
  * Enables drag-and-drop functionality for content items to whiteboard
+ * Normalizes YouTube video ID extraction from URL if ID not provided
  * 
  * @param {Object} content - The content item being dragged
  * @returns {Object} - Drag payload with content details
  */
 export const createContentDragPayload = (content) => {
+    // Normalize YouTube video ID from URL if not present
+    let youtubeVideoId = content.youtube_video_id || null;
+    if (!youtubeVideoId && content.youtube_url) {
+        youtubeVideoId = extractYoutubeVideoId(content.youtube_url);
+    }
+
     return {
         id: content.id,
         title: content.title,
@@ -2569,7 +2884,8 @@ export const createContentDragPayload = (content) => {
         mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
         originalFilename: content.title,
         is_youtube: content.is_youtube || false,
-        youtube_url: content.youtube_url || null
+        youtube_url: content.youtube_url || null,
+        youtube_video_id: youtubeVideoId
     };
 };
 
@@ -2605,8 +2921,13 @@ export const InstructorSessionPage = ({
     handleToggleMic,
     handleToggleCamera,
     handleFreeze,
+    handleRemoveParticipant,
     handleEndSession,
     isFrozen,
+    recordingStatus,
+    onToggleRecording,
+    onPauseResumeRecording,
+    isPaused,
 
     // Video streams
     localStream,
@@ -2710,8 +3031,13 @@ export const InstructorSessionPage = ({
     handleYoutubeDropped,
     handleCloseYoutubePopup,
 
+    // YouTube split video
+    inlineYoutube,
+    setInlineYoutube,
+
     // Active icons
     activeIcons,
+    isWaitActive = false,
     handleToolClick,
 
     // Button styles
@@ -2857,6 +3183,7 @@ export const InstructorSessionPage = ({
                                 setCanvasItems={setCanvasItems}
                                 toolAccess={toolAccess}
                                 remoteSelectedItemIds={remoteSelectedItemIds}
+                                setRemoteSelectedItemIds={setRemoteSelectedItemIds}
                                 feedbackMessage={feedbackMessage}
                                 waitingMessage={waitingMessage}
                                 floatingAnimations={floatingAnimations}
@@ -2874,10 +3201,14 @@ export const InstructorSessionPage = ({
                                 clearCanvasTrigger={clearCanvasTrigger}
                                 erasePenTrigger={erasePenTrigger}
                                 redrawCanvasTrigger={redrawCanvasTrigger}
-                                stopwatchFormattedTime={stopwatch?.isRunning ? stopwatch.formattedTime : null}
+                                stopwatchFormattedTime={stopwatch?.elapsedTime > 0 ? stopwatch.formattedTime : null}
                                 stopwatchIsRunning={stopwatch?.isRunning}
+                                onStopwatchReset={() => stopwatch.reset()}
+                                isInstructor={true}
                                 toolActive={toolActive}
                                 onYoutubeDropped={handleYoutubeDropped}
+                                inlineYoutube={inlineYoutube}
+                                setInlineYoutube={setInlineYoutube}
                                 canvasRefForParent={whiteboardCanvasRef}
                             />
                         </div>
@@ -2932,6 +3263,30 @@ export const InstructorSessionPage = ({
                             >
                                 <span>{cameraEnabled ? '📹' : '📷'}</span>
                             </button>
+
+                            {/* Session Recording Button */}
+                            {onToggleRecording && (
+                                <button
+                                    onClick={onToggleRecording}
+                                    className={`${recordingStatus === 'recording' ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                                    style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
+                                    title={recordingStatus === 'recording' ? 'Stop Recording' : 'Start Recording'}
+                                >
+                                    <span>{recordingStatus === 'recording' ? '⏹️' : '⏺️'}</span>
+                                </button>
+                            )}
+
+                            {/* Pause/Resume Recording Button */}
+                            {onPauseResumeRecording && recordingStatus === 'recording' && (
+                                <button
+                                    onClick={onPauseResumeRecording}
+                                    className={`${isPaused ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-purple-600 hover:bg-purple-700'} media-control text-white rounded-lg flex items-center transition-all duration-200 shadow-md`}
+                                    style={{ padding: 'clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem)', fontSize: 'clamp(0.625rem, 1.4vw, 0.875rem)', gap: 'clamp(0.25rem, 0.8vw, 0.5rem)' }}
+                                    title={isPaused ? 'Resume Recording' : 'Pause Recording'}
+                                >
+                                    <span>{isPaused ? '▶️' : '⏸️'}</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -2964,6 +3319,7 @@ export const InstructorSessionPage = ({
                         showExercise={showExercise}
                         setShowExercise={setShowExercise}
                         activeIcons={activeIcons}
+                        isWaitActive={isWaitActive}
                         handleToolClick={handleToolClick}
                         wbBtnBase={wbBtnBase}
                         wbBtnActive={wbBtnActive}
@@ -3015,7 +3371,14 @@ export const InstructorSessionPage = ({
                                 onStart={stopwatch.start}
                                 onPause={stopwatch.pause}
                                 onResume={stopwatch.resume}
-                                onReset={stopwatch.reset}
+                                onReset={() => {
+                                    stopwatch.reset();
+                                    whiteboardService?.send('stopwatch_sync', {
+                                        elapsedTime: 0,
+                                        isRunning: false,
+                                    });
+                                    setShowStopwatch(false);
+                                }}
                                 onSetTime={stopwatch.setTime}
                                 showControls={true}
                                 size="xs"
@@ -3033,9 +3396,26 @@ export const InstructorSessionPage = ({
                 </div>
             </div>
 
+            {/* iOS / PWA floating nav (back + refresh) */}
+            <IOSNavBar
+                onBack={() => { window.location.href = dashboardPath; }}
+                onRefresh={() => window.location.reload()}
+                position="bottom-right"
+            />
+
             {/* Session Info Bar */}
             <div className="session-info-bar session-control-buttons" style={{ justifyContent: 'center' }}>
                 <div className="session-info-actions">
+                    {handleRemoveParticipant && (
+                        <button
+                            className="btn-end-session"
+                            onClick={handleRemoveParticipant}
+                            title={`Remove ${participantName} from session`}
+
+                        >
+                            🚫 <span className="xs:inline">Exit {participantName}</span>
+                        </button>
+                    )}
                     <button
                         className={isFrozen ? "btn-freeze-session active" : "btn-freeze-session"}
                         onClick={handleFreeze}
@@ -3112,6 +3492,7 @@ export const WhiteboardTools = ({
     showExercise,
     setShowExercise,
     activeIcons,
+    isWaitActive = false,
     handleToolClick,
     wbBtnBase,
     wbBtnActive,
@@ -3132,14 +3513,17 @@ export const WhiteboardTools = ({
     remoteSelectedItemIds = [],
     setRemoteSelectedItemIds = null
 }) => {
+    const participantLabel = participantType === 'learner' ? 'learner' : 'participant';
+
     // Handler to unselect specific item selected by attendee
     const handleUnselectItem = (itemId) => {
+        const remainingIds = remoteSelectedItemIds.filter((id) => String(id) !== String(itemId));
         if (setRemoteSelectedItemIds) {
-            setRemoteSelectedItemIds((prevIds) => prevIds.filter((id) => id !== itemId));
+            setRemoteSelectedItemIds(remainingIds);
         }
         // Send unselect message to attendee through whiteboard service
         if (whiteboardService) {
-            whiteboardService.send('items_unselected', { itemIds: [] });
+            whiteboardService.send('items_unselected', { itemIds: remainingIds });
         }
     };
 
@@ -3157,7 +3541,7 @@ export const WhiteboardTools = ({
     // Get selected items details from canvasItems
     const getSelectedItemDetails = () => {
         if (!remoteSelectedItemIds || remoteSelectedItemIds.length === 0) return [];
-        return canvasItems.filter((item) => remoteSelectedItemIds.includes(item.id));
+        return canvasItems.filter((item) => remoteSelectedItemIds.some(id => String(id) === String(item.id)));
     };
 
     const selectedItems = getSelectedItemDetails();
@@ -3273,6 +3657,11 @@ export const WhiteboardTools = ({
                             whiteboardService.send('clear_canvas', {
                                 timestamp: Date.now()
                             });
+
+                            whiteboardService.sendMediaControl({
+                                action: 'close',
+                                timestamp: Date.now()
+                            });
                         }
                     }}
                     className={wbBtnBase}
@@ -3312,17 +3701,42 @@ export const WhiteboardTools = ({
                         <div className="flex items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
                             <label className="font-semibold text-slate-700 hidden md:inline" style={{ fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)' }}>Pen Size:</label>
                             <input
-                                type="range"
-                                min="1"
-                                max="10"
+                                type="number"
+                                min={MIN_PEN_SIZE}
+                                max={MAX_PEN_SIZE}
                                 value={lineWidth}
-                                onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                                className="brush-size-slider"
+                                onChange={(e) => {
+                                    const nextLineWidth = clampPenSize(e.target.value);
+                                    if (nextLineWidth === null) {
+                                        return;
+                                    }
+
+                                    setLineWidth(nextLineWidth);
+                                    if (whiteboardService) {
+                                        whiteboardService.send('pen_size_update', {
+                                            lineWidth: nextLineWidth,
+                                            timestamp: Date.now()
+                                        });
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    const nextLineWidth = clampPenSize(e.target.value);
+                                    if (nextLineWidth !== null && nextLineWidth !== lineWidth) {
+                                        setLineWidth(nextLineWidth);
+                                    }
+                                }}
                                 title="Pen Size"
-                                aria-label="Pen size slider"
+                                aria-label="Pen size input"
+                                inputMode="numeric"
                                 style={{
-                                    width: 'clamp(5rem, 12vw, 10rem)',
-                                    ['--pct']: `${Math.round(((lineWidth - 1) / (10 - 1)) * 100)}%`
+                                    width: 'clamp(3.5rem, 8vw, 4.5rem)',
+                                    padding: '0.3rem 0.45rem',
+                                    borderRadius: '0.5rem',
+                                    border: '1px solid #cbd5e1',
+                                    backgroundColor: '#ffffff',
+                                    color: '#0f172a',
+                                    fontSize: 'clamp(0.625rem, 1.8vw, 0.875rem)',
+                                    fontWeight: 600
                                 }}
                             />
                         </div>
@@ -3331,8 +3745,8 @@ export const WhiteboardTools = ({
                                 className="brush-preview"
                                 title="Brush preview"
                                 style={{
-                                    width: `${Math.max(6, lineWidth * 3)}px`,
-                                    height: `${Math.max(6, lineWidth * 3)}px`,
+                                    width: "1.5rem",
+                                    height: "1.5rem",
                                     background: tool === 'eraser' ? 'transparent' : color,
                                     border: tool === 'eraser' ? '2px solid red' : '1px solid rgba(0,0,0,0.6)',
                                     borderRadius: tool === 'eraser' ? '4px' : '9999px'
@@ -3388,6 +3802,16 @@ export const WhiteboardTools = ({
                     >
                         <span>↔️</span>
                         <span>Drag</span>
+                    </button>
+
+                    {/* Draw Tool Toggle */}
+                    <button
+                        onClick={() => toggleToolAccess('draw')}
+                        className={`${toolAccess.draw ? wbSmallBtnActive : wbSmallBtnBase}`}
+                        title={toolAccess.draw ? `Click to disable Draw for ${participantLabel}` : `Click to enable Draw for ${participantLabel}`}
+                    >
+                        <span>✏️</span>
+                        <span>Draw</span>
                     </button>
 
                     {/* Exercise Tool Button */}
@@ -3471,17 +3895,20 @@ export const WhiteboardTools = ({
                         { label: 'Balloons', icon: '🎈' },
                         { label: 'Stars', icon: '⭐' },
                         { label: 'Wait', icon: '⏳' }
-                    ].map((t, i) => (
-                        <button
-                            key={i}
-                            onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
-                            className={`${activeIcons[t.label] ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
-                            title={t.label}
-                        >
-                            <Emoji emoji={t.icon} size="base" className="inline-block" />
-                            <span className="hidden sm:inline">{t.label}</span>
-                        </button>
-                    ))}
+                    ].map((t, i) => {
+                        const isActive = t.label === 'Wait' ? isWaitActive : activeIcons[t.label];
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => handleToolClick(`${t.icon} ${t.label}`)}
+                                className={`${isActive ? wbBtnActive : wbBtnBase} px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-[9px] sm:text-[10px] text-center session-hover-transition transition-all duration-200 font-semibold flex items-center gap-0.5 sm:gap-1`}
+                                title={t.label === 'Wait' ? (isWaitActive ? 'Click to deactivate Wait' : 'Click to activate Wait') : t.label}
+                            >
+                                <Emoji emoji={t.icon} size="base" className="inline-block" />
+                                <span className="hidden sm:inline">{t.label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 

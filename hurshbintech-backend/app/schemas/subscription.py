@@ -42,6 +42,11 @@ class AdjustmentTypeEnum(str, enum.Enum):
     SUBTRACT = "SUBTRACT"
 
 
+class PackageTypeEnum(str, enum.Enum):
+    LEARNER = "LEARNER"
+    COACH = "COACH"
+
+
 # ============ SUBSCRIPTION PACKAGE SCHEMAS ============
 
 class SubscriptionPackageBase(BaseModel):
@@ -51,6 +56,7 @@ class SubscriptionPackageBase(BaseModel):
     sessions_count: int = Field(..., gt=0)
     validity_days: int = Field(..., gt=0)
     price: Decimal = Field(..., ge=0, decimal_places=2)
+    package_type: PackageTypeEnum = PackageTypeEnum.LEARNER
 
 
 class SubscriptionPackageCreate(SubscriptionPackageBase):
@@ -66,6 +72,7 @@ class SubscriptionPackageUpdate(BaseModel):
     validity_days: Optional[int] = Field(None, gt=0)
     price: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     is_active: Optional[bool] = None
+    package_type: Optional[PackageTypeEnum] = None
 
 
 class SubscriptionPackageResponse(SubscriptionPackageBase):
@@ -474,3 +481,62 @@ class BackdateValidationResponse(BaseModel):
 
 # Update forward references
 LearnerSubscriptionDetailResponse.model_rebuild()
+
+
+# ============ PUBLIC SUBSCRIPTION INQUIRY SCHEMAS ============
+
+class PaymentMethodEnum(str, enum.Enum):
+    UPI = "UPI"
+    BANK_TRANSFER = "BANK_TRANSFER"
+
+
+class InquiryReviewStatusEnum(str, enum.Enum):
+    NEW = "NEW"
+    REVIEWED = "REVIEWED"
+    PROCESSED = "PROCESSED"
+
+
+class PublicSubscriptionInquiryCreate(BaseModel):
+    """Schema for creating a public subscription inquiry (no auth required)."""
+    learner_name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(..., max_length=255)
+    contact_number: str = Field(..., min_length=1, max_length=50)
+    address: Optional[str] = Field(None, max_length=1000)
+    age: Optional[int] = Field(None, ge=0, le=150)
+    date_of_birth: Optional[date] = None
+    date_of_assessment: Optional[date] = None
+    package_id: Optional[int] = None
+    package_name: Optional[str] = Field(None, max_length=200)
+    package_price: Optional[Decimal] = Field(None, ge=0)
+    payment_method: Optional[str] = None
+
+
+class PublicSubscriptionInquiryResponse(BaseModel):
+    """Schema for public subscription inquiry response."""
+    id: int
+    learner_name: str
+    email: str
+    contact_number: str
+    address: Optional[str] = None
+    age: Optional[int] = None
+    date_of_birth: Optional[date] = None
+    date_of_assessment: Optional[date] = None
+    package_id: Optional[int] = None
+    package_name: Optional[str] = None
+    package_price: Optional[Decimal] = None
+    payment_method: Optional[str] = None
+    payment_receipt_url: Optional[str] = None
+    payment_receipt_filename: Optional[str] = None
+    review_status: str
+    admin_notes: Optional[str] = None
+    submitted_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PublicSubscriptionInquiryUpdate(BaseModel):
+    """Schema used by admin to update review status / notes."""
+    review_status: Optional[str] = None
+    admin_notes: Optional[str] = None

@@ -32,7 +32,12 @@ import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
 import CreateAssignedTraining from './pages/admin/CreateAssignedTraining';
 import AdminTrainingDetail from './pages/admin/AdminTrainingDetail';
 import AdminContacts from './pages/admin/AdminContacts';
+import AdminFreeAssessments from './pages/admin/AdminFreeAssessments';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminVendors from './pages/admin/AdminVendors';
+import AdminManageLearners from './pages/admin/AdminManageLearners';
+import AdminLearnerProgramsView from './pages/admin/AdminLearnerProgramsView';
+import AdminProgramGraphView from './pages/admin/AdminProgramGraphView';
 
 
 // Head Pages
@@ -48,6 +53,9 @@ import ManageSessions from './pages/head/ManageSessions';
 import ObserverSession from './pages/head/ObserverSession';
 import ViewVlogs from './pages/head/ViewVlogs';
 import ManageProgramAssignments from './pages/head/ManageProgramAssignments';
+import CreateProgram from './pages/head/CreateProgram';
+import EditProgram from './pages/head/EditProgram';
+import ManagePrograms from './pages/head/ManagePrograms';
 import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
 import LearnerProgramsView from './pages/head/LearnerProgramsView';
@@ -61,6 +69,7 @@ import TodaysSchedule from './pages/trainer/TodaysSchedule';
 
 // Coach Pages
 import CoachDashboard from './pages/coach/Dashboard';
+import CoachManageLearningReports from './pages/coach/CoachManageLearningReports';
 import CoachSession from './pages/coach/CoachSession';
 import CoachAppointments from './pages/coach/CoachAppointments';
 import CoachSessions from './pages/coach/CoachSessions';
@@ -77,6 +86,8 @@ import FeedbackPage from "./pages/learner/FeedbackPage";
 import MySessions from "./pages/learner/MySessions";
 import AssignedPrograms from "./pages/learner/AssignedPrograms";
 import LearningContent from "./pages/learner/LearningContent";
+import LearnerMyReports from "./pages/learner/LearnerMyReports";
+import LearnerProgramGraphView from "./pages/learner/LearnerProgramGraphView";
 
 // Client Pages
 import ClientSession from './pages/client/ClientSession';
@@ -247,6 +258,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vendors"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminVendors />
               </ProtectedRoute>
             }
           />
@@ -460,6 +479,38 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/free-assessments"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminFreeAssessments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/manage-learners"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminManageLearners />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/learner-programs/:learnerId"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLearnerProgramsView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/learner/:learnerId/program/:programName"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProgramGraphView />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Head Routes */}
           <Route
@@ -555,6 +606,30 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['head']}>
                 <ManageProgramAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/create-new-program"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <CreateProgram />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/edit-program/:programId"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <EditProgram />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/manage-programs"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <ManagePrograms />
               </ProtectedRoute>
             }
           />
@@ -685,6 +760,22 @@ function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/coach/learning-reports"
+            element={
+              <ProtectedRoute allowedRoles={['coach']}>
+                <CoachManageLearningReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coach/learner-reports/:learnerId"
+            element={
+              <ProtectedRoute allowedRoles={['coach']}>
+                <LearnerProgramsView />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Learner Routes */}
           <Route
@@ -760,6 +851,22 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["learner"]}>
                 <StoreCatalog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerMyReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learner/my-reports/:learnerId/program/:programName"
+            element={
+              <ProtectedRoute allowedRoles={['learner']}>
+                <LearnerProgramGraphView />
               </ProtectedRoute>
             }
           />

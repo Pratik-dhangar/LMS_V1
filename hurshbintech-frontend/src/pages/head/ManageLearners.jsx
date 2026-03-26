@@ -3,16 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import {
-  Users,
-  Edit3,
-  AlertCircle,
-  Loader2
-  , Eye, EyeOff
-} from 'lucide-react';
+import { Users, Edit3, AlertCircle, Loader2, Eye, EyeOff, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import headService from '../../api/services/headService';
 import SearchBar from '../../components/common/SearchBar';
+import { downloadProfilePDF } from '../../utils/pdfGenerator';
 import '../../styles/Table.css';
 import '../../styles/ManageUsersLayout.css';
 
@@ -30,11 +25,35 @@ const ManageLearners = () => {
   const [error, setError] = useState('');
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
   const [revealedPasscodes, setRevealedPasscodes] = useState({}); // Store decrypted passcodes
+  const [downloadingLearner, setDownloadingLearner] = useState(null);
 
   // Fetch learners data when component mounts
   useEffect(() => {
     fetchLearners();
   }, []);
+
+  /**
+   * Handle downloading learner profile as PDF
+   */
+  const handleDownloadProfile = async (learner) => {
+    setDownloadingLearner(learner.id);
+    try {
+      const fullLearnerProfile = await headService.getLearnerById(learner.id);
+      await downloadProfilePDF(fullLearnerProfile, 'learner');
+      toast.success(`${learner.name}'s profile downloaded successfully!`, {
+        position: "top-center",
+        autoClose: 2000,
+      });
+    } catch (err) {
+      console.error("Error downloading profile:", err);
+      toast.error("Failed to download profile. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    } finally {
+      setDownloadingLearner(null);
+    }
+  };
 
 
   // Fetch all learners from the server
@@ -222,7 +241,7 @@ const ManageLearners = () => {
                           Passcode
                         </th>
                         <th className="table-primary-th">
-                          Date of Assessment
+                          Start Date
                         </th>
                         <th className="table-primary-th">
                           Actions
@@ -267,13 +286,27 @@ const ManageLearners = () => {
                             }
                           </td>
                           <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleEditLearner(learner.id)}
-                              className="app-modal-btn app-modal-btn--primary"
-                            >
-                              <Edit3 className="table-primary-icon-sm" />
-                              Edit Profile
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleEditLearner(learner.id)}
+                                className="app-modal-btn app-modal-btn--primary"
+                                title="Edit Profile"
+                              >
+                                <Edit3 className="table-primary-icon-sm" />
+                              </button>
+                              <button
+                                onClick={() => handleDownloadProfile(learner)}
+                                disabled={downloadingLearner === learner.id}
+                                className="app-modal-btn app-modal-btn--primary"
+                                title="Download Profile"
+                                style={{
+                                  opacity: downloadingLearner === learner.id ? 0.6 : 1,
+                                  cursor: downloadingLearner === learner.id ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                <Download className="table-primary-icon-sm" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

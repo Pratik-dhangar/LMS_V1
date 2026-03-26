@@ -11,6 +11,8 @@ const LearningProgramSidebar = ({
   setSelectedPromptLevel,
   selectedReinforcementLevel,
   setSelectedReinforcementLevel,
+  reinforcementValueVisible = true,
+  onToggleReinforcementValueVisibility,
   selectedProgramId,
   handleProgramCheck,
   webRTC,
@@ -22,8 +24,48 @@ const LearningProgramSidebar = ({
   learningGoalsSearch,
   setLearningGoalsSearch
 }) => {
+  const promptToReinforcement = {
+    '0': 100,
+    '10': 90,
+    '20': 80,
+    '30': 70,
+    '40': 60,
+    '50': 50,
+    '60': 40,
+    '70': 30,
+    '80': 20,
+    '90': 10,
+    '100': 0,
+  };
+
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
+
+  const resolvedSkillNames = (() => {
+    const program = sessionInfo?.program || {};
+
+    const fromProgramDescription = (program.skill || program.description || program.descrption || '').trim();
+    if (fromProgramDescription) return fromProgramDescription;
+
+    const candidateList =
+      program.skill_names ||
+      program.skills ||
+      program.goal_names ||
+      program.learning_goal_names ||
+      [];
+
+    if (Array.isArray(candidateList) && candidateList.length > 0) {
+      const names = candidateList
+        .map((item) => {
+          if (typeof item === 'string') return item.trim();
+          return (item?.goal || item?.name || item?.title || '').trim();
+        })
+        .filter(Boolean);
+      if (names.length > 0) return names.join(', ');
+    }
+
+    return '';
+  })();
   // State for editable transcript
   const [editableTranscript, setEditableTranscript] = useState(transcript || '');
 
@@ -70,7 +112,7 @@ const LearningProgramSidebar = ({
               style={{
                 width: '100%',
                 padding: '8px',
-                border: '2px solid #4A90E2',
+                border: '1px solid gray',
                 borderRadius: '4px',
                 fontSize: '14px',
                 fontFamily: 'inherit',
@@ -90,7 +132,40 @@ const LearningProgramSidebar = ({
           </div>
         )}
 
-        <div className="sidebar-section-title">Program Items</div>
+        {sessionInfo?.program?.name && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            margin: '4px auto',
+            padding: '4px 8px',
+            backgroundColor: '#fef3c7',
+            borderLeft: '3px solid #d97706',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#92400e',
+            fontWeight: '600',
+          }}>
+            <span>📁</span>
+            <span>Program Name: {sessionInfo.program.name}</span>
+          </div>
+        )}
+        {resolvedSkillNames && (
+          <div style={{
+            margin: '2px auto 6px auto',
+            padding: '4px 8px',
+            backgroundColor: '#fff7ed',
+            borderLeft: '3px solid #f59e0b',
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: '#9a3412',
+            fontWeight: 600,
+          }}>
+            Skill: {resolvedSkillNames}
+          </div>
+        )}
+
+        <div className="sidebar-section-title">Learning Goals</div>
 
         <div className="sidebar-scrollable">
           {isSearching ? (
@@ -110,8 +185,7 @@ const LearningProgramSidebar = ({
                         checked={selectedProgramId === goal.id}
                         onChange={() => handleProgramCheck(goal.id)}
                       />
-                      <div className="sidebar-item-text">{index + 1}. {goalText}</div>
-                      <div className="sidebar-badge" title="Click to record prompt level">—</div>
+                      <div className="sidebar-item-text"> {goalText}</div>
                     </div>
                   );
                 })
@@ -127,17 +201,52 @@ const LearningProgramSidebar = ({
         <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>
         <div className="meter-container meter-container-gold">
           <div className="meter-buttons">
-            {['I', '10', '20', '30', '40', '50', '60', '70', '80', '90'].map((p) => (
+            {['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'].map((p) => (
               <div
                 key={p}
-                className={`meter-button ${selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'}`}
+                className={`meter-button ${p === '0' || p === '100'
+                  ? ''
+                  : selectedPromptLevel === p ? 'meter-button-selected' : 'meter-button-green'
+                  }`}
+                style={
+                  p === '0'
+                    ? {
+                      backgroundColor: selectedPromptLevel === '0' ? '#15803d' : '#16a34a',
+                      borderColor: '#16a34a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }
+                    : p === '100'
+                      ? {
+                        backgroundColor: selectedPromptLevel === '100' ? '#991b1b' : '#dc2626',
+                        borderColor: '#dc2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }
+                      : {}
+                }
+                title={p === '0' ? 'No prompt needed (0)' : p === '100' ? 'Full prompt needed (100)' : `Prompt level ${p}`}
                 onClick={() => {
                   const newValue = selectedPromptLevel === p ? null : p;
                   setSelectedPromptLevel(newValue);
                   webRTC && webRTC.sendPromptMeter(newValue);
+
+                  const mappedValue = newValue === null ? null : promptToReinforcement[newValue];
+                  const mappedReinforcement = mappedValue === null
+                    ? null
+                    : (mappedValue === 0 ? 0 : String(mappedValue));
+                  setSelectedReinforcementLevel(mappedReinforcement);
+                  webRTC && webRTC.sendReinforcementMeter(mappedReinforcement);
                 }}
               >
-                {p}
+                {p === '0' ? ('0') : p === '100' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                    <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                    <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                ) : p}
               </div>
             ))}
           </div>
@@ -148,23 +257,66 @@ const LearningProgramSidebar = ({
             </div>
           )} */}
         </div>
-
-        <div className="sidebar-section-title"><Emoji emoji="🎯" size="base" /> Reinforcement Meter</div>
+        <div className="sidebar-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <span><Emoji emoji="🎯" size="base" /> Reinforcement Meter</span>
+          {onToggleReinforcementValueVisibility && (
+            <button
+              type="button"
+              onClick={onToggleReinforcementValueVisibility}
+              style={{
+                border: '1px solid #16a34a',
+                backgroundColor: reinforcementValueVisible ? '#ecfdf5' : '#f8fafc',
+                color: '#166534',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+              title={reinforcementValueVisible ? 'Hide R value on learner page' : 'Show R value on learner page'}
+            >
+              {reinforcementValueVisible ? 'Hide' : 'View'}
+            </button>
+          )}
+        </div>
         <div className="meter-container meter-container-green">
           <div className="meter-buttons">
-            {['Full', '90', '80', '70', '60', '50', '40', '30', '20', '10'].map((r) => (
-              <div
-                key={r}
-                className={`meter-button ${selectedReinforcementLevel === r ? 'meter-button-selected' : 'meter-button-green'}`}
-                onClick={() => {
-                  const newValue = selectedReinforcementLevel === r ? null : r;
-                  setSelectedReinforcementLevel(newValue);
-                  webRTC && webRTC.sendReinforcementMeter(newValue);
-                }}
-              >
-                {r}
-              </div>
-            ))}
+            {['100', '90', '80', '70', '60', '50', '40', '30', '20', '10', 'Cross'].map((r) => {
+              const val = r === 'Cross' ? 0 : r === 'Tick' ? 100 : r;
+              const isSelected = selectedReinforcementLevel !== null
+                && selectedReinforcementLevel !== undefined
+                && String(selectedReinforcementLevel) === String(val);
+              return (
+                <div
+                  key={r}
+                  className={`meter-button ${r === 'Tick' || r === 'Cross' ? '' : isSelected ? 'meter-button-selected' : 'meter-button-green'}`}
+                  style={
+                    r === 'Tick'
+                      ? { backgroundColor: isSelected ? '#15803d' : '#16a34a', borderColor: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                      : r === 'Cross'
+                        ? { backgroundColor: isSelected ? '#991b1b' : '#dc2626', borderColor: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+                        : {}
+                  }
+                  title={r === 'Tick' ? 'Full reinforcement (100)' : r === 'Cross' ? 'No reinforcement (0)' : `Reinforcement level ${r}`}
+                  onClick={() => {
+                    const newValue = isSelected ? null : val;
+                    setSelectedReinforcementLevel(newValue);
+                    webRTC && webRTC.sendReinforcementMeter(newValue);
+                  }}
+                >
+                  {r === 'Tick' ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                      <polyline points="1.5,7 5.5,11 12.5,3" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : r === 'Cross' ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                      <line x1="1" y1="1" x2="11" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1="11" y1="1" x2="1" y2="11" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" />
+                    </svg>
+                  ) : r}
+                </div>
+              );
+            })}
           </div>
 
           {/* {selectedReinforcementLevel && (
@@ -175,19 +327,21 @@ const LearningProgramSidebar = ({
         </div>
 
         {/* Save Report Button */}
-        {selectedProgramId && selectedPromptLevel && selectedReinforcementLevel && (
+        {selectedProgramId && selectedReinforcementLevel !== null && selectedReinforcementLevel !== undefined && (
           <button
             onClick={() => onSaveReport({
               programId: selectedProgramId,
-              programName: selectedProgram?.goal || 'Unknown Program',
+              programName: selectedProgram?.goal || selectedProgram?.name || selectedProgram?.title || 'Unknown Program',
               promptMeter: selectedPromptLevel,
               reinforcementMeter: selectedReinforcementLevel
             })}
-            className="btn-primary w-50 ml-3.5"
+            className="btn-primary w-60 ml-3.5"
           >
-            💾 Save Session Report
+            💾 Save Learning Progress
           </button>
         )}
+
+
 
 
         {/* Speech Section */}

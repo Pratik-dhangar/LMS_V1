@@ -764,15 +764,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                   ref={emojiButtonRef}
                   type="button"
                   className="chat-icon-btn"
-                  onClick={() => {
-                    if (isMobile) {
-                      // On mobile, focus input and let native emoji keyboard open
-                      document.querySelector('.chat-input')?.focus();
-                    } else {
-                      // On desktop/tablet, toggle emoji picker
-                      setShowEmojiPicker(!showEmojiPicker);
-                    }
-                  }}
+                  onClick={() => setShowEmojiPicker(prev => !prev)}
                   title="Emoji"
                 >
                   <Smile size={24} />
@@ -820,8 +812,8 @@ const UnifiedChatPage = ({ isModal = false }) => {
                 <p className="chat-uploading-text">Uploading file...</p>
               )}
 
-              {/* Emoji Picker - Desktop/Tablet Only */}
-              {!isMobile && showEmojiPicker && (
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
                 <EmojiPicker
                   onEmojiSelect={handleEmojiSelect}
                   onClose={() => setShowEmojiPicker(false)}

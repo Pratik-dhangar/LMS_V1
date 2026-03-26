@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
@@ -6,7 +6,6 @@ import headService from "../../api/services/headService";
 import BasicInfoSection from "../../components/admin/EditHead/BasicInfoSection";
 import ProfessionalInfoSection from "../../components/admin/EditHead/ProfessionalInfoSection";
 import PersonalDetailsSection from "../../components/admin/EditHead/PersonalDetailsSection";
-import PerformanceFeedbackSection from "../../components/admin/EditHead/PerformanceFeedbackSection";
 import NotesSection from "../../components/admin/EditHead/NotesSection";
 import FormSection from "../../components/common/FormSection";
 import FormFileUpload from "../../components/common/FormFileUpload";
@@ -23,7 +22,7 @@ const RegisterCoach = () => {
     email: "",
     age: "",
     address: "",
-    contact_no: "",
+    contact_number: "",
     qualification: "",
     experience: "",
     date_of_joining: "",
@@ -36,12 +35,21 @@ const RegisterCoach = () => {
     learners_guardian_description: "",
     input_at_hurshbin: "",
     note_box: "",
-    message_box: "",
     availability_days: [],
     time_slots: [],
     specialization: "",
     profile_picture_url: null,
+    is_special: false,
+    dedicated_package_id: "",
   });
+
+  const [coachPackages, setCoachPackages] = useState([]);
+
+  useEffect(() => {
+    headService.getCoachPackages()
+      .then(setCoachPackages)
+      .catch(() => setCoachPackages([]));
+  }, []);
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const DAYS_OF_WEEK = [
@@ -126,10 +134,10 @@ const RegisterCoach = () => {
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.contact_no.trim()) {
-      newErrors.contact_no = "Contact number is required";
-    } else if (!/^\d{10}$/.test(formData.contact_no.replace(/\D/g, ""))) {
-      newErrors.contact_no = "Please enter a valid 10-digit phone number";
+    if (!formData.contact_number.trim()) {
+      newErrors.contact_number = "Contact number is required";
+    } else if (!/^\d{10}$/.test(formData.contact_number.replace(/\D/g, ""))) {
+      newErrors.contact_number = "Please enter a valid 10-digit phone number";
     }
 
     if (!formData.date_of_joining) {
@@ -176,6 +184,10 @@ const RegisterCoach = () => {
           submitData.append(key, parseInt(formData[key]) || 0);
         } else if (key === "age") {
           if (formData[key]) submitData.append(key, parseInt(formData[key]));
+        } else if (key === "is_special") {
+          submitData.append(key, formData[key] ? "true" : "false");
+        } else if (key === "dedicated_package_id") {
+          if (formData[key]) submitData.append(key, formData[key]);
         } else {
           submitData.append(key, formData[key] || "");
         }
@@ -334,169 +346,218 @@ const RegisterCoach = () => {
           {/* Form Card */}
           <div className="modern-form-card">
             <form onSubmit={handleSubmit}>
-            <BasicInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-              section="coach"
-            />
+              <BasicInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+                section="coach"
+              />
 
-            <ProfessionalInfoSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <ProfessionalInfoSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            <PersonalDetailsSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
+              <PersonalDetailsSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
 
-            {/* Coach-Specific Information */}
-            <FormSection
-              title="Coach-Specific Information"
-              description="Availability, specialization, and profile details"
-            >
-              <div className="modern-form-grid">
-                {/* Availability Days */}
-                <div>
-                  <label className="input-field-label">
-                    Availability Days <span className="input-field-required">*</span>
-                  </label>
-                  <div className="modern-form-checkbox-group">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <div key={day} className="modern-form-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`day_${day}`}
-                          checked={formData.availability_days.includes(day)}
-                          onChange={() =>
-                            handleMultiSelect("availability_days", day)
-                          }
-                          className="modern-form-checkbox-input"
-                        />
-                        <label
-                          htmlFor={`day_${day}`}
-                          className="modern-form-checkbox-label"
-                        >
-                          {day}
-                        </label>
-                      </div>
-                    ))}
+              {/* Coach-Specific Information */}
+              <FormSection
+                title="Coach-Specific Information"
+                description="Availability, specialization, and profile details"
+              >
+                <div className="modern-form-grid">
+                  {/* Availability Days */}
+                  <div>
+                    <label className="input-field-label">
+                      Availability Days <span className="input-field-required">*</span>
+                    </label>
+                    <div className="modern-form-checkbox-group">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <div key={day} className="modern-form-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`day_${day}`}
+                            checked={formData.availability_days.includes(day)}
+                            onChange={() =>
+                              handleMultiSelect("availability_days", day)
+                            }
+                            className="modern-form-checkbox-input"
+                          />
+                          <label
+                            htmlFor={`day_${day}`}
+                            className="modern-form-checkbox-label"
+                          >
+                            {day}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.availability_days.length > 0 && (
+                      <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        Selected: {formData.availability_days.join(", ")}
+                      </p>
+                    )}
                   </div>
-                  {formData.availability_days.length > 0 && (
-                    <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                      Selected: {formData.availability_days.join(", ")}
-                    </p>
-                  )}
+
+                  {/* Time Slots */}
+                  <div>
+                    <label className="input-field-label">
+                      Time Slots <span className="input-field-required">*</span>
+                    </label>
+                    <div className="modern-form-checkbox-group">
+                      {TIME_SLOT_OPTIONS.map((slot) => (
+                        <div key={slot} className="modern-form-checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`slot_${slot}`}
+                            checked={formData.time_slots.includes(slot)}
+                            onChange={() => handleMultiSelect("time_slots", slot)}
+                            className="modern-form-checkbox-input"
+                          />
+                          <label
+                            htmlFor={`slot_${slot}`}
+                            className="modern-form-checkbox-label"
+                          >
+                            {slot}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.time_slots.length > 0 && (
+                      <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        Selected: {formData.time_slots.join(", ")}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Time Slots */}
-                <div>
-                  <label className="input-field-label">
-                    Time Slots <span className="input-field-required">*</span>
-                  </label>
-                  <div className="modern-form-checkbox-group">
-                    {TIME_SLOT_OPTIONS.map((slot) => (
-                      <div key={slot} className="modern-form-checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`slot_${slot}`}
-                          checked={formData.time_slots.includes(slot)}
-                          onChange={() => handleMultiSelect("time_slots", slot)}
-                          className="modern-form-checkbox-input"
-                        />
-                        <label
-                          htmlFor={`slot_${slot}`}
-                          className="modern-form-checkbox-label"
-                        >
-                          {slot}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {formData.time_slots.length > 0 && (
-                    <p className="form-hint" style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                      Selected: {formData.time_slots.join(", ")}
-                    </p>
-                  )}
+                {/* Specialization */}
+                <div className="modern-form-grid-full">
+                  <TextAreaField
+                    label="Specialization"
+                    name="specialization"
+                    value={formData.specialization}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Coach's area of specialization"
+                  />
                 </div>
+
+                {/* Dedicated Package & Special Coach */}
+                <div className="modern-form-grid">
+                  {/* Dedicated Package */}
+                  <div>
+                    <label className="input-field-label">Dedicated Package</label>
+                    <select
+                      name="dedicated_package_id"
+                      value={formData.dedicated_package_id}
+                      onChange={handleChange}
+                      className="app-modal-form-input"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">— None —</option>
+                      {coachPackages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.package_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="form-hint" style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      Assign this coach as the dedicated coach for a specific COACH package
+                    </p>
+                  </div>
+
+                  {/* Special Coach */}
+                  <div>
+                    <label className="input-field-label">Special Coach</label>
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="true"
+                          checked={formData.is_special === true}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: true }))}
+                        />
+                        Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="is_special"
+                          value="false"
+                          checked={formData.is_special === false}
+                          onChange={() => setFormData(prev => ({ ...prev, is_special: false }))}
+                        />
+                        No
+                      </label>
+                    </div>
+                    <p className="form-hint" style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                      Mark this coach as featured / premium
+                    </p>
+                  </div>
+                </div>
+
+                {/* Profile Picture */}
+                <div className="modern-form-grid-full">
+                  <FormFileUpload
+                    label="Profile Picture"
+                    name="profile_picture_url"
+                    files={formData.profile_picture_url ? [formData.profile_picture_url] : []}
+                    onChange={handleProfileImageChange}
+                    onRemove={() => setFormData(prev => ({ ...prev, profile_picture_url: null }))}
+                    accept="image/*"
+                    multiple={false}
+                    helpText="Supported formats: JPG, PNG, GIF"
+                  />
+                </div>
+
+                {/* Reference Data */}
+                <div className="modern-form-grid-full">
+                  <FormFileUpload
+                    label="Reference Data"
+                    name="reference_files"
+                    files={referenceFiles}
+                    onChange={handleFileChange}
+                    onRemove={removeFile}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                    multiple={true}
+                    helpText="Documents, Images, Videos (PDF, DOCX, Images, Videos)"
+                  />
+                </div>
+              </FormSection>
+
+              <NotesSection
+                formData={formData}
+                errors={errors}
+                handleChange={handleChange}
+              />
+
+              {/* Submit Actions */}
+              <div className="modern-form-actions">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="modern-form-btn modern-form-btn-secondary"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="modern-form-btn modern-form-btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? "Registering..." : "Register Coach"}
+                </button>
               </div>
-
-              {/* Specialization */}
-              <div className="modern-form-grid-full">
-                <TextAreaField
-                  label="Specialization"
-                  name="specialization"
-                  value={formData.specialization}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Coach's area of specialization"
-                />
-              </div>
-
-              {/* Profile Picture */}
-              <div className="modern-form-grid-full">
-                <FormFileUpload
-                  label="Profile Picture"
-                  name="profile_picture_url"
-                  files={formData.profile_picture_url ? [formData.profile_picture_url] : []}
-                  onChange={handleProfileImageChange}
-                  onRemove={() => setFormData(prev => ({ ...prev, profile_picture_url: null }))}
-                  accept="image/*"
-                  multiple={false}
-                  helpText="Supported formats: JPG, PNG, GIF"
-                />
-              </div>
-
-              {/* Reference Data */}
-              <div className="modern-form-grid-full">
-                <FormFileUpload
-                  label="Reference Data"
-                  name="reference_files"
-                  files={referenceFiles}
-                  onChange={handleFileChange}
-                  onRemove={removeFile}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
-                  multiple={true}
-                  helpText="Documents, Images, Videos (PDF, DOCX, Images, Videos)"
-                />
-              </div>
-            </FormSection>
-
-            <PerformanceFeedbackSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
-
-            <NotesSection
-              formData={formData}
-              errors={errors}
-              handleChange={handleChange}
-            />
-
-            {/* Submit Actions */}
-            <div className="modern-form-actions">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="modern-form-btn modern-form-btn-secondary"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                className="modern-form-btn modern-form-btn-primary" 
-                disabled={loading}
-              >
-                {loading ? "Registering..." : "Register Coach"}
-              </button>
-            </div>
-          </form>
-        </div>
+            </form>
+          </div>
         </div>
       </main>
     </div>

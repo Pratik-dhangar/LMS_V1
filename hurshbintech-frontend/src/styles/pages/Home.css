@@ -16,7 +16,7 @@
   border-bottom-right-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
   min-height: 300px;
-  height: 300px; /* Fixed height to prevent layout shifts */
+  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -27,15 +27,15 @@
 @media (max-width: 768px) {
   .home-hero {
     min-height: 280px;
-    height: 280px; /* Fixed height for tablets */
+    height: auto;
     padding: 1.5rem 1rem;
   }
 }
 
 @media (max-width: 480px) {
   .home-hero {
-    min-height: 240px;
-    height: 240px; /* Fixed height for mobile */
+    min-height: 260px;
+    height: auto;
     padding: 1.25rem 0.75rem;
   }
 }
@@ -45,7 +45,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -98,6 +98,37 @@
   transform: translateY(-2px);
 }
 
+/* Buy Learning Program CTA button in hero nav */
+.hero-buy-subscription-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 2px solid rgba(255, 255, 255, 0.85) !important;
+  color: #fff !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 0.5rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.hero-buy-subscription-btn:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #5c1e1e !important;
+  border-color: #fff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+@media (max-width: 640px) {
+  .hero-buy-subscription-btn {
+    font-size: 0.875rem !important;
+    padding: 0.4rem 1rem !important;
+  }
+}
+
 @media (max-width: 640px) {
   .hero-nav-links {
     gap: 0.5rem;
@@ -122,6 +153,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
+  line-height: 1.25;
 }
 
 @media (min-width: 640px) {
@@ -139,7 +171,9 @@
 .home-hero-subtitle {
   font-size: 0.875rem;
   opacity: 0.9;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
+  line-height: 1.45;
+  max-width: 52rem;
 }
 
 @media (min-width: 640px) {
@@ -304,7 +338,7 @@
 }
 
 .home-section-title {
-  font-size: 4.25rem;
+  font-size: 2.25rem;
   font-weight: 700;
   color: #1f2937;
   margin-bottom: 0.5rem;
@@ -312,6 +346,12 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+@media (min-width: 1024px) {
+  .home-section-title {
+    font-size: 3rem;
+  }
 }
 
 .home-section-subtitle {
@@ -324,7 +364,7 @@
   gap: 2rem;
   margin-bottom: 3rem;
   justify-content: center;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
 }
 
 @media (min-width: 640px) {
@@ -464,7 +504,7 @@
   gap: 2rem;
   margin-bottom: 3rem;
   justify-content: center;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
 }
 
 @media (min-width: 640px) {
@@ -630,13 +670,154 @@
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
+  .home-hero {
+    min-height: 280px;
+  }
+
+  .hero-nav-links {
+    margin-bottom: 1rem;
+    gap: 0.4rem;
+  }
+
+  .home-hero-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .home-hero-subtitle {
+    font-size: 0.8rem;
+  }
+
   .home-section-title {
-    font-size: 1.875rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .home-section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .home-section-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .home-blogs-section,
+  .home-vlogs-section {
+    padding: 2rem 0.75rem;
+  }
+
+  .home-blogs-grid,
+  .home-vlogs-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .home-blog-content,
+  .home-vlog-content {
+    padding: 1rem;
+  }
+
+  .home-view-all-btn {
+    width: 100%;
+    max-width: 18rem;
   }
 
   .home-blog-card,
   .home-vlog-card {
     animation-delay: 0ms !important;
+  }
+}
+
+/* Social Float Container (right-side box on medium/large screens) */
+.social-float-container {
+  position: fixed;
+  right: 0;
+  bottom: 10rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 0.6rem;
+  background: rgba(219, 157, 50, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 12px 0 0 12px;
+  z-index: 1000;
+  box-shadow: -3px 0 16px rgba(219, 157, 50, 0.22);
+  animation: fadeInUp 0.3s ease;
+}
+
+/* WhatsApp Float Button */
+.whatsapp-float-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+
+.whatsapp-float-btn svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.whatsapp-float-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+.whatsapp-float-btn:active {
+  transform: scale(0.95);
+}
+
+/* Instagram Float Button */
+.instagram-float-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.instagram-float-btn svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.instagram-float-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+.instagram-float-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile: no box, icons float above chat widget */
+@media (max-width: 640px) {
+  .social-float-container {
+    right: 0.8rem;
+    bottom: 9.2rem;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    padding: 0.5rem 0.4rem;
+    gap: 0.4rem;
+    border-radius: 0;
+  }
+
+  .whatsapp-float-btn svg {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .instagram-float-btn svg {
+    width: 1.4rem;
+    height: 1.4rem;
   }
 }
 

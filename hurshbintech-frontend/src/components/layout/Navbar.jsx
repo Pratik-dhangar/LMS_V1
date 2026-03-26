@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
 
-const Navbar = () => {
+const Navbar = ({ setShowSubscriptionModal }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,15 +88,17 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Book Appointment */}
-            <button
-              className="navbar-btn"
-              onClick={() => {
-                handleNavigate("/book-appointment");
-              }}
-            >
-              Book Appointment
-            </button>
+            {/* Book Appointment - only for non-logged-in visitors */}
+            {!user && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  handleNavigate("/book-appointment");
+                }}
+              >
+                Book Appointment
+              </button>
+            )}
 
             {/* Contact Us - Only on landing page */}
             {location.pathname === "/" && (
@@ -136,6 +138,16 @@ const Navbar = () => {
                 onClick={() => handleNavigate("/store")}
               >
                 Buy Learning Material
+              </button>
+            )}
+
+            {/* Buy Learning Program - Only visible on landing page when NOT logged in */}
+            {!user && location.pathname === "/" && (
+              <button
+                className="navbar-btn navbar-subscription-btn"
+                onClick={() => setShowSubscriptionModal(true)}
+              >
+                Buy Learning Program
               </button>
             )}
           </div>
@@ -192,15 +204,17 @@ const Navbar = () => {
               </button>
             )}
 
-            {/* Book Appointment */}
-            <button
-              className="navbar-btn"
-              onClick={() => {
-                handleNavigate("/book-appointment");
-              }}
-            >
-              Book Appointment
-            </button>
+            {/* Book Appointment - only for non-logged-in visitors */}
+            {!user && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  handleNavigate("/book-appointment");
+                }}
+              >
+                Book Appointment
+              </button>
+            )}
 
             {/* Contact Us - Only on landing page */}
             {location.pathname === "/" && (
@@ -240,6 +254,19 @@ const Navbar = () => {
                 onClick={() => handleNavigate("/store")}
               >
                 Buy Learning Material
+              </button>
+            )}
+
+            {/* Buy Learning Program - Only visible on landing page when NOT logged in */}
+            {!user && location.pathname === "/" && (
+              <button
+                className="navbar-btn navbar-subscription-btn"
+                onClick={() => {
+                  setShowSubscriptionModal(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                Buy Learning Program
               </button>
             )}
 

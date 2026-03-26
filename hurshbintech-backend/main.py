@@ -40,8 +40,10 @@ from app.api.endpoints.learning_goals import router as learning_goals_router
 # from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
 # from app.api.endpoints.learning_program_assignments import learner_router
 from app.api.endpoints.program_assignments import router as program_assignments_router
+from app.api.endpoints.programs import router as programs_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
+from app.api.endpoints.learner_progress_reports import router as learner_progress_reports_router
 from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.vlogs import router as vlogs_router
@@ -50,9 +52,11 @@ from app.api.endpoints.products import router as products_router
 from app.api.endpoints.store import router as store_router
 from app.api.endpoints.cart import router as cart_router
 from app.api.endpoints.ecommerce import router as ecommerce_router
+from app.api.endpoints.subscription_inquiry import router as subscription_inquiry_router
 from app.api.endpoints.Chat.chat import router as chat_router
 from app.api.endpoints.Communication.webinar import router as webinar_router
 from app.api.endpoints.vendors import router as vendors_router
+from app.api.endpoints.free_assessment import router as free_assessment_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.core.request_logging import RequestLoggingMiddleware
@@ -67,6 +71,7 @@ limiter = Limiter(key_func=get_remote_address)
 # ✅ Background Task Scheduler for Auto-Cleanup Jobs
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.chat_message_cleanup import cleanup_old_messages
+from app.workers.session_purge import purge_old_sessions
 from app.workers.subscription_tasks import process_ended_sessions_task
 from app.services.cache_service import cache_service
 
@@ -86,11 +91,14 @@ async def lifespan(app: FastAPI):
         if not scheduler.running:
             # Schedule chat message cleanup daily at 3 AM
             scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
+            # Schedule session data purge daily at 4 AM (retains 30 days)
+            scheduler.add_job(purge_old_sessions, 'cron', hour=4, minute=0, id='session_purge', replace_existing=True)
             # Schedule session processing every 1 minute to handle subscription session counting (for immediate updates)
             scheduler.add_job(process_ended_sessions_task, 'interval', minutes=1, id='session_processing', replace_existing=True)
             scheduler.start()
             logger.info("✅ Background scheduler started")
             logger.info("   - Chat message cleanup: Daily at 3 AM")
+            logger.info("   - Session data purge: Daily at 4 AM (keeps 30 days)")
             logger.info("   - Session processing: Every 1 minute")
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
@@ -208,7 +216,9 @@ app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])
+app.include_router(free_assessment_router, prefix="/api", tags=["free-assessment"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
+app.include_router(learner_progress_reports_router, prefix="/api/learner-progress-reports", tags=["learner-progress-reports"])
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments
 # app.include_router(head_lp_router, prefix="/api")
@@ -217,11 +227,15 @@ app.include_router(session_reports_router, prefix="/api/session-reports", tags=[
 # ✅ Program Assignments router (new - replaces old learning_program_assignments)
 app.include_router(program_assignments_router, prefix="/api")
 
+# ✅ Programs router (session-scoped goal+content containers)
+app.include_router(programs_router, prefix="/api")
+
 # ✅ E-Commerce routers
 app.include_router(products_router, prefix="/api")  # Admin product management
 app.include_router(store_router, prefix="/api")  # Public catalog browsing
 app.include_router(cart_router, prefix="/api")  # Cart management
 app.include_router(ecommerce_router, prefix="/api")  # Orders & payments
+app.include_router(subscription_inquiry_router, prefix="/api")  # Public subscription inquiry form
 
 # ✅ Vendor Management routers
 app.include_router(vendors_router, prefix="/api")

@@ -75,9 +75,9 @@ const sessionService = {
   },
 
   // Common
-  getAllSessions: async () => {
+  getAllSessions: async (skip = 0, limit = 10) => {
     try {
-      const response = await api.get('/sessions/all');
+      const response = await api.get(`/sessions/all?skip=${skip}&limit=${limit}`);
       return response.data;
     } catch (error) {
       console.error('[sessionService] Error fetching all sessions:', error);
@@ -183,6 +183,72 @@ const sessionService = {
       return response.data;
     } catch (error) {
       console.error('[sessionService] Error uploading recording:', error);
+      throw error;
+    }
+  },
+
+  submitFeedback: async (sessionId, { rating, remark, attendeeRole, attendeeName }) => {
+    try {
+      const response = await api.post(`/sessions/${sessionId}/feedback`, {
+        rating,
+        remark: remark || null,
+        attendee_role: attendeeRole || 'learner',
+        attendee_name: attendeeName || null,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error submitting feedback:', error);
+      throw error;
+    }
+  },
+
+  getSessionFeedback: async (sessionId) => {
+    try {
+      const response = await api.get(`/sessions/${sessionId}/feedback`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching session feedback:', error);
+      throw error;
+    }
+  },
+
+  // Upload recording chunk (optimized)
+  uploadRecordingChunk: async (formData) => {
+    try {
+      const response = await api.post('/sessions/recordings/upload-chunk', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 60000 // 60 second timeout for chunk upload
+      });
+      return response.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || error.message;
+      const status = error.response?.status;
+      console.error(`[sessionService] Error uploading recording chunk (${status}):`, errorMsg);
+      console.error('[sessionService] Full error:', error.response?.data || error);
+      throw error;
+    }
+  },
+
+  // Finalize chunked recording (merge all chunks on server)
+  finalizeRecording: async (finalizationData) => {
+    try {
+      const response = await api.post('/sessions/recordings/finalize', finalizationData);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error finalizing recording:', error);
+      throw error;
+    }
+  },
+
+  // Get recording status
+  getRecordingStatus: async (recordingId) => {
+    try {
+      const response = await api.get(`/sessions/recordings/${recordingId}/status`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching recording status:', error);
       throw error;
     }
   }

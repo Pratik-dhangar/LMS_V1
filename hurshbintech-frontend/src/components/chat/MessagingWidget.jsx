@@ -7,7 +7,7 @@ import {
   MessageCircle, ChevronDown, ChevronUp, Search, Settings, 
   MoreHorizontal, MessageSquarePlus, X, Send, Paperclip, Smile, 
   ArrowLeft, Check, CheckCheck, Image as ImageIcon,
-  Download, Users
+  Download, Users, Mic, Square, Play, Pause
 } from 'lucide-react';
 import { useChat } from '../../context/chat/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +15,68 @@ import { getFileUrl } from '../../utils/urlHelper';
 import EmojiPicker from './EmojiPicker';
 import ImageModal from './ImageModal';
 import '../../styles/chats/MessagingWidget.css';
+
+/* ── Compact voice message player ── */
+const VoiceMessage = ({ src, fileName, onDownload }) => {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  const fmtTime = (s) => {
+    if (!s || isNaN(s) || !isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="messaging-voice-player">
+      <audio
+        ref={audioRef}
+        src={src}
+        onLoadedMetadata={(e) => setDuration(e.target.duration)}
+        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+      />
+      <button
+        className={`messaging-voice-play-btn ${playing ? 'playing' : ''}`}
+        onClick={togglePlay}
+        title={playing ? 'Pause' : 'Play voice message'}
+      >
+        {playing ? <Pause size={14} /> : <Play size={14} />}
+      </button>
+      <div className="messaging-voice-body">
+        <div className="messaging-voice-progress-track">
+          <div className="messaging-voice-progress-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="messaging-voice-timer">
+          {playing || currentTime > 0 ? fmtTime(currentTime) : fmtTime(duration)}
+        </span>
+      </div>
+      <button
+        className="messaging-voice-download-btn"
+        onClick={onDownload}
+        title="Download audio"
+      >
+        <Download size={13} />
+      </button>
+    </div>
+  );
+};
 
 const MessagingWidget = () => {
   const { user: currentUser } = useAuth();
@@ -53,11 +115,17 @@ const MessagingWidget = () => {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showChatDetails, setShowChatDetails] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const markedAsReadRef = useRef(new Set());
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
 
   // Auto-scroll to bottom in chat view
   useEffect(() => {
@@ -282,6 +350,83 @@ const MessagingWidget = () => {
     } catch (error) {
       console.error('Download failed:', error);
     }
+  };
+
+  // Voice recording
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.start(250); // collect chunks every 250ms
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error('Microphone access denied:', err);
+      alert('Could not access microphone. Please check your browser permissions.');
+    }
+  };
+
+  const handleStopAndSendRecording = () => {
+    if (!mediaRecorderRef.current) return;
+    clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingDuration(0);
+
+    const recorder = mediaRecorderRef.current;
+    recorder.onstop = async () => {
+      const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      recorder.stream.getTracks().forEach(t => t.stop());
+      audioChunksRef.current = [];
+
+      setUploadingFile(true);
+      try {
+        await sendFileMessage(selectedConversation.id, file);
+      } catch (err) {
+        console.error('Failed to send voice message:', err);
+        alert('Failed to send voice message. Please try again.');
+      } finally {
+        setUploadingFile(false);
+      }
+    };
+    recorder.stop();
+  };
+
+  const handleCancelRecording = () => {
+    if (!mediaRecorderRef.current) return;
+    clearInterval(recordingTimerRef.current);
+    mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+    mediaRecorderRef.current.onstop = null;
+    mediaRecorderRef.current.stop();
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setRecordingDuration(0);
+  };
+
+  const formatRecordingTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // Emoji selection
+  const handleEmojiSelect = (emoji) => {
+    setMessageInput(prev => prev + emoji);
   };
 
   // Handle create group
@@ -687,16 +832,11 @@ const MessagingWidget = () => {
                                 </button>
                               </div>
                             ) : message.message_type === 'AUDIO' ? (
-                              <div className="messaging-file-media">
-                                <audio src={getFileUrl(message.file_url)} controls />
-                                <button
-                                  className="messaging-file-download-btn"
-                                  onClick={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
-                                  title="Download audio"
-                                >
-                                  <Download size={16} />
-                                </button>
-                              </div>
+                              <VoiceMessage
+                                src={getFileUrl(message.file_url)}
+                                fileName={message.file_name}
+                                onDownload={() => handleDownload(getFileUrl(message.file_url), message.file_name)}
+                              />
                             ) : (
                               <div className="messaging-file-document">
                                 <a
@@ -763,38 +903,85 @@ const MessagingWidget = () => {
                 className="messaging-file-input"
                 accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingFile}
-                className="messaging-input-btn"
-              >
-                <Paperclip size={18} />
-              </button>
-              <button
-                type="button"
-                className="messaging-input-btn"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              >
-                <Smile size={18} />
-              </button>
-              <input
-                type="text"
-                value={messageInput}
-                onChange={(e) => {
-                  setMessageInput(e.target.value);
-                  handleTypingStart();
-                }}
-                placeholder="Write a message..."
-                className="messaging-input-field"
-              />
-              <button
-                type="submit"
-                disabled={!messageInput.trim() || isSubmitting}
-                className="messaging-send-btn"
-              >
-                <Send size={18} />
-              </button>
+
+              {isRecording ? (
+                /* ── Recording state ── */
+                <>
+                  <button
+                    type="button"
+                    className="messaging-cancel-record-btn"
+                    onClick={handleCancelRecording}
+                    title="Cancel recording"
+                  >
+                    <X size={18} />
+                  </button>
+                  <div className="messaging-recording-indicator">
+                    <span className="messaging-recording-dot" />
+                    <span className="messaging-recording-text">Recording</span>
+                    <span className="messaging-recording-timer">{formatRecordingTime(recordingDuration)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="messaging-send-record-btn"
+                    onClick={handleStopAndSendRecording}
+                    title="Stop and send"
+                  >
+                    <Send size={18} />
+                  </button>
+                </>
+              ) : (
+                /* ── Normal state ── */
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="messaging-input-btn"
+                    title="Attach file"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+                  <button
+                    ref={emojiButtonRef}
+                    type="button"
+                    className="messaging-input-btn"
+                    onClick={() => setShowEmojiPicker(prev => !prev)}
+                    title="Emoji"
+                  >
+                    <Smile size={18} />
+                  </button>
+                  <input
+                    type="text"
+                    value={messageInput}
+                    onChange={(e) => {
+                      setMessageInput(e.target.value);
+                      handleTypingStart();
+                    }}
+                    placeholder="Write a message..."
+                    className="messaging-input-field"
+                  />
+                  {messageInput.trim() ? (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="messaging-send-btn"
+                      title="Send message"
+                    >
+                      <Send size={18} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="messaging-mic-btn"
+                      onClick={handleStartRecording}
+                      disabled={uploadingFile}
+                      title="Record voice message"
+                    >
+                      <Mic size={18} />
+                    </button>
+                  )}
+                </>
+              )}
             </form>
 
             {uploadingFile && (
@@ -802,6 +989,15 @@ const MessagingWidget = () => {
                 <div className="messaging-uploading-spinner"></div>
                 <span>Uploading...</span>
               </div>
+            )}
+
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <EmojiPicker
+                onEmojiSelect={handleEmojiSelect}
+                onClose={() => setShowEmojiPicker(false)}
+                buttonRef={emojiButtonRef}
+              />
             )}
           </div>
         )}

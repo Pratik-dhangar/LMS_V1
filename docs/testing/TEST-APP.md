@@ -20,7 +20,7 @@ This document lists the main features discovered with concise descriptions and r
 
 **Session Notes (Auto-save)**: Auto-save and update notes during sessions; trainer draft/finalized workflow; head access to notes by internal session id. See [hurshbintech-backend/app/api/endpoints/session_notes.py](hurshbintech-backend/app/api/endpoints/session_notes.py).
 
-**Session Reports & Analytics**: Trainers create session reports; heads can view per-learner summaries, grouped program sessions, statistics for charts and PDF data export support. See [hurshbintech-backend/app/api/endpoints/session_reports.py](hurshbintech-backend/app/api/endpoints/session_reports.py).
+**Manage Learning Progress & Analytics**: Trainers create session reports; heads can view per-learner summaries, grouped program sessions, statistics for charts and PDF data export support. See [hurshbintech-backend/app/api/endpoints/session_reports.py](hurshbintech-backend/app/api/endpoints/session_reports.py).
 
 **Profile Endpoints**: Single endpoint to fetch the current user profile for any role. See [hurshbintech-backend/app/api/endpoints/profile.py](hurshbintech-backend/app/api/endpoints/profile.py).
 
@@ -60,7 +60,7 @@ This section lists features available to the `trainer` during a live training se
 
 - **Session Notes (Auto-save & Finalize)**: Trainer auto-saves draft notes during session and can update/ finalize notes. Backend endpoints in `session_notes.py`; frontend uses `sessionNotesService.js` and the auto-save/sendBeacon on unmount in `TrainerSession.jsx`.
 
-- **Session Reports Creation**: Trainers create detailed session reports (goal-level prompt/reinforcement values, notes, program mapping) after sessions; reports power leaderboards/analytics. Backend: `session_reports.py`; frontend: `sessionReportService.js` and session report UI hooks in `TrainerSession.jsx`.
+- **Manage Learning Progress Creation**: Trainers create detailed session reports (goal-level prompt/reinforcement values, notes, program mapping) after sessions; reports power leaderboards/analytics. Backend: `session_reports.py`; frontend: `sessionReportService.js` and session report UI hooks in `TrainerSession.jsx`.
 
 - **Timers & Stopwatches**: Per-session stopwatch/timers displayed on whiteboard and synced to learner (throttled updates) for timing exercises. Implementation in `TrainerSession.jsx` using `useStopwatch` and `whiteboardService.send('stopwatch_sync', ...)`.
 
@@ -116,7 +116,7 @@ This section summarizes features available to the `learner` during a live sessio
 
 - **Session Notes Visibility**: Learners may view session notes or summaries if provided (backend provides endpoints); notes auto-save is trainer/trainer-report centric. See `session_notes.py` and `sessionNotesService.js` for saving/reading notes.
 
-- **Session Reports & PDF Data (Read Access)**: Learners can access some session summary data or PDFs if exposed by the app; backend supports aggregated PDF data via session reports (`session_reports.py`) and frontend `sessionReportService.getPdfData`.
+- **Manage Learning Progress & PDF Data (Read Access)**: Learners can access some session summary data or PDFs if exposed by the app; backend supports aggregated PDF data via session reports (`session_reports.py`) and frontend `sessionReportService.getPdfData`.
 
 - **Moveable Video Feed & Simple Layout Controls**: Learners can move/resize the video feed UI elements (if allowed by design) using `MoveableVideoFeed.jsx` and layout state in `LearnerSession.jsx`.
 

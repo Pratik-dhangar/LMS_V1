@@ -115,7 +115,7 @@ const EditLearner = () => {
       const formattedData = {
         name: data.name || "",
         email: data.email || "",
-        contact_number: data.contact_no || "",
+        contact_number: data.contact_number || "",
         age: data.age || "",
         dob: data.dob ? new Date(data.dob).toISOString().split("T")[0] : "",
         date_of_assessment: data.date_of_assessment
@@ -300,7 +300,7 @@ const EditLearner = () => {
       newErrors.dob = "Date of birth cannot be in the future";
     }
 
-    // Date of Assessment is required
+    // Start Date is required
     if (!formData.date_of_assessment) {
       newErrors.date_of_assessment = "Date of assessment is required";
     } else if (new Date(formData.date_of_assessment) > new Date()) {

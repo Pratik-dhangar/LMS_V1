@@ -32,6 +32,9 @@ const Emoji = ({ emoji, className = '', style = {}, size = 'base' }) => {
 
   useEffect(() => {
     if (emojiRef.current) {
+      // Keep native emoji as a fallback for network/CDN failures.
+      const originalEmojiText = emoji;
+
       // Parse the emoji and replace with Twemoji images
       twemoji.parse(emojiRef.current, {
         folder: 'svg',
@@ -46,6 +49,13 @@ const Emoji = ({ emoji, className = '', style = {}, size = 'base' }) => {
         img.style.height = actualSize;
         img.style.verticalAlign = 'middle';
         img.style.display = 'inline-block';
+
+        // Fallback to native emoji if Twemoji image fails to load.
+        img.onerror = () => {
+          if (emojiRef.current) {
+            emojiRef.current.textContent = originalEmojiText;
+          }
+        };
       });
     }
   }, [emoji, actualSize]);
@@ -58,6 +68,7 @@ const Emoji = ({ emoji, className = '', style = {}, size = 'base' }) => {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        fontSize: actualSize,
         lineHeight: 1,
         ...style
       }}

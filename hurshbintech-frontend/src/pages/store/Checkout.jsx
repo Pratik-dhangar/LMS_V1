@@ -14,6 +14,7 @@ const Checkout = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
+    const [receiptPreview, setReceiptPreview] = useState(null);
     const [orderData, setOrderData] = useState(null);
     const [createdOrderId, setCreatedOrderId] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
@@ -35,87 +36,41 @@ const Checkout = () => {
 
     const loadUserData = async () => {
         try {
-            console.log('Loading user data from /profile/me/user...');
-            let userData = await axiosInstance.get('/profile/me/user');
-            console.log('✅ Successfully got response:', userData.status);
-            console.log('User data response:', userData.data);
+            // Fetch user profile data from Users table via profile endpoint
+            const response = await axiosInstance.get('/profile/me/user');
 
-            let email = userData.data.email || '';
-            let contact_number = userData.data.contact_no || '';
-
-            // If email or contact_number is missing, check respective profile pages
-            if (!email || !contact_number) {
-                console.log('Email or contact_number missing, checking profile pages...');
-
-                if (user && user.role) {
-                    try {
-                        // Try to fetch from role-specific profile endpoint
-                        const profileEndpoints = [
-                            `/profile/${user.role}/me`,
-                            `/${user.role}/profile/me`,
-                            `/profile/me/${user.role}`,
-                            `/${user.role}/profile`
-                        ];
-
-                        let profileData = null;
-                        for (const endpoint of profileEndpoints) {
-                            try {
-                                console.log(`Trying endpoint: ${endpoint}`);
-                                const response = await axiosInstance.get(endpoint);
-                                profileData = response.data;
-                                console.log(`✅ Found profile data from ${endpoint}:`, profileData);
-                                break;
-                            } catch (err) {
-                                console.log(`✗ Endpoint ${endpoint} failed`);
-                                continue;
-                            }
-                        }
-
-                        if (profileData) {
-                            // Update email if not found in users table
-                            if (!email && profileData.email) {
-                                email = profileData.email;
-                                console.log('Email found in profile page:', email);
-                            }
-                            // Update contact_number if not found in users table
-                            if (!contact_number && (profileData.contact_no || profileData.contact_number || profileData.phone)) {
-                                contact_number = profileData.contact_no || profileData.contact_number || profileData.phone;
-                                console.log('Contact number found in profile page:', contact_number);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error fetching from profile pages:', error);
-                    }
-                }
+            if (!response.data) {
+                console.warn('No user data returned from API');
+                return;
             }
 
-            setCurrentUser(userData.data);
+            // Extract email and contact_number directly from response
+            const userEmail = response.data.email || '';
+            const userContactNumber = response.data.contact_number || '';
 
-            console.log('Final email:', email);
-            console.log('Final contact_number:', contact_number);
+            console.log('=== USER DATA FETCHED ===');
+            console.log('Email:', userEmail);
+            console.log('Contact Number:', userContactNumber);
+            console.log('========================');
 
-            setFormData(prev => {
-                const updated = {
-                    ...prev,
-                    email: email,
-                    contact_number: contact_number
-                };
-                console.log('Updated formData:', updated);
-                return updated;
-            });
+            // Update form data with fetched values
+            setFormData(prevData => ({
+                ...prevData,
+                email: userEmail,
+                contact_number: userContactNumber
+            }));
 
-            if (email) {
-                console.log('Email verified - setting badge');
+            // Set email verification status
+            if (userEmail) {
                 setEmailVerified(true);
-            } else {
-                console.log('No email found - emailVerified remains false');
             }
+
+            // Store user data in state
+            setCurrentUser(response.data);
+
         } catch (error) {
-            console.error('❌ Error loading user data:', error);
-            console.error('Error status:', error.response?.status);
-            console.error('Error response:', error.response?.data);
-            console.error('Full error:', error);
-            // Continue without user data - email field will be empty
+            console.error('Failed to load user data:', error);
+            toast.error('Could not load user information');
         }
     };
 
@@ -169,6 +124,16 @@ const Checkout = () => {
                 return;
             }
             setReceiptFile(file);
+
+            // Create preview for image files
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (ev) => setReceiptPreview(ev.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                setReceiptPreview(null); // PDF doesn't have preview
+            }
+
             toast.success('Receipt selected: ' + file.name);
         }
     };
@@ -277,19 +242,7 @@ const Checkout = () => {
                                             <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
                                                 Email for Payment Instructions
                                             </h4>
-                                            {/* {emailVerified && (
-                                                // <span style={{
-                                                //     display: 'inline-block',
-                                                //     background: '#28a745',
-                                                //     color: 'white',
-                                                //     padding: '4px 8px',
-                                                //     borderRadius: '4px',
-                                                //     fontSize: '11px',
-                                                //     fontWeight: '600'
-                                                // }}>
-                                                //     ✓ From Database
-                                                // </span>
-                                            )} */}
+
                                         </div>
                                         <input
                                             type="email"
@@ -308,11 +261,7 @@ const Checkout = () => {
                                                 boxSizing: 'border-box'
                                             }}
                                         />
-                                        {/* <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#666' }}>
-                                            {emailVerified
-                                                ? '✓ Email from your account'
-                                                : 'Please enter your email address'}
-                                        </p> */}
+
                                     </div>
                                 </div>
                             </div>
@@ -445,26 +394,19 @@ const Checkout = () => {
                                         alignItems: 'center',
                                         justifyContent: 'center'
                                     }}>
-                                        <div style={{
-                                            width: '200px',
-                                            height: '200px',
-                                            background: 'white',
-                                            border: '2px solid #27ae60',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            borderRadius: '8px',
-                                            fontSize: '100px',
-                                            marginBottom: '15px'
-                                        }}>
-                                            📲
-                                        </div>
-                                        <div style={{ fontSize: '14px', color: '#27ae60', fontWeight: '600', marginBottom: '8px' }}>
-                                            UPI Payment QR Code
-                                        </div>
-                                        <div style={{ fontSize: '13px', color: '#555' }}>Scan with any UPI app</div>
-                                        <div style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '8px' }}>
-                                            Google Pay • PhonePe • Paytm • BHIM
+                                        <img
+                                            src="/upi-qr.jpeg"
+                                            alt="UPI QR Code"
+                                            className="bsm-qr-img"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                const placeholder = e.target.nextElementSibling;
+                                                if (placeholder) placeholder.style.display = 'flex';
+                                            }}
+                                        />
+                                        <div className="bsm-qr-placeholder">
+                                            <p>📱</p>
+                                            <span>QR Code file not found</span>
                                         </div>
                                     </div>
                                 </div>
@@ -490,18 +432,18 @@ const Checkout = () => {
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>Account Holder</td>
-                                                <td style={{ padding: '12px 0', color: '#2c3e50' }}>HurshBin Technologies Pvt Ltd</td>
+                                                <td style={{ padding: '12px 0', color: '#2c3e50' }}>HurshBin</td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>Account Number</td>
                                                 <td style={{ padding: '10px', color: '#2c3e50', fontFamily: 'monospace', background: '#f8f9fa' }}>
-                                                    1234567890123456
+                                                    50200034124439
                                                 </td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
                                                 <td style={{ padding: '12px 0', fontWeight: '600', color: '#2c3e50' }}>IFSC Code</td>
                                                 <td style={{ padding: '10px', color: '#2c3e50', fontFamily: 'monospace', background: '#f8f9fa' }}>
-                                                    ICIC0000001
+                                                    HDFC0000538
                                                 </td>
                                             </tr>
                                             <tr style={{ borderBottom: '1px solid #ddd' }}>
@@ -533,7 +475,7 @@ const Checkout = () => {
                                     <label
                                         htmlFor="receipt-upload"
                                         style={{
-                                            display: 'block',
+                                            display: receiptFile ? 'none' : 'block',
                                             background: 'white',
                                             border: '3px dashed #27ae60',
                                             padding: '40px',
@@ -562,6 +504,80 @@ const Checkout = () => {
                                         style={{ display: 'none' }}
                                     />
 
+                                    {/* Receipt Preview */}
+                                    {receiptPreview && (
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '15px',
+                                            background: '#f0f9ff',
+                                            border: '2px solid #3498db',
+                                            borderRadius: '8px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                <p style={{ margin: 0, fontSize: '13px', color: '#2980b9', fontWeight: '600' }}>📷 Receipt Preview:</p>
+                                                <button
+                                                    onClick={() => {
+                                                        document.getElementById('receipt-upload').click();
+                                                    }}
+                                                    style={{
+                                                        padding: '5px 12px',
+                                                        fontSize: '12px',
+                                                        background: '#3498db',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontWeight: '600'
+                                                    }}
+                                                >
+                                                    Change Receipt
+                                                </button>
+                                            </div>
+                                            <img
+                                                src={receiptPreview}
+                                                alt="Receipt preview"
+                                                style={{
+                                                    maxWidth: '100%',
+                                                    maxHeight: '300px',
+                                                    borderRadius: '6px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {receiptFile && !receiptPreview && (
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '12px',
+                                            background: '#f5f5f5',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '6px',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
+                                            <span style={{ fontSize: '13px', color: '#666' }}>📄 {receiptFile.name}</span>
+                                            <button
+                                                onClick={() => {
+                                                    document.getElementById('receipt-upload').click();
+                                                }}
+                                                style={{
+                                                    padding: '5px 12px',
+                                                    fontSize: '12px',
+                                                    background: '#3498db',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: '600'
+                                                }}
+                                            >
+                                                Change
+                                            </button>
+                                        </div>
+                                    )}
 
                                 </div>
                             </div>

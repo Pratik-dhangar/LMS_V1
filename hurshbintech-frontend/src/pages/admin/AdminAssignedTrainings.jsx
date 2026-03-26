@@ -289,7 +289,7 @@ const AdminAssignedTrainings = () => {
                             Back to Dashboard
                         </button>
                         <div>
-                            <h1 className="page-title">Internal Training Management</h1>
+                            <h1 className="page-title">Training Module Management</h1>
                             <p className="page-description">
                                 Create and manage training assignments for different roles
                             </p>

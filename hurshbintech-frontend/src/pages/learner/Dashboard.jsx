@@ -13,7 +13,8 @@ import {
   TrendingUp,
   AlertCircle,
   Loader2,
-  X
+  X,
+  FileBarChart
 } from "lucide-react";
 import subscriptionService from "../../api/services/subscriptionService";
 import "../../styles/admin/index.css";
@@ -54,12 +55,12 @@ const LearnerDashboard = () => {
   const menuItems = [
     {
       icon: GraduationCap,
-      title: "Individualised Intervention Program(IIP)",
+      title: "Individualised Intervention Program(ILP)",
       onClick: () => navigate("/learner/my-sessions"),
     },
     {
       icon: BookMarked,
-      title: "Home Program (HP)",
+      title: "Home Learning Program (HP)",
       onClick: () => navigate("/learner/assigned-programs"),
     },
     {
@@ -71,7 +72,12 @@ const LearnerDashboard = () => {
       icon: Package,
       title: "My Subscription",
       onClick: () => setShowSubscriptionModal(true),
-    }
+    },
+    {
+      icon: FileBarChart,
+      title: "My Progress Report",
+      onClick: () => navigate("/learner/my-reports"),
+    },
   ];
 
   return (

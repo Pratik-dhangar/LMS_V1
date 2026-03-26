@@ -2532,3 +2532,769 @@ class EmailService:
             html_body=html_body,
             email_type="webinar_invitation",
         )
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # Subscription Inquiry Confirmation Email - sent to learner when admin reviews/approves
+    # ────────────────────────────────────────────────────────────────────────────
+    @staticmethod
+    async def send_subscription_inquiry_approved(
+        recipient_email: str,
+        recipient_name: str,
+        inquiry_data: dict,
+    ) -> bool:
+        """
+        Send subscription inquiry confirmation email to learner after admin review.
+        inquiry_data should contain: email, contact_number, address, age, date_of_birth, date_of_assessment, 
+                                     package_name, package_price, payment_method, payment_receipt_filename
+        """
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+        
+        subject = "Subscription Inquiry Confirmation - HurshBintech"
+        
+        # Format dates
+        dob_display = inquiry_data.get('date_of_birth', '')
+        if dob_display:
+            try:
+                dob_display = datetime.fromisoformat(dob_display).strftime('%d %b %Y')
+            except:
+                pass
+        
+        doa_display = inquiry_data.get('date_of_assessment', '')
+        if doa_display:
+            try:
+                doa_display = datetime.fromisoformat(doa_display).strftime('%d %b %Y')
+            except:
+                pass
+        
+        price_display = inquiry_data.get('package_price', '')
+        if price_display:
+            try:
+                price_display = f"₹ {float(price_display):,.2f}"
+            except:
+                pass
+        
+        payment_method_display = inquiry_data.get('payment_method', '')
+        if payment_method_display == 'UPI':
+            payment_method_display = '📱 UPI'
+        elif payment_method_display == 'BANK_TRANSFER':
+            payment_method_display = '🏦 Bank Transfer'
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 650px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f5f5f5;
+                    }}
+                    .header {{
+                        background: linear-gradient(135deg, #5c1e1e 0%, #8b2e2e 100%);
+                        padding: 25px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-size: 28px;
+                        font-weight: 600;
+                    }}
+                    .header p {{
+                        margin: 5px 0 0 0;
+                        font-size: 14px;
+                        opacity: 0.95;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .greeting {{
+                        font-size: 16px;
+                        margin-bottom: 20px;
+                        color: #2c3e50;
+                    }}
+                    .section {{
+                        margin: 25px 0;
+                    }}
+                    .section-title {{
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #5c1e1e;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #5c1e1e;
+                        margin-bottom: 15px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }}
+                    .detail-row {{
+                        display: flex;
+                        margin: 12px 0;
+                        padding: 10px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                    }}
+                    .detail-label {{
+                        font-weight: 600;
+                        width: 40%;
+                        color: #5c1e1e;
+                    }}
+                    .detail-value {{
+                        width: 60%;
+                        color: #374151;
+                        word-break: break-word;
+                    }}
+                    .detail-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .status-box {{
+                        background-color: #f0fdf4;
+                        border-left: 4px solid #10b981;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .status-box p {{
+                        margin: 0;
+                        color: #065f46;
+                        font-size: 14px;
+                    }}
+                    .next-steps {{
+                        background-color: #fef3c7;
+                        border-left: 4px solid #f59e0b;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .next-steps p {{
+                        margin: 8px 0;
+                        color: #92400e;
+                        font-size: 14px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    .link {{
+                        color: #5c1e1e;
+                        text-decoration: none;
+                        font-weight: 600;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Subscription Inquiry Received</h1>
+                        <p>Thank you for your interest in HurshBintech programs</p>
+                    </div>
+                    
+                    <div class="content">
+                        <div class="greeting">
+                            <p>Hi <strong>{recipient_name}</strong>,</p>
+                            <p>Thank you! Your subscription inquiry has been confirmed and approved. Below is a summary of all the information you submitted for our records.</p>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">📋 Learner Information</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Full Name</span>
+                                <span class="detail-value">{recipient_name}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Email</span>
+                                <span class="detail-value">{inquiry_data.get('email', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Contact Number</span>
+                                <span class="detail-value">{inquiry_data.get('contact_number', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Address</span>
+                                <span class="detail-value">{inquiry_data.get('address', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Age</span>
+                                <span class="detail-value">{inquiry_data.get('age', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Date of Birth</span>
+                                <span class="detail-value">{dob_display or '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Assessment Date</span>
+                                <span class="detail-value">{doa_display or '—'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-title">💳 Package & Payment Details</div>
+                            <div class="detail-row">
+                                <span class="detail-label">Package Name</span>
+                                <span class="detail-value">{inquiry_data.get('package_name', '—')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Package Price</span>
+                                <span class="detail-value"><strong>{price_display or '—'}</strong></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Payment Method</span>
+                                <span class="detail-value">{payment_method_display or '—'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Receipt Status</span>
+                                <span class="detail-value">{('✅ Uploaded' if inquiry_data.get('payment_receipt_filename') else '⏳ Pending')}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-box">
+                            <p><strong>✓ Status: Confirmed</strong></p>
+                            <p>Your inquiry has been reviewed and approved! Our enrollment team will contact you at the email or phone number provided within 1-2 business days to complete your registration.</p>
+                        </div>
+                        
+                        <div class="next-steps">
+                            <p><strong>What happens next?</strong></p>
+                            <p>1. We will confirm your payment receipt</p>
+                            <p>2. Our enrollment team will arrange a call to finalize your details</p>
+                            <p>3. You'll receive access to your program and learning materials</p>
+                        </div>
+                        
+                        <div class="section">
+                            <p style="font-size: 14px; color: #6b7280;">
+                                If you have any questions or need to update your information, please reply to this email or contact us directly. Keep this email for your reference as it contains a summary of your inquiry.
+                            </p>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated confirmation email from HurshBintech.</p>
+                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="subscription_inquiry_approved",
+        )
+
+    # ========== WELCOME / CREDENTIALS EMAILS ==========
+
+    @staticmethod
+    async def send_welcome_credentials(
+        recipient_email: str,
+        recipient_name: str,
+        role: str,
+        password: str,
+    ) -> bool:
+        """Send welcome email with auto-generated login credentials to a newly registered Trainer or Learner"""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+
+        role_display = role.capitalize()
+        subject = f"Welcome to HurshBintech – Your {role_display} Account is Ready"
+
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 24px 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .header h1 {{
+                        margin: 0;
+                        font-size: 22px;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                    }}
+                    .header p {{
+                        margin: 6px 0 0;
+                        font-size: 14px;
+                        opacity: 0.9;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }}
+                    .greeting {{
+                        font-size: 16px;
+                        margin-bottom: 16px;
+                        color: #2c3e50;
+                    }}
+                    .credentials-box {{
+                        background-color: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-left: 4px solid #41A67E;
+                        border-radius: 6px;
+                        padding: 20px 24px;
+                        margin: 24px 0;
+                    }}
+                    .credentials-box h3 {{
+                        margin: 0 0 14px 0;
+                        font-size: 15px;
+                        color: #41A67E;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }}
+                    .credential-row {{
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #e2e8f0;
+                    }}
+                    .credential-row:last-child {{
+                        border-bottom: none;
+                    }}
+                    .credential-label {{
+                        font-weight: 600;
+                        color: #555;
+                        font-size: 14px;
+                        min-width: 100px;
+                    }}
+                    .credential-value {{
+                        font-size: 14px;
+                        color: #1a202c;
+                        font-family: 'Courier New', Courier, monospace;
+                        word-break: break-all;
+                    }}
+                    .password-value {{
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #2d8b5e;
+                        letter-spacing: 3px;
+                        font-family: 'Courier New', Courier, monospace;
+                    }}
+                    .warning-box {{
+                        background-color: #fff8e7;
+                        border: 1px solid #f6cc57;
+                        border-radius: 6px;
+                        padding: 14px 18px;
+                        margin: 20px 0;
+                        font-size: 13px;
+                        color: #7d6007;
+                    }}
+                    .warning-box strong {{
+                        color: #5a4500;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    a.link {{
+                        color: #41A67E;
+                        text-decoration: none;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Welcome to HurshBintech!</h1>
+                        <p>Your {role_display} account has been created</p>
+                    </div>
+                    <div class="content">
+                        <p class="greeting">Dear <strong>{recipient_name}</strong>,</p>
+                        <p>
+                            We are pleased to inform you that your <strong>{role_display}</strong> account on
+                            <strong>HurshBintech Child Development Platform</strong> has been successfully created
+                            by your Head.
+                        </p>
+                        <p>Below are your login credentials. Please keep them safe and do not share them with anyone.</p>
+
+                        <div class="credentials-box">
+                            <h3>Your Login Credentials</h3>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td class="credential-label" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:600; color:#555; font-size:14px; width:110px;">Role</td>
+                                    <td class="credential-value" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size:14px; color:#1a202c;">{role_display}</td>
+                                </tr>
+                                <tr>
+                                    <td class="credential-label" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:600; color:#555; font-size:14px;">Email</td>
+                                    <td class="credential-value" style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size:14px; color:#1a202c;">{recipient_email}</td>
+                                </tr>
+                                <tr>
+                                    <td class="credential-label" style="padding: 10px 0 6px; font-weight:600; color:#555; font-size:14px;">Password</td>
+                                    <td style="padding: 10px 0 6px;">
+                                        <span class="password-value">{password}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>⚠ Important:</strong> This is an auto-generated password. For your security,
+                            please log in and change your password immediately after your first sign-in.
+                            Never share your password with anyone.
+                        </div>
+
+                        <p>
+                            You can log in to the platform at:
+                            <a href="https://tech.hurshbin.com/" class="link">https://tech.hurshbin.com/</a>
+                        </p>
+
+                        <p>
+                            If you have any questions or need assistance, please contact your Head or
+                            reach out to our support team.
+                        </p>
+
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated credentials email from HurshBintech. Please do not reply.</p>
+                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="welcome_credentials",
+        )
+
+    # ============================================================
+    # VENDOR ORDER NOTIFICATION
+    # ============================================================
+
+    @staticmethod
+    async def send_vendor_order_notification(
+        vendor_email: str,
+        vendor_name: str,
+        order_number: str,
+        customer_name: str,
+        customer_email: str,
+        delivery_address: str,
+        delivery_city: str,
+        delivery_pincode: str,
+        items: list,  # [{"product_name": str, "quantity": int, "unit_price": float, "line_total": float}]
+        total_amount: float,
+    ) -> bool:
+        """Send order fulfilment notification to a vendor listing their assigned products."""
+
+        if not settings.ENABLE_EMAIL or not vendor_email:
+            logger.warning(f"Email sending disabled or no vendor email for {vendor_name}")
+            return False
+
+        subject = f"New Order Assignment #{order_number} – Action Required"
+
+        # Build items rows
+        items_rows = ""
+        for item in items:
+            items_rows += f"""
+            <tr>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">{item['product_name']}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">{item['quantity']}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">₹{float(item['unit_price']):.2f}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">₹{float(item['line_total']):.2f}</td>
+            </tr>"""
+
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }}
+                    .container {{ max-width: 620px; margin: 0 auto; padding: 10px; background-color: #f0f4ff; }}
+                    .header {{ background-color: #41A67E; padding: 24px; border-radius: 8px 8px 0 0; color: white; text-align: center; }}
+                    .content {{ background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }}
+                    .section-title {{ font-size: 15px; font-weight: 700; color: #41A67E; margin: 24px 0 8px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; }}
+                    .info-grid {{ display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; font-size: 14px; }}
+                    .info-grid .label {{ font-weight: 600; color: #555; }}
+                    table {{ width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }}
+                    thead tr {{ background-color: #f3f4f6; }}
+                    th {{ padding: 10px 12px; text-align: left; color: #6b7280; font-weight: 600; }}
+                    .total-row td {{ padding: 12px; font-weight: 700; font-size: 15px; color: #111; }}
+                    .footer {{ text-align: center; margin-top: 24px; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin:0;font-size:22px;">New Order Assignment</h1>
+                        <p style="margin:6px 0 0;opacity:.9;">Order #{order_number}</p>
+                    </div>
+                    <div class="content">
+                        <p>Dear <strong>{vendor_name}</strong>,</p>
+                        <p>You have been assigned to fulfil the following products for order <strong>#{order_number}</strong>. Please process and ship them to the customer at the address below.</p>
+
+                        <p class="section-title">Customer Details</p>
+                        <div class="info-grid">
+                            <span class="label">Name:</span><span>{customer_name}</span>
+                            <span class="label">Email:</span><span>{customer_email}</span>
+                            <span class="label">Delivery Address:</span><span>{delivery_address}</span>
+                            <span class="label">City:</span><span>{delivery_city}</span>
+                            <span class="label">Pincode:</span><span>{delivery_pincode}</span>
+                        </div>
+
+                        <p class="section-title">Your Products to Fulfil</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th style="text-align:center;">Qty</th>
+                                    <th style="text-align:right;">Unit Price</th>
+                                    <th style="text-align:right;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items_rows}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row" style="background-color:#f9fafb;">
+                                    <td colspan="3" style="padding:12px;font-weight:700;">Total Amount</td>
+                                    <td style="padding:12px;text-align:right;font-weight:700;">₹{float(total_amount):.2f}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <p style="margin-top:24px;font-size:13px;color:#6b7280;">
+                            If you have any questions about this order, please contact our admin team.
+                        </p>
+
+                        <div class="footer">
+                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>This is an automated vendor notification. Please do not reply directly to this email.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=vendor_email,
+            recipient_name=vendor_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="vendor_order_notification",
+        )
+
+    # ========== LEARNER GOALS REPORT EMAIL ==========
+
+    @staticmethod
+    async def send_learner_goals_report(
+        recipient_email: str,
+        recipient_name: str,
+        programs_covered: list,
+        total_sessions: int,
+        last_session_date: Optional[str],
+        sent_by_name: str,
+    ) -> bool:
+        """Send the Skill Development Graph  summary to the learner's registered email."""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email disabled or no recipient, skipping goals report email to {recipient_email}")
+            return False
+
+        subject = f"Your Learning Goals Report – {recipient_name}"
+
+        # Build program rows
+        program_rows_html = ""
+        for i, prog in enumerate(programs_covered):
+            bg = "#f9f9f9" if i % 2 == 0 else "#ffffff"
+            program_rows_html += f"""
+                <tr style="background-color: {bg};">
+                    <td style="padding: 10px 14px; border: 1px solid #ddd; color: #444;">{i + 1}</td>
+                    <td style="padding: 10px 14px; border: 1px solid #ddd; color: #333; font-weight: 500;">{prog}</td>
+                </tr>"""
+
+        last_session_text = last_session_date if last_session_date else "N/A"
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Learning Goals Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }}
+                .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+                .header {{ background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; padding: 28px 30px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 22px; letter-spacing: 0.5px; }}
+                .header p {{ margin: 8px 0 0 0; opacity: 0.88; font-size: 14px; }}
+                .content {{ padding: 28px 30px; }}
+                .stats-row {{ display: flex; gap: 16px; margin: 20px 0; }}
+                .stat-box {{ flex: 1; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 14px; text-align: center; }}
+                .stat-box .num {{ font-size: 26px; font-weight: 700; color: #7c1c1c; }}
+                .stat-box .label {{ font-size: 12px; color: #888; margin-top: 4px; }}
+                .footer {{ background: #f8f8f8; padding: 18px 30px; text-align: center; font-size: 13px; color: #888; border-top: 1px solid #eee; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📈 Skill Development Graph </h1>
+                    <p>A summary of your learning progress across all programs</p>
+                </div>
+                <div class="content">
+                    <p>Hi <strong>{recipient_name}</strong>,</p>
+                    <p>Your learning progress report has been shared by <strong>{sent_by_name}</strong>. Below is a summary of all the programs and goals you have been working on.</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 8px 0 20px 0;">
+                        <tr>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555; width: 45%;">Total Sessions Attended</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #7c1c1c; font-weight: 700;">{total_sessions}</td>
+                        </tr>
+                        <tr style="background: #fafafa;">
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555;">Last Session Date</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #555;">{last_session_text}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; font-weight: 600; color: #555;">Total Programs / Goals</td>
+                            <td style="padding: 8px 12px; border: 1px solid #ddd; color: #7c1c1c; font-weight: 700;">{len(programs_covered)}</td>
+                        </tr>
+                    </table>
+
+                    <h3 style="color: #7c1c1c; border-bottom: 2px solid #fca5a5; padding-bottom: 6px; margin-bottom: 12px;">Programs / Goals Covered</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                        <thead>
+                            <tr style="background: #7c1c1c; color: white;">
+                                <th style="padding: 10px 14px; border: 1px solid #a83232; text-align: left; width: 10%;">#</th>
+                                <th style="padding: 10px 14px; border: 1px solid #a83232; text-align: left;">Program / Goal Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {program_rows_html if programs_covered else '<tr><td colspan="2" style="padding: 12px; text-align: center; color: #888;">No programs recorded yet.</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <p style="color: #555; font-size: 14px;">To view detailed session reports and progress charts for each program, please log in to your dashboard.</p>
+
+                    <div style="text-align: center; margin: 24px 0;">
+                        <a href="{settings.FRONTEND_URL}/learner/dashboard" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Dashboard</a>
+                    </div>
+
+                    <div class="footer">
+                        <p>This report was sent by <strong>{sent_by_name}</strong> via the Hurshbintech platform.</p>
+                        <p>© 2026 Hurshbintech. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="learner_goals_report",
+        )
+
+    # Final Progress Report Email - Sent to learner when coach/head clicks Send on final report
+    @staticmethod
+    async def send_final_progress_report_email(
+        recipient_email: str,
+        recipient_name: str,
+        sent_by_name: str,
+        report_date: Optional[str] = None,
+    ) -> bool:
+        """Send the Final Progress Report notification to the learner's email."""
+
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email disabled or no recipient, skipping final report email to {recipient_email}")
+            return False
+
+        subject = f"Your Final Progress Report – {recipient_name}"
+
+        report_date_text = report_date if report_date else datetime.now().strftime("%d %b %Y")
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Final Progress Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }}
+                .container {{ max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+                .header {{ background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; padding: 28px 30px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 22px; letter-spacing: 0.5px; }}
+                .header p {{ margin: 8px 0 0 0; opacity: 0.88; font-size: 14px; }}
+                .content {{ padding: 28px 30px; }}
+                .footer {{ background: #f8f8f8; padding: 18px 30px; text-align: center; font-size: 13px; color: #888; border-top: 1px solid #eee; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📋 Final Progress Report</h1>
+                    <p>Your comprehensive developmental assessment is ready</p>
+                </div>
+                <div class="content">
+                    <p>Hi <strong>{recipient_name}</strong>,</p>
+                    <p>We are pleased to inform you that your <strong>Final Progress Report</strong> dated <strong>{report_date_text}</strong> has been prepared and shared by <strong>{sent_by_name}</strong>. This report provides a comprehensive overview of your developmental progress and learning journey. Please log in to your dashboard to view the full report under the <strong>My Progress Report</strong> section.</p>
+                    <div style="text-align: center; margin: 28px 0;">
+                        <a href="{settings.FRONTEND_URL}/learner/my-reports" style="background: linear-gradient(135deg, #7c1c1c, #a83232); color: white; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">View My Progress Report</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>This report was sent by <strong>{sent_by_name}</strong> via the Hurshbintech platform.</p>
+                    <p>© 2026 Hurshbintech. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="final_progress_report",
+        )

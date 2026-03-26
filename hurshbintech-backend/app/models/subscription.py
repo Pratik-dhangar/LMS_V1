@@ -24,6 +24,12 @@ def get_current_datetime():
 
 # ============ ENUMERATIONS ============
 
+class PackageType(enum.Enum):
+    """Type of subscription package"""
+    LEARNER = "LEARNER"    # Package for learners
+    COACH = "COACH"        # Package for coaches
+
+
 class SubscriptionStatus(enum.Enum):
     """Status of a learner's subscription"""
     ACTIVE = "ACTIVE"              # Currently active, sessions can be consumed
@@ -77,7 +83,8 @@ class SubscriptionPackage(Base):
     sessions_count = Column(Integer, nullable=False)  # Total sessions in package
     validity_days = Column(Integer, nullable=False)    # Validity period in days
     price = Column(Numeric(10, 2), nullable=False)     # Package price
-    
+    package_type = Column(SAEnum(PackageType, name="packagetype"), nullable=False, default=PackageType.LEARNER)  # Package target type
+
     # Package status
     is_active = Column(Boolean, default=True, nullable=False)  # Soft delete flag
     
@@ -85,13 +92,18 @@ class SubscriptionPackage(Base):
     created_at = Column(DateTime, nullable=False, default=get_current_datetime, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=get_current_datetime, onupdate=get_current_datetime, server_default=func.now())
     
+    # Dedicated coach for COACH-type packages (one coach per package)
+    dedicated_coach_id = Column(Integer, ForeignKey("coach_profiles.id", ondelete="SET NULL"), nullable=True, index=True)
+
     # Relationships
     head = relationship("User", foreign_keys=[head_id])
+    dedicated_coach = relationship("CoachProfile", foreign_keys=[dedicated_coach_id])
     subscriptions = relationship("LearnerSubscription", back_populates="package", cascade="all, delete-orphan")
     
     # Indexes
     __table_args__ = (
         Index('idx_package_head_active', 'head_id', 'is_active'),
+        Index('idx_package_dedicated_coach', 'dedicated_coach_id'),
     )
 
 
@@ -330,4 +342,53 @@ class SubscriptionEventLog(Base):
     __table_args__ = (
         Index('idx_event_subscription_type', 'subscription_id', 'event_type', 'created_at'),
         Index('idx_event_created', 'created_at'),
+    )
+
+
+class PublicSubscriptionInquiry(Base):
+    """
+    Public inquiry for subscription purchase submitted via the landing page.
+    No authentication required – simply collects prospective learner information.
+    No subscription or learner account is created; this is purely a data-collection record.
+    """
+    __tablename__ = "public_subscription_inquiries"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Learner personal details
+    learner_name = Column(String(200), nullable=False)
+    email = Column(String(255), nullable=False)
+    contact_number = Column(String(50), nullable=False)
+    address = Column(Text, nullable=True)
+    age = Column(Integer, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+
+    # Assessment date
+    date_of_assessment = Column(Date, nullable=True)
+
+    # Package & payment details (denormalised so we preserve history)
+    package_id = Column(Integer, ForeignKey("subscription_packages.id", ondelete="SET NULL"), nullable=True)
+    package_name = Column(String(200), nullable=True)
+    package_price = Column(Numeric(10, 2), nullable=True)
+    payment_method = Column(String(50), nullable=True)  # "UPI" | "BANK_TRANSFER"
+
+    # Payment receipt file
+    payment_receipt_url = Column(String(1024), nullable=True)
+    payment_receipt_filename = Column(String(500), nullable=True)
+
+    # Admin review
+    review_status = Column(String(50), nullable=False, default="NEW", server_default="NEW")
+    # Possible values: NEW, REVIEWED, PROCESSED
+    admin_notes = Column(Text, nullable=True)
+
+    # Timestamps
+    submitted_at = Column(DateTime, nullable=False, default=get_current_datetime, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=get_current_datetime, onupdate=get_current_datetime, server_default=func.now())
+
+    # Relationship (read-only reference)
+    package = relationship("SubscriptionPackage", foreign_keys=[package_id])
+
+    __table_args__ = (
+        Index('idx_inquiry_submitted_at', 'submitted_at'),
+        Index('idx_inquiry_review_status', 'review_status'),
     )

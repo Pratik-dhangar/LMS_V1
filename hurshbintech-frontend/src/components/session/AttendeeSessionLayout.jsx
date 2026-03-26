@@ -587,7 +587,7 @@ export const attendeeSessionStyles = `
     margin: 0 !important;
     padding: 0rem !important;
     min-height: 0 !important;
-    overflow: hidden !important;
+    // overflow: hidden !important;
   }
 
   @media (max-width: 767px) {
@@ -672,23 +672,31 @@ export const attendeeSessionStyles = `
     .learner-main-container {
       /* No scrolling needed in landscape */
       overflow: hidden !important;
+            min-height: 0 !important;
     }
 
     .learner-whiteboard-wrapper {
-      /* In landscape, fit perfectly in viewport when browser chrome is hidden */
-      min-height: calc(100vh - 40px) !important;
-      max-height: calc(100vh - 40px) !important;
-      height: calc(100vh - 40px) !important;
-      /* Use dvh for dynamic adjustment */
-      min-height: calc(100dvh - 40px) !important;
-      max-height: calc(100dvh - 40px) !important;
-      height: calc(100dvh - 40px) !important;
-      /* iOS Safari fallback */
-      min-height: calc(-webkit-fill-available - 40px) !important;
-      max-height: calc(-webkit-fill-available - 40px) !important;
+            /* Let whiteboard consume only remaining space under header to avoid bottom clipping */
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            height: auto !important;
       /* Remove bottom padding in landscape */
       padding-bottom: 0 !important;
     }
+
+        .session-whiteboard-container,
+        .learner-whiteboard-wrapper > div,
+        .learner-whiteboard-wrapper .w-full {
+            min-height: 0 !important;
+            height: 100% !important;
+        }
+
+        .learner-whiteboard-wrapper .whiteboard-main-wrapper,
+        .learner-whiteboard-wrapper .whiteboard {
+            min-height: 0 !important;
+            height: 100% !important;
+        }
   }
 
   .session-whiteboard-container {
@@ -1323,6 +1331,125 @@ AttendeeMainLayout.propTypes = {
 };
 
 /**
+ * Draw Color Palette
+ * Shows 4 color options (black, green, red, yellow) when draw tool access is enabled
+ * Used by: LearnerSession, GuestSession, ClientSession
+ */
+export const DrawColorPalette = ({ toolAccess, tool, setTool, color, setColor, lineWidth = 2 }) => {
+    if (!toolAccess?.draw) return null;
+
+    const colors = [
+        { value: '#000000', label: 'Black' },
+        { value: '#06b6d4', label: 'Cyan' },
+        { value: '#ef4444', label: 'Red' },
+        { value: '#f97316', label: 'Orange' },
+        { value: '#eab308', label: 'Yellow' },
+        { value: '#22c55e', label: 'Green' },
+        { value: '#3b82f6', label: 'Blue' },
+        { value: '#8b5cf6', label: 'Purple' },
+        { value: '#ec4899', label: 'Pink' },
+        { value: '#6b7280', label: 'Gray' },
+        { value: '#92400e', label: 'Brown' },
+    ];
+
+    const isEraser = tool === 'eraser';
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            borderRadius: '24px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            zIndex: 35,
+            pointerEvents: 'auto'
+        }}>
+            {/* Pen / color buttons */}
+            {colors.map(c => {
+                const isActive = !isEraser && color === c.value;
+                return (
+                    <button
+                        key={c.value}
+                        onClick={() => { setTool('pen'); setColor(c.value); }}
+                        title={c.label}
+                        style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            backgroundColor: c.value,
+                            border: isActive ? '3px solid #3b82f6' : '2px solid #ccc',
+                            cursor: 'pointer',
+                            outline: isActive ? '2px solid #93c5fd' : 'none',
+                            outlineOffset: '1px',
+                            transition: 'all 0.15s ease',
+                            boxShadow: isActive ? '0 0 6px rgba(59,130,246,0.4)' : 'none',
+                            flexShrink: 0
+                        }}
+                    />
+                );
+            })}
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '22px', backgroundColor: '#d1d5db', flexShrink: 0 }} />
+
+            {/* Eraser button */}
+            <button
+                onClick={() => setTool(isEraser ? 'pen' : 'eraser')}
+                title={isEraser ? 'Switch to Pen' : 'Eraser'}
+                style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isEraser ? '#3b82f6' : '#f3f4f6',
+                    border: isEraser ? '2px solid #2563eb' : '2px solid #ccc',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontSize: '15px',
+                    flexShrink: 0
+                }}
+            >
+                <span style={{ filter: isEraser ? 'brightness(10)' : 'none' }}>🧹</span>
+            </button>
+
+            {/* Current brush size indicator (controlled by trainer) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '2px' }} title={`Pen size: ${lineWidth}`}>
+                <div
+                    style={{
+                        width: "1.5rem",
+                        height: "1.5rem",
+                        borderRadius: isEraser ? '4px' : '9999px',
+                        border: isEraser ? '2px solid #ef4444' : '1px solid rgba(0,0,0,0.6)',
+                        backgroundColor: isEraser ? 'transparent' : color,
+                        transition: 'all 0.15s ease'
+                    }}
+                />
+                {/* <span style={{ fontSize: '12px', color: '#374151', minWidth: '12px', textAlign: 'center' }}>{lineWidth}</span> */}
+            </div>
+        </div>
+    );
+};
+
+DrawColorPalette.propTypes = {
+    toolAccess: PropTypes.object,
+    tool: PropTypes.string,
+    setTool: PropTypes.func,
+    color: PropTypes.string,
+    setColor: PropTypes.func,
+    lineWidth: PropTypes.number
+};
+
+/**
  * Attendee Whiteboard Section
  * Common nested div structure for whiteboard area
  * Used by all three session types (learner, guest, client)
@@ -1509,7 +1636,10 @@ export const AttendeeWhiteboardWithVideo = ({
             />
 
             {/* Whiteboard */}
-            <div className="w-full h-full">
+            <div className="w-full h-full" style={{ position: 'relative' }}>
+                {/* Floating color palette overlay - shown when draw access is enabled */}
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} lineWidth={lineWidth} />
+
                 <Whiteboard
                     whiteboardService={whiteboardService}
                     isTrainer={false}
@@ -1622,12 +1752,17 @@ export const LearnerWhiteboardWithVideo = ({
     syncedElapsedTime,
     syncedIsRunning,
     stopwatch,
-    Whiteboard
+    Whiteboard,
+    inlineMedia,
+    setInlineMedia
 }) => {
     return (
         <>
             {/* Whiteboard component */}
             <div className="w-full h-full" style={{ position: 'relative' }}>
+                {/* Floating color palette overlay - shown when draw access is enabled */}
+                <DrawColorPalette toolAccess={toolAccess} tool={tool} setTool={setTool} color={color} setColor={setColor} lineWidth={lineWidth} />
+
                 <Whiteboard
                     canvasRefForParent={whiteboardCanvasRef}
                     whiteboardService={whiteboardService}
@@ -1657,6 +1792,8 @@ export const LearnerWhiteboardWithVideo = ({
                     setLineWidth={setLineWidth}
                     stopwatchFormattedTime={syncedElapsedTime > 0 ? stopwatch.formatTime(syncedElapsedTime) : null}
                     stopwatchIsRunning={syncedIsRunning}
+                    inlineMedia={inlineMedia}
+                    setInlineMedia={setInlineMedia}
                 />
             </div>
         </>
@@ -1847,6 +1984,7 @@ AttendeeCommentsPanelWrapper.propTypes = {
 export const AttendeeMetricsPanel = ({
     promptMeter = 0,
     reinforcementMeter = 0,
+    showReinforcementValue = true,
     bucketColor = null,
     micEnabled = true,
     cameraEnabled = true,
@@ -1871,160 +2009,120 @@ export const AttendeeMetricsPanel = ({
             width: '20%',
             minWidth: 'clamp(7.5rem, 12vw, 9.375rem)',
             maxWidth: 'clamp(9.375rem, 15vw, 12rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+            // display: 'flex',
+            // flexDirection: 'column',
+            // alignItems: 'center',
+            // justifyContent: isPromptOpen ? 'flex-start' : 'center',
             gap: 'clamp(0.5rem, 1.5vh, 0.75rem)',
             backgroundColor: 'white',
             borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
             padding: 'clamp(0.75rem, 2vh, 1rem)',
             boxShadow: '0 0.125rem 0.25rem rgba(0,0,0,0.1)',
             height: '100%',
-            overflow: 'visible',
+            overflow: 'hidden',
             boxSizing: 'border-box',
             position: 'relative'
         }}>
-            {/* Row 1: P and R side by side */}
+            {/* Row 1 + Prompt — stacked column, contained within panel */}
             <div style={{
-                display: 'flex',
-                height: '0.1rem',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'clamp(1rem, 3vw, 1.5rem)',
-                width: '100%',
-                flexShrink: 0
-            }}>
-                {/* Prompt Level */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
-                }}>
-                    <span style={{
-                        fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
-                        color: '#d97706',
-                        whiteSpace: 'nowrap'
-                    }}>P :</span>
-                    <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
-                        fontWeight: 'bold',
-                        color: '#d97706',
-                        whiteSpace: 'nowrap'
-                    }}>{promptMeter}</span>
-                </div>
-
-                {/* Reinforcement Level */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
-                }}>
-                    <span style={{
-                        fontWeight: 'bold',
-                        fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
-                        color: '#16a34a',
-                        whiteSpace: 'nowrap'
-                    }}>R :</span>
-                    <span style={{
-                        fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
-                        fontWeight: 'bold',
-                        color: '#16a34a',
-                        whiteSpace: 'nowrap'
-                    }}>{reinforcementMeter}</span>
-                </div>
-            </div>
-
-            {/* Row 2: Bulb with Dropdown Prompt */}
-            <div style={{
-                position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: '100%',
+                gap: '0.25rem',
                 flexShrink: 0,
-                // gap: '0.5rem',   
-                width: '100%'
             }}>
-                <span
-                    onClick={(e) => { if (onTogglePrompt) onTogglePrompt(); }}
-                    title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
-                    style={{
-                        fontSize: 'clamp(1rem, 1.6vw, 18rem)',
-                        filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
-                        animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                        transition: 'filter 0.3s ease, transform 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        cursor: onTogglePrompt ? 'pointer' : 'default',
-                        transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)',
-                        zIndex: 100
-                    }}
-                >
-                    💡
-                </span>
+                {/* Row 1: R: value and Bulb side by side */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'clamp(0.5rem, 1.5vw, 0.75rem)',
+                    width: '100%',
+                    flexShrink: 0,
+                }}>
+                    {/* Reinforcement Level */}
+                    {showReinforcementValue && (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 'clamp(0.15rem, 0.3vw, 0.25rem)'
+                        }}>
+                            <span style={{
+                                fontWeight: 'bold',
+                                fontSize: 'clamp(0.625rem, 1.8vw, 12rem)',
+                                color: '#16a34a',
+                                whiteSpace: 'nowrap'
+                            }}>R :</span>
+                            <span style={{
+                                fontSize: 'clamp(0.875rem, 1.8vw, 12rem)',
+                                fontWeight: 'bold',
+                                color: '#16a34a',
+                                whiteSpace: 'nowrap'
+                            }}>{reinforcementMeter}</span>
+                        </div>
+                    )}
 
-                {/* Prompt Box - Integrated into metrics panel */}
+                    {/* Bulb — right of R:, toggles prompt box */}
+                    <span
+                        onClick={() => { if (onTogglePrompt) onTogglePrompt(); }}
+                        title={isPromptOpen ? 'Hide prompt' : 'Show prompt'}
+                        style={{
+                            fontSize: 'clamp(1rem, 1.6vw, 1.25rem)',
+                            filter: isBulbGlowing ? 'drop-shadow(0 0 0.75rem #fbbf24) drop-shadow(0 0 1.25rem rgba(251, 191, 36, 0.6))' : 'none',
+                            animation: isBulbGlowing ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                            transition: 'filter 0.3s ease, transform 0.15s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            cursor: onTogglePrompt ? 'pointer' : 'default',
+                            transform: isPromptOpen ? 'scale(1.08)' : 'scale(1)',
+                            userSelect: 'none'
+                        }}
+                    >
+                        💡
+                    </span>
+                </div>
+
+                {/* Prompt Box — in-flow below Row 1, stays inside panel */}
                 {isPromptOpen && (
                     <div style={{
                         width: '100%',
                         backgroundColor: '#ffffff',
                         borderRadius: '0.375rem',
-                        padding: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                        padding: 'clamp(0.4rem, 1.2vh, 0.6rem)',
                         border: promptText !== defaultPromptText ? '2px solid #fbbf24' : '1px solid #d1d5db',
                         boxShadow: promptText !== defaultPromptText
-                            ? '0 2px 8px rgba(251, 191, 36, 0.2)'
-                            : '0 1px 3px rgba(0, 0, 0, 0.08)',
+                            ? '0 2px 8px rgba(251, 191, 36, 0.25)'
+                            : '0 1px 4px rgba(0, 0, 0, 0.10)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
-                        minHeight: 'clamp(3.5rem, 9vh, 4.5rem)',
-                        maxHeight: 'clamp(6rem, 16vh, 5rem)',
+                        maxHeight: 'clamp(3rem, 14vh, 7rem)',
                         overflow: 'auto',
                         animation: 'slideDown 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        position: 'relative',
-                        gap: '0.25rem'
+                        boxSizing: 'border-box',
                     }}>
-                        {/* Small arrow pointing to bulb */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '-6px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '6px solid transparent',
-                            borderRight: '6px solid transparent',
-                            borderBottom: promptText !== defaultPromptText ? '6px solid #fbbf24' : '6px solid #d1d5db',
-                            zIndex: 1
-                        }} />
-
                         <p style={{
                             fontSize: 'clamp(0.65rem, 1.6vw, 0.8rem)',
                             color: promptText !== defaultPromptText ? '#1f2937' : '#6b7280',
                             margin: 0,
                             textAlign: 'center',
                             fontStyle: promptText !== defaultPromptText ? 'normal' : 'italic',
-                            lineHeight: '1.4',
+                            lineHeight: '1.3',
                             fontWeight: promptText !== defaultPromptText ? '600' : '500',
                             wordWrap: 'break-word',
                             overflowWrap: 'break-word',
-                            hyphens: 'manual',
-                            padding: '0.25rem 0.5rem',
+                            // padding: '0.25rem 0.5rem',
                             width: '100%',
                             boxSizing: 'border-box',
                             whiteSpace: 'normal',
                             wordBreak: 'break-word'
                         }}>
                             {promptText !== defaultPromptText ? promptText : 'Waiting...'}
-
                         </p>
                     </div>
                 )}
@@ -2091,6 +2189,7 @@ export const AttendeeMetricsPanel = ({
 AttendeeMetricsPanel.propTypes = {
     promptMeter: PropTypes.number,
     reinforcementMeter: PropTypes.number,
+    showReinforcementValue: PropTypes.bool,
     bucketColor: PropTypes.string,
     micEnabled: PropTypes.bool,
     cameraEnabled: PropTypes.bool,
@@ -2571,6 +2670,7 @@ export const AttendeeUpperSection = ({
     // Metrics Panel Props
     promptMeter = 0,
     reinforcementMeter = 0,
+    showReinforcementValue = true,
     bucketColor = null,
 
     // Prompt Panel Props
@@ -2698,7 +2798,7 @@ export const AttendeeUpperSection = ({
                     .attendee-upper-section {
                         flex-direction: row !important;
                         height: 35vh !important;
-                        max-height: 35vh !important;
+                        max-height: 25vh !important;
                         min-height: auto !important;
                     }
                     .attendee-metrics-panel {
@@ -2787,6 +2887,7 @@ export const AttendeeUpperSection = ({
                 <AttendeeMetricsPanel
                     promptMeter={promptMeter}
                     reinforcementMeter={reinforcementMeter}
+                    showReinforcementValue={showReinforcementValue}
                     bucketColor={bucketColor}
                     micEnabled={micEnabled}
                     cameraEnabled={cameraEnabled}
@@ -2843,6 +2944,7 @@ export const AttendeeUpperSection = ({
 AttendeeUpperSection.propTypes = {
     promptMeter: PropTypes.number,
     reinforcementMeter: PropTypes.number,
+    showReinforcementValue: PropTypes.bool,
     bucketColor: PropTypes.string,
     promptText: PropTypes.string,
     defaultPromptText: PropTypes.string,
@@ -2868,4 +2970,167 @@ AttendeeUpperSection.propTypes = {
     videoLabel: PropTypes.string,
     showVideoControls: PropTypes.bool,
     sessionType: PropTypes.string
+};
+
+// ============================================================================
+// SESSION FEEDBACK MODAL
+// ============================================================================
+
+/**
+ * SessionFeedbackModal
+ * Shown to the attendee when the instructor ends the session.
+ * Collects a 1-5 star rating and an optional remark.
+ */
+export const SessionFeedbackModal = ({ onSubmit, onSkip }) => {
+    const [rating, setRating] = useState(0);
+    const [hovered, setHovered] = useState(0);
+    const [remark, setRemark] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        if (rating === 0) return;
+        setSubmitting(true);
+        await onSubmit(rating, remark);
+    };
+
+    return (
+        <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+        }}>
+            <div style={{
+                backgroundColor: '#fff',
+                borderRadius: '16px',
+                padding: '2rem',
+                width: 'min(90vw, 420px)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.25rem'
+            }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#1f2937' }}>
+                        Session Complete!
+                    </h2>
+                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                        How was your session? Your feedback helps us improve.
+                    </p>
+                </div>
+
+                {/* Star Rating */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                        Rate your experience
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <button
+                                key={star}
+                                onMouseEnter={() => setHovered(star)}
+                                onMouseLeave={() => setHovered(0)}
+                                onClick={() => setRating(star)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '2.25rem',
+                                    color: star <= (hovered || rating) ? '#f59e0b' : '#d1d5db',
+                                    transition: 'color 0.15s ease, transform 0.1s ease',
+                                    transform: star <= (hovered || rating) ? 'scale(1.15)' : 'scale(1)',
+                                    padding: '0 2px',
+                                    lineHeight: 1
+                                }}
+                            >
+                                ★
+                            </button>
+                        ))}
+                    </div>
+                    {rating > 0 && (
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>
+                            {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][rating]}
+                        </p>
+                    )}
+                </div>
+
+                {/* Remark Text Box */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                        Remarks <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+                    </label>
+                    <textarea
+                        value={remark}
+                        onChange={e => setRemark(e.target.value)}
+                        placeholder="Share your thoughts about the session..."
+                        rows={3}
+                        maxLength={1000}
+                        style={{
+                            width: '100%',
+                            padding: '0.625rem 0.75rem',
+                            border: '1.5px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            color: '#1f2937'
+                        }}
+                        onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                        onBlur={e => e.target.style.borderColor = '#d1d5db'}
+                    />
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                        onClick={onSkip}
+                        disabled={submitting}
+                        style={{
+                            flex: 1,
+                            padding: '0.625rem',
+                            border: '1.5px solid #d1d5db',
+                            borderRadius: '8px',
+                            backgroundColor: '#f9fafb',
+                            color: '#6b7280',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Skip
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={rating === 0 || submitting}
+                        style={{
+                            flex: 2,
+                            padding: '0.625rem',
+                            border: 'none',
+                            borderRadius: '8px',
+                            backgroundColor: rating === 0 ? '#e5e7eb' : '#3b82f6',
+                            color: rating === 0 ? '#9ca3af' : '#fff',
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            cursor: rating === 0 ? 'not-allowed' : 'pointer',
+                            transition: 'background-color 0.15s ease'
+                        }}
+                    >
+                        {submitting ? 'Submitting...' : 'Submit Feedback'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+SessionFeedbackModal.propTypes = {
+    onSubmit: PropTypes.func.isRequired,
+    onSkip: PropTypes.func.isRequired,
 };

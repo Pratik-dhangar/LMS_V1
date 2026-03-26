@@ -11,7 +11,7 @@ const adminService = {
    * @returns {Promise} 
    */
   createHead: async (headData) => {
-    console.log('Creating new head:', { name: headData.name, contactNo: headData.contact_no });
+    console.log('Creating new head:', { name: headData.name, contactNumber: headData.contact_number });
     const response = await axiosInstance.post('/admin/heads', headData);
     console.log('Head created successfully:', { id: response.data.id, passcode: response.data.passcode });
     return response.data;
@@ -106,6 +106,16 @@ const adminService = {
   },
 
   /**
+   * Get session-wise recording status for one learner (admin/head)
+   * @param {number} learnerId
+   * @returns {Promise<{learner_id:number,sessions:Array,total:number}>}
+   */
+  getLearnerSessionRecordings: async (learnerId) => {
+    const response = await axiosInstance.get(`/sessions/admin/learner/${learnerId}/recordings`);
+    return response.data;
+  },
+
+  /**
    * Get all Consultants/Coaches (system-wide, read-only)
    * @returns {Promise} - Array of coach objects
    */
@@ -113,6 +123,18 @@ const adminService = {
     console.log('Fetching all coaches (admin view)');
     const response = await axiosInstance.get('/admin/coaches');
     console.log('Received coaches data:', { count: response.data.length });
+    return response.data;
+  },
+
+  /**
+   * Get Coach by ID
+   * @param {number} coachId
+   * @returns {Promise} - Coach object
+   */
+  getCoachById: async (coachId) => {
+    console.log('Fetching coach details:', { coachId });
+    const response = await axiosInstance.get(`/admin/coaches/${coachId}`);
+    console.log('Coach details received:', { id: response.data.id, name: response.data.name });
     return response.data;
   },
 
@@ -126,6 +148,35 @@ const adminService = {
     const response = await axiosInstance.get(`/admin/users/${userId}/reveal-passcode`);
     console.log('Admin passcode reveal response received');
     return response.data;
+  },
+
+  /**
+   * Get all appointments (admin view)
+   * @param {Object} params - Optional filters: guest_only (bool), status_filter (string)
+   * @returns {Promise} - Array of appointment objects
+   */
+  getAppointments: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/appointments', { params });
+    return response.data;
+  },
+
+  /**
+   * Update appointment status (admin)
+   * @param {number} appointmentId
+   * @param {Object} data - e.g. { status: 'confirmed' }
+   * @returns {Promise} - Updated appointment object
+   */
+  updateAppointmentStatus: async (appointmentId, data) => {
+    const response = await axiosInstance.patch(`/admin/appointments/${appointmentId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete an appointment record (admin)
+   * @param {number} appointmentId
+   */
+  deleteAppointment: async (appointmentId) => {
+    await axiosInstance.delete(`/admin/appointments/${appointmentId}`);
   },
 };
 
