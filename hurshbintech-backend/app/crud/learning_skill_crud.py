@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models.learning_skill_model import LearningSkill
-from app.schemas.learning_skill import LearningSkillCreate
+from app.schemas.learning_skill import LearningSkillCreate, LearningSkillUpdate
 
 
 async def get_skill_by_name(db: AsyncSession, skill_name: str) -> Optional[LearningSkill]:
@@ -44,3 +44,41 @@ async def get_all_learning_skills(db: AsyncSession) -> List[LearningSkill]:
         .order_by(LearningSkill.skill_name.asc())
     )
     return result.scalars().all()
+
+
+async def get_learning_skill_by_id(db: AsyncSession, skill_id: int) -> Optional[LearningSkill]:
+    result = await db.execute(
+        select(LearningSkill)
+        .options(joinedload(LearningSkill.created_by))
+        .where(LearningSkill.id == skill_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_learning_skill(
+    db: AsyncSession, skill_id: int, skill_data: LearningSkillUpdate
+) -> Optional[LearningSkill]:
+    skill = await get_learning_skill_by_id(db, skill_id)
+    if not skill:
+        return None
+
+    skill.skill_name = skill_data.skill_name.strip()
+    await db.commit()
+    await db.refresh(skill)
+
+    result = await db.execute(
+        select(LearningSkill)
+        .options(joinedload(LearningSkill.created_by))
+        .where(LearningSkill.id == skill.id)
+    )
+    return result.scalar_one()
+
+
+async def delete_learning_skill(db: AsyncSession, skill_id: int) -> bool:
+    skill = await get_learning_skill_by_id(db, skill_id)
+    if not skill:
+        return False
+
+    await db.delete(skill)
+    await db.commit()
+    return True
