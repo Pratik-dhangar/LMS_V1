@@ -36,6 +36,7 @@ from app.api.endpoints.head_session_notes import router as head_session_notes_ro
 from app.api.endpoints.health import router as health_router
 from app.api.endpoints.learning_content import router as learning_content_router
 from app.api.endpoints.learning_goals import router as learning_goals_router
+from app.api.endpoints.learning_skills import router as learning_skills_router
 # NOTE: Old learning_program_assignments replaced by program_assignments
 # from app.api.endpoints.learning_program_assignments import head_router as head_lp_router
 # from app.api.endpoints.learning_program_assignments import learner_router
@@ -71,6 +72,7 @@ limiter = Limiter(key_func=get_remote_address)
 # ✅ Background Task Scheduler for Auto-Cleanup Jobs
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.chat_message_cleanup import cleanup_old_messages
+from app.workers.recording_retention import cleanup_old_recordings
 from app.workers.session_purge import purge_old_sessions
 from app.workers.subscription_tasks import process_ended_sessions_task
 from app.services.cache_service import cache_service
@@ -89,6 +91,8 @@ async def lifespan(app: FastAPI):
         await cache_service.connect()
         
         if not scheduler.running:
+            # Schedule recording cleanup daily at 2 AM (deletes recordings after 30 days)
+            scheduler.add_job(cleanup_old_recordings, 'cron', hour=2, minute=0, id='recording_cleanup', replace_existing=True)
             # Schedule chat message cleanup daily at 3 AM
             scheduler.add_job(cleanup_old_messages, 'cron', hour=3, minute=0, id='chat_cleanup', replace_existing=True)
             # Schedule session data purge daily at 4 AM (retains 30 days)
@@ -97,6 +101,7 @@ async def lifespan(app: FastAPI):
             scheduler.add_job(process_ended_sessions_task, 'interval', minutes=1, id='session_processing', replace_existing=True)
             scheduler.start()
             logger.info("✅ Background scheduler started")
+            logger.info("   - Recording cleanup: Daily at 2 AM (deletes recordings older than 30 days)")
             logger.info("   - Chat message cleanup: Daily at 3 AM")
             logger.info("   - Session data purge: Daily at 4 AM (keeps 30 days)")
             logger.info("   - Session processing: Every 1 minute")
@@ -211,6 +216,7 @@ app.include_router(profile_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(session_notes_router, prefix="/api")
 app.include_router(learning_goals_router, prefix="/api")
+app.include_router(learning_skills_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
