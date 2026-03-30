@@ -7,6 +7,10 @@ class LearningSkillCreate(BaseModel):
     skill_name: str = Field(..., min_length=2, max_length=255)
 
 
+class LearningSkillUpdate(BaseModel):
+    skill_name: str = Field(..., min_length=2, max_length=255)
+
+
 class LearningSkillResponse(BaseModel):
     id: int
     skill_name: str
