@@ -209,7 +209,7 @@ const ProgramGraphView = () => {
             {/* Header */}
             <div className="page-header">
               <button
-                onClick={() => navigate("/head/reports")}
+                onClick={() => navigate(-1)}
                 className="back-button"
               >
                 <svg

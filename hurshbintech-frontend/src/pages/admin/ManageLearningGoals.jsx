@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import learningGoalsService from "../../api/services/learningGoalsService";
+import learningSkillsService from "../../api/services/learningSkillsService";
 import SearchBar from "../../components/common/SearchBar";
 import "../../styles/components/common/Modal.css";
 import "../../styles/Table.css";
@@ -13,8 +14,10 @@ const ManageLearningGoals = () => {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddSkillModal, setShowAddSkillModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState(null);
+  const [learningSkillName, setLearningSkillName] = useState("");
   const [formData, setFormData] = useState({
     goal: "",
     goal_description: "",
@@ -90,6 +93,25 @@ const ManageLearningGoals = () => {
     setActiveSearchQuery(query);
   };
 
+  const handleSkillSubmit = async (e) => {
+    e.preventDefault();
+    if (!learningSkillName.trim()) {
+      toast.error("Skill name is required");
+      return;
+    }
+
+    try {
+      await learningSkillsService.admin.create({
+        skill_name: learningSkillName.trim(),
+      });
+      toast.success("Learning skill created!");
+      setShowAddSkillModal(false);
+      setLearningSkillName("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create learning skill");
+    }
+  };
+
   const filteredGoals = goals.filter(
     (goal) =>
       goal.goal.toLowerCase().includes(activeSearchQuery.toLowerCase()) ||
@@ -136,12 +158,20 @@ const ManageLearningGoals = () => {
               onSearch={handleSearch}
               placeholder="Search by goal or description..."
             />
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="app-modal-btn app-modal-btn--success"
-            >
-              + Add New Goal
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="app-modal-btn app-modal-btn--success"
+              >
+                + Add New Goal
+              </button>
+              <button
+                onClick={() => setShowAddSkillModal(true)}
+                className="app-modal-btn app-modal-btn--primary"
+              >
+                + Add Learning Skill
+              </button>
+            </div>
           </div>
           {activeSearchQuery && (
             <div className="search-results-info">
@@ -281,37 +311,37 @@ const ManageLearningGoals = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="app-modal-content">
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Goal (Title) <span className="form-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="app-modal-form-input"
-                  placeholder="Enter goal title"
-                  value={formData.goal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, goal: e.target.value })
-                  }
-                  required
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Goal (Title) <span className="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="app-modal-form-input"
+                    placeholder="Enter goal title"
+                    value={formData.goal}
+                    onChange={(e) =>
+                      setFormData({ ...formData, goal: e.target.value })
+                    }
+                    required
+                  />
+                </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">Description</label>
-                <textarea
-                  className="app-modal-form-textarea"
-                  placeholder="Enter goal description"
-                  rows="4"
-                  value={formData.goal_description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      goal_description: e.target.value,
-                    })
-                  }
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Description</label>
+                  <textarea
+                    className="app-modal-form-textarea"
+                    placeholder="Enter goal description"
+                    rows="4"
+                    value={formData.goal_description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        goal_description: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
               <div className="app-modal-footer">
@@ -327,6 +357,60 @@ const ManageLearningGoals = () => {
                 </button>
                 <button type="submit" className="app-modal-btn app-modal-btn--primary">
                   Add Goal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Learning Skill Modal */}
+      {showAddSkillModal && (
+        <div className="app-modal-overlay">
+          <div className="app-modal-container app-modal-container--md">
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Add Learning Skill</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddSkillModal(false);
+                  setLearningSkillName("");
+                }}
+                className="app-modal-close"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSkillSubmit}>
+              <div className="app-modal-content">
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Skill Name <span className="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="app-modal-form-input"
+                    placeholder="Enter learning skill"
+                    value={learningSkillName}
+                    onChange={(e) => setLearningSkillName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="app-modal-footer">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddSkillModal(false);
+                    setLearningSkillName("");
+                  }}
+                  className="app-modal-btn app-modal-btn--secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                  Add Skill
                 </button>
               </div>
             </form>
@@ -353,37 +437,37 @@ const ManageLearningGoals = () => {
             </div>
             <form onSubmit={handleUpdate}>
               <div className="app-modal-content">
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">
-                  Goal (Title) <span className="form-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="app-modal-form-input"
-                  placeholder="Enter goal title"
-                  value={formData.goal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, goal: e.target.value })
-                  }
-                  required
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Goal (Title) <span className="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="app-modal-form-input"
+                    placeholder="Enter goal title"
+                    value={formData.goal}
+                    onChange={(e) =>
+                      setFormData({ ...formData, goal: e.target.value })
+                    }
+                    required
+                  />
+                </div>
 
-              <div className="app-modal-form-field">
-                <label className="app-modal-form-label">Description</label>
-                <textarea
-                  className="app-modal-form-textarea"
-                  placeholder="Enter goal description"
-                  rows="4"
-                  value={formData.goal_description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      goal_description: e.target.value,
-                    })
-                  }
-                />
-              </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Description</label>
+                  <textarea
+                    className="app-modal-form-textarea"
+                    placeholder="Enter goal description"
+                    rows="4"
+                    value={formData.goal_description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        goal_description: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
               <div className="app-modal-footer">

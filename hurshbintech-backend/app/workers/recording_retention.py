@@ -4,12 +4,12 @@ Automatically deletes recordings older than 30 days to manage storage costs.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.models.coach_session_model import CoachAppointmentSession
 from app.models.session_model import TrainingSession
 from app.services.recording_storage import get_recording_storage
 
@@ -18,21 +18,21 @@ logger = logging.getLogger(__name__)
 
 async def cleanup_old_recordings():
     """
-    Delete recordings older than 30 days.
+    Delete recordings older than 30 days from their creation date.
     
     This job should be run daily via cron, APScheduler, or Celery Beat.
     
     Process:
-    1. Find all sessions with recordings older than 30 days
-    2. Delete recording from storage backend (local or S3)
-    3. Update database to clear recording_url
-    4. Log results
+    1. Find sessions with recording_url where created_at is older than 30 days
+    2. Delete each recording individually from storage backend (local or S3)
+    3. Update database recording fields for each deleted recording
+    4. Log summary results
     
     Returns:
         dict: Summary of cleanup operation
     """
     retention_days = 30
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
     
     deleted_count = 0
     failed_count = 0
@@ -42,23 +42,37 @@ async def cleanup_old_recordings():
     try:
         # Get database session
         async for db in get_db():
-            # Find sessions with old recordings
-            query = select(TrainingSession).where(
-                TrainingSession.recording_uploaded_at < cutoff_date,
+            # Find old training session recordings by session creation timestamp
+            training_query = select(TrainingSession).where(
+                TrainingSession.created_at < cutoff_date,
                 TrainingSession.recording_url.isnot(None),
                 TrainingSession.recording_status == "completed"
             )
-            
-            result = await db.execute(query)
-            sessions = result.scalars().all()
-            
-            logger.info(f"Found {len(sessions)} recordings to clean up")
+            training_result = await db.execute(training_query)
+            training_sessions = training_result.scalars().all()
+
+            # Find old coach appointment session recordings by session creation timestamp
+            coach_query = select(CoachAppointmentSession).where(
+                CoachAppointmentSession.created_at < cutoff_date,
+                CoachAppointmentSession.recording_url.isnot(None),
+                CoachAppointmentSession.recording_status == "completed"
+            )
+            coach_result = await db.execute(coach_query)
+            coach_sessions = coach_result.scalars().all()
+
+            total_sessions = len(training_sessions) + len(coach_sessions)
+            logger.info(
+                "Found %s recordings to clean up (training=%s, coach=%s)",
+                total_sessions,
+                len(training_sessions),
+                len(coach_sessions),
+            )
             
             # Get storage backend
             storage = get_recording_storage()
             
-            # Process each session
-            for session in sessions:
+            # Process each training session recording individually
+            for session in training_sessions:
                 try:
                     # Delete from storage
                     await storage.delete(session.recording_url)
@@ -68,11 +82,29 @@ async def cleanup_old_recordings():
                     session.recording_status = "deleted"
                     
                     deleted_count += 1
-                    logger.info(f"Deleted recording for session {session.id}")
+                    logger.info("Deleted training session recording for session_id=%s", session.id)
                     
                 except Exception as e:
                     failed_count += 1
-                    logger.error(f"Failed to delete recording for session {session.id}: {e}")
+                    logger.error("Failed to delete training recording for session_id=%s: %s", session.id, e)
+
+            # Process each coach appointment session recording individually
+            for session in coach_sessions:
+                try:
+                    # Delete from storage
+                    await storage.delete(session.recording_url)
+
+                    # Clear database fields
+                    session.recording_url = None
+                    session.recording_status = "deleted"
+                    session.recording_uploaded_at = None
+
+                    deleted_count += 1
+                    logger.info("Deleted coach session recording for session_id=%s", session.id)
+
+                except Exception as e:
+                    failed_count += 1
+                    logger.error("Failed to delete coach recording for session_id=%s: %s", session.id, e)
             
             # Commit changes
             await db.commit()
@@ -85,6 +117,7 @@ async def cleanup_old_recordings():
                 "status": "completed",
                 "deleted": deleted_count,
                 "failed": failed_count,
+                "matched": total_sessions,
                 "cutoff_date": cutoff_date.isoformat()
             }
             

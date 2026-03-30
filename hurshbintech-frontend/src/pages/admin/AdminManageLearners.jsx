@@ -26,6 +26,7 @@ const AdminManageLearners = () => {
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
     const [reportCreatorFilter, setReportCreatorFilter] = useState('head'); // 'head', 'coach'
+    const [selectedCoach, setSelectedCoach] = useState(null); // Filter by specific coach
     const [showRecordingModal, setShowRecordingModal] = useState(false);
     const [recordingRows, setRecordingRows] = useState([]);
     const [recordingModalLearnerName, setRecordingModalLearnerName] = useState('');
@@ -37,6 +38,13 @@ const AdminManageLearners = () => {
         fetchLearners();
         fetchProgressReports();
     }, []);
+
+    // Reset coach selection when switching to head filter
+    useEffect(() => {
+        if (reportCreatorFilter === 'head') {
+            setSelectedCoach(null);
+        }
+    }, [reportCreatorFilter]);
 
     const fetchLearners = async () => {
         try {
@@ -240,12 +248,39 @@ const AdminManageLearners = () => {
     };
 
     const filterReportsByCreator = (reports) => {
+        let filtered = reports;
+
+        // Filter by head/coach type
         if (reportCreatorFilter === 'head') {
-            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(head)'));
+            filtered = filtered.filter(r => r.report_created_by?.toLowerCase().includes('(head)'));
         } else if (reportCreatorFilter === 'coach') {
-            return reports.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
+            filtered = filtered.filter(r => r.report_created_by?.toLowerCase().includes('(coach)'));
         }
-        return reports;
+
+        // Filter by specific coach if selected
+        if (selectedCoach && reportCreatorFilter === 'coach') {
+            filtered = filtered.filter(r => {
+                const createdBy = (r.report_created_by || '').toLowerCase();
+                return createdBy.includes(selectedCoach.toLowerCase());
+            });
+        }
+
+        return filtered;
+    };
+
+    // Extract unique coach names from reports
+    const getUniqueCoaches = () => {
+        const coaches = new Set();
+        Object.values(progressReportsMap).forEach(reports => {
+            reports.forEach(r => {
+                if (r.report_created_by?.toLowerCase().includes('(coach)')) {
+                    // Extract coach name by removing the "(coach)" suffix
+                    const coachName = r.report_created_by.replace(/\s*\(coach\)\s*$/i, '').trim();
+                    if (coachName) coaches.add(coachName);
+                }
+            });
+        });
+        return Array.from(coaches).sort();
     };
 
     // Collect standalone (unregistered learner) coach reports grouped by name
@@ -263,6 +298,8 @@ const AdminManageLearners = () => {
         });
         return Object.values(byName);
     })();
+
+    const showSessionRecordingsColumn = reportCreatorFilter !== 'coach';
 
     return (
         <div className="page-container">
@@ -295,29 +332,62 @@ const AdminManageLearners = () => {
                     </div>
 
                     {/* Report Creator Filter */}
-                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#374151' }}>Filter Reports:</span>
-                        {['head', 'coach'].map(filter => (
-                            <button
-                                key={filter}
-                                onClick={() => setReportCreatorFilter(filter)}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '0.375rem',
-                                    border: 'none',
-                                    fontSize: '0.875rem',
-                                    fontWeight: filter === reportCreatorFilter ? 600 : 400,
-                                    background: filter === reportCreatorFilter
-                                        ? 'linear-gradient(135deg, #7c1c1c, #a83232)'
-                                        : '#e5e7eb',
-                                    color: filter === reportCreatorFilter ? 'white' : '#374151',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                {`${filter.charAt(0).toUpperCase() + filter.slice(1)} Reports`}
-                            </button>
-                        ))}
+
+                        {/* Head/Coach Selector */}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {['head', 'coach'].map(filter => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setReportCreatorFilter(filter)}
+                                    style={{
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '0.375rem',
+                                        border: 'none',
+                                        fontSize: '0.875rem',
+                                        fontWeight: filter === reportCreatorFilter ? 600 : 400,
+                                        background: filter === reportCreatorFilter
+                                            ? 'linear-gradient(135deg, #7c1c1c, #a83232)'
+                                            : '#e5e7eb',
+                                        color: filter === reportCreatorFilter ? 'white' : '#374151',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {`${filter.charAt(0).toUpperCase() + filter.slice(1)} Reports`}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Coach Selector - shown only when Coach filter is selected */}
+                        {reportCreatorFilter === 'coach' && getUniqueCoaches().length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 500 }}>By Coach:</span>
+                                <select
+                                    value={selectedCoach || ''}
+                                    onChange={(e) => setSelectedCoach(e.target.value || null)}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '0.375rem',
+                                        border: '1px solid #d1d5db',
+                                        fontSize: '0.875rem',
+                                        backgroundColor: 'white',
+                                        color: '#374151',
+                                        cursor: 'pointer',
+                                        fontWeight: 500,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <option value="">All Coaches</option>
+                                    {getUniqueCoaches().map(coach => (
+                                        <option key={coach} value={coach}>
+                                            {coach}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {activeSearchQuery && (
@@ -369,7 +439,9 @@ const AdminManageLearners = () => {
                                                 <th className="table-primary-th">Start Date</th>
                                                 <th className="table-primary-th">Skill Development Graph </th>
                                                 <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
-                                                <th className="table-primary-th">Session Recordings</th>
+                                                {showSessionRecordingsColumn && (
+                                                    <th className="table-primary-th">Session Recordings</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="table-primary-body">
@@ -408,9 +480,11 @@ const AdminManageLearners = () => {
                                                             ))}
                                                         </div>
                                                     </td>
-                                                    <td className="table-primary-td table-primary-td-center">
-                                                        <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not registered</span>
-                                                    </td>
+                                                    {showSessionRecordingsColumn && (
+                                                        <td className="table-primary-td table-primary-td-center">
+                                                            <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not registered</span>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                             {filteredLearners.map((learner, index) => (
@@ -489,15 +563,17 @@ const AdminManageLearners = () => {
                                                             );
                                                         })()}
                                                     </td>
-                                                    <td className="table-primary-td table-primary-td-center">
-                                                        <button
-                                                            onClick={() => openLearnerRecordingModal(learner)}
-                                                            className="app-modal-btn app-modal-btn--primary"
-                                                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
-                                                        >
-                                                            🎥 View Sessions
-                                                        </button>
-                                                    </td>
+                                                    {showSessionRecordingsColumn && (
+                                                        <td className="table-primary-td table-primary-td-center">
+                                                            <button
+                                                                onClick={() => openLearnerRecordingModal(learner)}
+                                                                className="app-modal-btn app-modal-btn--primary"
+                                                                style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', whiteSpace: 'nowrap' }}
+                                                            >
+                                                                🎥 View Sessions
+                                                            </button>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                         </tbody>

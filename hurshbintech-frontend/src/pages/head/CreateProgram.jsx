@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { Search } from "lucide-react";
 import headService from "../../api/services/headService";
 import learningGoalsService from "../../api/services/learningGoalsService";
+import learningSkillsService from "../../api/services/learningSkillsService";
 import learningContentService from "../../api/services/learningContentService";
 import programService from "../../api/services/programService";
 import "../../styles/ManageUsersLayout.css";
@@ -19,6 +20,7 @@ const CreateProgram = () => {
 
     const [learners, setLearners] = useState([]);
     const [learningGoals, setLearningGoals] = useState([]);
+    const [learningSkills, setLearningSkills] = useState([]);
     const [contents, setContents] = useState([]);
 
     const [searchTerm, setSearchTerm] = useState({
@@ -57,13 +59,15 @@ const CreateProgram = () => {
     const fetchData = async () => {
         try {
             setLoadingData(true);
-            const [learnersData, goalsData, contentsData] = await Promise.all([
+            const [learnersData, goalsData, skillsData, contentsData] = await Promise.all([
                 headService.getLearnersForSessionScheduling(),
                 learningGoalsService.head.getAll(),
+                learningSkillsService.head.getAll(),
                 learningContentService.head.getAll(),
             ]);
             setLearners(learnersData || []);
             setLearningGoals(goalsData || []);
+            setLearningSkills(skillsData || []);
             setContents(contentsData || []);
         } catch {
             toast.error("Failed to load create program data");
@@ -274,13 +278,18 @@ const CreateProgram = () => {
                                 </div>
                                 <div>
                                     <label className="modern-form-label">Skill</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={formData.skill}
                                         onChange={(e) => setFormData((prev) => ({ ...prev, skill: e.target.value }))}
                                         className="modern-form-input"
-                                        placeholder="Optional skill name"
-                                    />
+                                    >
+                                        <option value="">Select learning skill (optional)</option>
+                                        {learningSkills.map((skill) => (
+                                            <option key={skill.id} value={skill.skill_name}>
+                                                {skill.skill_name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>
