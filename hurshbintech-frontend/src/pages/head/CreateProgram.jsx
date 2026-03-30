@@ -283,7 +283,7 @@ const CreateProgram = () => {
                                         onChange={(e) => setFormData((prev) => ({ ...prev, skill: e.target.value }))}
                                         className="modern-form-input"
                                     >
-                                        <option value="">Select learning skill (optional)</option>
+                                        <option value="">Select learning skill</option>
                                         {learningSkills.map((skill) => (
                                             <option key={skill.id} value={skill.skill_name}>
                                                 {skill.skill_name}
