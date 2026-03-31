@@ -10,8 +10,8 @@ NEEV CLOUD DEPLOYMENT (PROD) — docker-compose.prod.yml
 
 2. Build and push frontend image (ENV_TYPE=prod is default, no extra flag needed):
    docker build `
-     --build-arg VITE_API_BASE_URL=https://tech.hurshbin.com:8000/api `
-     --build-arg VITE_WS_URL=wss://tech.hurshbin.com:8000 `
+     --build-arg VITE_API_BASE_URL=https://hurshbin.com:8000/api `
+     --build-arg VITE_WS_URL=wss://hurshbin.com:8000 `
      --build-arg VITE_ENABLE_PWA=true `
      --build-arg VITE_GOOGLE_CLIENT_ID=594243784455-qehgec7ij9lqnvo38jumb5m29ttv4gck.apps.googleusercontent.com `
      -t lumesoftai/hurshbin-frontend:prod ./hurshbintech-frontend
