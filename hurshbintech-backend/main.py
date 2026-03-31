@@ -47,6 +47,7 @@ from app.api.endpoints.session_reports import router as session_reports_router
 from app.api.endpoints.learner_progress_reports import router as learner_progress_reports_router
 from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
+from app.api.endpoints.session_ws import router as session_ws_router
 from app.api.endpoints.vlogs import router as vlogs_router
 from app.api.endpoints.websocket import router as websocket_router
 from app.api.endpoints.products import router as products_router
@@ -204,6 +205,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.include_router(health_router, prefix="/api")  # Health check endpoint
 app.include_router(media_router, prefix="/api")  # Generic S3 media proxy
 app.include_router(auth_router, prefix="/api")
+app.include_router(session_ws_router, prefix="/api")  # Session WebSocket for device management
 app.include_router(booking_router, prefix="/api/booking")
 app.include_router(guest_sessions_router, prefix="/api")  # Public guest session endpoints
 app.include_router(admin_router, prefix="/api")
