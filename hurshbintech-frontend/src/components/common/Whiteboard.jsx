@@ -775,19 +775,19 @@ const Whiteboard = ({
 
             if (fullUrl.startsWith('s3://')) {
                 // Route S3 URLs through backend proxy (avoids CORS)
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
                 fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
             } else if (!fullUrl.startsWith('http')) {
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
@@ -2892,20 +2892,20 @@ const Whiteboard = ({
 
             // Handle S3 URLs through backend proxy (avoids CORS)
             if (fullUrl.startsWith('s3://')) {
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
                 fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
             } else if (!fullUrl.startsWith('http')) {
                 // It's a relative URL like /uploads/learning_content/file.png
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl; // Store full URL

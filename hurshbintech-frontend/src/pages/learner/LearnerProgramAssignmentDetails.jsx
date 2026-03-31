@@ -338,7 +338,7 @@ const LearnerProgramAssignmentDetails = () => {
   const getFileUrl = (fileUrl) => {
     if (!fileUrl) return "";
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://43.204.218.16:8000/api";
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://hurshbin.com/api";
     const BACKEND_URL = API_BASE_URL.replace('/api', '');
 
     // Handle full URLs (already accessible)
