@@ -1,0 +1,206 @@
+/**
+ * SessionInvalidatedModal.css
+ * Custom styled modal matching project theme
+ * Primary color: #db9d32 (gold/amber)
+ */
+
+/* Overlay background */
+.session-invalidated-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(31, 41, 55, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: session-overlay-fade-in 0.3s ease-out;
+}
+
+@keyframes session-overlay-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Modal container */
+.session-invalidated-modal {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    padding: 2.5rem 2rem;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+    animation: session-modal-slide-in 0.4s ease-out;
+}
+
+@keyframes session-modal-slide-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Close icon (circle with X) */
+.session-invalidated-close-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #db9d32 0%, #f0c566 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    animation: session-icon-bounce 0.6s ease-out;
+}
+
+@keyframes session-icon-bounce {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.session-invalidated-close-icon svg {
+    width: 45px;
+    height: 45px;
+    stroke-width: 1.5;
+}
+
+/* Modal title */
+.session-invalidated-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+}
+
+/* Alert message */
+.session-invalidated-message {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+/* Submessage */
+.session-invalidated-submessage {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+/* Action button */
+.session-invalidated-btn {
+    background: linear-gradient(135deg, #db9d32 0%, #f0c566 100%);
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(219, 157, 50, 0.3);
+    min-width: 200px;
+}
+
+.session-invalidated-btn:hover {
+    background: linear-gradient(135deg, #c88a1f 0%, #e6b94d 100%);
+    box-shadow: 0 6px 20px rgba(219, 157, 50, 0.4);
+    transform: translateY(-2px);
+}
+
+.session-invalidated-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(219, 157, 50, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .session-invalidated-modal {
+        padding: 2rem 1.5rem;
+        max-width: 95vw;
+        width: 95vw;
+    }
+
+    .session-invalidated-close-icon {
+        width: 70px;
+        height: 70px;
+    }
+
+    .session-invalidated-close-icon svg {
+        width: 40px;
+        height: 40px;
+    }
+
+    .session-invalidated-title {
+        font-size: 1.5rem;
+    }
+
+    .session-invalidated-message {
+        font-size: 0.95rem;
+    }
+
+    .session-invalidated-submessage {
+        font-size: 0.9rem;
+    }
+
+    .session-invalidated-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .session-invalidated-overlay {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .session-invalidated-modal {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
+
+    .session-invalidated-title {
+        color: #f3f4f6;
+    }
+
+    .session-invalidated-message {
+        color: #e5e7eb;
+    }
+
+    .session-invalidated-submessage {
+        color: #d1d5db;
+    }
+}

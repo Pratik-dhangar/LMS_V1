@@ -249,10 +249,10 @@ const drawFooterWithSignatureOnLastPage = async (doc, signatureImagePath = null,
         });
 
         if (stampDataURL) {
-            const stampW = 24;
-            const stampH = 21;
-            const stampX = pageWidth - margin - 78;
-            doc.addImage(stampDataURL, 'PNG', stampX, signatureBandTop + 2.5, stampW, stampH, '', 'FAST');
+            const stampW = 32;
+            const stampH = 28;
+            const stampX = pageWidth - margin - 85;
+            doc.addImage(stampDataURL, 'PNG', stampX, signatureBandTop + 7, stampW, stampH, '', 'FAST');
         }
     } catch (err) {
         console.warn('Could not load stamp:', err);

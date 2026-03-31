@@ -649,6 +649,8 @@ const Whiteboard = ({
     const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
     const [youtubeCurrentTime, setYoutubeCurrentTime] = useState(0);
     const [youtubeDuration, setYoutubeDuration] = useState(0);
+    const [youtubeVolume, setYoutubeVolume] = useState(100); // Volume 0-100
+    const [isYoutubeMuted, setIsYoutubeMuted] = useState(false);
     const activeYoutubeMedia = inlineYoutube || (inlineMedia && inlineMedia.type === 'youtube' ? inlineMedia : null);
     const isYoutubeMinimized = Boolean(activeYoutubeMedia?.minimized);
     const hasExpandedMedia = Boolean((inlineVideo && !isInlineVideoMinimized) || (activeYoutubeMedia && !isYoutubeMinimized));
@@ -677,6 +679,11 @@ const Whiteboard = ({
     // Generate custom cursor based on tool and lineWidth
     const generateCursor = useCallback((tool, lineWidth) => {
         try {
+            // Only show custom cursor for pen and eraser tools
+            if (tool !== 'pen' && tool !== 'eraser') {
+                return 'auto'; // Normal mouse pointer for other tools
+            }
+
             // Scale cursor size so it's always visible (browsers may clamp the image size)
             const base = Math.max(12, Math.round(lineWidth * 3));
             const center = Math.round(base / 2);
@@ -698,10 +705,10 @@ const Whiteboard = ({
                 return `url("${url}") ${center} ${center}, auto`;
             }
 
-            return 'default';
+            return 'auto';
         } catch {
             // btoa/encodeURIComponent can throw in certain environments - fall back gracefully
-            return 'default';
+            return 'auto';
         }
     }, []);
 
@@ -3276,6 +3283,45 @@ const Whiteboard = ({
         whiteboardService.sendMediaControl({ action: 'youtube_seek', time: time });
     }, [isTrainer, inlineYoutube, whiteboardService, setInlineYoutube]);
 
+    const handleYoutubeVolumeChange = useCallback((newVolume) => {
+        if (!isTrainer || !whiteboardService || !youtubePlayerRef.current) return;
+        const player = youtubePlayerRef.current;
+
+        // YouTube API uses 0-100 volume
+        player.setVolume(newVolume);
+        setYoutubeVolume(newVolume);
+
+        // Send volume update to attendees
+        whiteboardService.sendMediaControl({
+            action: 'youtube_volume',
+            volume: newVolume,
+            timestamp: Date.now()
+        });
+    }, [isTrainer, whiteboardService]);
+
+    const handleYoutubeMute = useCallback(() => {
+        if (!isTrainer || !whiteboardService || !youtubePlayerRef.current) return;
+        const player = youtubePlayerRef.current;
+
+        if (isYoutubeMuted) {
+            // Unmute
+            player.setVolume(youtubeVolume);
+            setIsYoutubeMuted(false);
+        } else {
+            // Mute
+            player.mute();
+            setIsYoutubeMuted(true);
+        }
+
+        // Send mute state to attendees
+        whiteboardService.sendMediaControl({
+            action: 'youtube_mute',
+            muted: !isYoutubeMuted,
+            volume: !isYoutubeMuted ? 0 : youtubeVolume,
+            timestamp: Date.now()
+        });
+    }, [isTrainer, whiteboardService, isYoutubeMuted, youtubeVolume]);
+
     useEffect(() => {
         if (!activeYoutubeMedia?.videoId) {
             if (youtubeSyncTimerRef.current) {
@@ -3780,6 +3826,27 @@ const Whiteboard = ({
                                     <span className="youtube-title-text">
                                         {activeYoutubeMedia?.title || 'YouTube Video'}
                                     </span>
+
+                                    {/* Volume Control */}
+                                    <div className="youtube-volume-control" title="Volume">
+                                        <button
+                                            onClick={handleYoutubeMute}
+                                            className="video-control-btn"
+                                            title={isYoutubeMuted ? 'Unmute' : 'Mute'}
+                                        >
+                                            {isYoutubeMuted ? <FaVolumeMute size={16} /> : <FaVolumeUp size={16} />}
+                                        </button>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={youtubeVolume}
+                                            onChange={(e) => handleYoutubeVolumeChange(parseInt(e.target.value))}
+                                            className="youtube-volume-slider"
+                                            title={`Volume: ${youtubeVolume}%`}
+                                        />
+                                        <span className="youtube-volume-text">{youtubeVolume}%</span>
+                                    </div>
 
                                     {/* Close Button */}
                                     <button
@@ -4685,19 +4752,20 @@ const Whiteboard = ({
                             className="text-box-container"
                             style={{
                                 position: 'absolute',
-                                left: textBox.x,
-                                top: textBox.y,
+                                left: Math.max(0, Math.min(textBox.x, window.innerWidth - 150)),
+                                top: Math.max(0, textBox.y),
                                 width: 'auto',
                                 height: 'auto',
                                 minWidth: '100px',
-                                maxWidth: '800px',
+                                maxWidth: `calc(100% - ${textBox.x + 20}px)`,
                                 border: activeTextBoxId === textBox.id ? '2px dashed #3b82f6' : 'none',
                                 backgroundColor: 'transparent',
                                 padding: activeTextBoxId === textBox.id ? '4px' : '0',
                                 cursor: activeTextBoxId === textBox.id ? 'move' : 'text',
-                                zIndex: activeTextBoxId === textBox.id ? 1000 : 50,
+                                zIndex: activeTextBoxId === textBox.id ? 100 : 50,
                                 transition: 'border 0.1s, padding 0.1s',
-                                display: 'inline-block'
+                                display: 'inline-block',
+                                pointerEvents: 'auto'
                             }}
                             onClick={(e) => {
                                 e.stopPropagation();
