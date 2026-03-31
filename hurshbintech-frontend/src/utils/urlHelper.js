@@ -3,7 +3,7 @@
  * S3 URLs are converted to presigned URLs via backend proxy.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
 
 /**
  * Get backend base URL (without /api prefix)
