@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import authService from '../api/services/authService';
 import { toast } from 'react-toastify';
 import logger from '../utils/logger';
+import { useDeviceSession, getDeviceInfo } from '../hooks/useDeviceSession';
+import SessionInvalidatedModal from '../components/SessionInvalidatedModal';
 
 // Create Auth Context
 const AuthContext = createContext(null);
@@ -26,7 +28,29 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState(null);
+  const [showSessionInvalidatedModal, setShowSessionInvalidatedModal] = useState(false);
   const navigate = useNavigate();
+
+  // Callback for session invalidation modal
+  const handleShowSessionInvalidatedModal = () => {
+    setShowSessionInvalidatedModal(true);
+  };
+
+  // Handle logout from session invalidated modal
+  const handleSessionInvalidatedLogout = () => {
+    logger.info('AuthContext: Logging out from session invalidated modal');
+    setShowSessionInvalidatedModal(false);
+    // Clear auth state
+    authService.logout();
+    setUser(null);
+    setAccessToken(null);
+    // Navigate to login
+    navigate('/login');
+  };
+
+  // Initialize device session management with modal callback
+  const { deviceInfo, isConnected } = useDeviceSession(accessToken, handleShowSessionInvalidatedModal);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -38,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       if (userData && token) {
         logger.debug('User authenticated from localStorage:', { id: userData.id, role: userData.role });
         setUser(userData);
+        setAccessToken(token);
       } else {
         logger.debug('No authenticated user found in localStorage');
       }
@@ -54,7 +79,20 @@ export const AuthProvider = ({ children }) => {
   const userLogin = async (credentials) => {
     try {
       logger.debug('AuthContext: Processing login for role:', { role: credentials.role });
-      const response = await authService.userLogin(credentials);
+
+      // Add device information to credentials
+      const deviceInfo = getDeviceInfo();
+      const loginCredentials = {
+        ...credentials,
+        ...deviceInfo,
+      };
+
+      logger.debug('AuthContext: Sending device info with login:', {
+        device_id: deviceInfo.device_id,
+        device_type: deviceInfo.device_type,
+      });
+
+      const response = await authService.userLogin(loginCredentials);
 
       logger.debug('AuthContext: Login successful, storing user data:', {
         userId: response.user_id,
@@ -68,6 +106,7 @@ export const AuthProvider = ({ children }) => {
         name: response.name,
       }));
 
+      setAccessToken(response.access_token);
       setUser({
         id: response.user_id,
         role: response.role,
@@ -116,6 +155,7 @@ export const AuthProvider = ({ children }) => {
     });
     authService.logout();
     setUser(null);
+    setAccessToken(null);
     toast.success('Logged out successfully', {
       position: "top-center",
       autoClose: 3000,
@@ -136,10 +176,16 @@ export const AuthProvider = ({ children }) => {
     logout,
     hasRole,
     isAuthenticated: !!user,
+    deviceInfo,
+    isDeviceSessionConnected: isConnected,
   };
 
   return (
     <AuthContext.Provider value={value}>
+      <SessionInvalidatedModal
+        isOpen={showSessionInvalidatedModal}
+        onConfirm={handleSessionInvalidatedLogout}
+      />
       {!loading && children}
     </AuthContext.Provider>
   );

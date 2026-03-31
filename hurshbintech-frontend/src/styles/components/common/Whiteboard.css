@@ -45,6 +45,7 @@
     margin: 0;
     overflow: hidden;
     flex-direction: column;
+    min-height: 0;
 }
 
 .split-media-minimized-hidden {
@@ -112,25 +113,112 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 3;
-    padding: 8px 10px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+    z-index: 999;
+    padding: 6px 8px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.4));
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    max-height: 120px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
 }
 
 .youtube-controls-single-line {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 0;
+    min-height: 36px;
+    overflow-y: auto;
+    max-height: 70px;
 }
 
 .youtube-title-text {
     color: #fff;
-    font-size: 12px;
+    font-size: max(10px, 11px);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 80px;
+    max-width: 300px;
+}
+
+/**
+ * YouTube Volume Control
+ * Mute button + volume slider + percentage text
+ */
+.youtube-volume-control {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    padding: 2px 0;
+}
+
+.youtube-volume-slider {
+    width: clamp(40px, 60px, 80px);
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #3b82f6 0%, #3b82f6 50%, #4b5563 50%, #4b5563 100%);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.youtube-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.youtube-volume-slider::-webkit-slider-thumb:hover {
+    width: 12px;
+    height: 12px;
+    background: #60a5fa;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.youtube-volume-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.youtube-volume-slider::-moz-range-thumb:hover {
+    width: 12px;
+    height: 12px;
+    background: #60a5fa;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.youtube-volume-text {
+    color: #fff;
+    font-size: max(9px, 10px);
+    font-weight: 600;
+    min-width: 28px;
+    text-align: right;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    flex-shrink: 0;
 }
 
 .youtube-attendee-readonly-overlay {
@@ -171,6 +259,9 @@
     margin: 0;
     overflow: hidden;
     pointer-events: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .whiteboard-full-canvas {
@@ -182,6 +273,9 @@
     margin: 0;
     overflow: hidden;
     pointer-events: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .whiteboard-split-canvas .canvas-container {
@@ -189,6 +283,9 @@
     height: 100%;
     padding: 0;
     margin: 0;
+    flex: 1;
+    position: relative;
+    min-height: 0;
 }
 
 .whiteboard-split-canvas .whiteboard {
@@ -198,6 +295,7 @@
     border-left: none;
     margin: 0;
     padding: 0;
+    min-height: 0;
 }
 
 /* Ensure consistent box-sizing so borders/padding don't affect sizing */
@@ -232,7 +330,7 @@
     border: 1px solid var(--color-gray-200);
     border-radius: var(--radius-md);
     touch-action: none;
-    cursor: crosshair;
+    cursor: auto;
     pointer-events: auto;
 }
 
@@ -2126,9 +2224,346 @@ input[type="range"]::-webkit-slider-thumb {
     border: none;
     outline: none;
     width: 6rem;
-    text-align: center;
-    font-size: 0.75rem;
-    background: transparent;
+}
+
+/* ============================================================================
+   RESPONSIVE MEDIA QUERIES FOR YOUTUBE CONTROLS
+   Ensures all controls remain visible and properly sized on all devices
+   ============================================================================ */
+
+/* Extra Small Devices (Mobile - up to 480px) */
+@media (max-width: 480px) {
+    .youtube-controls-container {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 4px;
+        padding: 2px 0;
+    }
+
+    .youtube-title-text {
+        font-size: 9px;
+        max-width: 120px;
+        padding: 0 2px;
+    }
+
+    .video-control-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 3px;
+    }
+
+    .video-time-text {
+        font-size: 10px;
+        padding: 0 2px;
+    }
+
+    .youtube-volume-control {
+        gap: 2px;
+    }
+
+    .youtube-volume-slider {
+        width: 40px;
+    }
+
+    .youtube-volume-text {
+        font-size: 9px;
+        min-width: 24px;
+    }
+}
+
+/* Small Devices (Tablets Portrait - 481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .youtube-controls-container {
+        padding: 6px 8px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 5px;
+    }
+
+    .youtube-title-text {
+        font-size: 10px;
+        max-width: 150px;
+    }
+
+    .video-control-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .video-time-text {
+        font-size: 11px;
+        padding: 0 3px;
+    }
+
+    .youtube-volume-slider {
+        width: 50px;
+    }
+
+    .youtube-volume-text {
+        font-size: 10px;
+        min-width: 26px;
+    }
+}
+
+/* Medium Devices (Tablets Landscape - 769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .youtube-controls-container {
+        padding: 6px 10px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 6px;
+    }
+
+    .youtube-title-text {
+        font-size: 11px;
+        max-width: 200px;
+    }
+
+    .video-control-btn {
+        width: 33px;
+        height: 33px;
+    }
+
+    .video-time-text {
+        font-size: 12px;
+        padding: 0 4px;
+    }
+
+    .youtube-volume-slider {
+        width: 60px;
+    }
+
+    .youtube-volume-text {
+        font-size: 10px;
+    }
+}
+
+/* Large Devices (Desktop - 1025px and above) */
+@media (min-width: 1025px) {
+    .youtube-controls-container {
+        padding: 8px 12px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 8px;
+    }
+
+    .youtube-title-text {
+        font-size: 12px;
+    }
+}
+
+/* ============================================================================
+    CONTENT OVERFLOW & RESPONSIVE ALIGNMENT
+    Ensure controls remain visible and properly aligned when content is large
+    ========================================================================== */
+
+/* Improve layout stability with large content */
+.whiteboard-main-wrapper {
+    min-height: 300px;
+}
+
+.canvas-container {
+    overflow: hidden !important;
+}
+
+.whiteboard {
+    overflow: hidden !important;
+    touch-action: none;
+}
+
+/* Text box responsive sizing */
+.text-box-container textarea {
+    resize: none;
+    line-height: 1.4;
+    font-size: clamp(12px, 1.5vw, 18px);
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure text messages don't overlap controls */
+.text-messages-container {
+    max-height: 40vh;
+    overflow-y: auto;
+    pointer-events: auto;
+    top: clamp(4px, 1vh, 10px);
+}
+
+/* Improve video control visibility */
+.video-controls-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 6px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5));
+    z-index: 1000;
+}
+
+.video-progress-bar {
+    width: 100%;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    box-sizing: border-box;
+}
+
+.video-progress-input {
+    width: 100%;
+    min-height: 14px;
+    cursor: pointer;
+}
+
+.video-controls-single-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 2px 0;
+    min-height: 32px;
+}
+
+.video-control-btn {
+    flex-shrink: 0;
+    min-width: clamp(26px, 4vw, 36px);
+    min-height: clamp(26px, 4vw, 36px);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-time-text {
+    flex-shrink: 0;
+    font-size: clamp(10px, 1.5vw, 12px);
+    min-width: fit-content;
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+/* Mobile responsiveness - ensure no overflow */
+@media (max-width: 640px) {
+    .whiteboard-main-wrapper {
+        flex-direction: column;
+        min-height: 600px;
+    }
+
+    .whiteboard-split-video,
+    .whiteboard-split-canvas {
+        flex: none;
+        width: 100%;
+        height: 50%;
+    }
+
+    .whiteboard-split-video {
+        border-right: none;
+        border-bottom: 2px solid var(--color-primary);
+    }
+
+    .youtube-controls-container {
+        max-height: 100px;
+        overflow-y: auto;
+    }
+
+    .youtube-controls-single-line {
+        gap: 4px;
+        min-height: 32px;
+    }
+
+    .text-messages-container {
+        width: 95%;
+        max-width: 100%;
+        top: auto;
+        bottom: auto;
+    }
+
+    .video-controls-single-line {
+        gap: 3px;
+        min-height: 30px;
+    }
+
+    .text-box-container textarea {
+        font-size: clamp(11px, 2vw, 14px);
+    }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .youtube-controls-container {
+        max-height: 110px;
+        overflow-y: auto;
+    }
+
+    .youtube-controls-single-line {
+        gap: 5px;
+        min-height: 34px;
+    }
+
+    .video-controls-single-line {
+        gap: 4px;
+        min-height: 32px;
+    }
+}
+
+/* Large desktop - comfortable spacing */
+@media (min-width: 1025px) {
+    .youtube-controls-container {
+        max-height: 120px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 8px;
+        min-height: 36px;
+    }
+
+    .video-controls-single-line {
+        gap: 6px;
+        min-height: 36px;
+    }
+}
+
+
+.video-control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+}
+
+.video-time-text {
+    font-size: 13px;
+    padding: 0 8px;
+}
+
+.youtube-volume-slider {
+    width: 75px;
+}
+
+.youtube-volume-text {
+    font-size: 11px;
+}
+
+
+/* Ensure all controls don't wrap and stay visible */
+@media (max-width: 600px) {
+    .youtube-controls-single-line {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .youtube-title-text {
+        display: none;
+        /* Hide title on very small screens to save space */
+    }
 }
 
 .bucket-close-button {
@@ -2321,9 +2756,9 @@ input[type="range"]::-webkit-slider-thumb {
     background: rgba(255, 255, 255, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
+    width: clamp(28px, 5vw, 36px);
+    height: clamp(28px, 5vw, 36px);
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2331,13 +2766,13 @@ input[type="range"]::-webkit-slider-thumb {
     transition: all 0.2s ease;
     padding: 0;
     flex-shrink: 0;
-    font-size: 14px;
+    font-size: clamp(12px, 2vw, 14px);
 }
 
 .video-control-btn:hover {
     background: rgba(255, 255, 255, 0.4);
     border-color: rgba(255, 255, 255, 0.6);
-    transform: scale(1.08);
+    transform: scale(1.05);
 }
 
 .video-control-btn:active {
@@ -2356,12 +2791,12 @@ input[type="range"]::-webkit-slider-thumb {
  */
 .video-time-text {
     color: white;
-    font-size: 13px;
+    font-size: clamp(10px, 2vw, 13px);
     font-weight: 500;
     white-space: nowrap;
     font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    letter-spacing: 0.5px;
-    padding: 0 8px;
+    letter-spacing: 0.3px;
+    padding: 0 4px;
     flex-shrink: 0;
 }
 
