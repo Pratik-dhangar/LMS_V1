@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
 const COACH_API = `${API_BASE_URL}/coaches`;
 
 // Get axios instance with auth token

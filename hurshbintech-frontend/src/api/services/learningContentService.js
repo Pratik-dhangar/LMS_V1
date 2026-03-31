@@ -24,8 +24,8 @@ const learningContentService = {
       try {
         const urlObj = new URL(fileUrl);
         if (urlObj.pathname.startsWith('/s3/') &&
-            !urlObj.hostname.includes('amazonaws.com') &&
-            !urlObj.hostname.includes('neevcloud.com')) {
+          !urlObj.hostname.includes('amazonaws.com') &&
+          !urlObj.hostname.includes('neevcloud.com')) {
           return `${window.location.origin}${urlObj.pathname}`;
         }
       } catch (_) { /* fall through */ }
@@ -35,18 +35,18 @@ const learningContentService = {
     if (fileUrl.startsWith('s3://')) {
       const parts = fileUrl.replace('s3://', '').split('/');
       const key = parts.slice(1).join('/');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
       return `${apiBaseUrl}/media/s3/${key}`;
     }
     // Handle backend proxy URLs (already have /api prefix from backend response)
     if (fileUrl.startsWith('/api/')) {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
       const backendUrl = apiBaseUrl.replace('/api', '');
       return `${backendUrl}${fileUrl}`;
     }
     // Handle other paths
     const cleanUrl = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
     const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
     return `${backendUrl}${cleanUrl}`;
   },
