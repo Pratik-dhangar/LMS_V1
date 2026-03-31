@@ -1055,7 +1055,6 @@ input[type="range"]::-webkit-slider-thumb {
 
 .floating-animation {
     position: absolute;
-    bottom: -100px;
     --floating-emoji-size: clamp(60px, 2vw, 120px);
     font-size: var(--floating-emoji-size);
     animation: floatUp calc(var(--animation-duration, 10000) * 1ms) ease-in-out forwards;
@@ -1134,30 +1133,28 @@ input[type="range"]::-webkit-slider-thumb {
 /* Float from bottom to top with gentle sway - optimized for performance */
 @keyframes floatUp {
     0% {
-        bottom: -100px;
         opacity: 0;
-        transform: translateX(0) scale(0.3);
+        transform: translate3d(0, 0, 0) scale(0.7);
     }
 
-    10% {
+    15% {
         opacity: 1;
-        transform: translateX(0) scale(1);
+        transform: translate3d(0, 0, 0) scale(1);
     }
 
     50% {
         opacity: 1;
-        transform: translateX(calc(var(--drift, 20px) * 0.7)) scale(1.05);
+        transform: translate3d(calc(var(--drift-x, 20px) * 0.6), calc(var(--drift-y, -45px) * 0.55), 0) scale(1.05);
     }
 
     90% {
         opacity: 0.9;
-        transform: translateX(calc(var(--drift, 20px) * 1.3)) scale(1);
+        transform: translate3d(calc(var(--drift-x, 20px) * 0.9), calc(var(--drift-y, -45px) * 0.85), 0) scale(1);
     }
 
     100% {
-        bottom: 105%;
         opacity: 0;
-        transform: translateX(calc(var(--drift, 20px) * 1.5)) scale(0.8);
+        transform: translate3d(var(--drift-x, 20px), var(--drift-y, -45px), 0) scale(0.85);
     }
 }
 
@@ -1223,9 +1220,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Type-specific drift and timing variations */
 .floating-animation.bubble {
-    --drift: 35px;
     --floating-emoji-size: 7rem;
-    animation-duration: 9s;
+    animation-duration: 5.8s;
     animation-timing-function: linear;
     will-change: transform, opacity;
 }
@@ -1235,9 +1231,8 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .floating-animation.smiley {
-    --drift: 20px;
     --floating-emoji-size: 6rem;
-    animation-duration: 10s;
+    animation-duration: 6.3s;
     animation-timing-function: linear;
     will-change: transform, opacity;
 }
@@ -1247,8 +1242,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .floating-animation.balloon {
-    --drift: 28px;
-    animation-duration: 11s;
+    animation-duration: 6.8s;
     animation-timing-function: linear;
     will-change: transform, opacity;
     --floating-emoji-size: 9rem;
@@ -1260,9 +1254,8 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .floating-animation.star {
-    --drift: 25px;
     --floating-emoji-size: 6rem;
-    animation-duration: 10.5s;
+    animation-duration: 6.4s;
     animation-timing-function: linear;
     will-change: transform, opacity;
 }

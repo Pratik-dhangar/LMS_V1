@@ -37,6 +37,7 @@ const LearnerMyReports = () => {
     const [downloadingId, setDownloadingId] = useState(null);
     const [previewingId, setPreviewingId] = useState(null);
     const [reportFilter, setReportFilter] = useState('head'); // 'head' | 'coach'
+    const [selectedCoach, setSelectedCoach] = useState(null); // Filter by specific coach
 
     useEffect(() => {
         if (learnerId) {
@@ -46,6 +47,13 @@ const LearnerMyReports = () => {
         }
     }, [learnerId]);
 
+    // Reset coach selection when switching to head filter
+    useEffect(() => {
+        if (reportFilter === 'head') {
+            setSelectedCoach(null);
+        }
+    }, [reportFilter]);
+
     const fetchProgressReports = async () => {
         try {
             const reports = await learnerProgressReportService.getMyReports();
@@ -54,6 +62,19 @@ const LearnerMyReports = () => {
             console.error("Error fetching progress reports:", error);
             setProgressReports([]);
         }
+    };
+
+    // Extract unique coach names from reports
+    const getUniqueCoaches = () => {
+        const coaches = new Set();
+        progressReports.forEach(r => {
+            if (r.report_created_by?.toLowerCase().includes('(coach)')) {
+                // Extract coach name by removing the "(coach)" suffix
+                const coachName = r.report_created_by.replace(/\s*\(coach\)\s*$/i, '').trim();
+                if (coachName) coaches.add(coachName);
+            }
+        });
+        return Array.from(coaches).sort();
     };
 
     const handlePreviewProgressReport = async (report) => {
@@ -267,29 +288,57 @@ const LearnerMyReports = () => {
 
                                 {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT Card */}
                                 <div style={{ ...sectionCard, marginTop: '1.25rem' }}>
-                                    <div style={{ ...sectionHeader('#7c1c1c'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    <div style={{ ...sectionHeader('#7c1c1c'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                                         <span>📄 The Comprehensive Skill Development Evaluation Report</span>
-                                        {/* Filter Tabs */}
-                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                            {['head', 'coach'].map(f => (
-                                                <button
-                                                    key={f}
-                                                    onClick={() => setReportFilter(f)}
+                                        {/* Filter Controls */}
+                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                            {/* Head/Coach Tabs */}
+                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                {['head', 'coach'].map(f => (
+                                                    <button
+                                                        key={f}
+                                                        onClick={() => setReportFilter(f)}
+                                                        style={{
+                                                            background: reportFilter === f ? 'white' : 'rgba(255,255,255,0.18)',
+                                                            color: reportFilter === f ? '#7c1c1c' : 'white',
+                                                            border: 'none',
+                                                            borderRadius: '1rem',
+                                                            padding: '0.25rem 0.85rem',
+                                                            fontSize: '0.78rem',
+                                                            fontWeight: 600,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                        }}
+                                                    >
+                                                        {f === 'head' ? 'Head' : 'Coach'}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Coach Selector - shown only when Coach filter is selected */}
+                                            {reportFilter === 'coach' && getUniqueCoaches().length > 0 && (
+                                                <select
+                                                    value={selectedCoach || ''}
+                                                    onChange={(e) => setSelectedCoach(e.target.value || null)}
                                                     style={{
-                                                        background: reportFilter === f ? 'white' : 'rgba(255,255,255,0.18)',
-                                                        color: reportFilter === f ? '#7c1c1c' : 'white',
+                                                        padding: '0.3rem 0.6rem',
+                                                        borderRadius: '0.5rem',
                                                         border: 'none',
-                                                        borderRadius: '1rem',
-                                                        padding: '0.25rem 0.85rem',
                                                         fontSize: '0.78rem',
-                                                        fontWeight: 600,
+                                                        backgroundColor: 'white',
+                                                        color: '#374151',
                                                         cursor: 'pointer',
-                                                        transition: 'all 0.2s',
+                                                        fontWeight: 500,
                                                     }}
                                                 >
-                                                    {f === 'head' ? 'Head' : 'Coach'}
-                                                </button>
-                                            ))}
+                                                    <option value="">All Coaches</option>
+                                                    {getUniqueCoaches().map(coach => (
+                                                        <option key={coach} value={coach}>
+                                                            {coach}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                     </div>
 
@@ -302,14 +351,26 @@ const LearnerMyReports = () => {
                                         ) : (() => {
                                             const filtered = progressReports.filter(r => {
                                                 const by = (r.report_created_by || '').toLowerCase();
-                                                if (reportFilter === 'head') return by.includes('head');
-                                                if (reportFilter === 'coach') return by.includes('coach');
+
+                                                // Filter by report type (head or coach)
+                                                if (reportFilter === 'head') {
+                                                    if (!by.includes('head')) return false;
+                                                } else if (reportFilter === 'coach') {
+                                                    if (!by.includes('coach')) return false;
+
+                                                    // Filter by specific coach if selected
+                                                    if (selectedCoach) {
+                                                        return by.includes(selectedCoach.toLowerCase());
+                                                    }
+                                                }
+
                                                 return true;
                                             });
+
                                             if (filtered.length === 0) {
                                                 return (
                                                     <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
-                                                        <p style={{ margin: 0 }}>No {reportFilter} reports found</p>
+                                                        <p style={{ margin: 0 }}>No {reportFilter} reports found{selectedCoach ? ` for ${selectedCoach}` : ''}</p>
                                                     </div>
                                                 );
                                             }

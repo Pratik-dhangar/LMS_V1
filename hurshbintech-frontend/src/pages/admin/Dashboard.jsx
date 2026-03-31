@@ -15,7 +15,7 @@ const AdminDashboard = () => {
     { id: '1.2', title: 'View HurshBin Trainers', description: 'View and manage HurshBin Trainers', icon: GraduationCap, color: 'green', onClick: () => navigate('/admin/view-trainers') },
     { id: '1.3', title: 'View Learners', description: 'View all learners and their learning progress', icon: Users, color: 'blue', onClick: () => navigate('/admin/manage-learners') },
     { id: '1.4', title: 'Manage Learning Content', description: 'View and manage learning content', icon: BookOpen, color: 'purple', onClick: () => navigate('/admin/learning-content') },
-    { id: '1.5', title: 'Manage Learning Goals', description: 'Create and manage learning goals', icon: Target, color: 'orange', onClick: () => navigate('/admin/learning-goals') },
+    { id: '1.5', title: 'Manage Learning Goals and Learning Skill', description: 'Create and manage learning goals', icon: Target, color: 'orange', onClick: () => navigate('/admin/learning-goals') },
     { id: '1.6', title: 'Manage HurshBin Coaches', description: 'Manage HurshBin Coaches and Consultants', icon: Award, color: 'teal', onClick: () => navigate('/admin/manage-coaches') },
     { id: '2.1', title: 'Training Module', description: 'Create and manage role-targeted training assignments', icon: Lightbulb, color: 'amber', onClick: () => navigate('/admin/assigned-trainings') },
     { id: '1.7', title: 'Manage Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
