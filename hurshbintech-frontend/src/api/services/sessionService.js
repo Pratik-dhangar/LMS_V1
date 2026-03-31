@@ -131,7 +131,7 @@ const sessionService = {
 
   // WebSocket
   initializeWebSocket: (sessionId, userId) => {
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com';
     const wsUrl = baseURL.replace('http', 'ws') + `/api/sessions/ws/${sessionId}/${userId}`;
     return new WebSocket(wsUrl);
   },
