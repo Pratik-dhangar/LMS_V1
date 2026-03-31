@@ -7,6 +7,7 @@ Validates credentials and issues JWT tokens for authenticated users
 import logging
 import os
 import time
+import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -18,8 +19,10 @@ from app.core.config import settings
 from app.core.metrics import metrics_collector
 from app.core.security import create_access_token
 from app.crud import user_crud
+from app.crud import device_session_crud
 from app.db.session import get_db
 from app.schemas.auth import Token, UserLogin
+from app.services.session_connection_manager import session_connection_manager
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
@@ -96,8 +99,50 @@ async def user_login(request: Request, credentials: UserLogin, db: AsyncSession 
         token_duration = time.time() - token_start
         logger.info(f"[TOKEN_CREATE_END] Token created in {token_duration:.3f}s")
 
+        # ============ DEVICE SESSION MANAGEMENT (SINGLE-DEVICE ACTIVE) ============
+        # Generate device_id if not provided by client
+        device_id = credentials.device_id or str(uuid.uuid4())
+        
+        logger.info(f"[DEVICE_SESSION] Recording login for user {user_id} on device {device_id}")
+        
+        # Create device session - this automatically deactivates previous active sessions
+        device_session = await device_session_crud.create_device_session(
+            db=db,
+            user_id=user_id,
+            device_id=device_id,
+            access_token=access_token,
+            device_name=credentials.device_name,
+            device_type=credentials.device_type,
+            browser_info=credentials.browser_info,
+            ip_address=credentials.ip_address or str(request.client.host if request.client else "unknown"),
+        )
+        
+        logger.info(f"[DEVICE_SESSION] Created device session ID={device_session.id} for user {user_id}")
+        
+        # Notify other devices that they've been logged out
+        # This runs in background (fire and forget) to not block login response
+        try:
+            # Import asyncio here to avoid circular imports
+            import asyncio
+            
+            async def notify_devices():
+                try:
+                    await session_connection_manager.notify_session_invalidated(
+                        user_id=user_id,
+                        active_device_id=device_id
+                    )
+                except Exception as e:
+                    logger.error(f"[DEVICE_SESSION] Failed to notify other devices: {e}")
+            
+            # Schedule notification in background without awaiting
+            asyncio.create_task(notify_devices())
+        except Exception as e:
+            logger.error(f"[DEVICE_SESSION] Error scheduling device notification: {e}")
+        
+        # ============ END DEVICE SESSION MANAGEMENT ============
+
         total_duration = time.time() - login_start_time
-        logger.info(f"[LOGIN_SUCCESS] Successful login - User: {user_name}, Role: {credentials.role}, Total time: {total_duration:.3f}s")
+        logger.info(f"[LOGIN_SUCCESS] Successful login - User: {user_name}, Role: {credentials.role}, Device: {device_id}, Total time: {total_duration:.3f}s")
         metrics_collector.record_auth_attempt(success=True)
 
         return Token(

@@ -2009,19 +2009,19 @@ export const AttendeeMetricsPanel = ({
             width: '20%',
             minWidth: 'clamp(7.5rem, 12vw, 9.375rem)',
             maxWidth: 'clamp(9.375rem, 15vw, 12rem)',
-            // display: 'flex',
-            // flexDirection: 'column',
-            // alignItems: 'center',
-            // justifyContent: isPromptOpen ? 'flex-start' : 'center',
             gap: 'clamp(0.5rem, 1.5vh, 0.75rem)',
             backgroundColor: 'white',
             borderRadius: 'clamp(0.375rem, 1vw, 0.5rem)',
             padding: 'clamp(0.75rem, 2vh, 1rem)',
             boxShadow: '0 0.125rem 0.25rem rgba(0,0,0,0.1)',
             height: '100%',
-            overflow: 'hidden',
+            overflow: 'auto',
+            overflowX: 'hidden',
             boxSizing: 'border-box',
-            position: 'relative'
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start'
         }}>
             {/* Row 1 + Prompt — stacked column, contained within panel */}
             <div style={{
@@ -2128,15 +2128,19 @@ export const AttendeeMetricsPanel = ({
                 )}
             </div>
 
-            {/* Row 3: Video control icons */}
+            {/* Row 3: Video control icons - Small and compact */}
             {showControls && onToggleMic && onToggleCamera && onLeaveSession && (
                 <div style={{
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 'clamp(0.75rem, 2vw, 1.25rem)',
-                    flexShrink: 0
+                    gap: 'clamp(0.5rem, 1.5vw, 0.75rem)',
+                    flexShrink: 0,
+                    width: '100%',
+                    padding: 'clamp(0.4rem, 0.8vh, 0.6rem) 0',
+                    borderTop: '1px solid #e5e7eb',
+                    flexWrap: 'wrap'
                 }}>
                     <span
                         onClick={onToggleMic}
@@ -2145,14 +2149,15 @@ export const AttendeeMetricsPanel = ({
                             cursor: 'pointer',
                             color: micEnabled ? '#16a34a' : '#dc2626',
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            userSelect: 'none'
                         }}
                     >
-                        {micEnabled
-                            ? <Mic size={18} />
-                            : <MicOff size={18} />
-                        }
+                        {micEnabled ? <Mic size={16} /> : <MicOff size={16} />}
                     </span>
+
                     <span
                         onClick={onToggleCamera}
                         title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
@@ -2160,14 +2165,15 @@ export const AttendeeMetricsPanel = ({
                             cursor: 'pointer',
                             color: cameraEnabled ? '#16a34a' : '#dc2626',
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            userSelect: 'none'
                         }}
                     >
-                        {cameraEnabled
-                            ? <Video size={18} />
-                            : <VideoOff size={18} />
-                        }
+                        {cameraEnabled ? <Video size={16} /> : <VideoOff size={16} />}
                     </span>
+
                     <span
                         onClick={onLeaveSession}
                         title="Leave Session"
@@ -2175,10 +2181,13 @@ export const AttendeeMetricsPanel = ({
                             cursor: 'pointer',
                             color: '#dc2626',
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            userSelect: 'none'
                         }}
                     >
-                        <PhoneOff size={18} />
+                        <PhoneOff size={16} />
                     </span>
                 </div>
             )}

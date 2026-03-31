@@ -90,7 +90,8 @@ const ClientSession = () => {
     promptText, setPromptText,
     trainerComments, setTrainerComments,
     isCommentsOpen, setIsCommentsOpen,
-    audioRef
+    audioRef,
+    inlineMedia, setInlineMedia
   } = sessionState;
 
   // Client-specific state
@@ -649,6 +650,8 @@ const ClientSession = () => {
               setKeyboardPosition={setKeyboardPosition}
               stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime).display : null}
               stopwatchIsRunning={stopwatchIsRunning}
+              inlineMedia={inlineMedia}
+              setInlineMedia={setInlineMedia}
             />
           </div>
         </AttendeeWhiteboardSection>
