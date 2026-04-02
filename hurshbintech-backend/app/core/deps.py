@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.security import decode_token
+from app.crud import device_session_crud
 from app.db.session import get_db
 from app.models.user_model import (
     Admin,
@@ -26,6 +27,20 @@ from app.models.user_model import (
 
 # HTTP Bearer token scheme for JWT authentication
 security = HTTPBearer()
+
+
+async def _enforce_active_device_session(db: AsyncSession, user_id: int, access_token: str) -> None:
+    """Reject requests from tokens that are no longer the active device session."""
+    is_active = await device_session_crud.validate_session_active(
+        db=db,
+        user_id=user_id,
+        access_token=access_token,
+    )
+    if not is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session invalidated. Please login again.",
+        )
 
 
 async def get_current_admin_user(
@@ -46,6 +61,8 @@ async def get_current_admin_user(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Verify role is admin
         if role != "admin":
             raise HTTPException(
@@ -62,6 +79,9 @@ async def get_current_admin_user(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
 
         return admin
+
+    except HTTPException:
+        raise
 
     except JWTError as e:
         raise HTTPException(
@@ -92,6 +112,8 @@ async def get_current_admin(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Verify role is admin
         if role != "admin":
             raise HTTPException(
@@ -108,6 +130,9 @@ async def get_current_admin(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
 
         return admin
+
+    except HTTPException:
+        raise
 
     except JWTError as e:
         raise HTTPException(
@@ -134,6 +159,8 @@ async def get_current_user(
         # Convert user_id to int if it's a string
         if isinstance(user_id, str):
             user_id = int(user_id)
+
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
 
         # Normalize role to uppercase for enum comparison
         role_upper = role.upper() if isinstance(role, str) else role
@@ -207,6 +234,8 @@ async def get_current_head(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Verify role is head
         if role != "head":
             raise HTTPException(
@@ -254,6 +283,8 @@ async def get_current_trainer(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Verify role is trainer
         if role != "trainer":
             raise HTTPException(
@@ -299,6 +330,8 @@ async def get_current_learner(
         # Convert user_id to int if it's a string
         if isinstance(user_id, str):
             user_id = int(user_id)
+
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
 
         # Verify role is learner
         if role != "learner":
@@ -346,6 +379,8 @@ async def get_current_coach(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Verify role is coach
         if role != "coach":
             raise HTTPException(
@@ -391,6 +426,8 @@ async def get_current_admin_or_head(
         # Convert user_id to int if it's a string
         if isinstance(user_id, str):
             user_id = int(user_id)
+
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
 
         # Verify role is admin or head
         if role not in ["admin", "head"]:
@@ -442,6 +479,8 @@ async def get_current_trainer_optional(
         if isinstance(user_id, str):
             user_id = int(user_id)
 
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
         # Return None if not a trainer
         if role != "trainer":
             return None
@@ -481,6 +520,8 @@ async def get_current_coach_optional(
         # Convert user_id to int if it's a string
         if isinstance(user_id, str):
             user_id = int(user_id)
+
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
 
         # Return None if not a coach
         if role != "coach":
