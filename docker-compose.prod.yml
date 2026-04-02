@@ -17,13 +17,11 @@ services:
       - REDIS_PASSWORD=Password12#$
       # CORS: allow the Prod frontend (port 443 = standard HTTPS) to reach the backend (port 8000)
       - FRONTEND_URL=https://hurshbin.com
-      - BACKEND_CORS_ORIGINS=["https://hurshbin.com"]
-    volumes:
-      - ~/certs:/app/certs:ro
+      - BACKEND_CORS_ORIGINS=["https://hurshbin.com","https://www.hurshbin.com"]
     depends_on:
       - redis-pwa
       - db-pwa
-    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-keyfile /app/certs/key.pem --ssl-certfile /app/certs/cert.pem"
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     restart: unless-stopped
     networks:
       - pwa-network
