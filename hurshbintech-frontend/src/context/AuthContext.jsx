@@ -72,6 +72,23 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
+  // Fallback for cases where WS invalidation is not delivered (multi-worker/process or reconnect races)
+  useEffect(() => {
+    const handleSessionInvalidatedEvent = () => {
+      logger.warn('AuthContext: Received global session-invalidated event');
+      authService.logout();
+      setUser(null);
+      setAccessToken(null);
+      setShowSessionInvalidatedModal(true);
+      navigate('/login');
+    };
+
+    window.addEventListener('session-invalidated', handleSessionInvalidatedEvent);
+    return () => {
+      window.removeEventListener('session-invalidated', handleSessionInvalidatedEvent);
+    };
+  }, [navigate]);
+
 
   /**
    * User Login
