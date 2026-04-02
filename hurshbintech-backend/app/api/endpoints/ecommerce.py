@@ -85,8 +85,12 @@ async def checkout(
     current_user: User = Depends(get_current_user)
 ):
     """Create order from cart (checkout)"""
+    current_user_id = current_user.id
+    current_user_email = current_user.email
+    current_user_name = current_user.name
+
     # Get cart with items
-    cart = await ecommerce_crud.get_cart_with_items(db, current_user.id)
+    cart = await ecommerce_crud.get_cart_with_items(db, current_user_id)
     
     if not cart or not cart.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
@@ -106,7 +110,7 @@ async def checkout(
     
     try:
         # Create order
-        order = await ecommerce_crud.create_order(db, current_user.id, order_data, cart.items)
+        order = await ecommerce_crud.create_order(db, current_user_id, order_data, cart.items)
         
         # Clear cart after order creation
         await ecommerce_crud.clear_cart(db, cart.id)
@@ -128,15 +132,15 @@ async def checkout(
             }
         
         # Send order created email with order details and payment instructions
-        recipient_email = order_data.email or current_user.email
-        recipient_name = current_user.name
+        recipient_email = order_data.email or current_user_email
+        recipient_name = current_user_name
         
-        logger.info(f"Checkout: Order created {order.order_number} for user {current_user.id}")
+        logger.info(f"Checkout: Order created {order.order_number} for user {current_user_id}")
         logger.info(f"Checkout: Email being sent to - {recipient_email}, Name - {recipient_name}")
         
         # Validate email before sending
         if not recipient_email:
-            logger.error(f"Checkout: No email found for user {current_user.id}. order_data.email={order_data.email}, current_user.email={current_user.email}")
+            logger.error(f"Checkout: No email found for user {current_user_id}. order_data.email={order_data.email}, current_user.email={current_user_email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is required for checkout. Please provide an email address."
@@ -196,7 +200,8 @@ async def checkout(
             "created_at": order.created_at
         }
     except Exception as e:
-        logger.error(f"Checkout: Error creating order for user {current_user.id}: {str(e)}", exc_info=True)
+        await db.rollback()
+        logger.error(f"Checkout: Error creating order for user {current_user_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create order: {str(e)}"
