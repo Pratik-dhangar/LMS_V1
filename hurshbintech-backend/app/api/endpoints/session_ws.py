@@ -7,6 +7,8 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 from app.services.session_connection_manager import session_connection_manager
 from app.core.security import decode_token
+from app.crud import device_session_crud
+from app.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,6 +38,17 @@ async def websocket_session_endpoint(websocket: WebSocket, token: str, device_id
         # Decode token to get user_id
         payload = decode_token(token)
         user_id = int(payload.get("sub"))
+
+        # Reject sockets from invalidated sessions.
+        async with AsyncSessionLocal() as db:
+            is_active = await device_session_crud.validate_session_active(
+                db=db,
+                user_id=user_id,
+                access_token=token,
+            )
+            if not is_active:
+                await websocket.close(code=4000, reason="Session invalidated")
+                return
         
         logger.info(f"[SESSION_WS] Connection attempt - user_id={user_id}, device_id={device_id_safe}")
         
