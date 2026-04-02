@@ -70,6 +70,20 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      const errorDetail = String(error.response?.data?.detail || '');
+      const isSessionInvalidated = errorDetail.toLowerCase().includes('session invalidated');
+
+      if (isSessionInvalidated) {
+        logger.warn('[Axios] Session invalidated by another device');
+        window.dispatchEvent(new CustomEvent('session-invalidated', {
+          detail: {
+            source: 'api-401',
+            message: errorDetail,
+          },
+        }));
+        return Promise.reject(error);
+      }
+
       logger.warn('[Axios] Received 401 Unauthorized - clearing auth and redirecting to login');
 
       toast.error("Session expired! Please login Again.");

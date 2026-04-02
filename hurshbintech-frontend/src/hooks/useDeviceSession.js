@@ -96,16 +96,14 @@ export const useDeviceSession = (accessToken, onSessionInvalidated) => {
             // Get backend URL from environment or use default
             const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
-            // Convert HTTP(S) URL to WS(S) protocol
-            // Replace http:// with ws:// or https:// with wss://
-            const wsProtocol = apiBaseUrl.startsWith('https') ? 'wss:' : 'ws:';
-            const backendHostPort = apiBaseUrl
-                .replace(/^https?:\/\//, '')  // Remove http:// or https://
-                .replace(/\/api$/, '');        // Remove /api suffix
+            // Build WS URL robustly from API base URL.
+            const parsedApiUrl = new URL(apiBaseUrl);
+            const wsProtocol = parsedApiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsBase = `${wsProtocol}//${parsedApiUrl.host}`;
 
             const deviceParam = encodeURIComponent(deviceInfo.device_id);
 
-            const wsUrl = `${wsProtocol}//${backendHostPort}/api/ws/session/${accessToken}?device_id=${deviceParam}`;
+            const wsUrl = `${wsBase}/api/ws/session/${accessToken}?device_id=${deviceParam}`;
 
             logger.info('useDeviceSession: Connecting to session WebSocket', {
                 url: wsUrl.replace(accessToken, '***'),
