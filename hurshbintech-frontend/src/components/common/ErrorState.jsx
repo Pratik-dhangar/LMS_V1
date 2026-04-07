@@ -1,14 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../layout/Navbar';
-import Footer from '../layout/Footer';
 import '../../styles/components/common/ErrorState.css';
 
 /**
  * ErrorState Component
  * 
- * Full-page error display with icon, message, and action button
- * Maintains the app layout with Navbar and Footer
+ * Error display with icon, message, and action button.
+ * Note: This component is used within MainLayout-wrapped pages, so navbar/footer are provided by the layout.
  * 
  * @param {string} title - Error title/heading
  * @param {string} message - Detailed error message
@@ -25,7 +23,6 @@ const ErrorState = ({
 
   return (
     <div className="error-state-container">
-      <Navbar />
       <main className="error-state-main">
         <div className="error-state-content">
           <svg className="error-state-icon" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
@@ -41,7 +38,6 @@ const ErrorState = ({
           </button>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
