@@ -2783,7 +2783,7 @@ class EmailService:
                         <div class="footer">
                             <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
                             <p>This is an automated confirmation email from HurshBintech.</p>
-                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                            <p><a href="https://hurshbin.com/" class="link">Visit our website</a></p>
                         </div>
                     </div>
                 </div>
@@ -2976,7 +2976,7 @@ class EmailService:
 
                         <p>
                             You can log in to the platform at:
-                            <a href="https://tech.hurshbin.com/" class="link">https://tech.hurshbin.com/</a>
+                            <a href="https://hurshbin.com/" class="link">https://hurshbin.com/</a>
                         </p>
 
                         <p>
@@ -2987,7 +2987,7 @@ class EmailService:
                         <div class="footer">
                             <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
                             <p>This is an automated credentials email from HurshBintech. Please do not reply.</p>
-                            <p><a href="https://tech.hurshbin.com/" class="link">Visit our website</a></p>
+                            <p><a href="https://hurshbin.com/" class="link">Visit our website</a></p>
                         </div>
                     </div>
                 </div>

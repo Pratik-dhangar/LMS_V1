@@ -89,14 +89,13 @@ const publicSubscriptionService = {
 
     /**
      * Admin: trigger CSV export download.
-     * Opens the export URL in a new tab – the browser handles the file download.
+     * Export is intentionally restricted to PROCESSED inquiries only.
      */
-    exportCsv: async (reviewStatus = null) => {
+    exportCsv: async () => {
         const baseURL =
             import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
         const token = localStorage.getItem('access_token');
-        let url = `${baseURL}/admin/subscription-inquiries/export`;
-        if (reviewStatus) url += `?review_status=${reviewStatus}`;
+        const url = `${baseURL}/admin/subscription-inquiries/export?review_status=PROCESSED`;
 
         // Use fetch so we can attach the auth header and trigger a proper download
         const response = await fetch(url, {

@@ -23,8 +23,8 @@ RUN echo "=== Checking index.html ===" && \
     echo "=== End diagnostic ==="
 
 # Accept build arguments for Vite
-ARG VITE_API_BASE_URL=https://tech.hurshbin.com:8000/api
-ARG VITE_WS_URL=wss://tech.hurshbin.com:8000
+ARG VITE_API_BASE_URL=https://hurshbin.com/api
+ARG VITE_WS_URL=wss://hurshbin.com/ws
 ARG VITE_GOOGLE_CLIENT_ID
 
 ARG VITE_ENABLE_PWA=false
@@ -44,7 +44,7 @@ RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 FROM nginx:alpine
 
 # ENV_TYPE selects which nginx config to use:
-#   prod (default) -> nginx/prod.conf  (port 443, tech.hurshbin.com, Neev S3)
+#   prod (default) -> nginx/prod.conf  (port 443, hurshbin.com, Neev S3)
 #   uat            -> nginx/uat.conf   (port 3000, localhost, AWS S3)
 ARG ENV_TYPE=prod
 

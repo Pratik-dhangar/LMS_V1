@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 
 // axios instance with default config
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api',
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -67,6 +67,20 @@ axiosInstance.interceptors.response.use(
       if (isOptionalEndpoint) {
         // Just reject the promise without triggering logout
         console.warn(`[Axios] Got 401 on optional endpoint: ${error.config?.url}, continuing without it`);
+        return Promise.reject(error);
+      }
+
+      const errorDetail = String(error.response?.data?.detail || '');
+      const isSessionInvalidated = errorDetail.toLowerCase().includes('session invalidated');
+
+      if (isSessionInvalidated) {
+        logger.warn('[Axios] Session invalidated by another device');
+        window.dispatchEvent(new CustomEvent('session-invalidated', {
+          detail: {
+            source: 'api-401',
+            message: errorDetail,
+          },
+        }));
         return Promise.reject(error);
       }
 

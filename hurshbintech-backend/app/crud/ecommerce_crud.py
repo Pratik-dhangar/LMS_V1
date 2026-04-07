@@ -5,7 +5,7 @@ from typing import List, Optional
 from uuid import UUID
 import logging
 
-from sqlalchemy import select, and_, extract
+from sqlalchemy import select, and_, extract, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -151,18 +151,24 @@ async def generate_order_number(db: AsyncSession) -> str:
     from datetime import datetime
     
     year = datetime.now().year
-    
-    # Get count of orders created this year to ensure sequential numbering
+
+    await db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": year})
+
+    year_start = datetime(year, 1, 1)
     result = await db.execute(
-        select(Order).where(Order.created_at >= datetime(year, 1, 1))
+        select(Order.order_number)
+        .where(Order.created_at >= year_start)
+        .order_by(Order.order_number.desc())
+        .limit(1)
     )
-    orders_this_year = result.scalars().all()
-    order_count = len(orders_this_year) + 1
-    
-    # Format with leading zeros: ORD-2025-000001
-    order_number = f"ORD-{year}-{order_count:06d}"
-    
-    return order_number
+    latest_order_number = result.scalar_one_or_none()
+
+    if not latest_order_number:
+        next_sequence = 1
+    else:
+        next_sequence = int(latest_order_number.rsplit("-", 1)[-1]) + 1
+
+    return f"ORD-{year}-{next_sequence:06d}"
 
 
 async def create_order(

@@ -113,19 +113,20 @@ export const useInstructorHandlers = ({
 
     // Whiteboard tools
     const handleToolClick = useCallback((toolName) => {
+        const REACTION_ASSET_BASE = `${import.meta.env.BASE_URL}reactions`;
         const REACTION_SVG_ASSETS = {
-            smiley: { type: 'svg', src: '/reactions/realistic-pastel-smile.svg', alt: 'Smile' },
-            bubble: { type: 'svg', src: '/reactions/realistic-bubble.svg', alt: 'Bubble' },
+            smiley: { type: 'svg', src: `${REACTION_ASSET_BASE}/realistic-pastel-smile.svg`, alt: 'Smile' },
+            bubble: { type: 'svg', src: `${REACTION_ASSET_BASE}/realistic-bubble.svg`, alt: 'Bubble' },
             balloon: [
-                { type: 'svg', src: '/reactions/02_pastel_mint.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/03_pastel_brown.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/04_pastel_lavender.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/05_pastel_peach.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/06_pastel_coral.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/07_pastel_teal.svg', alt: 'Balloon' },
-                { type: 'svg', src: '/reactions/08_pastel_yellow.svg', alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/02_pastel_mint.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/03_pastel_pink.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/04_pastel_lavender.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/05_pastel_peach.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/06_pastel_coral.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/07_pastel_teal.svg`, alt: 'Balloon' },
+                { type: 'svg', src: `${REACTION_ASSET_BASE}/08_pastel_yellow.svg`, alt: 'Balloon' },
             ],
-            star: { type: 'svg', src: '/reactions/realistic-oil-pastel-star.svg', alt: 'Star' },
+            star: { type: 'svg', src: `${REACTION_ASSET_BASE}/realistic-oil-pastel-star.svg`, alt: 'Star' },
         };
 
         // Create or reuse a ref for active floating animation types to prevent duplicates

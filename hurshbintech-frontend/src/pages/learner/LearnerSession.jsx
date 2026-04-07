@@ -1634,6 +1634,7 @@ const LearnerSession = () => {
           .learner-main-container {
             /* No scrolling needed in landscape */
             overflow: hidden !important;
+            min-height: 0 !important;
           }
 
           .learner-metrics-header {
@@ -1644,19 +1645,24 @@ const LearnerSession = () => {
           }
 
           .learner-whiteboard-wrapper {
-            /* In landscape, fit perfectly in viewport when browser chrome is hidden */
-            min-height: calc(100vh - 40px) !important;
-            max-height: calc(100vh - 40px) !important;
-            height: calc(100vh - 40px) !important;
-            /* Use dvh for dynamic adjustment */
-            min-height: calc(100dvh - 40px) !important;
-            max-height: calc(100dvh - 40px) !important;
-            height: calc(100dvh - 40px) !important;
-            /* iOS Safari fallback */
-            min-height: calc(-webkit-fill-available - 40px) !important;
-            max-height: calc(-webkit-fill-available - 40px) !important;
+            /* Consume remaining space under header; avoid fixed vh math that clips on small devices */
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            height: auto !important;
+            max-height: none !important;
             /* Remove bottom padding in landscape */
             padding-bottom: 0 !important;
+          }
+
+          .session-whiteboard-container,
+          .learner-whiteboard-wrapper > div,
+          .learner-whiteboard-wrapper .w-full,
+          .learner-whiteboard-wrapper .whiteboard-main-wrapper,
+          .learner-whiteboard-wrapper .whiteboard,
+          .learner-whiteboard-wrapper .canvas-container {
+            min-height: 0 !important;
+            height: 100% !important;
+            max-height: none !important;
           }
         }
 
@@ -1807,8 +1813,7 @@ const LearnerSession = () => {
 
           /* Constrain canvas to fit perfectly */
           .learner-whiteboard-wrapper canvas {
-            max-height: calc(100dvh - 43px) !important;
-            max-height: calc(-webkit-fill-available - 45px) !important;
+            max-height: 100% !important;
             object-fit: contain !important;
           }
 

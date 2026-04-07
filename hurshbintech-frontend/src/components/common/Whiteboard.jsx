@@ -649,6 +649,8 @@ const Whiteboard = ({
     const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
     const [youtubeCurrentTime, setYoutubeCurrentTime] = useState(0);
     const [youtubeDuration, setYoutubeDuration] = useState(0);
+    const [youtubeVolume, setYoutubeVolume] = useState(100); // Volume 0-100
+    const [isYoutubeMuted, setIsYoutubeMuted] = useState(false);
     const activeYoutubeMedia = inlineYoutube || (inlineMedia && inlineMedia.type === 'youtube' ? inlineMedia : null);
     const isYoutubeMinimized = Boolean(activeYoutubeMedia?.minimized);
     const hasExpandedMedia = Boolean((inlineVideo && !isInlineVideoMinimized) || (activeYoutubeMedia && !isYoutubeMinimized));
@@ -677,6 +679,11 @@ const Whiteboard = ({
     // Generate custom cursor based on tool and lineWidth
     const generateCursor = useCallback((tool, lineWidth) => {
         try {
+            // Only show custom cursor for pen and eraser tools
+            if (tool !== 'pen' && tool !== 'eraser') {
+                return 'auto'; // Normal mouse pointer for other tools
+            }
+
             // Scale cursor size so it's always visible (browsers may clamp the image size)
             const base = Math.max(12, Math.round(lineWidth * 3));
             const center = Math.round(base / 2);
@@ -698,10 +705,10 @@ const Whiteboard = ({
                 return `url("${url}") ${center} ${center}, auto`;
             }
 
-            return 'default';
+            return 'auto';
         } catch {
             // btoa/encodeURIComponent can throw in certain environments - fall back gracefully
-            return 'default';
+            return 'auto';
         }
     }, []);
 
@@ -768,19 +775,19 @@ const Whiteboard = ({
 
             if (fullUrl.startsWith('s3://')) {
                 // Route S3 URLs through backend proxy (avoids CORS)
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
                 fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
             } else if (!fullUrl.startsWith('http')) {
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
@@ -2885,20 +2892,20 @@ const Whiteboard = ({
 
             // Handle S3 URLs through backend proxy (avoids CORS)
             if (fullUrl.startsWith('s3://')) {
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
                 fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
                 // Backend proxy URL from API response
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', '');
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl;
             } else if (!fullUrl.startsWith('http')) {
                 // It's a relative URL like /uploads/learning_content/file.png
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://43.204.218.16:8000/api';
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
                 fullUrl = `${backendUrl}${fullUrl}`;
                 fileUrl = fullUrl; // Store full URL
@@ -3275,6 +3282,45 @@ const Whiteboard = ({
         });
         whiteboardService.sendMediaControl({ action: 'youtube_seek', time: time });
     }, [isTrainer, inlineYoutube, whiteboardService, setInlineYoutube]);
+
+    const handleYoutubeVolumeChange = useCallback((newVolume) => {
+        if (!isTrainer || !whiteboardService || !youtubePlayerRef.current) return;
+        const player = youtubePlayerRef.current;
+
+        // YouTube API uses 0-100 volume
+        player.setVolume(newVolume);
+        setYoutubeVolume(newVolume);
+
+        // Send volume update to attendees
+        whiteboardService.sendMediaControl({
+            action: 'youtube_volume',
+            volume: newVolume,
+            timestamp: Date.now()
+        });
+    }, [isTrainer, whiteboardService]);
+
+    const handleYoutubeMute = useCallback(() => {
+        if (!isTrainer || !whiteboardService || !youtubePlayerRef.current) return;
+        const player = youtubePlayerRef.current;
+
+        if (isYoutubeMuted) {
+            // Unmute
+            player.setVolume(youtubeVolume);
+            setIsYoutubeMuted(false);
+        } else {
+            // Mute
+            player.mute();
+            setIsYoutubeMuted(true);
+        }
+
+        // Send mute state to attendees
+        whiteboardService.sendMediaControl({
+            action: 'youtube_mute',
+            muted: !isYoutubeMuted,
+            volume: !isYoutubeMuted ? 0 : youtubeVolume,
+            timestamp: Date.now()
+        });
+    }, [isTrainer, whiteboardService, isYoutubeMuted, youtubeVolume]);
 
     useEffect(() => {
         if (!activeYoutubeMedia?.videoId) {
@@ -3780,6 +3826,27 @@ const Whiteboard = ({
                                     <span className="youtube-title-text">
                                         {activeYoutubeMedia?.title || 'YouTube Video'}
                                     </span>
+
+                                    {/* Volume Control */}
+                                    <div className="youtube-volume-control" title="Volume">
+                                        <button
+                                            onClick={handleYoutubeMute}
+                                            className="video-control-btn"
+                                            title={isYoutubeMuted ? 'Unmute' : 'Mute'}
+                                        >
+                                            {isYoutubeMuted ? <FaVolumeMute size={16} /> : <FaVolumeUp size={16} />}
+                                        </button>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={youtubeVolume}
+                                            onChange={(e) => handleYoutubeVolumeChange(parseInt(e.target.value))}
+                                            className="youtube-volume-slider"
+                                            title={`Volume: ${youtubeVolume}%`}
+                                        />
+                                        <span className="youtube-volume-text">{youtubeVolume}%</span>
+                                    </div>
 
                                     {/* Close Button */}
                                     <button
@@ -4584,8 +4651,11 @@ const Whiteboard = ({
                                 className={`floating-animation ${animation.type} ${animation.popped ? 'popped' : ''}`}
                                 style={{
                                     left: `${animation.x}%`,
+                                    top: `${animation.y ?? 82}%`,
                                     '--animation-delay': animation.startDelay,
                                     '--animation-duration': animation.duration,
+                                    '--drift-x': `${animation.driftX ?? 24}px`,
+                                    '--drift-y': `${animation.driftY ?? -45}px`,
                                     cursor: !animation.popped ? 'pointer' : 'default',
                                     pointerEvents: animation.popped ? 'none' : 'auto',
                                 }}
@@ -4682,19 +4752,20 @@ const Whiteboard = ({
                             className="text-box-container"
                             style={{
                                 position: 'absolute',
-                                left: textBox.x,
-                                top: textBox.y,
+                                left: Math.max(0, Math.min(textBox.x, window.innerWidth - 150)),
+                                top: Math.max(0, textBox.y),
                                 width: 'auto',
                                 height: 'auto',
                                 minWidth: '100px',
-                                maxWidth: '800px',
+                                maxWidth: `calc(100% - ${textBox.x + 20}px)`,
                                 border: activeTextBoxId === textBox.id ? '2px dashed #3b82f6' : 'none',
                                 backgroundColor: 'transparent',
                                 padding: activeTextBoxId === textBox.id ? '4px' : '0',
                                 cursor: activeTextBoxId === textBox.id ? 'move' : 'text',
-                                zIndex: activeTextBoxId === textBox.id ? 1000 : 50,
+                                zIndex: activeTextBoxId === textBox.id ? 100 : 50,
                                 transition: 'border 0.1s, padding 0.1s',
-                                display: 'inline-block'
+                                display: 'inline-block',
+                                pointerEvents: 'auto'
                             }}
                             onClick={(e) => {
                                 e.stopPropagation();

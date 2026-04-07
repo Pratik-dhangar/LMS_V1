@@ -3,7 +3,7 @@
  * S3 URLs are converted to presigned URLs via backend proxy.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.lumesoftai.in:8001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
 
 /**
  * Get backend base URL (without /api prefix)
@@ -52,8 +52,8 @@ export const getFileUrl = (url) => {
       // Rewrite old frontend-proxy S3 URLs (e.g. stored with :3001/s3/... from previous deployment)
       // Detected by: same domain (hurshbin.lumesoftai.in) with /s3/ path — rewrite to current origin
       if (urlObj.pathname.startsWith('/s3/') &&
-          !urlObj.hostname.includes('amazonaws.com') &&
-          !urlObj.hostname.includes('neevcloud.com')) {
+        !urlObj.hostname.includes('amazonaws.com') &&
+        !urlObj.hostname.includes('neevcloud.com')) {
         return `${window.location.origin}${urlObj.pathname}`;
       }
     } catch (_) { /* fall through */ }

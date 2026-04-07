@@ -11,6 +11,7 @@ import Exercise from '../../components/session/Exercise';
 import { useMediaControl } from '../../context/MediaControlContext';
 import sessionService from '../../api/services/sessionService';
 import useAutoHideNavbar from '../../hooks/useAutoHideNavbar';
+import { markSessionActive, clearSessionActivity } from '../../utils/sessionActivityTracker';
 import {
   useAttendeeSessionState,
   formatTime,
@@ -92,7 +93,8 @@ const GuestSession = () => {
     bucketColor, setBucketColor,
     promptText, setPromptText,
     trainerComments, setTrainerComments,
-    isCommentsOpen, setIsCommentsOpen
+    isCommentsOpen, setIsCommentsOpen,
+    inlineMedia, setInlineMedia
   } = sessionState;
 
   // Guest-specific state
@@ -109,6 +111,7 @@ const GuestSession = () => {
   const authAttemptedRef = useRef(false);
   const pollingIntervalRef = useRef(null);
   const pendingCleanupRef = useRef(null);
+  const restrictionAlertShownRef = useRef(false);
   const mediaControl = useMediaControl();
 
   // Use shared animation hooks
@@ -279,6 +282,10 @@ const GuestSession = () => {
 
     return () => {
       console.log('[GuestSession] Component unmounting, cleaning up');
+      // Clear guest session activity tracking on unmount
+      if (sessionInfo?.session_id) {
+        clearSessionActivity(sessionInfo.session_id, 'guest');
+      }
       cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
     };
   }, [token]);
@@ -299,6 +306,19 @@ const GuestSession = () => {
         name: sessionData.guest_name,
         email: sessionData.guest_email
       });
+
+      // 🔹 Purpose: Check if session is already active on another device/tab
+      // 🔸 How it works: uses sessionActivityTracker to prevent multiple access
+      const sessionCheck = markSessionActive(sessionData.session_id, 'guest');
+      if (!sessionCheck.success) {
+        // Only show alert once (prevent duplicate toasts)
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          toast.error(sessionCheck.message);
+          navigate('/');
+        }
+        return;
+      }
 
       // Initialize WebRTC and Whiteboard with the session_id
       try {
@@ -344,7 +364,17 @@ const GuestSession = () => {
 
       const session = await sessionService.getSessionDetails(sessionIdInternal);
       setSessionInfo(session);
-
+      // Check sync status again before joining
+      const sessionCheck = markSessionActive(sessionIdInternal, 'guest');
+      if (!sessionCheck.success) {
+        if (!restrictionAlertShownRef.current) {
+          restrictionAlertShownRef.current = true;
+          toast.error(sessionCheck.message);
+          navigate('/');
+        }
+        setRetrying(false);
+        return;
+      }
       await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
       setShowWaitingModal(false);
       setLoading(false);
@@ -371,6 +401,13 @@ const GuestSession = () => {
       return;
     }
 
+    // Auto-join polling - check frequently for session start
+    // Uses adaptive polling: 3 seconds initially, then backs off to 5 seconds after 30 seconds
+    let pollCount = 0;
+    const FAST_POLL_DURATION = 30000; // First 30 seconds: poll every 3 seconds
+    const FAST_POLL_INTERVAL = 3000;  // 3 seconds for faster detection
+    const SLOW_POLL_INTERVAL = 5000;  // 5 seconds after 30 seconds
+
     pollingIntervalRef.current = setInterval(async () => {
       try {
         // Case 1: Session exists, check if it's now active
@@ -379,6 +416,18 @@ const GuestSession = () => {
           const isActive = session.status === 'ACTIVE' || session.status === 'active';
 
           if (isActive) {
+            console.log('[GuestSession] ✅ Session is now ACTIVE! Auto-joining...');
+            // Check sync status again before auto-joining
+            const sessionCheck = markSessionActive(sessionInfo.session_id, 'guest');
+            if (!sessionCheck.success) {
+              if (!restrictionAlertShownRef.current) {
+                restrictionAlertShownRef.current = true;
+                toast.error(sessionCheck.message);
+                navigate('/');
+              }
+              return;
+            }
+
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
 
@@ -389,7 +438,9 @@ const GuestSession = () => {
                 setShowWaitingModal(false);
                 setLoading(false);
                 setAwaitingAdmission(true); // Show awaiting-admission screen until coach's offer arrives
+                toast.success('Session started! Joining now...');
               } catch (error) {
+                console.error('[GuestSession] Error during auto-join:', error);
                 setRetrying(false);
               }
             }, 300);
@@ -398,21 +449,88 @@ const GuestSession = () => {
           // Case 2: Session not created yet, retry authentication
           try {
             console.log('[GuestSession] Retrying guest authentication (session not created yet)...');
+            // Check sync status again for the existing session
+            if (session?.session_id) {
+              const sessionCheck = markSessionActive(session.session_id, 'guest');
+              if (!sessionCheck.success) {
+                if (!restrictionAlertShownRef.current) {
+                  restrictionAlertShownRef.current = true;
+                  toast.error(sessionCheck.message);
+                  navigate('/');
+                }
+                return;
+              }
+            }
             await authenticateGuestSession();
             // If authenticateGuestSession succeeds it will clear the waiting modal
           } catch (err) {
             // Silently continue polling
           }
         }
+        pollCount++;
       } catch (error) {
         // Silently continue polling for session updates
+        console.error('[GuestSession] Polling error:', error);
       }
-    }, 10000);
+    }, FAST_POLL_INTERVAL);
+
+    // Slow down polling after 30 seconds (if still waiting)
+    const slowdownTimeoutId = setTimeout(() => {
+      if (pollingIntervalRef.current !== null) {
+        clearInterval(pollingIntervalRef.current);
+        console.log('[GuestSession] Switching to slower polling (5s interval)');
+        pollingIntervalRef.current = setInterval(async () => {
+          try {
+            if (sessionInfo?.session_id) {
+              const session = await sessionService.getSessionDetails(sessionInfo.session_id);
+              const isActive = session.status === 'ACTIVE' || session.status === 'active';
+              if (isActive) {
+                console.log('[GuestSession] ✅ Session is now ACTIVE! Auto-joining...');
+                const sessionCheck = markSessionActive(sessionInfo.session_id, 'guest');
+                if (!sessionCheck.success) {
+                  if (!restrictionAlertShownRef.current) {
+                    restrictionAlertShownRef.current = true;
+                    toast.error(sessionCheck.message);
+                    navigate('/');
+                  }
+                  return;
+                }
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+                setTimeout(async () => {
+                  setRetrying(true);
+                  try {
+                    await initializeAttendeeServices(WS_BASE_URL, session.session_id, 'guest', sessionState);
+                    setShowWaitingModal(false);
+                    setLoading(false);
+                    setAwaitingAdmission(true);
+                    toast.success('Session started! Joining now...');
+                  } catch (error) {
+                    console.error('[GuestSession] Error during auto-join:', error);
+                    setRetrying(false);
+                  }
+                }, 300);
+              }
+            }
+          } catch (error) {
+            console.error('[GuestSession] Slow polling error:', error);
+          }
+        }, SLOW_POLL_INTERVAL);
+      }
+    }, FAST_POLL_DURATION);
+
+    // Store slowdown timeout ID for cleanup
+    const originalPollingRef = pollingIntervalRef;
+    pollingIntervalRef.slowdownTimeoutId = slowdownTimeoutId;
 
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+      }
+      if (pollingIntervalRef.slowdownTimeoutId) {
+        clearTimeout(pollingIntervalRef.slowdownTimeoutId);
+        pollingIntervalRef.slowdownTimeoutId = null;
       }
     };
   }, [showWaitingModal, sessionInfo, navigate]);
@@ -522,6 +640,10 @@ const GuestSession = () => {
         role: 'guest',
         name: guestInfo?.name || 'Guest'
       }));
+    }
+    // Clear guest session activity tracking
+    if (sessionInfo?.session_id) {
+      clearSessionActivity(sessionInfo.session_id, 'guest');
     }
     cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
     window.location.href = '/';
@@ -707,6 +829,8 @@ const GuestSession = () => {
               setKeyboardPosition={setKeyboardPosition}
               stopwatchFormattedTime={stopwatchElapsedTime > 0 ? formatTime(stopwatchElapsedTime).display : null}
               stopwatchIsRunning={stopwatchIsRunning}
+              inlineMedia={inlineMedia}
+              setInlineMedia={setInlineMedia}
             />
           </div>
         </AttendeeWhiteboardSection>

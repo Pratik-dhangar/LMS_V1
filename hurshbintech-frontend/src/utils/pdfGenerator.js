@@ -204,26 +204,41 @@ const applyWatermarkToAllPages = async (doc) => {
  */
 const drawFooterWithSignatureOnLastPage = async (doc, signatureImagePath = null, options = {}) => {
     const {
-        footerText = 'Report Created By: Ms. Binal Shah',
-        footerSubtext = 'HurshBin Child Development Learning & Behaviour Modification Services'
+        signatureLines = [
+            'Ms. Binal Shah For HurshBin',
+            'Child Development',
+            'Learning & Behaviour',
+            'Modification services'
+        ],
+        footerTitle = 'HURSHBIN CHILD DEVELOPMENT, LEARNING AND BEHAVIOUR SERVICES (ABA)',
+        footerLeftLines = [
+            '+91 8928765220',
+            'hurshbin_mumbai / binal_all_about_happychild'
+        ],
+        footerRightLines = [
+            'HurshBin Child Development Learning & Behaviour Services',
+            'www.HurshBin.com'
+        ]
     } = options;
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
-    const footerTop = pageHeight - 50;
+
+    // Keep footer in fixed vertical bands so text/images never overlap.
+    const signatureBandTop = pageHeight - 66;
+    const contactDividerY = pageHeight - 31;
+    const titleY = contactDividerY + 4.5;
+    const contactStartY = titleY + 4.5;
+    const pageNumberSafeBottom = pageHeight - 7;
 
     const totalPages = doc.internal.getNumberOfPages();
     doc.setPage(totalPages); // Go to last page
 
-    // Gold divider line
-    doc.setDrawColor(219, 157, 50);
-    doc.setLineWidth(0.8);
-    doc.line(margin, footerTop, pageWidth - margin, footerTop);
+    // Remove top divider above stamp/signature per request.
 
-    // Load stamp
+    // Load stamp image
     const stampPath = '/sign/Stamp.png?v=' + Date.now();
-    let stampLoaded = false;
     try {
         const stampBlob = await fetch(stampPath).then(res => res.blob());
         const stampDataURL = await new Promise((resolve) => {
@@ -236,15 +251,15 @@ const drawFooterWithSignatureOnLastPage = async (doc, signatureImagePath = null,
         if (stampDataURL) {
             const stampW = 32;
             const stampH = 28;
-            doc.addImage(stampDataURL, 'PNG', margin + 5, footerTop + 8, stampW, stampH, '', 'FAST');
-            stampLoaded = true;
+            const stampX = pageWidth - margin - 85;
+            doc.addImage(stampDataURL, 'PNG', stampX, signatureBandTop + 7, stampW, stampH, '', 'FAST');
         }
     } catch (err) {
         console.warn('Could not load stamp:', err);
     }
 
-    // Load and add signature
-    let sigLoaded = false;
+    // Load and add signature image
+    let signatureTextY = signatureBandTop + 20;
     if (signatureImagePath) {
         try {
             const sigBlob = await fetch(signatureImagePath).then(res => res.blob());
@@ -256,41 +271,91 @@ const drawFooterWithSignatureOnLastPage = async (doc, signatureImagePath = null,
             });
 
             if (sigDataURL) {
-                const sigW = 38;
-                const sigH = 24;
-                const sigX = pageWidth - margin - sigW - 5;
-                doc.addImage(sigDataURL, 'PNG', sigX, footerTop + 10, sigW, sigH, '', 'FAST');
-                sigLoaded = true;
+                const sigW = 40;
+                const sigH = 16;
+                const sigX = pageWidth - margin - 47;
+                doc.addImage(sigDataURL, 'PNG', sigX, signatureBandTop + 3.5, sigW, sigH, '', 'FAST');
+                signatureTextY = signatureBandTop + 20;
             }
         } catch (err) {
             console.warn('Could not load signature:', err);
         }
     }
 
-    // Footer text
-    let footerY = footerTop + 12;
-    const centerX = pageWidth / 2;
-
+    // Signature text below the signature image
+    const signatureTextX = pageWidth - margin - 26;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(122, 44, 44); // Brown color
-    doc.text(footerText, centerX, footerY, { align: 'center' });
-
-    footerY += 6;
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text(footerSubtext, centerX, footerY, { align: 'center' });
+    doc.setTextColor(122, 44, 44);
+    signatureLines.forEach((line, idx) => {
+        doc.text(line, signatureTextX, signatureTextY + idx * 3.6, { align: 'center' });
+    });
 
-    // Page numbers and disclaimer on last page
-    footerY = pageHeight - 8;
-    doc.setFontSize(7);
-    doc.setTextColor(130, 130, 130);
+    // Footer heading divider
+    doc.setDrawColor(219, 157, 50);
+    doc.setLineWidth(0.6);
+    doc.line(margin, contactDividerY, pageWidth - margin, contactDividerY);
+
+    // Footer heading
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.3);
+    doc.setTextColor(20, 20, 20);
+    doc.text(footerTitle, pageWidth / 2, titleY, { align: 'center' });
+
+    // Footer contact rows (left / right columns)
+    const leftX = margin + 1;
+    const rightX = pageWidth / 2 + 3;
+    const columnWidth = pageWidth / 2 - margin - 5;
+    const iconSize = 3.4;
+    const textPadAfterIcon = 1.8;
     doc.setFont('helvetica', 'normal');
-    if (totalPages > 1) {
-        doc.text(`Page ${totalPages} of ${totalPages}`, centerX, footerY, { align: 'center' });
-    }
-    doc.text('Confidential', centerX, footerY + 4, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(20, 20, 20);
+
+    const telIcon = await loadImageFromPublic('/icons/Tel.png');
+    const instaIcon = await loadImageFromPublic('/icons/Instagram.webp');
+    const fbIcon = await loadImageFromPublic('/icons/FB.png');
+    const webIcon = await loadImageFromPublic('/icons/Web.png');
+
+    const drawIcon = (iconDataURL, format, x, y) => {
+        if (!iconDataURL) return;
+        try {
+            doc.addImage(iconDataURL, format, x, y - 2.6, iconSize, iconSize);
+        } catch {
+            try {
+                doc.addImage(iconDataURL, 'PNG', x, y - 2.6, iconSize, iconSize);
+            } catch {
+                // If icon rendering fails, keep text rendering only.
+            }
+        }
+    };
+
+    let leftY = contactStartY;
+    footerLeftLines.forEach((line, idx) => {
+        const wrapped = doc.splitTextToSize(line, columnWidth - iconSize - textPadAfterIcon);
+        const iconDataURL = idx === 0 ? telIcon : instaIcon;
+        const iconFormat = idx === 1 ? 'WEBP' : 'PNG';
+        drawIcon(iconDataURL, iconFormat, leftX, leftY);
+        wrapped.forEach((chunk) => {
+            if (leftY <= pageNumberSafeBottom) {
+                doc.text(chunk, leftX + iconSize + textPadAfterIcon, leftY);
+            }
+            leftY += 3.5;
+        });
+    });
+
+    let rightY = contactStartY;
+    footerRightLines.forEach((line, idx) => {
+        const wrapped = doc.splitTextToSize(line, columnWidth - iconSize - textPadAfterIcon);
+        const iconDataURL = idx === 0 ? fbIcon : webIcon;
+        drawIcon(iconDataURL, 'PNG', rightX, rightY);
+        wrapped.forEach((chunk) => {
+            if (rightY <= pageNumberSafeBottom) {
+                doc.text(chunk, rightX + iconSize + textPadAfterIcon, rightY);
+            }
+            rightY += 3.5;
+        });
+    });
 };
 
 /**
@@ -597,10 +662,7 @@ export const generateProfilePDF = async (profileData, profileType = 'trainer') =
         });
     }
 
-    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg', {
-        footerText: 'Ms. Binal Shah',
-        footerSubtext: 'HurshBin Child Development Learning & Behaviour Services'
-    });
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
 
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -608,7 +670,7 @@ export const generateProfilePDF = async (profileData, profileType = 'trainer') =
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
         doc.setTextColor(130, 130, 130);
-        doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
+        doc.text(`Page ${i} / ${totalPages}`, pageW / 2, pageH - 1.5, { align: 'center' });
     }
 
     try {
@@ -809,6 +871,23 @@ export const generateLearningProgramPDF = async (data = {}) => {
 
         y += rowH;
     });
+
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
+
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${i} / ${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
+    }
+
+    try {
+        await applyWatermarkToAllPages(doc);
+    } catch (err) {
+        console.warn('Watermark error:', err);
+    }
 
     return doc;
 };
@@ -1114,28 +1193,16 @@ export const generateProgressReportPDF = async (data, options = {}) => {
         doc.text('No data available for PDF generation.', margin, currentY);
     }
 
-    // Add footer to all pages
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
+
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-
-        // Draw gold border
         drawPageBorder(doc, margin, 2.5);
-
-        doc.setFontSize(8);
-        doc.setTextColor(127, 140, 141);
         doc.setFont('helvetica', 'normal');
-        doc.text(
-            `Page ${i} of ${totalPages}`,
-            pageWidth / 2,
-            pageHeight - 10,
-            { align: 'center' }
-        );
-        doc.text(
-            'HurshbinTech - Progress Report',
-            margin,
-            pageHeight - 10
-        );
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${i} / ${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
     }
 
     // Add watermark to all pages
@@ -1175,9 +1242,10 @@ export const downloadProgressReportPDF = async (data, options = {}) => {
  * @param {object} params
  * @param {string} params.learnerName
  * @param {string} params.programName
+ * @param {string} [params.skillName]
  * @param {Array}  params.sessionData  – processed session array from ProgramGraphView state
  */
-export const downloadProgramGraphPDF = async ({ learnerName, programName, sessionData }) => {
+export const downloadProgramGraphPDF = async ({ learnerName, programName, skillName, sessionData }) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const pageWidth = doc.internal.pageSize.getWidth();   // 210
@@ -1187,7 +1255,10 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
 
     /* ── BRANDED HEADER ───────────────────────────────────────────── */
     const headerDataURL = await loadHeaderDataURL();
-    const subtitle = learnerName ? `${learnerName}  —  ${programName}` : programName;
+    const skillLabel = `Skill: ${skillName || '-'}`;
+    const subtitle = learnerName
+        ? `${learnerName}  —  ${programName}  —  ${skillLabel}`
+        : `${programName}  —  ${skillLabel}`;
     const genDate = `Generated on: ${new Date().toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })}`;
@@ -1366,15 +1437,15 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, sessio
         y += rowH;
     });
 
-    /* ── FOOTER ───────────────────────────────────────────────────── */
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
+
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
-        doc.setFontSize(7.5);
-        doc.setTextColor(160, 160, 160);
         doc.setFont('helvetica', 'normal');
-        doc.text('HurshbinTech — Progress Report', margin, pageHeight - 8);
-        doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${p} / ${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
     }
 
     /* ── SAVE ─────────────────────────────────────────────────────── */
@@ -1474,6 +1545,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
 
     const drawProgramSection = (prog) => {
         const sessions = prog.sessions || [];
+        const skillLabel = prog.skill_name || prog.skill || '-';
 
         /* sub-header bar */
         checkBreak(14);
@@ -1485,7 +1557,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         doc.setFontSize(10);
         doc.setTextColor(55, 65, 81);
         doc.text(`  ${prog.program_name}`, margin + 2, y + 8);
-        const subLabel = `${prog.total_sessions || sessions.length} Sessions${prog.last_session_date ? '  ·  Last: ' + new Date(prog.last_session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}`;
+        const subLabel = `Skill: ${skillLabel}  ·  ${prog.total_sessions || sessions.length} Sessions${prog.last_session_date ? '  ·  Last: ' + new Date(prog.last_session_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}`;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(107, 114, 128);
@@ -1645,15 +1717,15 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         drawProgramSection(prog);
     });
 
-    /* ── FOOTER ───────────────────────────────────────────────────── */
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
+
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
-        doc.setFontSize(7.5);
-        doc.setTextColor(160, 160, 160);
         doc.setFont('helvetica', 'normal');
-        doc.text('HurshbinTech — Progress Report', margin, pageHeight - 8);
-        doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${p} / ${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
     }
 
     /* ── SAVE ─────────────────────────────────────────────────────── */
@@ -1679,7 +1751,7 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
     const contentW = pageW - 2 * contentX;
     const GOLD = [210, 140, 30];
     const BROWN = [122, 44, 44];  // Brown color (#7a2c2c) for headings
-    const FOOTER_H = 38;   // height reserved at bottom for footer
+    const FOOTER_H = 56;   // reserve space for unified footer on the last page
 
     // ── Draw outer gold border on current page ──────────────────────
     const drawBorder = () => {
@@ -1689,132 +1761,6 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
             pageW - 2 * BORDER_MARGIN, pageH - 2 * BORDER_MARGIN, 'S');
     };
 
-    // ── Load image and convert to base64 ──────────────────────
-    const loadImage = async (imagePath) => {
-        try {
-            const response = await fetch(imagePath);
-            if (!response.ok) {
-                console.warn(`Image not found: ${imagePath}`);
-                return null;
-            }
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target?.result);
-                reader.onerror = () => {
-                    console.warn(`Failed to read image: ${imagePath}`);
-                    resolve(null);
-                };
-                reader.readAsDataURL(blob);
-            });
-        } catch (err) {
-            console.warn(`Could not load image ${imagePath}:`, err.message);
-            return null;
-        }
-    };
-
-    // ── Draw footer on current page ─────────────────────────────────
-    const drawFooter = async (pageNum, totalPages) => {
-        try {
-            const footerTop = pageH - BORDER_MARGIN - BORDER_THICK - INNER_PAD - FOOTER_H + 3;
-
-            // Gold divider
-            doc.setDrawColor(...GOLD);
-            doc.setLineWidth(0.6);
-            doc.line(contentX, footerTop, contentX + contentW, footerTop);
-
-            let fy = footerTop + 6;
-
-            // Company name centred
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(8);
-            doc.setTextColor(0, 0, 0);
-            doc.text(
-                'HURSHBIN CHILD DEVELOPMENT, LEARNING AND BEHAVIOUR SERVICES (ABA)',
-                pageW / 2, fy, { align: 'center' }
-            );
-            fy += 6;
-
-            // Load icons from public/icons folder
-            const telIcon = await loadImage('/icons/Tel.png');
-            const instaIcon = await loadImage('/icons/Instagram.webp');
-            const fbIcon = await loadImage('/icons/FB.png');
-            const webIcon = await loadImage('/icons/Web.png');
-
-            // Two-column contact line with icons
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            const col1 = contentX + 4;
-            const col2 = pageW / 2 + 8;
-            const iconSize = 3.5; // 3.5mm icons
-            const iconOffsetX = -1; // Left of text
-
-            // Column 1: Tel and Instagram
-            let col1X = col1;
-            if (telIcon) {
-                try {
-                    doc.addImage(telIcon, 'PNG', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
-                } catch (e) {
-                    console.warn('Failed to add tel icon:', e.message);
-                }
-                col1X += 4;
-            }
-            doc.text('+91 8928765220', col1X, fy);
-
-            fy += 5.5;
-            col1X = col1;
-            if (instaIcon) {
-                try {
-                    doc.addImage(instaIcon, 'WEBP', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
-                } catch (e) {
-                    // Try as PNG if WEBP fails
-                    try {
-                        doc.addImage(instaIcon, 'PNG', col1X + iconOffsetX, fy - 2.4, iconSize, iconSize);
-                    } catch (e2) {
-                        console.warn('Failed to add instagram icon:', e2.message);
-                    }
-                }
-                col1X += 4;
-            }
-            doc.text('hurshbin_mumbai / binal_all_about_happychild', col1X, fy, { maxWidth: contentW / 2 - 8 });
-
-            // Column 2: Facebook and Web
-            fy = footerTop + 12;
-            let col2X = col2;
-            if (fbIcon) {
-                try {
-                    doc.addImage(fbIcon, 'PNG', col2X + iconOffsetX, fy - 2.4, iconSize, iconSize);
-                } catch (e) {
-                    console.warn('Failed to add facebook icon:', e.message);
-                }
-                col2X += 4;
-            }
-            doc.text('HurshBin Child Development Learning & Behaviour Services', col2X, fy, { maxWidth: contentW / 2 - 8 });
-
-            fy += 5.5;
-            col2X = col2;
-            if (webIcon) {
-                try {
-                    doc.addImage(webIcon, 'PNG', col2X + iconOffsetX, fy - 2.4, iconSize, iconSize);
-                } catch (e) {
-                    console.warn('Failed to add web icon:', e.message);
-                }
-                col2X += 4;
-            }
-            doc.text('www.HurshBin.com', col2X, fy);
-
-            // Page counter for multi-page docs
-            if (totalPages > 1) {
-                doc.setFontSize(7);
-                doc.setTextColor(0, 0, 0);
-                doc.text(`Page ${pageNum} / ${totalPages}`,
-                    pageW / 2, pageH - BORDER_MARGIN - BORDER_THICK - INNER_PAD - 2, { align: 'center' });
-            }
-        } catch (err) {
-            console.error('Error drawing footer:', err.message);
-            // Continue anyway - don't let footer errors crash the PDF generation
-        }
-    };
 
     // Load header image (/public/Header.jpeg)
     const headerImg = await loadHeaderDataURL();
@@ -2197,49 +2143,16 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
         y += 5;
     });
 
-    // ── Digital Signature & Stamp ──────────────────────────────────
-    maybeBreak(45);
-    const sigX = contentX + contentW - 44; // Right side positioning for signature
-    const stampX = sigX - 45; // Left of signature
+    await drawFooterWithSignatureOnLastPage(doc, signatureImage || '/sign/sign.jpeg');
 
-    // Load and add Stamp.png
-    const stampImg = await loadImage('/sign/Stamp.png');
-    if (stampImg) {
-        const stampW = 35;
-        const stampH = 30;
-        doc.addImage(stampImg, 'PNG', stampX, y - 0, stampW, stampH, '', 'FAST');
-    }
-
-    if (signatureImage) {
-        const sigImgW = 40;
-        const sigImgH = 25;
-        // Load signature image from public folder
-        try {
-            const sigBlob = await fetch(signatureImage).then(res => res.blob());
-            const sigDataURL = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target?.result);
-                reader.readAsDataURL(sigBlob);
-            });
-            doc.addImage(sigDataURL, 'PNG', sigX, y, sigImgW, sigImgH, '', 'FAST');
-        } catch (err) {
-            console.warn('Could not load signature image:', err);
-        }
-    }
-
-    // ── Professional Signature Line ────────────────────────────────
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(FIELD_FS);
-    doc.setTextColor(...BROWN);
-    doc.text('Ms.Binal Shah For HurshBin Child Development Learning & Behaviour Modification services', sigX + 40, y + 32, { align: 'right', maxWidth: 50 });
-    y = Math.max(y + 45, y + 45);
-
-
-
-    /* ── Stamp footer ONLY on the last page ──────────────────────── */
     const totalPages = doc.internal.getNumberOfPages();
-    doc.setPage(totalPages);
-    await drawFooter(totalPages, totalPages);
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${i} / ${totalPages}`, pageW / 2, pageH - 1.5, { align: 'center' });
+    }
 
     /* ── Add watermark to all pages ──────────────────────────────── */
     try {
@@ -2720,24 +2633,15 @@ export const generateFreeAssessmentPDF = async (assessment, { previewOnly = fals
     writeSectionTitle('Current Development, Learning & Behaviour Overview');
     drawSkillsTable(skills);
 
-    /* ── Page numbers & branded footer on every page ─────────── */
+    await drawFooterWithSignatureOnLastPage(doc, '/sign/sign.jpeg');
+
     const totalPages = doc.internal.getNumberOfPages();
     for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
         doc.setPage(pageIndex);
-
-        // Draw gold border
-        drawPageBorder(doc, margin, 2.5);
-
-        doc.setDrawColor(...GOLD);
-        doc.setLineWidth(0.4);
-        doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
-
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(150, 150, 150);
-        doc.text('HurshBinTech – Free Assessment Report', margin, pageHeight - 5.5);
-        doc.text(`Page ${pageIndex} of ${totalPages}`, pageWidth / 2, pageHeight - 5.5, { align: 'center' });
-        doc.text('Confidential', pageWidth - margin, pageHeight - 5.5, { align: 'right' });
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Page ${pageIndex} / ${totalPages}`, pageWidth / 2, pageHeight - 1.5, { align: 'center' });
     }
 
     // Add watermark to all pages

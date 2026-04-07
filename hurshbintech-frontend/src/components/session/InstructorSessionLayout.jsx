@@ -1970,9 +1970,9 @@ export const spawnFloatingAnimation = ({
 
     activeFloatingAnimationTypesRef.add(type);
 
-    const leftPositions = generateSpacedPositions(count);
+    const randomBetween = (min, max) => min + Math.random() * (max - min);
 
-    const newAnimations = leftPositions.map((leftPercent, index) => {
+    const newAnimations = Array.from({ length: count }, (_, index) => {
         const selectedAsset = Array.isArray(asset)
             ? asset[Math.floor(Math.random() * asset.length)]
             : asset;
@@ -1980,9 +1980,12 @@ export const spawnFloatingAnimation = ({
         return {
             id: `${type}-${Date.now()}-${index}`,
             type: type,
-            x: leftPercent,
-            startDelay: index * 200,
-            duration: 8000 + Math.random() * 5000,
+            x: randomBetween(2, 98),
+            y: randomBetween(4, 94),
+            driftX: randomBetween(-40, 40),
+            driftY: randomBetween(-70, -25),
+            startDelay: randomBetween(0, 700),
+            duration: 4500 + Math.random() * 2500,
             asset: {
                 type: selectedAsset.type,
                 src: selectedAsset.src,
