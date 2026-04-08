@@ -82,7 +82,14 @@ def convert_vlog_response(vlog) -> Vlog:
 
 
 def validate_video_file(file: UploadFile):
+    logger.info("=" * 80)
+    logger.info(f"[VLOG] Validating video file: {file.filename}")
+    logger.info(f"[VLOG] Content-Type: {file.content_type}")
+    logger.info(f"[VLOG] Allowed types: {ALLOWED_VIDEO_TYPES}")
+    
     if file.content_type not in ALLOWED_VIDEO_TYPES:
+        logger.error(f"[VLOG] ❌ Invalid file type: {file.content_type} not in {ALLOWED_VIDEO_TYPES}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_VIDEO_TYPES)}",
@@ -93,60 +100,104 @@ def validate_video_file(file: UploadFile):
     file_size = file.file.tell()
     file.file.seek(0)  # Reset file pointer
 
+    logger.info(f"[VLOG] File size: {file_size} bytes ({file_size / (1024*1024):.2f}MB)")
+    logger.info(f"[VLOG] Max allowed size: {MAX_VIDEO_SIZE} bytes ({MAX_VIDEO_SIZE/(1024*1024):.2f}MB)")
+
     if file_size > MAX_VIDEO_SIZE:
+        logger.error(f"[VLOG] ❌ File size too large: {file_size} > {MAX_VIDEO_SIZE}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=400,
             detail=f"File size too large. Maximum size: {MAX_VIDEO_SIZE/1024/1024}MB",
         )
+    
+    logger.info(f"[VLOG] ✅ Video file validation passed")
+    logger.info("=" * 80)
 
 
 async def save_vlog_file(video_file: UploadFile, thumbnail_file: UploadFile = None) -> dict:
     """Save vlog files to S3 or local storage"""
     try:
+        logger.info("=" * 80)
+        logger.info(f"[VLOG_SAVE] Starting vlog file save")
+        logger.info(f"[VLOG_SAVE] Video file: {video_file.filename}")
+        logger.info(f"[VLOG_SAVE] Thumbnail provided: {thumbnail_file is not None and thumbnail_file.filename is not None}")
+        logger.info(f"[VLOG_SAVE] S3 Enabled: {settings.USE_S3}")
+        if settings.USE_S3:
+            logger.info(f"[VLOG_SAVE] S3 Bucket: {settings.S3_BUCKET_NAME}")
+            logger.info(f"[VLOG_SAVE] S3 Region: {settings.AWS_REGION}")
+            logger.info(f"[VLOG_SAVE] S3 Endpoint: {settings.S3_ENDPOINT_URL or 'AWS S3 (default)'}")
+        
         # Read video file
         video_content = await video_file.read()
+        logger.info(f"[VLOG_SAVE] Video file read: {len(video_content)} bytes")
 
         if settings.USE_S3:
             # Upload video to S3
-            video_s3_key = s3_manager.upload_file(
-                video_content,
-                folder="vlogs",
-                filename=f"{uuid.uuid4()}{Path(video_file.filename).suffix}",
-                content_type=video_file.content_type,
-            )
+            logger.info(f"[VLOG_SAVE] Uploading video to S3...")
+            try:
+                video_s3_key = s3_manager.upload_file(
+                    video_content,
+                    folder="vlogs",
+                    filename=f"{uuid.uuid4()}{Path(video_file.filename).suffix}",
+                    content_type=video_file.content_type,
+                )
+                logger.info(f"[VLOG_SAVE] ✅ Video uploaded to S3: {video_s3_key}")
+            except Exception as e:
+                logger.error(f"[VLOG_SAVE] ❌ S3 video upload failed: {str(e)}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Video upload failed: {str(e)}")
 
             # Generate and upload video thumbnail
             thumbnail_s3_key = None
             try:
+                logger.info(f"[VLOG_SAVE] Generating video thumbnail...")
                 thumbnail_bytes = s3_manager.generate_thumbnail(video_content, "video")
                 if thumbnail_bytes:
+                    logger.info(f"[VLOG_SAVE] ✅ Auto-generated thumbnail: {len(thumbnail_bytes)} bytes")
                     thumbnail_s3_key = s3_manager.upload_file(
                         thumbnail_bytes,
                         folder="vlogs",
                         filename=f"{uuid.uuid4()}_thumbnail.jpg",
                         content_type="image/jpeg",
                     )
+                    logger.info(f"[VLOG_SAVE] ✅ Auto thumbnail uploaded: {thumbnail_s3_key}")
+                else:
+                    logger.warning(f"[VLOG_SAVE] ⚠️ Auto thumbnail generation returned None")
             except Exception as e:
-                logger.warning(f"Failed to generate video thumbnail: {str(e)}")
+                logger.warning(f"[VLOG_SAVE] ⚠️ Failed to generate auto thumbnail: {str(e)}", exc_info=True)
 
             # Handle user-provided thumbnail if present
             if thumbnail_file and thumbnail_file.filename:
+                logger.info(f"[VLOG_SAVE] User-provided thumbnail: {thumbnail_file.filename}")
                 if not thumbnail_file.content_type.startswith("image/"):
+                    logger.error(f"[VLOG_SAVE] ❌ Invalid thumbnail type: {thumbnail_file.content_type}")
                     raise HTTPException(status_code=400, detail="Invalid thumbnail format")
 
                 user_thumbnail_content = await thumbnail_file.read()
-                user_thumbnail_s3_key = s3_manager.upload_file(
-                    user_thumbnail_content,
-                    folder="vlogs",
-                    filename=f"{uuid.uuid4()}_user_thumbnail.jpg",
-                    content_type=thumbnail_file.content_type,
-                )
-                thumbnail_s3_key = user_thumbnail_s3_key
+                logger.info(f"[VLOG_SAVE] User thumbnail size: {len(user_thumbnail_content)} bytes")
+                
+                try:
+                    user_thumbnail_s3_key = s3_manager.upload_file(
+                        user_thumbnail_content,
+                        folder="vlogs",
+                        filename=f"{uuid.uuid4()}_user_thumbnail.jpg",
+                        content_type=thumbnail_file.content_type,
+                    )
+                    logger.info(f"[VLOG_SAVE] ✅ User thumbnail uploaded: {user_thumbnail_s3_key}")
+                    thumbnail_s3_key = user_thumbnail_s3_key
+                except Exception as e:
+                    logger.error(f"[VLOG_SAVE] ❌ User thumbnail upload failed: {str(e)}", exc_info=True)
+                    raise HTTPException(status_code=500, detail=f"Thumbnail upload failed: {str(e)}")
 
             video_url = f"s3://{settings.S3_BUCKET_NAME}/{video_s3_key}"
             thumbnail_url = (
                 f"s3://{settings.S3_BUCKET_NAME}/{thumbnail_s3_key}" if thumbnail_s3_key else None
             )
+
+            logger.info(f"[VLOG_SAVE] ✅ S3 vlog save complete")
+            logger.info(f"[VLOG_SAVE] Video URL: {video_url}")
+            logger.info(f"[VLOG_SAVE] Thumbnail URL: {thumbnail_url or 'N/A'}")
+            logger.info("=" * 80)
 
             return {
                 "file_url": video_url,
@@ -158,25 +209,41 @@ async def save_vlog_file(video_file: UploadFile, thumbnail_file: UploadFile = No
 
         else:
             # Local storage fallback
+            logger.info("[VLOG_SAVE] Using local storage fallback")
             video_filename = f"{uuid.uuid4()}{Path(video_file.filename).suffix}"
             video_path = os.path.join(UPLOAD_DIR, video_filename)
 
-            with open(video_path, "wb") as buffer:
-                buffer.write(video_content)
+            try:
+                with open(video_path, "wb") as buffer:
+                    buffer.write(video_content)
+                logger.info(f"[VLOG_SAVE] ✅ Video saved locally: {video_path}")
+            except Exception as e:
+                logger.error(f"[VLOG_SAVE] ❌ Failed to save video locally: {str(e)}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to save video: {str(e)}")
 
             thumbnail_url = None
             if thumbnail_file and thumbnail_file.filename:
+                logger.info(f"[VLOG_SAVE] Saving user-provided thumbnail locally: {thumbnail_file.filename}")
                 if not thumbnail_file.content_type.startswith("image/"):
+                    logger.error(f"[VLOG_SAVE] ❌ Invalid thumbnail type: {thumbnail_file.content_type}")
                     raise HTTPException(status_code=400, detail="Invalid thumbnail format")
 
                 thumbnail_content = await thumbnail_file.read()
+                logger.info(f"[VLOG_SAVE] Thumbnail size: {len(thumbnail_content)} bytes")
                 thumbnail_filename = f"{uuid.uuid4()}{Path(thumbnail_file.filename).suffix}"
                 thumbnail_path = os.path.join(UPLOAD_DIR, thumbnail_filename)
 
-                with open(thumbnail_path, "wb") as buffer:
-                    buffer.write(thumbnail_content)
+                try:
+                    with open(thumbnail_path, "wb") as buffer:
+                        buffer.write(thumbnail_content)
+                    logger.info(f"[VLOG_SAVE] ✅ Thumbnail saved locally: {thumbnail_path}")
+                    thumbnail_url = f"/uploads/vlogs/{thumbnail_filename}"
+                except Exception as e:
+                    logger.error(f"[VLOG_SAVE] ❌ Failed to save thumbnail: {str(e)}", exc_info=True)
+                    raise HTTPException(status_code=500, detail=f"Failed to save thumbnail: {str(e)}")
 
-                thumbnail_url = f"/uploads/vlogs/{thumbnail_filename}"
+            logger.info(f"[VLOG_SAVE] ✅ Local vlog save complete")
+            logger.info("=" * 80)
 
             return {
                 "file_url": f"/uploads/vlogs/{video_filename}",
@@ -187,7 +254,9 @@ async def save_vlog_file(video_file: UploadFile, thumbnail_file: UploadFile = No
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving vlog file: {str(e)}")
+        logger.error(f"[VLOG_SAVE] ❌ Error saving vlog file: {str(e)}", exc_info=True)
+        logger.error(f"[VLOG_SAVE] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise HTTPException(status_code=500, detail=f"Failed to save vlog: {str(e)}")
 
 
@@ -233,27 +302,44 @@ async def create_vlog(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    validate_video_file(video_file)
-
-    # Save files
-    file_info = await save_vlog_file(video_file, thumbnail_file)
-
-    # Create vlog entry
-    vlog_data = VlogCreate(
-        title=title,
-        description=description,
-        file_url=file_info["file_url"],
-        file_size=file_info["file_size"],
-        thumbnail_url=file_info.get("thumbnail_url"),
-        status=status,
-    )
-
-    created_vlog = await vlog_crud.create_vlog(db, vlog_data)
+    logger.info("=" * 80)
+    logger.info(f"[CREATE_VLOG_ENDPOINT] Creating vlog by user: {current_user.email}")
+    logger.info(f"[CREATE_VLOG_ENDPOINT] Title: {title}")
+    logger.info(f"[CREATE_VLOG_ENDPOINT] Status: {status}")
     
-    # Invalidate vlog caches
-    await cache_service.invalidate_vlogs()
-    
-    return convert_vlog_response(created_vlog)
+    try:
+        validate_video_file(video_file)
+
+        # Save files
+        logger.info(f"[CREATE_VLOG_ENDPOINT] Saving vlog files...")
+        file_info = await save_vlog_file(video_file, thumbnail_file)
+
+        # Create vlog entry
+        logger.info(f"[CREATE_VLOG_ENDPOINT] Creating vlog database entry...")
+        vlog_data = VlogCreate(
+            title=title,
+            description=description,
+            file_url=file_info["file_url"],
+            file_size=file_info["file_size"],
+            thumbnail_url=file_info.get("thumbnail_url"),
+            status=status,
+        )
+
+        created_vlog = await vlog_crud.create_vlog(db, vlog_data)
+        logger.info(f"[CREATE_VLOG_ENDPOINT] ✅ Vlog created with ID: {created_vlog.id}")
+        
+        # Invalidate vlog caches
+        logger.info(f"[CREATE_VLOG_ENDPOINT] Invalidating caches...")
+        await cache_service.invalidate_vlogs()
+        
+        logger.info(f"[CREATE_VLOG_ENDPOINT] ✅ Vlog creation complete")
+        logger.info("=" * 80)
+        
+        return convert_vlog_response(created_vlog)
+    except Exception as e:
+        logger.error(f"[CREATE_VLOG_ENDPOINT] ❌ Error creating vlog: {str(e)}", exc_info=True)
+        logger.error("=" * 80)
+        raise
 
 
 @router.get("/", response_model=List[Vlog])

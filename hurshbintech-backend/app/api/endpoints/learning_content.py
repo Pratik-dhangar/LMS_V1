@@ -84,19 +84,26 @@ def get_file_category(filename: str) -> str:
 async def save_upload_file(upload_file: UploadFile) -> dict:
     """Save uploaded file to S3 or local storage"""
     try:
-        logger.info(f"Starting upload for file: {upload_file.filename}")
+        logger.info("=" * 80)
+        logger.info(f"[LEARNING_CONTENT] Starting upload for file: {upload_file.filename}")
+        logger.info(f"[LEARNING_CONTENT] Content-Type from header: {upload_file.content_type}")
+        logger.info(f"[LEARNING_CONTENT] S3 Enabled: {settings.USE_S3}")
+        if settings.USE_S3:
+            logger.info(f"[LEARNING_CONTENT] S3 Bucket: {settings.S3_BUCKET_NAME}")
+            logger.info(f"[LEARNING_CONTENT] S3 Region: {settings.AWS_REGION}")
+            logger.info(f"[LEARNING_CONTENT] S3 Endpoint URL: {settings.S3_ENDPOINT_URL or 'AWS S3 (default)'}")
         
         # Read file content
         file_content = await upload_file.read()
         file_size = len(file_content)
-        logger.info(f"File read successfully: {file_size} bytes")
+        logger.info(f"[LEARNING_CONTENT] File read successfully: {file_size} bytes")
 
         # Validate file size (max 500MB for videos, 50MB for others)
         file_category = get_file_category(upload_file.filename)
         max_size = 500 * 1024 * 1024 if file_category == "video" else 50 * 1024 * 1024
 
         if file_size > max_size:
-            logger.error(f"File size {file_size} exceeds limit {max_size}")
+            logger.error(f"[LEARNING_CONTENT] ❌ File size {file_size} exceeds limit {max_size} ({file_category})")
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"File size exceeds {max_size / (1024*1024):.0f}MB limit",
@@ -104,27 +111,34 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
         content_type = get_content_type(upload_file.filename)
         file_category = get_file_category(upload_file.filename)
-        logger.info(f"File category: {file_category}, content type: {content_type}")
+        logger.info(f"[LEARNING_CONTENT] File category: {file_category}, content type: {content_type}")
 
         if settings.USE_S3:
             # Upload to S3
-            logger.info(f"Uploading {file_category} file to S3...")
-            s3_key = s3_manager.upload_file(
-                file_content,
-                folder="learning-content",
-                filename=f"{uuid.uuid4()}{os.path.splitext(upload_file.filename)[1]}",
-                content_type=content_type,
-            )
-            logger.info(f"File uploaded to S3 successfully: {s3_key}")
+            logger.info(f"[LEARNING_CONTENT] Uploading {file_category} file to S3...")
+            try:
+                s3_key = s3_manager.upload_file(
+                    file_content,
+                    folder="learning-content",
+                    filename=f"{uuid.uuid4()}{os.path.splitext(upload_file.filename)[1]}",
+                    content_type=content_type,
+                )
+                logger.info(f"[LEARNING_CONTENT] ✅ File uploaded to S3 successfully: {s3_key}")
+            except Exception as e:
+                logger.error(f"[LEARNING_CONTENT] ❌ S3 upload failed: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"S3 upload failed: {str(e)}",
+                )
 
             # Generate and upload thumbnail
             thumbnail_s3_key = None
             if file_category in ["image", "video"]:
                 try:
-                    logger.info(f"Generating thumbnail for {file_category}...")
+                    logger.info(f"[LEARNING_CONTENT] Generating thumbnail for {file_category}...")
                     thumbnail_bytes = s3_manager.generate_thumbnail(file_content, file_category)
                     if thumbnail_bytes:
-                        logger.info(f"Thumbnail generated ({len(thumbnail_bytes)} bytes)")
+                        logger.info(f"[LEARNING_CONTENT] ✅ Thumbnail generated ({len(thumbnail_bytes)} bytes)")
                         thumbnail_filename = f"{uuid.uuid4()}_thumbnail.jpg"
                         thumbnail_s3_key = s3_manager.upload_file(
                             thumbnail_bytes,
@@ -132,16 +146,19 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
                             filename=thumbnail_filename,
                             content_type="image/jpeg",
                         )
-                        logger.info(f"Thumbnail uploaded to S3: {thumbnail_s3_key}")
+                        logger.info(f"[LEARNING_CONTENT] ✅ Thumbnail uploaded to S3: {thumbnail_s3_key}")
                     else:
-                        logger.warning(f"Thumbnail generation returned None")
+                        logger.warning(f"[LEARNING_CONTENT] ⚠️ Thumbnail generation returned None")
                 except Exception as e:
-                    logger.warning(f"Failed to generate thumbnail: {str(e)}", exc_info=True)
+                    logger.warning(f"[LEARNING_CONTENT] ⚠️ Failed to generate thumbnail: {str(e)}", exc_info=True)
 
             file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             thumbnail_url = (
                 f"s3://{settings.S3_BUCKET_NAME}/{thumbnail_s3_key}" if thumbnail_s3_key else None
             )
+
+            logger.info(f"[LEARNING_CONTENT] ✅ S3 Upload Complete - File URL: {file_url}")
+            logger.info("=" * 80)
 
             return {
                 "file_url": file_url,
@@ -155,15 +172,22 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
         else:
             # Local storage fallback
-            logger.info("Using local storage fallback")
+            logger.info("[LEARNING_CONTENT] Using local storage fallback")
             file_extension = os.path.splitext(upload_file.filename)[1].lower()
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = UPLOAD_DIR / unique_filename
 
-            with open(file_path, "wb") as buffer:
-                buffer.write(file_content)
-            
-            logger.info(f"File saved locally: {file_path}")
+            try:
+                with open(file_path, "wb") as buffer:
+                    buffer.write(file_content)
+                logger.info(f"[LEARNING_CONTENT] ✅ File saved locally: {file_path}")
+                logger.info("=" * 80)
+            except Exception as e:
+                logger.error(f"[LEARNING_CONTENT] ❌ Failed to save file locally: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to save file: {str(e)}",
+                )
 
             return {
                 "file_url": f"/uploads/learning_content/{unique_filename}",
@@ -175,7 +199,9 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving upload file: {str(e)}", exc_info=True)
+        logger.error(f"[LEARNING_CONTENT] ❌ Error saving upload file: {str(e)}", exc_info=True)
+        logger.error(f"[LEARNING_CONTENT] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise
 
 
@@ -252,6 +278,11 @@ async def upload_file(
 ):
     """Upload a file and get file info (Admin only)"""
     try:
+        logger.info("=" * 80)
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] Upload endpoint called by admin")
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] File: {file.filename}")
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] Content-Type: {file.content_type}")
+        
         # Validate file size (max 100MB)
         max_size = 100 * 1024 * 1024  # 100MB
         file.file.seek(0, 2)  # Move to end
@@ -259,13 +290,14 @@ async def upload_file(
         file.file.seek(0)  # Reset to start
 
         if file_size > max_size:
-            logger.error(f"Upload rejected: file too large ({file_size} > {max_size})")
+            logger.error(f"[LEARNING_CONTENT_ENDPOINT] ❌ Upload rejected: file too large ({file_size} > {max_size})")
+            logger.error("=" * 80)
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail="File size exceeds 100MB limit",
             )
 
-        logger.info(f"Processing upload: {file.filename} ({file_size} bytes)")
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] Processing upload: {file.filename} ({file_size} bytes)")
         file_info = await save_upload_file(file)
 
         # Convert S3 URLs to public URLs (no expiration, accessible to all users)
@@ -276,7 +308,10 @@ async def upload_file(
             else None
         )
 
-        logger.info(f"Upload completed successfully for: {file.filename}")
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] ✅ Upload completed successfully for: {file.filename}")
+        logger.info(f"[LEARNING_CONTENT_ENDPOINT] Final File URL: {file_url}")
+        logger.info("=" * 80)
+        
         return {
             "message": "File uploaded successfully",
             "file_url": file_url,
@@ -288,7 +323,9 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"File upload failed: {str(e)}", exc_info=True)
+        logger.error(f"[LEARNING_CONTENT_ENDPOINT] ❌ File upload failed: {str(e)}", exc_info=True)
+        logger.error(f"[LEARNING_CONTENT_ENDPOINT] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload failed: {str(e)}",

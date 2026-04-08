@@ -108,36 +108,63 @@ def get_file_category(filename: str) -> str:
 
 def validate_image_file(file: UploadFile):
     """Validate uploaded image file"""
+    logger.info(f"[IMAGE_VALIDATE] Validating image: {file.filename}")
+    logger.info(f"[IMAGE_VALIDATE] Content-Type: {file.content_type}")
+    logger.info(f"[IMAGE_VALIDATE] Allowed types: {ALLOWED_IMAGE_TYPES}")
+    
     if file.content_type not in ALLOWED_IMAGE_TYPES:
+        logger.error(f"[IMAGE_VALIDATE] ❌ Invalid image type: {file.content_type} not in {ALLOWED_IMAGE_TYPES}")
         raise HTTPException(
             status_code=400,
             detail=f"Invalid image type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}",
         )
+    
+    logger.info(f"[IMAGE_VALIDATE] ✅ Image validation passed")
 
 
 def validate_training_file(file: UploadFile):
     """Validate uploaded training file"""
+    logger.info(f"[TRAINING_VALIDATE] Validating file: {file.filename}")
+    logger.info(f"[TRAINING_VALIDATE] Content-Type: {file.content_type}")
+    
     # Simplified check - just validate file extension
     file_ext = Path(file.filename).suffix.lower()
     allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx',
                          '.mp4', '.avi', '.mov', '.mkv', '.webm',
                          '.mp3', '.wav', '.ogg', '.m4a',
                          '.jpg', '.jpeg', '.png', '.gif', '.webp']
+    
+    logger.info(f"[TRAINING_VALIDATE] File extension: {file_ext}")
+    logger.info(f"[TRAINING_VALIDATE] Allowed extensions: {allowed_extensions}")
+    
     if file_ext not in allowed_extensions:
+        logger.error(f"[TRAINING_VALIDATE] ❌ File type not allowed: {file_ext}")
         raise HTTPException(
             status_code=400,
             detail=f"File type not allowed: {file_ext}",
         )
+    
+    logger.info(f"[TRAINING_VALIDATE] ✅ Validation passed")
 
 
 
 async def save_thumbnail(image_file: UploadFile, training_id: int) -> str:
     """Save thumbnail image to S3 or local storage - stores in training_id folder"""
     try:
+        logger.info("=" * 80)
+        logger.info(f"[TRAINING_THUMBNAIL] Saving thumbnail for training_id: {training_id}")
+        logger.info(f"[TRAINING_THUMBNAIL] File: {image_file.filename}, Content-Type: {image_file.content_type}")
+        logger.info(f"[TRAINING_THUMBNAIL] S3 Enabled: {settings.USE_S3}")
+        
         image_content = await image_file.read()
+        logger.info(f"[TRAINING_THUMBNAIL] Image size: {len(image_content)} bytes")
+        
         validate_image_file(image_file)
+        logger.info(f"[TRAINING_THUMBNAIL] ✅ Image validation passed")
 
         if len(image_content) > MAX_IMAGE_SIZE:
+            logger.error(f"[TRAINING_THUMBNAIL] ❌ Image too large: {len(image_content)} > {MAX_IMAGE_SIZE}")
+            logger.error("=" * 80)
             raise HTTPException(
                 status_code=400,
                 detail=f"Image too large. Maximum: 50MB",
@@ -147,26 +174,46 @@ async def save_thumbnail(image_file: UploadFile, training_id: int) -> str:
         
         if settings.USE_S3:
             # Upload to S3 - uploads/trainings/thumbnails/{training_id}/
+            logger.info(f"[TRAINING_THUMBNAIL] Uploading to S3...")
             folder = f"trainings/thumbnails/{training_id}"
-            s3_key = s3_manager.upload_file(
-                image_content,
-                folder=folder,
-                filename=filename,
-                content_type=image_file.content_type,
-            )
-            return f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+            try:
+                s3_key = s3_manager.upload_file(
+                    image_content,
+                    folder=folder,
+                    filename=filename,
+                    content_type=image_file.content_type,
+                )
+                result = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+                logger.info(f"[TRAINING_THUMBNAIL] ✅ Thumbnail uploaded to S3: {s3_key}")
+                logger.info("=" * 80)
+                return result
+            except Exception as e:
+                logger.error(f"[TRAINING_THUMBNAIL] ❌ S3 upload failed: {str(e)}", exc_info=True)
+                logger.error("=" * 80)
+                raise
         else:
             # Save locally - matches S3 structure
+            logger.info(f"[TRAINING_THUMBNAIL] Saving locally...")
             folder_path = LOCAL_UPLOAD_DIR / "thumbnails" / str(training_id)
             folder_path.mkdir(parents=True, exist_ok=True)
             file_path = folder_path / filename
-            with open(file_path, "wb") as f:
-                f.write(image_content)
-            return f"/uploads/trainings/thumbnails/{training_id}/{filename}"
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(image_content)
+                result = f"/uploads/trainings/thumbnails/{training_id}/{filename}"
+                logger.info(f"[TRAINING_THUMBNAIL] ✅ Thumbnail saved locally: {file_path}")
+                logger.info("=" * 80)
+                return result
+            except Exception as e:
+                logger.error(f"[TRAINING_THUMBNAIL] ❌ Local save failed: {str(e)}", exc_info=True)
+                logger.error("=" * 80)
+                raise
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving thumbnail: {str(e)}")
+        logger.error(f"[TRAINING_THUMBNAIL] ❌ Error saving thumbnail: {str(e)}", exc_info=True)
+        logger.error(f"[TRAINING_THUMBNAIL] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=500,
             detail="Failed to save thumbnail"
@@ -176,10 +223,20 @@ async def save_thumbnail(image_file: UploadFile, training_id: int) -> str:
 async def save_training_file(upload_file: UploadFile, training_id: int) -> dict:
     """Save training file to S3 or local storage - requires existing training_id"""
     try:
+        logger.info("=" * 80)
+        logger.info(f"[TRAINING_FILE] Saving training file for training_id: {training_id}")
+        logger.info(f"[TRAINING_FILE] File: {upload_file.filename}, Content-Type: {upload_file.content_type}")
+        logger.info(f"[TRAINING_FILE] S3 Enabled: {settings.USE_S3}")
+        
         file_content = await upload_file.read()
+        logger.info(f"[TRAINING_FILE] File size: {len(file_content)} bytes")
+        
         validate_training_file(upload_file)
+        logger.info(f"[TRAINING_FILE] ✅ File validation passed")
 
         if len(file_content) > MAX_FILE_SIZE:
+            logger.error(f"[TRAINING_FILE] ❌ File too large: {len(file_content)} > {MAX_FILE_SIZE}")
+            logger.error("=" * 80)
             raise HTTPException(
                 status_code=400,
                 detail=f"File too large. Maximum: 500MB",
@@ -187,36 +244,60 @@ async def save_training_file(upload_file: UploadFile, training_id: int) -> dict:
 
         file_category = get_file_category(upload_file.filename)
         filename = f"{uuid.uuid4()}{Path(upload_file.filename).suffix}"
+        logger.info(f"[TRAINING_FILE] File category: {file_category}")
         
         if settings.USE_S3:
             # Upload to S3 - uploads/trainings/learning-materials/{training_id}/
+            logger.info(f"[TRAINING_FILE] Uploading to S3...")
             folder = f"trainings/learning-materials/{training_id}"
-            s3_key = s3_manager.upload_file(
-                file_content,
-                folder=folder,
-                filename=filename,
-                content_type=upload_file.content_type,
-            )
-            file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+            try:
+                s3_key = s3_manager.upload_file(
+                    file_content,
+                    folder=folder,
+                    filename=filename,
+                    content_type=upload_file.content_type,
+                )
+                file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+                logger.info(f"[TRAINING_FILE] ✅ File uploaded to S3: {s3_key}")
+                logger.info("=" * 80)
+                return {
+                    "name": upload_file.filename,
+                    "url": file_url,
+                    "size": len(file_content),
+                    "type": file_category,
+                }
+            except Exception as e:
+                logger.error(f"[TRAINING_FILE] ❌ S3 upload failed: {str(e)}", exc_info=True)
+                logger.error("=" * 80)
+                raise
         else:
             # Save locally - matches S3 structure
+            logger.info(f"[TRAINING_FILE] Saving locally...")
             folder_path = LOCAL_UPLOAD_DIR / "learning-materials" / str(training_id)
             folder_path.mkdir(parents=True, exist_ok=True)
             file_path = folder_path / filename
-            with open(file_path, "wb") as f:
-                f.write(file_content)
-            file_url = f"/uploads/trainings/learning-materials/{training_id}/{filename}"
-        
-        return {
-            "name": upload_file.filename,
-            "url": file_url,
-            "size": len(file_content),
-            "type": file_category,
-        }
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(file_content)
+                file_url = f"/uploads/trainings/learning-materials/{training_id}/{filename}"
+                logger.info(f"[TRAINING_FILE] ✅ File saved locally: {file_path}")
+                logger.info("=" * 80)
+                return {
+                    "name": upload_file.filename,
+                    "url": file_url,
+                    "size": len(file_content),
+                    "type": file_category,
+                }
+            except Exception as e:
+                logger.error(f"[TRAINING_FILE] ❌ Local save failed: {str(e)}", exc_info=True)
+                logger.error("=" * 80)
+                raise
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error saving training file: {str(e)}")
+        logger.error(f"[TRAINING_FILE] ❌ Error saving training file: {str(e)}", exc_info=True)
+        logger.error(f"[TRAINING_FILE] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=500,
             detail="Failed to save training file"
@@ -226,14 +307,21 @@ async def save_training_file(upload_file: UploadFile, training_id: int) -> dict:
 def delete_file_from_storage(file_url: str) -> bool:
     """Delete file from S3 or local storage"""
     if not file_url:
+        logger.warning("[FILE_DELETE] ⚠️ Empty file_url provided")
         return False
     
     try:
+        logger.info("=" * 80)
+        logger.info(f"[FILE_DELETE] Deleting file: {file_url}")
+        logger.info(f"[FILE_DELETE] S3 Enabled: {settings.USE_S3}")
+        
         if settings.USE_S3 and file_url.startswith("s3://"):
             # Extract S3 key
             s3_key = file_url.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            logger.info(f"[FILE_DELETE] S3 key: {s3_key}")
             s3_manager.delete_file(s3_key)
-            logger.info(f"Deleted file from S3: {s3_key}")
+            logger.info(f"[FILE_DELETE] ✅ Deleted file from S3: {s3_key}")
+            logger.info("=" * 80)
             return True
         elif not file_url.startswith("s3://"):
             # Local file deletion
@@ -241,13 +329,19 @@ def delete_file_from_storage(file_url: str) -> bool:
                 file_url = file_url[1:]  # Remove leading /
             
             file_path = Path(file_url)
+            logger.info(f"[FILE_DELETE] Local path: {file_path}")
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"Deleted local file: {file_path}")
+                logger.info(f"[FILE_DELETE] ✅ Deleted local file: {file_path}")
+                logger.info("=" * 80)
                 return True
+            else:
+                logger.warning(f"[FILE_DELETE] ⚠️ File not found: {file_path}")
+                logger.info("=" * 80)
         return False
     except Exception as e:
-        logger.error(f"Error deleting file: {str(e)}")
+        logger.error(f"[FILE_DELETE] ❌ Error deleting file: {str(e)}", exc_info=True)
+        logger.error("=" * 80)
         return False
 
 
