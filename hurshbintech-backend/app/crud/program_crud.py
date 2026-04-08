@@ -23,7 +23,7 @@ async def create_program(
     head_id: int,
     data: ProgramCreate,
 ) -> Program:
-    """Create a new program. goal_ids are frozen at this point."""
+    """Create a new program. goal_ids and skills are frozen at this point."""
     resolved_skill = data.skill if data.skill is not None else data.description
     program = Program(
         name=data.name,
@@ -32,6 +32,7 @@ async def create_program(
         learner_id=data.learner_id,
         goal_ids=data.goal_ids or [],
         content_ids=data.content_ids or [],
+        skills=[skill.model_dump() if hasattr(skill, 'model_dump') else skill for skill in (data.skills or [])],
         is_active=True,
     )
     db.add(program)

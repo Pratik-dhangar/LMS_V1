@@ -55,8 +55,18 @@ async def upload_profile_picture(
     Upload profile picture for coach
     Saves to S3 if USE_S3=true, otherwise saves locally
     """
+    logger.info("=" * 80)
+    logger.info(f"[COACH_PROFILE] Uploading profile picture for coach_id: {current_coach.id}")
+    logger.info(f"[COACH_PROFILE] File: {file.filename}, Content-Type: {file.content_type}")
+    logger.info(f"[COACH_PROFILE] S3 Enabled: {settings.USE_S3}")
+    if settings.USE_S3:
+        logger.info(f"[COACH_PROFILE] S3 Bucket: {settings.S3_BUCKET_NAME}")
+        logger.info(f"[COACH_PROFILE] S3 Endpoint: {settings.S3_ENDPOINT_URL or 'AWS S3 (default)'}")
+    
     # Validate file
     if not file.content_type.startswith("image/"):
+        logger.error(f"[COACH_PROFILE] ❌ Invalid file type: {file.content_type}, must be image")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File must be an image",
@@ -64,7 +74,11 @@ async def upload_profile_picture(
 
     max_size = 5 * 1024 * 1024  # 5 MB
     content = await file.read()
+    logger.info(f"[COACH_PROFILE] File size: {len(content)} bytes")
+    
     if len(content) > max_size:
+        logger.error(f"[COACH_PROFILE] ❌ File size exceeds limit: {len(content)} > {max_size}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File size exceeds 5 MB limit",
@@ -73,41 +87,57 @@ async def upload_profile_picture(
     # Generate filename
     file_extension = file.filename.split(".")[-1]
     filename = f"coach_{current_coach.id}_{current_coach.user_id}.{file_extension}"
+    logger.info(f"[COACH_PROFILE] Generated filename: {filename}")
 
     try:
         if settings.USE_S3:
             # Save to S3 - store in s3://bucket/key format
+            logger.info(f"[COACH_PROFILE] Uploading to S3...")
             from app.utils.s3_utils import S3Manager
 
             s3_manager = S3Manager(settings.S3_BUCKET_NAME, settings.AWS_REGION)
             await file.seek(0)  # Reset file pointer
             file_content = await file.read()
-            s3_key = s3_manager.upload_file(
-                file_content,
-                folder="profile_pictures",
-                filename=filename,
-                content_type=file.content_type or "image/jpeg",
-            )
-            file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
             
-            # Update coach profile with S3 URL
-            current_coach.profile_picture_url = file_url
+            try:
+                s3_key = s3_manager.upload_file(
+                    file_content,
+                    folder="profile_pictures",
+                    filename=filename,
+                    content_type=file.content_type or "image/jpeg",
+                )
+                file_url = f"s3://{settings.S3_BUCKET_NAME}/{s3_key}"
+                logger.info(f"[COACH_PROFILE] ✅ File uploaded to S3: {s3_key}")
+                
+                # Update coach profile with S3 URL
+                current_coach.profile_picture_url = file_url
+            except Exception as e:
+                logger.error(f"[COACH_PROFILE] ❌ S3 upload failed: {str(e)}", exc_info=True)
+                raise
         else:
             # Save to local uploads folder
+            logger.info(f"[COACH_PROFILE] Using local storage")
             upload_dir = Path("uploads/profile_pictures")
             upload_dir.mkdir(parents=True, exist_ok=True)
 
             file_path = upload_dir / filename
-            with open(file_path, "wb") as f:
-                f.write(content)
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(content)
+                logger.info(f"[COACH_PROFILE] ✅ File saved locally: {file_path}")
 
-            # Update coach profile with local path
-            current_coach.profile_picture_url = f"/uploads/profile_pictures/{filename}"
+                # Update coach profile with local path
+                current_coach.profile_picture_url = f"/uploads/profile_pictures/{filename}"
+            except Exception as e:
+                logger.error(f"[COACH_PROFILE] ❌ Local save failed: {str(e)}", exc_info=True)
+                raise
 
         await db.commit()
         await db.refresh(current_coach)
+        logger.info(f"[COACH_PROFILE] ✅ Database updated")
 
         # Invalidate coach list cache so new picture appears immediately
+        logger.info(f"[COACH_PROFILE] Invalidating caches...")
         await cache_service.invalidate_coach_profiles()
 
         # Build proxy URL for the response so the frontend can display it right away
@@ -117,12 +147,18 @@ async def upload_profile_picture(
         else:
             display_url = raw_url
 
+        logger.info(f"[COACH_PROFILE] ✅ Upload complete - Display URL: {display_url}")
+        logger.info("=" * 80)
+
         return {
             "message": "Profile picture uploaded successfully",
             "profile_picture_url": display_url,
         }
 
     except Exception as e:
+        logger.error(f"[COACH_PROFILE] ❌ Error uploading profile picture: {str(e)}", exc_info=True)
+        logger.error(f"[COACH_PROFILE] Exception type: {type(e).__name__}")
+        logger.error("=" * 80)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload profile picture: {str(e)}",

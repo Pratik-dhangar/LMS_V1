@@ -4,12 +4,20 @@ Program Schemas - Pydantic models for Program validation
 Rules enforced at the schema level:
   - ProgramCreate includes goal_ids (set once at creation)
   - ProgramUpdateContent does NOT include goal_ids (goals are immutable)
+  - skills array stores multi-skill mapping with sub-programs
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class SkillWithGoals(BaseModel):
+    """A skill with its associated learning goals (sub-programs)"""
+    skill_id: int = Field(..., description="Learning skill ID")
+    skill_name: str = Field(..., description="Skill name")
+    goal_ids: List[int] = Field(default_factory=list, description="Learning goal IDs for this skill")
 
 
 class ProgramCreate(BaseModel):
@@ -20,6 +28,7 @@ class ProgramCreate(BaseModel):
     learner_id: int = Field(..., description="Learner this program is for")
     goal_ids: List[int] = Field(default_factory=list, description="Learning goal IDs — locked after creation")
     content_ids: List[int] = Field(default_factory=list, description="Learning content IDs — mutable")
+    skills: List[SkillWithGoals] = Field(default_factory=list, description="Multi-skill structure with sub-programs")
 
 
 class ProgramUpdateContent(BaseModel):
@@ -41,6 +50,7 @@ class ProgramInSession(BaseModel):
     description: Optional[str] = None  # Deprecated alias for backward compatibility
     goal_ids: List[int] = []
     content_ids: List[int] = []
+    skills: List[Dict] = []
 
     class Config:
         from_attributes = True
@@ -55,6 +65,7 @@ class ProgramListItem(BaseModel):
     learner_id: Optional[int] = None
     goal_ids: List[int] = []
     content_ids: List[int] = []
+    skills: List[Dict] = []
     is_active: bool = True
 
     class Config:
@@ -71,6 +82,7 @@ class ProgramResponse(BaseModel):
     learner_id: Optional[int] = None
     goal_ids: List[int] = []
     content_ids: List[int] = []
+    skills: List[Dict] = []
     is_active: bool = True
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -1700,14 +1700,23 @@ async def update_subscription_package(
     if not package:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
+    # Store dedicated_coach_id before update (if it exists)
+    dedicated_coach_id = package.dedicated_coach_id if hasattr(package, 'dedicated_coach_id') else None
+    
     updated_package = await subscription_crud.update_package(db, package_id, package_data)
     
     # Invalidate subscription package caches
     try:
         await cache_service.delete_pattern("subscription:packages:*")
         logger.info("Invalidated subscription package caches after update")
+        
+        # If this package is assigned to a coach, also invalidate coach caches
+        # This ensures the updated price is reflected when coaches are fetched
+        if dedicated_coach_id:
+            await cache_service.invalidate_coach_profiles()
+            logger.info(f"Invalidated coach caches for dedicated coach {dedicated_coach_id}")
     except Exception as e:
-        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+        logger.warning(f"Failed to invalidate caches after package update: {e}")
     
     return updated_package
 
@@ -1723,14 +1732,22 @@ async def delete_subscription_package(
     if not package:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Package not found")
     
+    # Store dedicated_coach_id before deletion (if it exists)
+    dedicated_coach_id = package.dedicated_coach_id if hasattr(package, 'dedicated_coach_id') else None
+    
     await subscription_crud.soft_delete_package(db, package_id)
     
     # Invalidate subscription package caches
     try:
         await cache_service.delete_pattern("subscription:packages:*")
         logger.info("Invalidated subscription package caches after deletion")
+        
+        # If this package was assigned to a coach, also invalidate coach caches
+        if dedicated_coach_id:
+            await cache_service.invalidate_coach_profiles()
+            logger.info(f"Invalidated coach caches for dedicated coach {dedicated_coach_id}")
     except Exception as e:
-        logger.warning(f"Failed to invalidate subscription package cache: {e}")
+        logger.warning(f"Failed to invalidate caches after package deletion: {e}")
     
     return None
 
