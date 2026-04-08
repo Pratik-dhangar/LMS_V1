@@ -1534,13 +1534,13 @@ async def get_recording_playback_url(
         )
     
     # Verify user access
-    # Admin can access any recording. Others must be participants/creator.
-    is_admin = (
-        current_user.role == UserRole.ADMIN
-        or str(current_user.role).upper() == "ADMIN"
-        or current_user.role == "admin"
+    # Admin and Head can access any recording. Others must be participants/creator.
+    is_admin_or_head = (
+        current_user.role in [UserRole.ADMIN, UserRole.HEAD]
+        or str(current_user.role).upper() in ["ADMIN", "HEAD"]
+        or current_user.role in ["admin", "head"]
     )
-    if (not is_admin) and current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
+    if (not is_admin_or_head) and current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this session recording"
@@ -1638,6 +1638,96 @@ async def get_trainer_recordings(
         
     except Exception as e:
         logger.error(f"Error fetching trainer recordings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch recordings: {str(e)}"
+        )
+
+
+@router.get("/recordings/all")
+async def get_all_recordings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all recordings in the system (admin/head only).
+    
+    Returns a list of all sessions with recordings including playback URLs.
+    
+    Returns:
+        List of sessions with recordings and their playback URLs
+    """
+    # Check if user is admin or head
+    is_admin_or_head = (
+        current_user.role in [UserRole.ADMIN, UserRole.HEAD]
+        or str(current_user.role).upper() in ["ADMIN", "HEAD"]
+        or current_user.role in ["admin", "head"]
+    )
+    if not is_admin_or_head:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin/head can access all recordings",
+        )
+    
+    logger.info(f"Fetching all recordings for {current_user.role} {current_user.id}")
+    
+    try:
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        
+        # Query all sessions where recording exists with eager loaded User relationships
+        stmt = select(TrainingSession).where(
+            TrainingSession.recording_url.isnot(None)
+        ).options(
+            selectinload(TrainingSession.trainer),
+            selectinload(TrainingSession.learner)
+        ).order_by(TrainingSession.updated_at.desc())
+        
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+        
+        if not sessions:
+            return {
+                "recordings": [],
+                "total": 0,
+                "message": "No recordings found"
+            }
+        
+        # Build response with playback URLs
+        recordings = []
+        storage = get_recording_storage()
+        
+        for session in sessions:
+            try:
+                playback_url = await storage.get_playback_url(session.recording_url)
+            except Exception as e:
+                logger.error(f"Failed to generate playback URL for session {session.id}: {e}")
+                playback_url = None
+            
+            recordings.append({
+                "id": session.id,
+                "session_id": session.session_id,
+                "title": session.title,
+                "trainer_id": session.trainer_id,
+                "trainer_name": session.trainer.name if session.trainer else "Unknown",
+                "learner_id": session.learner_id,
+                "learner_name": session.learner.name if session.learner else "Unknown",
+                "status": session.status,
+                "recording_status": session.recording_status,
+                "recorded_at": session.recording_uploaded_at,
+                "playback_url": playback_url,
+                "scheduled_date": session.scheduled_date,
+                "duration": session.duration
+            })
+        
+        return {
+            "recordings": recordings,
+            "total": len(recordings),
+            "message": f"Found {len(recordings)} recording(s)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching all recordings: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recordings: {str(e)}"

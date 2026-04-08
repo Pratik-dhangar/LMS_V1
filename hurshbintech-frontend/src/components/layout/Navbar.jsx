@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
 
-const Navbar = ({ setShowSubscriptionModal }) => {
+const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -108,6 +108,16 @@ const Navbar = ({ setShowSubscriptionModal }) => {
               >
                 <Mail className="w-4 h-4" />
                 Contact Us
+              </button>
+            )}
+
+            {/* Free Assessment - Only on landing page for non-logged-in users */}
+            {!user && location.pathname === "/" && (
+              <button
+                className="navbar-btn"
+                onClick={() => setShowAssessmentModal(true)}
+              >
+                Free Assessment
               </button>
             )}
 
@@ -224,6 +234,19 @@ const Navbar = ({ setShowSubscriptionModal }) => {
               >
                 <Mail className="w-4 h-4" />
                 Contact Us
+              </button>
+            )}
+
+            {/* Free Assessment - Only on landing page for non-logged-in users */}
+            {!user && location.pathname === "/" && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  setShowAssessmentModal(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                Free Assessment
               </button>
             )}
 

@@ -350,16 +350,34 @@ const ScheduleSession = () => {
     try {
       const programDetail = await programService.getProgramById(selectedProgramId);
 
-      const selectedGoalIds = programDetail?.goal_ids || [];
-      const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
-      const subProgramText = selectedGoals.length
-        ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
-        : "-";
+      let rows = [];
 
-      const rows = [{
-        skill: programDetail?.skill || selectedProgram?.skill || "-",
-        subPrograms: subProgramText,
-      }];
+      // Check if program has multi-skill structure
+      if (programDetail?.skills && Array.isArray(programDetail.skills) && programDetail.skills.length > 0) {
+        // Use new multi-skill structure
+        rows = programDetail.skills.map(skill => {
+          const skillGoals = learningGoals.filter(goal => skill.goal_ids?.includes(goal.id));
+          const subProgramText = skillGoals.length
+            ? skillGoals.map(goal => goal.goal || `Goal #${goal.id}`).join(", ")
+            : "-";
+          return {
+            skill: skill.skill_name || "-",
+            subPrograms: subProgramText,
+          };
+        });
+      } else {
+        // Fall back to old single-skill structure for backward compatibility
+        const selectedGoalIds = programDetail?.goal_ids || [];
+        const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
+        const subProgramText = selectedGoals.length
+          ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
+          : "-";
+
+        rows = [{
+          skill: programDetail?.skill || selectedProgram?.skill || "-",
+          subPrograms: subProgramText,
+        }];
+      }
 
       const selectedLearner = learners.find((l) => l.id === parseInt(formData.learner_id));
       const selectedTrainer = trainers.find((t) => t.user_id === parseInt(formData.trainer_id));
