@@ -42,8 +42,8 @@ const GuestBookingStep2 = () => {
   });
 
   const sessionTypes = [
-    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min' },
-    { value: 'extended', label: 'Extended Session', duration: '90 min' },
+    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 2000 },
+    { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3000 },
   ];
 
   // Auto-select session type when coach has a dedicated package
@@ -605,21 +605,28 @@ const GuestBookingStep2 = () => {
                         </small>
                       </>
                     ) : (
-                      <select
-                        id="session_type"
-                        name="session_type"
-                        value={formData.session_type}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                        required
-                      >
-                        <option value="">Select session type...</option>
-                        {sessionTypes.map(type => (
-                          <option key={type.value} value={type.value}>
-                            {type.label} - {type.duration}
-                          </option>
-                        ))}
-                      </select>
+                      <>
+                        <select
+                          id="session_type"
+                          name="session_type"
+                          value={formData.session_type}
+                          onChange={handleInputChange}
+                          disabled={loading}
+                          required
+                        >
+                          <option value="">Select session type...</option>
+                          {sessionTypes.map(type => (
+                            <option key={type.value} value={type.value}>
+                              {type.label} - {type.duration}
+                            </option>
+                          ))}
+                        </select>
+                        {formData.session_type && (
+                          <small style={{ color: '#10b981', marginTop: '4px', display: 'block', fontSize: '0.95rem', fontWeight: '600' }}>
+                            Fees for this session: ₹{sessionTypes.find(t => t.value === formData.session_type)?.fee || 0}
+                          </small>
+                        )}
+                      </>
                     )}
                   </div>
 

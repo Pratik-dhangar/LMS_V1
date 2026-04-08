@@ -117,13 +117,13 @@ const drawBrandedHeader = (doc, { headerDataURL, reportTitle, subtitle, generate
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.setTextColor(52, 73, 94);
+    doc.setTextColor(122, 44, 44);  // Brown
     doc.text(reportTitle, pageWidth / 2, y, { align: 'center' });
     y += 7;
 
     if (subtitle) {
         doc.setFontSize(10);
-        doc.setTextColor(80, 80, 80);
+        doc.setTextColor(0, 0, 0);  // Black
         doc.text(subtitle, pageWidth / 2, y, { align: 'center' });
         y += 6;
     }
@@ -137,7 +137,7 @@ const drawBrandedHeader = (doc, { headerDataURL, reportTitle, subtitle, generate
     }
 
     // Thin separator below title block
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(150, 150, 150);  // Dark gray (was light gray)
     doc.setLineWidth(0.3);
     doc.line(margin, y, pageWidth - margin, y);
 
@@ -571,7 +571,7 @@ export const generateProfilePDF = async (profileData, profileType = 'trainer') =
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(110, 110, 110);
+    doc.setTextColor(0, 0, 0);  // Changed to black
     doc.text(`Generated on ${new Date().toLocaleDateString('en-IN')}`, pageW / 2, y, { align: 'center' });
     y += 6;
 
@@ -768,12 +768,12 @@ export const generateLearningProgramPDF = async (data = {}) => {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.setTextColor(52, 73, 94);
+    doc.setTextColor(122, 44, 44);  // Brown
     doc.text('Learning Program', pageWidth / 2, y, { align: 'center' });
     y += 7;
 
     doc.setFontSize(11);
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(0, 0, 0);  // Black
     doc.text(String(programName || 'Learning Program'), pageWidth / 2, y, { align: 'center' });
     y += 10;
 
@@ -953,7 +953,7 @@ export const generateProgressReportPDF = async (data, options = {}) => {
         let y = startY;
 
         // Draw header
-        doc.setFillColor(52, 73, 94);
+        doc.setFillColor(122, 44, 44);  // Brown (was blue)
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
@@ -998,26 +998,26 @@ export const generateProgressReportPDF = async (data, options = {}) => {
     // Helper function to add header
     const addHeader = () => {
         doc.setFontSize(22);
-        doc.setTextColor(52, 73, 94);
+        doc.setTextColor(122, 44, 44);  // Brown
         doc.setFont('helvetica', 'bold');
         const title = programName ? 'Progress Graph' : 'Overall Progress Report';
         doc.text(title, pageWidth / 2, currentY, { align: 'center' });
         currentY += 10;
 
         doc.setFontSize(16);
-        doc.setTextColor(41, 128, 185);
+        doc.setTextColor(0, 0, 0);  // Black (was blue)
         doc.text(learnerName, pageWidth / 2, currentY, { align: 'center' });
         currentY += 8;
 
         if (programName) {
             doc.setFontSize(14);
-            doc.setTextColor(52, 152, 219);
+            doc.setTextColor(219, 157, 50);  // Orange (was blue)
             doc.text(programName, pageWidth / 2, currentY, { align: 'center' });
             currentY += 8;
         }
 
         doc.setFontSize(10);
-        doc.setTextColor(127, 140, 141);
+        doc.setTextColor(0, 0, 0);  // Black (was gray)
         const dateStr = `Generated on: ${new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -1038,7 +1038,7 @@ export const generateProgressReportPDF = async (data, options = {}) => {
         checkPageBreak(40);
 
         doc.setFontSize(14);
-        doc.setTextColor(52, 73, 94);
+        doc.setTextColor(122, 44, 44);  // Brown
         doc.setFont('helvetica', 'bold');
         doc.text('Summary Statistics', margin, currentY);
         currentY += 8;
@@ -1099,7 +1099,7 @@ export const generateProgressReportPDF = async (data, options = {}) => {
         checkPageBreak(50);
 
         doc.setFontSize(14);
-        doc.setTextColor(52, 73, 94);
+        doc.setTextColor(122, 44, 44);  // Brown
         doc.setFont('helvetica', 'bold');
         doc.text('Program Breakdown', margin, currentY);
         currentY += 12;
@@ -1130,13 +1130,13 @@ export const generateProgressReportPDF = async (data, options = {}) => {
 
             // Program header
             doc.setFontSize(13);
-            doc.setTextColor(41, 128, 185);
+            doc.setTextColor(122, 44, 44);  // Brown (was blue)
             doc.setFont('helvetica', 'bold');
             doc.text(`Program: ${program.program_name}`, margin, currentY);
             currentY += 6;
 
             doc.setFontSize(10);
-            doc.setTextColor(127, 140, 141);
+            doc.setTextColor(0, 0, 0);  // Black (was gray)
             doc.setFont('helvetica', 'normal');
             doc.text(`Total Sessions: ${program.total_sessions || program.sessions.length}`, margin, currentY);
             currentY += 8;
@@ -1179,7 +1179,7 @@ export const generateProgressReportPDF = async (data, options = {}) => {
             currentY = margin;
 
             doc.setFontSize(16);
-            doc.setTextColor(52, 73, 94);
+            doc.setTextColor(122, 44, 44);  // Brown
             doc.setFont('helvetica', 'bold');
             doc.text('Detailed Learning Progress', margin, currentY);
             currentY += 12;
@@ -1369,7 +1369,7 @@ export const downloadProgramGraphPDF = async ({ learnerName, programName, skillN
     // Section title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(52, 73, 94);
+    doc.setTextColor(122, 44, 44);  // Brown
     doc.text('Session Details', margin, y);
     y += 7;
 
@@ -1659,7 +1659,7 @@ export const downloadAllProgramsPDF = async ({ learnerName, programs }) => {
         checkBreak(16);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
-        doc.setTextColor(52, 73, 94);
+        doc.setTextColor(122, 44, 44);  // Brown
         doc.text('Session Details', margin, y);
         y += 6;
 
@@ -2027,9 +2027,9 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(FIELD_FS);
         doc.setTextColor(...BROWN);
-        doc.text('Functional Development Overview through overall development', contentX + contentW / 2, y, { align: 'center' });
+        doc.text('FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT', contentX + contentW / 2, y, { align: 'center' });
         // Add underline
-        const functionalTextWidth = doc.getTextWidth('Functional Development Overview through overall development');
+        const functionalTextWidth = doc.getTextWidth('FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT');
         const functionalLineX1 = contentX + contentW / 2 - functionalTextWidth / 2;
         const functionalLineX2 = contentX + contentW / 2 + functionalTextWidth / 2;
         doc.setDrawColor(...BROWN);
@@ -2187,10 +2187,10 @@ export const generateFreeAssessmentPDF = async (assessment, { previewOnly = fals
     const contentWidth = pageWidth - margin * 2;
 
     const GOLD = [219, 157, 50];
-    const DARK_NAVY = [30, 58, 90];
+    const DARK_NAVY = [122, 44, 44];  // Changed to brown (was blue)
     const BROWN = [122, 44, 44];
-    const TEXT_DARK = [45, 55, 72];
-    const GRAY_MID = [200, 208, 218];
+    const TEXT_DARK = [0, 0, 0];  // Pure black for all questions and answers
+    const GRAY_MID = [100, 100, 100];  // Changed to dark gray (was light blue-gray)
     const bottomMargin = 18;
 
     /* ── Helpers ──────────────────────────────────────────────── */
@@ -2434,8 +2434,8 @@ export const generateFreeAssessmentPDF = async (assessment, { previewOnly = fals
             const yesX = margin + qW + 6;
             const noX = margin + qW + aW / 2 + 2;
 
-            drawRadio(yesX, optionY, yesSelected, [39, 174, 96]);
-            drawRadio(noX, optionY, noSelected, [192, 57, 43]);
+            drawRadio(yesX, optionY, yesSelected, [122, 44, 44]);  // Changed to brown
+            drawRadio(noX, optionY, noSelected, [219, 157, 50]);  // Changed to orange
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7.8);
@@ -2449,10 +2449,10 @@ export const generateFreeAssessmentPDF = async (assessment, { previewOnly = fals
 
     /* ── Skills rating table ─────────────────────────────────── */
     const RATING_META = {
-        '0': { color: [192, 57, 43], label: 'Most Concern' },
-        '1': { color: [211, 84, 0], label: 'Partial' },
-        '2': { color: [243, 156, 18], label: 'Needs Help' },
-        '3': { color: [39, 174, 96], label: 'Developed' },
+        '0': { color: [219, 157, 50], label: 'Most Concern' },  // Orange
+        '1': { color: [219, 157, 50], label: 'Partial' },  // Orange
+        '2': { color: [122, 44, 44], label: 'Needs Help' },  // Brown
+        '3': { color: [0, 0, 0], label: 'Developed' },  // Black
     };
 
     const drawSkillsTable = (skills) => {

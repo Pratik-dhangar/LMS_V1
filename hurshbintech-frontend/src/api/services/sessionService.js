@@ -251,6 +251,17 @@ const sessionService = {
       console.error('[sessionService] Error fetching recording status:', error);
       throw error;
     }
+  },
+
+  // Get all recordings (admin/head only)
+  getAllRecordings: async () => {
+    try {
+      const response = await api.get('/sessions/recordings/all');
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error fetching all recordings:', error);
+      throw error;
+    }
   }
 };
 

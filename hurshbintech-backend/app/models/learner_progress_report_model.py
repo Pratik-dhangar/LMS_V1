@@ -38,7 +38,7 @@ class LearnerProgressReport(Base):
     development_history = Column(Text, nullable=True)
     learning_history = Column(Text, nullable=True)
 
-    # Functional Development Overview through overall development (HEAD only)
+    # FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT (HEAD only)
     attention_cooperation = Column(Text, nullable=True)
     sensory_integration_motor = Column(Text, nullable=True)
     speech_language_communication = Column(Text, nullable=True)

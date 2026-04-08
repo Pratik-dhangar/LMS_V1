@@ -36,6 +36,7 @@ const CreateProgram = () => {
         content_ids: [],
         name: "",
         skill: "",
+        skills: [], // Array of {skill_id, skill_name, goal_ids}
     });
 
     useEffect(() => {
@@ -133,6 +134,46 @@ const CreateProgram = () => {
         }));
     };
 
+    // Handle multi-skill structure
+    const handleSkillToggle = (skillId, skillName) => {
+        setFormData((prev) => {
+            const skillExists = prev.skills.find(s => s.skill_id === skillId);
+            if (skillExists) {
+                // Remove skill
+                return {
+                    ...prev,
+                    skills: prev.skills.filter(s => s.skill_id !== skillId),
+                };
+            } else {
+                // Add skill
+                return {
+                    ...prev,
+                    skills: [...prev.skills, { skill_id: skillId, skill_name: skillName, goal_ids: [] }],
+                };
+            }
+        });
+    };
+
+    const handleSkillSubProgramToggle = (skillId, goalId) => {
+        setFormData((prev) => {
+            const updatedSkills = prev.skills.map(skill => {
+                if (skill.skill_id === skillId) {
+                    return {
+                        ...skill,
+                        goal_ids: skill.goal_ids.includes(goalId)
+                            ? skill.goal_ids.filter(id => id !== goalId)
+                            : [...skill.goal_ids, goalId],
+                    };
+                }
+                return skill;
+            });
+            return {
+                ...prev,
+                skills: updatedSkills,
+            };
+        });
+    };
+
     const getContentTitle = (content) => {
         return content.title || content.name || `Content #${content.id}`;
     };
@@ -193,23 +234,33 @@ const CreateProgram = () => {
             toast.error("Please select a learner first");
             return;
         }
-        if (formData.goal_ids.length === 0) {
+        if (formData.skills.length === 0) {
             toast.error("Please select at least one skill before creating a program");
             return;
         }
+        // Check that at least one skill has sub-programs selected
+        const hasSubPrograms = formData.skills.some(skill => skill.goal_ids.length > 0);
+        if (!hasSubPrograms) {
+            toast.error("Please select at least one sub-program for any skill");
+            return;
+        }
         if (formData.content_ids.length === 0) {
-            toast.error("Please select at least one sub-program before creating a program");
+            toast.error("Please select at least one learning content before creating a program");
             return;
         }
 
         try {
             setCreatingProgram(true);
+            // Collect all goal_ids from all skills - these are the flat goal_ids
+            const allGoalIds = Array.from(new Set(formData.skills.flatMap(skill => skill.goal_ids)));
+
             const created = await programService.createProgram({
                 name: formData.name.trim(),
                 skill: formData.skill.trim() || null,
                 learner_id: parseInt(formData.learner_id),
-                goal_ids: formData.goal_ids,
+                goal_ids: allGoalIds,
                 content_ids: formData.content_ids,
+                skills: formData.skills, // Send the multi-skill structure
             });
 
             toast.success(`Program "${created.name}" created successfully`);
@@ -254,7 +305,7 @@ const CreateProgram = () => {
                         <div>
                             <h1 className="page-title">Create New Program</h1>
                             <p className="page-description">
-                                Create a program by selecting learner, skills, and sub-programs
+                                Create a program by selecting learner, multiple skills with sub-programs, and learning content
                             </p>
                         </div>
                     </div>
@@ -276,7 +327,7 @@ const CreateProgram = () => {
                                         required
                                     />
                                 </div>
-                                <div>
+                                {/* <div>
                                     <label className="modern-form-label">Skill</label>
                                     <select
                                         value={formData.skill}
@@ -290,7 +341,7 @@ const CreateProgram = () => {
                                             </option>
                                         ))}
                                     </select>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
 
@@ -336,67 +387,172 @@ const CreateProgram = () => {
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Programs</h2>
+                            <h2 className="modern-form-section-title">Select Skills & Sub-Programs</h2>
                             <p className="modern-form-section-description">
-                                Choose one or more programs for this session.
+                                Select one or more skills, and for each skill choose one or more sub-programs.
                             </p>
-                            <div className="search-container">
-                                <Search className="search-icon" />
-                                <input
-                                    type="text"
-                                    placeholder="Search goals by name or description..."
-                                    value={searchTerm.goal}
-                                    onChange={(e) => setSearchTerm((prev) => ({ ...prev, goal: e.target.value }))}
-                                    className="search-input"
-                                />
-                            </div>
-                            {learningGoals.length === 0 ? (
-                                <p className="empty-state">No learning goals available</p>
+
+                            {learningSkills.length === 0 ? (
+                                <p className="empty-state">No learning skills available</p>
                             ) : (
                                 <div className="table-primary-container">
-                                    <div className="table-primary-wrapper">
-                                        <table className="table-primary">
-                                            <thead className="table-primary-header">
-                                                <tr>
-                                                    <th className="table-primary-th table-primary-th-center" style={{ width: "60px" }}>Select</th>
-                                                    <th className="table-primary-th">Goal</th>
-                                                    <th className="table-primary-th">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="table-primary-body">
-                                                {filteredGoals.length > 0 ? (
-                                                    filteredGoals.map((goal) => {
-                                                        const checked = formData.goal_ids.includes(goal.id);
-                                                        return (
-                                                            <tr key={goal.id} className={checked ? "row-selected" : ""}>
-                                                                <td className="table-primary-td table-primary-td-center">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked}
-                                                                        onChange={() => handleGoalToggle(goal.id)}
-                                                                    />
-                                                                </td>
-                                                                <td className="table-primary-td">{goal.goal}</td>
-                                                                <td className="table-primary-td">{goal.goal_description || "-"}</td>
-                                                            </tr>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <tr>
-                                                        <td className="table-primary-td" colSpan="3">No goals found</td>
-                                                    </tr>
+                                    {learningSkills.map((skill) => {
+                                        const skillSelected = formData.skills.find(s => s.skill_id === skill.id);
+                                        return (
+                                            <div
+                                                key={skill.id}
+                                                className="modern-form-section"
+                                                style={{
+                                                    border: "1px solid #e0e0e0",
+                                                    borderRadius: "8px",
+                                                    padding: "1rem",
+                                                    marginBottom: "1rem",
+                                                    backgroundColor: skillSelected ? "#f9f5f0" : "#fff",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        cursor: "pointer",
+                                                        marginBottom: skillSelected ? "1rem" : "0",
+                                                    }}
+                                                    onClick={() => handleSkillToggle(skill.id, skill.skill_name)}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!skillSelected}
+                                                        onChange={() => handleSkillToggle(skill.id, skill.skill_name)}
+                                                        style={{ marginRight: "0.75rem", cursor: "pointer" }}
+                                                    />
+                                                    <label
+                                                        style={{
+                                                            fontWeight: "600",
+                                                            color: "#333",
+                                                            cursor: "pointer",
+                                                            flex: 1,
+                                                            margin: 0,
+                                                        }}
+                                                    >
+                                                        {skill.skill_name}
+                                                    </label>
+                                                </div>
+
+                                                {skillSelected && (
+                                                    <div
+                                                        style={{
+                                                            marginLeft: "1.5rem",
+                                                            paddingTop: "0.5rem",
+                                                            borderTop: "1px solid #ddd",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            className="modern-form-section-description"
+                                                            style={{ marginBottom: "0.75rem" }}
+                                                        >
+                                                            Select sub-programs for <strong>{skill.skill_name}</strong>:
+                                                        </p>
+                                                        {learningGoals.length === 0 ? (
+                                                            <p className="empty-state" style={{ marginLeft: 0 }}>
+                                                                No learning goals available
+                                                            </p>
+                                                        ) : (
+                                                            <div
+                                                                style={{
+                                                                    display: "grid",
+                                                                    gridTemplateColumns: "1fr 1fr",
+                                                                    gap: "0.75rem",
+                                                                }}
+                                                            >
+                                                                {learningGoals.map((goal) => {
+                                                                    const isChecked = skillSelected?.goal_ids?.includes(goal.id) || false;
+                                                                    return (
+                                                                        <div
+                                                                            key={goal.id}
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                alignItems: "flex-start",
+                                                                                padding: "0.75rem",
+                                                                                borderRadius: "6px",
+                                                                                backgroundColor: isChecked ? "#fff9f0" : "#fafafa",
+                                                                                border: isChecked ? "1px solid #d9a87e" : "1px solid #e0e0e0",
+                                                                                cursor: "pointer",
+                                                                            }}
+                                                                            onClick={() => handleSkillSubProgramToggle(skill.id, goal.id)}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isChecked}
+                                                                                onChange={() => handleSkillSubProgramToggle(skill.id, goal.id)}
+                                                                                style={{ marginRight: "0.5rem", marginTop: "0.25rem", cursor: "pointer" }}
+                                                                            />
+                                                                            <div style={{ flex: 1 }}>
+                                                                                <div
+                                                                                    style={{
+                                                                                        fontWeight: "500",
+                                                                                        color: "#333",
+                                                                                        marginBottom: "0.25rem",
+                                                                                    }}
+                                                                                >
+                                                                                    {goal.goal}
+                                                                                </div>
+                                                                                {goal.goal_description && (
+                                                                                    <div
+                                                                                        style={{
+                                                                                            fontSize: "0.85rem",
+                                                                                            color: "#666",
+                                                                                        }}
+                                                                                    >
+                                                                                        {goal.goal_description}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Summary of selected skills and sub-programs */}
+                            {formData.skills.length > 0 && (
+                                <div
+                                    style={{
+                                        marginTop: "1.5rem",
+                                        padding: "1rem",
+                                        backgroundColor: "#f0f8ff",
+                                        borderRadius: "8px",
+                                        border: "1px solid #b3d9ff",
+                                    }}
+                                >
+                                    <h3 style={{ marginTop: 0, marginBottom: "0.75rem", color: "#333" }}>
+                                        Selected Structure:
+                                    </h3>
+                                    {formData.skills.map((skill) => (
+                                        <div key={skill.skill_id} style={{ marginBottom: "0.75rem" }}>
+                                            <strong>{skill.skill_name}:</strong>{" "}
+                                            {skill.goal_ids.length > 0
+                                                ? learningGoals
+                                                    .filter(g => skill.goal_ids.includes(g.id))
+                                                    .map(g => g.goal)
+                                                    .join(", ")
+                                                : <span style={{ color: "#999", fontStyle: "italic" }}>No sub-programs selected</span>}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Learning Goals</h2>
+                            <h2 className="modern-form-section-title">Select Learning Content</h2>
                             <p className="modern-form-section-description">
-                                Choose one or more sub-programs for this program.
+                                Choose one or more learning content items for this program.
                             </p>
                             <div className="search-container">
                                 <Search className="search-icon" />
@@ -506,24 +662,24 @@ const CreateProgram = () => {
                                     )}
                                 </div>
                             )}
-                        </div>
 
-                        <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                            <button
-                                type="button"
-                                onClick={() => navigate("/head/manage-sessions")}
-                                className="modern-form-btn modern-form-btn-secondary"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="modern-form-btn modern-form-btn-primary"
-                                disabled={creatingProgram}
-                            >
-                                {creatingProgram ? "Creating..." : "Create Program"}
-                            </button>
-                        </div>
+                            <div className="form-actions" style={{ marginTop: "1.5rem" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate("/head/manage-sessions")}
+                                    className="modern-form-btn modern-form-btn-secondary"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="modern-form-btn modern-form-btn-primary"
+                                    disabled={creatingProgram}
+                                >
+                                    {creatingProgram ? "Creating..." : "Create Program"}
+                                </button>
+                            </div>
+                            </div>
                     </form>
                 </div>
             </div>

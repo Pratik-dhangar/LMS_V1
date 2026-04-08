@@ -44,6 +44,10 @@ class Program(Base):
     goal_ids = Column(JSON, nullable=False, default=list)
     # content_ids is freely mutable — updated whenever head changes content during scheduling
     content_ids = Column(JSON, nullable=False, default=list)
+    
+    # New multi-skill structure: array of {skill_id, skill_name, goal_ids}
+    # Structure: [{"skill_id": 1, "skill_name": "Skill 1", "goal_ids": [1, 2, 3]}, ...]
+    skills = Column(JSON, nullable=False, default=list)
 
     # Soft-delete: keeps historical session → program links intact
     is_active = Column(Boolean, nullable=False, default=True)
