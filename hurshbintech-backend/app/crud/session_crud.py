@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from sqlalchemy import and_, or_, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.learning_content_model import LearningContent
 from app.models.learning_goals_model import LearningGoals
@@ -34,18 +34,18 @@ async def get_all_sessions_by_head(
     result = await db.execute(
         select(TrainingSession)
         .options(
-            joinedload(TrainingSession.trainer),
-            joinedload(TrainingSession.learner),
-            joinedload(TrainingSession.created_by),
-            joinedload(TrainingSession.learning_contents),
-            joinedload(TrainingSession.learning_goals),
+            selectinload(TrainingSession.trainer),
+            selectinload(TrainingSession.learner),
+            selectinload(TrainingSession.created_by),
+            selectinload(TrainingSession.learning_contents),
+            selectinload(TrainingSession.learning_goals),
         )
         .where(TrainingSession.created_by_id == head_user_id)
         .order_by(TrainingSession.scheduled_date.desc())
         .offset(skip)
         .limit(limit)
     )
-    return result.unique().scalars().all(), total_count
+    return result.scalars().all(), total_count
 
 
 async def get_by_id(db: AsyncSession, session_pk: int) -> Optional[TrainingSession]:
@@ -53,15 +53,15 @@ async def get_by_id(db: AsyncSession, session_pk: int) -> Optional[TrainingSessi
     result = await db.execute(
         select(TrainingSession)
         .options(
-            joinedload(TrainingSession.trainer),
-            joinedload(TrainingSession.learner),
-            joinedload(TrainingSession.created_by),
-            joinedload(TrainingSession.learning_contents),
-            joinedload(TrainingSession.learning_goals),
+            selectinload(TrainingSession.trainer),
+            selectinload(TrainingSession.learner),
+            selectinload(TrainingSession.created_by),
+            selectinload(TrainingSession.learning_contents),
+            selectinload(TrainingSession.learning_goals),
         )
         .where(TrainingSession.id == session_pk)
     )
-    return result.unique().scalar_one_or_none()
+    return result.scalar_one_or_none()
 
 
 async def create_session(

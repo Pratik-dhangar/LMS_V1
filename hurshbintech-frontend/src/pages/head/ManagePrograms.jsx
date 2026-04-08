@@ -200,7 +200,9 @@ const ManagePrograms = () => {
                                                             </span>
                                                         </td>
                                                         <td className="table-primary-td">
-                                                            {program.skill || program.description || '-'}
+                                                            {program.skills && program.skills.length > 0
+                                                                ? program.skills.map(s => s.skill_name).join(', ')
+                                                                : (program.skill || program.description || '-')}
                                                         </td>
                                                         <td className="table-primary-td">
                                                             {getProgramLearnerName(program) || '-'}

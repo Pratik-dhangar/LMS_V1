@@ -518,8 +518,8 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                         {/* HEAD DEVELOPMENT AREAS SECTION */}
                         {!isCoach && (
                             <>
-                                {/* ── Functional Development Overview through overall development ── */}
-                                <SectionHeading title="Functional Development Overview through overall development" subtitle="Provide assessment notes for each area" />
+                                {/* ── FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT ── */}
+                                <SectionHeading title="FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT" subtitle="Provide assessment notes for each area" />
                                 {DEVELOPMENT_AREAS.map((area, idx) => (
                                     <Field key={area.key} label={`${idx + 1}. ${area.label}`}>
                                         <textarea
@@ -684,7 +684,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                     {!isCoach && (
                         <>
                             {/* 9 Areas */}
-                            <PreviewSection title="Functional Development Overview through overall development">
+                            <PreviewSection title="FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT">
                                 {DEVELOPMENT_AREAS.map((area, idx) => (
                                     form[area.key] ? (
                                         <div key={area.key} style={{ marginBottom: '1rem' }}>

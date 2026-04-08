@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import MessagingWidget from '../chat/MessagingWidget';
 import BuySubscriptionModal from '../common/BuySubscriptionModal';
+import FreeAssessmentModal from '../common/FreeAssessmentModal';
 import { useAuth } from '../../context/AuthContext';
 
 /**
@@ -19,6 +20,7 @@ const MainLayout = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
 
   // Hide messaging widget on session pages
   const isSessionPage = location.pathname.includes('/session/') ||
@@ -27,7 +29,10 @@ const MainLayout = () => {
 
   return (
     <>
-      <Navbar setShowSubscriptionModal={setShowSubscriptionModal} />
+      <Navbar
+        setShowSubscriptionModal={setShowSubscriptionModal}
+        setShowAssessmentModal={setShowAssessmentModal}
+      />
       <Outlet />
       <Footer />
       {/* LinkedIn-style messaging widget - hidden on session pages */}
@@ -36,6 +41,14 @@ const MainLayout = () => {
       {/* Buy Learning Program Modal */}
       {showSubscriptionModal && (
         <BuySubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
+      )}
+
+      {/* Free Assessment Modal */}
+      {showAssessmentModal && (
+        <FreeAssessmentModal
+          isOpen={showAssessmentModal}
+          onClose={() => setShowAssessmentModal(false)}
+        />
       )}
     </>
   );
