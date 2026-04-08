@@ -469,6 +469,17 @@ const ManageLearningContent = () => {
                           href={learningContentService.getFileUrl(content.file_url)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => {
+                            const finalUrl = learningContentService.getFileUrl(content.file_url);
+                            console.log('[📂 VIEW BUTTON] Content:', {
+                              id: content.id,
+                              title: content.title,
+                              original_file_url: content.file_url,
+                              final_url: finalUrl,
+                              content_type: content.content_type,
+                              timestamp: new Date().toISOString()
+                            });
+                          }}
                           className="app-modal-btn app-modal-btn--secondary btn-sm"
                         >
                           View

@@ -4,7 +4,6 @@ import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
 import GoogleOAuthProvider from './components/GoogleOAuthProvider';
-import { registerSW } from 'virtual:pwa-register';
 
 // Pages
 import Home from './pages/Home';
@@ -982,9 +981,13 @@ function App() {
   // Register PWA Service Worker
   useEffect(() => {
     if (import.meta.env.VITE_ENABLE_PWA === 'true') {
-      registerSW({
-        onNeedRefresh() { },
-        onOfflineReady() { },
+      import('virtual:pwa-register').then(({ registerSW }) => {
+        registerSW({
+          onNeedRefresh() { },
+          onOfflineReady() { },
+        });
+      }).catch(err => {
+        console.warn('PWA registration failed:', err);
       });
     }
   }, []);

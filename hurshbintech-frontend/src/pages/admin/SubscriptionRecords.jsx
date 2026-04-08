@@ -30,6 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getFileUrl } from "../../utils/urlHelper";
 import subscriptionService from "../../api/services/subscriptionService";
 import publicSubscriptionService from "../../api/services/publicSubscriptionService";
 import adminService from "../../api/services/adminService";
@@ -892,15 +893,12 @@ const SubscriptionRecords = () => {
                               <td className="table-primary-td table-primary-td-center">
                                 {inq.payment_receipt_url ? (
                                   <a
-                                    href={
-                                      inq.payment_receipt_url.startsWith('s3://')
-                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(inq.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
-                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${inq.payment_receipt_url}`
-                                    }
+                                    href={getFileUrl(inq.payment_receipt_url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
                                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                    onClick={() => console.log('[📄 SUBSCRIPTION RECEIPT] View:', { original: inq.payment_receipt_url, final: getFileUrl(inq.payment_receipt_url) })}
                                   >
                                     <ExternalLink size={12} /> View
                                   </a>
@@ -1057,15 +1055,12 @@ const SubscriptionRecords = () => {
                               <td className="table-primary-td table-primary-td-center">
                                 {apt.payment_receipt_url ? (
                                   <a
-                                    href={
-                                      apt.payment_receipt_url.startsWith('s3://')
-                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(apt.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
-                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${apt.payment_receipt_url}`
-                                    }
+                                    href={getFileUrl(apt.payment_receipt_url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
                                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                    onClick={() => console.log('[📄 APPOINTMENT RECEIPT] View:', { original: apt.payment_receipt_url, final: getFileUrl(apt.payment_receipt_url) })}
                                   >
                                     <ExternalLink size={12} /> View
                                   </a>
