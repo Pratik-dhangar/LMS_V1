@@ -505,7 +505,8 @@ async def add_files_to_training(
     
     logger.info(f"Added {len(uploaded_files)} files to training {training_id}")
     
-    return AssignedTrainingResponse.from_orm(updated_training)
+    response = AssignedTrainingResponse.from_orm(updated_training)
+    return convert_training_urls(response)
 
 
 # ========== ADMIN ENDPOINTS (CRUD) ==========
@@ -594,7 +595,8 @@ async def create_training_with_files(
         await cache_service.delete_pattern("assigned_trainings:*")
         logger.info(f"Cache invalidated after creating training {training.id}")
         
-        return AssignedTrainingResponse.from_orm(training)
+        response = AssignedTrainingResponse.from_orm(training)
+        return convert_training_urls(response)
         
     except json.JSONDecodeError as e:
         raise HTTPException(
@@ -651,7 +653,8 @@ async def create_assigned_training(
         await cache_service.delete_pattern("assigned_trainings:*")
         logger.info(f"Cache invalidated after creating training {training.id}")
         
-        return AssignedTrainingResponse.from_orm(training)
+        response = AssignedTrainingResponse.from_orm(training)
+        return convert_training_urls(response)
         
     except Exception as e:
         logger.error(f"Error creating training: {str(e)}")
@@ -756,7 +759,8 @@ async def update_assigned_training(
     # Invalidate all assigned trainings caches
     await cache_service.delete_pattern("assigned_trainings:*")
     
-    return AssignedTrainingResponse.from_orm(updated_training)
+    response = AssignedTrainingResponse.from_orm(updated_training)
+    return convert_training_urls(response)
 
 
 @router.delete("/admin/assigned-trainings/{training_id}", status_code=status.HTTP_204_NO_CONTENT)

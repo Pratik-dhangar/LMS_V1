@@ -36,7 +36,9 @@ const learningContentService = {
       const parts = fileUrl.replace('s3://', '').split('/');
       const key = parts.slice(1).join('/');
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
-      return `${apiBaseUrl}/media/s3/${key}`;
+      const finalUrl = `${apiBaseUrl}/media/s3/${key}`;
+      console.log('[DEBUG] S3 URL conversion:', { original: fileUrl, key, finalUrl });  // ADD THIS
+      return finalUrl;
     }
     // Handle backend proxy URLs (already have /api prefix from backend response)
     if (fileUrl.startsWith('/api/')) {
