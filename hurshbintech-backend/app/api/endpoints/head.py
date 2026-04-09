@@ -327,13 +327,33 @@ async def update_trainer_profile(
         message_box=message_box,
     )
 
-    updated_trainer = await user_crud.update_trainer(db, trainer_id, trainer_update)
+    try:
+        updated_trainer = await user_crud.update_trainer(db, trainer_id, trainer_update)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error updating trainer: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update trainer profile",
+        )
     
     # Update User record with contact_number
     if contact_number is not None:
-        updated_trainer.user.contact_number = contact_number
-        await db.commit()
-        await db.refresh(updated_trainer.user)
+        try:
+            updated_trainer.user.contact_number = contact_number
+            await db.commit()
+            await db.refresh(updated_trainer.user)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error updating contact number: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update contact number",
+            )
     
     # Handle reference files upload
     if reference_files:
@@ -955,7 +975,19 @@ async def update_learner_profile(
                 detail=f"Invalid learner data format: {str(e)}"
             )
         
-        updated_learner = await user_crud.update_learner(db, learner_id, learner_update_obj)
+        try:
+            updated_learner = await user_crud.update_learner(db, learner_id, learner_update_obj)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+        except Exception as e:
+            logger.error(f"Error updating learner: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update learner profile",
+            )
     else:
         updated_learner = learner
     

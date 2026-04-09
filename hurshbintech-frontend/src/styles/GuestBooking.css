@@ -10,7 +10,6 @@
 
 .guest-booking-flow .page-main-guest {
   flex: 1;
-  background: #f5f6fa;
   padding: 0.5rem;
   margin: 1rem 9rem;
   min-height: 100vh;
@@ -37,6 +36,34 @@
 
 .guest-booking-flow .page-content {
   margin-top: 1rem;
+}
+
+/* Page Header - Matches Project Protocol */
+.guest-booking-flow .page-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 3px solid #DB9D32;
+  min-height: 80px;
+}
+
+.guest-booking-flow .page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.guest-booking-flow .page-subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  text-align: center;
+  margin: 0;
 }
 
 
@@ -186,6 +213,299 @@
 
   .progress-step {
     flex: 0 1 calc(33.333% - 0.667rem);
+  }
+}
+
+/* Appointment Summary Section */
+.guest-booking-flow .appointment-summary {
+  background: #f0f9ff;
+  border-left: 4px solid #3b82f6;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 0.5rem;
+}
+
+.guest-booking-flow .appointment-summary h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.guest-booking-flow .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.guest-booking-flow .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.guest-booking-flow .summary-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.guest-booking-flow .summary-value {
+  font-size: 1rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+/* Token Expiry Box */
+.guest-booking-flow .token-expiry-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.guest-booking-flow .token-expiry-box svg {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.guest-booking-flow .token-expiry-box p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.guest-booking-flow .token-expiry-box p strong {
+  color: #92400e;
+}
+
+/* Payment Methods Section */
+.guest-booking-flow .payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.guest-booking-flow .payment-method-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: #f9fafb;
+  transition: all 0.3s ease;
+}
+
+.guest-booking-flow .payment-method-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d1d5db;
+}
+
+.guest-booking-flow .payment-method-card h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.75rem 0;
+}
+
+.guest-booking-flow .payment-method-card p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.guest-booking-flow .qr-code-container {
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+  min-height: 200px;
+}
+
+.guest-booking-flow .qr-code-container img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.guest-booking-flow .bank-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.guest-booking-flow .bank-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.guest-booking-flow .bank-detail-item:last-child {
+  border-bottom: none;
+}
+
+.guest-booking-flow .bank-detail-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.guest-booking-flow .bank-detail-value {
+  font-size: 0.95rem;
+  color: #1f2937;
+  font-weight: 500;
+  font-family: monospace;
+  flex: 1;
+  word-break: break-all;
+}
+
+.guest-booking-flow .copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.guest-booking-flow .copy-button:hover {
+  color: #10b981;
+}
+
+.guest-booking-flow .copy-button.copied {
+  color: #10b981;
+}
+
+/* QR Code Modal */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.qr-modal-container {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  max-width: 500px;
+  width: 100%;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.qr-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #e2aa41 0%, #e7bb29 100%);
+  color: white;
+  /* border-bottom: 3px solid #DB9D32; */
+}
+
+.qr-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.qr-modal-close {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.qr-modal-close:hover {
+  transform: scale(1.1);
+}
+
+.qr-modal-content {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.qr-modal-image {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.qr-modal-instructions {
+  text-align: center;
+  font-size: 1rem;
+  color: #1f2937;
+  font-weight: 500;
+  margin: 0;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .qr-modal-container {
+    max-width: 90vw;
+  }
+
+  .qr-modal-header {
+    padding: 1rem;
+  }
+
+  .qr-modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .qr-modal-content {
+    padding: 1.5rem;
+  }
+
+  .qr-modal-image {
+    max-width: 280px;
   }
 }
 
@@ -1395,6 +1715,18 @@
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-booking-flow .payment-method-card {
+    padding: 1rem;
+  }
+
+  .guest-booking-flow .qr-code-container {
+    min-height: 160px;
   }
 
   .action-buttons {
