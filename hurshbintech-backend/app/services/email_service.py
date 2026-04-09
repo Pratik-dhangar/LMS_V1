@@ -3398,18 +3398,6 @@ class EmailService:
                         letter-spacing: 3px;
                         font-family: 'Courier New', Courier, monospace;
                     }}
-                    .warning-box {{
-                        background-color: #fff8e7;
-                        border: 1px solid #f6cc57;
-                        border-radius: 6px;
-                        padding: 14px 18px;
-                        margin: 20px 0;
-                        font-size: 13px;
-                        color: #7d6007;
-                    }}
-                    .warning-box strong {{
-                        color: #5a4500;
-                    }}
                     .footer {{
                         text-align: center;
                         margin-top: 30px;
@@ -3457,12 +3445,6 @@ class EmailService:
                                     </td>
                                 </tr>
                             </table>
-                        </div>
-
-                        <div class="warning-box">
-                            <strong>⚠ Important:</strong> This is an auto-generated password. For your security,
-                            please log in and change your password immediately after your first sign-in.
-                            Never share your password with anyone.
                         </div>
 
                         <p>
