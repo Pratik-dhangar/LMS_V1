@@ -27,13 +27,13 @@ const INITIAL_FORM = {
     payment_method: '',
 };
 
-// Bank transfer details – update with your actual account info
+// Bank transfer details
 const BANK_DETAILS = {
-    bank_name: 'State Bank of India',
-    account_name: 'Hurshbin Child Development Services',
-    account_number: 'XXXX XXXX XXXX',
-    ifsc: 'SBINXXXXXXX',
-    branch: 'Your Branch Name',
+    bank_name: 'HDFC Bank',
+    account_name: 'HurshBin',
+    account_number: '50200034124439',
+    ifsc: 'HDFC0000538',
+    branch: 'Main Branch',
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
